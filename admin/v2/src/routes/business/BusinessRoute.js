@@ -1,6 +1,5 @@
 import {
   AdminDataTable,
-  AdminDialog,
   AdminDrawer,
   AdminEmptyState,
   AdminErrorState,
@@ -12,6 +11,7 @@ import {
 } from "../../components/index.js";
 import { createElement } from "../../components/dom.js";
 import { ADMIN_DATA_STATES } from "../../core/data-state.js";
+import { BusinessSupervisionView } from "./BusinessSupervisionView.js";
 
 function titleCase(value, fallback = "Not available") {
   const text = String(value || "").trim();
@@ -23,9 +23,8 @@ function number(value, options = {}) {
 }
 
 function amount(value, currencyCode) {
-  if (!Number.isFinite(value)) return "—";
-  const formatted = value.toLocaleString("en-US", { maximumFractionDigits: 2 });
-  return currencyCode ? `${formatted} ${currencyCode}` : formatted;
+  if (typeof value !== "string" || !/^\d+(?:\.\d+)?$/.test(value)) return "—";
+  return currencyCode ? `${value} ${currencyCode}` : value;
 }
 
 function dateTime(value) {
@@ -52,7 +51,7 @@ function summary(model) {
     attrs: { "aria-label": "Business summary" },
     children: [
       metric("Businesses", number(model.summary.totalCount), "Current game"),
-      metric("Active", number(model.summary.activeCount), "Operating normally"),
+      metric("Active", number(model.summary.activeCount), "Recorded Business status"),
       metric("Needs attention", number(model.summary.attentionCount), "Distressed or restructuring"),
       metric("Avg. reputation", number(model.summary.averageReputation), "0–100 when available"),
     ],
@@ -101,13 +100,11 @@ function detailContent(business) {
       createElement("dl", {
         className: "admin-business-detail__grid",
         children: [
-          detailLine("Owner", business.owner.displayName),
-          detailLine("Roster label", business.owner.rosterLabel || "Not available"),
-          detailLine("Owner status", titleCase(business.owner.status)),
           detailLine("Country", business.countryCode || "Not available"),
+          detailLine("Operational readiness", titleCase(business.operationalReadiness)),
+          detailLine("Attention flags", business.attentionFlags.length ? business.attentionFlags.map((value) => titleCase(value)).join(", ") : "None"),
           detailLine("Capitalization", amount(business.capitalization, business.currencyCode)),
           detailLine("Reputation", number(business.reputationScore)),
-          detailLine("Capacity units", number(business.capacityUnits)),
           detailLine("Failure count", number(business.failureCount)),
           detailLine("Created", dateTime(business.createdAt)),
           detailLine("Updated", dateTime(business.updatedAt)),
@@ -119,99 +116,34 @@ function detailContent(business) {
         children: [
           AdminIcon({ name: "info", size: 18 }),
           createElement("p", {
-            text: "This view uses the current Business Admin contract only. Inventory, products, production runs, employees, and transactions are not reconstructed from database tables when no Business Admin read contract exposes them.",
+            text: "Identity and attention indicators are not cached profit or valuation. Financial evidence is separated by currency and source; ownership is shown without private Player identifiers.",
           }),
         ],
       }),
+      BusinessSupervisionView(business.supervision),
     ],
   });
 }
 
-function complianceForm({ business, onSubmit, onCancel }) {
-  const requirementKey = AdminField({
-    name: "requirementKey",
-    label: "Existing compliance requirement key",
-    type: "text",
-    placeholder: "operating-license",
-    autocomplete: "off",
-    minLength: 2,
-    maxLength: 120,
-    hint: "Use an existing requirement key. The current Business read model does not expose a requirement catalog, so this screen will not invent one.",
+function loadingDetail(business) {
+  return createElement("div", {
+    attrs: { role: "status", "aria-label": `Loading ${business.legalName}` },
+    children: [AdminSkeleton({ label: "Loading authoritative Business detail", count: 6, shape: "row" })],
   });
-  const requirementType = AdminField({
-    name: "requirementType",
-    label: "Requirement type",
-    type: "select",
-    value: "license",
-    options: [
-      { value: "license", label: "License" },
-      { value: "tax", label: "Tax" },
-      { value: "regulation", label: "Regulation" },
-    ],
-  });
-  const status = AdminField({
-    name: "status",
-    label: "Compliance status",
-    type: "select",
-    value: "approved",
-    options: [
-      { value: "pending", label: "Pending" },
-      { value: "approved", label: "Approved" },
-      { value: "suspended", label: "Suspended" },
-      { value: "expired", label: "Expired" },
-      { value: "waived", label: "Waived" },
-    ],
-  });
-  const feeAmount = AdminField({ name: "feeAmount", label: `Fee amount${business.currencyCode ? ` (${business.currencyCode})` : ""}`, type: "number", value: "0", min: 0, max: 10_000_000, step: 0.01, inputMode: "decimal" });
-  const expiresAt = AdminField({ name: "expiresAt", label: "Expiration (optional)", type: "datetime-local" });
-  const reason = AdminField({ name: "reason", label: "Reason", type: "textarea", placeholder: "Explain the administrative compliance decision." });
-  const error = createElement("p", { className: "admin-business-compliance__error", attrs: { role: "alert" } });
-  error.hidden = true;
-
-  const form = createElement("form", {
-    className: "admin-business-compliance",
-    children: [requirementKey.element, requirementType.element, status.element, feeAmount.element, expiresAt.element, reason.element, error],
-  });
-  const cancel = button({ label: "Cancel", quiet: true, action: "cancel-compliance", onClick: onCancel });
-  const save = button({ label: "Save compliance", icon: "success", action: "save-compliance", onClick() { form.requestSubmit(); } });
-  const footer = createElement("div", { className: "admin-business-compliance__footer", children: [cancel, save] });
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    error.hidden = true;
-    const key = requirementKey.getValue().trim();
-    const reasonText = reason.getValue().trim();
-    const fee = Number(feeAmount.getValue());
-    if (key.length < 2 || key.length > 120 || reasonText.length < 2 || reasonText.length > 1000 || !Number.isFinite(fee) || fee < 0 || fee > 10_000_000) {
-      error.textContent = "Review the requirement key, reason, and fee amount.";
-      error.hidden = false;
-      return;
-    }
-    const expiration = expiresAt.getValue().trim();
-    const input = {
-      requirementKey: key,
-      requirementType: requirementType.getValue(),
-      status: status.getValue(),
-      feeAmount: fee,
-      expiresAt: expiration ? new Date(expiration).toISOString() : null,
-      reason: reasonText,
-    };
-    save.disabled = true;
-    cancel.disabled = true;
-    const result = await onSubmit(input);
-    if (result?.ok !== true) {
-      save.disabled = false;
-      cancel.disabled = false;
-      error.textContent = result?.error?.userMessage || "Compliance could not be updated.";
-      error.hidden = false;
-    }
-  });
-
-  return { element: form, footer, initialFocus: requirementKey.control };
 }
 
-function catalog({ model, filters, onFiltersChange, onDetail, onCompliance }) {
-  const search = AdminField({ name: "search", label: "Search businesses", type: "search", placeholder: "Business, owner, industry, country", autocomplete: "off", value: filters.query, prefix: AdminIcon({ name: "search", size: 16 }) });
+function detailError(error, retry) {
+  return AdminErrorState({
+    title: "Business detail could not be loaded",
+    message: error?.userMessage || "The authoritative Business detail is temporarily unavailable.",
+    requestId: error?.requestId,
+    retryAfterSeconds: error?.retryAfterSeconds,
+    retry: error?.retryable ? { label: "Retry detail", onClick: retry } : null,
+  });
+}
+
+function catalog({ model, filters, onFiltersChange, onDetail }) {
+  const search = AdminField({ name: "search", label: "Search businesses", type: "search", placeholder: "Business, industry, country", autocomplete: "off", value: filters.query, prefix: AdminIcon({ name: "search", size: 16 }) });
   const status = AdminField({
     name: "status",
     label: "Status",
@@ -241,19 +173,15 @@ function catalog({ model, filters, onFiltersChange, onDetail, onCompliance }) {
           children: [createElement("strong", { text: business.legalName }), createElement("small", { text: `${titleCase(business.entityType)} · ${business.businessKey}` })],
         }),
       },
-      {
-        key: "owner",
-        label: "Owner",
-        render: (owner) => createElement("div", { className: "admin-business-route__owner", children: [createElement("span", { text: owner.displayName }), owner.rosterLabel ? createElement("small", { text: owner.rosterLabel }) : null] }),
-      },
       { key: "industryCode", label: "Industry", render: (value) => value || "—" },
       { key: "countryCode", label: "Country", render: (value) => value || "—" },
+      { key: "operationalReadiness", label: "Readiness", render: (value) => titleCase(value) },
       {
         key: "status",
         label: "Status",
         render: (value) => createElement("span", { className: "admin-business-route__status", dataset: { status: value || "unknown" }, text: titleCase(value) }),
       },
-      { key: "capitalization", label: "Capitalization", align: "end", render: (value, business) => amount(value, business.currencyCode) },
+      { key: "capitalization", label: "Capitalization", align: "end", sortable: false, render: (value, business) => amount(value, business.currencyCode) },
       { key: "reputationScore", label: "Reputation", align: "end", render: (value) => number(value) },
       {
         key: "actions",
@@ -263,7 +191,6 @@ function catalog({ model, filters, onFiltersChange, onDetail, onCompliance }) {
           className: "admin-business-route__actions",
           children: [
             button({ label: "Details", icon: "overview", quiet: true, action: "details", onClick(event) { onDetail(business, event.currentTarget); } }),
-            button({ label: "Compliance", icon: "settings", quiet: true, action: "compliance", onClick(event) { onCompliance(business, event.currentTarget); } }),
           ],
         }),
       },
@@ -276,7 +203,7 @@ function catalog({ model, filters, onFiltersChange, onDetail, onCompliance }) {
     const selectedStatus = status.getValue();
     const selectedCountry = country.getValue();
     const visible = model.businesses.filter((business) => {
-      const searchable = [business.legalName, business.owner.displayName, business.owner.rosterLabel, business.industryCode, business.countryCode, business.businessKey].join(" ").toLowerCase();
+      const searchable = [business.legalName, business.industryCode, business.countryCode, business.businessKey].join(" ").toLowerCase();
       return (!query || searchable.includes(query))
         && (selectedStatus === "all" || business.status === selectedStatus)
         && (selectedCountry === "all" || business.countryCode === selectedCountry);
@@ -291,6 +218,7 @@ function catalog({ model, filters, onFiltersChange, onDetail, onCompliance }) {
   applyFilters();
 
   const root = createElement("div", { className: "admin-business-route__resolved", children: [summary(model), controls] });
+  if (model.truncated) root.append(createElement("p", { attrs: { role: "status" }, text: "Showing the first 2,000 businesses. Summary counts and filters cover only these rows; additional businesses exist." }));
   root.append(model.isEmpty
     ? AdminEmptyState({ title: "No businesses yet", message: "No player business entities exist in the current game." })
     : createElement("section", { className: "admin-business-route__catalog", attrs: { "aria-label": "Business directory" }, children: table.element }));
@@ -302,46 +230,51 @@ export function BusinessRoute({
   filters = { query: "", status: "all", country: "all" },
   onFiltersChange = () => {},
   onRefresh = async () => {},
-  onCompliance = async () => ({ ok: false }),
+  onLoadDetail = async (business) => business,
 } = {}) {
   let detailDrawer = null;
-  let complianceDialog = null;
+  let selectedBusiness = null;
+  let detailSequence = 0;
+  let destroyed = false;
+
+  function setDetailContent(content) {
+    if (!detailDrawer) return;
+    const replacesFocus = detailDrawer.body.contains(document.activeElement);
+    detailDrawer.setContent(content);
+    // Removing the focused Retry button otherwise leaves focus on document.body.
+    if (replacesFocus && detailDrawer.isOpen()) detailDrawer.panel.focus({ preventScroll: true });
+  }
+
+  async function loadDetailIntoDrawer(business) {
+    const sequence = ++detailSequence;
+    selectedBusiness = business;
+    setDetailContent(loadingDetail(business));
+    try {
+      const detail = await onLoadDetail(business);
+      if (destroyed || sequence !== detailSequence || selectedBusiness !== business || !detailDrawer?.isOpen()) return;
+      setDetailContent(detailContent(detail));
+    } catch (error) {
+      if (destroyed || sequence !== detailSequence || selectedBusiness !== business || !detailDrawer?.isOpen()) return;
+      setDetailContent(detailError(error, () => loadDetailIntoDrawer(business)));
+    }
+  }
 
   function openDetail(business, opener) {
     detailDrawer?.destroy();
+    selectedBusiness = business;
     detailDrawer = AdminDrawer({
       title: business.legalName,
-      description: "Authoritative Business entity details for the selected game.",
+      description: "Read-only, game-scoped authoritative Business detail.",
       size: "large",
-      content: detailContent(business),
-    });
-    detailDrawer.open(opener);
-  }
-
-  function openCompliance(business, opener) {
-    complianceDialog?.destroy();
-    let dialog;
-    const form = complianceForm({
-      business,
-      onCancel() { dialog.close("cancelled"); },
-      async onSubmit(input) {
-        dialog.setBusy(true);
-        const result = await onCompliance(business, input);
-        if (result?.ok === true) dialog.close("saved");
-        else dialog.setBusy(false);
-        return result;
+      protectUnsavedChanges: false,
+      content: loadingDetail(business),
+      onClose() {
+        detailSequence += 1;
+        selectedBusiness = null;
       },
     });
-    dialog = AdminDialog({
-      title: "Update business compliance",
-      description: `Record an existing compliance requirement for ${business.legalName}.`,
-      content: form.element,
-      footer: form.footer,
-      initialFocus: form.initialFocus,
-      size: "medium",
-    });
-    complianceDialog = dialog;
-    dialog.open(opener);
+    detailDrawer.open(opener);
+    void loadDetailIntoDrawer(business);
   }
 
   const refreshButton = button({
@@ -369,7 +302,7 @@ export function BusinessRoute({
       retry: state.error?.retryable ? { label: "Retry Business", onClick: onRefresh } : null,
     }));
   } else if (state.data) {
-    const content = catalog({ model: state.data, filters, onFiltersChange, onDetail: openDetail, onCompliance: openCompliance });
+    const content = catalog({ model: state.data, filters, onFiltersChange, onDetail: openDetail });
     if (state.status === ADMIN_DATA_STATES.STALE) {
       route.append(AdminStaleState({ message: state.error?.userMessage || "Showing the last successful Business data while the service recovers.", retry: { label: "Retry", onClick: onRefresh }, content }));
     } else {
@@ -383,7 +316,7 @@ export function BusinessRoute({
   const page = AdminPageFrame({
     eyebrow: "Game administration",
     title: "Business Oversight",
-    description: "Review player businesses and apply the compliance changes currently supported by this surface. Business identity and operating metrics are read-only here.",
+    description: "Review authoritative Business identity and operational readiness. This supervision surface is read-only.",
     actions: [refreshButton],
     content: route,
   });
@@ -391,10 +324,11 @@ export function BusinessRoute({
   return {
     ...page,
     destroy() {
+      destroyed = true;
+      detailSequence += 1;
       detailDrawer?.destroy();
-      complianceDialog?.destroy();
       detailDrawer = null;
-      complianceDialog = null;
+      selectedBusiness = null;
     },
   };
 }

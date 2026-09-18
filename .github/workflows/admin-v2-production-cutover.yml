@@ -1,6 +1,13 @@
 name: Admin V2 Production Cutover
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_authorized:
+        description: "Explicit owner-authorized production Admin cutover of current main"
+        required: true
+        type: boolean
+        default: false
   pull_request:
     branches: [main]
     paths:
@@ -110,7 +117,7 @@ jobs:
 
   production:
     name: Build, verify, and switch production Admin to V2
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.release_authorized == true && github.ref == 'refs/heads/main'
     needs: contract
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -125,6 +132,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
           test "$GITHUB_REF" = "refs/heads/main"
           [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
           test -n "$VERCEL_TOKEN"

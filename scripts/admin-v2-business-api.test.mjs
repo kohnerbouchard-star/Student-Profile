@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { createBusinessApi } from "../admin/v2/src/routes/business/BusinessApi.js";
-import { createBusinessController, normalizeBusinessReadModel } from "../admin/v2/src/routes/business/BusinessController.js";
+import { createBusinessController, normalizeBusinessDetail, normalizeBusinessReadModel } from "../admin/v2/src/routes/business/BusinessController.js";
 import { isAdminErrorEnvelope } from "../admin/v2/src/core/error-envelope.js";
 
 const GAME_ID = "10000000-0000-4000-8000-000000000001";
@@ -31,36 +31,33 @@ function business(overrides = {}) {
     demand_index: "POISON_DEMAND",
     reputation_score: 84,
     failure_count: 0,
+    operational_readiness: "ready",
+    attention_flags: [],
     updated_at: "2026-08-07T00:00:00.000Z",
     ...overrides,
   };
 }
 
-test("Business API uses exact current-main read and compliance contracts", async () => {
+test("Business API uses exact read-only directory and detail contracts", async () => {
   const calls = [];
   const api = createBusinessApi({
     fetchImpl: async (url, init) => {
       calls.push({ url, init });
-      return init.method === "POST" ? response({ data: { result: { outcome: "applied" } } }) : response({ data: { businesses: [business()] } });
+      return url.endsWith(`/${BUSINESS_KEY}`)
+        ? response({ data: { business: business() } })
+        : response({ data: { businesses: [business()] } });
     },
     timeoutMs: 1000,
   });
   await api.readBusinesses({ gameId: GAME_ID });
-  await api.setBusinessCompliance({
-    gameId: GAME_ID,
-    businessKey: BUSINESS_KEY,
-    idempotencyKey: "admin.business.compliance.test-0001",
-    input: { requirementKey: "operating-license", requirementType: "license", status: "approved", feeAmount: 25, expiresAt: null, reason: "Verified current license" },
-  });
+  await api.readBusiness({ gameId: GAME_ID, businessKey: BUSINESS_KEY });
   assert.equal(calls[0].url, `/api/admin/games/${GAME_ID}/businesses`);
   assert.equal(calls[0].init.method, "GET");
-  assert.equal(calls[1].url, `/api/admin/games/${GAME_ID}/businesses/${BUSINESS_KEY}/compliance`);
-  assert.equal(calls[1].init.method, "POST");
+  assert.equal(calls[1].url, `/api/admin/games/${GAME_ID}/businesses/${BUSINESS_KEY}`);
+  assert.equal(calls[1].init.method, "GET");
   assert.equal(calls[1].init.headers.Authorization, undefined);
-  assert.equal(calls[1].init.headers["Idempotency-Key"], "admin.business.compliance.test-0001");
-  const body = JSON.parse(calls[1].init.body);
-  assert.equal(body.policyEffects && Object.keys(body.policyEffects).length, 0);
-  assert.equal(body.idempotencyKey, "admin.business.compliance.test-0001");
+  assert.equal(calls[1].init.cache, "no-store");
+  assert.equal(api.setBusinessCompliance, undefined);
   assert.equal(api.settleBusinessCycle, undefined);
   assert.equal(api.readBusinessInventory, undefined);
 });
@@ -70,7 +67,7 @@ test("Business API converts backend detail to safe error envelopes", async () =>
     fetchImpl: async () => response({ code: "access_denied", message: "service_role select from private table" }, 403),
     timeoutMs: 1000,
   });
-  await assert.rejects(api.readBusinesses({ gameId: GAME_ID }), (error) => {
+  await assert.rejects(api.readBusiness({ gameId: GAME_ID, businessKey: BUSINESS_KEY }), (error) => {
     assert.equal(isAdminErrorEnvelope(error), true);
     assert.equal(error.code, "PERMISSION_DENIED");
     assert.equal(JSON.stringify(error).includes("service_role"), false);
@@ -93,13 +90,23 @@ test("Business read model excludes owner UUID and retired cached financial and d
   assert.doesNotMatch(JSON.stringify(one), /POISON_(?:REVENUE|EXPENSE|PROFIT|VALUATION|DEMAND)/u);
   const many = normalizeBusinessReadModel({ data: { businesses: [
     business(),
-    business({ public_key: `biz_${"b".repeat(32)}`, owner_player_id: "20000000-0000-4000-8000-000000000003", legal_name: "Northreach Logistics", status: "distressed", profit_total: -75 }),
-    business({ public_key: `biz_${"c".repeat(32)}`, owner_player_id: "20000000-0000-4000-8000-000000000004", legal_name: "Solvend Cooperative", status: "restructuring", reputation_score: null }),
+    business({ public_key: `biz_${"b".repeat(32)}`, owner_player_id: "20000000-0000-4000-8000-000000000003", legal_name: "Northreach Logistics", status: "distressed", profit_total: -75, operational_readiness: "attention", attention_flags: ["status:distressed"] }),
+    business({ public_key: `biz_${"c".repeat(32)}`, owner_player_id: "20000000-0000-4000-8000-000000000004", legal_name: "Solvend Cooperative", status: "restructuring", reputation_score: null, operational_readiness: "attention", attention_flags: ["status:restructuring"] }),
   ] } });
   assert.equal(many.businesses.length, 3);
   assert.equal(many.summary.attentionCount, 2);
   assert.equal(many.businesses.every((row) => row.owner.displayName === "Owner unavailable"), true);
   assert.equal(JSON.stringify(many).includes("owner_player_id"), false);
+});
+
+test("Business identity preserves decimal precision and strips every UUID version", () => {
+  const exact = "9007199254740993.123456789123456789";
+  const row = business({ capitalization: exact, legal_name: "private 10000000-0000-7000-8000-000000000001" });
+  const model = normalizeBusinessReadModel({ data: { businesses: [row] } });
+  assert.equal(model.businesses[0].capitalization, exact);
+  assert.equal(model.businesses[0].legalName, "Unnamed business");
+  assert.equal(normalizeBusinessDetail({ business: row }).capitalization, exact);
+  assert.equal(normalizeBusinessDetail({ business: business({ capitalization: Number.MAX_SAFE_INTEGER + 1 }) }).capitalization, null);
 });
 
 test("Business route does not render retired cached aggregates", () => {
@@ -115,6 +122,9 @@ test("Business route does not render retired cached aggregates", () => {
     "business.demandIndex",
     'label: "Valuation"',
     'label: "Profit"',
+    "Compliance",
+    "onCompliance",
+    "setBusinessCompliance",
   ]) {
     assert.equal(source.includes(forbidden), false, `Business route retained ${forbidden}`);
   }
@@ -126,8 +136,8 @@ test("Business controller fails closed before reads and preserves stale data on 
   let next = { data: { businesses: [business()] } };
   const api = {
     async readBusinesses() { reads += 1; if (next instanceof Error) throw next; return next; },
+    async readBusiness() { return { data: { business: business() } }; },
     cancelBusinessRequest() { return false; },
-    async setBusinessCompliance() { return { data: { result: {} } }; },
   };
   const controller = createBusinessController({ api, selectedGameId: GAME_ID, hasPermission: () => allowed });
   await controller.load();
@@ -142,32 +152,28 @@ test("Business controller fails closed before reads and preserves stale data on 
   controller.destroy();
 });
 
-test("Business controller compliance mutations reuse an idempotency key for retryable failure", async () => {
-  const keys = [];
-  let attempts = 0;
+test("Business controller loads one public-key detail without retaining private fields", async () => {
+  const detailCalls = [];
   const api = {
     async readBusinesses() { return { data: { businesses: [business()] } }; },
-    cancelBusinessRequest() { return false; },
-    async setBusinessCompliance(input) {
-      keys.push(input.idempotencyKey);
-      attempts += 1;
-      if (attempts === 1) throw Object.assign(new Error("temporary"), { status: 503 });
-      return { data: { result: { outcome: "applied" } } };
+    async readBusiness(input) {
+      detailCalls.push(input);
+      return { data: { business: business({ owner_player_id: OWNER_UUID }) } };
     },
+    cancelBusinessRequest() { return false; },
   };
   const controller = createBusinessController({
     api,
     selectedGameId: GAME_ID,
     hasPermission: () => true,
-    cryptoObject: { randomUUID: () => "30000000-0000-4000-8000-000000000003" },
   });
   const model = normalizeBusinessReadModel({ data: { businesses: [business()] } });
-  const input = { requirementKey: "license", requirementType: "license", status: "approved", feeAmount: 0, expiresAt: null, reason: "Verified" };
-  const first = await controller.setCompliance(model.businesses[0], input);
-  const second = await controller.setCompliance(model.businesses[0], input);
-  assert.equal(first.ok, false);
-  assert.equal(second.ok, true);
-  assert.equal(keys.length, 2);
-  assert.equal(keys[0], keys[1]);
+  const detail = await controller.loadDetail(model.businesses[0]);
+  assert.equal(detail.businessKey, BUSINESS_KEY);
+  assert.equal(detail.operationalReadiness, "ready");
+  assert.deepEqual(detail.attentionFlags, []);
+  assert.equal(JSON.stringify(detail).includes(OWNER_UUID), false);
+  assert.deepEqual(detailCalls, [{ gameId: GAME_ID, businessKey: BUSINESS_KEY }]);
+  assert.equal(normalizeBusinessDetail({ data: { business: business() } }).businessKey, BUSINESS_KEY);
   controller.destroy();
 });

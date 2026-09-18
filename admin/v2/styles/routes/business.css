@@ -50,6 +50,13 @@
 .admin-business-detail__contract-note .admin-icon { flex: 0 0 auto; color: var(--admin-color-purple); }
 .admin-business-detail__contract-note p { overflow-wrap: anywhere; }
 
+.admin-business-supervision,
+.admin-business-supervision__content { display: grid; gap: var(--admin-space-3); min-inline-size: 0; max-inline-size: 100%; }
+.admin-business-supervision { padding-block-start: var(--admin-space-4); border-block-start: 1px solid var(--admin-color-line); }
+.admin-business-supervision p { color: var(--admin-color-text-muted); overflow-wrap: anywhere; }
+.admin-business-supervision th,
+.admin-business-supervision td { max-inline-size: 20rem; overflow-wrap: anywhere; }
+
 .admin-business-compliance { display: grid; gap: var(--admin-space-4); }
 .admin-business-compliance__error { padding: var(--admin-space-3); border: 1px solid var(--admin-color-red); background: var(--admin-color-red-soft); color: var(--admin-color-red); }
 .admin-business-compliance__footer { display: flex; justify-content: end; gap: var(--admin-space-3); }

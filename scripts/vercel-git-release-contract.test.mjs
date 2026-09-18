@@ -17,6 +17,10 @@ const edgeWorkflow = readFileSync(
   ".github/workflows/edge-function-inventory-converge.yml",
   "utf8",
 );
+const adminCutoverWorkflow = readFileSync(
+  ".github/workflows/admin-v2-production-cutover.yml",
+  "utf8",
+);
 
 // A code merge must not grant deployment authority. All environment reads and
 // writes stay behind the explicit dispatch, with existing parity gates intact.
@@ -24,13 +28,14 @@ const releaseCondition =
   "github.event_name == 'workflow_dispatch' && inputs.release_authorized == true && github.ref == 'refs/heads/main'";
 for (const [workflow, expectedJobs] of [
   [edgeWorkflow, ["staging", "production"]],
+  [adminCutoverWorkflow, ["contract", "production"]],
   [releaseWorkflow, ["static-contract", "staging-evidence", "production-evidence", "enforce-parity", "publish-release-branch"]],
 ]) {
   assert.match(workflow, /workflow_dispatch:\n    inputs:\n      release_authorized:\n        description: [^\n]+\n        required: true\n        type: boolean\n        default: false/u);
   const jobs = [...workflow.slice(workflow.indexOf("\njobs:\n")).matchAll(/^  ([a-z-]+):\n([\s\S]*?)(?=^  [a-z-]+:\n|$(?![\s\S]))/gmu)];
   assert.deepEqual(jobs.map((job) => job[1]), expectedJobs);
   for (const [block, name] of jobs) {
-    if (name === "static-contract") continue;
+    if (name === "static-contract" || name === "contract") continue;
     assert.equal(block.match(/^    if: (.+)$/mu)?.[1], releaseCondition, `${name} needs explicit release authority`);
   }
 }
