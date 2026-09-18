@@ -26,7 +26,8 @@
     "scripts/business-common-equity-database.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-685.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/player-terminal-verify.yml"
   ],
   "requiredFiles": [
     "backend/supabase/migrations/20260918070248_business_common_equity_invariants_v1.sql",

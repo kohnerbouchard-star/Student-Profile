@@ -31,7 +31,7 @@ The existing public ownership assertion preserves all noncorporate rules and add
 
 Permanent source and disposable-database jobs verify the exact PR head. The database starts from zero twice and runs advisors. Acceptance exercises real C-corporation proposal, approval, activation and replay; invalid votes, ownership kind, share totals, capacity, missing structure, identity change and unmatched receipts; role denial; receipt immutability; atomic fixture transfer; a two-session race for the last authorized shares; and another game's unchanged economic state. The fixture-only transfer/issuance probes do not reopen the retired valuation-dependent transfer command or introduce an economic API.
 
-Retained reporting, Admin, Banking/FX, Store settlement/purge, connected Player and classroom-load gates remain required. Seven existing PR branch filters explicitly admit this stack's predecessor branches so required checks cannot disappear merely because a PR is stacked. Existing action pins and all manual deployment conditions remain intact.
+Retained reporting, Admin, Banking/FX, Store settlement/purge, connected Player and classroom-load gates remain required. Seven existing PR branch filters explicitly admit this stack's predecessor branches so required checks cannot disappear merely because a PR is stacked. Player Terminal verification also triggers for PR-bound authority manifests, preserving its required security/resilience checks on SQL-only tranches. Existing action pins and all manual deployment conditions remain intact.
 
 Exact implementation SHA, run/job identities, results and evidence limits will be recorded after publication and verification; until then this item stays `IN_PROGRESS`.
 
