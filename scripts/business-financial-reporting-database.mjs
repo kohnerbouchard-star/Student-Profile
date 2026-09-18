@@ -61,12 +61,16 @@ runSql(`begin; set local role service_role;
   select public.ensure_business_payroll_clock_v2('${one.id}','${one.businessId}');
   select public.ensure_business_payroll_clock_v2('${two.id}','${two.businessId}'); commit;`);
 
-function closePeriod(game, suffix) {
-  // Only the disposable fixture advances time; the report has no close command.
+function initializeDueHistory(game, periods) {
+  // Seed an overdue disposable clock once. Canonical closes then advance
+  // contiguous periods; rewinding after a close would overlap assigned sales.
   runSql(`update public.business_payroll_clocks
-    set period_started_at = statement_timestamp() - make_interval(secs => period_duration_seconds),
-        next_due_at = statement_timestamp(), version = version + 1
+    set period_started_at = statement_timestamp() - make_interval(secs => period_duration_seconds * ${periods}),
+        next_due_at = statement_timestamp() - make_interval(secs => period_duration_seconds * ${periods - 1}),
+        version = version + 1
     where game_session_id='${game.id}' and business_id='${game.businessId}';`);
+}
+function closePeriod(game, suffix) {
   const claims = runJson(`begin; set local role service_role;
     select coalesce(jsonb_agg(to_jsonb(c)), '[]'::jsonb)::text
     from public.claim_due_business_operating_periods_v1(100) c; commit;`);
@@ -82,6 +86,7 @@ function closePeriod(game, suffix) {
   assert.equal(replay.replayed, true);
   return first;
 }
+initializeDueHistory(one, 1);
 const firstClose = closePeriod(one, "sales");
 const first = read();
 assert.equal(first.schemaVersion, 1);
@@ -113,14 +118,16 @@ assert.deepEqual(read(), first);
 assert.deepEqual([snapshot(one.id), snapshot(two.id), clockCount()], before);
 expectSqlError(`update public.business_operating_period_close_receipts
   set gross_wages_due=1 where public_key=${q(firstClose.close_receipt_key)};`, /BUSINESS_OPERATING_PERIOD_EVIDENCE_IMMUTABLE/);
-closePeriod(one, "zero-sales");
-const second = read();
-assert.equal(second.periods[0].storeReceiptCount, 0);
-assert.deepEqual(second.periods[0].salesByCurrency, []);
-assert.deepEqual(second.periods[1], period, "later closes cannot rewrite earlier evidence");
-closePeriod(two, "other-game");
-assert.equal(read(two).periods.length, 1);
-assert.equal(read().periods.length, 2);
+initializeDueHistory(two, 51);
+closePeriod(two, "zero-sales");
+const emptyPeriod = read(two).periods[0];
+assert.equal(emptyPeriod.storeReceiptCount, 0);
+assert.deepEqual(emptyPeriod.salesByCurrency, []);
+closePeriod(two, "next-empty-period");
+const second = read(two);
+assert.equal(second.periods[0].startedAt, emptyPeriod.dueAt, "close cadence stays contiguous");
+assert.deepEqual(second.periods[1], emptyPeriod, "later closes cannot rewrite earlier evidence");
+assert.deepEqual(read(), first, "other-game closes cannot alter the sales report");
 
 // Pure projection precision/privacy test, without inserting fabricated evidence.
 const exact = "9007199254740993.123456789123456789";
@@ -146,15 +153,18 @@ assert.equal(projection.taxByCurrency[0].taxUnpaid, exact);
 assert.doesNotMatch(JSON.stringify(projection), /POISON|private|request_hash|metadata/);
 
 // Exercise the bounded window using real server close commands, including replay.
-for (let index = 3; index <= 51; index += 1) closePeriod(one, `window-${index}`);
-const bounded = read();
+for (let index = 3; index <= 51; index += 1) closePeriod(two, `window-${index}`);
+const bounded = read(two);
 assert.equal(bounded.periods.length, 50);
 assert.equal(bounded.periodLimit, 50);
 assert.equal(bounded.truncated, true);
 assert.equal(bounded.periods[0].periodNumber, "51");
 assert.equal(bounded.periods.at(-1).periodNumber, "2");
 assert.equal(new Set(bounded.periods.map((row) => row.closeReceiptKey)).size, 50);
-assert.equal(read(two).periods.length, 1);
+for (let index = 0; index < bounded.periods.length - 1; index += 1) {
+  assert.equal(bounded.periods[index].startedAt, bounded.periods[index + 1].dueAt);
+}
+assert.deepEqual(read(), first);
 expectSqlError(`begin; update public.business_entities set status='closed',closed_at=now()
   where id='${one.businessId}'; set local role service_role; select ${call()}; rollback;`, /BUSINESS_NOT_FOUND/);
 console.log("Phase 14A1: closed Store evidence, replay, empty/zero-sale periods, read-only scope/grants, decimal precision, privacy and bounded history pass.");
