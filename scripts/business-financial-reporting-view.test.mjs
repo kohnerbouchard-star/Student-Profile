@@ -16,5 +16,7 @@ test("reporting shows exact decimals, separate currencies and incomplete evidenc
 test("reporting distinguishes empty, stale and unavailable data", () => {
   assert.match(renderBusinessFinancialReporting(null), /unavailable/);
   assert.match(renderBusinessFinancialReporting({ statements: [] }), /No closed-period/);
-  assert.match(renderBusinessFinancialReporting({ statements: [] }, "stale"), /unavailable/);
+  const stale = renderBusinessFinancialReporting({ statements: [{ periodNumber: "7", dueAt: "2026-09-08T00:00:00Z", status: "complete", currencies: [] }] }, "stale");
+  assert.match(stale, /Showing the last loaded reports/);
+  assert.match(stale, /Period 7/);
 });

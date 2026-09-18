@@ -102,6 +102,7 @@ jobs:
         run: |
           npm ci --ignore-scripts
           npm --prefix player-terminal ci --ignore-scripts
+          cd player-terminal
           npx playwright install --with-deps chromium
       - name: Verify reporting and retained workspace in desktop and mobile browsers
         env:
