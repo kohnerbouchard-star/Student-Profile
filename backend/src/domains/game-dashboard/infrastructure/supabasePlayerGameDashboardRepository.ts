@@ -374,12 +374,13 @@ export class SupabasePlayerGameDashboardRepository
       meCheckingBalances,
       meCountry.currencyCode,
     );
+    const stockCash = toCashDto(meCheckingBalances, "ECO");
     const meHoldings = holdings
       .filter((holding) => holding.player_id === input.playerId)
       .map((holding) =>
         toHoldingDto(holding, stockByAssetId.get(holding.stock_asset_id))
       );
-    const portfolio = summarizePortfolio(meCash, meHoldings);
+    const portfolio = summarizePortfolio(stockCash, meHoldings);
     const leaderboard = toLeaderboard(
       players,
       countryByPlayerId,
@@ -396,9 +397,13 @@ export class SupabasePlayerGameDashboardRepository
     ) =>
       value.currencyCode !== valuationCurrencyCode && value.marketValue !== 0
     );
-    const excludedStockMarketValue =
-      excludedStocksByCurrency.find((value) => value.currencyCode === "ECO")
-        ?.marketValue ?? 0;
+    const excludedStockMarketValue = valuationCurrencyCode === "ECO"
+      ? 0
+      : portfolio.holdingsMarketValue;
+    const matchingHoldingsMarketValue =
+      portfolio.byCurrency?.find((value) =>
+        value.currencyCode === valuationCurrencyCode
+      )?.marketValue ?? 0;
 
     return {
       gameSession: {
@@ -419,7 +424,7 @@ export class SupabasePlayerGameDashboardRepository
         netWorth: myLeaderboardEntry?.netWorth ??
           round(
             meCash.totalBalance + meSavingsTotal +
-              portfolio.holdingsMarketValue,
+              matchingHoldingsMarketValue,
           ),
         netWorthValuation: {
           currencyCode: valuationCurrencyCode,

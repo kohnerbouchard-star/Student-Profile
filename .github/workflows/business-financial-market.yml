@@ -50,7 +50,7 @@ jobs:
           node scripts/business-financial-market-contract.mjs
           node --check scripts/business-financial-market-database.mjs
           node --test scripts/business-financial-market-client.test.mjs
-          deno test --allow-env backend/src/domains/business/infrastructure/businessMarketCustodyWorkspace.test.ts backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts backend/src/domains/stocks/services/businessStockListingProjection.test.ts backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.test.ts backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.test.ts backend/src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts
+          deno test --allow-env backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts backend/src/domains/business/infrastructure/businessMarketCustodyWorkspace.test.ts backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts backend/src/domains/stocks/services/businessStockListingProjection.test.ts backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.test.ts backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.test.ts backend/src/domains/stocks/infrastructure/supabaseStockMarketTradingRepository.test.ts
           node scripts/business-financial-reporting-contract.mjs
           node scripts/validate-supabase-migrations.mjs
           if [ -n "$PR_NUMBER" ]; then

@@ -19,3 +19,16 @@ const database=readFileSync('scripts/business-financial-market-database.mjs','ut
 for(const token of ['createPrimaryIpoFixture','closeIpoOperatingHistory','pollForDatabaseWait','after_funding','after_holding','after_order','after_trade','after_evidence','verifyPrimaryIpoPurge','otherBefore'])assert.ok(database.includes(token),token);
 const runner=readFileSync('backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.ts','utf8');assert.ok(runner.indexOf('"consume_business_market_events_v1"')<runner.indexOf('const tickIndex ='));
 console.log('Phase 14D source: separate Business/Market/Banking authorities, whole-share custody, immutable event consumption, retained settlement and exact-source acceptance are present.');
+
+const purge=migration('business_financial_market_purge_convergence_v1');
+const previous=migration('business_primary_ipo_purge_convergence_v1');
+const normalize=body=>body
+  .replaceAll("7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3","ab44a67a1247fd706636c3aeb627f352344ca08bde6b6c7159f686a873612a48")
+  .replaceAll("fe88cafd56ca4c21ab3c1d34385e21f4c3d8be201eae44ee7f5539a34a98f329","343f1966b3750e7a639fb82059bab1049edd44591e27d59cd08017c19be46198")
+  .replaceAll("19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897","f2fe1c6ad5d11bf7c73e1bd761153e6e6cfa726d9b26f780b62e42eb603667b6")
+  .replace(/\b(206|207|456)\b/gu,value=>({206:"205",207:"206",456:"455"})[value]);
+for(const name of ['execute_game_data_purge_db_batch_v2','finalize_game_data_purge_v1']) {
+  const expression=new RegExp(`create or replace function public\\.${name}\\([\\s\\S]*?\\$function\\$;`,'u');
+  assert.equal(normalize(purge.match(expression)?.[0]||''),previous.match(expression)?.[0],name);
+}
+console.log('Phase 14D purge changes only replay-observed fingerprints and cursor bounds; complete authorization and zero-row proof are preserved.');

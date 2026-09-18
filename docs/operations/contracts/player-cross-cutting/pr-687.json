@@ -15,6 +15,7 @@
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
     "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
     "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+    "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts",
     "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.ts",
     "backend/src/domains/stocks/contracts/businessStockListingContracts.ts",
     "backend/src/domains/stocks/contracts/playerStockAssetListContracts.ts",
@@ -34,6 +35,7 @@
     "backend/supabase/migrations/20260918093021_business_market_listing_consumer_v1.sql",
     "backend/supabase/migrations/20260918093133_business_market_common_share_settlement_v1.sql",
     "backend/supabase/migrations/20260918093319_business_financial_market_purge_registry_v1.sql",
+    "backend/supabase/migrations/20260918095220_business_financial_market_purge_convergence_v1.sql",
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-687.json",
     "docs/roadmaps/business-financial-market-scope-v1.md",
@@ -54,6 +56,7 @@
     "scripts/business-financial-market-database.mjs",
     "scripts/business-financial-market-fixture.mjs",
     "scripts/business-primary-ipo-purge.mjs",
+    "scripts/business-store-sales-convergence-database.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],

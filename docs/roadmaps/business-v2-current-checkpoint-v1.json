@@ -80,9 +80,9 @@
   "active_checkpoint_pr": 687,
   "active_checkpoint_started_at": "2026-09-18T09:28:37.958991+00:00",
   "active_candidate_parent_sha": "1b1af1d492cc0f9dfe55dfa0f6a326106be3f8ea",
-  "active_candidate_implementation_sha": null,
+  "active_candidate_implementation_sha": "55d26fefddf44510d693205886c77b12d1b48c59",
   "active_candidate_state": "IN_PROGRESS",
-  "active_candidate_note": "Phase 14D Market integration prepared from the exact green Phase 14C handoff; source/database/browser certification is pending.",
+  "active_candidate_note": "First 14D source/browser and pre-purge settlement acceptance passed. Retained HTTP fixtures, ECO summary compatibility and observed purge convergence repaired; full exact-source certification remains pending.",
   "next_authorized_checkpoint": "BUSINESS-V2-14D",
   "next_authorized_scope": "Market-owned versioned Business event consumption, completed-IPO listing, canonical common-share secondary transfers and authenticated Market/Portfolio surfaces; no live release.",
   "remaining_dependency_order": [

@@ -3205,7 +3205,7 @@
       },
       {
         "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "lines": 1127
+        "lines": 1132
       },
       {
         "file": "player-terminal/src/api/read-model.js",
@@ -3324,6 +3324,10 @@
         "lines": 724
       },
       {
+        "file": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts",
+        "lines": 716
+      },
+      {
         "file": "frontend/src/core/login.js",
         "lines": 715
       },
@@ -3357,10 +3361,6 @@
       },
       {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
-        "lines": 649
-      },
-      {
-        "file": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts",
         "lines": 649
       },
       {

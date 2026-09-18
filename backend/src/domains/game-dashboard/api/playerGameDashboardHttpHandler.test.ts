@@ -185,7 +185,7 @@ Deno.test("dashboard uses authoritative common shares and keeps national currenc
     body.me.stocks.holdings.map((h: { quantity: number }) => h.quantity),
     [5, 20],
   );
-  assertEquals(body.me.stocks.portfolio.holdingsMarketValue, 625);
+  assertEquals(body.me.stocks.portfolio.holdingsMarketValue, 0);
   assertEquals(body.me.stocks.portfolio.valuationStatus, "partial_unconverted");
   assertEquals(body.me.netWorth, 10125);
   assertEquals(body.me.netWorthValuation.status, "partial_unconverted");
@@ -248,7 +248,7 @@ Deno.test("player dashboard includes same-player stock history across sessions a
     totalBalance: 9500,
   });
   assertEquals(body.me.stocks.portfolio, {
-    currencyCode: "SLV",
+    currencyCode: "ECO",
     byCurrency: [{
       currencyCode: "SLV",
       marketValue: 625,
@@ -256,13 +256,13 @@ Deno.test("player dashboard includes same-player stock history across sessions a
       unrealizedPnl: 125,
       realizedPnl: 30,
     }],
-    valuationStatus: "complete",
-    cashBalance: 9500,
-    holdingsMarketValue: 625,
-    totalEquity: 10125,
-    totalCostBasis: 500,
-    unrealizedPnl: 125,
-    realizedPnl: 30,
+    valuationStatus: "partial_unconverted",
+    cashBalance: 0,
+    holdingsMarketValue: 0,
+    totalEquity: 0,
+    totalCostBasis: 0,
+    unrealizedPnl: 0,
+    realizedPnl: 0,
     positionsCount: 1,
   });
   assertEquals(body.me.stocks.holdings, [{
