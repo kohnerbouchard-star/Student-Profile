@@ -1,7 +1,7 @@
 # Phase 14C — Fixed-price primary IPO issuance
 
 Roadmap item: `BUSINESS-V2-14C`, within `BETA-BUSINESS-V2-001`.
-Status: `IN_PROGRESS`, draft PR #686. This document establishes the existing authorized successor owner; it is not an implementation certificate.
+Status: `IMPLEMENTED_NOT_MERGED`, draft PR #686. Exact repository-certified implementation: `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`.
 
 Owner: `feat/business-ipo-issuance-v2`, based on exact green Phase 14B handoff `bab8393cd8f0d30a84be5ad36ad90f41f9cae75f`. Its 28 workflows passed, with 53 successful jobs and three expected manual staging/parity skips. The predecessor implementation certificate remains `197caa4034214e21b8033a3f4363dc07a13b5dcf` on draft PR #685. Vercel passed. The connected workflow and both 30/40-player loads also passed on the handoff.
 
@@ -29,4 +29,16 @@ After this source and handoff are certified, `BUSINESS-V2-14D` consumes versione
 
 Initial candidate `8ba46d6e94fc77d5787a0f7a8639463630a7cd88` passed IPO source and all IPO/retained workspace desktop/mobile browser checks on run `35324179840`. The fresh database rebuilt through all migrations; the test stopped on an invalid paused-game fixture. Retained Edge checks identified an overly broad mixed-facade route type, and retained ownership source assertions required reconciliation to the canonical resolver. These are corrected with explicit retained delegation and a test proving ambiguous authority cannot fall back to investment ownership.
 
-Fresh database job `105533302010` observed registry `ab44a67a1247fd706636c3aeb627f352344ca08bde6b6c7159f686a873612a48` / 206 tables; FK graph `343f1966b3750e7a639fb82059bab1049edd44591e27d59cd08017c19be46198` / 455 edges; delete order `f2fe1c6ad5d11bf7c73e1bd761153e6e6cfa726d9b26f780b62e42eb603667b6` / 205 tables; final cursor 206. CLI-generated forward migration `20260918083200_business_primary_ipo_purge_convergence_v1.sql` advances only those fingerprint/cursor constants in the canonical writers. Source comparison preserves every request, entitlement, environment, token and physical zero-row guard. A populated IPO purge test and first-subscription held-funds rollback test are added. Certification still requires the corrected candidate's complete exact-commit matrix.
+Fresh database job `105533302010` observed registry `ab44a67a1247fd706636c3aeb627f352344ca08bde6b6c7159f686a873612a48` / 206 tables; FK graph `343f1966b3750e7a639fb82059bab1049edd44591e27d59cd08017c19be46198` / 455 edges; delete order `f2fe1c6ad5d11bf7c73e1bd761153e6e6cfa726d9b26f780b62e42eb603667b6` / 205 tables; final cursor 206. CLI-generated forward migration `20260918083200_business_primary_ipo_purge_convergence_v1.sql` advances only those fingerprint/cursor constants in the canonical writers. Source comparison preserves every request, entitlement, environment, token and physical zero-row guard. A populated IPO purge test and first-subscription held-funds rollback test are added. The corrected exact-commit matrix passed as recorded below.
+
+## Repository certificate
+
+Exact source `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`: all 43 workflows, 84 applicable jobs and Vercel passed. Four expected skips cover manual staging/release/parity and the historical Phase 4A inventory writer; no required IPO or connected gate skipped. The checkpoint retains every run/job identity.
+
+Primary IPO run `35326213193`: source `105539748023`, database `105539747818`, browser `105539747974`. Two fresh zero-to-head replays, advisors, canonical formation/Store/close/issuance, held-funds rollback, allocation race, immutable evidence, operator separation and populated canonical purge passed. Advisors report only the three retained duplicate-index warnings. All 12 desktop/mobile IPO and retained workspace cases passed. Browser artifact `10539480034`, SHA-256 `533e6c58df3215401acec39aa54e51a24f31be1ec7ce82675d58f44efefde21b`, expires 2026-10-02; CI logs establish browser execution, not a local artifact inspection.
+
+Connected run `35326213393`, job `105539888140`, passed Business/World and retained journeys, 30/40-player loads with zero server errors and final enforcement. Retained common-equity, reporting, Store/Inventory/Banking/FX, Admin, Player, Edge, security and database gates all passed.
+
+Four forward migrations end at `20260918083200_business_primary_ipo_purge_convergence_v1.sql`. Routes are the shared authenticated IPO read/propose/vote/subscribe adapters. Business owns common positions and issuance; canonical Banking owns cash. No applied migration was changed. The final correction extracts reusable test support and applies the retained Deno formatting gate without changing economics or raising architecture ceilings.
+
+Local root tests, Backend TypeScript, focused Deno/Player contracts, migration, authority, architecture and secret checks passed. Browser responses are bounded fixtures; transactional economics are proved by disposable PostgreSQL. Live staging/production evidence is not claimed. Rollout must follow A → B → C → D under separate release authorization, with fresh replay, parity and exact artifacts. Corrections remain forward-only. This documentation handoff preserves the source identity above.

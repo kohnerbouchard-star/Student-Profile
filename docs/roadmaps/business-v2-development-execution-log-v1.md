@@ -1436,3 +1436,11 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 ## 2026-09-18 — Phase 14C candidate
 
 Opened draft PR #686 from exact green common-equity handoff `bab8393cd8f0d30a84be5ad36ad90f41f9cae75f`. Source, authorization, atomic issuance, Player review and recovery verification are in progress. This is not a certificate. Phase 14B remains the latest certified implementation.
+
+## 2026-09-18 — Phase 14C repository certification
+
+- Draft PR #686, exact source `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`: all 43 workflows, 84 jobs and Vercel passed; four manual/historical skips. `phase14c_certification` retains complete identities.
+- IPO run `35326213193` / source `105539748023`, database `105539747818`, browser `105539747974`: two fresh replays/advisors and all 12 desktop/mobile cases passed. Canonical formation/Store/close, immutable approved terms, held-funds rollback, issuance/Banking conservation, allocation race, operating mandates, role/scope denial and populated purge passed.
+- Connected `35326213393` / `105539888140` passed retained Business/World journeys, 30/40-player load, zero server errors and enforcement. Browser artifact `10539480034`, SHA-256 `533e6c58df3215401acec39aa54e51a24f31be1ec7ce82675d58f44efefde21b`. Evidence limits and forward rollout remain in the scope document.
+- Repairs preserve explicit mixed-facade delegation, canonical resolver ambiguity, observed purge fingerprints, valid paused-game fixtures and retained Deno formatting; no assertion/security boundary or architecture ceiling was weakened. Advisors retain three pre-existing duplicate-index warnings.
+- Status `IMPLEMENTED_NOT_MERGED`; full Phase 14 `IN_PROGRESS`. No merge, deployment, live SQL, scheduler or secret action. Next authorized item after green documentation handoff: `BUSINESS-V2-14D` Market-owned events, listing and common-share secondary trading.
