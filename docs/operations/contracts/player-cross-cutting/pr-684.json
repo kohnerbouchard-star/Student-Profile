@@ -17,6 +17,8 @@
     "docs/roadmaps/business-v2-development-execution-plan-v1.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "backend/supabase/migrations/20260918014630_business_financial_reporting_v1.sql",
+    "backend/supabase/migrations/20260918032342_business_accounting_evidence_v1.sql",
+    "backend/supabase/migrations/20260918032648_business_financial_statements_v1.sql",
     "scripts/business-financial-reporting-database.mjs",
     "scripts/business-financial-reporting-contract.mjs",
     ".github/workflows/business-financial-reporting.yml",
@@ -58,5 +60,5 @@
     "business-financial-reporting-source",
     "business-financial-reporting-database"
   ],
-  "authorizationNote": "Owner authorized merge and Phase 14 start on 2026-09-18. This draft starts BUSINESS-V2-14A1 from merged main 4a9674ed9ca0565c828093fe100aa658ef4faaa6 with read-only closed-period reporting and retained verification. No full financial statements, equity/IPO, deployment, live database mutation or secret handling."
+  "authorizationNote": "Owner authorized completing Phase 14A through 14D on 2026-09-18. This existing draft owns Phase 14A financial statements, canonical accounting evidence and authenticated reporting, with retained verification. Equity, IPO and Market integration retain separate successor owners after a green predecessor. No deployment, live database mutation or secret handling."
 }

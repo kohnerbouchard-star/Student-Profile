@@ -21,6 +21,11 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`BUSINESS-V2-14A`–`14D` — Full Phase 14 continuation (2026-09-18)**
+  - Status: `IN_PROGRESS`. The owner instructed “continue until phase 14 is done,” authorizing all four implementation and verification stages. Existing reporting owner PR #684 remains authoritative; successors retain the exact-green-predecessor sequence below. No deployment, live SQL, secret or scheduler change is authorized.
+  - Current work: canonical inventory/loan position evidence and immutable period-end financial statements in CLI-generated migrations `20260918032342_business_accounting_evidence_v1.sql` and `20260918032648_business_financial_statements_v1.sql`. These are under development, not certified. Complete reporting includes labor capitalization, separate-currency balances/cash flows, authenticated Player/Admin views and connected acceptance before common equity, fixed-price primary IPO and Market-owned event consumption.
+  - The prior reporting handoff's retained Store browser failure passed unchanged on rerun (run `35298549687`, job `105468946753`); no retained assertion was weakened. Live parity remains a separate release/runtime blocker.
+
 - **`BUSINESS-V2-14A1` — Closed-period financial reporting foundation**
   - Status: `IMPLEMENTED_NOT_MERGED`. Draft PR #684, owner `feat/business-financial-reporting-v2`, from merged Phase 13 main `4a9674ed9ca0565c828093fe100aa658ef4faaa6`. Exact verified implementation `c3647db988f2be8edd52b1656e640b388b2fc00f`; Phase 14A and the full phase remain `IN_PROGRESS`.
   - Scope: read-only, owner-scoped reporting over immutable closed-period receipts; exact amounts by currency and bounded history. Full statements await labor capitalization and period-end reconciliation.
