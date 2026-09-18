@@ -13,9 +13,10 @@ path. No credential may be copied into an issue, pull request, artifact, or log.
 ## Normal release path
 
 Merging code does not authorize deployment. The Edge Function inventory and
-production Git release workflows require a separate manual dispatch on current
+production Git release workflows, and the Admin V2 production cutover workflow,
+require a separate manual dispatch on current
 `main` with `release_authorized: true`, after the owner approves that release.
-Their push events cannot deploy functions or advance `release/production`.
+Their push events cannot deploy functions, promote Admin, or advance `release/production`.
 For an approved release, run Edge convergence first, then Production Git Release
 at the same immutable current-main SHA. Exact-source, staging, inventory,
 migration parity and production-environment gates remain mandatory. If `main`

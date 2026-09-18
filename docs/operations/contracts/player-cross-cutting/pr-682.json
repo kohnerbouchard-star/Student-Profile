@@ -9,6 +9,9 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/admin-v2-production-cutover.yml",
+    "scripts/vercel-git-release-contract.test.mjs",
+    "docs/operations/production-change-control.md",
     ".github/workflows/admin-browser-e2e.yml",
     ".github/workflows/admin-business-supervision.yml",
     "admin/v2/src/routes/business/BusinessApi.js",
