@@ -8,11 +8,11 @@ export const ROUTE_RESOURCE_PLAN = Object.freeze({
   }),
   world: Object.freeze({ required: Object.freeze(["countries"]), optional: Object.freeze(["worldRuntime", "storyDeliveries"]) }),
   news: Object.freeze({ required: Object.freeze(["news"]), optional: Object.freeze([]) }),
-  market: Object.freeze({ required: Object.freeze(["market"]), optional: Object.freeze(["news", "banking", "bankingFx", "portfolio", "countries"]) }),
+  market: Object.freeze({ required: Object.freeze(["market"]), optional: Object.freeze(["news", "banking", "bankingFx", "portfolio", "countries", "businessIpos"]) }),
   portfolio: Object.freeze({ required: Object.freeze(["portfolio"]), optional: Object.freeze(["market"]) }),
   business: Object.freeze({
     required: Object.freeze(["business", "countries"]),
-    optional: Object.freeze(["businessWorkforce", "store"]),
+    optional: Object.freeze(["businessWorkforce", "store", "businessIpos"]),
     dependent: Object.freeze(["businessTreasury", "businessStockroom", "businessRecipes", "businessEquipment"]),
   }),
   contracts: Object.freeze({ required: Object.freeze(["contracts"]), optional: Object.freeze([]) }),
@@ -28,6 +28,9 @@ export const ROUTE_RESOURCE_PLAN = Object.freeze({
 });
 
 export const WRITE_INVALIDATIONS = Object.freeze({
+  businessIpoPropose: Object.freeze(["businessIpos", "business"]),
+  businessIpoVote: Object.freeze(["businessIpos", "business"]),
+  businessIpoSubscribe: Object.freeze(["businessIpos", "business", "businessTreasury", "banking", "portfolio"]),
   arrivalClass: Object.freeze(["worldRuntime", "dashboard"]),
   travelQuote: Object.freeze([]),
   travelExecute: Object.freeze(["worldRuntime", "dashboard", "banking"]),

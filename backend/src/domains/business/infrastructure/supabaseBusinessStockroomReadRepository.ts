@@ -101,9 +101,13 @@ function validateWorkspaceGovernance(value: unknown): void {
   boundedInteger(governance.ownershipModelVersion, 1, 2); boundedInteger(governance.ownerCount, 1, 100_000);
   nonNegativeIntegerString(governance.totalUnits); nonNegativeIntegerString(governance.totalVotingUnits);
   if (governance.readOnly !== true) throw invalidWorkspaceProjection();
+  if (governance.currentPosition === null) {
+    if (governance.managementAuthority !== true) throw invalidWorkspaceProjection();
+  } else {
   const position = strictRow(governance.currentPosition);
   publicKey(position.positionKey, "own"); requiredText(position.ownershipKind); nonNegativeIntegerString(position.units); nonNegativeIntegerString(position.votingUnits);
   boundedInteger(position.ownershipBasisPoints, 0, 10_000); boundedInteger(position.votingBasisPoints, 0, 10_000); timestamp(position.effectiveAt);
+  }
   if (governance.corporateShareStructure !== null) {
     const structure = strictRow(governance.corporateShareStructure);
     for (const key of ["authorizedShares", "issuedShares", "treasuryShares", "outstandingShares"]) nonNegativeIntegerString(structure[key]);

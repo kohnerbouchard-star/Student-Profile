@@ -1,7 +1,7 @@
 # Phase 14C — Fixed-price primary IPO issuance
 
 Roadmap item: `BUSINESS-V2-14C`, within `BETA-BUSINESS-V2-001`.
-Status: `IN_PROGRESS`. This document establishes the existing authorized successor owner; it is not an implementation certificate.
+Status: `IN_PROGRESS`, draft PR #686. This document establishes the existing authorized successor owner; it is not an implementation certificate.
 
 Owner: `feat/business-ipo-issuance-v2`, based on exact green Phase 14B handoff `bab8393cd8f0d30a84be5ad36ad90f41f9cae75f`. Its 28 workflows passed, with 53 successful jobs and three expected manual staging/parity skips. The predecessor implementation certificate remains `197caa4034214e21b8033a3f4363dc07a13b5dcf` on draft PR #685. Vercel passed. The connected workflow and both 30/40-player loads also passed on the handoff.
 

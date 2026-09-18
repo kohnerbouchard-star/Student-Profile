@@ -60,14 +60,14 @@
       "final-enforcement"
     ]
   },
-  "active_checkpoint": "BUSINESS-V2-14B",
-  "active_checkpoint_branch": "feat/business-common-equity-v2",
-  "active_checkpoint_pr": 685,
+  "active_checkpoint": "BUSINESS-V2-14C",
+  "active_checkpoint_branch": "feat/business-ipo-issuance-v2",
+  "active_checkpoint_pr": 686,
   "active_checkpoint_started_at": "2026-09-18T07:03:31.660465+00:00",
-  "active_candidate_parent_sha": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
-  "active_candidate_implementation_sha": "197caa4034214e21b8033a3f4363dc07a13b5dcf",
-  "active_candidate_state": "IMPLEMENTED_NOT_MERGED",
-  "active_candidate_note": "28 exact-source workflows, 53 applicable jobs and Vercel passed. Three manual staging/parity jobs correctly skipped. Full connected journey, both classroom loads, common-equity two fresh replays/race/advisors passed. Documentation handoff is separate from tested implementation.",
+  "active_candidate_parent_sha": "bab8393cd8f0d30a84be5ad36ad90f41f9cae75f",
+  "active_candidate_implementation_sha": null,
+  "active_candidate_state": "IN_PROGRESS",
+  "active_candidate_note": "Primary IPO candidate in preparation; exact-source database/browser and retained certification pending. Phase 14B remains the latest certified checkpoint.",
   "next_authorized_checkpoint": "BUSINESS-V2-14C",
   "next_authorized_scope": "Fixed-price primary IPO eligibility, immutable approved terms and atomic issuance on the exact green common-equity predecessor; preserve operator/treasury authority separately from investment ownership. Then 14D Market-owned consumption and secondary trading. No live release.",
   "remaining_dependency_order": [

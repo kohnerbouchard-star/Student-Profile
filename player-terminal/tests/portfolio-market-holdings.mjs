@@ -35,7 +35,7 @@ const asset = {
 
 assert.deepEqual(
   ROUTE_RESOURCE_PLAN.market.optional,
-  ["news", "banking", "bankingFx", "portfolio", "countries"],
+  ["news", "banking", "bankingFx", "portfolio", "countries", "businessIpos"],
   "Market route reloads must include authoritative Banking FX, Portfolio, and country metadata reads.",
 );
 

@@ -14,6 +14,10 @@ export type PlayerBusinessRoute =
       | "equipment"
       | "workforceCandidates";
   }
+  | { readonly kind: "businessIposRead" }
+  | { readonly kind: "businessIpoPropose" }
+  | { readonly kind: "businessIpoVote"; readonly ipoKey: string }
+  | { readonly kind: "businessIpoSubscribe"; readonly ipoKey: string }
   | { readonly kind: "businessTreasuryRead" }
   | { readonly kind: "businessTreasuryAccountOpen" }
   | { readonly kind: "businessTreasuryFxQuote" }

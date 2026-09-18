@@ -12,6 +12,7 @@ import { readBusinessRequestBody, validateBusinessRequestEnvelope, validateBusin
 import { createBusinessStoreQuote, purchaseBusinessStoreQuote, requestBusinessStoreWithdrawal } from "./playerBusinessStoreProcurement.ts";
 import { hireBusinessWorkforceCandidate, readBusinessWorkforceCandidates } from "./playerBusinessWorkforce.ts";
 import { cancelPlayerBusinessManufacturingJob, readPlayerBusinessManufacturingJobs, startPlayerBusinessManufacturingJob } from "./playerBusinessManufacturing.ts";
+import { dispatchPlayerBusinessIpoRequest } from "./playerBusinessIpoHttpDispatch.ts";
 import { dispatchPlayerBusinessTreasuryRequest } from "./playerBusinessTreasuryHttpDispatch.ts";
 
 export interface PlayerBusinessRequestScope { readonly gameId: string; readonly playerUuid: string }
@@ -31,7 +32,7 @@ export async function handlePlayerBusinessRequest(
 ): Promise<Response> {
   try {
     validateBusinessRequestEnvelope(request);
-    const isRead = route.kind === "businessRead" || route.kind === "businessTreasuryRead" || (route.kind === "businessManufacturingCollection" && request.method === "GET");
+    const isRead = route.kind === "businessRead" || route.kind === "businessTreasuryRead" || route.kind === "businessIposRead" || (route.kind === "businessManufacturingCollection" && request.method === "GET");
     const body = await readBusinessRequestBody(request, isRead);
     validateBusinessRequestMethodAndFields(route, request.method, body);
     const environment = (dependencies.readEnvironment ?? readSupabaseEnv)();
@@ -43,6 +44,9 @@ export async function handlePlayerBusinessRequest(
       : await dependencies.resolveScope(request, client, body);
     const repository = dependencies.createRepository ? dependencies.createRepository(client) : new SupabasePlayerBusinessRepository(client);
     const publicScope = { gameSessionId: scope.gameId, playerId: scope.playerUuid };
+
+    const ipoResponse = await dispatchPlayerBusinessIpoRequest({ route, body, client, publicScope });
+    if (ipoResponse) return ipoResponse;
 
     const treasuryResponse = await dispatchPlayerBusinessTreasuryRequest({ route, body, client, publicScope, createTreasuryRepository: dependencies.createTreasuryRepository });
     if (treasuryResponse) return treasuryResponse;

@@ -1432,3 +1432,7 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 - Common-equity run `35320024755`: source `105520237288`, database `105520237526`; two fresh replays, real formation/replay, one-share/one-vote and receipt reconciliation, negative/role/immutability checks, two-session capacity race, game isolation and advisors passed.
 - Connected run `35320024704` / job `105520237048` passed creation identity checks, all retained economic/Business/World/Crafting journeys, 30/40-player load and final enforcement. Two prior Beta lookup failures are retained above; no root cause/product fix is claimed. Stronger request/response identity checks and safe diagnostics stay in permanent acceptance.
 - Status `IMPLEMENTED_NOT_MERGED`; full Phase 14 remains `IN_PROGRESS`. No merge, deployment, live SQL, scheduler or secret action. Next exact item after this documentation handoff is green: `BUSINESS-V2-14C` fixed-price primary IPO, then `14D` Market integration.
+
+## 2026-09-18 — Phase 14C candidate
+
+Opened draft PR #686 from exact green common-equity handoff `bab8393cd8f0d30a84be5ad36ad90f41f9cae75f`. Source, authorization, atomic issuance, Player review and recovery verification are in progress. This is not a certificate. Phase 14B remains the latest certified implementation.

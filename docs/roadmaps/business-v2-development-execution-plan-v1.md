@@ -556,7 +556,7 @@ Phase 13 retains original certification `949da9f91990eeeee2cd815541446a5b6413066
 - [x] Implement and repository-certify Business statements/fundamentals from canonical operating evidence; see [scope and handoff](business-financial-reporting-scope-v1.md).
 - [x] Preserve the original 14A1 certificate while completing labor capitalization, period-end reconciliation and authenticated Player/Admin reporting.
 - [x] Repository-certify common-share invariants (`BUSINESS-V2-14B`), draft #685 at `197caa4034214e21b8033a3f4363dc07a13b5dcf`: 28 workflows, 53 jobs and Vercel passed, including two fresh database replays and full connected/load acceptance. Still unmerged.
-- [ ] Add fixed-price primary IPO eligibility/terms/issuance (`14C`).
+- [ ] Add and certify fixed-price primary IPO eligibility/terms/issuance (`14C`); candidate in progress on draft #686 from green handoff `bab8393cd8f0d30a84be5ad36ad90f41f9cae75f`.
 - [ ] Publish versioned Business events to a Market-owned consumer (`14D`).
 - [ ] Verify the existing Financial Market/Portfolio as the secondary trading surface after listing, without Business writing Market internals.
 - [ ] Merge/release only under applicable owner authorization and satisfy the separate live-parity/runtime boundary before `VERIFIED_COMPLETE`.

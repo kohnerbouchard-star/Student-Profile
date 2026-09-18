@@ -21,6 +21,11 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`BUSINESS-V2-14C` — Fixed-price primary IPO (2026-09-18)**
+  - Status: `IN_PROGRESS`, draft PR #686, owner `feat/business-ipo-issuance-v2`, from exact green Phase 14B handoff `bab8393cd8f0d30a84be5ad36ad90f41f9cae75f` (28 workflows, 53 jobs, Vercel and full connected/30–40-player checks passed; three expected manual staging/parity skips).
+  - Scope: canonical closed-statement eligibility, immutable approved terms, atomic Checking-to-Business funding/common issuance, explicit operating mandates, authenticated Player IPO adapters and Business/Market review. See `business-primary-ipo-scope-v1.md`. Candidate verification is pending; this is not a completion claim.
+  - Next exact dependency after certification: `BUSINESS-V2-14D`. No Phase 14 merge, deployment, live SQL, scheduler or secret change is authorized by this draft.
+
 - **`BUSINESS-V2-14B` — Common-equity invariants (2026-09-18)**
   - Status: `IMPLEMENTED_NOT_MERGED`, exact certified implementation `197caa4034214e21b8033a3f4363dc07a13b5dcf`. Owner draft PR #685 / `feat/business-common-equity-v2`, exact green predecessor handoff `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`; no replacement reporting owner.
   - CLI-created forward enforcement migration, permanent source/two-replay database/race acceptance and retained stack CI filters are prepared. Canonical positions, immutable receipts and corporate share structure remain sole authorities; common shares reconcile one share/one vote, receipts and authorized capacity. Raw service cap-table writes are revoked; existing definer commands and request-bound game purge remain intact.
@@ -32,7 +37,7 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
   - Status: `IN_PROGRESS`. The owner instructed “continue until phase 14 is done,” authorizing all four implementation and verification stages. Existing reporting owner PR #684 remains authoritative; successors retain the exact-green-predecessor sequence below. No deployment, live SQL, secret or scheduler change is authorized.
   - Phase 14A: `IMPLEMENTED_NOT_MERGED` on draft PR #684 at exact certified source `aed8c3f6462d927cec3ebc55602854d48a460a9b`. Five CLI-generated forward migrations (`20260918014630` through `20260918035524`) implement closed-period evidence, immutable inventory/loan observations, reconciled income/balance/cash-flow statements, authenticated Player/Admin reads and canonical purge convergence. Player Finance and Admin's 25 read-only sections preserve exact decimal text, separate currencies, historical coverage, privacy and stale/error states. Implementation files, RPCs, rollout and acceptance limits are in `business-financial-reporting-scope-v1.md`.
   - Verification at that source: all 50 applicable workflows, 90 checks and Vercel passed. One staging-only workflow and eight manual/historical jobs skipped as expected. Reporting run `35314969708` passed source/database/browser, two fresh replays and advisors; all six desktop/mobile cases passed. Connected run `35314969894` passed Business/World, both classroom load profiles and final enforcement. Full workflow/job/artifact identities and skip reasons are in the checkpoint. No required economic or connected gate was skipped.
-  - Next exact item: `BUSINESS-V2-14C` fixed-price primary issuance after the green common-equity handoff, then `14D` Market event consumption/secondary trading. These successors remain unimplemented.
+  - Next exact item: `BUSINESS-V2-14C` fixed-price primary issuance after the green common-equity handoff, then `14D` Market event consumption/secondary trading. Phase 14C is now in progress on draft PR #686; 14D remains unimplemented.
   - The prior reporting handoff's retained Store browser failure passed unchanged on rerun (run `35298549687`, job `105468946753`); no retained assertion was weakened. Live parity remains a separate release/runtime blocker.
 
 - **`BUSINESS-V2-14A1` — Closed-period financial reporting foundation**

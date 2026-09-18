@@ -1,3 +1,4 @@
+import { renderBusinessIpoPanel } from "../features/business-ipo/business-ipo-panel.js";
 import { escapeHtml, formatCompact, formatCurrency, formatNumber, formatPercent, toneFromChange } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderChange, renderEmptyState, renderStatusPill } from "../components/ui.js";
@@ -38,7 +39,7 @@ function checkingAccountOptions(accounts, selectedKey = "") {
 export function renderMarketPage(data, ui) {
   const market = data.market;
   if (!Array.isArray(market?.assets) || !market.assets.length) {
-    return `<section class="player-terminal-page player-terminal-market-page" data-page="market"><header class="player-terminal-page-heading"><div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets and prepare market orders.</p></div></header>${renderEmptyState({ title: "No assets are listed", detail: "The exchange directory will populate when tradable instruments become available.", iconName: "market" })}</section>`;
+    return `<section class="player-terminal-page player-terminal-market-page" data-page="market"><header class="player-terminal-page-heading"><div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets and prepare market orders.</p></div></header>${renderEmptyState({ title: "No assets are listed", detail: "The exchange directory will populate when tradable instruments become available.", iconName: "market" })}${renderBusinessIpoPanel(data)}</section>`;
   }
   const selectedId = ui.marketAssetId || market.selectedAssetId;
   const selected = market.assets.find((asset) => asset.id === selectedId) || market.assets[0];
@@ -184,5 +185,6 @@ export function renderMarketPage(data, ui) {
         ${bankingUnavailable ? "<p class=\"player-terminal-inline-empty\">Banking summary is unavailable; Stock funding still relies only on the canonical Banking FX account model.</p>" : ""}
       </section>
     </div>
+    ${renderBusinessIpoPanel(data)}
   </section>`;
 }

@@ -1,3 +1,4 @@
+import { FixtureBuilder, assertEquals, assertNoUuid } from "./businessRepositoryFixtureSupport.ts";
 import { SupabasePlayerBusinessRepository } from "./supabasePlayerBusinessRepository.ts";
 
 declare const Deno: {
@@ -433,65 +434,16 @@ function fixtureClient(overrides: Record<string, unknown[]>) {
         (columns) => selections.push({ table, columns }),
       );
     },
-    rpc() {
+    rpc(command: string, args: Record<string, unknown>) {
+      if (command === "resolve_player_business_v2") {
+        assertEquals(args, { p_game_session_id: GAME_ID, p_player_id: PLAYER_ID });
+        const businesses = fixtures.business_entities as Record<string, unknown>[];
+        const active = businesses.filter(row => row.status !== "closed");
+        if (!active.length) return Promise.resolve({ data: null, error: { message: "BUSINESS_NOT_FOUND" } });
+        if (active.length > 1) return Promise.resolve({ data: null, error: { message: "BUSINESS_OWNERSHIP_AMBIGUOUS" } });
+        return Promise.resolve({ data: [{ business_id: active[0].id }], error: null });
+      }
       return Promise.resolve({ data: null, error: null });
     },
   };
-}
-
-class FixtureBuilder implements
-  PromiseLike<{
-    data: unknown[];
-    error: null;
-  }> {
-  constructor(
-    private readonly data: unknown[],
-    private readonly onSelect: (columns: string) => void,
-  ) {}
-  select(columns: string) {
-    this.onSelect(columns);
-    return this;
-  }
-  eq() {
-    return this;
-  }
-  order() {
-    return this;
-  }
-  limit() {
-    return this;
-  }
-  then<TResult1 = { data: unknown[]; error: null }, TResult2 = never>(
-    onfulfilled?:
-      | ((
-        value: { data: unknown[]; error: null },
-      ) => TResult1 | PromiseLike<TResult1>)
-      | null,
-    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
-  ): PromiseLike<TResult1 | TResult2> {
-    return Promise.resolve({ data: this.data, error: null }).then(
-      onfulfilled,
-      onrejected,
-    );
-  }
-}
-
-function assertNoUuid(value: unknown): void {
-  const serialized = JSON.stringify(value);
-  if (
-    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/iu
-      .test(serialized)
-  ) {
-    throw new Error(
-      `Business Store-sales projection leaked an internal UUID: ${serialized}`,
-    );
-  }
-}
-
-function assertEquals(actual: unknown, expected: unknown): void {
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(
-      `Actual ${JSON.stringify(actual)} Expected ${JSON.stringify(expected)}`,
-    );
-  }
 }

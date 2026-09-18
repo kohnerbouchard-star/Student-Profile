@@ -192,3 +192,13 @@ test("Player namespaces retain explicit Vercel rewrites", async () => {
     ],
   );
 });
+
+test("Phase 14C retained verification is bound to PR 686 and exact IPO paths", async () => {
+  const manifestPath = authorityPathForPullRequest(686);
+  const value = JSON.parse(await readFile(manifestPath, "utf8"));
+  const input = { manifest: value, changedPaths: value.allowedPaths, pullRequestNumber: 686, baseRef: "feat/business-common-equity-v2", manifestPath };
+  assert.ok(verifyAuthority(input).changedPathCount > 0);
+  assert.throws(() => verifyAuthority({ ...input, baseRef: "main" }), /base ref/u);
+  assert.throws(() => verifyAuthority({ ...input, changedPaths: [...value.allowedPaths, "scripts/unreviewed.sql"] }), /does not allow/u);
+  for (const gate of ["business-primary-ipo-source", "business-primary-ipo-database", "business-primary-ipo-browser"]) assert.ok(value.criticalJobChecks.includes(gate));
+});

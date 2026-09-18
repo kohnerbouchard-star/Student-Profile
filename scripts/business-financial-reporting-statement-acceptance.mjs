@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { runSql, runJson, expectSqlError, sqlLiteral as q } from "./business-phase10-atomic-settlement-database-support.mjs";
 
-export function prepareContributedInventory(game) {
+export function prepareContributedInventory(game, currencyCode = "ECO") {
   // Replace disposable unreceipted seed stock with a real owner contribution.
   // Position observers remain enabled throughout: the initial seed and its
   // removal cancel; only the canonical contribution adds closing capital.
@@ -14,9 +14,9 @@ export function prepareContributedInventory(game) {
     v_player:=economy_private.ensure_player_inventory_account_v2(${q(game.id)},${q(game.ownerId)});
     insert into public.inventory_holdings(game_session_id,inventory_account_id,game_item_id,
       player_id,quantity_owned,quantity_reserved,average_unit_cost,cost_currency_code,version)
-    values(${q(game.id)},v_player,${q(game.gameItemId)},${q(game.ownerId)},10,0,2.5,'ECO',1)
+    values(${q(game.id)},v_player,${q(game.gameItemId)},${q(game.ownerId)},10,0,2.5,${q(currencyCode)},1)
     on conflict on constraint inventory_holdings_account_item_unique do update
-      set quantity_owned=10,average_unit_cost=2.5,cost_currency_code='ECO';
+      set quantity_owned=10,average_unit_cost=2.5,cost_currency_code=${q(currencyCode)};
     select canonical_key into v_item from public.game_items where id=${q(game.gameItemId)};
     perform * from public.contribute_player_inventory_to_business_v2(
       ${q(game.id)},${q(game.ownerId)},${q(game.businessKey)},v_item,10,'phase14-owner-inventory');
@@ -25,9 +25,9 @@ export function prepareContributedInventory(game) {
       'store_offer_stock',${q(game.offerId)},'phase14-list-contributed-inventory','{}'::jsonb,
       jsonb_build_array(
         jsonb_build_object('inventoryAccountId',v_warehouse,'gameItemId',${q(game.gameItemId)},
-          'quantityDelta',-10,'reservationDelta',0,'unitCost',2.5,'currencyCode','ECO'),
+          'quantityDelta',-10,'reservationDelta',0,'unitCost',2.5,'currencyCode',${q(currencyCode)}),
         jsonb_build_object('inventoryAccountId',v_listing,'gameItemId',${q(game.gameItemId)},
-          'quantityDelta',10,'reservationDelta',0,'unitCost',2.5,'currencyCode','ECO')));
+          'quantityDelta',10,'reservationDelta',0,'unitCost',2.5,'currencyCode',${q(currencyCode)})));
   end; $fixture$;`);
 }
 

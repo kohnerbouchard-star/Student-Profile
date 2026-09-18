@@ -35,6 +35,10 @@ Deno.test("reviewed Player route mapping is server-owned and exhaustive", () => 
     ],
     "bankingFxInstant:POST": ["player.banking.fx.orders.instant", "sensitive"],
     "bankingFxCancel:POST": ["player.banking.fx.orders.cancel", "sensitive"],
+    "businessIpos:GET": ["player.business.ipos.read", "read"],
+    "businessIpoPropose:POST": ["player.business.ipos.propose", "sensitive"],
+    "businessIpoVote:POST": ["player.business.ipos.vote", "sensitive"],
+    "businessIpoSubscribe:POST": ["player.business.ipos.subscribe", "sensitive"],
     "businessTreasury:GET": ["player.business.treasury.read", "read"],
     "businessTreasuryAccountOpen:POST": [
       "player.business.treasury.accounts.open",

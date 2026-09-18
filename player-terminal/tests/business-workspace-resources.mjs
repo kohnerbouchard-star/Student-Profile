@@ -116,7 +116,9 @@ assert.equal(advertised.businessTreasury, false, "Treasury keeps independent cap
 
 const businessPlan = resourcesForRoute("business");
 assert.deepEqual(businessPlan.required, ["business", "countries"]);
-assert.deepEqual(businessPlan.optional, ["businessWorkforce", "store"]);
+assert.deepEqual(businessPlan.optional, ["businessWorkforce", "store", "businessIpos"]);
+assert.equal(advertised.businessIpos, false, "IPO visibility requires its own advertised read capability.");
+assert.ok(resourcesForRoute("market").optional.includes("businessIpos"), "Passive investors can discover offerings without an operating Business.");
 assert.deepEqual(businessPlan.dependent, ["businessTreasury", "businessStockroom", "businessRecipes", "businessEquipment"]);
 assert.deepEqual(dependentResourcesForRoute("business", { business: { configured: false } }), []);
 assert.deepEqual(dependentResourcesForRoute("business", { business: { configured: true } }), ["businessTreasury", "businessStockroom", "businessRecipes", "businessEquipment"]);
