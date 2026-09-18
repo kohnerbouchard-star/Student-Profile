@@ -142,9 +142,10 @@ test("multiplayer workflow warms its disposable runtime before strict startup pr
   assert.ok(start >= 0 && journey > start);
   const startup = workflow.slice(start, journey);
   const gateway = startup.indexOf("echo $! > /tmp/player-runtime-gateway.pid");
+  const staticReady = startup.indexOf('test "$STATIC_READY" = "true"');
   const recovery = startup.indexOf("await restartLocalEdgeRuntime();");
   const probes = startup.indexOf("for ATTEMPT in $(seq 1 90)");
-  assert.ok(gateway >= 0 && recovery > gateway && probes > recovery);
+  assert.ok(gateway >= 0 && staticReady > gateway && recovery > staticReady && probes > recovery);
   assert.match(startup, /local-edge-runtime-isolation\.mjs/u);
   assert.match(startup, /\[ "\$PLAYER_STATUS" = "204" \]/u);
   assert.match(startup, /\[ "\$BOOTSTRAP_STATUS" = "204" \]/u);

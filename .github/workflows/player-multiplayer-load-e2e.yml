@@ -257,6 +257,17 @@ jobs:
             --port 4173 \
             > /tmp/player-runtime-gateway.log 2>&1 &
           echo $! > /tmp/player-runtime-gateway.pid
+          # The gateway writes runtime-config.env.js before serving static files.
+          # Wait for that handoff before the recovery helper reads the config.
+          STATIC_READY=false
+          for ATTEMPT in $(seq 1 30); do
+            if [ "$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 5 http://127.0.0.1:4173/ || true)" = "200" ]; then
+              STATIC_READY=true
+              break
+            fi
+            sleep 1
+          done
+          test "$STATIC_READY" = "true"
           # Warm and recover the disposable Edge runtime with the same bounded,
           # localhost-only readiness contract used by the other connected suites.
           # Keep the strict gateway checks and every journey/load gate below.
