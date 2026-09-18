@@ -29,7 +29,8 @@
     "scripts/player-cross-cutting-authority.test.mjs",
     ".github/workflows/player-terminal-verify.yml",
     "scripts/player-multiplayer-browser-acceptance-core.mjs",
-    "scripts/business-banking-player-commerce-browser-acceptance.core.mjs"
+    "scripts/business-banking-player-commerce-browser-acceptance.core.mjs",
+    "docs/roadmaps/business-v2-development-execution-plan-v1.md"
   ],
   "requiredFiles": [
     "backend/supabase/migrations/20260918070248_business_common_equity_invariants_v1.sql",

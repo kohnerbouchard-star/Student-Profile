@@ -1425,3 +1425,10 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 
 - Exact candidate `1780f1a741c931596118a577ee72e9a62e54ad6a` passed 25 workflows, including common-equity source/database and two fresh replays, reporting, Admin and retained monetary regressions. Connected multiplayer run `35318225125` failed its commerce fixture lookup twice, after two-player login, Messaging, notifications and watchlist passed. Downstream journeys/load did not execute and are not certified.
 - Add strict request/response identity assertions at rendered Player creation and bounded boolean/length diagnostics at the failing Admin lookup. No credentials/UUIDs are logged, no product or data mutation changes, and no existing assertion is removed. This diagnoses the repeatable failure before a repair; 14C remains unopened.
+
+## 2026-09-18 — Phase 14B repository certification
+
+- Draft PR #685, exact certified source `197caa4034214e21b8033a3f4363dc07a13b5dcf`, base green 14A handoff `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`. All 28 workflows, 53 applicable jobs and Vercel passed; three manual staging/parity jobs skipped as intended. Checkpoint `phase14b_certification` retains every run/job identity.
+- Common-equity run `35320024755`: source `105520237288`, database `105520237526`; two fresh replays, real formation/replay, one-share/one-vote and receipt reconciliation, negative/role/immutability checks, two-session capacity race, game isolation and advisors passed.
+- Connected run `35320024704` / job `105520237048` passed creation identity checks, all retained economic/Business/World/Crafting journeys, 30/40-player load and final enforcement. Two prior Beta lookup failures are retained above; no root cause/product fix is claimed. Stronger request/response identity checks and safe diagnostics stay in permanent acceptance.
+- Status `IMPLEMENTED_NOT_MERGED`; full Phase 14 remains `IN_PROGRESS`. No merge, deployment, live SQL, scheduler or secret action. Next exact item after this documentation handoff is green: `BUSINESS-V2-14C` fixed-price primary IPO, then `14D` Market integration.

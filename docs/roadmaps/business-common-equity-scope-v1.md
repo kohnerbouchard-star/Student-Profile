@@ -1,7 +1,7 @@
 # Phase 14B — Common-equity invariants
 
 Roadmap item: `BUSINESS-V2-14B`, within `BETA-BUSINESS-V2-001`.
-Status: `IN_PROGRESS`; no completion or live-runtime claim.
+Status: `IMPLEMENTED_NOT_MERGED`, exact certified implementation `197caa4034214e21b8033a3f4363dc07a13b5dcf`. No live-runtime claim.
 
 ## Ownership and dependency
 
@@ -33,7 +33,9 @@ Permanent source and disposable-database jobs verify the exact PR head. The data
 
 Retained reporting, Admin, Banking/FX, Store settlement/purge, connected Player and classroom-load gates remain required. Seven existing PR branch filters explicitly admit this stack's predecessor branches so required checks cannot disappear merely because a PR is stacked. Player Terminal verification also triggers for PR-bound authority manifests, preserving its required security/resilience checks on SQL-only tranches. Existing action pins and all manual deployment conditions remain intact.
 
-Exact implementation SHA, run/job identities, results and evidence limits will be recorded after publication and verification; until then this item stays `IN_PROGRESS`.
+Exact implementation `197caa4034214e21b8033a3f4363dc07a13b5dcf` passed all 28 workflows, 53 applicable jobs and Vercel. Three manual staging/parity jobs skipped as expected. Common-equity run `35320024755`: source `105520237288`, database `105520237526`, both passed; database acceptance ran after two fresh replays and advisors passed. Connected run `35320024704`, job `105520237048`, passed every retained journey, 30/40-player load and final enforcement. Full identities are in `phase14b_certification` in the checkpoint.
+
+Earlier candidate `1780f1a741c931596118a577ee72e9a62e54ad6a` failed the Beta commerce-fixture lookup twice. Final acceptance strengthens rendered-creation request/response identity checks and safe lookup diagnostics; it passed without weakening an assertion. The earlier failure's root cause remains unproven, so no product repair is claimed. The two bounded browser-core scripts are verification changes only. Evidence is from disposable CI, not live staging/production.
 
 ## Rollout and correction
 
