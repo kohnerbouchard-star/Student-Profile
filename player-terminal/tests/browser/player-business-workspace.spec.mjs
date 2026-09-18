@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 const keys = Object.freeze({
   business: `biz_${"a".repeat(32)}`,
@@ -33,6 +34,21 @@ const WORKSPACE_SECTIONS = Object.freeze([
 ]);
 
 async function mountWorkspace(page) {
+  // The fixture server is rooted in player-terminal. Supply the deployment
+  // configuration and real parent-directory initializer before host-runtime.
+  await page.route("**/runtime-config.env.js", (route) => route.fulfill({
+    contentType: "application/javascript",
+    body: `window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze(${JSON.stringify({
+      environment: "development",
+      projectRef: "localdevelopment0000",
+      supabaseUrl: "http://127.0.0.1:54321",
+      supabasePublishableKey: "sb_publishable_business_workspace_fixture",
+    })});`,
+  }));
+  const runtimeConfig = await readFile(new URL("../../../frontend/src/core/runtime-config.js", import.meta.url), "utf8");
+  await page.route("**/frontend/src/core/runtime-config.js", (route) => route.fulfill({
+    contentType: "application/javascript", body: runtimeConfig,
+  }));
   await page.goto("/?preview=1#business");
   await expect(page.locator("#player-main-content .player-terminal-page")).toBeVisible();
   await page.evaluate(async ({ keys }) => {
