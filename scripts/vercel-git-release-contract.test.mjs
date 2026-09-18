@@ -13,6 +13,31 @@ const verifier = readFileSync(
   "utf8",
 );
 const health = readFileSync("api/_runtime-health.js", "utf8");
+const edgeWorkflow = readFileSync(
+  ".github/workflows/edge-function-inventory-converge.yml",
+  "utf8",
+);
+
+// A code merge must not grant deployment authority. All environment reads and
+// writes stay behind the explicit dispatch, with existing parity gates intact.
+const releaseCondition =
+  "github.event_name == 'workflow_dispatch' && inputs.release_authorized == true && github.ref == 'refs/heads/main'";
+for (const [workflow, expectedJobs] of [
+  [edgeWorkflow, ["staging", "production"]],
+  [releaseWorkflow, ["static-contract", "staging-evidence", "production-evidence", "enforce-parity", "publish-release-branch"]],
+]) {
+  assert.match(workflow, /workflow_dispatch:\n    inputs:\n      release_authorized:\n        description: [^\n]+\n        required: true\n        type: boolean\n        default: false/u);
+  const jobs = [...workflow.slice(workflow.indexOf("\njobs:\n")).matchAll(/^  ([a-z-]+):\n([\s\S]*?)(?=^  [a-z-]+:\n|$(?![\s\S]))/gmu)];
+  assert.deepEqual(jobs.map((job) => job[1]), expectedJobs);
+  for (const [block, name] of jobs) {
+    if (name === "static-contract") continue;
+    assert.equal(block.match(/^    if: (.+)$/mu)?.[1], releaseCondition, `${name} needs explicit release authority`);
+  }
+}
+assert.equal((edgeWorkflow.match(/test "\$GITHUB_EVENT_NAME" = "workflow_dispatch"/gu) || []).length, 2);
+assert.ok(releaseWorkflow.includes("event=workflow_dispatch&per_page=20"));
+assert.match(edgeWorkflow, /production:\n[\s\S]*?needs: staging/u);
+assert.match(releaseWorkflow, /publish-release-branch:\n[\s\S]*?needs: enforce-parity/u);
 
 assert.equal(config.git?.deploymentEnabled?.main, false);
 assert.equal(config.git?.deploymentEnabled?.["release/production"], true);

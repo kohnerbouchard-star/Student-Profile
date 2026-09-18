@@ -12,6 +12,19 @@ path. No credential may be copied into an issue, pull request, artifact, or log.
 
 ## Normal release path
 
+Merging code does not authorize deployment. The Edge Function inventory and
+production Git release workflows require a separate manual dispatch on current
+`main` with `release_authorized: true`, after the owner approves that release.
+Their push events cannot deploy functions or advance `release/production`.
+For an approved release, run Edge convergence first, then Production Git Release
+at the same immutable current-main SHA. Exact-source, staging, inventory,
+migration parity and production-environment gates remain mandatory. If `main`
+moves, revalidate the new source; do not reuse earlier attestations.
+
+The 2026-09-18 instruction authorizes merging certified Business Phases 12–13
+and beginning Phase 14. It does not authorize these release dispatches or live
+SQL. This restriction also applies while migration parity remains unresolved.
+
 1. Merge a reviewed, bounded pull request after required checks pass.
 2. Build once from the immutable merge commit and create a release manifest.
 3. Apply migrations to an isolated staging project from the repository only.

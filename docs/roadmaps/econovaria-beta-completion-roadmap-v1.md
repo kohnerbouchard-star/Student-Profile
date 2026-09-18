@@ -21,6 +21,15 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`BETA-BUSINESS-MERGE-RELEASE-GUARD-001` — Separate merge from deployment**
+  - Status: `IN_PROGRESS`. Owner `fix/business-merge-release-guard-v1`, based on fetched main `9dc7906bb278b7eee9ceef6d3624fb088a6b5a97`.
+  - Owner instruction on 2026-09-18 authorizes merging certified Phase 12 PR #681 and Phase 13 PR #682, then starting `BUSINESS-V2-14A`. This supersedes the older Business no-merge/no-Phase-14 scope below. Deployment, live SQL, secret and scheduler changes remain outside the request.
+  - Merge preflight found that main-push Edge convergence deploys staging and production, and Production Git Release can advance the live release branch. Bound both to explicit manual release dispatch; retain exact-main, staging, parity, inventory and production-environment gates. Pushes retain static verification only.
+  - Existing PR #620 owns dependency action-version updates on these workflows, not this release-authorization correction. Preserve its action pins and reconcile this guard in any later dependency merge. No Phase 14 owner exists among the five live open PRs.
+  - Phase 12 source `76539c5cfcff612a322963e303e727e6edc7f7ed` / handoff `d6ddb52f38da1ad931ba56600b49786f11f11ac6` and Phase 13 source `949da9f91990eeeee2cd815541446a5b64130664` / handoff `c68bd1df07bc654ba9f59856b91f74a581da872e` retain their certifications. Both are still unmerged at this preflight. Main already contains Phase 11; older stack ownership text below is historical, not an instruction to merge closed PRs.
+  - Files: the two release workflows, their Vercel and retained Phase 11 source contracts, production change control and this ledger. No application, schema, RPC or live environment change. Validation and immutable PR/commit evidence follow before normal merge.
+  - Next: merge this bounded guard after checks, then merge #681 and #682 in dependency order and start financial reporting from resulting main. `BETA-LIVE-MIGRATION-PARITY-001` remains a separate runtime/release blocker.
+
 - **`BETA-BUSINESS-V2-001` — Business V2 completion through Phase 14**
   - Status: `IN_PROGRESS`
   - Requested scope and defaults: implement `BUSINESS-V2-10A4C4`, `BUSINESS-V2-10A4D`, `BUSINESS-V2-11`, `BUSINESS-V2-12`, `BUSINESS-V2-13`, and `BUSINESS-V2-14A`–`14D` as an unmerged draft stack. Only committed Player Store purchases may create new physical-goods sales after Phase 11; statements close on guarded server-owned payroll periods; IPOs are fixed-price primary issuances; legacy operating periods use a seven-day cadence and later policy changes affect only unopened periods.
