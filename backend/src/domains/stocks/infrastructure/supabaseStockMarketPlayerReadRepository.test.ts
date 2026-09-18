@@ -24,9 +24,12 @@ const OTHER_TRADE_ID = "00000000-0000-4000-8000-000000000302";
 
 Deno.test("stock player read repository maps cash, holdings, and portfolio math", async () => {
   const client = new FakeClient(defaultTables());
-  const repository = new SupabaseStockMarketPlayerReadRepository(client as any, {
-    now: () => new Date("2026-06-24T00:00:00.000Z"),
-  });
+  const repository = new SupabaseStockMarketPlayerReadRepository(
+    client as any,
+    {
+      now: () => new Date("2026-06-24T00:00:00.000Z"),
+    },
+  );
   const result = await repository.read({
     action: "read_portfolio",
     gameSessionId: GAME_SESSION_ID,
@@ -45,6 +48,15 @@ Deno.test("stock player read repository maps cash, holdings, and portfolio math"
       balance: 9500,
     },
     summary: {
+      currencyCode: "ECO",
+      valuationStatus: "complete",
+      byCurrency: [{
+        currencyCode: "ECO",
+        marketValue: 625,
+        costBasis: 500,
+        unrealizedPnl: 125,
+        realizedPnl: 30,
+      }],
       cashBalance: 9500,
       holdingsMarketValue: 625,
       totalEquity: 10125,
@@ -59,6 +71,7 @@ Deno.test("stock player read repository maps cash, holdings, and portfolio math"
       companyName: "Aurora Aerospace Systems",
       sector: "AI_AEROSPACE",
       countryCode: "SOLVEND",
+      currencyCode: "ECO",
       quantity: 5,
       averageCost: 100,
       currentPrice: 125,
@@ -99,9 +112,12 @@ Deno.test("stock player read repository queries only requested game and player d
       }),
     ],
   });
-  const repository = new SupabaseStockMarketPlayerReadRepository(client as any, {
-    now: () => new Date("2026-06-24T00:00:00.000Z"),
-  });
+  const repository = new SupabaseStockMarketPlayerReadRepository(
+    client as any,
+    {
+      now: () => new Date("2026-06-24T00:00:00.000Z"),
+    },
+  );
   const result = await repository.read({
     action: "read_holdings",
     gameSessionId: GAME_SESSION_ID,
@@ -114,17 +130,31 @@ Deno.test("stock player read repository queries only requested game and player d
   }
 
   assertEquals(result.holdings.map((holding) => holding.ticker), ["AURA"]);
-  assertTableFilter(client, "player_sessions", "game_session_id", GAME_SESSION_ID);
+  assertTableFilter(
+    client,
+    "player_sessions",
+    "game_session_id",
+    GAME_SESSION_ID,
+  );
   assertTableFilter(client, "player_sessions", "id", PLAYER_SESSION_ID);
-  assertTableFilter(client, "stock_holdings", "game_session_id", GAME_SESSION_ID);
-  assertTableFilter(client, "stock_holdings", "player_id", PLAYER_ID);
-  assertTableFilter(client, "game_session_stock_assets", "game_session_id", GAME_SESSION_ID);
+  assertEquals(client.rpcCalls, [{
+    functionName: "read_player_stock_positions_v1",
+    args: { p_game_session_id: GAME_SESSION_ID, p_player_id: PLAYER_ID },
+  }]);
+  assertTableFilter(
+    client,
+    "game_session_stock_assets",
+    "game_session_id",
+    GAME_SESSION_ID,
+  );
 });
 
 Deno.test("stock player read repository handles zero cost basis PnL percentage safely", async () => {
   const repository = repositoryWithTables({
     ...defaultTables(),
-    stock_holdings: [holdingRow({ quantity: 2, average_cost: 0, realized_pnl: 0 })],
+    stock_holdings: [
+      holdingRow({ quantity: 2, average_cost: 0, realized_pnl: 0 }),
+    ],
     game_session_stock_assets: [assetRow({ current_price: 25 })],
   });
   const result = await repository.read({
@@ -270,7 +300,12 @@ Deno.test("stock player read repository maps missing and inactive player session
     () =>
       repositoryWithTables({
         ...defaultTables(),
-        player_sessions: [playerSessionRow({ status: "revoked", revoked_at: "2026-06-24T00:00:00.000Z" })],
+        player_sessions: [
+          playerSessionRow({
+            status: "revoked",
+            revoked_at: "2026-06-24T00:00:00.000Z",
+          }),
+        ],
       }).read({
         action: "read_portfolio",
         gameSessionId: GAME_SESSION_ID,
@@ -288,9 +323,12 @@ Deno.test("stock player read repository maps schema errors", async () => {
     code: "42P01",
     message: "relation stock_holdings does not exist",
   });
-  const repository = new SupabaseStockMarketPlayerReadRepository(client as any, {
-    now: () => new Date("2026-06-24T00:00:00.000Z"),
-  });
+  const repository = new SupabaseStockMarketPlayerReadRepository(
+    client as any,
+    {
+      now: () => new Date("2026-06-24T00:00:00.000Z"),
+    },
+  );
 
   await assertRejectsWithCodeAndStatus(
     () =>
@@ -370,6 +408,7 @@ function assetRow(overrides: Record<string, unknown> = {}) {
     company_name: "Aurora Aerospace Systems",
     sector_key: "AI_AEROSPACE",
     country_code: "SOLVEND",
+    listing_currency_code: "ECO",
     current_price: 125,
     ...overrides,
   };
@@ -451,7 +490,68 @@ function assertTableFilter(
   }
 }
 
+Deno.test("stock player positions keep national currencies out of ECO totals", async () => {
+  const result = await repositoryWithTables({
+    ...defaultTables(),
+    game_session_stock_assets: [assetRow({ listing_currency_code: "NRC" })],
+  }).read({
+    action: "read_portfolio",
+    gameSessionId: GAME_SESSION_ID,
+    playerSessionId: PLAYER_SESSION_ID,
+    limit: 100,
+  });
+  if (result.action !== "read_portfolio") {
+    throw new Error("Expected portfolio.");
+  }
+  assertEquals(result.holdings[0].currencyCode, "NRC");
+  assertEquals(result.summary.holdingsMarketValue, 0);
+  assertEquals(result.summary.totalEquity, 9500);
+  assertEquals(result.summary.valuationStatus, "partial_unconverted");
+  assertEquals(result.summary.byCurrency, [{
+    currencyCode: "NRC",
+    marketValue: 625,
+    costBasis: 500,
+    unrealizedPnl: 125,
+    realizedPnl: 30,
+  }]);
+});
+Deno.test("stock player positions reject a foreign RPC result", async () => {
+  const client = new FakeClient(defaultTables());
+  client.rpc = async () => ({
+    data: [holdingRow({ game_session_id: OTHER_SESSION_ID })],
+    error: null,
+  });
+  const repository = new SupabaseStockMarketPlayerReadRepository(
+    client as any,
+    { now: () => new Date("2026-06-24T00:00:00Z") },
+  );
+  await assertRejectsWithCodeAndStatus(
+    () =>
+      repository.read({
+        action: "read_portfolio",
+        gameSessionId: GAME_SESSION_ID,
+        playerSessionId: PLAYER_SESSION_ID,
+        limit: 100,
+      }),
+    "stock_market_player_read_failed",
+    500,
+  );
+});
+
 class FakeClient {
+  readonly rpcCalls: { functionName: string; args: Record<string, string> }[] =
+    [];
+  async rpc(functionName: string, args: Record<string, string>) {
+    this.rpcCalls.push({ functionName, args });
+    assertEquals(functionName, "read_player_stock_positions_v1");
+    return {
+      data: (this.tables.stock_holdings ?? []).filter((r) =>
+        r.game_session_id === args.p_game_session_id &&
+        r.player_id === args.p_player_id
+      ),
+      error: this.tableErrors.get("stock_holdings") ?? null,
+    };
+  }
   readonly tableErrors = new Map<
     string,
     { readonly code?: string; readonly message: string }
@@ -469,7 +569,10 @@ class FakeClient {
 
 interface QueryExecution {
   readonly tableName: string;
-  readonly filters: readonly { readonly column: string; readonly value: unknown }[];
+  readonly filters: readonly {
+    readonly column: string;
+    readonly value: unknown;
+  }[];
   readonly inFilters: readonly {
     readonly column: string;
     readonly values: readonly unknown[];
@@ -477,13 +580,20 @@ interface QueryExecution {
 }
 
 class FakeQueryBuilder
-  implements PromiseLike<{ readonly data: unknown[] | null; readonly error: unknown }> {
-  private readonly filters: { readonly column: string; readonly value: unknown }[] = [];
+  implements
+    PromiseLike<{ readonly data: unknown[] | null; readonly error: unknown }> {
+  private readonly filters: {
+    readonly column: string;
+    readonly value: unknown;
+  }[] = [];
   private readonly inFilters: {
     readonly column: string;
     readonly values: readonly unknown[];
   }[] = [];
-  private readonly orderings: { readonly column: string; readonly ascending: boolean }[] = [];
+  private readonly orderings: {
+    readonly column: string;
+    readonly ascending: boolean;
+  }[] = [];
   private limitCount: number | null = null;
 
   constructor(
@@ -518,10 +628,15 @@ class FakeQueryBuilder
     return this;
   }
 
-  then<TResult1 = { readonly data: unknown[] | null; readonly error: unknown }, TResult2 = never>(
-    onfulfilled?: ((
-      value: { readonly data: unknown[] | null; readonly error: unknown },
-    ) => TResult1 | PromiseLike<TResult1>) | null,
+  then<
+    TResult1 = { readonly data: unknown[] | null; readonly error: unknown },
+    TResult2 = never,
+  >(
+    onfulfilled?:
+      | ((
+        value: { readonly data: unknown[] | null; readonly error: unknown },
+      ) => TResult1 | PromiseLike<TResult1>)
+      | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     return this.execute().then(onfulfilled, onrejected);
@@ -555,7 +670,10 @@ class FakeQueryBuilder
 
     for (const ordering of [...this.orderings].reverse()) {
       rows.sort((left, right) => {
-        const comparison = compareValues(left[ordering.column], right[ordering.column]);
+        const comparison = compareValues(
+          left[ordering.column],
+          right[ordering.column],
+        );
         return ordering.ascending ? comparison : -comparison;
       });
     }

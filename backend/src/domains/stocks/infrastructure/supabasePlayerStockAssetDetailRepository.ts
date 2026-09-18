@@ -1,7 +1,8 @@
+import { projectBusinessStockListing } from "../services/businessStockListingProjection.ts";
 import {
+  PlayerStockAssetDetailPersistenceError,
   type PlayerStockAssetDetailRepository,
   type PlayerStockAssetDetailRepositoryResult,
-  PlayerStockAssetDetailPersistenceError,
   type PlayerStockAssetHistoryRecord,
 } from "../contracts/playerStockAssetDetailContracts.ts";
 import type {
@@ -48,6 +49,10 @@ const ASSET_SELECT = [
   "sector_key",
   "country_code",
   "listing_currency_code",
+  "business_public_key",
+  "business_ipo_key",
+  "business_financials",
+  "business_market_policy",
   "description",
   "current_price",
   "previous_close",
@@ -91,7 +96,9 @@ export class SupabasePlayerStockAssetDetailRepository
     }
 
     const asset = toAssetRecord(assetRows[0]);
-    const historyResponse = await this.client.rpc<readonly Record<string, unknown>[]>(
+    const historyResponse = await this.client.rpc<
+      readonly Record<string, unknown>[]
+    >(
       "read_stock_market_history_v2",
       {
         p_game_session_id: input.gameId,
@@ -123,6 +130,9 @@ function toAssetRecord(row: Record<string, unknown>): PlayerStockAssetRecord {
     countryCode: requireCountryCode(row.country_code),
     listingCurrencyCode: requireCurrencyCode(row.listing_currency_code),
     description: optionalText(row.description),
+    ...(row.business_public_key == null
+      ? {}
+      : { commonEquity: projectBusinessStockListing(row) }),
     currentPrice: requireFiniteNumber(row.current_price),
     previousClose: requireFiniteNumber(row.previous_close),
     openPrice: requireFiniteNumber(row.open_price),
@@ -187,9 +197,10 @@ function optionalText(value: unknown): string | null {
 function requireUuid(value: unknown): string {
   const text = requireText(value).toLowerCase();
   if (
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(
-      text,
-    )
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+      .test(
+        text,
+      )
   ) {
     throw readFailed();
   }

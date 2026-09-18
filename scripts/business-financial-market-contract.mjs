@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {readdirSync,readFileSync} from 'node:fs';
+const migration=suffix=>{const names=readdirSync('backend/supabase/migrations').filter(n=>n.endsWith(`_${suffix}.sql`));assert.equal(names.length,1,suffix);return readFileSync(`backend/supabase/migrations/${names[0]}`,'utf8');};
+const business=migration('business_financial_market_ports_v1');
+const market=migration('business_market_listing_consumer_v1');
+const settlement=migration('business_market_common_share_settlement_v1');
+const registry=migration('business_financial_market_purge_registry_v1');
+for(const sql of [business,market,settlement,registry]){assert.match(sql,/\bbegin;/u);assert.match(sql,/commit;\s*$/u);assert.doesNotMatch(sql,/disable\s+trigger|session_replication_role|grant\s+all|bypassrls/iu);}
+assert.doesNotMatch(business,/(?:insert\s+into|update|delete\s+from)\s+public\.(?:game_session_stock_assets|stock_|account_balances|ledger_entries|inventory_)/iu);
+for(const sql of [market,settlement])assert.doesNotMatch(sql,/(?:insert\s+into|update|delete\s+from)\s+public\.(?:business_|account_balances|ledger_entries|inventory_)/iu);
+for(const token of ['market_custody_shares','BUSINESS_COMMON_CUSTODY_RECEIPT_MISMATCH','business.financials.closed.v1','business.market.status.changed.v1','read_business_market_events_v1','read_business_market_listing_v1','read_business_market_position_v1','lock_business_market_position_v1','transfer_business_market_shares_v1','assert_business_ownership_invariants_v2'])assert.ok(business.includes(token),token);
+for(const token of ['consumed.event_key is null','limit p_limit','for update','pg_advisory_xact_lock','force row level security','STOCK_BUSINESS_QUANTITY_AUTHORITY_REQUIRED','STOCK_BUSINESS_ORDER_COMMAND_REQUIRED','is_game_data_purge_delete_authorized_v1','read_player_stock_positions_v1',"'{}'::jsonb",'fair_value_anchor'])assert.ok(market.includes(token),token);
+assert.doesNotMatch(market,/last_consumed_at|watermark|update\s+public\.game_session_stock_assets\s+set\s+current_price/iu);
+for(const token of ['private.create_stock_buy_quote_at_v1','private.settle_stock_buy_quote_at_v1','private.settle_stock_sell_at_v1','STOCK_BUSINESS_WHOLE_SHARES_REQUIRED','STOCK_BUSINESS_SHARES_UNAVAILABLE','after_funding','after_holding','after_order','after_trade','after_evidence'])assert.ok(settlement.includes(token),token);
+assert.match(registry,/GAME_PURGE_CURSOR_RECONCILIATION_REQUIRED/u);
+const workflow=readFileSync('.github/workflows/business-financial-market.yml','utf8');
+for(const token of ['for PASS in 1 2','supabase db reset','supabase db advisors','--fail-on error','github.event.pull_request.head.sha','player-business-market.spec.mjs','player-business-ipo.spec.mjs'])assert.ok(workflow.includes(token),token);
+const database=readFileSync('scripts/business-financial-market-database.mjs','utf8');
+for(const token of ['createPrimaryIpoFixture','closeIpoOperatingHistory','pollForDatabaseWait','after_funding','after_holding','after_order','after_trade','after_evidence','verifyPrimaryIpoPurge','otherBefore'])assert.ok(database.includes(token),token);
+const runner=readFileSync('backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.ts','utf8');assert.ok(runner.indexOf('"consume_business_market_events_v1"')<runner.indexOf('const tickIndex ='));
+console.log('Phase 14D source: separate Business/Market/Banking authorities, whole-share custody, immutable event consumption, retained settlement and exact-source acceptance are present.');

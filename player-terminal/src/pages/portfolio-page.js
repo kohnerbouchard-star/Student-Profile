@@ -1,3 +1,4 @@
+import { renderPortfolioPositions } from "../features/market/portfolio-positions-view.js";
 import { escapeHtml, formatCurrency, formatNumber, formatPercent, toneFromChange } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
@@ -15,6 +16,7 @@ function chartPath(values, width = 760, height = 250, padding = 18) {
 }
 
 export function renderPortfolioPage(data) {
+  if (Array.isArray(data.portfolio?.holdings)) return renderPortfolioPositions(data);
   const currencyCode = data.session.currencyCode;
   const portfolio = data.portfolio;
   const holdings = data.market.assets.filter((asset) => asset.owned > 0).map((asset) => {

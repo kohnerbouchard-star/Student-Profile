@@ -98,7 +98,7 @@ export async function readBusinessWorkspaceProjection(client: EdgeSupabaseClient
 function validateWorkspaceGovernance(value: unknown): void {
   const governance = strictRow(value);
   publicKey(governance.businessKey, "biz"); requiredText(governance.entityType); requiredText(governance.taxClassification); requiredText(governance.formationState);
-  boundedInteger(governance.ownershipModelVersion, 1, 2); boundedInteger(governance.ownerCount, 1, 100_000);
+  boundedInteger(governance.ownershipModelVersion, 1, 2); boundedInteger(governance.ownerCount, 0, 100_000);
   nonNegativeIntegerString(governance.totalUnits); nonNegativeIntegerString(governance.totalVotingUnits);
   if (governance.readOnly !== true) throw invalidWorkspaceProjection();
   if (governance.currentPosition === null) {
@@ -112,6 +112,14 @@ function validateWorkspaceGovernance(value: unknown): void {
     const structure = strictRow(governance.corporateShareStructure);
     for (const key of ["authorizedShares", "issuedShares", "treasuryShares", "outstandingShares"]) nonNegativeIntegerString(structure[key]);
   }
+  const structure = governance.corporateShareStructure === null ? null : strictRow(governance.corporateShareStructure);
+  if (structure?.marketCustodyShares !== undefined) {
+    const custody = BigInt(nonNegativeIntegerString(structure.marketCustodyShares));
+    if (custody > BigInt(nonNegativeIntegerString(structure.outstandingShares))) throw invalidWorkspaceProjection();
+  }
+  if (governance.ownerCount === 0 && (!structure || governance.managementAuthority !== true || governance.currentPosition !== null ||
+    structure.marketCustodyShares !== structure.outstandingShares || structure.outstandingShares !== governance.totalUnits ||
+    governance.totalUnits === "0" || governance.totalVotingUnits !== "0")) throw invalidWorkspaceProjection();
   const keys = new Set<string>();
   for (const raw of strictArray(governance.openProposals)) {
     const proposal = strictRow(raw); const key = publicKey(proposal.proposalKey, "bgp");

@@ -147,6 +147,58 @@ Deno.test("player dashboard rejects runner secret and client-supplied identity",
   );
 });
 
+Deno.test("dashboard uses authoritative common shares and keeps national currency values separate", async () => {
+  const data = tables();
+  const secondAsset = "00000000-0000-4000-8000-000000000103";
+  data.game_session_stock_assets = [
+    stockAsset(),
+    stockAsset({
+      id: secondAsset,
+      ticker: "LISTED",
+      listing_currency_code: "NRC",
+      current_price: 2.5,
+    }),
+  ];
+  data.stock_price_ticks = [
+    stockTick(),
+    stockTick({ stock_asset_id: secondAsset, ticker: "LISTED", price: 2.5 }),
+  ];
+  data.stock_holdings = [holdingRow({ quantity: 0 })];
+  data.stock_positions = [
+    holdingRow(),
+    holdingRow({
+      stock_asset_id: secondAsset,
+      ticker: "LISTED",
+      quantity: 20,
+      average_cost: 2.5,
+      realized_pnl: 0,
+    }),
+  ];
+  const client = new FakeClient(data);
+  const response = await handlePlayerGameDashboardRequest(
+    request(),
+    dependencies({ client }),
+  );
+  const body = await response.json();
+  assertEquals(response.status, 200);
+  assertEquals(
+    body.me.stocks.holdings.map((h: { quantity: number }) => h.quantity),
+    [5, 20],
+  );
+  assertEquals(body.me.stocks.portfolio.holdingsMarketValue, 625);
+  assertEquals(body.me.stocks.portfolio.valuationStatus, "partial_unconverted");
+  assertEquals(body.me.netWorth, 10125);
+  assertEquals(body.me.netWorthValuation.status, "partial_unconverted");
+  assertEquals(body.me.netWorthValuation.excludedStocksByCurrency, [{
+    currencyCode: "NRC",
+    marketValue: 50,
+    costBasis: 50,
+    unrealizedPnl: 0,
+    realizedPnl: 0,
+  }]);
+  assertEquals(client.forbiddenCalls, []);
+});
+
 Deno.test("player dashboard does not require playerSessionId and derives it from token", async () => {
   const repository = new CapturingRepository();
   const response = await handlePlayerGameDashboardRequest(
@@ -196,6 +248,15 @@ Deno.test("player dashboard includes same-player stock history across sessions a
     totalBalance: 9500,
   });
   assertEquals(body.me.stocks.portfolio, {
+    currencyCode: "SLV",
+    byCurrency: [{
+      currencyCode: "SLV",
+      marketValue: 625,
+      costBasis: 500,
+      unrealizedPnl: 125,
+      realizedPnl: 30,
+    }],
+    valuationStatus: "complete",
     cashBalance: 9500,
     holdingsMarketValue: 625,
     totalEquity: 10125,
@@ -210,6 +271,7 @@ Deno.test("player dashboard includes same-player stock history across sessions a
     companyName: "Aurora Aerospace Systems",
     sector: "AI_AEROSPACE",
     countryCode: "SOLVEND",
+    currencyCode: "SLV",
     quantity: 5,
     averageCost: 100,
     currentPrice: 125,
@@ -284,8 +346,8 @@ Deno.test("player dashboard includes same-player stock history across sessions a
       netWorth: entry.netWorth,
     })),
     [
-      { playerId: OTHER_PLAYER_ID, rank: 1, netWorth: 52500 },
-      { playerId: PLAYER_ID, rank: 2, netWorth: 10125 },
+      { playerId: OTHER_PLAYER_ID, rank: 1, netWorth: 50000 },
+      { playerId: PLAYER_ID, rank: 1, netWorth: 10125 },
     ],
   );
   assertEquals(
@@ -993,6 +1055,7 @@ function stockAsset(overrides: Record<string, unknown> = {}) {
     company_name: "Aurora Aerospace Systems",
     sector_key: "AI_AEROSPACE",
     country_code: "SOLVEND",
+    listing_currency_code: "SLV",
     description: "A game-public stock.",
     current_price: 125,
     previous_close: 100,
@@ -1309,6 +1372,24 @@ class FakeClient {
   }
 
   async rpc(functionName: string, args: Record<string, unknown> = {}) {
+    if (functionName === "is_stock_market_open_at") {
+      return { data: true, error: null };
+    }
+    if (functionName === "read_game_stock_positions_v1") {
+      const rows = this.tables.stock_positions ?? this.tables.stock_holdings ??
+        [];
+      return {
+        data: rows.filter((row) =>
+          row.game_session_id === args.p_game_session_id
+        ).map((row) => ({
+          ...row,
+          listing_currency_code: this.tables.game_session_stock_assets.find((
+            a,
+          ) => a.id === row.stock_asset_id)?.listing_currency_code,
+        })),
+        error: null,
+      };
+    }
     if (functionName !== "read_latest_stock_market_ticks_for_game") {
       this.forbiddenCalls.push(`rpc:${functionName}`);
       return {

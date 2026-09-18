@@ -4,7 +4,7 @@ import { jsonService } from "./business-primary-ipo-fixture.mjs";
 
 // This helper inherits the fixture's localhost-only connection guard. The R2
 // completion and expired license are disposable test setup, not live actions.
-export function verifyPrimaryIpoPurge(game, other) {
+export function verifyPrimaryIpoPurge(game, other, additionalTables = []) {
   const before = snapshot(other.id);
   const ids = {
     code: '71000000-0000-4000-8000-000000000014',
@@ -13,7 +13,7 @@ export function verifyPrimaryIpoPurge(game, other) {
     arm: '74000000-0000-4000-8000-000000000014',
   };
   const tables = ['business_management_mandates','business_governance_proposals','business_governance_voter_snapshots',
-    'business_governance_votes','business_ownership_transactions','business_financial_statements'];
+    'business_governance_votes','business_ownership_transactions','business_financial_statements',...additionalTables];
   const counts = Object.fromEntries(tables.map(table => [table, Number(runSql(
     `select count(*) from public.${table} where game_session_id=${q(game.id)};`).output)]));
   assert.ok(Object.values(counts).every(count => count > 0), 'purge must exercise actual IPO and financial evidence');

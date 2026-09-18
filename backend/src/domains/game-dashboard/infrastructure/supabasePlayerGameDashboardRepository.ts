@@ -68,7 +68,6 @@ type DashboardTableName =
   | "players"
   | "stock_market_events"
   | "stock_price_ticks"
-  | "stock_holdings"
   | "stock_orders"
   | "stock_trades"
   | "store_items"
@@ -137,6 +136,8 @@ interface AccountBalanceRow {
 }
 
 interface StockHoldingRow {
+  readonly game_session_id: string;
+  readonly listing_currency_code: string;
   readonly player_id: string;
   readonly stock_asset_id: string;
   readonly ticker: string;
@@ -234,8 +235,6 @@ const PLAYER_SELECT = "id,display_name,roster_label";
 const COUNTRY_ASSIGNMENT_SELECT = "player_id,country_profile_id,assigned_at";
 const COUNTRY_PROFILE_SELECT = "id,country_code,currency_code";
 const CASH_SELECT = "player_id,account_type,balance,currency_code";
-const HOLDING_SELECT =
-  "player_id,stock_asset_id,ticker,quantity,average_cost,realized_pnl";
 const ORDER_SELECT = [
   "id",
   "player_id",
@@ -375,13 +374,12 @@ export class SupabasePlayerGameDashboardRepository
       meCheckingBalances,
       meCountry.currencyCode,
     );
-    const stockCash = toCashDto(meCheckingBalances, "ECO");
     const meHoldings = holdings
       .filter((holding) => holding.player_id === input.playerId)
       .map((holding) =>
         toHoldingDto(holding, stockByAssetId.get(holding.stock_asset_id))
       );
-    const portfolio = summarizePortfolio(stockCash, meHoldings);
+    const portfolio = summarizePortfolio(meCash, meHoldings);
     const leaderboard = toLeaderboard(
       players,
       countryByPlayerId,
@@ -393,9 +391,14 @@ export class SupabasePlayerGameDashboardRepository
       entry.playerId === input.playerId
     );
     const valuationCurrencyCode = meCash.primaryCurrencyCode;
-    const excludedStockMarketValue = valuationCurrencyCode === "ECO"
-      ? 0
-      : portfolio.holdingsMarketValue;
+    const excludedStocksByCurrency = (portfolio.byCurrency ?? []).filter((
+      value,
+    ) =>
+      value.currencyCode !== valuationCurrencyCode && value.marketValue !== 0
+    );
+    const excludedStockMarketValue =
+      excludedStocksByCurrency.find((value) => value.currencyCode === "ECO")
+        ?.marketValue ?? 0;
 
     return {
       gameSession: {
@@ -416,16 +419,15 @@ export class SupabasePlayerGameDashboardRepository
         netWorth: myLeaderboardEntry?.netWorth ??
           round(
             meCash.totalBalance + meSavingsTotal +
-              (valuationCurrencyCode === "ECO"
-                ? portfolio.holdingsMarketValue
-                : 0),
+              portfolio.holdingsMarketValue,
           ),
         netWorthValuation: {
           currencyCode: valuationCurrencyCode,
-          status: excludedStockMarketValue === 0
+          status: excludedStocksByCurrency.length === 0
             ? "complete"
             : "partial_unconverted",
           excludedStockMarketValue,
+          excludedStocksByCurrency,
         },
         cash: meCash,
         stocks: {
@@ -615,17 +617,18 @@ export class SupabasePlayerGameDashboardRepository
   private async readStockHoldings(
     gameSessionId: string,
   ): Promise<readonly StockHoldingRow[]> {
-    const response = await this.client
-      .from("stock_holdings")
-      .select(HOLDING_SELECT)
-      .eq("game_session_id", gameSessionId)
-      .order("ticker", { ascending: true });
-
-    if (response.error) {
-      throw readFailed();
-    }
-
-    return (response.data ?? []) as StockHoldingRow[];
+    const response = await this.client.rpc("read_game_stock_positions_v1", {
+      p_game_session_id: gameSessionId,
+    });
+    if (response.error || !Array.isArray(response.data)) throw readFailed();
+    const rows = response.data as StockHoldingRow[];
+    if (
+      rows.some((row) =>
+        !row || row.game_session_id !== gameSessionId ||
+        !normalizeCurrencyCode(row.listing_currency_code)
+      )
+    ) throw readFailed();
+    return rows;
   }
 
   private async readStockOrders(
@@ -787,6 +790,7 @@ function toHoldingDto(
     companyName: stock?.companyName ?? holding.ticker,
     sector: stock?.sector ?? "",
     countryCode: stock?.countryCode ?? "",
+    currencyCode: holding.listing_currency_code,
     quantity,
     averageCost,
     currentPrice,
@@ -804,22 +808,33 @@ function summarizePortfolio(
   cash: ReturnType<typeof toCashDto>,
   holdings: readonly StockMarketPlayerHoldingDto[],
 ): StockMarketPlayerPortfolioSummaryDto {
-  const holdingsMarketValue = round(
-    sum(holdings, (holding) => holding.marketValue),
-  );
-  const totalCostBasis = round(sum(holdings, (holding) => holding.costBasis));
-  const unrealizedPnl = round(
-    sum(holdings, (holding) => holding.unrealizedPnl),
-  );
-  const realizedPnl = round(sum(holdings, (holding) => holding.realizedPnl));
-
+  const currencyCode = cash.primaryCurrencyCode ?? "UNKNOWN";
+  const byCurrency = [
+    ...new Set(holdings.map((h) => h.currencyCode ?? "UNKNOWN")),
+  ].sort().map((code) => {
+    const rows = holdings.filter((h) => (h.currencyCode ?? "UNKNOWN") === code);
+    return {
+      currencyCode: code,
+      marketValue: round(sum(rows, (h) => h.marketValue)),
+      costBasis: round(sum(rows, (h) => h.costBasis)),
+      unrealizedPnl: round(sum(rows, (h) => h.unrealizedPnl)),
+      realizedPnl: round(sum(rows, (h) => h.realizedPnl)),
+    };
+  });
+  const value = byCurrency.find((v) => v.currencyCode === currencyCode);
+  const holdingsMarketValue = value?.marketValue ?? 0;
   return {
+    currencyCode,
+    byCurrency,
+    valuationStatus: byCurrency.some((v) => v.currencyCode !== currencyCode)
+      ? "partial_unconverted"
+      : "complete",
     cashBalance: cash.totalBalance,
     holdingsMarketValue,
     totalEquity: round(cash.totalBalance + holdingsMarketValue),
-    totalCostBasis,
-    unrealizedPnl,
-    realizedPnl,
+    totalCostBasis: value?.costBasis ?? 0,
+    unrealizedPnl: value?.unrealizedPnl ?? 0,
+    realizedPnl: value?.realizedPnl ?? 0,
     positionsCount: holdings.filter((holding) => holding.quantity > 0).length,
   };
 }
@@ -977,15 +992,15 @@ function toLeaderboard(
       financialByPlayerId.get(player.id) ?? [],
       valuationCurrencyCode,
     );
-    const holdingsMarketValue = valuationCurrencyCode === "ECO"
-      ? sum(
-        holdingsByPlayerId.get(player.id) ?? [],
-        (holding) => {
-          const stock = stockByAssetId.get(holding.stock_asset_id);
-          return toNumber(holding.quantity) * (stock?.currentPrice ?? 0);
-        },
-      )
-      : 0;
+    const holdingsMarketValue = sum(
+      (holdingsByPlayerId.get(player.id) ?? []).filter((h) =>
+        h.listing_currency_code === valuationCurrencyCode
+      ),
+      (holding) => {
+        const stock = stockByAssetId.get(holding.stock_asset_id);
+        return toNumber(holding.quantity) * (stock?.currentPrice ?? 0);
+      },
+    );
 
     return {
       ...toPublicPlayerDto(player, countryByPlayerId.get(player.id)),
@@ -1045,7 +1060,9 @@ function resolveValuationCurrency(
   return available.length === 1 ? available[0] : null;
 }
 
-function normalizeCurrencyCode(value: string | null | undefined): string | null {
+function normalizeCurrencyCode(
+  value: string | null | undefined,
+): string | null {
   const normalized = value?.trim().toUpperCase();
   return normalized && /^[A-Z0-9]{3,16}$/.test(normalized) ? normalized : null;
 }

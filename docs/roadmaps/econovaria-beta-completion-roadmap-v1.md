@@ -22,7 +22,7 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 ## Scope Intake
 
 - **`BUSINESS-V2-14D` — Financial Market integration (2026-09-18)**
-  - Status: `IN_PROGRESS`, owner `feat/business-financial-market-integration-v2`, from exact green Phase 14C handoff `1b1af1d492cc0f9dfe55dfa0f6a326106be3f8ea`. Its 43 workflows, 84 jobs, Vercel and connected/load checks passed.
+  - Status: `IN_PROGRESS`, draft PR #687, owner `feat/business-financial-market-integration-v2`, from exact green Phase 14C handoff `1b1af1d492cc0f9dfe55dfa0f6a326106be3f8ea`. Its 43 workflows, 84 jobs, Vercel and connected/load checks passed.
   - Scope: versioned Business events through a Market-owned consumer; completed-IPO listing; canonical common-share custody/secondary transfers; existing Banking/Market settlement; public Market/Portfolio reads with currency separation. See `business-financial-market-scope-v1.md` for authority, evidence and forward rollout.
   - Certification pending. No merge, deployment, live SQL, scheduler or secret action. Phase 14 remains in progress until this final repository checkpoint passes.
 

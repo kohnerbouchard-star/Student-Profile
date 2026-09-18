@@ -1,3 +1,4 @@
+import type { BusinessStockListing } from "./businessStockListingContracts.ts";
 export type PlayerStockAssetRoute =
   | { readonly kind: "assets" }
   | { readonly kind: "asset"; readonly assetId: string }
@@ -25,6 +26,7 @@ export interface PlayerStockAssetRecord {
   readonly countryCode: string;
   readonly listingCurrencyCode: string;
   readonly description: string | null;
+  readonly commonEquity?: BusinessStockListing;
   readonly currentPrice: number;
   readonly previousClose: number;
   readonly openPrice: number;
@@ -77,6 +79,7 @@ export interface PlayerStockAssetDto {
   readonly currentVolatility: number;
   readonly longRunVolatility: number;
   readonly description: string | null;
+  readonly commonEquity?: BusinessStockListing;
   readonly isWatchlisted: boolean;
 }
 

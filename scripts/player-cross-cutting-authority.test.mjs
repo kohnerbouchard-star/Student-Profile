@@ -202,3 +202,14 @@ test("Phase 14C retained verification is bound to PR 686 and exact IPO paths", a
   assert.throws(() => verifyAuthority({ ...input, changedPaths: [...value.allowedPaths, "scripts/unreviewed.sql"] }), /does not allow/u);
   for (const gate of ["business-primary-ipo-source", "business-primary-ipo-database", "business-primary-ipo-browser"]) assert.ok(value.criticalJobChecks.includes(gate));
 });
+
+test("Phase 14D retained verification binds PR 687 to its predecessor and exact Market paths", async () => {
+  const manifestPath = authorityPathForPullRequest(687);
+  const value = JSON.parse(await readFile(manifestPath, "utf8"));
+  const input = { manifest: value, changedPaths: value.allowedPaths, pullRequestNumber: 687, baseRef: "feat/business-ipo-issuance-v2", manifestPath };
+  assert.ok(verifyAuthority(input).changedPathCount > 0);
+  assert.throws(() => verifyAuthority({ ...input, pullRequestNumber: 686 }), /pull request/u);
+  assert.throws(() => verifyAuthority({ ...input, baseRef: "main" }), /base ref/u);
+  assert.throws(() => verifyAuthority({ ...input, changedPaths: [...value.allowedPaths, "scripts/unreviewed.sql"] }), /does not allow/u);
+  for (const gate of ["business-financial-market-source", "business-financial-market-database", "business-financial-market-browser"]) assert.ok(value.criticalJobChecks.includes(gate));
+});
