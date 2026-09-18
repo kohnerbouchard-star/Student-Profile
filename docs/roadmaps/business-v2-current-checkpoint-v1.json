@@ -1,7 +1,7 @@
 {
   "program": "BETA-BUSINESS-V2-001",
   "status": "PHASE_14_IN_PROGRESS",
-  "audited_at": "2026-09-18T06:42:35.367Z",
+  "audited_at": "2026-09-18T07:03:31.660456+00:00",
   "integration_pr": null,
   "integration_branch": "main",
   "historical_integration": {
@@ -84,16 +84,16 @@
       "final-enforcement"
     ]
   },
-  "active_checkpoint": "BUSINESS-V2-14A",
-  "active_checkpoint_branch": "feat/business-financial-reporting-v2",
-  "active_checkpoint_pr": 684,
-  "active_checkpoint_started_at": "2026-09-18T01:41:00.735Z",
-  "active_candidate_parent_sha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6",
-  "active_candidate_implementation_sha": "aed8c3f6462d927cec3ebc55602854d48a460a9b",
-  "active_candidate_state": "IMPLEMENTED_NOT_MERGED",
-  "active_candidate_note": "Full Phase 14A is repository-certified: 50 applicable workflows, 90 checks, Vercel, two reporting replays, six browser cases and connected Business/World with both load profiles passed. Documentation handoff preserves this exact source identity; its follow-up CI is separate.",
-  "next_authorized_checkpoint": "BUSINESS-V2-14B",
-  "next_authorized_scope": "Complete C-corporation common-share invariants on feat/business-common-equity-v2 from the exact green Phase 14A handoff, then 14C fixed-price primary IPO and 14D Market-owned event consumption/secondary trading. No live release action.",
+  "active_checkpoint": "BUSINESS-V2-14B",
+  "active_checkpoint_branch": "feat/business-common-equity-v2",
+  "active_checkpoint_pr": null,
+  "active_checkpoint_started_at": "2026-09-18T07:03:31.660465+00:00",
+  "active_candidate_parent_sha": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
+  "active_candidate_implementation_sha": null,
+  "active_candidate_state": "IN_PROGRESS",
+  "active_candidate_note": "Phase 14B common-equity enforcement and permanent database race/role/isolation acceptance are prepared on the exact green reporting handoff. Exact-head CI is required before certification.",
+  "next_authorized_checkpoint": "BUSINESS-V2-14C",
+  "next_authorized_scope": "Fixed-price primary IPO eligibility, immutable approved terms and atomic issuance on the exact green common-equity predecessor; preserve operator/treasury authority separately from investment ownership. Then 14D Market-owned consumption and secondary trading. No live release.",
   "remaining_dependency_order": [
     "BUSINESS-V2-14B",
     "BUSINESS-V2-14C",
@@ -1394,5 +1394,323 @@
     },
     "no_live_deployment_or_sql": true,
     "release_blocker": "BETA-LIVE-MIGRATION-PARITY-001"
+  },
+  "phase14a_documentation_handoff": {
+    "sha": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
+    "state": "IMPLEMENTED_NOT_MERGED",
+    "workflow_runs": [
+      {
+        "id": 35316399979,
+        "name": "PR361 Staging Game Provisioning Repair",
+        "status": "completed",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 35316399977,
+        "name": "Business Banking Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399780,
+        "name": "Admin Bundle Contract Audit",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399718,
+        "name": "Business Workforce Hiring V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399699,
+        "name": "Required Game Market Timezone",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399905,
+        "name": "Release Promote Exact Artifacts",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399560,
+        "name": "Production Runtime Promotion Contract",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399931,
+        "name": "Admin V2 Attendance",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399717,
+        "name": "Business Workforce Payroll V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399528,
+        "name": "Edge Function Inventory",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399824,
+        "name": "Environment Neutral Browser",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399710,
+        "name": "Player Button Click Safety",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399787,
+        "name": "World Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399614,
+        "name": "Admin V2 Production Cutover",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399536,
+        "name": "Crafting Activation Connected V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399532,
+        "name": "Business Timed Manufacturing V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399691,
+        "name": "Button Action Coverage",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399526,
+        "name": "Database Replay",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399959,
+        "name": "Backend Typecheck",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399975,
+        "name": "Business Financial Reporting",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399985,
+        "name": "Admin Shell Smoke",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399850,
+        "name": "Game Creation Provisioning",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399810,
+        "name": "Crafting Item Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399967,
+        "name": "Staging Readiness Preflight",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399892,
+        "name": "Repository Quality",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399722,
+        "name": "Seed Executable Beta Pack",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399935,
+        "name": "Release Integrity",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399857,
+        "name": "multicurrency-store-funding-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316400004,
+        "name": "Supply Chain Security",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399920,
+        "name": "business-multicurrency-treasury-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399702,
+        "name": "Admin Browser E2E",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399954,
+        "name": "multicurrency-marketplace-funding-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316400007,
+        "name": "multicurrency-stock-funding-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399729,
+        "name": "Player Terminal Verify",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316400002,
+        "name": "business-player-store-fx-final-v2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399437,
+        "name": "banking-fx-clearing-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399672,
+        "name": "business-store-sales-convergence-v2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399543,
+        "name": "Player Multiplayer and Load E2E",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399513,
+        "name": "Business Store Listing Inventory V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316400020,
+        "name": "Business Store Seller Offers V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399837,
+        "name": "Business Store Withdrawal Safety V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316398107,
+        "name": "Exchange Calendar Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316398101,
+        "name": "Runtime Interaction Wiring",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316398005,
+        "name": "Admin Scroll Integrity",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396710,
+        "name": "Business Store Atomic Settlement V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396075,
+        "name": "Admin API Check",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396067,
+        "name": "Progression Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396072,
+        "name": "Admin Business Supervision",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396125,
+        "name": "Business Economy V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396031,
+        "name": "Runtime Stabilization Onboarding",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396164,
+        "name": "Business Player Store Cutover V2",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "vercel": "success",
+    "transient_retry": {
+      "run": 35316396031,
+      "original_job": 105508865205,
+      "reason": "Disposable runner host port 54322 already in use; unchanged failed-job rerun passed."
+    }
   }
 }

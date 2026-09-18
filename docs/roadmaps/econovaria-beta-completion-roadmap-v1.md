@@ -21,6 +21,13 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`BUSINESS-V2-14B` — Common-equity invariants (2026-09-18)**
+  - Status: `IN_PROGRESS`. Owner `feat/business-common-equity-v2`, exact green predecessor handoff `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`; no replacement reporting owner.
+  - CLI-created forward enforcement migration, permanent source/two-replay database/race acceptance and retained stack CI filters are prepared. Canonical positions, immutable receipts and corporate share structure remain sole authorities; common shares reconcile one share/one vote, receipts and authorized capacity. Raw service cap-table writes are revoked; existing definer commands and request-bound game purge remain intact.
+  - Files, behavior, compatibility audit, verification and rollout: `business-common-equity-scope-v1.md`. No new table/FK, Market/money/Inventory writer, HTTP route, merge, deployment or live SQL. Exact published source and workflow results remain required before `IMPLEMENTED_NOT_MERGED`.
+  - Next exact item after green certification: `BUSINESS-V2-14C` fixed-price primary IPO, followed by `14D` Market integration. IPO ownership must not confer operating/treasury authority.
+
+
 - **`BUSINESS-V2-14A`–`14D` — Full Phase 14 continuation (2026-09-18)**
   - Status: `IN_PROGRESS`. The owner instructed “continue until phase 14 is done,” authorizing all four implementation and verification stages. Existing reporting owner PR #684 remains authoritative; successors retain the exact-green-predecessor sequence below. No deployment, live SQL, secret or scheduler change is authorized.
   - Phase 14A: `IMPLEMENTED_NOT_MERGED` on draft PR #684 at exact certified source `aed8c3f6462d927cec3ebc55602854d48a460a9b`. Five CLI-generated forward migrations (`20260918014630` through `20260918035524`) implement closed-period evidence, immutable inventory/loan observations, reconciled income/balance/cash-flow statements, authenticated Player/Admin reads and canonical purge convergence. Player Finance and Admin's 25 read-only sections preserve exact decimal text, separate currencies, historical coverage, privacy and stale/error states. Implementation files, RPCs, rollout and acceptance limits are in `business-financial-reporting-scope-v1.md`.

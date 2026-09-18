@@ -2,7 +2,7 @@ name: Crafting Activation Connected V2
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/business-financial-reporting-v2, feat/business-common-equity-v2, feat/business-ipo-issuance-v2]
     paths:
       - ".github/workflows/crafting-activation-connected-v2.yml"
       - "backend/supabase/migrations/**"
