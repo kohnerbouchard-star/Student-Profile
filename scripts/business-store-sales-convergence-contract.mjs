@@ -140,18 +140,23 @@ assert.deepEqual(
   [...edgeConvergenceEvents.matchAll(/^  ([a-z_]+):/gmu)].map((match) =>
     match[1]
   ),
-  ["push"],
-  "Edge inventory convergence may retain only its main-push release event",
+  ["workflow_dispatch", "push"],
+  "Edge inventory convergence accepts explicit release dispatch and inert main-push events only",
 );
 assert.match(
   edgeConvergenceEvents,
-  /^on:\n  push:\n    branches:\n      - main\n    paths:/u,
-  "Edge inventory convergence must remain a main-push-only release workflow",
+  /\n  push:\n    branches:\n      - main\n    paths:/u,
+  "Edge inventory convergence must keep the bounded main push path filter",
+);
+assert.equal(
+  (edgeConvergenceWorkflow.match(/if: github\.event_name == 'workflow_dispatch' && inputs\.release_authorized == true && github\.ref == 'refs\/heads\/main'/gu) || []).length,
+  2,
+  "Both staging and production require an explicit authorized main release; pushes cannot deploy",
 );
 assert.doesNotMatch(
   edgeConvergenceEvents,
-  /(?:pull_request(?:_target)?|workflow_dispatch|workflow_run|repository_dispatch|schedule|cron):/u,
-  "Phase 11 may not add a PR writer, manual deploy trigger, or scheduler to Edge convergence",
+  /(?:pull_request(?:_target)?|workflow_run|repository_dispatch|schedule|cron):/u,
+  "Edge convergence must not acquire a PR writer, indirect release event, or scheduler",
 );
 const edgeStagingJobStart = edgeConvergenceWorkflow.indexOf("\n  staging:\n");
 const edgeProductionJobStart = edgeConvergenceWorkflow.indexOf("\n  production:\n");

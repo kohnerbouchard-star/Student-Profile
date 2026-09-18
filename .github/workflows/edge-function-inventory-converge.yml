@@ -2,6 +2,13 @@ name: Edge Function Inventory Convergence
 # Release synchronization touch: production-current-20260817 exact merged-SHA attestation.
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_authorized:
+        description: "Explicit owner-authorized staging and production release of current main"
+        required: true
+        type: boolean
+        default: false
   push:
     branches:
       - main
@@ -28,6 +35,7 @@ concurrency:
 jobs:
   staging:
     name: Converge staging Edge Function inventory
+    if: github.event_name == 'workflow_dispatch' && inputs.release_authorized == true && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     environment: staging
@@ -38,7 +46,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
           test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_ACCESS_TOKEN"
           test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
@@ -196,6 +204,7 @@ jobs:
 
   production:
     name: Converge production Edge Function inventory
+    if: github.event_name == 'workflow_dispatch' && inputs.release_authorized == true && github.ref == 'refs/heads/main'
     needs: staging
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -207,7 +216,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
           test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_ACCESS_TOKEN"
           test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
