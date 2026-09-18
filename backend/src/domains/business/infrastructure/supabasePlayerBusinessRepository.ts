@@ -62,23 +62,46 @@ export class SupabasePlayerBusinessRepository
     if (replayRows.length === 1) return;
 
     if (await this.resolveOperatingBusiness(input)) {
-      throw new PlayerBusinessError("business_already_owned", "Close the current operating business before creating another one.", 409);
+      throw new PlayerBusinessError(
+        "business_already_owned",
+        "Close the current operating business before creating another one.",
+        409,
+      );
     }
   }
 
-  private async resolveOperatingBusiness(input: { readonly gameSessionId: string; readonly playerId: string }): Promise<string | null> {
-    const response = await this.client.rpc<unknown>("resolve_player_business_v2", {
-      p_game_session_id: input.gameSessionId, p_player_id: input.playerId,
-    });
+  private async resolveOperatingBusiness(
+    input: { readonly gameSessionId: string; readonly playerId: string },
+  ): Promise<string | null> {
+    const response = await this.client.rpc<unknown>(
+      "resolve_player_business_v2",
+      {
+        p_game_session_id: input.gameSessionId,
+        p_player_id: input.playerId,
+      },
+    );
     if (response.error) {
-      if (/^BUSINESS_NOT_FOUND(?:$|[\s.])/u.test(response.error.message)) return null;
+      if (/^BUSINESS_NOT_FOUND(?:$|[\s.])/u.test(response.error.message)) {
+        return null;
+      }
       throw mapPlayerBusinessDatabaseError(response.error.message);
     }
-    const resolved = Array.isArray(response.data) ? response.data : [response.data];
+    const resolved = Array.isArray(response.data)
+      ? response.data
+      : [response.data];
     const value = resolved[0] as Record<string, unknown> | undefined;
-    if (resolved.length !== 1 || !value || typeof value.business_id !== "string" ||
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(value.business_id)) {
-      throw new PlayerBusinessError("business_scope_invalid", "Operating Business authority could not be verified.", 502);
+    if (
+      resolved.length !== 1 || !value ||
+      typeof value.business_id !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(
+        value.business_id,
+      )
+    ) {
+      throw new PlayerBusinessError(
+        "business_scope_invalid",
+        "Operating Business authority could not be verified.",
+        502,
+      );
     }
     return value.business_id;
   }
@@ -89,12 +112,23 @@ export class SupabasePlayerBusinessRepository
   }): Promise<BusinessSnapshotDto> {
     const operatingId = await this.resolveOperatingBusiness(input);
     if (!operatingId) return emptyBusiness();
-    const businesses = await rows(this.client.from("business_entities").select(
-      "id,public_key,legal_name,entity_type,industry_code,country_code,currency_code,status,capacity_units,reputation_score,created_at",
-    ).eq("game_session_id", input.gameSessionId).eq("id", operatingId).limit(1));
+    const businesses = await rows(
+      this.client.from("business_entities").select(
+        "id,public_key,legal_name,entity_type,industry_code,country_code,currency_code,status,capacity_units,reputation_score,created_at",
+      ).eq("game_session_id", input.gameSessionId).eq("id", operatingId).limit(
+        1,
+      ),
+    );
     const business = businesses[0];
-    if (!business || text(business.id) !== operatingId || text(business.status) === "closed") {
-      throw new PlayerBusinessError("business_scope_invalid", "Operating Business authority could not be verified.", 502);
+    if (
+      !business || text(business.id) !== operatingId ||
+      text(business.status) === "closed"
+    ) {
+      throw new PlayerBusinessError(
+        "business_scope_invalid",
+        "Operating Business authority could not be verified.",
+        502,
+      );
     }
 
     const businessId = text(business.id);

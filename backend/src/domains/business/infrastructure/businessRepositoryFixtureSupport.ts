@@ -54,3 +54,61 @@ export function assertEquals(actual: unknown, expected: unknown): void {
     );
   }
 }
+
+export function businessRepositoryFixtureClient(
+  overrides: Record<string, unknown[]>,
+  gameId: string,
+  playerId: string,
+) {
+  const fixtures: Record<string, unknown[]> = {
+    business_entities: [],
+    business_products: [],
+    business_employees: [],
+    business_inventory: [],
+    business_production_runs: [],
+    account_balances: [],
+    store_offer_purchase_receipts: [],
+    business_activity_events: [],
+    ...overrides,
+  };
+  const selections: Array<{ table: string; columns: string }> = [];
+  return {
+    selections,
+    from(table: string) {
+      return new FixtureBuilder(
+        fixtures[table] ?? [],
+        (columns) => selections.push({ table, columns }),
+      );
+    },
+    rpc(command: string, args: Record<string, unknown>) {
+      if (command === "resolve_player_business_v2") {
+        assertEquals(args, {
+          p_game_session_id: gameId,
+          p_player_id: playerId,
+        });
+        const businesses = fixtures.business_entities as Record<
+          string,
+          unknown
+        >[];
+        const active = businesses.filter((row) => row.status !== "closed");
+        if (!active.length) {
+          return Promise.resolve({
+            data: null,
+            error: { message: "BUSINESS_NOT_FOUND" },
+          });
+        }
+        if (active.length > 1) {
+          return Promise.resolve({
+            data: null,
+            error: { message: "BUSINESS_OWNERSHIP_AMBIGUOUS" },
+          });
+        }
+        return Promise.resolve({
+          data: [{ business_id: active[0].id }],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    },
+  };
+}

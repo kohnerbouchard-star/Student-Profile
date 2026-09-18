@@ -1,4 +1,8 @@
-import { FixtureBuilder, assertEquals, assertNoUuid } from "./businessRepositoryFixtureSupport.ts";
+import {
+  assertEquals,
+  assertNoUuid,
+  businessRepositoryFixtureClient,
+} from "./businessRepositoryFixtureSupport.ts";
 import { SupabasePlayerBusinessRepository } from "./supabasePlayerBusinessRepository.ts";
 
 declare const Deno: {
@@ -396,24 +400,44 @@ Deno.test(
 );
 
 Deno.test("Operating Business reads reject ambiguous authority before reading Business data", async () => {
-  for (const message of ["BUSINESS_OWNERSHIP_AMBIGUOUS", "BUSINESS_NOT_FOUND"]) {
+  for (
+    const message of ["BUSINESS_OWNERSHIP_AMBIGUOUS", "BUSINESS_NOT_FOUND"]
+  ) {
     const reads: string[] = [];
     const repository = new SupabasePlayerBusinessRepository({
-      from(table: string) { reads.push(table); throw new Error("Authority failure must precede data access"); },
+      from(table: string) {
+        reads.push(table);
+        throw new Error("Authority failure must precede data access");
+      },
       rpc(command: string, args: Record<string, unknown>) {
         assertEquals(command, "resolve_player_business_v2");
-        assertEquals(args, { p_game_session_id: GAME_ID, p_player_id: PLAYER_ID });
+        assertEquals(args, {
+          p_game_session_id: GAME_ID,
+          p_player_id: PLAYER_ID,
+        });
         return Promise.resolve({ data: null, error: { message } });
       },
     } as never);
     if (message === "BUSINESS_NOT_FOUND") {
-      const result = await repository.readBusiness({ gameSessionId: GAME_ID, playerId: PLAYER_ID });
+      const result = await repository.readBusiness({
+        gameSessionId: GAME_ID,
+        playerId: PLAYER_ID,
+      });
       assertEquals(result.configured, false);
     } else {
       let error: PublicBusinessError | undefined;
-      try { await repository.readBusiness({ gameSessionId: GAME_ID, playerId: PLAYER_ID }); }
-      catch (caught) { error = caught as PublicBusinessError; }
-      assertEquals([error?.code, error?.status], ["business_ownership_ambiguous", 409]);
+      try {
+        await repository.readBusiness({
+          gameSessionId: GAME_ID,
+          playerId: PLAYER_ID,
+        });
+      } catch (caught) {
+        error = caught as PublicBusinessError;
+      }
+      assertEquals([error?.code, error?.status], [
+        "business_ownership_ambiguous",
+        409,
+      ]);
     }
     assertEquals(reads, []);
   }
@@ -438,36 +462,5 @@ async function executeError(message: string): Promise<PublicBusinessError> {
 }
 
 function fixtureClient(overrides: Record<string, unknown[]>) {
-  const fixtures: Record<string, unknown[]> = {
-    business_entities: [],
-    business_products: [],
-    business_employees: [],
-    business_inventory: [],
-    business_production_runs: [],
-    account_balances: [],
-    store_offer_purchase_receipts: [],
-    business_activity_events: [],
-    ...overrides,
-  };
-  const selections: Array<{ table: string; columns: string }> = [];
-  return {
-    selections,
-    from(table: string) {
-      return new FixtureBuilder(
-        fixtures[table] ?? [],
-        (columns) => selections.push({ table, columns }),
-      );
-    },
-    rpc(command: string, args: Record<string, unknown>) {
-      if (command === "resolve_player_business_v2") {
-        assertEquals(args, { p_game_session_id: GAME_ID, p_player_id: PLAYER_ID });
-        const businesses = fixtures.business_entities as Record<string, unknown>[];
-        const active = businesses.filter(row => row.status !== "closed");
-        if (!active.length) return Promise.resolve({ data: null, error: { message: "BUSINESS_NOT_FOUND" } });
-        if (active.length > 1) return Promise.resolve({ data: null, error: { message: "BUSINESS_OWNERSHIP_AMBIGUOUS" } });
-        return Promise.resolve({ data: [{ business_id: active[0].id }], error: null });
-      }
-      return Promise.resolve({ data: null, error: null });
-    },
-  };
+  return businessRepositoryFixtureClient(overrides, GAME_ID, PLAYER_ID);
 }
