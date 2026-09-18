@@ -395,6 +395,30 @@ Deno.test(
   },
 );
 
+Deno.test("Operating Business reads reject ambiguous authority before reading Business data", async () => {
+  for (const message of ["BUSINESS_OWNERSHIP_AMBIGUOUS", "BUSINESS_NOT_FOUND"]) {
+    const reads: string[] = [];
+    const repository = new SupabasePlayerBusinessRepository({
+      from(table: string) { reads.push(table); throw new Error("Authority failure must precede data access"); },
+      rpc(command: string, args: Record<string, unknown>) {
+        assertEquals(command, "resolve_player_business_v2");
+        assertEquals(args, { p_game_session_id: GAME_ID, p_player_id: PLAYER_ID });
+        return Promise.resolve({ data: null, error: { message } });
+      },
+    } as never);
+    if (message === "BUSINESS_NOT_FOUND") {
+      const result = await repository.readBusiness({ gameSessionId: GAME_ID, playerId: PLAYER_ID });
+      assertEquals(result.configured, false);
+    } else {
+      let error: PublicBusinessError | undefined;
+      try { await repository.readBusiness({ gameSessionId: GAME_ID, playerId: PLAYER_ID }); }
+      catch (caught) { error = caught as PublicBusinessError; }
+      assertEquals([error?.code, error?.status], ["business_ownership_ambiguous", 409]);
+    }
+    assertEquals(reads, []);
+  }
+});
+
 type PublicBusinessError = Readonly<
   Record<"code" | "status" | "retryable" | "message", unknown>
 >;

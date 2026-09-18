@@ -24,3 +24,9 @@ Two fresh migration replays and advisors; canonical formation → Store sale →
 ## Next dependency
 
 After this source and handoff are certified, `BUSINESS-V2-14D` consumes versioned Business events through a Market-owned integration, publishes the listing, reuses canonical Market orders/funding and derives common holdings from Business share authority. No secondary trade may mint shares.
+
+## Candidate verification and corrections
+
+Initial candidate `8ba46d6e94fc77d5787a0f7a8639463630a7cd88` passed IPO source and all IPO/retained workspace desktop/mobile browser checks on run `35324179840`. The fresh database rebuilt through all migrations; the test stopped on an invalid paused-game fixture. Retained Edge checks identified an overly broad mixed-facade route type, and retained ownership source assertions required reconciliation to the canonical resolver. These are corrected with explicit retained delegation and a test proving ambiguous authority cannot fall back to investment ownership.
+
+Fresh database job `105533302010` observed registry `ab44a67a1247fd706636c3aeb627f352344ca08bde6b6c7159f686a873612a48` / 206 tables; FK graph `343f1966b3750e7a639fb82059bab1049edd44591e27d59cd08017c19be46198` / 455 edges; delete order `f2fe1c6ad5d11bf7c73e1bd761153e6e6cfa726d9b26f780b62e42eb603667b6` / 205 tables; final cursor 206. CLI-generated forward migration `20260918083200_business_primary_ipo_purge_convergence_v1.sql` advances only those fingerprint/cursor constants in the canonical writers. Source comparison preserves every request, entitlement, environment, token and physical zero-row guard. A populated IPO purge test and first-subscription held-funds rollback test are added. Certification still requires the corrected candidate's complete exact-commit matrix.

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { verifyPrimaryIpoPurge } from "./business-primary-ipo-purge.mjs";
 import { createPrimaryIpoFixture, closeIpoOperatingHistory, jsonService, service } from "./business-primary-ipo-fixture.mjs";
 import { runSql, runJson, expectSqlError, sqlLiteral as q, snapshot, openPsqlSession, pollForDatabaseWait } from "./business-phase10-atomic-settlement-database-support.mjs";
 
@@ -55,7 +56,7 @@ expectSqlError(`update public.business_governance_voter_snapshots set voting_uni
 expectSqlError(`update public.business_governance_votes set decision='reject' where game_session_id=${q(one.id)};`, /BUSINESS_GOVERNANCE_EVIDENCE_IMMUTABLE/);
 for (const unavailable of [
   `update public.players set status='archived' where id=${q(one.buyerOneId)}`,
-  `update public.game_sessions set status='disabled' where id=${q(one.id)}`,
+  `update public.game_sessions set status='disabled',lifecycle_state='paused' where id=${q(one.id)}`,
 ]) expectSqlError(`begin; ${unavailable}; set local role service_role; select ${subSql()}; commit;`, /BUSINESS_IPO_(PLAYER|GAME)_UNAVAILABLE/);
 const quantities = () => runJson(`select jsonb_build_object(
   'issued',s.issued_shares::text,'outstanding',s.outstanding_shares::text,
@@ -66,6 +67,16 @@ const quantities = () => runJson(`select jsonb_build_object(
   'businessCash',public.read_business_balance_v2(s.game_session_id,s.business_id,'NRC')::text)::text
   from public.business_corporate_share_structures s where s.game_session_id=${q(one.id)} and s.business_id=${q(one.businessId)};`);
 const before = quantities();
+// Fail the very first subscription through canonical held funds. The mandate
+// capture occurs before Banking; this proves it also rolls back on denial.
+expectSqlError(`begin; do $fixture$ declare a uuid; v_amount numeric; begin
+  select bank_account_id,balance into a,v_amount from public.account_balances
+    where game_session_id=${q(one.id)} and player_id=${q(one.buyerOneId)} and currency_code='NRC' and account_type='checking';
+  perform private.create_bank_account_hold_v1(${q(one.id)},a,v_amount,'business-ipo-acceptance','held-funds-proof',null,
+    'phase14c-held-first',repeat('a',64),clock_timestamp()+interval '1 day','{}'::jsonb);
+  end; $fixture$; set local role service_role; select ${subSql()}; commit;`, /BANK_ACCOUNT_AVAILABLE_BALANCE_INSUFFICIENT/);
+assert.deepEqual(quantities(), before);
+assert.equal(runSql(`select count(*) from public.business_management_mandates where game_session_id=${q(one.id)};`).output, '0');
 const receipt = jsonService(subSql());
 assert.equal(receipt.receipt.shares, '8');
 assert.equal(Number(receipt.receipt.total), 20);
@@ -112,4 +123,10 @@ assert.equal(jsonService(subSql(one.buyerTwoId, 4, 'phase14c-final-allocation'))
 expectSqlError(asService(subSql(one.buyerTwoId, 1, 'phase14c-oversubscribed')), /BUSINESS_IPO_NOT_OPEN/);
 assert.deepEqual(snapshot(two.id), otherBefore, 'another game remains unchanged across all primary actions');
 assert.doesNotMatch(JSON.stringify([read(),receipt,completed]), /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|request_hash|idempotency_key|source_id/i);
+const journal = runJson(`select jsonb_build_object('transactions',count(*),'invalid',count(*) filter(where posting_version<>'balanced_v2' or
+  exists(select 1 from public.ledger_entries l where l.game_session_id=t.game_session_id and l.bank_transaction_id=t.id
+    group by l.currency_code having sum(l.amount)<>0)))::text from public.bank_transactions t
+  where t.game_session_id=${q(one.id)} and t.source_action in ('ipo_primary_subscription','ipo_primary_subscription_out');`);
+assert.equal(journal.transactions, 6); assert.equal(journal.invalid, 0);
+verifyPrimaryIpoPurge(one, two);
 console.log('Phase 14C primary IPO: canonical formation/Store/close, eligibility, immutable governance, balanced issuance/replay, operator separation, allocation race, roles and game isolation pass.');

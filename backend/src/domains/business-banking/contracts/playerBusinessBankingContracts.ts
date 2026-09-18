@@ -13,17 +13,15 @@ export type PlayerBankingRoute =
   | { readonly kind: "loanApply"; readonly offerKey: string }
   | { readonly kind: "loanRepay"; readonly loanKey: string };
 
-export type DelegatedPlayerBusinessRoute = Exclude<
+// Only the retained routes delegate through this facade. New
+// Business capabilities are dispatched by the canonical Business root.
+export type DelegatedPlayerBusinessRoute = Extract<
   PlayerBusinessRoute,
-  | { readonly kind: "businessManufacturingCollection" }
-  | { readonly kind: "businessManufacturingCancel" }
-  | { readonly kind: "businessTreasuryRead" }
-  | { readonly kind: "businessTreasuryAccountOpen" }
-  | { readonly kind: "businessTreasuryFxQuote" }
-  | { readonly kind: "businessTreasuryFxStandard" }
-  | { readonly kind: "businessTreasuryFxInstant" }
-  | { readonly kind: "businessTreasuryFxCancel" }
-  | { readonly kind: "businessStoreWithdrawal" }
+  { readonly kind:
+    | "businessRead" | "businessCreate" | "businessProductCreate"
+    | "businessInputPurchase" | "businessStoreQuote" | "businessStorePurchase"
+    | "businessCandidateHire" | "businessProduction" | "businessPrice"
+    | "businessHire" | "businessTerminate" | "businessStatus" }
 >;
 
 export type PlayerBusinessBankingRoute =

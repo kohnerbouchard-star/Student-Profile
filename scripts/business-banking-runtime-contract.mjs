@@ -15,6 +15,7 @@ const files = {
   businessMutationExecutor: "backend/src/domains/business/api/playerBusinessMutationExecutor.ts",
   businessRequestValidation: "backend/src/domains/business/api/playerBusinessRequestValidation.ts",
   businessRepository: "backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts",
+  businessErrors: "backend/src/domains/business/infrastructure/playerBusinessDatabaseErrors.ts",
   businessRoutes: "backend/src/domains/business/api/playerBusinessRoutePaths.ts",
   capabilities: "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
   playerScope: "backend/src/domains/players/api/playerRequestScope.ts",
@@ -120,7 +121,9 @@ assert.match(source.businessRepository, /assertBusinessCreationAllowed/u);
 assert.match(source.businessRepository, /business\.create_or_acquire/u);
 assert.match(source.businessRepository, /\.eq\("metadata->>idempotency_key", input\.idempotencyKey\)/u);
 assert.doesNotMatch(source.businessRepository, /record\(row\.metadata\)\.idempotency_key/u);
-assert.match(source.businessRepository, /business_ownership_ambiguous/u);
+assert.match(source.businessRepository, /resolve_player_business_v2/u);
+assert.match(source.businessRepository, /throw mapPlayerBusinessDatabaseError\(response.error.message\)/u);
+assert.match(source.businessErrors, /BUSINESS_OWNERSHIP_AMBIGUOUS:\s*\[\s*409/u);
 assert.match(source.businessRepository, /business_already_owned/u);
 assert.doesNotMatch(source.businessRepository, /\.neq\("status", "closed"\)/u);
 
