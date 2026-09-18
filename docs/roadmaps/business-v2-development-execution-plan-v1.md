@@ -551,15 +551,15 @@ Phase 13 retains original certification `949da9f91990eeeee2cd815541446a5b6413066
 
 ## Phase 14 — Financial reporting, equity and IPO -> Financial Market
 
-**Status:** `IN_PROGRESS` — owner authorized merge/start on 2026-09-18. Financial reporting owner `feat/business-financial-reporting-v2`, draft PR #684, starts from merged main `4a9674ed9ca0565c828093fe100aa658ef4faaa6`. First tranche `14A1` is `IMPLEMENTED_NOT_MERGED` at verified source `c3647db988f2be8edd52b1656e640b388b2fc00f`: 25 applicable workflows, 50 checks and Vercel passed, including two fresh reporting database replays and both classroom load profiles. One staging-only workflow and six non-applicable checks skipped. Full Phase 14 remains open.
+**Status:** `IN_PROGRESS` for full Phase 14. Phase 14A is `IMPLEMENTED_NOT_MERGED` on draft PR #684, exact certified source `aed8c3f6462d927cec3ebc55602854d48a460a9b`. All 50 applicable workflows, 90 checks and Vercel passed, including two reporting database replays/advisors, six desktop/mobile browser cases and connected Business/World with 30/40-player load. One staging-only workflow and eight manual/historical jobs skipped as documented in the [checkpoint](business-v2-current-checkpoint-v1.json). No live deployment or SQL occurred.
 
-- [ ] Stabilize Business financial statements/fundamentals from real operating activity.
-- [ ] 14A1: merge/release the verified closed-period evidence foundation only when authorized; see [scope](business-financial-reporting-scope-v1.md). No live application occurred. Next implementation is the remainder of `BUSINESS-V2-14A`: labor capitalization and period-end reconciliation before complete statements and authenticated adapters/views.
-- [ ] Complete common-share equity invariants for C corporations.
-- [ ] Add IPO eligibility/terms/issuance.
-- [ ] Publish versioned Business events to Stocks/Financial Markets integration.
-- [ ] Never write Market internal tables directly from Business.
-- [ ] Existing Financial Market/Portfolio becomes the secondary trading surface after listing.
+- [x] Implement and repository-certify Business statements/fundamentals from canonical operating evidence; see [scope and handoff](business-financial-reporting-scope-v1.md).
+- [x] Preserve the original 14A1 certificate while completing labor capitalization, period-end reconciliation and authenticated Player/Admin reporting.
+- [ ] Complete common-share equity invariants for C corporations on the green 14A handoff (`BUSINESS-V2-14B`).
+- [ ] Add fixed-price primary IPO eligibility/terms/issuance (`14C`).
+- [ ] Publish versioned Business events to a Market-owned consumer (`14D`).
+- [ ] Verify the existing Financial Market/Portfolio as the secondary trading surface after listing, without Business writing Market internals.
+- [ ] Merge/release only under applicable owner authorization and satisfy the separate live-parity/runtime boundary before `VERIFIED_COMPLETE`.
 
 ---
 
