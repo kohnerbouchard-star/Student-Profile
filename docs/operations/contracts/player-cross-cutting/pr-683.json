@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.business-merge-release-guard-pr-683.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 683,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/edge-function-inventory-converge.yml",
+    ".github/workflows/production-git-release.yml",
+    "docs/operations/production-change-control.md",
+    "docs/operations/contracts/player-cross-cutting/pr-683.json",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/business-store-sales-convergence-contract.mjs",
+    "scripts/vercel-git-release-contract.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    ".github/workflows/edge-function-inventory-converge.yml",
+    ".github/workflows/production-git-release.yml",
+    "scripts/vercel-git-release-contract.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-store-sales-convergence-v2-source",
+    "business-store-sales-convergence-v2-player-admin"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-store-sales-convergence-v2-source",
+    "business-store-sales-convergence-v2-player-admin"
+  ],
+  "authorizationNote": "2026-09-18 owner authorized merging certified Business Phases 12-13 and starting Phase 14. This bounded prerequisite prevents merges from implicitly deploying; it authorizes no release dispatch, live data, secret or scheduler change."
+}
