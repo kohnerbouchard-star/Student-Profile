@@ -5,7 +5,7 @@ Status: `IMPLEMENTED_NOT_MERGED`, draft PR #686. Exact repository-certified impl
 
 Owner: `feat/business-ipo-issuance-v2`, based on exact green Phase 14B handoff `bab8393cd8f0d30a84be5ad36ad90f41f9cae75f`. Its 28 workflows passed, with 53 successful jobs and three expected manual staging/parity skips. The predecessor implementation certificate remains `197caa4034214e21b8033a3f4363dc07a13b5dcf` on draft PR #685. Vercel passed. The connected workflow and both 30/40-player loads also passed on the handoff.
 
-The owner authorized implementation and verification through Phase 14D. This bounded draft owns primary issuance. It does not authorize merging Phase 14, deployment, live SQL/data changes, schedulers, or secrets. `BETA-LIVE-MIGRATION-PARITY-001` remains a separate runtime/release blocker.
+The owner authorized implementation and verification through Phase 14D, then explicitly authorized full Phase 14 repository integration and issue repair on 2026-09-19. This supersedes the original draft-only/no-merge restriction, not any verification gate. Phase 14B is now merged as `c2d892cb4e39625c2b5cdd7de65c41149502d203`; this existing IPO branch incorporates it normally and targets main, preserving the certified IPO application and inheriting the verified read-recovery repair. Fresh exact-head checks are required before merging. Deployment, live SQL/data changes, schedulers and secrets remain unauthorized. `BETA-LIVE-MIGRATION-PARITY-001` remains a separate runtime/release blocker.
 
 ## Contract
 
@@ -32,6 +32,8 @@ Initial candidate `8ba46d6e94fc77d5787a0f7a8639463630a7cd88` passed IPO source a
 Fresh database job `105533302010` observed registry `ab44a67a1247fd706636c3aeb627f352344ca08bde6b6c7159f686a873612a48` / 206 tables; FK graph `343f1966b3750e7a639fb82059bab1049edd44591e27d59cd08017c19be46198` / 455 edges; delete order `f2fe1c6ad5d11bf7c73e1bd761153e6e6cfa726d9b26f780b62e42eb603667b6` / 205 tables; final cursor 206. CLI-generated forward migration `20260918083200_business_primary_ipo_purge_convergence_v1.sql` advances only those fingerprint/cursor constants in the canonical writers. Source comparison preserves every request, entitlement, environment, token and physical zero-row guard. A populated IPO purge test and first-subscription held-funds rollback test are added. The corrected exact-commit matrix passed as recorded below.
 
 ## Repository certificate
+
+Ordered integration against main exposed a missing ledger registration on candidate `3eb6edddba094f264be804f7fc44149e09bfc407`: Button Action Coverage run `35434994134`, job `105876030399`, rejected the three new IPO actions. Their existing desktop/mobile spec already exercises proposal, keyboard voting and uncertain subscription recovery. The repair registers that bounded fixture-backed coverage as `local_browser`, explicitly not live/connected evidence, and binds the ledger and button gate to PR #686's exact authority. No application, migration, browser assertion or release policy changes. A new exact-head certificate is required.
 
 Exact source `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`: all 43 workflows, 84 applicable jobs and Vercel passed. Four expected skips cover manual staging/release/parity and the historical Phase 4A inventory writer; no required IPO or connected gate skipped. The checkpoint retains every run/job identity.
 

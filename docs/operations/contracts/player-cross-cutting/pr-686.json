@@ -3,7 +3,7 @@
   "authorityId": "econovaria.business-primary-ipo-pr-686.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 686,
-  "baseRef": "feat/business-common-equity-v2",
+  "baseRef": "main",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
@@ -33,6 +33,7 @@
     "backend/supabase/migrations/20260918080420_business_primary_ipo_purge_registry_v1.sql",
     "backend/supabase/migrations/20260918083200_business_primary_ipo_purge_convergence_v1.sql",
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/button-action-coverage-v1.json",
     "docs/operations/contracts/player-cross-cutting/pr-686.json",
     "docs/roadmaps/business-primary-ipo-scope-v1.md",
     "docs/roadmaps/business-v2-current-checkpoint-v1.json",
@@ -60,6 +61,7 @@
     "player-terminal/tests/fixtures/business-ipo-fixture.mjs",
     "player-terminal/tests/portfolio-market-holdings.mjs",
     "scripts/business-banking-runtime-contract.mjs",
+    "scripts/business-banking-player-market-browser-acceptance.core.mjs",
     "scripts/business-financial-reporting-statement-acceptance.mjs",
     "scripts/business-primary-ipo-client.test.mjs",
     "scripts/business-primary-ipo-contract.mjs",
@@ -71,6 +73,7 @@
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
+    "docs/operations/contracts/button-action-coverage-v1.json",
     "scripts/business-primary-ipo-contract.mjs",
     "scripts/business-primary-ipo-database.mjs",
     "scripts/business-primary-ipo-fixture.mjs",
@@ -78,6 +81,7 @@
     "docs/roadmaps/business-primary-ipo-scope-v1.md"
   ],
   "requiredChecks": [
+    "button-action-coverage",
     "player-terminal-verify",
     "player-edge-trusted-ip-entrypoint-contract",
     "player-production-secret-provision-contract",
@@ -103,6 +107,7 @@
     "business-primary-ipo-browser"
   ],
   "criticalJobChecks": [
+    "button-action-coverage",
     "business-player-store-fx-final-v2-source",
     "business-player-store-fx-final-v2-player-browser",
     "business-store-sales-convergence-v2-source",
@@ -116,5 +121,5 @@
     "business-primary-ipo-database",
     "business-primary-ipo-browser"
   ],
-  "authorizationNote": "Owner authorized Phase 14 implementation and verification. PR 686 owns primary IPO on exact green Phase 14B handoff bab8393cd8f0d30a84be5ad36ad90f41f9cae75f. Exact files preserve retained connected/browser/economic gates and canonical Banking, equity, game-scoped purge and operator boundaries. No merge, deployment, live mutation, scheduler or secret change."
+  "authorizationNote": "Owner authorized full Phase 14 repository integration and issue repair on 2026-09-19. Existing PR 686 owns primary IPO and now normally incorporates merged B c2d892cb4e39625c2b5cdd7de65c41149502d203, targeting main with fresh exact-head gates. Original certified IPO implementation and all exact-path, connected/browser/economic, canonical Banking, equity, game-scoped purge and operator boundaries remain intact. No deployment, live mutation, scheduler or secret change."
 }

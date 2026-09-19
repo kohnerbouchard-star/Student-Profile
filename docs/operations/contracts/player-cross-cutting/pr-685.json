@@ -3,12 +3,16 @@
   "authorityId": "econovaria.business-common-equity-pr-685.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 685,
-  "baseRef": "feat/business-financial-reporting-v2",
+  "baseRef": "main",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    "backend/supabase/functions/player-web-session-api/runtime.ts",
+    "backend/supabase/functions/player-web-session-api/retiredWorkerReadRecovery.ts",
+    "scripts/player-bff-retry-classification.test.mjs",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     ".github/workflows/admin-browser-e2e.yml",
     ".github/workflows/business-common-equity.yml",
     ".github/workflows/crafting-activation-connected-v2.yml",
@@ -33,6 +37,8 @@
     "docs/roadmaps/business-v2-development-execution-plan-v1.md"
   ],
   "requiredFiles": [
+    "backend/supabase/functions/player-web-session-api/retiredWorkerReadRecovery.ts",
+    "scripts/player-bff-retry-classification.test.mjs",
     "backend/supabase/migrations/20260918070248_business_common_equity_invariants_v1.sql",
     "scripts/business-common-equity-database.mjs",
     "scripts/business-common-equity-contract.mjs",
@@ -72,5 +78,5 @@
     "business-common-equity-source",
     "business-common-equity-database"
   ],
-  "authorizationNote": "Owner authorized all Phase 14 implementation and verification. PR 685 owns common-equity enforcement on exact green Phase 14A handoff bcc53a5f6f4c3dcca1938e385e63239d59cdad7a. Preserves retained economic, connected and browser gates. No deployment, live mutation, secrets, or independent Market/money/Inventory authority."
+  "authorizationNote": "Owner authorized full Phase 14 merges and issue repair on 2026-09-19. PR 685 targets main after Phase 14A merge 46cde60e80eb285733f01aa99dcba3c3ec0deedd. The exact additional paths cover one bounded authenticated GET/HEAD retired-worker recovery, negative regression tests and regenerated inventory; common-equity/economic implementation and every check remain unchanged. Retained economic, connected, security and browser gates are required. No deployment, live mutation, secrets, new economic writer, generic 500 retry or mutation retry."
 }

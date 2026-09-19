@@ -2,6 +2,7 @@ import {
   readEdgeSupabaseEnv,
   requirePublishableRequest,
 } from "../_shared/econovariaAuth.ts";
+import { recoverRetiredPlayerRead } from "./retiredWorkerReadRecovery.ts";
 import { readTrustedClientIp } from "../../../src/security/rateLimitKeying.ts";
 import {
   constantTimePlayerTextEqual,
@@ -373,16 +374,26 @@ async function handleProxy(
     Boolean(bodyResult.body),
     resolved.payload.sessionToken,
   );
-  const upstream = await fetch(
-    `${supabaseUrl}/functions/v1/player-api${suffix}${new URL(request.url).search}`,
-    {
-      method: request.method,
-      headers,
-      body: bodyResult.body ? ownedArrayBuffer(bodyResult.body) : undefined,
-      cache: "no-store",
-      redirect: "manual",
-    },
-  ).catch(() => null);
+  const recovered = await recoverRetiredPlayerRead(request.method, async () => {
+    const upstream = await fetch(
+      `${supabaseUrl}/functions/v1/player-api${suffix}${new URL(request.url).search}`,
+      {
+        method: request.method,
+        headers,
+        body: bodyResult.body ? ownedArrayBuffer(bodyResult.body) : undefined,
+        cache: "no-store",
+        redirect: "manual",
+      },
+    ).catch(() => null);
+    const responseBody = upstream ? await readBoundedResponse(request, upstream) : null;
+    return {
+      upstream,
+      responseBody,
+      status: upstream?.status ?? 0,
+      body: responseBody?.ok ? responseBody.body : new Uint8Array(),
+    };
+  });
+  const { upstream, responseBody } = recovered;
   if (!upstream) {
     return json(request, 502, errorBody(
       "player_service_unavailable",
@@ -390,7 +401,7 @@ async function handleProxy(
       true,
     ));
   }
-  const responseBody = await readBoundedResponse(request, upstream);
+  if (!responseBody) throw new Error("Missing Player upstream response body.");
   if (responseBody.ok === false) return responseBody.response;
   if (upstream.status === 401) {
     return clearPlayerSessionResponse(

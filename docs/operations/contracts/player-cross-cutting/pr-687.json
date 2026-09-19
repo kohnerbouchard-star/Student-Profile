@@ -3,7 +3,7 @@
   "authorityId": "econovaria.business-financial-market-pr-687.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 687,
-  "baseRef": "feat/business-ipo-issuance-v2",
+  "baseRef": "main",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
@@ -115,5 +115,5 @@
     "business-financial-market-database",
     "business-financial-market-browser"
   ],
-  "authorizationNote": "Owner authorized Phase 14 implementation and verification. PR 687 owns the final Market integration on exact green 14C handoff 1b1af1d492cc0f9dfe55dfa0f6a326106be3f8ea. Exact paths preserve canonical Business shares, Market pricing/settlement, Banking cash, game purge and retained gates. No merge, deployment, live mutation, scheduler or secret change."
+  "authorizationNote": "Owner authorized full Phase 14 repository integration and bounded issue repair on 2026-09-19. Existing PR 687 owns final Market integration, normally incorporating verified C main merge 338f7c6dc5021812116da34d720c3dbb39e84d7c and targeting main with fresh exact-head gates. Exact paths preserve canonical Business shares, Market pricing/settlement, Banking cash, game purge and all retained gates. No deployment, live mutation, scheduler or secret change."
 }

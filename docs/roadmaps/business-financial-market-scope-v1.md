@@ -2,7 +2,7 @@
 
 Roadmap item `BUSINESS-V2-14D`, within `BETA-BUSINESS-V2-001`. Status `IMPLEMENTED_NOT_MERGED`, repository-certified at `dee709fcbe5bfdf23c66347447eeb70c1408dcd9`, draft PR #687. Owner `feat/business-financial-market-integration-v2`, from green Phase 14C documentation handoff `1b1af1d492cc0f9dfe55dfa0f6a326106be3f8ea`: 43 workflows, 84 jobs and Vercel passed; four manual/historical skips. Predecessor implementation remains `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`, draft #686.
 
-The owner authorized implementation and verification through Phase 14D. This work does not authorize Phase 14 merge, deployment, live SQL, scheduler or secret changes. `BETA-LIVE-MIGRATION-PARITY-001` remains a separate runtime/release blocker.
+The owner authorized implementation and verification through Phase 14D, then full Phase 14 repository integration and bounded issue repair on 2026-09-19. This supersedes the original no-merge restriction, not any verification gate. Existing #687 now normally incorporates verified C main merge `338f7c6dc5021812116da34d720c3dbb39e84d7c`, preserving its certified Market application and inheriting the verified B/C repairs. Fresh exact-head gates precede its normal merge. Deployment, live SQL, scheduler and secret changes remain unauthorized. `BETA-LIVE-MIGRATION-PARITY-001` remains a separate runtime/release blocker.
 
 ## Authority and behavior
 

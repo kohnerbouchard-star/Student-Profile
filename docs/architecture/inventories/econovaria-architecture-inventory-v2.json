@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1235,
+    "sourceFiles": 1236,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 55,
@@ -3256,6 +3256,10 @@
         "lines": 869
       },
       {
+        "file": "backend/supabase/functions/player-web-session-api/runtime.ts",
+        "lines": 867
+      },
+      {
         "file": "backend/src/domains/storylines/services/storylineRunner.test.ts",
         "lines": 866
       },
@@ -3265,10 +3269,6 @@
       },
       {
         "file": "backend/src/domains/storylines/services/storyEffectEngine.ts",
-        "lines": 856
-      },
-      {
-        "file": "backend/supabase/functions/player-web-session-api/runtime.ts",
         "lines": 856
       },
       {
