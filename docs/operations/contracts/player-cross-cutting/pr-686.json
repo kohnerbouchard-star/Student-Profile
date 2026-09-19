@@ -3,7 +3,7 @@
   "authorityId": "econovaria.business-primary-ipo-pr-686.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 686,
-  "baseRef": "feat/business-common-equity-v2",
+  "baseRef": "main",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
@@ -116,5 +116,5 @@
     "business-primary-ipo-database",
     "business-primary-ipo-browser"
   ],
-  "authorizationNote": "Owner authorized Phase 14 implementation and verification. PR 686 owns primary IPO on exact green Phase 14B handoff bab8393cd8f0d30a84be5ad36ad90f41f9cae75f. Exact files preserve retained connected/browser/economic gates and canonical Banking, equity, game-scoped purge and operator boundaries. No merge, deployment, live mutation, scheduler or secret change."
+  "authorizationNote": "Owner authorized full Phase 14 repository integration and issue repair on 2026-09-19. Existing PR 686 owns primary IPO and now normally incorporates merged B c2d892cb4e39625c2b5cdd7de65c41149502d203, targeting main with fresh exact-head gates. Original certified IPO implementation and all exact-path, connected/browser/economic, canonical Banking, equity, game-scoped purge and operator boundaries remain intact. No deployment, live mutation, scheduler or secret change."
 }
