@@ -21,6 +21,21 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`BUSINESS-V2-14A`–`14D` — Repository integration closed (2026-09-19)**
+  - All four feature PRs are normally merged. No remaining Phase 14 repository implementation or feature merge. Overall status is `BLOCKED` only for separate `BETA-LIVE-MIGRATION-PARITY-001` live/release evidence, not an outstanding repository merge. Do not label live capability `VERIFIED_COMPLETE` without that evidence.
+
+    | Phase | PR | Verified integration head | Main merge |
+    | --- | --- | --- | --- |
+    | 14A reporting | #684 | `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a` | `46cde60e80eb285733f01aa99dcba3c3ec0deedd` |
+    | 14B common equity | #685 | `5b058a23ac46e696fc9274c9df2409e9a37926d1` | `c2d892cb4e39625c2b5cdd7de65c41149502d203` |
+    | 14C primary IPO | #686 | `3aca159d1d68ff554f96e998d9ffbfe74cd992db` | `338f7c6dc5021812116da34d720c3dbb39e84d7c` |
+    | 14D Financial Market | #687 | `7ca05777456e450a3c0daab7439d2050fa81d439` | `017a4732ce52c29b31f8fb3666e4662420b19188` |
+
+  - Each merge tree exactly matches its verified head. B passed 40 workflows/81 jobs, C 51/94, and D 47/90, all with Vercel. D's connected retry passed every journey and both 30/40-player profiles with zero server errors; its first single-503 attempt is preserved, not relabeled. Expected manual/staging/historical skips and every run/job identity are in [the merge evidence](../operations/evidence/phase14-repository-merge-verification-2026-09-19.json) and the current checkpoint.
+  - B fixed exact retired-worker read recovery behind existing authenticated GET/HEAD boundaries. C registered three existing IPO browser actions accurately and synchronized the retained Market harness with fresh funding reads. Mutations, economic/console/privacy assertions, retry/load budgets and architecture ceilings were not weakened. D retained its original certified application. Implementation files, migrations (through `20260918095220`), RPCs, routes and rollout remain in the four Phase 14 scope documents.
+  - Final application main `017a4732ce52c29b31f8fb3666e4662420b19188` passed all 22 applicable post-merge workflows and 40 jobs, with two expected skipped release workflows and ten expected skipped jobs; no failure or pending check. Documentation-only closure #688 reconciles these records and adds no runtime capability. All older integration-progress and draft-only blocks below are historical and superseded.
+  - No deployment, live SQL, scheduler or secret change. Release guards and automatic-main deployment settings are unchanged; `release/production` remains `59a82ef8580d7d571727e722424bc84cf064e8aa`. No next implementation phase is authorized. Live parity/release or later feature work needs separate owner direction.
+
 - **Current ordered-integration status (2026-09-19):** A #684, B #685 and C #686 are merged. C merge `338f7c6dc5021812116da34d720c3dbb39e84d7c` exactly matches certified head `3aca159d1d68ff554f96e998d9ffbfe74cd992db`: 51 applicable workflows, 94 jobs and Vercel passed; 11 expected manual/staging/historical job skips. Both IPO-ledger and Market-readiness issues below are fixed and verified; every connected journey and 30/40-player load passed with zero server errors. D #687 is the final remaining normal merge, now integrated against main with its certified application unchanged. Fresh D exact-head and C post-merge checks precede merge. Older blocks below are historical; no live release is authorized and live parity remains `BLOCKED`.
 
 - **`BUSINESS-V2-14D` — Financial Market integration (2026-09-18)**

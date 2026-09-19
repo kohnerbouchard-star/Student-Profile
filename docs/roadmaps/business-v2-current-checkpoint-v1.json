@@ -4,18 +4,39 @@
     "authorized_at": "2026-09-19",
     "scope": "Ordered normal repository merges only; no deployment, live SQL, scheduler or secret change.",
     "implementation_complete": true,
-    "integration_status": "IN_PROGRESS",
+    "integration_status": "MERGED",
     "repair_authorization": "Owner: Get phase 14 fully merged and fix it if there are issues (2026-09-19). No deployment authority.",
     "repair_candidate": {
       "owner_pr": 685,
       "scope": "One 150ms-delayed retry after exact retired-worker transport identification, only for authenticated Player GET/HEAD reads; all mutation, ordinary-error, authorization and resource boundaries remain intact.",
-      "files": ["backend/supabase/functions/player-web-session-api/runtime.ts", "backend/supabase/functions/player-web-session-api/retiredWorkerReadRecovery.ts", "scripts/player-bff-retry-classification.test.mjs"],
+      "files": [
+        "backend/supabase/functions/player-web-session-api/runtime.ts",
+        "backend/supabase/functions/player-web-session-api/retiredWorkerReadRecovery.ts",
+        "scripts/player-bff-retry-classification.test.mjs"
+      ],
       "local_evidence": "50 read-resilience, proxy-recovery, authority and security tests plus 19 isolation/security contracts passed; common-equity/reporting source and architecture ratchet passed.",
       "verified_head": "5b058a23ac46e696fc9274c9df2409e9a37926d1",
       "merged_main_sha": "c2d892cb4e39625c2b5cdd7de65c41149502d203",
       "runtime_evidence_pending": false,
-      "verification": { "successful_workflows": 40, "successful_jobs": 81, "expected_skipped_jobs": 6, "vercel": "success", "store_run": 35433862505, "store_connected_job": 105873110754, "connected_load_run": 35433862631, "connected_load_job": 105873110825, "server_errors": 0 },
-      "store_artifact": { "id": 10581127502, "sha256": "3360e709aa5dd1aada688020fa23356e4e0639b6debbf68338f29b4898669033", "downloaded_and_verified": true, "console_errors": 0, "page_errors": 0, "economic_and_isolation_evidence": true },
+      "verification": {
+        "successful_workflows": 40,
+        "successful_jobs": 81,
+        "expected_skipped_jobs": 6,
+        "vercel": "success",
+        "store_run": 35433862505,
+        "store_connected_job": 105873110754,
+        "connected_load_run": 35433862631,
+        "connected_load_job": 105873110825,
+        "server_errors": 0
+      },
+      "store_artifact": {
+        "id": 10581127502,
+        "sha256": "3360e709aa5dd1aada688020fa23356e4e0639b6debbf68338f29b4898669033",
+        "downloaded_and_verified": true,
+        "console_errors": 0,
+        "page_errors": 0,
+        "economic_and_isolation_evidence": true
+      },
       "source_reference": "https://github.com/supabase/cli/blob/v2.109.1/apps/cli/src/shared/functions/serve.main.ts"
     },
     "integration_blocker": {
@@ -29,9 +50,14 @@
       "failure": "Player browser emitted console errors. Retry artifact records one HTTP 500 console error in Isolation Buyer, no page errors, and successful economic/isolation evidence. Runtime diagnostics include HTTP 500 for /players/me/world/countries plus WorkerAlreadyRetired and CPU soft-limit messages; causation is not established.",
       "retry_artifact_id": 10578575529,
       "retry_artifact_sha256": "77dbc1b257185b09c285562a8daf8d471f3b579369b3cbd37f8bcbc2160c5153",
-      "main_workflow_summary": { "success": 24, "failure": 1, "expected_skipped": 2, "pending": 0 },
+      "main_workflow_summary": {
+        "success": 24,
+        "failure": 1,
+        "expected_skipped": 2,
+        "pending": 0
+      },
       "comparator": "PR 685 candidate b4b360a4058e687b895f2ba0b68c70100c91a8dc passed its connected Store job 105842279867 and full connected/load job 105842279641. That different-source result does not clear the failed main run.",
-      "next_action": "Verify Phase 14B post-merge main, then integrate and verify PR 686 and PR 687 in order. No assertion was waived; platform retirement cause remains unestablished."
+      "next_action": "Original A failure is preserved and superseded by verified B repair; C corrections are verified and merged. Complete final-main verification and documentation closure only. No new feature or live release is authorized."
     },
     "phase14a_merge": "46cde60e80eb285733f01aa99dcba3c3ec0deedd",
     "phase14a_verified_handoff": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
@@ -45,9 +71,34 @@
     "phase14c_verified_handoff": "3aca159d1d68ff554f96e998d9ffbfe74cd992db",
     "phase14c_verified_tree": "d8551245915a9dce7d81ab1d224eae1b29a48ae4",
     "phase14c_premerge_evidence": "51 applicable workflows, 94 jobs and Vercel passed; 11 expected manual/staging/historical job skips, including three wholly skipped staging workflows. Merge and candidate trees are identical.",
-    "phase14c_ipo_gate": { "run": 35435691359, "source_job": 105877825693, "database_job": 105877825714, "browser_job": 105877825558, "fresh_replays": 2, "browser_cases": 12, "artifact_id": 10581343837, "artifact_sha256": "8f3ef2ce8abca675b13c289066e0fffdb600bf02fc9dc8b6e00e2fb223accb95" },
-    "phase14c_connected_gate": { "run": 35435691418, "job": 105877825563, "all_journeys": "success", "load_profiles": [30, 40], "server_errors": 0, "p95_ms": { "login": 1749.29, "read": 2461.27, "burst_read": 2605.44 }, "artifact_id": 10582670208, "artifact_sha256": "41218c940a997c0aa48d03dde2ebd5a2522f1cf03e8ebcc9e61a638ffedccd60" },
-    "current_integration_pr": 687,
+    "phase14c_ipo_gate": {
+      "run": 35435691359,
+      "source_job": 105877825693,
+      "database_job": 105877825714,
+      "browser_job": 105877825558,
+      "fresh_replays": 2,
+      "browser_cases": 12,
+      "artifact_id": 10581343837,
+      "artifact_sha256": "8f3ef2ce8abca675b13c289066e0fffdb600bf02fc9dc8b6e00e2fb223accb95"
+    },
+    "phase14c_connected_gate": {
+      "run": 35435691418,
+      "job": 105877825563,
+      "all_journeys": "success",
+      "load_profiles": [
+        30,
+        40
+      ],
+      "server_errors": 0,
+      "p95_ms": {
+        "login": 1749.29,
+        "read": 2461.27,
+        "burst_read": 2605.44
+      },
+      "artifact_id": 10582670208,
+      "artifact_sha256": "41218c940a997c0aa48d03dde2ebd5a2522f1cf03e8ebcc9e61a638ffedccd60"
+    },
+    "current_integration_pr": null,
     "phase14c_market_readiness_correction": {
       "failed_head": "f4c36fc2b5a381d9d999c2e3dbba50a69b13ac85",
       "workflow_run": 35435123176,
@@ -67,13 +118,61 @@
       "verification": "Button gate passed on final exact head 3aca159d1d68ff554f96e998d9ffbfe74cd992db before normal merge 338f7c6dc5021812116da34d720c3dbb39e84d7c. Original failed run remains historical."
     },
     "current_integration_base": "main",
-    "candidate_note": "Market application and migrations retain certified implementation dee709fcbe5bfdf23c66347447eeb70c1408dcd9. Normal main merge inherits verified B/C repairs; exact-main authority, negative regression and integration records are reconciled. Fresh exact-head gates are required before PR 687 merges.",
-    "remaining_merge_order": [687],
+    "candidate_note": "All four Phase 14 feature PRs are normally merged. Final application main exactly matches the verified D tree and passed all applicable post-merge checks. Documentation-only closure #688 records evidence; no Phase 14 implementation or feature merge remains.",
+    "remaining_merge_order": [],
     "production_release_before": "59a82ef8580d7d571727e722424bc84cf064e8aa",
     "runtime_status": "BLOCKED",
-    "runtime_blocker": "BETA-LIVE-MIGRATION-PARITY-001"
+    "runtime_blocker": "BETA-LIVE-MIGRATION-PARITY-001",
+    "postmerge_verification_status": "PASSED",
+    "phase14d_postmerge_evidence": { "sha": "017a4732ce52c29b31f8fb3666e4662420b19188", "successful_workflows": 22, "successful_jobs": 40, "expected_skipped_workflows": 2, "expected_skipped_jobs": 10, "failed": 0, "pending": 0 },
+    "documentation_closure_pr": 688,
+    "phase14c_postmerge_evidence": {
+      "sha": "338f7c6dc5021812116da34d720c3dbb39e84d7c",
+      "workflows": 24,
+      "success": 22,
+      "skipped": 2,
+      "pending": 0,
+      "failed": [],
+      "jobs": {
+        "skipped": 10,
+        "success": 40
+      }
+    },
+    "phase14d_merge": "017a4732ce52c29b31f8fb3666e4662420b19188",
+    "phase14d_verified_handoff": "7ca05777456e450a3c0daab7439d2050fa81d439",
+    "phase14d_verified_tree": "643a757d2e3175572d5a5d5e63c59b1ba79ccc56",
+    "phase14d_premerge_evidence": {
+      "sha": "7ca05777456e450a3c0daab7439d2050fa81d439",
+      "workflows": 49,
+      "success": 47,
+      "skipped": 2,
+      "pending": 0,
+      "failed": [],
+      "jobs": {
+        "success": 90,
+        "skipped": 6
+      }
+    },
+    "phase14d_connected_retry": {
+      "head": "7ca05777456e450a3c0daab7439d2050fa81d439",
+      "run": 35436595436,
+      "job": 105881790145,
+      "conclusion": "success",
+      "unchanged_source": true
+    },
+    "phase14d_prior_load_failure": {
+      "head": "7ca05777456e450a3c0daab7439d2050fa81d439",
+      "run": 35436595436,
+      "failedJob": 105880199285,
+      "artifact": 10583205733,
+      "sha256": "c7a0b0543f8344f044ef7f18b09f32c78adff68ba5b72be0f741dd21c0f45af3",
+      "finding": "All journeys and 30-player load passed. One 40-player GET /players/me HTTP503 arrived at 3066ms and exhausted the existing 3000ms retry budget before another attempt. Twelve other 503 read recoveries succeeded. Worker-retirement/CPU diagnostics are correlated, not a proven platform root cause.",
+      "action": "One unchanged-source failed-job retry; no retry budget, threshold, concurrency, source or assertion changes."
+    },
+    "production_release_after": "59a82ef8580d7d571727e722424bc84cf064e8aa",
+    "evidence": "docs/operations/evidence/phase14-repository-merge-verification-2026-09-19.json"
   },
-  "status": "PHASE_14_REPOSITORY_CERTIFIED",
+  "status": "PHASE_14_REPOSITORY_MERGED",
   "audited_at": "2026-09-19",
   "integration_pr": null,
   "integration_branch": "main",
@@ -83,11 +182,11 @@
     "state": "CLOSED_SUPERSEDED_BY_MERGED_MAIN"
   },
   "latest_checkpoint": "BUSINESS-V2-14D",
-  "latest_checkpoint_branch": "feat/business-financial-market-integration-v2",
+  "latest_checkpoint_branch": "main",
   "latest_checkpoint_pr": 687,
   "exact_implementation_sha": "dee709fcbe5bfdf23c66347447eeb70c1408dcd9",
   "documentation_parent_sha": "dee709fcbe5bfdf23c66347447eeb70c1408dcd9",
-  "merged_main_sha": "338f7c6dc5021812116da34d720c3dbb39e84d7c",
+  "merged_main_sha": "017a4732ce52c29b31f8fb3666e4662420b19188",
   "parent_checkpoint": "BUSINESS-V2-14C",
   "parent_implementation_sha": "cf3fabf2444a2c85d71155fccfa1e5b371bc2c37",
   "required_workflow_runs": {
@@ -148,16 +247,16 @@
       "final-enforcement"
     ]
   },
-  "active_checkpoint": "BUSINESS-V2-14D",
-  "active_checkpoint_branch": "feat/business-financial-market-integration-v2",
-  "active_checkpoint_pr": 687,
-  "active_checkpoint_started_at": "2026-09-18T09:28:37.958991+00:00",
-  "active_candidate_parent_sha": "1b1af1d492cc0f9dfe55dfa0f6a326106be3f8ea",
+  "active_checkpoint": null,
+  "active_checkpoint_branch": null,
+  "active_checkpoint_pr": null,
+  "active_checkpoint_started_at": null,
+  "active_candidate_parent_sha": null,
   "active_candidate_implementation_sha": "dee709fcbe5bfdf23c66347447eeb70c1408dcd9",
-  "active_candidate_state": "IMPLEMENTED_NOT_MERGED",
-  "active_candidate_note": "All four Phase 14 checkpoints are repository-certified. This final implementation includes green retained economics, connected/load and browser checks. Draft stack remains unmerged and undeployed.",
+  "active_candidate_state": "BLOCKED",
+  "active_candidate_note": "All Phase 14A–D implementations are repository-certified and merged; no active implementation remains. BLOCKED refers only to separate live migration parity/release evidence. No live deployment occurred.",
   "next_authorized_checkpoint": null,
-  "next_authorized_scope": "No remaining Phase 14 repository implementation. Stack integration and live parity/release remain under separate owner authorization.",
+  "next_authorized_scope": "No remaining Phase 14 repository implementation or feature merge. Documentation closure is recorded in #688. Live parity/release and any later implementation phase require separate owner direction.",
   "remaining_dependency_order": [],
   "release_state": {
     "phase12_merged_to_main": true,
@@ -169,8 +268,9 @@
     "phase13_merged_to_main": true,
     "phase12_merge_sha": "b09905c066016ae1523d2f0a991e86f2f60c70db",
     "phase13_merge_sha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6",
-    "phase14_merged_to_main": false,
-    "phase14_repository_certified": true
+    "phase14_merged_to_main": true,
+    "phase14_repository_certified": true,
+    "phase14_merge_sha": "017a4732ce52c29b31f8fb3666e4662420b19188"
   },
   "known_global_blocker": "BETA-LIVE-MIGRATION-PARITY-001",
   "known_global_blocker_scope": "Separate live/release evidence; does not block Phase 14 repository certification and does not authorize live reconciliation from this branch.",
@@ -4920,25 +5020,45 @@
       "checkpoint": "14A",
       "pr": 684,
       "implementation": "aed8c3f6462d927cec3ebc55602854d48a460a9b",
-      "status": "IMPLEMENTED_NOT_MERGED"
+      "status": "BLOCKED",
+      "repository_merged": true,
+      "merge_sha": "46cde60e80eb285733f01aa99dcba3c3ec0deedd",
+      "verified_head": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
+      "runtime_blocker": "BETA-LIVE-MIGRATION-PARITY-001",
+      "status_scope": "Live/release evidence only; repository implementation and merge are complete."
     },
     {
       "checkpoint": "14B",
       "pr": 685,
       "implementation": "197caa4034214e21b8033a3f4363dc07a13b5dcf",
-      "status": "IMPLEMENTED_NOT_MERGED"
+      "status": "BLOCKED",
+      "repository_merged": true,
+      "merge_sha": "c2d892cb4e39625c2b5cdd7de65c41149502d203",
+      "verified_head": "5b058a23ac46e696fc9274c9df2409e9a37926d1",
+      "runtime_blocker": "BETA-LIVE-MIGRATION-PARITY-001",
+      "status_scope": "Live/release evidence only; repository implementation and merge are complete."
     },
     {
       "checkpoint": "14C",
       "pr": 686,
       "implementation": "cf3fabf2444a2c85d71155fccfa1e5b371bc2c37",
-      "status": "IMPLEMENTED_NOT_MERGED"
+      "status": "BLOCKED",
+      "repository_merged": true,
+      "merge_sha": "338f7c6dc5021812116da34d720c3dbb39e84d7c",
+      "verified_head": "3aca159d1d68ff554f96e998d9ffbfe74cd992db",
+      "runtime_blocker": "BETA-LIVE-MIGRATION-PARITY-001",
+      "status_scope": "Live/release evidence only; repository implementation and merge are complete."
     },
     {
       "checkpoint": "14D",
       "pr": 687,
       "implementation": "dee709fcbe5bfdf23c66347447eeb70c1408dcd9",
-      "status": "IMPLEMENTED_NOT_MERGED"
+      "status": "BLOCKED",
+      "repository_merged": true,
+      "merge_sha": "017a4732ce52c29b31f8fb3666e4662420b19188",
+      "verified_head": "7ca05777456e450a3c0daab7439d2050fa81d439",
+      "runtime_blocker": "BETA-LIVE-MIGRATION-PARITY-001",
+      "status_scope": "Live/release evidence only; repository implementation and merge are complete."
     }
   ],
   "phase14d_handoff_attempts": [

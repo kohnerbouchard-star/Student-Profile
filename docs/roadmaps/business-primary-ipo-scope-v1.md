@@ -1,5 +1,9 @@
 # Phase 14C — Fixed-price primary IPO issuance
 
+Current status (2026-09-19): repository implementation verified and **merged**, PR #686, merge `338f7c6dc5021812116da34d720c3dbb39e84d7c`, exact verified head `3aca159d1d68ff554f96e998d9ffbfe74cd992db`. Overall roadmap status is `BLOCKED` only for separate `BETA-LIVE-MIGRATION-PARITY-001` live/release evidence. No deployment or live mutation occurred. Final A–D application main is `017a4732ce52c29b31f8fb3666e4662420b19188`; the [merge record](../operations/evidence/phase14-repository-merge-verification-2026-09-19.json) retains exact checks, corrections, prior failures and post-merge verification. No Phase 14 feature merge remains.
+
+Original implementation history follows. Older draft, unmerged or merge-pending references describe their recorded checkpoints and are superseded by the current integration status above; original source certificates and economic contracts remain intact.
+
 Roadmap item: `BUSINESS-V2-14C`, within `BETA-BUSINESS-V2-001`.
 Status: `IMPLEMENTED_NOT_MERGED`, draft PR #686. Exact repository-certified implementation: `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`.
 

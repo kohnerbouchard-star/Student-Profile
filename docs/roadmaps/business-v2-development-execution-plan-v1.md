@@ -551,15 +551,16 @@ Phase 13 retains original certification `949da9f91990eeeee2cd815541446a5b6413066
 
 ## Phase 14 — Financial reporting, equity and IPO -> Financial Market
 
-**Status:** `IMPLEMENTED_NOT_MERGED` for all Phase 14A–D. Draft stack #684 → #685 → #686 → #687 is repository-certified. Final D source `dee709fcbe5bfdf23c66347447eeb70c1408dcd9` passed 43 workflows, 86 applicable jobs and Vercel, two fresh database replays/advisors, 14 desktop/mobile cases and retained Business/World with 30/40-player load. 4 manual/historical jobs skipped as recorded in the [checkpoint](business-v2-current-checkpoint-v1.json). Full source, migration, artifact and rollout details are in the [Market handoff](business-financial-market-scope-v1.md). No Phase 14 merge, deployment or live SQL occurred.
+**Status:** `BLOCKED` for live parity/release evidence only. All Phase 14A–D repository implementations are verified and normally merged through #684 → #685 → #686 → #687. Final application main `017a4732ce52c29b31f8fb3666e4662420b19188` exactly matches D head `7ca05777456e450a3c0daab7439d2050fa81d439`: 47 applicable workflows, 90 jobs and Vercel passed, two fresh database replays/advisors, 14 desktop/mobile cases and all connected journeys plus 30/40-player load. Six manual/staging/historical jobs skipped as expected. The unchanged-source retry's prior single-503 failure is preserved. The [merge evidence](../operations/evidence/phase14-repository-merge-verification-2026-09-19.json), [checkpoint](business-v2-current-checkpoint-v1.json) and four scope documents retain exact source, migration, artifact and rollout details. Documentation closure #688 adds no application change. No deployment or live SQL occurred.
 
 - [x] Implement and repository-certify Business statements/fundamentals from canonical operating evidence; see [scope and handoff](business-financial-reporting-scope-v1.md).
 - [x] Preserve the original 14A1 certificate while completing labor capitalization, period-end reconciliation and authenticated Player/Admin reporting.
-- [x] Repository-certify common-share invariants (`BUSINESS-V2-14B`), draft #685 at `197caa4034214e21b8033a3f4363dc07a13b5dcf`: 28 workflows, 53 jobs and Vercel passed, including two fresh database replays and full connected/load acceptance. Still unmerged.
-- [x] Repository-certify fixed-price primary IPO (`14C`), draft #686 at `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`: 43 workflows, 84 jobs, two fresh replays, 12 browser cases and full connected/load acceptance passed. Still unmerged.
+- [x] Repository-certify and merge common-share invariants (`BUSINESS-V2-14B`), #685; original implementation `197caa4034214e21b8033a3f4363dc07a13b5dcf`, verified integration merge `c2d892cb4e39625c2b5cdd7de65c41149502d203`.
+- [x] Repository-certify and merge fixed-price primary IPO (`14C`), #686; original implementation `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`, verified integration merge `338f7c6dc5021812116da34d720c3dbb39e84d7c`.
 - [x] Publish versioned Business events to a Market-owned consumer (`14D`).
 - [x] Verify existing Financial Market/Portfolio secondary trading, authoritative Dashboard positions, finite custody and Banking settlement without Business writing Market internals.
-- [ ] Merge/release only under applicable owner authorization and satisfy the separate live-parity/runtime boundary before `VERIFIED_COMPLETE`.
+- [x] Merge all four Phase 14 feature owners under explicit owner authorization and exact-head verification, without deploying.
+- [ ] Satisfy separate live-parity/runtime evidence and obtain explicit release authorization before live promotion or `VERIFIED_COMPLETE`.
 
 ---
 
@@ -626,14 +627,14 @@ Form Business
 
 # Development/PR strategy
 
-PR #648 and the old Business integration stack are closed. Main already contains Phase 11 and the owner-authorized Phase 12/13 merges. Phase 14 remains a bounded, repository-certified draft stack in dependency order:
+PR #648 and the old Business integration stack are closed. Main contains Phase 11, the owner-authorized Phase 12/13 merges, and all four Phase 14 feature owners, normally merged in dependency order:
 
 1. #684 `feat/business-financial-reporting-v2` — financial reporting.
 2. #685 `feat/business-common-equity-v2` — common equity.
 3. #686 `feat/business-ipo-issuance-v2` — fixed-price primary IPO.
 4. #687 `feat/business-financial-market-integration-v2` — Market consumption and secondary trading.
 
-Each owner starts from its exact green predecessor handoff. Any ordered integration requires applicable owner authorization and renewed gates on the actual merge candidates; no live release follows from repository certification. `BETA-LIVE-MIGRATION-PARITY-001` remains separate. Earlier execution-log references to #648 are historical.
+Each owner incorporated its exact verified predecessor main normally and passed renewed candidate gates. Documentation-only #688 closes the merge ledger; it does not replace a feature owner. No live release follows from repository certification. `BETA-LIVE-MIGRATION-PARITY-001` remains separate, with no later implementation phase authorized by this merge request. Earlier draft/merge-pending execution-log references are historical.
 
 ---
 

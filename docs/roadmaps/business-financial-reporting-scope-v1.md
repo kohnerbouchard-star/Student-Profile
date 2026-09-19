@@ -1,5 +1,9 @@
 # Business V2 Phase 14A — Financial reporting
 
+Current status (2026-09-19): repository implementation verified and **merged**, PR #684, merge `46cde60e80eb285733f01aa99dcba3c3ec0deedd`, exact verified head `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`. Overall roadmap status is `BLOCKED` only for separate `BETA-LIVE-MIGRATION-PARITY-001` live/release evidence. No deployment or live mutation occurred. Final A–D application main is `017a4732ce52c29b31f8fb3666e4662420b19188`; the [merge record](../operations/evidence/phase14-repository-merge-verification-2026-09-19.json) retains exact checks, corrections, prior failures and post-merge verification. No Phase 14 feature merge remains.
+
+Original implementation history follows. Older draft, unmerged or merge-pending references describe their recorded checkpoints and are superseded by the current integration status above; original source certificates and economic contracts remain intact.
+
 Status: `IMPLEMENTED_NOT_MERGED`. Exact certified implementation: `aed8c3f6462d927cec3ebc55602854d48a460a9b`. Owner: `feat/business-financial-reporting-v2`, draft PR #684, based on Phase 13 merged main `4a9674ed9ca0565c828093fe100aa658ef4faaa6`. The owner authorized all Phase 14 implementation/verification stages on 2026-09-18; deployment, live SQL, scheduler and secret changes remain outside that authorization.
 
 ## Implemented reporting contract
