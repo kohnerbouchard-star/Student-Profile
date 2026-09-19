@@ -1,5 +1,9 @@
 # Phase 14B — Common-equity invariants
 
+Current status (2026-09-19): repository implementation verified and **merged**, PR #685, merge `c2d892cb4e39625c2b5cdd7de65c41149502d203`, exact verified head `5b058a23ac46e696fc9274c9df2409e9a37926d1`. Overall roadmap status is `BLOCKED` only for separate `BETA-LIVE-MIGRATION-PARITY-001` live/release evidence. No deployment or live mutation occurred. Final A–D application main is `017a4732ce52c29b31f8fb3666e4662420b19188`; the [merge record](../operations/evidence/phase14-repository-merge-verification-2026-09-19.json) retains exact checks, corrections, prior failures and post-merge verification. No Phase 14 feature merge remains.
+
+Original implementation history follows. Older draft, unmerged or merge-pending references describe their recorded checkpoints and are superseded by the current integration status above; original source certificates and economic contracts remain intact.
+
 Roadmap item: `BUSINESS-V2-14B`, within `BETA-BUSINESS-V2-001`.
 Status: `IMPLEMENTED_NOT_MERGED`, exact certified implementation `197caa4034214e21b8033a3f4363dc07a13b5dcf`. No live-runtime claim.
 

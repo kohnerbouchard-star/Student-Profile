@@ -3497,7 +3497,7 @@
           ]
         }
       ],
-      "postmerge_state": "PENDING",
+      "postmerge_state": "PASSED",
       "vercel": {
         "statuses": [
           {
@@ -3525,7 +3525,463 @@
         "id": 10582841967,
         "sha256": "a62e2c77dd72a43febea9a235fc69dc0c57a30fc4f509a32a5a94cdfb5b02105",
         "downloaded_and_verified": true
-      }
+      },
+      "postmerge_summary": {
+        "sha": "017a4732ce52c29b31f8fb3666e4662420b19188",
+        "workflows": 24,
+        "success": 22,
+        "skipped": 2,
+        "pending": 0,
+        "failed": [],
+        "jobs": {
+          "skipped": 10,
+          "success": 40
+        }
+      },
+      "postmerge": [
+        {
+          "run": 35437898918,
+          "name": "Vercel Git Production Verification",
+          "result": "skipped",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437898918",
+          "jobs": [
+            {
+              "id": 105883604344,
+              "name": "Verify Vercel Git production deployment",
+              "result": "skipped"
+            },
+            {
+              "id": 105883605176,
+              "name": "Validate Vercel Git verification contract",
+              "result": "skipped"
+            }
+          ]
+        },
+        {
+          "run": 35437784547,
+          "name": "Runtime Interaction Wiring",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784547",
+          "jobs": [
+            {
+              "id": 105883289775,
+              "name": "trace-runtime-controls",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784571,
+          "name": "Edge Function Inventory Convergence",
+          "result": "skipped",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784571",
+          "jobs": [
+            {
+              "id": 105883290714,
+              "name": "Converge staging Edge Function inventory",
+              "result": "skipped"
+            },
+            {
+              "id": 105883305597,
+              "name": "Converge production Edge Function inventory",
+              "result": "skipped"
+            }
+          ]
+        },
+        {
+          "run": 35437784566,
+          "name": "Beta Pilot Contract",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784566",
+          "jobs": [
+            {
+              "id": 105883289773,
+              "name": "contract",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784586,
+          "name": "Player Local Currency Authority",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784586",
+          "jobs": [
+            {
+              "id": 105883289987,
+              "name": "Checking, Savings, and local-currency contract",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784558,
+          "name": "Production Git Release",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784558",
+          "jobs": [
+            {
+              "id": 105883289975,
+              "name": "Validate tokenless production release contract",
+              "result": "success"
+            },
+            {
+              "id": 105883318037,
+              "name": "Capture exact staging live parity evidence",
+              "result": "skipped"
+            },
+            {
+              "id": 105883318060,
+              "name": "Capture exact production live parity evidence",
+              "result": "skipped"
+            },
+            {
+              "id": 105883318391,
+              "name": "Enforce exact bounded live parity",
+              "result": "skipped"
+            },
+            {
+              "id": 105883318656,
+              "name": "Publish parity-verified source to release/production",
+              "result": "skipped"
+            }
+          ]
+        },
+        {
+          "run": 35437784533,
+          "name": "Business Workforce Hiring V2",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784533",
+          "jobs": [
+            {
+              "id": 105883289684,
+              "name": "verify",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784572,
+          "name": "Beta Security Contract",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784572",
+          "jobs": [
+            {
+              "id": 105883289831,
+              "name": "verify",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784570,
+          "name": "Business Banking Runtime",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784570",
+          "jobs": [
+            {
+              "id": 105883289823,
+              "name": "verify",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784540,
+          "name": "Supply Chain Security",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784540",
+          "jobs": [
+            {
+              "id": 105883289858,
+              "name": "verify-and-attest",
+              "result": "success"
+            },
+            {
+              "id": 105883290507,
+              "name": "dependency-review",
+              "result": "skipped"
+            }
+          ]
+        },
+        {
+          "run": 35437784574,
+          "name": "Required Game Market Timezone",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784574",
+          "jobs": [
+            {
+              "id": 105883290006,
+              "name": "apply-and-validate",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784612,
+          "name": "Release Integrity",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784612",
+          "jobs": [
+            {
+              "id": 105883290430,
+              "name": "Verify static release integrity",
+              "result": "success"
+            },
+            {
+              "id": 105883398961,
+              "name": "Inspect staging and production parity read-only",
+              "result": "skipped"
+            }
+          ]
+        },
+        {
+          "run": 35437784589,
+          "name": "Admin API Check",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784589",
+          "jobs": [
+            {
+              "id": 105883289939,
+              "name": "admin-api-check",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784594,
+          "name": "Repository Quality",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784594",
+          "jobs": [
+            {
+              "id": 105883290050,
+              "name": "quality",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784573,
+          "name": "Backend Typecheck",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784573",
+          "jobs": [
+            {
+              "id": 105883289941,
+              "name": "backend-typecheck",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784554,
+          "name": "Business Timed Manufacturing V2",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784554",
+          "jobs": [
+            {
+              "id": 105883289815,
+              "name": "Boot reviewed Player Edge entrypoints",
+              "result": "success"
+            },
+            {
+              "id": 105883289883,
+              "name": "Verify timed manufacturing",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784561,
+          "name": "Database Replay",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784561",
+          "jobs": [
+            {
+              "id": 105883289980,
+              "name": "replay",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784577,
+          "name": "Business Store Seller Offers V2",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784577",
+          "jobs": [
+            {
+              "id": 105883289866,
+              "name": "verify-retained-business-banking",
+              "result": "success"
+            },
+            {
+              "id": 105883289953,
+              "name": "verify-store-seller-offers",
+              "result": "success"
+            },
+            {
+              "id": 105883290037,
+              "name": "verify-player-terminal-and-chromium",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784567,
+          "name": "Business Store Listing Inventory V2",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784567",
+          "jobs": [
+            {
+              "id": 105883289970,
+              "name": "Verify Store-listing authority",
+              "result": "success"
+            },
+            {
+              "id": 105883290064,
+              "name": "Verify retained Player Terminal and Chromium",
+              "result": "success"
+            },
+            {
+              "id": 105883290081,
+              "name": "Verify retained Store, Inventory, and Business runtime",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784598,
+          "name": "Player Terminal Verify",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784598",
+          "jobs": [
+            {
+              "id": 105883290262,
+              "name": "verify",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784600,
+          "name": "Business Store Atomic Settlement V2",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784600",
+          "jobs": [
+            {
+              "id": 105883290246,
+              "name": "Verify database settlement, rollback, races, and isolation",
+              "result": "success"
+            },
+            {
+              "id": 105883290361,
+              "name": "Verify atomic settlement authority and retained Store phases",
+              "result": "success"
+            },
+            {
+              "id": 105883290372,
+              "name": "Verify retained Player Terminal and Chromium",
+              "result": "success"
+            },
+            {
+              "id": 105883290376,
+              "name": "Replay complete database twice and lint",
+              "result": "success"
+            },
+            {
+              "id": 105883290404,
+              "name": "Verify retained Business, Store, Inventory, Backend, and Edge runtime",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784605,
+          "name": "Business Store Withdrawal Safety V2",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784605",
+          "jobs": [
+            {
+              "id": 105883290207,
+              "name": "Verify withdrawal authority",
+              "result": "success"
+            },
+            {
+              "id": 105883290375,
+              "name": "Verify retained Player Terminal and Chromium",
+              "result": "success"
+            },
+            {
+              "id": 105883290422,
+              "name": "Verify retained Store, Inventory, and Business runtime",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437784596,
+          "name": "Business Player Store Cutover V2",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437784596",
+          "jobs": [
+            {
+              "id": 105883290195,
+              "name": "Replay complete database twice and lint at warning level",
+              "result": "success"
+            },
+            {
+              "id": 105883290268,
+              "name": "Verify public Store, seller projection, capabilities, rates, and Edge roots",
+              "result": "success"
+            },
+            {
+              "id": 105883290277,
+              "name": "Verify serial settlement, ordering races, and two-game isolation",
+              "result": "success"
+            },
+            {
+              "id": 105883290294,
+              "name": "Verify connected Buyer and seller Store journey in two games",
+              "result": "success"
+            },
+            {
+              "id": 105883290312,
+              "name": "Verify Player Store cutover and retained authorities",
+              "result": "success"
+            },
+            {
+              "id": 105883290313,
+              "name": "Verify standalone Player Terminal and full Chromium suite",
+              "result": "success"
+            }
+          ]
+        },
+        {
+          "run": 35437783994,
+          "name": "Push on main",
+          "result": "success",
+          "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35437783994",
+          "jobs": [
+            {
+              "id": 105883289715,
+              "name": "Analyze (actions)",
+              "result": "success"
+            },
+            {
+              "id": 105883289748,
+              "name": "Analyze (javascript-typescript)",
+              "result": "success"
+            },
+            {
+              "id": 105883289751,
+              "name": "Analyze (python)",
+              "result": "success"
+            }
+          ]
+        }
+      ]
     }
   ],
   "failure_history": [
@@ -3595,5 +4051,6 @@
     "runtime_status": "BLOCKED",
     "runtime_blocker": "BETA-LIVE-MIGRATION-PARITY-001",
     "evidence_limits": "Disposable CI database/browser/load evidence is not live staging or production parity. No general platform retirement/503 root-cause fix is claimed. Unrelated PRs 620, 624 and 668 remain untouched."
-  }
+  },
+  "documentation_closure_pr": 688
 }
