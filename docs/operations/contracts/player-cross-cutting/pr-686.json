@@ -61,6 +61,7 @@
     "player-terminal/tests/fixtures/business-ipo-fixture.mjs",
     "player-terminal/tests/portfolio-market-holdings.mjs",
     "scripts/business-banking-runtime-contract.mjs",
+    "scripts/business-banking-player-market-browser-acceptance.core.mjs",
     "scripts/business-financial-reporting-statement-acceptance.mjs",
     "scripts/business-primary-ipo-client.test.mjs",
     "scripts/business-primary-ipo-contract.mjs",

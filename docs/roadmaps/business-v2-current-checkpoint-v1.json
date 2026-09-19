@@ -41,6 +41,16 @@
     "phase14b_verified_tree": "68d8917e1a8b7a3f12b0d27b7622f119e62a30ba",
     "phase14b_premerge_evidence": "40 applicable workflows, 81 jobs and Vercel passed; six expected manual/staging/historical job skips. Merge and candidate trees are identical.",
     "current_integration_pr": 686,
+    "phase14c_market_readiness_correction": {
+      "failed_head": "f4c36fc2b5a381d9d999c2e3dbba50a69b13ac85",
+      "workflow_run": 35435123176,
+      "job": 105876403141,
+      "artifact_id": 10582128961,
+      "artifact_sha256": "656edfa9d9a8e74d1b34e3b0d8a3ca34f01899153d0d4946870bd7549986bfdf",
+      "finding": "Market acceptance enumerated account-backed tickets without awaiting its optional Banking FX resource. Failure artifact has no console/page errors and no Banking FX response at selection; gateway records that response during teardown. Market buy/sell and downstream load did not execute.",
+      "repair": "Wait at most 30 seconds for both Market and Banking FX resource states to be ready, then for the first rendered row, before the unchanged strict ticket selection. Permanent IPO client test rejects missing/loading/stale/unavailable states and preserves no-valid-asset failure. No product, economic assertion or timing threshold changes.",
+      "verification": "Fresh exact-head connected journey and full matrix required. Original failed run and all unexecuted evidence remain historical."
+    },
     "phase14c_integration_correction": {
       "failed_head": "3eb6edddba094f264be804f7fc44149e09bfc407",
       "workflow_run": 35434994134,
