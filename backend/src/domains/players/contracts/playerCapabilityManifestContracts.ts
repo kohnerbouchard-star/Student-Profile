@@ -31,6 +31,9 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "bankTransfer",
   "businessCreate",
   "businessEmployeeTerminate",
+  "businessIpoPropose",
+  "businessIpoVote",
+  "businessIpoSubscribe",
   "businessFormationActivate",
   "businessFormationPropose",
   "businessFormationRespond",
@@ -96,6 +99,10 @@ export type PlayerCapabilityEndpointKey =
   | "business"
   | "businessStoreQuote"
   | "businessStorePurchase"
+  | "businessIpos"
+  | "businessIpoPropose"
+  | "businessIpoVote"
+  | "businessIpoSubscribe"
   | "businessTreasury"
   | "businessTreasuryAccountOpen"
   | "businessTreasuryFxQuote"
@@ -330,6 +337,29 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
     key: "business",
     operations: [{ method: "GET", pathTemplate: "/players/me/business" }],
     routeCapabilities: ["business"],
+  },
+  {
+    key: "businessIpos",
+    operations: [{ method: "GET", pathTemplate: "/players/me/business/ipos" }],
+    routeCapabilities: ["business", "market"],
+  },
+  {
+    key: "businessIpoPropose",
+    operations: [{ method: "POST", pathTemplate: "/players/me/business/ipos/proposals" }],
+    routeCapabilities: ["business", "market"],
+    actionCapabilities: ["businessIpoPropose"],
+  },
+  {
+    key: "businessIpoVote",
+    operations: [{ method: "POST", pathTemplate: "/players/me/business/ipos/:ipoKey/votes" }],
+    routeCapabilities: ["business", "market"],
+    actionCapabilities: ["businessIpoVote"],
+  },
+  {
+    key: "businessIpoSubscribe",
+    operations: [{ method: "POST", pathTemplate: "/players/me/business/ipos/:ipoKey/subscriptions" }],
+    routeCapabilities: ["business", "market"],
+    actionCapabilities: ["businessIpoSubscribe"],
   },
   {
     key: "businessTreasury",

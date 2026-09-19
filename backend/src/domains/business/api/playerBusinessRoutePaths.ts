@@ -34,6 +34,15 @@ export function readPlayerBusinessRoutePath(
   }
 
   const tail = segments.slice(2);
+  if (tail[0] === "business" && tail[1] === "ipos") {
+    if (tail.length === 2) return { kind: "businessIposRead" };
+    if (tail.length === 3 && tail[2] === "proposals") return { kind: "businessIpoPropose" };
+    if (tail.length === 4 && validKey(tail[2], "bgp")) {
+      if (tail[3] === "votes") return { kind: "businessIpoVote", ipoKey: tail[2].toLowerCase() };
+      if (tail[3] === "subscriptions") return { kind: "businessIpoSubscribe", ipoKey: tail[2].toLowerCase() };
+    }
+    return null;
+  }
 
   if (tail.length === 1 && tail[0] === "business") {
     return { kind: "businessRead", resource: "overview" };

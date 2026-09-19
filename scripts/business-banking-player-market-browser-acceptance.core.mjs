@@ -254,7 +254,16 @@ async function reloadMarket(page) {
 
 async function chooseTradableAsset(page) {
   await openMarket(page);
+  // The route shell can render before its optional Banking FX request settles.
+  // Require both authoritative reads before inspecting account-backed tickets.
+  await page.waitForFunction(() => {
+    const data = globalThis.Econovaria?.playerTerminal?.getState?.()?.data;
+    return ["market", "bankingFx"].every(
+      (key) => data?.resourceStatus?.[key]?.state === "ready",
+    );
+  }, null, { timeout: 30_000 });
   const rows = page.locator("[data-player-market-select]");
+  await rows.first().waitFor({ state: "visible", timeout: 30_000 });
   for (let index = 0; index < await rows.count(); index += 1) {
     const row = rows.nth(index);
     const assetId = String(await row.getAttribute("data-player-market-select") || "").trim().toLowerCase();

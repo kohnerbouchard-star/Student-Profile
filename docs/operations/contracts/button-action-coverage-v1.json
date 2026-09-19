@@ -60,6 +60,24 @@
       "evidence": "contract_only",
       "domain": "business"
     },
+    "businessIpoPropose": {
+      "evidence": "local_browser",
+      "domain": "business",
+      "evidencePath": "player-terminal/tests/browser/player-business-ipo.spec.mjs",
+      "evidenceLimit": "Real Player components and request mapping with bounded authenticated response fixtures; transaction economics are verified separately by the IPO database gate."
+    },
+    "businessIpoSubscribe": {
+      "evidence": "local_browser",
+      "domain": "business",
+      "evidencePath": "player-terminal/tests/browser/player-business-ipo.spec.mjs",
+      "evidenceLimit": "Real subscription review, uncertain-response replay and committed-success recovery with bounded response fixtures; not live-service browser evidence."
+    },
+    "businessIpoVote": {
+      "evidence": "local_browser",
+      "domain": "business",
+      "evidencePath": "player-terminal/tests/browser/player-business-ipo.spec.mjs",
+      "evidenceLimit": "Keyboard proposal and vote submission through real Player components and request mapping with bounded response fixtures."
+    },
     "businessCandidateHire": {
       "evidence": "connected_browser",
       "domain": "business"

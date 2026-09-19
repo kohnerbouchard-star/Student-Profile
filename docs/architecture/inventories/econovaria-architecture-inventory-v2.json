@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1221,
+    "sourceFiles": 1229,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 55,
@@ -104,7 +104,7 @@
         "infrastructure",
         "services"
       ],
-      "sourceFiles": 51,
+      "sourceFiles": 55,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -3236,16 +3236,16 @@
         "lines": 935
       },
       {
+        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+        "lines": 931
+      },
+      {
         "file": "backend/src/domains/contracts/api/staffContractReviewHttpHandler.test.ts",
         "lines": 920
       },
       {
         "file": "admin/v2/src/api/admin-api-client.js",
         "lines": 908
-      },
-      {
-        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-        "lines": 901
       },
       {
         "file": "backend/supabase/functions/classroom-api/index.ts",

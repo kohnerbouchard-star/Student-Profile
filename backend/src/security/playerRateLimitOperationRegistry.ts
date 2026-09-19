@@ -70,6 +70,10 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
     POST: operation("player.banking.transfers.create", "sensitive"),
   }),
   business: byMethod({ GET: operation("player.business.read", "read") }),
+  businessIpos: byMethod({ GET: operation("player.business.ipos.read", "read") }),
+  businessIpoPropose: byMethod({ POST: operation("player.business.ipos.propose", "sensitive") }),
+  businessIpoVote: byMethod({ POST: operation("player.business.ipos.vote", "sensitive") }),
+  businessIpoSubscribe: byMethod({ POST: operation("player.business.ipos.subscribe", "sensitive") }),
   businessTreasury: byMethod({
     GET: operation("player.business.treasury.read", "read"),
   }),

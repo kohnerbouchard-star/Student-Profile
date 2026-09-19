@@ -19,15 +19,15 @@ const gameOne = FIXTURE.games.one;
 const gameTwo = FIXTURE.games.two;
 const purgeFingerprint = Object.freeze({
   registrySha256:
-    "d3a0e132271485f7c5edf434021a56a1c1ec3768cb003041d227b4775ceecafe",
-  registryTableCount: 205,
+    "ab44a67a1247fd706636c3aeb627f352344ca08bde6b6c7159f686a873612a48",
+  registryTableCount: 206,
   fkGraphSha256:
-    "cb08e151c693cd018fec0fb7fe2a1d700cc34b0f5704c1b4a7bf1c560f2aa6af",
-  fkGraphEdgeCount: 452,
+    "343f1966b3750e7a639fb82059bab1049edd44591e27d59cd08017c19be46198",
+  fkGraphEdgeCount: 455,
   deleteOrderSha256:
-    "b04f1ca4956a17a89e9afe29255c467bcb1b071978da35aaef76e85e19c2dbf5",
-  deleteOrderTableCount: 204,
-  finalizeCursor: 205,
+    "f2fe1c6ad5d11bf7c73e1bd761153e6e6cfa726d9b26f780b62e42eb603667b6",
+  deleteOrderTableCount: 205,
+  finalizeCursor: 206,
 });
 const phase11PurgeTables = Object.freeze([
   "business_operating_period_policies",

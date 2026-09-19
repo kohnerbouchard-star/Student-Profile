@@ -91,3 +91,9 @@ Deno.test("Player Business and Banking routes reject malformed and non-Player pa
   assertEquals(readPlayerBusinessBankingRoutePath(`/players/me/banking/loans/${key("lop", "e")}/payments`), null);
   assertEquals(readPlayerBusinessBankingRoutePath("/players/other/banking/transfers"), null);
 });
+
+Deno.test("IPO routes remain exclusively owned by the canonical Business dispatcher", () => {
+  for (const path of ["ipos", "ipos/proposals", `ipos/${key("bgp", "a")}/votes`, `ipos/${key("bgp", "a")}/subscriptions`]) {
+    assertEquals(readPlayerBusinessBankingRoutePath(`/players/me/business/${path}`), null);
+  }
+});

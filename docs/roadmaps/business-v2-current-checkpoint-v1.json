@@ -10,13 +10,18 @@
       "owner_pr": 685,
       "scope": "One 150ms-delayed retry after exact retired-worker transport identification, only for authenticated Player GET/HEAD reads; all mutation, ordinary-error, authorization and resource boundaries remain intact.",
       "files": ["backend/supabase/functions/player-web-session-api/runtime.ts", "backend/supabase/functions/player-web-session-api/retiredWorkerReadRecovery.ts", "scripts/player-bff-retry-classification.test.mjs"],
-      "local_evidence": "50 read-resilience, proxy-recovery, authority and security tests passed; common-equity/reporting source and architecture ratchet passed. Fresh exact-source CI required.",
-      "runtime_evidence_pending": true,
+      "local_evidence": "50 read-resilience, proxy-recovery, authority and security tests plus 19 isolation/security contracts passed; common-equity/reporting source and architecture ratchet passed.",
+      "verified_head": "5b058a23ac46e696fc9274c9df2409e9a37926d1",
+      "merged_main_sha": "c2d892cb4e39625c2b5cdd7de65c41149502d203",
+      "runtime_evidence_pending": false,
+      "verification": { "successful_workflows": 40, "successful_jobs": 81, "expected_skipped_jobs": 6, "vercel": "success", "store_run": 35433862505, "store_connected_job": 105873110754, "connected_load_run": 35433862631, "connected_load_job": 105873110825, "server_errors": 0 },
+      "store_artifact": { "id": 10581127502, "sha256": "3360e709aa5dd1aada688020fa23356e4e0639b6debbf68338f29b4898669033", "downloaded_and_verified": true, "console_errors": 0, "page_errors": 0, "economic_and_isolation_evidence": true },
       "source_reference": "https://github.com/supabase/cli/blob/v2.109.1/apps/cli/src/shared/functions/serve.main.ts"
     },
     "integration_blocker": {
       "id": "BUSINESS-V2-14-MERGE-STORE-001",
-      "scope": "Repeated post-merge connected Store browser failure on exact Phase 14A main; remaining normal merges paused, independently of the live-release parity blocker.",
+      "scope": "Historical repeated post-merge connected Store failure on exact Phase 14A main, repaired and superseded by the exact-source verified Phase 14B merge; original failed attempts remain immutable.",
+      "resolved_by": "c2d892cb4e39625c2b5cdd7de65c41149502d203",
       "main_sha": "46cde60e80eb285733f01aa99dcba3c3ec0deedd",
       "workflow_run": 35422140967,
       "initial_failed_job": 105841659341,
@@ -26,21 +31,43 @@
       "retry_artifact_sha256": "77dbc1b257185b09c285562a8daf8d471f3b579369b3cbd37f8bcbc2160c5153",
       "main_workflow_summary": { "success": 24, "failure": 1, "expected_skipped": 2, "pending": 0 },
       "comparator": "PR 685 candidate b4b360a4058e687b895f2ba0b68c70100c91a8dc passed its connected Store job 105842279867 and full connected/load job 105842279641. That different-source result does not clear the failed main run.",
-      "next_action": "Diagnose and repair the retained connected runtime failure, then verify exact-source gates before resuming ordered PR 685/686/687 merges. Do not waive console cleanliness or claim a root cause from worker diagnostics alone."
+      "next_action": "Verify Phase 14B post-merge main, then integrate and verify PR 686 and PR 687 in order. No assertion was waived; platform retirement cause remains unestablished."
     },
     "phase14a_merge": "46cde60e80eb285733f01aa99dcba3c3ec0deedd",
     "phase14a_verified_handoff": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
     "phase14a_premerge_evidence": "50 applicable workflows, 90 jobs and Vercel passed; 8 manual/historical job skips, including one wholly skipped staging-only workflow.",
-    "current_integration_pr": 685,
+    "phase14b_merge": "c2d892cb4e39625c2b5cdd7de65c41149502d203",
+    "phase14b_verified_handoff": "5b058a23ac46e696fc9274c9df2409e9a37926d1",
+    "phase14b_verified_tree": "68d8917e1a8b7a3f12b0d27b7622f119e62a30ba",
+    "phase14b_premerge_evidence": "40 applicable workflows, 81 jobs and Vercel passed; six expected manual/staging/historical job skips. Merge and candidate trees are identical.",
+    "current_integration_pr": 686,
+    "phase14c_market_readiness_correction": {
+      "failed_head": "f4c36fc2b5a381d9d999c2e3dbba50a69b13ac85",
+      "workflow_run": 35435123176,
+      "job": 105876403141,
+      "artifact_id": 10582128961,
+      "artifact_sha256": "656edfa9d9a8e74d1b34e3b0d8a3ca34f01899153d0d4946870bd7549986bfdf",
+      "finding": "Market acceptance enumerated account-backed tickets without awaiting its optional Banking FX resource. Failure artifact has no console/page errors and no Banking FX response at selection; gateway records that response during teardown. Market buy/sell and downstream load did not execute.",
+      "repair": "Wait at most 30 seconds for both Market and Banking FX resource states to be ready, then for the first rendered row, before the unchanged strict ticket selection. Permanent IPO client test rejects missing/loading/stale/unavailable states and preserves no-valid-asset failure. No product, economic assertion or timing threshold changes.",
+      "verification": "Fresh exact-head connected journey and full matrix required. Original failed run and all unexecuted evidence remain historical."
+    },
+    "phase14c_integration_correction": {
+      "failed_head": "3eb6edddba094f264be804f7fc44149e09bfc407",
+      "workflow_run": 35434994134,
+      "failed_job": 105876030399,
+      "finding": "Main-only Button Action Coverage correctly rejected three IPO actions missing from its evidence ledger.",
+      "repair": "Register propose, vote and subscribe against the existing desktop/mobile IPO browser specification as local_browser fixture evidence, not connected/live evidence. Exact authority adds only the ledger path and retains the button gate as critical. No product, test assertion or release policy changes.",
+      "verification": "Local button ledger contract passes; new exact-head CI required. Original failed run remains historical."
+    },
     "current_integration_base": "main",
-    "candidate_note": "Common-equity application and migrations retain certified implementation 197caa4034214e21b8033a3f4363dc07a13b5dcf. Normal main merge plus exact-base authority, negative regression and integration records only. New exact-head gates are required before PR 685 merges.",
-    "remaining_merge_order": [685, 686, 687],
+    "candidate_note": "IPO application and migrations retain certified implementation cf3fabf2444a2c85d71155fccfa1e5b371bc2c37. Normal main merge inherits the verified B read-recovery repair; exact-main authority, negative regression and integration records are reconciled. Fresh exact-head gates are required before PR 686 merges.",
+    "remaining_merge_order": [686, 687],
     "production_release_before": "59a82ef8580d7d571727e722424bc84cf064e8aa",
     "runtime_status": "BLOCKED",
     "runtime_blocker": "BETA-LIVE-MIGRATION-PARITY-001"
   },
   "status": "PHASE_14_IN_PROGRESS",
-  "audited_at": "2026-09-18T07:48:16.581115+00:00",
+  "audited_at": "2026-09-18T09:06:44.274Z",
   "integration_pr": null,
   "integration_branch": "main",
   "historical_integration": {
@@ -48,43 +75,58 @@
     "branch": "refactor/business-ux-mechanics-v1",
     "state": "CLOSED_SUPERSEDED_BY_MERGED_MAIN"
   },
-  "latest_checkpoint": "BUSINESS-V2-14B",
-  "latest_checkpoint_branch": "feat/business-common-equity-v2",
-  "latest_checkpoint_pr": 685,
-  "exact_implementation_sha": "197caa4034214e21b8033a3f4363dc07a13b5dcf",
-  "documentation_parent_sha": "197caa4034214e21b8033a3f4363dc07a13b5dcf",
-  "merged_main_sha": "46cde60e80eb285733f01aa99dcba3c3ec0deedd",
-  "parent_checkpoint": "BUSINESS-V2-14A",
-  "parent_implementation_sha": "aed8c3f6462d927cec3ebc55602854d48a460a9b",
+  "latest_checkpoint": "BUSINESS-V2-14C",
+  "latest_checkpoint_branch": "feat/business-ipo-issuance-v2",
+  "latest_checkpoint_pr": 686,
+  "exact_implementation_sha": "cf3fabf2444a2c85d71155fccfa1e5b371bc2c37",
+  "documentation_parent_sha": "cf3fabf2444a2c85d71155fccfa1e5b371bc2c37",
+  "merged_main_sha": "c2d892cb4e39625c2b5cdd7de65c41149502d203",
+  "parent_checkpoint": "BUSINESS-V2-14B",
+  "parent_implementation_sha": "197caa4034214e21b8033a3f4363dc07a13b5dcf",
   "required_workflow_runs": {
-    "Admin API Check": 35320024837,
-    "Production Runtime Promotion Contract": 35320024765,
-    "Staging Readiness Preflight": 35320024790,
-    "Business Banking Runtime": 35320024693,
-    "Repository Quality": 35320024964,
-    "Release Integrity": 35320024817,
-    "Backend Typecheck": 35320024830,
-    "Crafting Activation Connected V2": 35320024855,
-    "Game Creation Provisioning": 35320024681,
-    "Exchange Calendar Runtime": 35320024922,
-    "Admin Browser E2E": 35320024649,
-    "Seed Executable Beta Pack": 35320024956,
-    "Supply Chain Security": 35320024881,
-    "Workflow Action Pinning": 35320024730,
-    "Database Replay": 35320024668,
-    "Admin Business Supervision": 35320024700,
-    "multicurrency-marketplace-funding-v1": 35320024661,
-    "Required Game Market Timezone": 35320024740,
-    "Business Common Equity": 35320024755,
-    "business-multicurrency-treasury-v1": 35320024659,
-    "business-player-store-fx-final-v2": 35320024820,
-    "Business Financial Reporting": 35320024941,
-    "multicurrency-stock-funding-v1": 35320024734,
-    "banking-fx-clearing-v1": 35320024724,
-    "business-store-sales-convergence-v2": 35320024767,
-    "Player Terminal Verify": 35320024873,
-    "Business Player Store Cutover V2": 35320024781,
-    "Player Multiplayer and Load E2E": 35320024704
+    "Environment Neutral Browser": 35326213477,
+    "Production Runtime Promotion Contract": 35326213108,
+    "Runtime Interaction Wiring": 35326213438,
+    "Business Workforce Production Payroll V2": 35326213206,
+    "Beta Security Contract": 35326213190,
+    "Admin API Check": 35326213150,
+    "Staging Readiness Preflight": 35326213406,
+    "Release Integrity": 35326213461,
+    "Progression Runtime": 35326213172,
+    "Business Common Equity": 35326213100,
+    "multicurrency-store-funding-v1": 35326213515,
+    "Admin Browser E2E": 35326213516,
+    "business-multicurrency-treasury-v1": 35326213380,
+    "Repository Quality": 35326213530,
+    "Business Economy V2": 35326213428,
+    "Backend Typecheck": 35326213512,
+    "Required Game Market Timezone": 35326213364,
+    "World Runtime": 35326213345,
+    "Game Creation Provisioning": 35326213478,
+    "Crafting Activation Connected V2": 35326213449,
+    "Database Replay": 35326213379,
+    "Exchange Calendar Runtime": 35326213266,
+    "Business Primary IPO": 35326213193,
+    "Seed Executable Beta Pack": 35326213118,
+    "Business Timed Manufacturing V2": 35326213472,
+    "multicurrency-marketplace-funding-v1": 35326213489,
+    "Business Workforce Hiring V2": 35326213347,
+    "Business Banking Runtime": 35326213384,
+    "Business Financial Reporting": 35326213522,
+    "Business Workforce Payroll V2": 35326213590,
+    "Supply Chain Security": 35326213565,
+    "Admin Business Supervision": 35326213357,
+    "business-player-store-fx-final-v2": 35326213403,
+    "multicurrency-stock-funding-v1": 35326213307,
+    "Business Store Listing Inventory V2": 35326213130,
+    "Player Multiplayer and Load E2E": 35326213393,
+    "Business Store Withdrawal Safety V2": 35326213194,
+    "business-store-sales-convergence-v2": 35326213387,
+    "banking-fx-clearing-v1": 35326213559,
+    "Business Player Store Cutover V2": 35326213475,
+    "Player Terminal Verify": 35326213500,
+    "Business Store Atomic Settlement V2": 35326213290,
+    "Business Store Seller Offers V2": 35326213437
   },
   "expected_skipped_workflow_runs": {},
   "phase12_connected_gate": {
@@ -99,18 +141,17 @@
       "final-enforcement"
     ]
   },
-  "active_checkpoint": "BUSINESS-V2-14B",
-  "active_checkpoint_branch": "feat/business-common-equity-v2",
-  "active_checkpoint_pr": 685,
+  "active_checkpoint": "BUSINESS-V2-14C",
+  "active_checkpoint_branch": "feat/business-ipo-issuance-v2",
+  "active_checkpoint_pr": 686,
   "active_checkpoint_started_at": "2026-09-18T07:03:31.660465+00:00",
-  "active_candidate_parent_sha": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
-  "active_candidate_implementation_sha": "197caa4034214e21b8033a3f4363dc07a13b5dcf",
+  "active_candidate_parent_sha": "bab8393cd8f0d30a84be5ad36ad90f41f9cae75f",
+  "active_candidate_implementation_sha": "cf3fabf2444a2c85d71155fccfa1e5b371bc2c37",
   "active_candidate_state": "IMPLEMENTED_NOT_MERGED",
-  "active_candidate_note": "28 exact-source workflows, 53 applicable jobs and Vercel passed. Three manual staging/parity jobs correctly skipped. Full connected journey, both classroom loads, common-equity two fresh replays/race/advisors passed. Documentation handoff is separate from tested implementation.",
-  "next_authorized_checkpoint": "BUSINESS-V2-14C",
-  "next_authorized_scope": "Fixed-price primary IPO eligibility, immutable approved terms and atomic issuance on the exact green common-equity predecessor; preserve operator/treasury authority separately from investment ownership. Then 14D Market-owned consumption and secondary trading. No live release.",
+  "active_candidate_note": "Phase 14C source is repository-certified. This documentation handoff must be green before the authorized 14D successor opens.",
+  "next_authorized_checkpoint": "BUSINESS-V2-14D",
+  "next_authorized_scope": "Market-owned versioned Business event consumption, completed-IPO listing, canonical common-share secondary transfers and authenticated Market/Portfolio surfaces; no live release.",
   "remaining_dependency_order": [
-    "BUSINESS-V2-14C",
     "BUSINESS-V2-14D"
   ],
   "release_state": {
@@ -128,22 +169,28 @@
   "known_global_blocker_scope": "Separate release/runtime evidence; does not block Phase 13 repository certification and does not authorize live reconciliation from this branch.",
   "expected_skipped_jobs": [
     {
-      "workflow_run": 35320024790,
-      "job": 105520237855,
+      "workflow_run": 35326213406,
+      "job": 105539749233,
       "name": "Fail-closed staging evidence check",
-      "reason": "Manual staging/release/parity job; inapplicable to this unmerged draft."
+      "reason": "Manual release/staging/parity evidence; not applicable to this unmerged draft."
     },
     {
-      "workflow_run": 35320024817,
-      "job": 105520556903,
+      "workflow_run": 35326213461,
+      "job": 105539848536,
       "name": "Inspect staging and production parity read-only",
-      "reason": "Manual staging/release/parity job; inapplicable to this unmerged draft."
+      "reason": "Manual release/staging/parity evidence; not applicable to this unmerged draft."
     },
     {
-      "workflow_run": 35320024956,
-      "job": 105521261274,
+      "workflow_run": 35326213118,
+      "job": 105540702395,
       "name": "Execute connected isolated-staging release and rollback",
-      "reason": "Manual staging/release/parity job; inapplicable to this unmerged draft."
+      "reason": "Manual release/staging/parity evidence; not applicable to this unmerged draft."
+    },
+    {
+      "workflow_run": 35326213590,
+      "job": 105539750561,
+      "name": "Materialize Phase 4A architecture inventory",
+      "reason": "Historical PR-bound inventory writer, not applicable to this owner."
     }
   ],
   "phase12_certification": {
@@ -2385,5 +2432,817 @@
       }
     ],
     "evidence_limits": "Disposable CI only. Earlier Beta fixture lookup failure reproduced twice, then final strengthened creation/request/response identity assertions and the entire connected journey passed. No product fix or diagnosed root cause is claimed. No merge/deployment/live SQL."
+  },
+  "phase14c_certification": {
+    "exact_implementation_sha": "cf3fabf2444a2c85d71155fccfa1e5b371bc2c37",
+    "recorded_at": "2026-09-18T09:06:44.274Z",
+    "status": "IMPLEMENTED_NOT_MERGED",
+    "workflow_success_count": 43,
+    "check_success_count": 84,
+    "expected_skipped_check_count": 4,
+    "vercel_status": "success",
+    "primary_ipo": {
+      "workflow_run": 35326213193,
+      "source_job": 105539748023,
+      "database_job": 105539747818,
+      "browser_job": 105539747974,
+      "fresh_database_replays_passed": 2,
+      "advisors_gate": "success",
+      "desktop_mobile_cases_passed": 12,
+      "artifact": {
+        "id": 10539480034,
+        "name": "business-primary-ipo-browser-cf3fabf2444a2c85d71155fccfa1e5b371bc2c37",
+        "size_in_bytes": 234468,
+        "url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/artifacts/10539480034",
+        "archive_download_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/artifacts/10539480034/zip",
+        "expired": false,
+        "created_at": "2026-09-18T08:49:01Z",
+        "expires_at": "2026-10-02T08:49:00Z",
+        "updated_at": "2026-09-18T08:49:01Z",
+        "digest": "sha256:533e6c58df3215401acec39aa54e51a24f31be1ec7ce82675d58f44efefde21b",
+        "workflow_run": {
+          "id": 35326213193,
+          "repository_id": 1264495890,
+          "head_repository_id": 1264495890,
+          "head_branch": "feat/business-ipo-issuance-v2",
+          "head_sha": "cf3fabf2444a2c85d71155fccfa1e5b371bc2c37"
+        }
+      }
+    },
+    "connected_load": {
+      "workflow_run": 35326213393,
+      "job": 105539888140,
+      "business_world_and_30_40_player_load": "success"
+    },
+    "workflow_runs": [
+      {
+        "id": 35326213477,
+        "name": "Environment Neutral Browser",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539750477,
+            "name": "runtime-config-contract",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213108,
+        "name": "Production Runtime Promotion Contract",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539746847,
+            "name": "Verify production promotion remains fail-closed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213438,
+        "name": "Runtime Interaction Wiring",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539748762,
+            "name": "trace-runtime-controls",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213206,
+        "name": "Business Workforce Production Payroll V2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539747378,
+            "name": "verify-payroll",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213190,
+        "name": "Beta Security Contract",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539747428,
+            "name": "verify",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213150,
+        "name": "Admin API Check",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539747092,
+            "name": "admin-api-check",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213406,
+        "name": "Staging Readiness Preflight",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539747803,
+            "name": "Validator tests",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749233,
+            "name": "Fail-closed staging evidence check",
+            "conclusion": "skipped"
+          }
+        ]
+      },
+      {
+        "id": 35326213461,
+        "name": "Release Integrity",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749193,
+            "name": "Verify static release integrity",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539848536,
+            "name": "Inspect staging and production parity read-only",
+            "conclusion": "skipped"
+          }
+        ]
+      },
+      {
+        "id": 35326213172,
+        "name": "Progression Runtime",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539747609,
+            "name": "verify",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213100,
+        "name": "Business Common Equity",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539747554,
+            "name": "business-common-equity-source",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539747880,
+            "name": "business-common-equity-database",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213515,
+        "name": "multicurrency-store-funding-v1",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539748864,
+            "name": "Verify multi-currency Store funding source and scope",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749036,
+            "name": "Verify multi-currency Store funding database",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213516,
+        "name": "Admin Browser E2E",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749578,
+            "name": "Rendered Admin browser and secure mutation journey",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213380,
+        "name": "business-multicurrency-treasury-v1",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749012,
+            "name": "Verify C4 source, public contracts, and retained application boundaries",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749269,
+            "name": "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749343,
+            "name": "Verify C4 database, replay, isolation, rollback, and concurrency",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213530,
+        "name": "Repository Quality",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749653,
+            "name": "quality",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213428,
+        "name": "Business Economy V2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749198,
+            "name": "Backend typecheck",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749384,
+            "name": "Business economy authority contract",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213512,
+        "name": "Backend Typecheck",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749656,
+            "name": "backend-typecheck",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213364,
+        "name": "Required Game Market Timezone",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539747950,
+            "name": "apply-and-validate",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213345,
+        "name": "World Runtime",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539748169,
+            "name": "verify",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213478,
+        "name": "Game Creation Provisioning",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749282,
+            "name": "provision",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213449,
+        "name": "Crafting Activation Connected V2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749689,
+            "name": "activate",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213379,
+        "name": "Database Replay",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539748225,
+            "name": "replay",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213266,
+        "name": "Exchange Calendar Runtime",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539747581,
+            "name": "Validate exchange calendar runtime",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213193,
+        "name": "Business Primary IPO",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539747818,
+            "name": "business-primary-ipo-database",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539747974,
+            "name": "business-primary-ipo-browser",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539748023,
+            "name": "business-primary-ipo-source",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213118,
+        "name": "Seed Executable Beta Pack",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539747843,
+            "name": "Verify transactional import, replay, rollback, and isolation",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539747978,
+            "name": "Verify bounded pack and repository contracts",
+            "conclusion": "success"
+          },
+          {
+            "id": 105540702395,
+            "name": "Execute connected isolated-staging release and rollback",
+            "conclusion": "skipped"
+          }
+        ]
+      },
+      {
+        "id": 35326213472,
+        "name": "Business Timed Manufacturing V2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749423,
+            "name": "Boot reviewed Player Edge entrypoints",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749655,
+            "name": "Verify timed manufacturing",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213489,
+        "name": "multicurrency-marketplace-funding-v1",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749408,
+            "name": "Verify multi-currency Marketplace funding database",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749450,
+            "name": "Verify connected multi-currency Marketplace funding browser journey",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749469,
+            "name": "Verify multi-currency Marketplace funding source and scope",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213347,
+        "name": "Business Workforce Hiring V2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539747739,
+            "name": "verify",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213384,
+        "name": "Business Banking Runtime",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539748341,
+            "name": "verify",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213522,
+        "name": "Business Financial Reporting",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749698,
+            "name": "business-financial-reporting-database",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749846,
+            "name": "business-financial-reporting-browser",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539750004,
+            "name": "business-financial-reporting-source",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213590,
+        "name": "Business Workforce Payroll V2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749695,
+            "name": "Workforce and payroll authority contract",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749871,
+            "name": "Backend typecheck",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539750561,
+            "name": "Materialize Phase 4A architecture inventory",
+            "conclusion": "skipped"
+          }
+        ]
+      },
+      {
+        "id": 35326213565,
+        "name": "Supply Chain Security",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539750045,
+            "name": "verify-and-attest",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539750286,
+            "name": "dependency-review",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213357,
+        "name": "Admin Business Supervision",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539748372,
+            "name": "admin-business-supervision-browser",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539748563,
+            "name": "admin-business-supervision-source",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539748741,
+            "name": "admin-business-supervision-database",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213403,
+        "name": "business-player-store-fx-final-v2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539749150,
+            "name": "business-player-store-fx-final-v2-player-browser",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749355,
+            "name": "business-player-store-fx-final-v2-connected",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749368,
+            "name": "business-player-store-fx-final-v2-database",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539749385,
+            "name": "business-player-store-fx-final-v2-source",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213307,
+        "name": "multicurrency-stock-funding-v1",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539889943,
+            "name": "Verify C3C atomic Stock buy database and retained C3A/C3B authority + C3D sell + C3E cutover",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539890189,
+            "name": "Verify C3C Stock buy settlement source and retained C3A/C3B scope + C3D sell + C3E Player cutover",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213130,
+        "name": "Business Store Listing Inventory V2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539824588,
+            "name": "Verify Store-listing authority",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539824760,
+            "name": "Verify retained Player Terminal and Chromium",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539824893,
+            "name": "Verify retained Store, Inventory, and Business runtime",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213393,
+        "name": "Player Multiplayer and Load E2E",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539888140,
+            "name": "Two-browser Player journey, secure mutations, and 30-40 Player load",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213194,
+        "name": "Business Store Withdrawal Safety V2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539802252,
+            "name": "Verify retained Store, Inventory, and Business runtime",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539802473,
+            "name": "Verify withdrawal authority",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539802574,
+            "name": "Verify retained Player Terminal and Chromium",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213387,
+        "name": "business-store-sales-convergence-v2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539882442,
+            "name": "business-store-sales-convergence-v2-database",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539882739,
+            "name": "business-store-sales-convergence-v2-player-admin",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539882771,
+            "name": "business-store-sales-convergence-v2-worker",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539882834,
+            "name": "business-store-sales-convergence-v2-source",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213559,
+        "name": "banking-fx-clearing-v1",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539839933,
+            "name": "Verify Banking FX Chromium acceptance",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539840058,
+            "name": "Certify Banking FX clearing source",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539840146,
+            "name": "Verify Banking FX database acceptance",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213475,
+        "name": "Business Player Store Cutover V2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539857853,
+            "name": "Verify standalone Player Terminal and full Chromium suite",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539858093,
+            "name": "Verify connected Buyer and seller Store journey in two games",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539858118,
+            "name": "Verify public Store, seller projection, capabilities, rates, and Edge roots",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539858158,
+            "name": "Verify Player Store cutover and retained authorities",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539858205,
+            "name": "Replay complete database twice and lint at warning level",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539858345,
+            "name": "Verify serial settlement, ordering races, and two-game isolation",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213500,
+        "name": "Player Terminal Verify",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539841003,
+            "name": "verify",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213290,
+        "name": "Business Store Atomic Settlement V2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539820407,
+            "name": "Verify database settlement, rollback, races, and isolation",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539820619,
+            "name": "Replay complete database twice and lint",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539820641,
+            "name": "Verify atomic settlement authority and retained Store phases",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539820706,
+            "name": "Verify retained Player Terminal and Chromium",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539820748,
+            "name": "Verify retained Business, Store, Inventory, Backend, and Edge runtime",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35326213437,
+        "name": "Business Store Seller Offers V2",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 105539834846,
+            "name": "verify-retained-business-banking",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539835039,
+            "name": "verify-store-seller-offers",
+            "conclusion": "success"
+          },
+          {
+            "id": 105539835111,
+            "name": "verify-player-terminal-and-chromium",
+            "conclusion": "success"
+          }
+        ]
+      }
+    ],
+    "expected_skipped_jobs": [
+      {
+        "workflow_run": 35326213406,
+        "job": 105539749233,
+        "name": "Fail-closed staging evidence check",
+        "reason": "Manual release/staging/parity evidence; not applicable to this unmerged draft."
+      },
+      {
+        "workflow_run": 35326213461,
+        "job": 105539848536,
+        "name": "Inspect staging and production parity read-only",
+        "reason": "Manual release/staging/parity evidence; not applicable to this unmerged draft."
+      },
+      {
+        "workflow_run": 35326213118,
+        "job": 105540702395,
+        "name": "Execute connected isolated-staging release and rollback",
+        "reason": "Manual release/staging/parity evidence; not applicable to this unmerged draft."
+      },
+      {
+        "workflow_run": 35326213590,
+        "job": 105539750561,
+        "name": "Materialize Phase 4A architecture inventory",
+        "reason": "Historical PR-bound inventory writer, not applicable to this owner."
+      }
+    ],
+    "documentation_handoff_note": "Documentation-only followups preserve this exact tested implementation identity; they are not a new implementation certification."
   }
 }

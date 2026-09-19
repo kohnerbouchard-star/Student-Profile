@@ -1,3 +1,4 @@
+import { BUSINESS_IPO_BACKEND_ROUTE_KEYS, hasBusinessIpoBackendRoute, resolveBusinessIpoBackendRequest } from "./business-ipo-backend-routes.js";
 import {
   hasPlayerBackendRoute as hasCorePlayerBackendRoute,
   PLAYER_BACKEND_ROUTE_KEYS as CORE_PLAYER_BACKEND_ROUTE_KEYS,
@@ -41,6 +42,7 @@ const BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS = Object.freeze([
 ]);
 
 export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze([
+  ...BUSINESS_IPO_BACKEND_ROUTE_KEYS,
   ...CORE_PLAYER_BACKEND_ROUTE_KEYS,
   ...BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.filter((key) =>
     !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key)
@@ -70,7 +72,7 @@ export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze([
 ]);
 
 export function hasPlayerBackendRoute(endpointKey) {
-  return hasCorePlayerBackendRoute(endpointKey) ||
+  return hasBusinessIpoBackendRoute(endpointKey) || hasCorePlayerBackendRoute(endpointKey) ||
     BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.includes(endpointKey) ||
     hasCraftingBackendRoute(endpointKey) ||
     hasMessagingBackendRoute(endpointKey) ||
@@ -79,6 +81,7 @@ export function hasPlayerBackendRoute(endpointKey) {
 }
 
 export function resolvePlayerBackendRequest(input) {
+  if (hasBusinessIpoBackendRoute(input.endpointKey)) return resolveBusinessIpoBackendRequest(input);
   if (hasBankingFxBackendRoute(input.endpointKey)) {
     return resolveBankingFxBackendRequest(input);
   }

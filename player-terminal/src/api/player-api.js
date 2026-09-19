@@ -219,7 +219,7 @@ export class PlayerApi {
     }
 
     const operation = this.transport.request(context)
-      .then((raw) => normalizeApiResponse(endpointKey, raw, { config: this.config, path, requestId }))
+      .then((raw) => normalizeApiResponse(endpointKey, raw, { config: this.config, path, requestId, intent: payload }))
       .then((value) => {
         if (sessionVersion !== this.sessionVersion) {
           throw new ApiRequestError("The request was cancelled.", { code: "REQUEST_ABORTED", endpointKey, path, requestId });
@@ -414,7 +414,7 @@ export class PlayerApi {
     const sessionVersion = this.sessionVersion;
 
     const operation = this.transport.request(context)
-      .then((raw) => normalizeApiResponse(endpointKey, raw, { config: this.config, path, requestId }))
+      .then((raw) => normalizeApiResponse(endpointKey, raw, { config: this.config, path, requestId, intent: payload }))
       .then((result) => {
         if (sessionVersion !== this.sessionVersion) {
           throw new ApiRequestError("The request was cancelled.", { code: "REQUEST_ABORTED", endpointKey, path, requestId });

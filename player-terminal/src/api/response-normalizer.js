@@ -1,8 +1,9 @@
+import { normalizeBusinessIpoResponse } from "./business-ipo-response.js";
 import { ApiRequestError } from "./errors.js";
 import { validateStoreResponse } from "./response-store-validator.js";
 import { normalizeBusinessTreasurySnapshot } from "../features/business-treasury/business-treasury-read-model.js";
 const ARRAY_READS = new Set(["countries", "notifications"]);
-const READ_ENDPOINTS = new Set(["session", "dashboard", "countries", "country", "news", "worldRuntime", "market", "portfolio", "business", "businessWorkforce", "businessTreasury", "businessStockroom", "businessRecipes", "store", "marketplace", "contracts", "inventory", "crafting", "banking", "bankingFx", "bankingFxHistory", "bankingFxOrders", "loans", "messages", "progression", "notifications", "notificationsPage", "storyDeliveries"]);
+const READ_ENDPOINTS = new Set(["session", "dashboard", "countries", "country", "news", "worldRuntime", "market", "portfolio", "business", "businessWorkforce", "businessTreasury", "businessIpos", "businessStockroom", "businessRecipes", "store", "marketplace", "contracts", "inventory", "crafting", "banking", "bankingFx", "bankingFxHistory", "bankingFxOrders", "loans", "messages", "progression", "notifications", "notificationsPage", "storyDeliveries"]);
 const REQUIRED_ARRAY_FIELDS = Object.freeze({
   dashboard: Object.freeze(["worldEvents", "marketPulse"]),
   news: Object.freeze(["categories", "items"]),
@@ -377,6 +378,7 @@ function validateEndpointShape(endpointKey, value, context) {
 }
 export function normalizeApiResponse(endpointKey, raw, context = {}) {
   let value = sanitizeValue(unwrap(endpointKey, raw), context.config || {});
+  if (endpointKey === "businessIpos" || ["businessIpoPropose", "businessIpoVote", "businessIpoSubscribe"].includes(endpointKey)) return normalizeBusinessIpoResponse(endpointKey, value, context.intent);
   if (!READ_ENDPOINTS.has(endpointKey)) return value;
   if (endpointKey === "businessTreasury") return normalizeBusinessTreasurySnapshot(value);
   if (ARRAY_READS.has(endpointKey)) {

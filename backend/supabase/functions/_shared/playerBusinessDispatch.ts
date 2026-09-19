@@ -52,6 +52,10 @@ function endpointKey(
   method: string,
 ):
   | "business"
+  | "businessIpos"
+  | "businessIpoPropose"
+  | "businessIpoVote"
+  | "businessIpoSubscribe"
   | "businessTreasury"
   | "businessTreasuryAccountOpen"
   | "businessTreasuryFxQuote"
@@ -79,6 +83,8 @@ function endpointKey(
   | "businessPrice"
   | "businessTerminate"
   | "businessStatus" {
+  if (route.kind === "businessIposRead") return "businessIpos";
+  if (route.kind === "businessIpoPropose" || route.kind === "businessIpoVote" || route.kind === "businessIpoSubscribe") return route.kind;
   if (route.kind === "businessRead") return "business";
   if (route.kind === "businessTreasuryRead") return "businessTreasury";
   if (route.kind === "businessTreasuryAccountOpen") {

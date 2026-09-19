@@ -90,7 +90,7 @@ export function validateBusinessRequestMethodAndFields(
   const isManufacturingCollection =
     route.kind === "businessManufacturingCollection";
   const isRead = route.kind === "businessRead" ||
-    route.kind === "businessTreasuryRead";
+    route.kind === "businessTreasuryRead" || route.kind === "businessIposRead";
   if (isRead && method !== "GET") {
     throw methodNotAllowed("Use GET for this resource.");
   }
@@ -128,6 +128,10 @@ export function validateBusinessRequestMethodAndFields(
 
   const allowed: Record<PlayerBusinessRoute["kind"], readonly string[]> = {
     businessRead: [],
+    businessIposRead: [],
+    businessIpoPropose: ["unitPrice", "offeredShares", "idempotencyKey"],
+    businessIpoVote: ["decision", "idempotencyKey"],
+    businessIpoSubscribe: ["shares", "idempotencyKey"],
     businessTreasuryRead: [],
     businessTreasuryAccountOpen: ["currencyCode", "idempotencyKey"],
     businessTreasuryFxQuote: [
