@@ -41,6 +41,14 @@
     "phase14b_verified_tree": "68d8917e1a8b7a3f12b0d27b7622f119e62a30ba",
     "phase14b_premerge_evidence": "40 applicable workflows, 81 jobs and Vercel passed; six expected manual/staging/historical job skips. Merge and candidate trees are identical.",
     "current_integration_pr": 686,
+    "phase14c_integration_correction": {
+      "failed_head": "3eb6edddba094f264be804f7fc44149e09bfc407",
+      "workflow_run": 35434994134,
+      "failed_job": 105876030399,
+      "finding": "Main-only Button Action Coverage correctly rejected three IPO actions missing from its evidence ledger.",
+      "repair": "Register propose, vote and subscribe against the existing desktop/mobile IPO browser specification as local_browser fixture evidence, not connected/live evidence. Exact authority adds only the ledger path and retains the button gate as critical. No product, test assertion or release policy changes.",
+      "verification": "Local button ledger contract passes; new exact-head CI required. Original failed run remains historical."
+    },
     "current_integration_base": "main",
     "candidate_note": "IPO application and migrations retain certified implementation cf3fabf2444a2c85d71155fccfa1e5b371bc2c37. Normal main merge inherits the verified B read-recovery repair; exact-main authority, negative regression and integration records are reconciled. Fresh exact-head gates are required before PR 686 merges.",
     "remaining_merge_order": [686, 687],

@@ -33,6 +33,8 @@ Fresh database job `105533302010` observed registry `ab44a67a1247fd706636c3aeb62
 
 ## Repository certificate
 
+Ordered integration against main exposed a missing ledger registration on candidate `3eb6edddba094f264be804f7fc44149e09bfc407`: Button Action Coverage run `35434994134`, job `105876030399`, rejected the three new IPO actions. Their existing desktop/mobile spec already exercises proposal, keyboard voting and uncertain subscription recovery. The repair registers that bounded fixture-backed coverage as `local_browser`, explicitly not live/connected evidence, and binds the ledger and button gate to PR #686's exact authority. No application, migration, browser assertion or release policy changes. A new exact-head certificate is required.
+
 Exact source `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`: all 43 workflows, 84 applicable jobs and Vercel passed. Four expected skips cover manual staging/release/parity and the historical Phase 4A inventory writer; no required IPO or connected gate skipped. The checkpoint retains every run/job identity.
 
 Primary IPO run `35326213193`: source `105539748023`, database `105539747818`, browser `105539747974`. Two fresh zero-to-head replays, advisors, canonical formation/Store/close/issuance, held-funds rollback, allocation race, immutable evidence, operator separation and populated canonical purge passed. Advisors report only the three retained duplicate-index warnings. All 12 desktop/mobile IPO and retained workspace cases passed. Browser artifact `10539480034`, SHA-256 `533e6c58df3215401acec39aa54e51a24f31be1ec7ce82675d58f44efefde21b`, expires 2026-10-02; CI logs establish browser execution, not a local artifact inspection.

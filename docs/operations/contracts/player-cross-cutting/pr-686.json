@@ -33,6 +33,7 @@
     "backend/supabase/migrations/20260918080420_business_primary_ipo_purge_registry_v1.sql",
     "backend/supabase/migrations/20260918083200_business_primary_ipo_purge_convergence_v1.sql",
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/button-action-coverage-v1.json",
     "docs/operations/contracts/player-cross-cutting/pr-686.json",
     "docs/roadmaps/business-primary-ipo-scope-v1.md",
     "docs/roadmaps/business-v2-current-checkpoint-v1.json",
@@ -71,6 +72,7 @@
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
+    "docs/operations/contracts/button-action-coverage-v1.json",
     "scripts/business-primary-ipo-contract.mjs",
     "scripts/business-primary-ipo-database.mjs",
     "scripts/business-primary-ipo-fixture.mjs",
@@ -78,6 +80,7 @@
     "docs/roadmaps/business-primary-ipo-scope-v1.md"
   ],
   "requiredChecks": [
+    "button-action-coverage",
     "player-terminal-verify",
     "player-edge-trusted-ip-entrypoint-contract",
     "player-production-secret-provision-contract",
@@ -103,6 +106,7 @@
     "business-primary-ipo-browser"
   ],
   "criticalJobChecks": [
+    "button-action-coverage",
     "business-player-store-fx-final-v2-source",
     "business-player-store-fx-final-v2-player-browser",
     "business-store-sales-convergence-v2-source",

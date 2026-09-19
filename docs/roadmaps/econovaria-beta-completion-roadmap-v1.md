@@ -21,6 +21,8 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **Phase 14C integration correction:** Exact-main candidate `3eb6edddba094f264be804f7fc44149e09bfc407` exposed three missing IPO action entries in the button evidence ledger (run `35434994134`, job `105876030399`). Register the existing propose/vote/subscribe browser coverage accurately as fixture-backed `local_browser`, preserve release policy and all assertions, and rerun exact-head gates. IPO application/migrations remain unchanged.
+
 - **Current integration update (2026-09-19):** A #684 and B #685 are merged. B's exact repair head `5b058a23ac46e696fc9274c9df2409e9a37926d1` passed 40 applicable workflows, 81 jobs and Vercel with six expected job skips; normal merge `c2d892cb4e39625c2b5cdd7de65c41149502d203` has the identical tree. Store browser and full connected 30/40-player loads passed with zero errors. The prior A failure below is retained history, superseded by this verified repair. C #686 is being reconciled to main; fresh exact-head checks and B post-merge checks precede its merge, then D #687 follows. All A–D original implementations are repository-certified. No deployment or live mutation is authorized; separate live parity remains `BLOCKED`.
 
 - **`BUSINESS-V2-14C` — Fixed-price primary IPO (2026-09-18)**
