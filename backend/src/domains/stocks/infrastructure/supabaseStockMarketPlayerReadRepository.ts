@@ -1,3 +1,4 @@
+import { summarizePortfolio } from "../services/stockPortfolioValuation.ts";
 import type {
   StockMarketPlayerCashDto,
   StockMarketPlayerHoldingDto,
@@ -27,11 +28,14 @@ type StockMarketPlayerReadTableName =
   | "account_balances"
   | "game_session_stock_assets"
   | "player_sessions"
-  | "stock_holdings"
   | "stock_orders"
   | "stock_trades";
 
 interface SupabaseStockMarketPlayerReadClient {
+  rpc<T>(
+    functionName: string,
+    args: unknown,
+  ): PromiseLike<SupabasePlayerReadQueryResponse<T>>;
   from(
     tableName: StockMarketPlayerReadTableName,
   ): SupabaseStockMarketPlayerReadQueryBuilder;
@@ -92,6 +96,7 @@ interface GameSessionStockAssetReadRow {
   readonly sector_key: string;
   readonly country_code: string;
   readonly current_price: number | string;
+  readonly listing_currency_code: string;
 }
 
 interface StockOrderReadRow {
@@ -145,17 +150,6 @@ const CASH_SELECT = [
   "currency_code",
 ].join(",");
 
-const HOLDING_SELECT = [
-  "game_session_id",
-  "player_session_id",
-  "player_id",
-  "stock_asset_id",
-  "ticker",
-  "quantity",
-  "average_cost",
-  "realized_pnl",
-].join(",");
-
 const ASSET_SELECT = [
   "id",
   "game_session_id",
@@ -164,6 +158,7 @@ const ASSET_SELECT = [
   "sector_key",
   "country_code",
   "current_price",
+  "listing_currency_code",
 ].join(",");
 
 const ORDER_SELECT = [
@@ -313,18 +308,26 @@ export class SupabaseStockMarketPlayerReadRepository
     gameSessionId: string,
     playerId: string,
   ): Promise<readonly StockMarketPlayerHoldingDto[]> {
-    const response = await this.client
-      .from("stock_holdings")
-      .select(HOLDING_SELECT)
-      .eq("game_session_id", gameSessionId)
-      .eq("player_id", playerId)
-      .order("ticker", { ascending: true });
+    const response = await this.client.rpc<readonly StockHoldingReadRow[]>(
+      "read_player_stock_positions_v1",
+      { p_game_session_id: gameSessionId, p_player_id: playerId },
+    );
 
     if (response.error) {
       throw mapPlayerReadError(response.error);
     }
 
-    const holdingRows = (response.data ?? []) as StockHoldingReadRow[];
+    const holdingRows = response.data ?? [];
+    if (
+      holdingRows.some((row) =>
+        row.game_session_id !== gameSessionId || row.player_id !== playerId
+      )
+    ) {
+      throw new StockMarketPlayerReadError(
+        "stock_market_player_read_failed",
+        "Stock position scope mismatch.",
+      );
+    }
 
     if (holdingRows.length === 0) {
       return [];
@@ -431,6 +434,7 @@ function toHoldingDto(
     companyName: asset?.company_name ?? holding.ticker,
     sector: asset?.sector_key ?? "",
     countryCode: asset?.country_code ?? "",
+    currencyCode: asset?.listing_currency_code ?? "UNKNOWN",
     quantity,
     averageCost,
     currentPrice,
@@ -441,26 +445,6 @@ function toHoldingDto(
       ? round((unrealizedPnl / costBasis) * 100)
       : 0,
     realizedPnl: toNumber(holding.realized_pnl),
-  };
-}
-
-function summarizePortfolio(
-  cash: StockMarketPlayerCashDto,
-  holdings: readonly StockMarketPlayerHoldingDto[],
-) {
-  const holdingsMarketValue = round(sum(holdings, (holding) => holding.marketValue));
-  const totalCostBasis = round(sum(holdings, (holding) => holding.costBasis));
-  const unrealizedPnl = round(sum(holdings, (holding) => holding.unrealizedPnl));
-  const realizedPnl = round(sum(holdings, (holding) => holding.realizedPnl));
-
-  return {
-    cashBalance: cash.balance,
-    holdingsMarketValue,
-    totalEquity: round(cash.balance + holdingsMarketValue),
-    totalCostBasis,
-    unrealizedPnl,
-    realizedPnl,
-    positionsCount: holdings.filter((holding) => holding.quantity > 0).length,
   };
 }
 
@@ -500,10 +484,6 @@ function normalizeSide(value: string): "buy" | "sell" {
 
 function unique(values: readonly string[]): readonly string[] {
   return [...new Set(values)];
-}
-
-function sum<T>(values: readonly T[], select: (value: T) => number): number {
-  return values.reduce((total, value) => total + select(value), 0);
 }
 
 function toNumber(value: number | string | null | undefined): number {

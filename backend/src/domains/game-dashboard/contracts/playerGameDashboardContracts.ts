@@ -151,6 +151,10 @@ export interface PlayerGameDashboardNetWorthValuationDto {
   readonly currencyCode: string | null;
   readonly status: "complete" | "partial_unconverted";
   readonly excludedStockMarketValue: number;
+  readonly excludedStocksByCurrency?: readonly {
+    readonly currencyCode: string;
+    readonly marketValue: number;
+  }[];
 }
 
 export interface PlayerGameDashboardPublicStoreListingDto {

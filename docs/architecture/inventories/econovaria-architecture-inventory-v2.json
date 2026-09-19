@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1229,
+    "sourceFiles": 1236,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 55,
@@ -104,7 +104,7 @@
         "infrastructure",
         "services"
       ],
-      "sourceFiles": 55,
+      "sourceFiles": 56,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -339,7 +339,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 90,
+      "sourceFiles": 94,
       "publicBoundaryFiles": []
     },
     {
@@ -3193,7 +3193,7 @@
       },
       {
         "file": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
-        "lines": 1520
+        "lines": 1601
       },
       {
         "file": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
@@ -3204,12 +3204,12 @@
         "lines": 1132
       },
       {
-        "file": "player-terminal/src/api/read-model.js",
-        "lines": 1111
+        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+        "lines": 1132
       },
       {
-        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "lines": 1110
+        "file": "player-terminal/src/api/read-model.js",
+        "lines": 1114
       },
       {
         "file": "admin/v2/src/routes/crafting/CraftingRoute.js",
@@ -3224,12 +3224,12 @@
         "lines": 1018
       },
       {
-        "file": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
-        "lines": 998
+        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.ts",
+        "lines": 1003
       },
       {
-        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.ts",
-        "lines": 938
+        "file": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
+        "lines": 998
       },
       {
         "file": "admin/v2/src/routes/world-management/WorldManagementRoute.js",
@@ -3308,6 +3308,10 @@
         "lines": 773
       },
       {
+        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.test.ts",
+        "lines": 767
+      },
+      {
         "file": "backend/src/simulations/economy/deterministicEconomicSimulation.ts",
         "lines": 748
       },
@@ -3320,8 +3324,16 @@
         "lines": 724
       },
       {
+        "file": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts",
+        "lines": 716
+      },
+      {
         "file": "frontend/src/core/login.js",
         "lines": 715
+      },
+      {
+        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.test.ts",
+        "lines": 706
       },
       {
         "file": "backend/src/domains/markets/state/priceTimeOrderBookStateMachine.ts",
@@ -3352,10 +3364,6 @@
         "lines": 649
       },
       {
-        "file": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts",
-        "lines": 649
-      },
-      {
         "file": "backend/src/security/adminBffRequestAuth.ts",
         "lines": 643
       },
@@ -3378,10 +3386,6 @@
       {
         "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.ts",
         "lines": 637
-      },
-      {
-        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.test.ts",
-        "lines": 628
       },
       {
         "file": "backend/src/domains/markets/calculations/collectiveInvestmentAnalytics.ts",
@@ -3452,10 +3456,6 @@
         "lines": 590
       },
       {
-        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.test.ts",
-        "lines": 588
-      },
-      {
         "file": "backend/src/domains/marketplace/infrastructure/supabasePlayerMarketplaceRepository.ts",
         "lines": 581
       },
@@ -3512,10 +3512,6 @@
         "lines": 554
       },
       {
-        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.ts",
-        "lines": 553
-      },
-      {
         "file": "backend/src/domains/contracts/services/contractRewardService.ts",
         "lines": 551
       },
@@ -3542,6 +3538,10 @@
       {
         "file": "admin/v2/src/routes/market/MarketController.js",
         "lines": 535
+      },
+      {
+        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.ts",
+        "lines": 533
       },
       {
         "file": "admin/v2/src/routes/attendance/AttendanceController.js",

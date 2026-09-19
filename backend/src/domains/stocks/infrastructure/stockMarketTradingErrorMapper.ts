@@ -12,7 +12,9 @@ export function mapStockTradingRpcError(
     .filter(Boolean).join(" ").toUpperCase();
   const token = [...source.matchAll(/[A-Z][A-Z0-9_]{4,}/gu)]
     .map((match) => match[0])
-    .find((candidate) => /^(?:STOCK|PURCHASE|FUNDING|BANK|FX)_/u.test(candidate)) ?? "";
+    .find((candidate) =>
+      /^(?:STOCK|BUSINESS|PURCHASE|FUNDING|BANK|FX)_/u.test(candidate)
+    ) ?? "";
 
   if (isSchemaNotApplied(error, source)) {
     return failure(
@@ -22,32 +24,88 @@ export function mapStockTradingRpcError(
     );
   }
   if (
-    token.includes("REQUEST_INVALID") || token.includes("ALLOCATIONS_INVALID") ||
+    token.includes("REQUEST_INVALID") ||
+    token.includes("ALLOCATIONS_INVALID") ||
     token.includes("PRECISION_INVALID") || token.includes("GROSS_INVALID")
-  ) return failure("invalid_stock_market_trading_request", "Stock market trading request is invalid.", 400);
+  ) {
+    return failure(
+      "invalid_stock_market_trading_request",
+      "Stock market trading request is invalid.",
+      400,
+    );
+  }
+  if (token.includes("WHOLE_SHARES_REQUIRED")) {
+    return failure(
+      "invalid_stock_market_trading_request",
+      "Business common shares require a whole-share quantity.",
+      400,
+    );
+  }
+  if (
+    token === "STOCK_BUSINESS_SHARES_UNAVAILABLE" ||
+    token === "BUSINESS_MARKET_SHARES_UNAVAILABLE"
+  ) {
+    return failure(
+      "insufficient_shares",
+      "There are not enough common shares available on the Market.",
+      409,
+    );
+  }
   if (token.includes("PLAYER_NOT_FOUND")) {
-    return failure("player_not_found", "Player could not be found in this game session.", 404);
+    return failure(
+      "player_not_found",
+      "Player could not be found in this game session.",
+      404,
+    );
   }
   if (token.includes("ASSET_NOT_FOUND")) {
-    return failure("stock_asset_not_found", "Stock asset could not be found in this game session.", 404);
+    return failure(
+      "stock_asset_not_found",
+      "Stock asset could not be found in this game session.",
+      404,
+    );
   }
   if (token.includes("QUOTE_NOT_FOUND")) {
-    return failure("stock_quote_not_found", "Stock purchase quote could not be found.", 404);
+    return failure(
+      "stock_quote_not_found",
+      "Stock purchase quote could not be found.",
+      404,
+    );
   }
   if (token.includes("MARKET_CLOSED")) {
-    return failure("stock_market_closed", "Stock market is closed. No trade was executed.", 409);
+    return failure(
+      "stock_market_closed",
+      "Stock market is closed. No trade was executed.",
+      409,
+    );
   }
   if (token.includes("PRICE_CHANGED")) {
-    return failure("stale_stock_price", "The reviewed Stock price changed. Refresh the market and quote again.", 409);
+    return failure(
+      "stale_stock_price",
+      "The reviewed Stock price changed. Refresh the market and quote again.",
+      409,
+    );
   }
   if (token.includes("TICK_CHANGED") || token.includes("TICK_UNAVAILABLE")) {
-    return failure("stale_stock_tick", "The reviewed Stock price tick is no longer current.", 409);
+    return failure(
+      "stale_stock_tick",
+      "The reviewed Stock price tick is no longer current.",
+      409,
+    );
   }
   if (token.includes("QUOTE_EXPIRED")) {
-    return failure("stock_quote_expired", "The Stock purchase quote expired. Create a new quote.", 409);
+    return failure(
+      "stock_quote_expired",
+      "The Stock purchase quote expired. Create a new quote.",
+      409,
+    );
   }
   if (token.includes("QUOTE_CONSUMED")) {
-    return failure("stock_quote_consumed", "The Stock purchase quote has already been consumed.", 409);
+    return failure(
+      "stock_quote_consumed",
+      "The Stock purchase quote has already been consumed.",
+      409,
+    );
   }
   if (token.includes("DESTINATION_INVALID")) {
     return failure(
@@ -57,7 +115,11 @@ export function mapStockTradingRpcError(
     );
   }
   if (token.includes("SHARES_INSUFFICIENT")) {
-    return failure("insufficient_shares", "Available Stock holdings are insufficient for this sale.", 409);
+    return failure(
+      "insufficient_shares",
+      "Available Stock holdings are insufficient for this sale.",
+      409,
+    );
   }
   if (token.includes("IDEMPOTENCY") || token.includes("CONFLICT")) {
     return failure(
@@ -115,7 +177,10 @@ function fundsInsufficient(token: string): boolean {
     token.includes("AVAILABLE_INSUFFICIENT");
 }
 
-function isSchemaNotApplied(error: SupabaseTradingQueryError, source: string): boolean {
+function isSchemaNotApplied(
+  error: SupabaseTradingQueryError,
+  source: string,
+): boolean {
   return error.code === "42P01" || error.code === "42703" ||
     error.code === "42883" || error.code === "PGRST202" ||
     source.includes("DOES NOT EXIST") || source.includes("SCHEMA CACHE") ||

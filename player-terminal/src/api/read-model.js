@@ -1,3 +1,4 @@
+import { businessShareListing } from "../features/market/business-share-view.js";
 function list(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -425,6 +426,8 @@ function normalizeMarketAsset(stock, options = {}) {
     name: text(stock.companyName, text(stock.ticker, "Unknown asset")),
     type: "Stock",
     sector: text(stock.sector, "Other"),
+    listingCurrencyCode: text(stock.listingCurrencyCode),
+    commonEquity: businessShareListing(stock.commonEquity),
     countryId: text(stock.countryCode).toLowerCase(),
     price: currentPrice,
     open: number(stock.openPrice, currentPrice),
@@ -433,8 +436,8 @@ function normalizeMarketAsset(stock, options = {}) {
     change,
     volume: number(stock.volume),
     marketCap: number(stock.marketCap),
-    pe: number(existing.pe),
-    yield: number(existing.yield),
+    pe: stock.commonEquity ? 0 : number(existing.pe),
+    yield: stock.commonEquity ? 0 : number(existing.yield),
     risk: currentVolatility > longRunVolatility ? "High" : "Medium",
     outlook: change > 0 ? "Positive" : change < 0 ? "Cautious" : "Stable",
     watchlisted: typeof stock.isWatchlisted === "boolean"

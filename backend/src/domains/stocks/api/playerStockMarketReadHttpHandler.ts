@@ -67,7 +67,8 @@ export async function handlePlayerStockMarketReadRequest(
   if (request.headers.has("x-stock-market-runner-secret")) {
     return jsonError(400, {
       code: "stock_runner_secret_not_allowed",
-      message: "Player stock reads must not send the stock market runner secret.",
+      message:
+        "Player stock reads must not send the stock market runner secret.",
       retryable: false,
     });
   }
@@ -91,7 +92,9 @@ export async function handlePlayerStockMarketReadRequest(
 
     const url = new URL(request.url);
     const requestedGameSessionIds = url.searchParams.getAll("gameSessionId");
-    const requestedPlayerSessionIds = url.searchParams.getAll("playerSessionId");
+    const requestedPlayerSessionIds = url.searchParams.getAll(
+      "playerSessionId",
+    );
     const legacyScopedRequest = requestedGameSessionIds.length > 0 ||
       requestedPlayerSessionIds.length > 0;
 
@@ -187,6 +190,7 @@ function toPlayerSafeStockRead(result: StockMarketPlayerReadResult) {
         companyName: holding.companyName,
         sector: holding.sector,
         countryCode: holding.countryCode,
+        ...(holding.currencyCode ? { currencyCode: holding.currencyCode } : {}),
         quantity: holding.quantity,
         averageCost: holding.averageCost,
         currentPrice: holding.currentPrice,

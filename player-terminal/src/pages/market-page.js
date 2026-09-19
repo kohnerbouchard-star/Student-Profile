@@ -1,3 +1,4 @@
+import { renderBusinessShareFacts } from "../features/market/business-share-view.js";
 import { renderBusinessIpoPanel } from "../features/business-ipo/business-ipo-panel.js";
 import { escapeHtml, formatCompact, formatCurrency, formatNumber, formatPercent, toneFromChange } from "../core/format.js";
 import { icon } from "../components/icons.js";
@@ -85,7 +86,7 @@ export function renderMarketPage(data, ui) {
 
     <div class="player-terminal-market-summary">
       <article><small>COMPOSITE INDEX</small><strong>${escapeHtml(formatNumber(composite?.price || 0, 2))}</strong><span class="${toneFromChange(compositeChange)}">${escapeHtml(formatPercent(compositeChange))}</span></article>
-      <article><small>YOUR PORTFOLIO</small><strong>${escapeHtml(formatCurrency(data.dashboard.portfolioValue, sessionCurrencyCode))}</strong><span class="${toneFromChange(data.dashboard.dailyChange)}">${escapeHtml(formatPercent(data.dashboard.dailyChange))}</span></article>
+      <article><small>YOUR POSITIONS</small><strong>${escapeHtml(String(Array.isArray(data.portfolio?.holdings) ? data.portfolio.holdings.filter(h => h.quantity > 0).length : market.assets.filter(a => a.owned > 0).length))}</strong><span>Values by currency in Portfolio</span></article>
       <article><small>CHECKING FUNDING</small><strong>${escapeHtml(checkingAccounts.length ? `${checkingAccounts.length} account${checkingAccounts.length === 1 ? "" : "s"}` : "Unavailable")}</strong><span>${escapeHtml(accountSummary)}</span></article>
       <article><small>MARKET VOLUME</small><strong>${escapeHtml(formatCompact(marketVolume))}</strong><span>Across listed assets</span></article>
     </div>
@@ -128,6 +129,7 @@ export function renderMarketPage(data, ui) {
           <span><small>DIVIDEND</small><strong>${selected.yield ? `${escapeHtml(selected.yield.toFixed(1))}%` : "—"}</strong></span>
           <span><small>RISK / OUTLOOK</small><strong>${escapeHtml(selected.risk)} · ${escapeHtml(selected.outlook)}</strong></span>
         </div>
+        ${renderBusinessShareFacts(selected)}
         <div class="player-terminal-position-strip">
           <div><small>YOUR POSITION</small><strong>${escapeHtml(formatNumber(position.owned))} shares</strong></div>
           <div><small>AVERAGE COST</small><strong>${position.owned ? escapeHtml(formatCurrency(position.averageCost, listingCurrencyCode)) : "—"}</strong></div>
@@ -146,7 +148,7 @@ export function renderMarketPage(data, ui) {
           <input type="hidden" name="ticker" value="${escapeHtml(selected.symbol)}" />
           <input type="hidden" name="expectedPrice" value="${escapeHtml(String(selected.price))}" />
           <input type="hidden" name="expectedTickIndex" value="${escapeHtml(String(market.tickIndex || 0))}" />
-          <label>BUY QUANTITY<input name="quantity" type="number" min="0.0001" step="0.0001" value="1" required /></label>
+          <label>BUY QUANTITY<input name="quantity" type="number" min="${selected.commonEquity ? "1" : "0.0001"}" step="${selected.commonEquity ? "1" : "0.0001"}" value="1" required /></label>
           <fieldset>
             <legend>FUNDING SPLIT · TARGET ${escapeHtml(listingCurrencyCode)}</legend>
             <label>CHECKING ACCOUNT 1<select name="sourceAccountKey1" required><option value="">Select Checking account</option>${buyAccountOptions}</select></label>
@@ -170,7 +172,7 @@ export function renderMarketPage(data, ui) {
           <input type="hidden" name="ticker" value="${escapeHtml(selected.symbol)}" />
           <input type="hidden" name="expectedPrice" value="${escapeHtml(String(selected.price))}" />
           <input type="hidden" name="expectedTickIndex" value="${escapeHtml(String(market.tickIndex || 0))}" />
-          <label>SELL QUANTITY<input name="quantity" type="number" min="0.0001" step="0.0001" max="${escapeHtml(String(position.owned || 0))}" value="${position.owned > 0 ? "1" : "0"}" required /></label>
+          <label>SELL QUANTITY<input name="quantity" type="number" min="${selected.commonEquity ? "1" : "0.0001"}" step="${selected.commonEquity ? "1" : "0.0001"}" max="${escapeHtml(String(position.owned || 0))}" value="${position.owned > 0 ? "1" : "0"}" required /></label>
           <label>PROCEEDS DESTINATION · ${escapeHtml(listingCurrencyCode)}<select name="destinationAccountKey" required><option value="">Select ${escapeHtml(listingCurrencyCode)} Checking account</option>${sellAccountOptions}</select></label>
           <div class="player-terminal-order-review">
             <span><small>ESTIMATED PROCEEDS</small><strong data-player-market-sell-proceeds>${escapeHtml(formatCurrency(defaultTargetAmount, listingCurrencyCode))}</strong></span>

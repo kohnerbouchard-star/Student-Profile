@@ -1,3 +1,4 @@
+import { assertBusinessShareQuantity, businessShareListing } from "./business-share-view.js";
 import { PlayerApi } from "../../api/player-api.js";
 import { ApiConnectionPendingError } from "../../api/errors.js";
 import { normalizeWritePayload } from "../../api/payload-normalizer.js";
@@ -211,7 +212,7 @@ async function readAuthoritativeTradeReview(api, config, asset, form) {
   setReviewValue(form, "expectedPrice", expectedPrice);
   setReviewValue(form, "expectedTickIndex", expectedTickIndex);
   return {
-    asset: { ...asset, price: expectedPrice },
+    asset: { ...asset, price: expectedPrice, commonEquity: businessShareListing(reviewed.commonEquity), listingCurrencyCode: reviewed.listingCurrencyCode || asset.listingCurrencyCode },
     expectedPrice,
     expectedTickIndex,
   };
@@ -331,6 +332,7 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     pending = true;
     try {
       const review = await readAuthoritativeTradeReview(api, config, asset, form);
+      assertBusinessShareQuantity(review.asset, payload.quantity);
       if (roundStock(review.expectedPrice) !== roundStock(payload.expectedPrice)) {
         try {
           await refreshTradeResources();
@@ -388,6 +390,7 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     pending = true;
     try {
       const review = await readAuthoritativeTradeReview(api, config, asset, form);
+      assertBusinessShareQuantity(review.asset, payload.quantity);
       payload = {
         ...payload,
         expectedPrice: review.expectedPrice,

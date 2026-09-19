@@ -4,7 +4,7 @@ import { jsonService } from "./business-primary-ipo-fixture.mjs";
 
 // This helper inherits the fixture's localhost-only connection guard. The R2
 // completion and expired license are disposable test setup, not live actions.
-export function verifyPrimaryIpoPurge(game, other) {
+export function verifyPrimaryIpoPurge(game, other, additionalTables = []) {
   const before = snapshot(other.id);
   const ids = {
     code: '71000000-0000-4000-8000-000000000014',
@@ -13,7 +13,7 @@ export function verifyPrimaryIpoPurge(game, other) {
     arm: '74000000-0000-4000-8000-000000000014',
   };
   const tables = ['business_management_mandates','business_governance_proposals','business_governance_voter_snapshots',
-    'business_governance_votes','business_ownership_transactions','business_financial_statements'];
+    'business_governance_votes','business_ownership_transactions','business_financial_statements',...additionalTables];
   const counts = Object.fromEntries(tables.map(table => [table, Number(runSql(
     `select count(*) from public.${table} where game_session_id=${q(game.id)};`).output)]));
   assert.ok(Object.values(counts).every(count => count > 0), 'purge must exercise actual IPO and financial evidence');
@@ -35,14 +35,14 @@ export function verifyPrimaryIpoPurge(game, other) {
       from public.game_sessions where id=${q(game.id)};
     commit;`);
   const preflight = jsonService(`public.get_game_data_purge_preflight_v1(${q(ids.request)})`);
-  assert.equal(preflight.registrySha256, 'ab44a67a1247fd706636c3aeb627f352344ca08bde6b6c7159f686a873612a48');
-  assert.equal(preflight.fkGraphSha256, '343f1966b3750e7a639fb82059bab1049edd44591e27d59cd08017c19be46198');
-  assert.equal(preflight.deleteOrderSha256, 'f2fe1c6ad5d11bf7c73e1bd761153e6e6cfa726d9b26f780b62e42eb603667b6');
-  assert.deepEqual([preflight.registryTableCount,preflight.fkGraphEdgeCount,preflight.deleteOrderTableCount], [206,455,205]);
-  expectSqlError(`begin; update private.game_data_purge_requests set db_delete_cursor=206 where id=${q(ids.request)};
+  assert.equal(preflight.registrySha256, '7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3');
+  assert.equal(preflight.fkGraphSha256, 'fe88cafd56ca4c21ab3c1d34385e21f4c3d8be201eae44ee7f5539a34a98f329');
+  assert.equal(preflight.deleteOrderSha256, '19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897');
+  assert.deepEqual([preflight.registryTableCount,preflight.fkGraphEdgeCount,preflight.deleteOrderTableCount], [207,456,206]);
+  expectSqlError(`begin; update private.game_data_purge_requests set db_delete_cursor=207 where id=${q(ids.request)};
     set local role service_role; select public.finalize_game_data_purge_v1(${q(ids.request)}); commit;`, /GAME_PURGE_DATABASE_ROWS_REMAIN/);
   let cursor = 0;
-  while (cursor < 206) {
+  while (cursor < 207) {
     const claims = runJson(`begin; set local role service_role;
       select coalesce(jsonb_agg(to_jsonb(c)),'[]'::jsonb)::text from public.claim_confirmed_game_data_purge_v1() c; commit;`);
     assert.equal(claims.length, 1); assert.equal(claims[0].request_id, ids.request); assert.equal(claims[0].stage, 'db');
@@ -56,5 +56,5 @@ export function verifyPrimaryIpoPurge(game, other) {
   const deleted = runJson(`select db_deleted_rows::text from private.game_data_purge_requests where id=${q(ids.request)};`);
   for (const table of tables) assert.equal(deleted[`public.${table}`], counts[table], table);
   assert.deepEqual(snapshot(other.id), before, 'canonical IPO purge must preserve the comparison game');
-  console.log('Phase 14C populated IPO purge: 206 registry / 455 FK / 205 ordered / 206 final cursor; immutable evidence removed with other-game isolation.');
+  console.log('Phase 14C populated IPO purge: 207 registry / 456 FK / 206 ordered / 207 final cursor; immutable evidence removed with other-game isolation.');
 }

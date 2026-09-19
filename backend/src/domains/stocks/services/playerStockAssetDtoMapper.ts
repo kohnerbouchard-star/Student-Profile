@@ -30,6 +30,7 @@ export function toPlayerStockAssetDto(
     currentVolatility: asset.currentVolatility,
     longRunVolatility: asset.longRunVolatility,
     description: asset.description,
+    ...(asset.commonEquity ? { commonEquity: asset.commonEquity } : {}),
     isWatchlisted,
   };
 }

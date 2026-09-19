@@ -355,13 +355,13 @@ function assertPhase(label, results, latencyLimitMs) {
   const failures = results.filter((result) => !result.ok);
   const serverErrors = results.filter((result) => result.status >= 500);
   const p95 = percentile(results.map((result) => result.elapsedMs), 0.95);
-  if (serverErrors.length) throw new Error(`${label} produced ${serverErrors.length} server errors.`);
+  const summary = (serverErrors.length ? serverErrors : failures).slice(0, 5).map((failure) => ({
+    status: failure.status,
+    path: sanitize(failure.path),
+    error: sanitize(failure.error),
+  }));
+  if (serverErrors.length) throw new Error(`${label} produced ${serverErrors.length} server errors: ${JSON.stringify(summary)}`);
   if (failures.length) {
-    const summary = failures.slice(0, 5).map((failure) => ({
-      status: failure.status,
-      path: failure.path,
-      error: failure.error,
-    }));
     throw new Error(`${label} produced ${failures.length} failed requests: ${JSON.stringify(summary)}`);
   }
   if (p95 > latencyLimitMs) {

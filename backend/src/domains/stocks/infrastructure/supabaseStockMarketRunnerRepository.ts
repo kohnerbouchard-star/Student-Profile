@@ -16,8 +16,8 @@ import type {
   StockMarketShockScope,
 } from "../contracts/stockMarketEngineContracts.ts";
 import {
-  StockMarketRunnerError,
   type StockMarketRunnerApplyResult,
+  StockMarketRunnerError,
   type StockMarketRunnerLoadedState,
   type StockMarketRunnerLoadInput,
   type StockMarketRunnerPersistencePayload,
@@ -269,6 +269,19 @@ export class SupabaseStockMarketRunnerRepository
     input: StockMarketRunnerLoadInput,
   ): Promise<StockMarketRunnerLoadedState> {
     await this.assertGameSessionExists(input.gameSessionId);
+    const consumed = await this.client.rpc(
+      "consume_business_market_events_v1",
+      {
+        p_game_session_id: input.gameSessionId,
+        p_limit: 1000,
+      },
+    );
+    if (consumed.error) {
+      throw mapPersistenceError(
+        consumed.error,
+        "stock_market_state_load_failed",
+      );
+    }
 
     const tickIndex = input.tickIndex ??
       await this.readNextTickIndex(input.gameSessionId);
@@ -316,7 +329,10 @@ export class SupabaseStockMarketRunnerRepository
     });
 
     if (response.error) {
-      throw mapPersistenceError(response.error, "stock_market_tick_apply_failed");
+      throw mapPersistenceError(
+        response.error,
+        "stock_market_tick_apply_failed",
+      );
     }
 
     const row = response.data?.[0];
@@ -343,7 +359,10 @@ export class SupabaseStockMarketRunnerRepository
       .maybeSingle();
 
     if (response.error) {
-      throw mapPersistenceError(response.error, "stock_market_state_load_failed");
+      throw mapPersistenceError(
+        response.error,
+        "stock_market_state_load_failed",
+      );
     }
 
     const row = response.data as GameSessionRow | null;
@@ -366,7 +385,10 @@ export class SupabaseStockMarketRunnerRepository
       .limit(1);
 
     if (response.error) {
-      throw mapPersistenceError(response.error, "stock_market_state_load_failed");
+      throw mapPersistenceError(
+        response.error,
+        "stock_market_state_load_failed",
+      );
     }
 
     const rows = (response.data ?? []) as StockPriceTickIndexRow[];
@@ -388,7 +410,10 @@ export class SupabaseStockMarketRunnerRepository
       .maybeSingle();
 
     if (response.error) {
-      throw mapPersistenceError(response.error, "stock_market_state_load_failed");
+      throw mapPersistenceError(
+        response.error,
+        "stock_market_state_load_failed",
+      );
     }
 
     if (response.data) {
@@ -411,7 +436,10 @@ export class SupabaseStockMarketRunnerRepository
       .order("ticker", { ascending: true });
 
     if (response.error) {
-      throw mapPersistenceError(response.error, "stock_market_state_load_failed");
+      throw mapPersistenceError(
+        response.error,
+        "stock_market_state_load_failed",
+      );
     }
 
     return (response.data ?? []) as GameSessionStockAssetRow[];
@@ -429,11 +457,16 @@ export class SupabaseStockMarketRunnerRepository
       .order("created_tick", { ascending: true });
 
     if (response.error) {
-      throw mapPersistenceError(response.error, "stock_market_state_load_failed");
+      throw mapPersistenceError(
+        response.error,
+        "stock_market_state_load_failed",
+      );
     }
 
     return ((response.data ?? []) as StockMarketEventRow[])
-      .filter((row) => isTickInWindow(row.created_tick, row.expires_tick, tickIndex))
+      .filter((row) =>
+        isTickInWindow(row.created_tick, row.expires_tick, tickIndex)
+      )
       .map(toStockMarketShockInput);
   }
 
@@ -449,14 +482,19 @@ export class SupabaseStockMarketRunnerRepository
       .order("starts_tick", { ascending: false });
 
     if (response.error) {
-      throw mapPersistenceError(response.error, "stock_market_state_load_failed");
+      throw mapPersistenceError(
+        response.error,
+        "stock_market_state_load_failed",
+      );
     }
 
     const row = ((response.data ?? []) as StockMarketRegimeRow[])
       .filter((candidate) =>
         isTickInWindow(candidate.starts_tick, candidate.ends_tick, tickIndex)
       )
-      .sort((left, right) => toNumber(right.starts_tick) - toNumber(left.starts_tick))[0];
+      .sort((left, right) =>
+        toNumber(right.starts_tick) - toNumber(left.starts_tick)
+      )[0];
 
     return row ? toStockMarketRegimeInput(row) : undefined;
   }
@@ -487,7 +525,10 @@ export class SupabaseStockMarketRunnerRepository
       .eq("status", "active");
 
     if (profileResponse.error) {
-      throw mapPersistenceError(profileResponse.error, "stock_market_state_load_failed");
+      throw mapPersistenceError(
+        profileResponse.error,
+        "stock_market_state_load_failed",
+      );
     }
 
     const profiles = (profileResponse.data ?? []) as CountryProfileRow[];
@@ -501,7 +542,9 @@ export class SupabaseStockMarketRunnerRepository
     }
 
     const profileById = new Map(
-      profiles.map((profile) => [profile.id, normalizeKey(profile.country_code)]),
+      profiles.map((
+        profile,
+      ) => [profile.id, normalizeKey(profile.country_code)]),
     );
     const snapshotResponse = await this.client
       .from("country_economic_snapshots")
@@ -512,7 +555,10 @@ export class SupabaseStockMarketRunnerRepository
       .order("effective_at", { ascending: false });
 
     if (snapshotResponse.error) {
-      throw mapPersistenceError(snapshotResponse.error, "stock_market_state_load_failed");
+      throw mapPersistenceError(
+        snapshotResponse.error,
+        "stock_market_state_load_failed",
+      );
     }
 
     const latestSnapshots = readLatestCountrySnapshots(
@@ -602,8 +648,14 @@ export function toStockMarketMacroInput(
 ): StockMarketMacroInput {
   return {
     gameSessionId,
-    gdpGrowthRate: average(snapshots, ({ snapshot }) => snapshot.gdp_growth_rate),
-    inflationRate: average(snapshots, ({ snapshot }) => snapshot.inflation_rate),
+    gdpGrowthRate: average(
+      snapshots,
+      ({ snapshot }) => snapshot.gdp_growth_rate,
+    ),
+    inflationRate: average(
+      snapshots,
+      ({ snapshot }) => snapshot.inflation_rate,
+    ),
     unemploymentRate: average(
       snapshots,
       ({ snapshot }) => snapshot.unemployment_rate,
@@ -646,7 +698,10 @@ export function readLatestCountrySnapshots(
 }[] {
   const latestByCountry = new Map<
     string,
-    { readonly snapshot: CountryEconomicSnapshotRow; readonly countryCode: string }
+    {
+      readonly snapshot: CountryEconomicSnapshotRow;
+      readonly countryCode: string;
+    }
   >();
 
   for (const snapshot of snapshots) {
@@ -668,7 +723,9 @@ export function readLatestCountrySnapshots(
   );
 }
 
-function toStockMarketShockInput(row: StockMarketEventRow): StockMarketShockInput {
+function toStockMarketShockInput(
+  row: StockMarketEventRow,
+): StockMarketShockInput {
   return {
     gameSessionId: row.game_session_id,
     shockId: row.shock_id,
@@ -775,9 +832,10 @@ function toNumberRecord(
   const result: Record<string, number> = {};
 
   for (const [key, rawValue] of Object.entries(value)) {
-    const numericValue = typeof rawValue === "number" || typeof rawValue === "string"
-      ? Number(rawValue)
-      : Number.NaN;
+    const numericValue =
+      typeof rawValue === "number" || typeof rawValue === "string"
+        ? Number(rawValue)
+        : Number.NaN;
 
     if (Number.isFinite(numericValue)) {
       result[options.normalizeKeys ? normalizeKey(key) : key] = numericValue;
@@ -795,7 +853,8 @@ function isTickInWindow(
   const startTick = toNumber(startsAt);
   const endTick = toOptionalNumber(endsAt);
 
-  return tickIndex >= startTick && (endTick === undefined || tickIndex <= endTick);
+  return tickIndex >= startTick &&
+    (endTick === undefined || tickIndex <= endTick);
 }
 
 function compareSnapshotRecency(
@@ -844,7 +903,9 @@ function averageGlobalDemand(
   return round(total / (values.length * 3));
 }
 
-function toIndexScale(value: number | string | JsonValue | undefined | null): number {
+function toIndexScale(
+  value: number | string | JsonValue | undefined | null,
+): number {
   const numericValue = toNumber(value);
 
   if (!Number.isFinite(numericValue)) {
@@ -854,7 +915,9 @@ function toIndexScale(value: number | string | JsonValue | undefined | null): nu
   return Math.abs(numericValue) <= 2 ? numericValue * 100 : numericValue;
 }
 
-function toNumber(value: number | string | JsonValue | undefined | null): number {
+function toNumber(
+  value: number | string | JsonValue | undefined | null,
+): number {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : Number.NaN;
   }
@@ -898,7 +961,9 @@ function isJsonObject(value: JsonValue): value is JsonObject {
 
 function mapPersistenceError(
   error: SupabaseRunnerQueryError,
-  defaultCode: "stock_market_state_load_failed" | "stock_market_tick_apply_failed",
+  defaultCode:
+    | "stock_market_state_load_failed"
+    | "stock_market_tick_apply_failed",
 ): StockMarketRunnerError {
   const normalizedMessage = error.message.toUpperCase();
 

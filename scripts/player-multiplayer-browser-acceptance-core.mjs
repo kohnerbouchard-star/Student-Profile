@@ -300,11 +300,34 @@ async function createPlayer(page, player) {
   await page.getByRole("button", { name: /Add Player/i }).click();
   const form = page.locator("[data-admin-terminal-player-form]");
   await form.waitFor({ state: "visible", timeout: 30_000 });
+  // Visibility precedes the legacy form's credential decoration and scheduled
+  // initial focus. Wait for the mounted form before sending keyboard input.
+  await page.waitForFunction(() => {
+    const candidate = document.querySelector("[data-admin-terminal-player-form]");
+    const backdrop = candidate?.closest("[data-admin-terminal-modal-backdrop]");
+    const controller = window.EconovariaAdminModalAccessibility?.getActiveController?.();
+    return candidate?.dataset.playerIdentityConfigured === "true" &&
+      candidate.hasAttribute("data-admin-player-create-auto-credentials") &&
+      backdrop?.dataset.adminModalAccessibilityBound === "true" &&
+      controller?.dialog?.contains(candidate);
+  }, null, { timeout: 30_000 });
+  await form.evaluate(() => new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  }));
   await form.locator('[name="displayName"]').fill(player.displayName);
   const roster = form.locator('[name="rosterLabel"]');
   if (await roster.count()) await roster.fill("Multiplayer Browser Roster");
   await form.locator('[name="playerIdentifier"]').fill(player.playerIdentifier);
   await form.locator('[name="accessCode"]').fill(player.accessCode);
+
+  const enteredIdentity = await form.evaluate((element, expected) => ({
+    displayNameMatches: element.elements.namedItem("displayName")?.value === expected.displayName,
+    playerIdentifierMatches: element.elements.namedItem("playerIdentifier")?.value === expected.playerIdentifier,
+    accessCodeMatches: element.elements.namedItem("accessCode")?.value === expected.accessCode,
+  }), player);
+  if (Object.values(enteredIdentity).some((matches) => !matches)) {
+    throw new Error(`Rendered Player form changed fixture input before submission: ${JSON.stringify(enteredIdentity)}`);
+  }
 
   const requestStart = evidence.adminRequests.length;
   const responsePromise = page.waitForResponse(

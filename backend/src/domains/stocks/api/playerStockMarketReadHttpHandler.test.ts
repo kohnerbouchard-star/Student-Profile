@@ -50,15 +50,22 @@ Deno.test("player stock read rejects invalid player session", async () => {
 });
 
 Deno.test("player stock read rejects revoked, expired, and inactive sessions", async () => {
-  for (const session of [
-    playerSession({ status: "revoked", revoked_at: "2026-06-24T00:00:00.000Z" }),
-    playerSession({ expires_at: "2020-01-01T00:00:00.000Z" }),
-    playerSession({ status: "expired" }),
-  ]) {
+  for (
+    const session of [
+      playerSession({
+        status: "revoked",
+        revoked_at: "2026-06-24T00:00:00.000Z",
+      }),
+      playerSession({ expires_at: "2020-01-01T00:00:00.000Z" }),
+      playerSession({ status: "expired" }),
+    ]
+  ) {
     const response = await handlePlayerStockMarketReadRequest(
       request("read_portfolio"),
       "read_portfolio",
-      dependencies({ client: new FakeClient({ ...tables(), player_sessions: [session] }) }),
+      dependencies({
+        client: new FakeClient({ ...tables(), player_sessions: [session] }),
+      }),
     );
 
     await assertErrorResponse(response, 401, "invalid_player_session");
@@ -87,24 +94,44 @@ Deno.test("player stock read rejects missing game or player session query", asyn
     dependencies(),
   );
 
-  await assertErrorResponse(missingGame, 400, "invalid_player_stock_read_request");
-  await assertErrorResponse(missingPlayer, 400, "invalid_player_stock_read_request");
+  await assertErrorResponse(
+    missingGame,
+    400,
+    "invalid_player_stock_read_request",
+  );
+  await assertErrorResponse(
+    missingPlayer,
+    400,
+    "invalid_player_stock_read_request",
+  );
 });
 
 Deno.test("player stock read rejects array-shaped or multiple session ids", async () => {
   const multipleGame = await handlePlayerStockMarketReadRequest(
-    request("read_portfolio", { extraQuery: `gameSessionId=${GAME_SESSION_ID}` }),
+    request("read_portfolio", {
+      extraQuery: `gameSessionId=${GAME_SESSION_ID}`,
+    }),
     "read_portfolio",
     dependencies(),
   );
   const multiplePlayer = await handlePlayerStockMarketReadRequest(
-    request("read_portfolio", { extraQuery: `playerSessionId=${PLAYER_SESSION_ID}` }),
+    request("read_portfolio", {
+      extraQuery: `playerSessionId=${PLAYER_SESSION_ID}`,
+    }),
     "read_portfolio",
     dependencies(),
   );
 
-  await assertErrorResponse(multipleGame, 400, "invalid_player_stock_read_request");
-  await assertErrorResponse(multiplePlayer, 400, "invalid_player_stock_read_request");
+  await assertErrorResponse(
+    multipleGame,
+    400,
+    "invalid_player_stock_read_request",
+  );
+  await assertErrorResponse(
+    multiplePlayer,
+    400,
+    "invalid_player_stock_read_request",
+  );
 });
 
 Deno.test("player stock read rejects invalid limits", async () => {
@@ -160,6 +187,15 @@ Deno.test("player stock read returns portfolio DTO through the player-safe route
       balance: 9500,
     },
     summary: {
+      currencyCode: "ECO",
+      valuationStatus: "complete",
+      byCurrency: [{
+        currencyCode: "ECO",
+        marketValue: 625,
+        costBasis: 500,
+        unrealizedPnl: 125,
+        realizedPnl: 30,
+      }],
       cashBalance: 9500,
       holdingsMarketValue: 625,
       totalEquity: 10125,
@@ -242,10 +278,13 @@ Deno.test("player stock read returns trades newest-first through the player-safe
   const body = await response.json();
 
   assertEquals(response.status, 200);
-  assertEquals(body.trades.map((trade: { readonly tradeId: string }) => trade.tradeId), [
-    OTHER_TRADE_ID,
-    TRADE_ID,
-  ]);
+  assertEquals(
+    body.trades.map((trade: { readonly tradeId: string }) => trade.tradeId),
+    [
+      OTHER_TRADE_ID,
+      TRADE_ID,
+    ],
+  );
   assertEquals(body.trades[0], {
     tradeId: OTHER_TRADE_ID,
     orderId: OTHER_ORDER_ID,
@@ -278,22 +317,22 @@ function dependencies(options: {
     sessionTokenHash: string,
   ) => Promise<
     | {
-        readonly ok: true;
-        readonly session: {
-          readonly id: string;
-          readonly game_session_id: string;
-          readonly player_id: string;
-        };
-      }
+      readonly ok: true;
+      readonly session: {
+        readonly id: string;
+        readonly game_session_id: string;
+        readonly player_id: string;
+      };
+    }
     | {
-        readonly ok: false;
-        readonly status: number;
-        readonly error: {
-          readonly code: string;
-          readonly message: string;
-          readonly retryable: boolean;
-        };
-      }
+      readonly ok: false;
+      readonly status: number;
+      readonly error: {
+        readonly code: string;
+        readonly message: string;
+        readonly retryable: boolean;
+      };
+    }
   >;
 } = {}): any {
   const client = options.client ?? new FakeClient(tables());
@@ -359,7 +398,9 @@ function request(
   }
 
   return new Request(
-    `https://example.test/players/me/stocks/${pathByAction[action]}?${query}${suffix}`,
+    `https://example.test/players/me/stocks/${
+      pathByAction[action]
+    }?${query}${suffix}`,
     { method: "GET", headers },
   );
 }
@@ -397,6 +438,7 @@ function tables(): Record<string, readonly Record<string, unknown>[]> {
       realized_pnl: 30,
     }],
     game_session_stock_assets: [{
+      listing_currency_code: "ECO",
       id: STOCK_ASSET_ID,
       game_session_id: GAME_SESSION_ID,
       ticker: "AURA",
@@ -490,6 +532,7 @@ function holdingDto() {
     companyName: "Aurora Aerospace Systems",
     sector: "AI_AEROSPACE",
     countryCode: "SOLVEND",
+    currencyCode: "ECO",
     quantity: 5,
     averageCost: 100,
     currentPrice: 125,
@@ -512,20 +555,36 @@ class FakeClient {
     return new FakeQueryBuilder(this, tableName);
   }
 
-  async rpc(functionName: string) {
+  async rpc(functionName: string, args: Record<string, unknown> = {}) {
+    if (functionName === "read_player_stock_positions_v1") {
+      return {
+        data: (this.tables.stock_holdings ?? []).filter((row) =>
+          row.game_session_id === args.p_game_session_id &&
+          row.player_id === args.p_player_id
+        ),
+        error: null,
+      };
+    }
     this.forbiddenCalls.push(`rpc:${functionName}`);
     return { data: null, error: { message: `Unexpected RPC ${functionName}` } };
   }
 }
 
 class FakeQueryBuilder
-  implements PromiseLike<{ readonly data: unknown[] | null; readonly error: unknown }> {
-  private readonly filters: { readonly column: string; readonly value: unknown }[] = [];
+  implements
+    PromiseLike<{ readonly data: unknown[] | null; readonly error: unknown }> {
+  private readonly filters: {
+    readonly column: string;
+    readonly value: unknown;
+  }[] = [];
   private readonly inFilters: {
     readonly column: string;
     readonly values: readonly unknown[];
   }[] = [];
-  private readonly orderings: { readonly column: string; readonly ascending: boolean }[] = [];
+  private readonly orderings: {
+    readonly column: string;
+    readonly ascending: boolean;
+  }[] = [];
   private limitCount: number | null = null;
 
   constructor(
@@ -580,10 +639,15 @@ class FakeQueryBuilder
     return { data: result.data?.[0] ?? null, error: result.error };
   }
 
-  then<TResult1 = { readonly data: unknown[] | null; readonly error: unknown }, TResult2 = never>(
-    onfulfilled?: ((
-      value: { readonly data: unknown[] | null; readonly error: unknown },
-    ) => TResult1 | PromiseLike<TResult1>) | null,
+  then<
+    TResult1 = { readonly data: unknown[] | null; readonly error: unknown },
+    TResult2 = never,
+  >(
+    onfulfilled?:
+      | ((
+        value: { readonly data: unknown[] | null; readonly error: unknown },
+      ) => TResult1 | PromiseLike<TResult1>)
+      | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     return this.execute().then(onfulfilled, onrejected);
@@ -605,7 +669,10 @@ class FakeQueryBuilder
 
     for (const ordering of [...this.orderings].reverse()) {
       rows.sort((left, right) => {
-        const comparison = compareValues(left[ordering.column], right[ordering.column]);
+        const comparison = compareValues(
+          left[ordering.column],
+          right[ordering.column],
+        );
         return ordering.ascending ? comparison : -comparison;
       });
     }
