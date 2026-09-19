@@ -189,6 +189,7 @@ function adaptPhase12CanonicalWorkspace(source) {
     navigationValid: false,
     stockroomLocationsRendered: false,
     treasuryRendered: false,
+    financialReportsRendered: false,
     governanceRendered: false,
     activityRendered: false,
     productCreatorRetired: false,
@@ -312,6 +313,12 @@ function adaptPhase12CanonicalWorkspace(source) {
     throw new Error("Canonical Business Treasury evidence was not rendered inside Finance.");
   }
   evidence.workspace.treasuryRendered = true;
+  const reports = finance.locator("[data-business-financial-reporting]");
+  await reports.waitFor({ state: "visible", timeout: 30_000 });
+  if (!(await reports.innerText()).includes("No closed-period financial statements yet.")) {
+    throw new Error("New Business reporting did not arrive through the authenticated workspace read.");
+  }
+  evidence.workspace.financialReportsRendered = true;
 
   const governance = workspace.locator('[data-business-workspace-section="governance"]');
   await governance.waitFor({ state: "visible", timeout: 30_000 });

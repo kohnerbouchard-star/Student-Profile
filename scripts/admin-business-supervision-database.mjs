@@ -30,7 +30,11 @@ assert.equal(first.business.public_key, one.businessKey);
 assert.equal(first.supervision.readOnly,true);
 assert.equal(first.supervision.businessKey,one.businessKey);
 const sections = first.supervision.sections;
-assert.equal(Object.keys(sections).length,22);
+assert.equal(Object.keys(sections).length,25);
+for (const name of ["statementIncome", "statementBalance", "statementCash"]) {
+  assert.equal(sections[name].status, "empty");
+  assert.deepEqual(sections[name].rows, []);
+}
 assert.equal(sections.activity.rows.length,100);
 assert.equal(sections.activity.truncated,true);
 assert.equal(sections.ownership.rows.length,2);
@@ -70,7 +74,7 @@ assert.equal(closed.business.status,"closed");
 assert.ok(closed.supervision.healthFlags.includes("business-not-active"));
 assert.equal(closed.supervision.sections.readiness.status,"unavailable");
 assert.equal(closed.supervision.sections.activity.rows.length,100);
-assert.equal(Object.keys(closed.supervision.sections).length,22);
+assert.equal(Object.keys(closed.supervision.sections).length,25);
 const exact = runJson(`select economy_private.business_supervision_section_v2('[{"amount":9007199254740993.123456789123456789}]'::jsonb)::text;`);
 assert.equal(exact.rows[0].amount,"9007199254740993.123456789123456789");
-console.log("Phase 13 database: 22 sections, read-only enforcement, two-game scope, multi-owner percentages, grants/roles, closed history, Player ownership, and exact decimal precision pass");
+console.log("Phase 13/14 database: 25 sections, read-only enforcement, two-game scope, multi-owner percentages, grants/roles, closed history, Player ownership, and exact decimal precision pass");

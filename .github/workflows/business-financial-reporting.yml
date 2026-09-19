@@ -1,0 +1,121 @@
+name: Business Financial Reporting
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/business-financial-reporting.yml"
+      - "backend/supabase/migrations/**"
+      - "backend/src/domains/business/**"
+      - "backend/supabase/functions/admin-api/businessSupervisionProjection*"
+      - "player-terminal/src/pages/business-financial-reporting.js"
+      - "player-terminal/src/pages/business-workspace-sections.js"
+      - "admin/v2/src/routes/business/**"
+      - "scripts/business-financial-reporting-*.mjs"
+      - "docs/roadmaps/business-financial-reporting-*.md"
+      - "docs/roadmaps/business-v2-current-checkpoint-v1.json"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: business-financial-reporting-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  source:
+    name: business-financial-reporting-source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+      - name: Verify exact source and retained authority
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          node scripts/business-financial-reporting-contract.mjs
+          node --check scripts/business-financial-reporting-database.mjs
+          node --test scripts/business-financial-reporting-view.test.mjs
+          deno test --config backend/supabase/functions/classroom-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen backend/src/domains/business/application/businessFinancialReportingProjection.test.ts
+          node scripts/validate-supabase-migrations.mjs
+          if [ -n "$PR_NUMBER" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/phase14-changed.txt
+            node scripts/verify-player-cross-cutting-authority.mjs --changed-files /tmp/phase14-changed.txt --pr-number "$PR_NUMBER" --base-ref "$BASE_REF"
+          fi
+          git diff --check
+  database:
+    name: business-financial-reporting-database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+      - name: Install pinned tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+      - name: Replay twice and verify closed-period reporting
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta
+          for PASS in 1 2; do
+            npx supabase db reset --workdir backend --local
+            node scripts/business-financial-reporting-database.mjs
+          done
+      - name: Check rebuilt database advisors
+        run: npx supabase db advisors --workdir backend --local --type all --level warn --fail-on error --output-format json
+      - name: Stop disposable service
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup
+  browser:
+    name: business-financial-reporting-browser
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+      - name: Install pinned browser tooling
+        run: |
+          npm ci --ignore-scripts
+          npm --prefix player-terminal ci --ignore-scripts
+          cd player-terminal
+          npx playwright install --with-deps chromium
+      - name: Verify reporting and retained workspace in desktop and mobile browsers
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          CI: true
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          cd player-terminal
+          npx playwright test tests/browser/player-business-workspace.spec.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: business-financial-reporting-browser-${{ github.event.pull_request.head.sha || github.sha }}
+          path: player-terminal/playwright-report/
+          if-no-files-found: error
+          retention-days: 14

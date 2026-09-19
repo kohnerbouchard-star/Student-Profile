@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 const keys = Object.freeze({
   business: `biz_${"a".repeat(32)}`,
@@ -33,6 +34,21 @@ const WORKSPACE_SECTIONS = Object.freeze([
 ]);
 
 async function mountWorkspace(page) {
+  // The fixture server is rooted in player-terminal. Supply the deployment
+  // configuration and real parent-directory initializer before host-runtime.
+  await page.route("**/runtime-config.env.js", (route) => route.fulfill({
+    contentType: "application/javascript",
+    body: `window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze(${JSON.stringify({
+      environment: "development",
+      projectRef: "localdevelopment0000",
+      supabaseUrl: "http://127.0.0.1:54321",
+      supabasePublishableKey: "sb_publishable_business_workspace_fixture",
+    })});`,
+  }));
+  const runtimeConfig = await readFile(new URL("../../../frontend/src/core/runtime-config.js", import.meta.url), "utf8");
+  await page.route("**/frontend/src/core/runtime-config.js", (route) => route.fulfill({
+    contentType: "application/javascript", body: runtimeConfig,
+  }));
   await page.goto("/?preview=1#business");
   await expect(page.locator("#player-main-content .player-terminal-page")).toBeVisible();
   await page.evaluate(async ({ keys }) => {
@@ -345,6 +361,40 @@ test("Phase 12 Business workspace is keyboard and screen-reader operable across 
     const heights = await touchTargets.evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().height));
     expect(heights.every((height) => height >= 40), `Business seller touch targets: ${JSON.stringify(heights)}`).toBe(true);
   }
+});
+
+test("Phase 14 financial statements retain precision and accessible disclosure on both layouts", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const fixture = await mountWorkspace(page);
+  await page.evaluate(async () => {
+    const { renderBusinessFinancialReporting } = await import("/src/pages/business-financial-reporting.js");
+    const exact = "9007199254740993.123456789123456789";
+    const model = { statements: [{ periodNumber: "9007199254740993", dueAt: "2026-09-08T00:00:00Z", status: "unreconciled",
+      currencies: ["ECO", "NRC"].map((currencyCode) => ({ currencyCode,
+        incomeStatement: { revenue: exact, netIncome: "-1.000000000000000001" },
+        balanceSheet: { cash: exact, totalAssets: exact }, cashFlowStatement: { openingCash: "0", closingCash: exact },
+        reconciliation: { equityDifference: "0.01", cashDifference: "0" },
+      })),
+    }] };
+    document.querySelector("#phase12BusinessWorkspaceFixture [data-business-financial-reporting]").outerHTML = renderBusinessFinancialReporting(model);
+  });
+  const reports = fixture.locator("[data-business-financial-reporting]");
+  const summary = reports.locator("summary");
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  await expect(reports.getByRole("table", { name: "Income statement · ECO" })).toBeVisible();
+  await expect(reports.getByRole("table", { name: "Cash flow statement · NRC" })).toBeVisible();
+  await expect(reports).toContainText("9007199254740993.123456789123456789");
+  await expect(reports).toContainText("-1.000000000000000001");
+  await expect(reports.getByRole("status")).toContainText("before they can support an IPO");
+  await reports.getByRole("region", { name: "Income statement ECO" }).focus();
+  await expect(reports.getByRole("region", { name: "Income statement ECO" })).toBeFocused();
+  expect(await accessibilityIssues(fixture)).toEqual([]);
+  const overflow = await horizontalOverflow(page);
+  expect(overflow.document).toBeLessThanOrEqual(1);
+  expect(overflow.body).toBeLessThanOrEqual(1);
+  expect(errors).toEqual([]);
 });
 
 test("Phase 12 seller controls expose bounded active intent and lock pending withdrawals", async ({ page }) => {

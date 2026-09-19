@@ -506,7 +506,7 @@ Exit: Store settlement is the only new physical-goods sale, inventory-consumptio
 
 ## Phase 12 — Player Business workspace UX convergence
 
-**Status:** `IMPLEMENTED_NOT_MERGED` — exact implementation and verification source `76539c5cfcff612a322963e303e727e6edc7f7ed`; draft PR #681 remains unmerged and undeployed
+**Status:** `BLOCKED` for live parity only — repository verified and merged by PR #681 as `b09905c066016ae1523d2f0a991e86f2f60c70db`; original certification remains immutable.
 
 Target modules:
 
@@ -536,7 +536,7 @@ Exit: Player can operate Business V2 without legacy Business forms.
 
 ## Phase 13 — Admin Business supervision
 
-**Status:** `IMPLEMENTED_NOT_MERGED` — existing owner `feat/admin-business-supervision-v2`, draft PR #682, certified implementation `949da9f91990eeeee2cd815541446a5b64130664`
+**Status:** `BLOCKED` for live parity only — repository verified and merged by PR #682 as `4a9674ed9ca0565c828093fe100aa658ef4faaa6`; candidate `6ba9b3d6e53eb00052c220bea2a04191c9fb913f` passed 51 workflows.
 
 - [x] Phase 13A: establish the game-scoped, public-key-only, read-only Business directory and selected-Business detail foundation with loading/error/empty/no-store behavior.
 - [x] Phase 13B: canonical stockroom, manufacturing, workforce/payroll and equipment supervision, verified.
@@ -547,18 +547,19 @@ Exit: Player can operate Business V2 without legacy Business forms.
 
 Phase 13A deliberately removes the Admin v2 compliance mutation affordance from the supervision route. It does not delete or expand the existing legacy compliance RPC; Phase 13 exposes no mutation unless a later bounded intervention decision separately proves the complete authority and audit contract.
 
-Phase 13A repair head `435f04775f9a5fd229ada71afc9054f3cc90a10f` passed all 30 workflows then triggered. Full Phase 13 implementation `949da9f91990eeeee2cd815541446a5b64130664` subsequently passed all 33 workflows on 2026-09-17, including two fresh database replays and all 16 desktop/mobile supervision scenarios. The [implementation handoff](business-admin-supervision-implementation-handoff-v1.md) is the durable certification ledger. The Admin browser workflow covers the stacked base. No Phase 14, merge, deployment or live database work is authorized; next dependency is Phase 14A after separate owner direction.
+Phase 13 retains original certification `949da9f91990eeeee2cd815541446a5b64130664`. The owner subsequently authorized merge and Phase 14 start. Final main-target candidate `6ba9b3d6e53eb00052c220bea2a04191c9fb913f` passed 51 workflows, 93 applicable checks, both classroom load profiles and Vercel status. The [handoff](business-admin-supervision-implementation-handoff-v1.md) and merge evidence retain exact identities. No deployment or live SQL occurred.
 
 ## Phase 14 — Financial reporting, equity and IPO -> Financial Market
 
-**Status:** `PLANNED` — remains behind Phase 13 and is not authorized by this closeout
+**Status:** `IN_PROGRESS` for full Phase 14. Phase 14A is `IMPLEMENTED_NOT_MERGED` on draft PR #684, exact certified source `aed8c3f6462d927cec3ebc55602854d48a460a9b`. All 50 applicable workflows, 90 checks and Vercel passed, including two reporting database replays/advisors, six desktop/mobile browser cases and connected Business/World with 30/40-player load. One staging-only workflow and eight manual/historical jobs skipped as documented in the [checkpoint](business-v2-current-checkpoint-v1.json). No live deployment or SQL occurred.
 
-- [ ] Stabilize Business financial statements/fundamentals from real operating activity.
-- [ ] Complete common-share equity invariants for C corporations.
-- [ ] Add IPO eligibility/terms/issuance.
-- [ ] Publish versioned Business events to Stocks/Financial Markets integration.
-- [ ] Never write Market internal tables directly from Business.
-- [ ] Existing Financial Market/Portfolio becomes the secondary trading surface after listing.
+- [x] Implement and repository-certify Business statements/fundamentals from canonical operating evidence; see [scope and handoff](business-financial-reporting-scope-v1.md).
+- [x] Preserve the original 14A1 certificate while completing labor capitalization, period-end reconciliation and authenticated Player/Admin reporting.
+- [ ] Complete common-share equity invariants for C corporations on the green 14A handoff (`BUSINESS-V2-14B`).
+- [ ] Add fixed-price primary IPO eligibility/terms/issuance (`14C`).
+- [ ] Publish versioned Business events to a Market-owned consumer (`14D`).
+- [ ] Verify the existing Financial Market/Portfolio as the secondary trading surface after listing, without Business writing Market internals.
+- [ ] Merge/release only under applicable owner authorization and satisfy the separate live-parity/runtime boundary before `VERIFIED_COMPLETE`.
 
 ---
 

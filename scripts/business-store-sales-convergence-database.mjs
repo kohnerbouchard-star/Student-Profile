@@ -19,15 +19,15 @@ const gameOne = FIXTURE.games.one;
 const gameTwo = FIXTURE.games.two;
 const purgeFingerprint = Object.freeze({
   registrySha256:
-    "68695d3995661af72de99b01fffe0ed301071f1131e6a8e6b92f03febfedb960",
-  registryTableCount: 202,
+    "d3a0e132271485f7c5edf434021a56a1c1ec3768cb003041d227b4775ceecafe",
+  registryTableCount: 205,
   fkGraphSha256:
-    "779750e69db0f918d3c54dc47765ac12a04d635bcc32760d529d571fd4041ec0",
-  fkGraphEdgeCount: 448,
+    "cb08e151c693cd018fec0fb7fe2a1d700cc34b0f5704c1b4a7bf1c560f2aa6af",
+  fkGraphEdgeCount: 452,
   deleteOrderSha256:
-    "ef50615cdc9e9191b149f45746d639d196aa0cd1eb1d308dfd2fd80ea43a7fa4",
-  deleteOrderTableCount: 201,
-  finalizeCursor: 202,
+    "b04f1ca4956a17a89e9afe29255c467bcb1b071978da35aaef76e85e19c2dbf5",
+  deleteOrderTableCount: 204,
+  finalizeCursor: 205,
 });
 const phase11PurgeTables = Object.freeze([
   "business_operating_period_policies",
@@ -2232,6 +2232,7 @@ function proveExecutableWholeGamePurge() {
 }
 
 const prospectivePurgeFacts = readProspectivePurgeFacts();
+console.log(JSON.stringify({ prospectivePurgeFacts }));
 assert.equal(
   prospectivePurgeFacts.registrySha256,
   purgeFingerprint.registrySha256,

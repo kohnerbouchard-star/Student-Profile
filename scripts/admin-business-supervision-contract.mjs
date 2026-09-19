@@ -4,7 +4,9 @@ import { BUSINESS_SUPERVISION_FIELDS, normalizeBusinessSupervision } from "../ad
 const read = (file) => readFileSync(new URL("../" + file, import.meta.url), "utf8");
 const migrations = "backend/supabase/migrations/";
 const shared = read(migrations + "20260917214421_admin_business_supervision_v2.sql");
-const snapshot = read(migrations + "20260917214558_admin_business_supervision_snapshot_v2.sql");
+const reportingAdapters = read(migrations + "20260918034225_business_reporting_adapters_v1.sql");
+const snapshot = read(migrations + "20260917214558_admin_business_supervision_snapshot_v2.sql") +
+  reportingAdapters.slice(reportingAdapters.indexOf("create or replace function public.read_admin_business_supervision_v2("));
 const mapping = [
   {
     "player": "read_owned_business_stockroom_locations_v2",
