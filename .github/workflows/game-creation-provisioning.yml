@@ -3,7 +3,7 @@ name: Game Creation Provisioning
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main]
+    branches: [main, feat/business-financial-reporting-v2, feat/business-common-equity-v2, feat/business-ipo-issuance-v2]
     paths:
       - ".github/workflows/game-creation-provisioning.yml"
       - "backend/supabase/migrations/**"

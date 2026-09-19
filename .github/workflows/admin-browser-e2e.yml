@@ -3,7 +3,7 @@ name: Admin Browser E2E
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main, feat/player-business-workspace-v2]
+    branches: [main, feat/player-business-workspace-v2, feat/business-financial-reporting-v2, feat/business-common-equity-v2, feat/business-ipo-issuance-v2]
     paths:
       - ".github/workflows/admin-browser-e2e.yml"
       - "index.html"

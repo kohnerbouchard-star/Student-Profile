@@ -10,6 +10,7 @@ on:
       - "backend/supabase/functions/player-api/**"
       - "backend/supabase/functions/player-web-session-api/**"
       - "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-*.json"
       - "docs/operations/evidence/player-login-production-secret-trigger-v1.json"
       - "scripts/runtime-config-contract.test.mjs"
       - "scripts/environment-neutral-browser-integration.test.mjs"

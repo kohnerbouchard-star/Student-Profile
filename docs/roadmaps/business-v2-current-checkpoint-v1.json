@@ -1,7 +1,46 @@
 {
   "program": "BETA-BUSINESS-V2-001",
+  "phase14_repository_integration": {
+    "authorized_at": "2026-09-19",
+    "scope": "Ordered normal repository merges only; no deployment, live SQL, scheduler or secret change.",
+    "implementation_complete": true,
+    "integration_status": "IN_PROGRESS",
+    "repair_authorization": "Owner: Get phase 14 fully merged and fix it if there are issues (2026-09-19). No deployment authority.",
+    "repair_candidate": {
+      "owner_pr": 685,
+      "scope": "One 150ms-delayed retry after exact retired-worker transport identification, only for authenticated Player GET/HEAD reads; all mutation, ordinary-error, authorization and resource boundaries remain intact.",
+      "files": ["backend/supabase/functions/player-web-session-api/runtime.ts", "backend/supabase/functions/player-web-session-api/retiredWorkerReadRecovery.ts", "scripts/player-bff-retry-classification.test.mjs"],
+      "local_evidence": "50 read-resilience, proxy-recovery, authority and security tests passed; common-equity/reporting source and architecture ratchet passed. Fresh exact-source CI required.",
+      "runtime_evidence_pending": true,
+      "source_reference": "https://github.com/supabase/cli/blob/v2.109.1/apps/cli/src/shared/functions/serve.main.ts"
+    },
+    "integration_blocker": {
+      "id": "BUSINESS-V2-14-MERGE-STORE-001",
+      "scope": "Repeated post-merge connected Store browser failure on exact Phase 14A main; remaining normal merges paused, independently of the live-release parity blocker.",
+      "main_sha": "46cde60e80eb285733f01aa99dcba3c3ec0deedd",
+      "workflow_run": 35422140967,
+      "initial_failed_job": 105841659341,
+      "unchanged_retry_failed_job": 105843139764,
+      "failure": "Player browser emitted console errors. Retry artifact records one HTTP 500 console error in Isolation Buyer, no page errors, and successful economic/isolation evidence. Runtime diagnostics include HTTP 500 for /players/me/world/countries plus WorkerAlreadyRetired and CPU soft-limit messages; causation is not established.",
+      "retry_artifact_id": 10578575529,
+      "retry_artifact_sha256": "77dbc1b257185b09c285562a8daf8d471f3b579369b3cbd37f8bcbc2160c5153",
+      "main_workflow_summary": { "success": 24, "failure": 1, "expected_skipped": 2, "pending": 0 },
+      "comparator": "PR 685 candidate b4b360a4058e687b895f2ba0b68c70100c91a8dc passed its connected Store job 105842279867 and full connected/load job 105842279641. That different-source result does not clear the failed main run.",
+      "next_action": "Diagnose and repair the retained connected runtime failure, then verify exact-source gates before resuming ordered PR 685/686/687 merges. Do not waive console cleanliness or claim a root cause from worker diagnostics alone."
+    },
+    "phase14a_merge": "46cde60e80eb285733f01aa99dcba3c3ec0deedd",
+    "phase14a_verified_handoff": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
+    "phase14a_premerge_evidence": "50 applicable workflows, 90 jobs and Vercel passed; 8 manual/historical job skips, including one wholly skipped staging-only workflow.",
+    "current_integration_pr": 685,
+    "current_integration_base": "main",
+    "candidate_note": "Common-equity application and migrations retain certified implementation 197caa4034214e21b8033a3f4363dc07a13b5dcf. Normal main merge plus exact-base authority, negative regression and integration records only. New exact-head gates are required before PR 685 merges.",
+    "remaining_merge_order": [685, 686, 687],
+    "production_release_before": "59a82ef8580d7d571727e722424bc84cf064e8aa",
+    "runtime_status": "BLOCKED",
+    "runtime_blocker": "BETA-LIVE-MIGRATION-PARITY-001"
+  },
   "status": "PHASE_14_IN_PROGRESS",
-  "audited_at": "2026-09-18T06:42:35.367Z",
+  "audited_at": "2026-09-18T07:48:16.581115+00:00",
   "integration_pr": null,
   "integration_branch": "main",
   "historical_integration": {
@@ -9,69 +48,45 @@
     "branch": "refactor/business-ux-mechanics-v1",
     "state": "CLOSED_SUPERSEDED_BY_MERGED_MAIN"
   },
-  "latest_checkpoint": "BUSINESS-V2-14A",
-  "latest_checkpoint_branch": "feat/business-financial-reporting-v2",
-  "latest_checkpoint_pr": 684,
-  "exact_implementation_sha": "aed8c3f6462d927cec3ebc55602854d48a460a9b",
-  "documentation_parent_sha": "aed8c3f6462d927cec3ebc55602854d48a460a9b",
-  "merged_main_sha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6",
-  "parent_checkpoint": "BUSINESS-V2-13",
-  "parent_implementation_sha": "6ba9b3d6e53eb00052c220bea2a04191c9fb913f",
+  "latest_checkpoint": "BUSINESS-V2-14B",
+  "latest_checkpoint_branch": "feat/business-common-equity-v2",
+  "latest_checkpoint_pr": 685,
+  "exact_implementation_sha": "197caa4034214e21b8033a3f4363dc07a13b5dcf",
+  "documentation_parent_sha": "197caa4034214e21b8033a3f4363dc07a13b5dcf",
+  "merged_main_sha": "46cde60e80eb285733f01aa99dcba3c3ec0deedd",
+  "parent_checkpoint": "BUSINESS-V2-14A",
+  "parent_implementation_sha": "aed8c3f6462d927cec3ebc55602854d48a460a9b",
   "required_workflow_runs": {
-    "Admin V2 Production Cutover": 35314969513,
-    "Admin Bundle Contract Audit": 35314969631,
-    "Release Integrity": 35314969474,
-    "Staging Readiness Preflight": 35314969865,
-    "Edge Function Inventory": 35314969616,
-    "Exchange Calendar Runtime": 35314969667,
-    "Business Workforce Payroll V2": 35314969666,
-    "Repository Quality": 35314969581,
-    "Environment Neutral Browser": 35314969847,
-    "Runtime Interaction Wiring": 35314969601,
-    "Production Runtime Promotion Contract": 35314969514,
-    "Business Banking Runtime": 35314969823,
-    "Admin Scroll Integrity": 35314969766,
-    "Crafting Item Runtime": 35314969762,
-    "Player Button Click Safety": 35314969625,
-    "Button Action Coverage": 35314969785,
-    "Business Economy V2": 35314969721,
-    "Backend Typecheck": 35314969900,
-    "business-multicurrency-treasury-v1": 35314969883,
-    "Crafting Activation Connected V2": 35314969751,
-    "Required Game Market Timezone": 35314969787,
-    "Business Workforce Hiring V2": 35314969757,
-    "Supply Chain Security": 35314969632,
-    "Admin Browser E2E": 35314969442,
-    "Business Timed Manufacturing V2": 35314969615,
-    "World Runtime": 35314969566,
-    "Admin V2 Attendance": 35314969652,
-    "Admin Business Supervision": 35314969991,
-    "Admin API Check": 35314969613,
-    "Release Promote Exact Artifacts": 35314969810,
-    "Progression Runtime": 35314969737,
-    "multicurrency-store-funding-v1": 35314969892,
-    "multicurrency-marketplace-funding-v1": 35314969547,
-    "Game Creation Provisioning": 35314969773,
-    "Admin Shell Smoke": 35314969591,
-    "Runtime Stabilization Onboarding": 35314969565,
-    "Business Financial Reporting": 35314969708,
-    "Database Replay": 35314969736,
-    "multicurrency-stock-funding-v1": 35314969609,
-    "business-store-sales-convergence-v2": 35314969533,
-    "Seed Executable Beta Pack": 35314969490,
-    "banking-fx-clearing-v1": 35314969535,
-    "Business Store Seller Offers V2": 35314969505,
-    "Player Terminal Verify": 35314969981,
-    "Business Store Withdrawal Safety V2": 35314969861,
-    "Business Player Store Cutover V2": 35314969689,
-    "Player Multiplayer and Load E2E": 35314969894,
-    "Business Store Listing Inventory V2": 35314969760,
-    "Business Store Atomic Settlement V2": 35314969699,
-    "business-player-store-fx-final-v2": 35314969767
+    "Admin API Check": 35320024837,
+    "Production Runtime Promotion Contract": 35320024765,
+    "Staging Readiness Preflight": 35320024790,
+    "Business Banking Runtime": 35320024693,
+    "Repository Quality": 35320024964,
+    "Release Integrity": 35320024817,
+    "Backend Typecheck": 35320024830,
+    "Crafting Activation Connected V2": 35320024855,
+    "Game Creation Provisioning": 35320024681,
+    "Exchange Calendar Runtime": 35320024922,
+    "Admin Browser E2E": 35320024649,
+    "Seed Executable Beta Pack": 35320024956,
+    "Supply Chain Security": 35320024881,
+    "Workflow Action Pinning": 35320024730,
+    "Database Replay": 35320024668,
+    "Admin Business Supervision": 35320024700,
+    "multicurrency-marketplace-funding-v1": 35320024661,
+    "Required Game Market Timezone": 35320024740,
+    "Business Common Equity": 35320024755,
+    "business-multicurrency-treasury-v1": 35320024659,
+    "business-player-store-fx-final-v2": 35320024820,
+    "Business Financial Reporting": 35320024941,
+    "multicurrency-stock-funding-v1": 35320024734,
+    "banking-fx-clearing-v1": 35320024724,
+    "business-store-sales-convergence-v2": 35320024767,
+    "Player Terminal Verify": 35320024873,
+    "Business Player Store Cutover V2": 35320024781,
+    "Player Multiplayer and Load E2E": 35320024704
   },
-  "expected_skipped_workflow_runs": {
-    "PR361 Staging Game Provisioning Repair": 35314969913
-  },
+  "expected_skipped_workflow_runs": {},
   "phase12_connected_gate": {
     "workflow_run": 34926342349,
     "job": 104245107219,
@@ -84,18 +99,17 @@
       "final-enforcement"
     ]
   },
-  "active_checkpoint": "BUSINESS-V2-14A",
-  "active_checkpoint_branch": "feat/business-financial-reporting-v2",
-  "active_checkpoint_pr": 684,
-  "active_checkpoint_started_at": "2026-09-18T01:41:00.735Z",
-  "active_candidate_parent_sha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6",
-  "active_candidate_implementation_sha": "aed8c3f6462d927cec3ebc55602854d48a460a9b",
+  "active_checkpoint": "BUSINESS-V2-14B",
+  "active_checkpoint_branch": "feat/business-common-equity-v2",
+  "active_checkpoint_pr": 685,
+  "active_checkpoint_started_at": "2026-09-18T07:03:31.660465+00:00",
+  "active_candidate_parent_sha": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
+  "active_candidate_implementation_sha": "197caa4034214e21b8033a3f4363dc07a13b5dcf",
   "active_candidate_state": "IMPLEMENTED_NOT_MERGED",
-  "active_candidate_note": "Full Phase 14A is repository-certified: 50 applicable workflows, 90 checks, Vercel, two reporting replays, six browser cases and connected Business/World with both load profiles passed. Documentation handoff preserves this exact source identity; its follow-up CI is separate.",
-  "next_authorized_checkpoint": "BUSINESS-V2-14B",
-  "next_authorized_scope": "Complete C-corporation common-share invariants on feat/business-common-equity-v2 from the exact green Phase 14A handoff, then 14C fixed-price primary IPO and 14D Market-owned event consumption/secondary trading. No live release action.",
+  "active_candidate_note": "28 exact-source workflows, 53 applicable jobs and Vercel passed. Three manual staging/parity jobs correctly skipped. Full connected journey, both classroom loads, common-equity two fresh replays/race/advisors passed. Documentation handoff is separate from tested implementation.",
+  "next_authorized_checkpoint": "BUSINESS-V2-14C",
+  "next_authorized_scope": "Fixed-price primary IPO eligibility, immutable approved terms and atomic issuance on the exact green common-equity predecessor; preserve operator/treasury authority separately from investment ownership. Then 14D Market-owned consumption and secondary trading. No live release.",
   "remaining_dependency_order": [
-    "BUSINESS-V2-14B",
     "BUSINESS-V2-14C",
     "BUSINESS-V2-14D"
   ],
@@ -114,52 +128,22 @@
   "known_global_blocker_scope": "Separate release/runtime evidence; does not block Phase 13 repository certification and does not authorize live reconciliation from this branch.",
   "expected_skipped_jobs": [
     {
-      "workflow_run": 35314969913,
-      "job": 105504559702,
-      "name": "Repair isolated staging and verify new-game provisioning",
-      "reason": "Manual PR361 isolated-staging repair is not applicable to this draft."
-    },
-    {
-      "workflow_run": 35314969513,
-      "job": 105504641061,
-      "name": "Build, verify, and switch production Admin to V2",
-      "reason": "Production Admin cutover requires explicit manual release authorization."
-    },
-    {
-      "workflow_run": 35314969474,
-      "job": 105504699408,
-      "name": "Inspect staging and production parity read-only",
-      "reason": "Live parity inspection is dispatch-only; this is repository certification."
-    },
-    {
-      "workflow_run": 35314969865,
-      "job": 105504558786,
+      "workflow_run": 35320024790,
+      "job": 105520237855,
       "name": "Fail-closed staging evidence check",
-      "reason": "Staging dispatch gate is not applicable to the pull-request event."
+      "reason": "Manual staging/release/parity job; inapplicable to this unmerged draft."
     },
     {
-      "workflow_run": 35314969616,
-      "job": 105504728848,
-      "name": "Attest staging and production inventory",
-      "reason": "Live inventory attestation is dispatch-only."
+      "workflow_run": 35320024817,
+      "job": 105520556903,
+      "name": "Inspect staging and production parity read-only",
+      "reason": "Manual staging/release/parity job; inapplicable to this unmerged draft."
     },
     {
-      "workflow_run": 35314969666,
-      "job": 105504559038,
-      "name": "Materialize Phase 4A architecture inventory",
-      "reason": "Historical writer is restricted to PR #657."
-    },
-    {
-      "workflow_run": 35314969810,
-      "job": 105504559101,
-      "name": "Verify and authorize unchanged artifacts",
-      "reason": "Artifact promotion requires manual release dispatch."
-    },
-    {
-      "workflow_run": 35314969490,
-      "job": 105506736934,
+      "workflow_run": 35320024956,
+      "job": 105521261274,
       "name": "Execute connected isolated-staging release and rollback",
-      "reason": "Isolated-staging release/rollback requires manual dispatch."
+      "reason": "Manual staging/release/parity job; inapplicable to this unmerged draft."
     }
   ],
   "phase12_certification": {
@@ -1394,5 +1378,1012 @@
     },
     "no_live_deployment_or_sql": true,
     "release_blocker": "BETA-LIVE-MIGRATION-PARITY-001"
+  },
+  "phase14a_documentation_handoff": {
+    "sha": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
+    "state": "IMPLEMENTED_NOT_MERGED",
+    "workflow_runs": [
+      {
+        "id": 35316399979,
+        "name": "PR361 Staging Game Provisioning Repair",
+        "status": "completed",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 35316399977,
+        "name": "Business Banking Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399780,
+        "name": "Admin Bundle Contract Audit",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399718,
+        "name": "Business Workforce Hiring V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399699,
+        "name": "Required Game Market Timezone",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399905,
+        "name": "Release Promote Exact Artifacts",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399560,
+        "name": "Production Runtime Promotion Contract",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399931,
+        "name": "Admin V2 Attendance",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399717,
+        "name": "Business Workforce Payroll V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399528,
+        "name": "Edge Function Inventory",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399824,
+        "name": "Environment Neutral Browser",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399710,
+        "name": "Player Button Click Safety",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399787,
+        "name": "World Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399614,
+        "name": "Admin V2 Production Cutover",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399536,
+        "name": "Crafting Activation Connected V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399532,
+        "name": "Business Timed Manufacturing V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399691,
+        "name": "Button Action Coverage",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399526,
+        "name": "Database Replay",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399959,
+        "name": "Backend Typecheck",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399975,
+        "name": "Business Financial Reporting",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399985,
+        "name": "Admin Shell Smoke",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399850,
+        "name": "Game Creation Provisioning",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399810,
+        "name": "Crafting Item Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399967,
+        "name": "Staging Readiness Preflight",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399892,
+        "name": "Repository Quality",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399722,
+        "name": "Seed Executable Beta Pack",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399935,
+        "name": "Release Integrity",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399857,
+        "name": "multicurrency-store-funding-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316400004,
+        "name": "Supply Chain Security",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399920,
+        "name": "business-multicurrency-treasury-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399702,
+        "name": "Admin Browser E2E",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399954,
+        "name": "multicurrency-marketplace-funding-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316400007,
+        "name": "multicurrency-stock-funding-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399729,
+        "name": "Player Terminal Verify",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316400002,
+        "name": "business-player-store-fx-final-v2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399437,
+        "name": "banking-fx-clearing-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399672,
+        "name": "business-store-sales-convergence-v2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399543,
+        "name": "Player Multiplayer and Load E2E",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399513,
+        "name": "Business Store Listing Inventory V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316400020,
+        "name": "Business Store Seller Offers V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316399837,
+        "name": "Business Store Withdrawal Safety V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316398107,
+        "name": "Exchange Calendar Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316398101,
+        "name": "Runtime Interaction Wiring",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316398005,
+        "name": "Admin Scroll Integrity",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396710,
+        "name": "Business Store Atomic Settlement V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396075,
+        "name": "Admin API Check",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396067,
+        "name": "Progression Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396072,
+        "name": "Admin Business Supervision",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396125,
+        "name": "Business Economy V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396031,
+        "name": "Runtime Stabilization Onboarding",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35316396164,
+        "name": "Business Player Store Cutover V2",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "vercel": "success",
+    "transient_retry": {
+      "run": 35316396031,
+      "original_job": 105508865205,
+      "reason": "Disposable runner host port 54322 already in use; unchanged failed-job rerun passed."
+    }
+  },
+  "phase14b_certification": {
+    "status": {
+      "statuses": [
+        {
+          "context": "Vercel",
+          "state": "success",
+          "target_url": "https://vercel.com/econovaria/econovaria/4eqfmrgy9yJzKA7D2R1xpgFsbPTf"
+        }
+      ]
+    },
+    "pull_request": 685,
+    "parent_handoff": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
+    "commit": "197caa4034214e21b8033a3f4363dc07a13b5dcf",
+    "workflow_runs": [
+      {
+        "id": 35320024837,
+        "name": "Admin API Check",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 4428,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024837/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024837/logs",
+        "workflow_id": 312347057,
+        "jobs": [
+          {
+            "id": 105520237104,
+            "name": "admin-api-check",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024765,
+        "name": "Production Runtime Promotion Contract",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 1227,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024765/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024765/logs",
+        "workflow_id": 323681858,
+        "jobs": [
+          {
+            "id": 105520236870,
+            "name": "Verify production promotion remains fail-closed",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024790,
+        "name": "Staging Readiness Preflight",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 4163,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024790/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024790/logs",
+        "workflow_id": 315668528,
+        "jobs": [
+          {
+            "id": 105520236815,
+            "name": "Validator tests",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237855,
+            "name": "Fail-closed staging evidence check",
+            "status": "completed",
+            "conclusion": "skipped"
+          }
+        ]
+      },
+      {
+        "id": 35320024693,
+        "name": "Business Banking Runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 2741,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024693/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024693/logs",
+        "workflow_id": 317092080,
+        "jobs": [
+          {
+            "id": 105520236653,
+            "name": "verify",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024964,
+        "name": "Repository Quality",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 7450,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024964/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024964/logs",
+        "workflow_id": 315007591,
+        "jobs": [
+          {
+            "id": 105520237650,
+            "name": "quality",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024817,
+        "name": "Release Integrity",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 1276,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024817/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024817/logs",
+        "workflow_id": 324960112,
+        "jobs": [
+          {
+            "id": 105520238062,
+            "name": "Verify static release integrity",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520556903,
+            "name": "Inspect staging and production parity read-only",
+            "status": "completed",
+            "conclusion": "skipped"
+          }
+        ]
+      },
+      {
+        "id": 35320024830,
+        "name": "Backend Typecheck",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 6061,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024830/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024830/logs",
+        "workflow_id": 296665301,
+        "jobs": [
+          {
+            "id": 105520237015,
+            "name": "backend-typecheck",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024855,
+        "name": "Crafting Activation Connected V2",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 1569,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024855/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024855/logs",
+        "workflow_id": 319575984,
+        "jobs": [
+          {
+            "id": 105520237223,
+            "name": "activate",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024681,
+        "name": "Game Creation Provisioning",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 1608,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024681/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024681/logs",
+        "workflow_id": 319343607,
+        "jobs": [
+          {
+            "id": 105520236932,
+            "name": "provision",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024922,
+        "name": "Exchange Calendar Runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 4709,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024922/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024922/logs",
+        "workflow_id": 315960361,
+        "jobs": [
+          {
+            "id": 105520237582,
+            "name": "Validate exchange calendar runtime",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024649,
+        "name": "Admin Browser E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 2357,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024649/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024649/logs",
+        "workflow_id": 320061957,
+        "jobs": [
+          {
+            "id": 105520236923,
+            "name": "Rendered Admin browser and secure mutation journey",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024956,
+        "name": "Seed Executable Beta Pack",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 2566,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024956/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024956/logs",
+        "workflow_id": 316534659,
+        "jobs": [
+          {
+            "id": 105520238054,
+            "name": "Verify transactional import, replay, rollback, and isolation",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520238279,
+            "name": "Verify bounded pack and repository contracts",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105521261274,
+            "name": "Execute connected isolated-staging release and rollback",
+            "status": "completed",
+            "conclusion": "skipped"
+          }
+        ]
+      },
+      {
+        "id": 35320024881,
+        "name": "Supply Chain Security",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 6331,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024881/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024881/logs",
+        "workflow_id": 316444456,
+        "jobs": [
+          {
+            "id": 105520237638,
+            "name": "verify-and-attest",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237771,
+            "name": "dependency-review",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024730,
+        "name": "Workflow Action Pinning",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 73,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024730/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024730/logs",
+        "workflow_id": 324854492,
+        "jobs": [
+          {
+            "id": 105520237201,
+            "name": "Verify immutable third-party actions",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024668,
+        "name": "Database Replay",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 4676,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024668/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024668/logs",
+        "workflow_id": 315007592,
+        "jobs": [
+          {
+            "id": 105520236655,
+            "name": "replay",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024700,
+        "name": "Admin Business Supervision",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 25,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024700/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024700/logs",
+        "workflow_id": 360915204,
+        "jobs": [
+          {
+            "id": 105520236997,
+            "name": "admin-business-supervision-browser",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237329,
+            "name": "admin-business-supervision-source",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237338,
+            "name": "admin-business-supervision-database",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024661,
+        "name": "multicurrency-marketplace-funding-v1",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 465,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024661/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024661/logs",
+        "workflow_id": 344166290,
+        "jobs": [
+          {
+            "id": 105520236921,
+            "name": "Verify multi-currency Marketplace funding source and scope",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237186,
+            "name": "Verify multi-currency Marketplace funding database",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237209,
+            "name": "Verify connected multi-currency Marketplace funding browser journey",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024740,
+        "name": "Required Game Market Timezone",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 5145,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024740/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024740/logs",
+        "workflow_id": 315969895,
+        "jobs": [
+          {
+            "id": 105520237027,
+            "name": "apply-and-validate",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024755,
+        "name": "Business Common Equity",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 4,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024755/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024755/logs",
+        "workflow_id": 361148626,
+        "jobs": [
+          {
+            "id": 105520237288,
+            "name": "business-common-equity-source",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237526,
+            "name": "business-common-equity-database",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024659,
+        "name": "business-multicurrency-treasury-v1",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 261,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024659/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024659/logs",
+        "workflow_id": 346239393,
+        "jobs": [
+          {
+            "id": 105520237077,
+            "name": "Verify C4 database, replay, isolation, rollback, and concurrency",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237307,
+            "name": "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237321,
+            "name": "Verify C4 source, public contracts, and retained application boundaries",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024820,
+        "name": "business-player-store-fx-final-v2",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 255,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024820/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024820/logs",
+        "workflow_id": 346373436,
+        "jobs": [
+          {
+            "id": 105520237413,
+            "name": "business-player-store-fx-final-v2-database",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237660,
+            "name": "business-player-store-fx-final-v2-source",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237679,
+            "name": "business-player-store-fx-final-v2-player-browser",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237723,
+            "name": "business-player-store-fx-final-v2-connected",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024941,
+        "name": "Business Financial Reporting",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 13,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024941/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024941/logs",
+        "workflow_id": 361003361,
+        "jobs": [
+          {
+            "id": 105520237677,
+            "name": "business-financial-reporting-browser",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237973,
+            "name": "business-financial-reporting-database",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237989,
+            "name": "business-financial-reporting-source",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024734,
+        "name": "multicurrency-stock-funding-v1",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 544,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024734/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024734/logs",
+        "workflow_id": 345136290,
+        "jobs": [
+          {
+            "id": 105520237069,
+            "name": "Verify C3C atomic Stock buy database and retained C3A/C3B authority + C3D sell + C3E cutover",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237337,
+            "name": "Verify C3C Stock buy settlement source and retained C3A/C3B scope + C3D sell + C3E Player cutover",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024724,
+        "name": "banking-fx-clearing-v1",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 681,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024724/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024724/logs",
+        "workflow_id": 342806447,
+        "jobs": [
+          {
+            "id": 105520236885,
+            "name": "Certify Banking FX clearing source",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237091,
+            "name": "Verify Banking FX Chromium acceptance",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237177,
+            "name": "Verify Banking FX database acceptance",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024767,
+        "name": "business-store-sales-convergence-v2",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 253,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024767/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024767/logs",
+        "workflow_id": 347166828,
+        "jobs": [
+          {
+            "id": 105520237333,
+            "name": "business-store-sales-convergence-v2-source",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237624,
+            "name": "business-store-sales-convergence-v2-worker",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237627,
+            "name": "business-store-sales-convergence-v2-database",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237657,
+            "name": "business-store-sales-convergence-v2-player-admin",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024873,
+        "name": "Player Terminal Verify",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 3561,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024873/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024873/logs",
+        "workflow_id": 314989074,
+        "jobs": [
+          {
+            "id": 105520237729,
+            "name": "verify",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024781,
+        "name": "Business Player Store Cutover V2",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 717,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024781/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024781/logs",
+        "workflow_id": 341987590,
+        "jobs": [
+          {
+            "id": 105520237548,
+            "name": "Verify public Store, seller projection, capabilities, rates, and Edge roots",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237616,
+            "name": "Verify standalone Player Terminal and full Chromium suite",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237709,
+            "name": "Verify connected Buyer and seller Store journey in two games",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237715,
+            "name": "Verify serial settlement, ordering races, and two-game isolation",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237719,
+            "name": "Verify Player Store cutover and retained authorities",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 105520237753,
+            "name": "Replay complete database twice and lint at warning level",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 35320024704,
+        "name": "Player Multiplayer and Load E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "run_number": 2133,
+        "jobs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024704/jobs",
+        "logs_url": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs/35320024704/logs",
+        "workflow_id": 320144298,
+        "jobs": [
+          {
+            "id": 105520237048,
+            "name": "Two-browser Player journey, secure mutations, and 30-40 Player load",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      }
+    ],
+    "evidence_limits": "Disposable CI only. Earlier Beta fixture lookup failure reproduced twice, then final strengthened creation/request/response identity assertions and the entire connected journey passed. No product fix or diagnosed root cause is claimed. No merge/deployment/live SQL."
   }
 }

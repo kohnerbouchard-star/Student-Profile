@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - main
+      - feat/business-financial-reporting-v2
+      - feat/business-common-equity-v2
+      - feat/business-ipo-issuance-v2
   merge_group:
     types:
       - checks_requested
