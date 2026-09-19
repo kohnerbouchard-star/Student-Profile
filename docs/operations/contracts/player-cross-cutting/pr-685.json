@@ -9,6 +9,10 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    "backend/supabase/functions/player-web-session-api/runtime.ts",
+    "backend/supabase/functions/player-web-session-api/retiredWorkerReadRecovery.ts",
+    "scripts/player-bff-retry-classification.test.mjs",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     ".github/workflows/admin-browser-e2e.yml",
     ".github/workflows/business-common-equity.yml",
     ".github/workflows/crafting-activation-connected-v2.yml",
@@ -33,6 +37,8 @@
     "docs/roadmaps/business-v2-development-execution-plan-v1.md"
   ],
   "requiredFiles": [
+    "backend/supabase/functions/player-web-session-api/retiredWorkerReadRecovery.ts",
+    "scripts/player-bff-retry-classification.test.mjs",
     "backend/supabase/migrations/20260918070248_business_common_equity_invariants_v1.sql",
     "scripts/business-common-equity-database.mjs",
     "scripts/business-common-equity-contract.mjs",
@@ -72,5 +78,5 @@
     "business-common-equity-source",
     "business-common-equity-database"
   ],
-  "authorizationNote": "Owner authorized ordered Phase 14 repository integration on 2026-09-19. PR 685 now targets main after Phase 14A merge 46cde60e80eb285733f01aa99dcba3c3ec0deedd, preserving its exact certified common-equity implementation and unchanged path/check boundaries. Retained economic, connected and browser gates remain required. No deployment, live mutation, secrets, or independent Market/money/Inventory authority."
+  "authorizationNote": "Owner authorized full Phase 14 merges and issue repair on 2026-09-19. PR 685 targets main after Phase 14A merge 46cde60e80eb285733f01aa99dcba3c3ec0deedd. The exact additional paths cover one bounded authenticated GET/HEAD retired-worker recovery, negative regression tests and regenerated inventory; common-equity/economic implementation and every check remain unchanged. Retained economic, connected, security and browser gates are required. No deployment, live mutation, secrets, new economic writer, generic 500 retry or mutation retry."
 }

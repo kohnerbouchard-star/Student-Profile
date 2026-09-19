@@ -4,7 +4,16 @@
     "authorized_at": "2026-09-19",
     "scope": "Ordered normal repository merges only; no deployment, live SQL, scheduler or secret change.",
     "implementation_complete": true,
-    "integration_status": "BLOCKED",
+    "integration_status": "IN_PROGRESS",
+    "repair_authorization": "Owner: Get phase 14 fully merged and fix it if there are issues (2026-09-19). No deployment authority.",
+    "repair_candidate": {
+      "owner_pr": 685,
+      "scope": "One 150ms-delayed retry after exact retired-worker transport identification, only for authenticated Player GET/HEAD reads; all mutation, ordinary-error, authorization and resource boundaries remain intact.",
+      "files": ["backend/supabase/functions/player-web-session-api/runtime.ts", "backend/supabase/functions/player-web-session-api/retiredWorkerReadRecovery.ts", "scripts/player-bff-retry-classification.test.mjs"],
+      "local_evidence": "50 read-resilience, proxy-recovery, authority and security tests passed; common-equity/reporting source and architecture ratchet passed. Fresh exact-source CI required.",
+      "runtime_evidence_pending": true,
+      "source_reference": "https://github.com/supabase/cli/blob/v2.109.1/apps/cli/src/shared/functions/serve.main.ts"
+    },
     "integration_blocker": {
       "id": "BUSINESS-V2-14-MERGE-STORE-001",
       "scope": "Repeated post-merge connected Store browser failure on exact Phase 14A main; remaining normal merges paused, independently of the live-release parity blocker.",
