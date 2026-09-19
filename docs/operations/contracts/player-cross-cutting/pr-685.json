@@ -3,7 +3,7 @@
   "authorityId": "econovaria.business-common-equity-pr-685.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 685,
-  "baseRef": "feat/business-financial-reporting-v2",
+  "baseRef": "main",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
@@ -72,5 +72,5 @@
     "business-common-equity-source",
     "business-common-equity-database"
   ],
-  "authorizationNote": "Owner authorized all Phase 14 implementation and verification. PR 685 owns common-equity enforcement on exact green Phase 14A handoff bcc53a5f6f4c3dcca1938e385e63239d59cdad7a. Preserves retained economic, connected and browser gates. No deployment, live mutation, secrets, or independent Market/money/Inventory authority."
+  "authorizationNote": "Owner authorized ordered Phase 14 repository integration on 2026-09-19. PR 685 now targets main after Phase 14A merge 46cde60e80eb285733f01aa99dcba3c3ec0deedd, preserving its exact certified common-equity implementation and unchanged path/check boundaries. Retained economic, connected and browser gates remain required. No deployment, live mutation, secrets, or independent Market/money/Inventory authority."
 }

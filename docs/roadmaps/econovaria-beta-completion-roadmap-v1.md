@@ -21,6 +21,13 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`BUSINESS-V2-14A`–`14D` — Ordered repository integration (2026-09-19)**
+  - Owner authorized normal merges of the repository-certified Phase 14 stack, with no deployment, live SQL, scheduler or secret change. This supersedes the older draft-only/no-merge scope for these four PRs, not any required check or release gate.
+  - Phase 14A PR #684 merged as `46cde60e80eb285733f01aa99dcba3c3ec0deedd` from certified handoff `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`: 50 applicable workflows, 90 jobs and Vercel passed; eight expected manual/historical job skips. Repository source is merged; runtime status is `BLOCKED` by separate `BETA-LIVE-MIGRATION-PARITY-001`, not `VERIFIED_COMPLETE`.
+  - Phase 14B PR #685 is being integrated against merged `main`, with unchanged certified application/migrations and an exact-main verification manifest. Its new exact-head matrix must pass before merge; C #686 and D #687 follow normally. The original implementation certificates remain immutable and full A–D repository implementation is already complete.
+  - Live main was `4a9674ed9ca0565c828093fe100aa658ef4faaa6` before integration. Release guards remain unchanged, automatic main deployment is disabled, and `release/production` was `59a82ef8580d7d571727e722424bc84cf064e8aa`. Current evidence is retained in the checkpoint's `phase14_repository_integration` and each PR's exact-head checks.
+  - Next exact item: merge-ready verification of `BUSINESS-V2-14B`, then ordered C/D integration and final merged-main verification. No unrelated architecture/CSS/dependency owner is included.
+
 - **`BUSINESS-V2-14B` — Common-equity invariants (2026-09-18)**
   - Status: `IMPLEMENTED_NOT_MERGED`, exact certified implementation `197caa4034214e21b8033a3f4363dc07a13b5dcf`. Owner draft PR #685 / `feat/business-common-equity-v2`, exact green predecessor handoff `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`; no replacement reporting owner.
   - CLI-created forward enforcement migration, permanent source/two-replay database/race acceptance and retained stack CI filters are prepared. Canonical positions, immutable receipts and corporate share structure remain sole authorities; common shares reconcile one share/one vote, receipts and authorized capacity. Raw service cap-table writes are revoked; existing definer commands and request-bound game purge remain intact.

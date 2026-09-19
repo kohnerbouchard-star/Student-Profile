@@ -1432,3 +1432,9 @@ The exact source exposed 60 completed check runs with no failure, cancellation, 
 - Common-equity run `35320024755`: source `105520237288`, database `105520237526`; two fresh replays, real formation/replay, one-share/one-vote and receipt reconciliation, negative/role/immutability checks, two-session capacity race, game isolation and advisors passed.
 - Connected run `35320024704` / job `105520237048` passed creation identity checks, all retained economic/Business/World/Crafting journeys, 30/40-player load and final enforcement. Two prior Beta lookup failures are retained above; no root cause/product fix is claimed. Stronger request/response identity checks and safe diagnostics stay in permanent acceptance.
 - Status `IMPLEMENTED_NOT_MERGED`; full Phase 14 remains `IN_PROGRESS`. No merge, deployment, live SQL, scheduler or secret action. Next exact item after this documentation handoff is green: `BUSINESS-V2-14C` fixed-price primary IPO, then `14D` Market integration.
+
+## 2026-09-19 — Owner-authorized Phase 14 repository integration
+
+- Reverified all four original handoffs, exact-head workflows/jobs, Vercel, empty review/inline-thread sets and unchanged main/release guards. Phase 14A #684 merged normally as `46cde60e80eb285733f01aa99dcba3c3ec0deedd`; original implementation and handoff identities are preserved.
+- Phase 14B #685 incorporates that main merge normally and retargets its exact-path authority to main, with negative wrong-base/PR/path tests. Application, migrations, economic behavior and existing gate requirements are unchanged. A fresh exact-head matrix precedes its normal merge; C/D follow in order. Full A–D repository implementation was already certified before this integration request.
+- No production deployment, live SQL, scheduler or secret change is authorized. `release/production` started at `59a82ef8580d7d571727e722424bc84cf064e8aa`. Separate live parity/runtime status remains `BLOCKED`.

@@ -7,7 +7,7 @@ Status: `IMPLEMENTED_NOT_MERGED`, exact certified implementation `197caa4034214e
 
 The owner is `feat/business-common-equity-v2`, stacked on the exact green Phase 14A documentation handoff `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`. The predecessor's implementation certificate remains `aed8c3f6462d927cec3ebc55602854d48a460a9b` on draft PR #684. This tranche owns draft PR #685. Phase 14C and 14D retain separate successor owners.
 
-The owner authorized completion of all Phase 14 implementation and verification. Merge, deployment, live SQL, scheduler and secret changes remain outside this draft-stack scope. Live migration parity is a separate release blocker.
+The owner authorized completion of all Phase 14 implementation and verification, then ordered normal repository integration on 2026-09-19. Phase 14A PR #684 is merged as `46cde60e80eb285733f01aa99dcba3c3ec0deedd`; #685 now targets main with the same exact-path/check boundaries. New exact-head checks remain required. Deployment, live SQL, scheduler and secret changes remain unauthorized. Live migration parity is a separate release blocker.
 
 ## Canonical authority and transaction contract
 

@@ -1,5 +1,20 @@
 {
   "program": "BETA-BUSINESS-V2-001",
+  "phase14_repository_integration": {
+    "authorized_at": "2026-09-19",
+    "scope": "Ordered normal repository merges only; no deployment, live SQL, scheduler or secret change.",
+    "implementation_complete": true,
+    "phase14a_merge": "46cde60e80eb285733f01aa99dcba3c3ec0deedd",
+    "phase14a_verified_handoff": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
+    "phase14a_premerge_evidence": "50 applicable workflows, 90 jobs and Vercel passed; 8 manual/historical job skips, including one wholly skipped staging-only workflow.",
+    "current_integration_pr": 685,
+    "current_integration_base": "main",
+    "candidate_note": "Common-equity application and migrations retain certified implementation 197caa4034214e21b8033a3f4363dc07a13b5dcf. Normal main merge plus exact-base authority, negative regression and integration records only. New exact-head gates are required before PR 685 merges.",
+    "remaining_merge_order": [685, 686, 687],
+    "production_release_before": "59a82ef8580d7d571727e722424bc84cf064e8aa",
+    "runtime_status": "BLOCKED",
+    "runtime_blocker": "BETA-LIVE-MIGRATION-PARITY-001"
+  },
   "status": "PHASE_14_IN_PROGRESS",
   "audited_at": "2026-09-18T07:48:16.581115+00:00",
   "integration_pr": null,
@@ -14,7 +29,7 @@
   "latest_checkpoint_pr": 685,
   "exact_implementation_sha": "197caa4034214e21b8033a3f4363dc07a13b5dcf",
   "documentation_parent_sha": "197caa4034214e21b8033a3f4363dc07a13b5dcf",
-  "merged_main_sha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6",
+  "merged_main_sha": "46cde60e80eb285733f01aa99dcba3c3ec0deedd",
   "parent_checkpoint": "BUSINESS-V2-14A",
   "parent_implementation_sha": "aed8c3f6462d927cec3ebc55602854d48a460a9b",
   "required_workflow_runs": {
