@@ -69,14 +69,14 @@ jobs:
           [[ "${{ inputs.candidate_run_id }}" =~ ^[0-9]+$ ]]
 
       - name: Check out verification control plane
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Check out exact deployed source commit
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.source_commit }}
           fetch-depth: 0
@@ -95,7 +95,7 @@ jobs:
           test -f scripts/verify-downloaded-edge-function-source.mjs
 
       - name: Download exact staging-verified artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: production-web-session-${{ inputs.source_commit }}
           run-id: ${{ inputs.candidate_run_id }}
@@ -150,7 +150,7 @@ jobs:
           rm -rf "$expected_dir" "$artifact_dir" "$expected_tar" "$artifact_tar"
 
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.109.1
 

@@ -40,7 +40,7 @@ jobs:
           node-version: "22.23.1"
           cache: npm
       - run: npm ci
-      - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
         with:
           version: 2.109.1
       - name: Link exact staging
@@ -163,7 +163,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520
         with:
           version: 2.109.1
       - name: Link staging
