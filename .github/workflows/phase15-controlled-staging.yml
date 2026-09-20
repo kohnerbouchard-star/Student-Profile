@@ -14,6 +14,8 @@ on:
       - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
       - "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh"
       - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
+      - "scripts/staging/golden-five-contract.test.mjs"
+      - "scripts/staging/golden-five-verify.mjs"
       - "docs/operations/contracts/player-cross-cutting/pr-699.json"
       - "scripts/player-cross-cutting-authority.test.mjs"
   push:
@@ -28,6 +30,8 @@ on:
       - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
       - "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh"
       - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
+      - "scripts/staging/golden-five-contract.test.mjs"
+      - "scripts/staging/golden-five-verify.mjs"
 
 permissions:
   contents: read
@@ -65,6 +69,7 @@ jobs:
           set -euo pipefail
           node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
           node --test scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs
+          node --test scripts/staging/golden-five-contract.test.mjs
           node --test scripts/edge-function-inventory/validate.test.mjs
           node --test scripts/local-edge-runtime-contract.test.mjs
           node --test scripts/runtime-config-contract.test.mjs
@@ -439,6 +444,7 @@ jobs:
     timeout-minutes: 45
     environment: staging
     env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: eecvbssdvarfcykcfrny
       EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
       PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
@@ -466,17 +472,301 @@ jobs:
         with:
           node-version: "22.23.1"
           cache: npm
-      - name: Validate staging-only secret boundary
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Prepare and validate staging-only fixture authority
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
-          test -n "$POOLER_URL"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$SUPABASE_DB_PASSWORD"
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+
+          if test -z "$POOLER_URL"; then
+            (
+              cd backend
+              supabase --yes link \
+                --project-ref "$SUPABASE_PROJECT_REF" \
+                --password "$SUPABASE_DB_PASSWORD"
+            )
+            pooler_path="backend/supabase/.temp/pooler-url"
+            test -s "$pooler_path"
+            POOLER_URL="$(RAW_POOLER_URL="$(tr -d '\r\n' < "$pooler_path")" DATABASE_PASSWORD="$SUPABASE_DB_PASSWORD" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.RAW_POOLER_URL);
+          parsed.password = process.env.DATABASE_PASSWORD;
+          parsed.searchParams.set('sslmode', 'require');
+          parsed.searchParams.delete('sslrootcert');
+          process.stdout.write(parsed.href);
+          NODE
+            )"
+          fi
+          test -n "$POOLER_URL"
+          echo "::add-mask::$POOLER_URL"
+          export POOLER_URL
+          node scripts/release-integrity/cli.mjs validate-db-url \
+            --url-env POOLER_URL \
+            --expected-project-ref "$SUPABASE_PROJECT_REF"
+          case "$POOLER_URL" in *"$SUPABASE_PROJECT_REF"*) ;; *) echo 'Staging pooler identity mismatch.' >&2; exit 1 ;; esac
+          case "$POOLER_URL" in *"$PRODUCTION_PROJECT_REF"*) echo 'Production database selection is prohibited.' >&2; exit 1 ;; esac
+
+          if test -z "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY"; then
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/api-keys?reveal=true" \
+              > "$RUNNER_TEMP/staging-api-keys.json"
+            ECONOVARIA_SUPABASE_PUBLISHABLE_KEY="$(KEYS_PATH="$RUNNER_TEMP/staging-api-keys.json" node - <<'NODE'
+          const rows = require(process.env.KEYS_PATH);
+          const row = rows.find((value) => String(value.api_key || value.apiKey || '').startsWith('sb_publishable_'));
+          process.stdout.write(String(row?.api_key || row?.apiKey || ''));
+          NODE
+            )"
+            rm -f "$RUNNER_TEMP/staging-api-keys.json"
+          fi
           test -n "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY"
           case "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY" in sb_publishable_*) ;; *) exit 1 ;; esac
-          case "$POOLER_URL" in *"$SUPABASE_PROJECT_REF"*) ;; *) echo 'Staging pooler identity mismatch.' >&2; exit 1 ;; esac
+          echo "::add-mask::$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY"
+          export ECONOVARIA_SUPABASE_PUBLISHABLE_KEY
+
+          generated_count=0
+          for spec in \
+            'ECONOVARIA_GOLDEN_ALPHA_ACCESS_CODE|ALPHA' \
+            'ECONOVARIA_GOLDEN_BRAVO_ACCESS_CODE|BRAVO' \
+            'ECONOVARIA_GOLDEN_CHARLIE_ACCESS_CODE|CHARLIE' \
+            'ECONOVARIA_GOLDEN_DELTA_ACCESS_CODE|DELTA' \
+            'ECONOVARIA_GOLDEN_ECHO_ACCESS_CODE|ECHO'; do
+            IFS='|' read -r name slot <<< "$spec"
+            value="${!name:-}"
+            if test -z "$value"; then
+              value="G15-${slot}-$(openssl rand -hex 16 | tr '[:lower:]' '[:upper:]')"
+              generated_count=$((generated_count + 1))
+            fi
+            [[ "$value" =~ ^[A-Z0-9-]{8,96}$ ]]
+            echo "::add-mask::$value"
+            digest="$(printf '%s' "$value" | sha256sum | awk '{print $1}')"
+            [[ "$digest" =~ ^[a-f0-9]{64}$ ]]
+            echo "::add-mask::$digest"
+            printf -v "$name" '%s' "$value"
+            export "$name"
+            printf -v "GOLDEN_${slot}_DIGEST" '%s' "$digest"
+            export "GOLDEN_${slot}_DIGEST"
+            printf '%s=%s\n' "$name" "$value" >> "$GITHUB_ENV"
+          done
+
+          mkdir -p /tmp/econovaria-golden-five
+          PGSSLMODE=require psql "$POOLER_URL" -X -q -v ON_ERROR_STOP=1 \
+            -v golden_alpha="$GOLDEN_ALPHA_DIGEST" \
+            -v golden_bravo="$GOLDEN_BRAVO_DIGEST" \
+            -v golden_charlie="$GOLDEN_CHARLIE_DIGEST" \
+            -v golden_delta="$GOLDEN_DELTA_DIGEST" \
+            -v golden_echo="$GOLDEN_ECHO_DIGEST" \
+            -v lifecycle_key="phase15-golden-resume-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" <<'SQL'
+          begin;
+          set local lock_timeout = '5s';
+          set local statement_timeout = '120s';
+          select pg_catalog.pg_advisory_xact_lock(
+            pg_catalog.hashtextextended('econovaria.staging.golden-five.credentials', 0)
+          );
+
+          create temp table phase15_golden_credentials (
+            player_identifier text primary key,
+            access_code_hash text not null check (access_code_hash ~ '^[0-9a-f]{64}$')
+          ) on commit drop;
+          insert into phase15_golden_credentials(player_identifier, access_code_hash) values
+            ('GOLD-ALPHA', :'golden_alpha'),
+            ('GOLD-BRAVO', :'golden_bravo'),
+            ('GOLD-CHARLIE', :'golden_charlie'),
+            ('GOLD-DELTA', :'golden_delta'),
+            ('GOLD-ECHO', :'golden_echo');
+
+          do $phase15_validate_fixture_scope$
+          begin
+            if (select count(*) from public.game_sessions where name = 'Econovaria Golden Five') <> 1 then
+              raise exception 'PHASE15_GOLDEN_GAME_SCOPE_INVALID';
+            end if;
+            if exists (
+              select 1
+              from public.game_sessions
+              where name = 'Econovaria Golden Five'
+                and (
+                  owner_staff_user_id is null
+                  or lifecycle_state not in ('active', 'paused')
+                  or provisioning_status <> 'ready'
+                  or game_join_code <> 'ECO-GOLDEN-FIVE-584'
+                )
+            ) then
+              raise exception 'PHASE15_GOLDEN_GAME_PRECONDITION_INVALID';
+            end if;
+            if (select count(distinct access_code_hash) from phase15_golden_credentials) <> 5 then
+              raise exception 'PHASE15_GOLDEN_ACCESS_CODE_COLLISION';
+            end if;
+          end;
+          $phase15_validate_fixture_scope$;
+
+          create temp table phase15_golden_lifecycle_transition on commit drop as
+          select *
+          from public.transition_game_lifecycle_atomic_v1(
+            (select id from public.game_sessions where name = 'Econovaria Golden Five'),
+            (select owner_staff_user_id from public.game_sessions where name = 'Econovaria Golden Five'),
+            'resume',
+            :'lifecycle_key',
+            (select lifecycle_version from public.game_sessions where name = 'Econovaria Golden Five')
+          );
+
+          do $phase15_validate_active_fixture$
+          begin
+            if (
+              select count(*)
+              from phase15_golden_lifecycle_transition
+              where transition_action = 'resume'
+                and lifecycle_state = 'active'
+                and operational_status = 'active'
+                and transition_outcome in ('applied', 'already_current', 'replayed')
+            ) <> 1 then
+              raise exception 'PHASE15_GOLDEN_LIFECYCLE_RESUME_FAILED';
+            end if;
+            if (
+              select count(*)
+              from public.game_sessions
+              where name = 'Econovaria Golden Five'
+                and status = 'active'
+                and lifecycle_state = 'active'
+                and provisioning_status = 'ready'
+                and game_join_code = 'ECO-GOLDEN-FIVE-584'
+            ) <> 1 then
+              raise exception 'PHASE15_GOLDEN_GAME_NOT_ACTIVE';
+            end if;
+            if (
+              select count(*)
+              from public.players as player_row
+              join public.game_sessions as game_row on game_row.id = player_row.game_session_id
+              join phase15_golden_credentials as fixture_row
+                on fixture_row.player_identifier = player_row.player_identifier
+              where game_row.name = 'Econovaria Golden Five'
+                and game_row.status = 'active'
+                and player_row.status = 'active'
+            ) <> 5 then
+              raise exception 'PHASE15_GOLDEN_PLAYER_SCOPE_INVALID';
+            end if;
+          end;
+          $phase15_validate_active_fixture$;
+
+          with target_players as (
+            select player_row.game_session_id, player_row.id as player_id
+            from public.players as player_row
+            join public.game_sessions as game_row on game_row.id = player_row.game_session_id
+            join phase15_golden_credentials as fixture_row
+              on fixture_row.player_identifier = player_row.player_identifier
+            where game_row.name = 'Econovaria Golden Five'
+              and game_row.status = 'active'
+              and player_row.status = 'active'
+          )
+          update public.player_access_credentials as credential_row
+          set status = 'revoked',
+              revoked_at = clock_timestamp(),
+              updated_at = clock_timestamp()
+          from target_players
+          where credential_row.game_session_id = target_players.game_session_id
+            and credential_row.player_id = target_players.player_id
+            and credential_row.status = 'active';
+
+          with target_players as (
+            select player_row.game_session_id, player_row.id as player_id
+            from public.players as player_row
+            join public.game_sessions as game_row on game_row.id = player_row.game_session_id
+            join phase15_golden_credentials as fixture_row
+              on fixture_row.player_identifier = player_row.player_identifier
+            where game_row.name = 'Econovaria Golden Five'
+              and game_row.status = 'active'
+              and player_row.status = 'active'
+          )
+          update public.player_sessions as session_row
+          set status = 'revoked',
+              revoked_at = clock_timestamp(),
+              updated_at = clock_timestamp()
+          from target_players
+          where session_row.game_session_id = target_players.game_session_id
+            and session_row.player_id = target_players.player_id
+            and session_row.status = 'active'
+            and session_row.revoked_at is null;
+
+          insert into public.player_access_credentials (
+            game_session_id,
+            player_id,
+            normalized_student_code_hash,
+            credential_version,
+            credential_salt,
+            credential_verifier,
+            credential_iterations,
+            status
+          )
+          select
+            player_row.game_session_id,
+            player_row.id,
+            fixture_row.access_code_hash,
+            'sha256-v1',
+            null,
+            null,
+            null,
+            'active'
+          from public.players as player_row
+          join public.game_sessions as game_row on game_row.id = player_row.game_session_id
+          join phase15_golden_credentials as fixture_row
+            on fixture_row.player_identifier = player_row.player_identifier
+          where game_row.name = 'Econovaria Golden Five'
+            and game_row.status = 'active'
+            and player_row.status = 'active';
+
+          do $phase15_verify_rotation$
+          begin
+            if (
+              select count(*)
+              from public.player_access_credentials as credential_row
+              join public.players as player_row
+                on player_row.game_session_id = credential_row.game_session_id
+               and player_row.id = credential_row.player_id
+              join public.game_sessions as game_row on game_row.id = player_row.game_session_id
+              join phase15_golden_credentials as fixture_row
+                on fixture_row.player_identifier = player_row.player_identifier
+              where game_row.name = 'Econovaria Golden Five'
+                and credential_row.status = 'active'
+                and credential_row.credential_version = 'sha256-v1'
+                and credential_row.normalized_student_code_hash = fixture_row.access_code_hash
+            ) <> 5 then
+              raise exception 'PHASE15_GOLDEN_CREDENTIAL_ROTATION_FAILED';
+            end if;
+          end;
+          $phase15_verify_rotation$;
+          commit;
+          SQL
+
+          SOURCE_COMMIT="$GITHUB_SHA" \
+          PROJECT_REF="$SUPABASE_PROJECT_REF" \
+          GENERATED_COUNT="$generated_count" \
+            node --input-type=module - <<'NODE' \
+            > /tmp/econovaria-golden-five/fixture-credential-authority.json
+          process.stdout.write(`${JSON.stringify({
+            schemaVersion: 1,
+            evidenceType: 'phase15-staging-fixture-credential-authority',
+            sourceCommit: process.env.SOURCE_COMMIT,
+            projectRef: process.env.PROJECT_REF,
+            productionSelected: false,
+            credentialCount: 5,
+            generatedCredentialCount: Number(process.env.GENERATED_COUNT),
+            plaintextPersisted: false,
+            browserCredentialContract: 'publishable-key-only',
+            fixtureLifecycleAction: 'resume',
+            fixtureLifecycleState: 'active',
+            decision: 'PASS',
+          }, null, 2)}\n`);
+          NODE
+
+          printf 'POOLER_URL=%s\n' "$POOLER_URL" >> "$GITHUB_ENV"
+          printf 'ECONOVARIA_SUPABASE_PUBLISHABLE_KEY=%s\n' "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY" >> "$GITHUB_ENV"
       - name: Install exact test dependencies and Chromium
         run: |
           npm install --global npm@10.9.8
