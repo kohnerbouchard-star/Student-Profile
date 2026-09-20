@@ -59,6 +59,7 @@ test("Golden Five verifier matches the current canonical fixture and lifecycle",
   assert.match(workflow, /phase15-staging-golden-fx-alignment-v1/u);
   assert.match(workflow, /bounded-latest-snapshot-copy-v1/u);
   assert.match(verifier, /fxAuthorityReady/u);
+  assert.match(verifier, /balance_row\.currency_code = country_row\.currency_code/u);
   assert.match(workflow, /Production database selection is prohibited\./u);
   assert.match(workflow, /PGSSLMODE: verify-full/u);
   assert.match(workflow, /sslmode', 'verify-full'/u);

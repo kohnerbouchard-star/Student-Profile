@@ -116,6 +116,7 @@ with target_game as (
     on balance_row.game_session_id = game_row.id
    and balance_row.player_id = player_row.id
    and balance_row.account_type = 'checking'
+   and balance_row.currency_code = country_row.currency_code
   join public.player_access_credentials as credential_row
     on credential_row.game_session_id = game_row.id
    and credential_row.player_id = player_row.id
