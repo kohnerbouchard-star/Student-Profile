@@ -150,7 +150,15 @@ select jsonb_build_object(
     'status', coalesce((select status from target_game), ''),
     'lifecycleState', coalesce((select lifecycle_state from target_game), ''),
     'provisioningStatus', coalesce((select provisioning_status from target_game), ''),
-    'joinCodeMatches', coalesce((select game_join_code = ${sqlText(GAME_JOIN_CODE)} from target_game), false)
+    'joinCodeMatches', coalesce((select game_join_code = ${sqlText(GAME_JOIN_CODE)} from target_game), false),
+    'joinCodeStatus', coalesce((select game_join_code_status from target_game), ''),
+    'joinCodeHashMatches', coalesce((
+      select game_join_code_hash = encode(
+        extensions.digest(${sqlText(GAME_JOIN_CODE)}, 'sha256'),
+        'hex'
+      )
+      from target_game
+    ), false)
   ),
   'migrations', jsonb_build_object(
     'requiredCount', ${REQUIRED_MIGRATIONS.length},
@@ -216,6 +224,8 @@ if (evidence.game?.status !== "active") failures.push("The golden game is not ac
 if (evidence.game?.lifecycleState !== "active") failures.push("The golden game lifecycle is not active.");
 if (evidence.game?.provisioningStatus !== "ready") failures.push("The golden game is not provisioned.");
 if (evidence.game?.joinCodeMatches !== true) failures.push("The golden game code does not match the fixture contract.");
+if (evidence.game?.joinCodeStatus !== "active") failures.push("The golden game code is not active.");
+if (evidence.game?.joinCodeHashMatches !== true) failures.push("The golden game code hash does not match.");
 if (evidence.migrations?.appliedCount !== REQUIRED_MIGRATIONS.length) failures.push("Required staging migrations are missing.");
 if (evidence.fx?.runtimeStatus !== "ready" || evidence.fx?.hasCurrentFixing !== true) failures.push("The golden game FX authority is not ready.");
 if (Number(evidence.fx?.fixingValues) !== 11) failures.push("The golden game current FX fixing is incomplete.");

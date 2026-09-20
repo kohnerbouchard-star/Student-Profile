@@ -599,6 +599,10 @@ jobs:
                   or lifecycle_state not in ('active', 'paused')
                   or provisioning_status <> 'ready'
                   or game_join_code <> 'ECO-GOLDEN-FIVE-584'
+                  or game_join_code_hash <> encode(
+                    extensions.digest('ECO-GOLDEN-FIVE-584', 'sha256'),
+                    'hex'
+                  )
                 )
             ) then
               raise exception 'PHASE15_GOLDEN_GAME_PRECONDITION_INVALID';
@@ -608,6 +612,19 @@ jobs:
             end if;
           end;
           $phase15_validate_fixture_scope$;
+
+          update public.game_sessions
+          set game_join_code_status = 'active',
+              updated_at = clock_timestamp()
+          where name = 'Econovaria Golden Five'
+            and status = 'active'
+            and lifecycle_state in ('active', 'paused')
+            and provisioning_status = 'ready'
+            and game_join_code = 'ECO-GOLDEN-FIVE-584'
+            and game_join_code_hash = encode(
+              extensions.digest('ECO-GOLDEN-FIVE-584', 'sha256'),
+              'hex'
+            );
 
           do $phase15_validate_fx_macro_alignment_scope$
           declare
@@ -826,6 +843,11 @@ jobs:
                 and lifecycle_state = 'active'
                 and provisioning_status = 'ready'
                 and game_join_code = 'ECO-GOLDEN-FIVE-584'
+                and game_join_code_status = 'active'
+                and game_join_code_hash = encode(
+                  extensions.digest('ECO-GOLDEN-FIVE-584', 'sha256'),
+                  'hex'
+                )
             ) <> 1 then
               raise exception 'PHASE15_GOLDEN_GAME_NOT_ACTIVE';
             end if;
@@ -975,6 +997,7 @@ jobs:
             browserCredentialContract: 'publishable-key-only',
             fixtureLifecycleAction: 'resume',
             fixtureLifecycleState: 'active',
+            fixtureJoinCodeStatus: 'active',
             fxAuthorityState: 'ready',
             bankingFxReadiness: 'ready',
             fxMacroAlignment: 'bounded-latest-snapshot-copy-v1',
