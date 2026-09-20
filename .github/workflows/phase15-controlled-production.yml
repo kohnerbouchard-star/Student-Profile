@@ -125,7 +125,7 @@ jobs:
               scripts/staging/golden-five-contract.test.mjs|scripts/staging/golden-five-verify.mjs|scripts/staging/golden-five-browser-acceptance.mjs) ;;
               scripts/phase15-storage-lifecycle-convergence.test.mjs) ;;
               backend/supabase/migrations/20260920082200_phase15_close_database_advisor_findings_v1.sql) ;;
-              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json) ;;
+              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json) ;;
               backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts|backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts) ;;
               backend/src/domains/world/services/playerWorldRuntimeService.ts|backend/src/domains/world/services/playerWorldRuntimeService.test.ts) ;;
               *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
@@ -674,12 +674,19 @@ jobs:
           test -n "$restore_url"
           echo "::add-mask::$restore_url"
 
-          PGSSLMODE=disable psql "$restore_url" -X \
+          db_container="supabase_db_phase15-restore-$GITHUB_RUN_ID"
+          test "$(docker inspect --format '{{.State.Health.Status}}' "$db_container")" = "healthy"
+          test "$(docker exec "$db_container" psql -U supabase_admin -d postgres -X -qAt \
+            -v ON_ERROR_STOP=1 -c 'select rolsuper from pg_roles where rolname = current_user')" = "t"
+          docker cp "$validation_root/roles.sql" "$db_container:/tmp/phase15-roles.sql"
+          docker cp "$validation_root/schema.sql" "$db_container:/tmp/phase15-schema.sql"
+          docker cp "$validation_root/data.sql" "$db_container:/tmp/phase15-data.sql"
+          docker exec "$db_container" psql -U supabase_admin -d postgres -X \
             --single-transaction --variable ON_ERROR_STOP=1 \
-            --file "$validation_root/roles.sql" \
-            --file "$validation_root/schema.sql" \
+            --file /tmp/phase15-roles.sql \
+            --file /tmp/phase15-schema.sql \
             --command 'SET session_replication_role = replica' \
-            --file "$validation_root/data.sql"
+            --file /tmp/phase15-data.sql
 
           psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
             < scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql \
