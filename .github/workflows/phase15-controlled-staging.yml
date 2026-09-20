@@ -16,6 +16,7 @@ on:
       - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
       - "scripts/staging/golden-five-contract.test.mjs"
       - "scripts/staging/golden-five-verify.mjs"
+      - "scripts/staging/golden-five-browser-acceptance.mjs"
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts"
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts"
       - "docs/operations/contracts/player-cross-cutting/pr-699.json"
@@ -34,6 +35,7 @@ on:
       - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
       - "scripts/staging/golden-five-contract.test.mjs"
       - "scripts/staging/golden-five-verify.mjs"
+      - "scripts/staging/golden-five-browser-acceptance.mjs"
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts"
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts"
 
