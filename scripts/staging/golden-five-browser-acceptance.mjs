@@ -310,6 +310,9 @@ async function exercisePlayer(session) {
   assertNoFailedRequests(journey, `Player ${journey.slot} refresh`, requestStart);
   journey.refreshPersisted = true;
 
+  await visitRoute(session, "profile");
+  journey.routes.pop();
+
   const logout = page.locator('[data-player-action="logout"]:visible').first();
   await logout.waitFor({ state: "visible", timeout: 30_000 });
   const logoutStart = journey.requests.length;
