@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "contractId": "econovaria.database-parity.v1",
+  "status": "BLOCKED",
+  "canonicalSourceCommit": "22dc9ce5023eb200a6608d5bb90a9ac30cb36c90",
+  "canonicalManifest": "docs/operations/evidence/phase15-live-parity/2026-09-20/repository-migration-manifest.json",
+  "canonicalManifestSha256": "9e52c6b235948f531fc075f90f1c1c63bcd3616c79d76ea46d85b1692a243b82",
+  "approvedHistoricalAliases": [],
+  "historicalAliasReview": "docs/operations/evidence/live-migration-reconciliation-v1/live-renumbered-identity-review.json",
+  "expectedSchemaFingerprint": null,
+  "stagingCertification": null,
+  "productionCertification": null,
+  "certifiedGitSha": null,
+  "rules": {
+    "appliedMigrationsImmutable": true,
+    "correctionsForwardOnly": true,
+    "migrationCountEqualityIsParity": false,
+    "ordinaryPrRequiresProductionCredentials": false
+  },
+  "blockingReason": "Phase 15A read-only reconciliation is incomplete. No live convergence or release certification."
+}

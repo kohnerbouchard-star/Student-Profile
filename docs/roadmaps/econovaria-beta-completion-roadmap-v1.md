@@ -21,6 +21,14 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`BETA-LIVE-MIGRATION-PARITY-001` — Phase 15 program (2026-09-20)**
+  - Owner authorizes the full gated 15A–15F program. This supersedes prior no-Phase-15/no-release authorization statements, while preserving the requirement that production changes follow certified 15A–15E gates.
+  - Status: `IN_PROGRESS`; 15A hard gate `BLOCKED`, later tranches unopened. Owner branch `fix/phase15-live-migration-parity-v1`, source main `22dc9ce5023eb200a6608d5bb90a9ac30cb36c90`.
+  - Fresh ledgers and schema/advisor/Edge/Vercel evidence live in `docs/operations/evidence/phase15-live-parity/2026-09-20/`. Existing parity enforcement identifies eleven unapproved routine differences and post-cutoff ledger drift. Count differences do not define parity.
+  - Implementation: extensions to `scripts/operations/live-migration-reconciliation/`, clean replay fingerprint capture, and the incomplete/fail-closed `docs/operations/contracts/database-parity-v1.json`. No live mutation or certification.
+  - Next exact item: finish 15A effect reconciliation, including all historical aliases, live-only changes, complete application schemas, and a proven convergence path before 15B.
+
+
 - **`BUSINESS-V2-14A`–`14D` — Repository integration closed (2026-09-19)**
   - All four feature PRs are normally merged. No remaining Phase 14 repository implementation or feature merge. Overall status is `BLOCKED` only for separate `BETA-LIVE-MIGRATION-PARITY-001` live/release evidence, not an outstanding repository merge. Do not label live capability `VERIFIED_COMPLETE` without that evidence.
 

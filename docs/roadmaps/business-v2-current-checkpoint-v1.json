@@ -124,7 +124,15 @@
     "runtime_status": "BLOCKED",
     "runtime_blocker": "BETA-LIVE-MIGRATION-PARITY-001",
     "postmerge_verification_status": "PASSED",
-    "phase14d_postmerge_evidence": { "sha": "017a4732ce52c29b31f8fb3666e4662420b19188", "successful_workflows": 22, "successful_jobs": 40, "expected_skipped_workflows": 2, "expected_skipped_jobs": 10, "failed": 0, "pending": 0 },
+    "phase14d_postmerge_evidence": {
+      "sha": "017a4732ce52c29b31f8fb3666e4662420b19188",
+      "successful_workflows": 22,
+      "successful_jobs": 40,
+      "expected_skipped_workflows": 2,
+      "expected_skipped_jobs": 10,
+      "failed": 0,
+      "pending": 0
+    },
     "documentation_closure_pr": 688,
     "phase14c_postmerge_evidence": {
       "sha": "338f7c6dc5021812116da34d720c3dbb39e84d7c",
@@ -254,9 +262,9 @@
   "active_candidate_parent_sha": null,
   "active_candidate_implementation_sha": "dee709fcbe5bfdf23c66347447eeb70c1408dcd9",
   "active_candidate_state": "BLOCKED",
-  "active_candidate_note": "All Phase 14A–D implementations are repository-certified and merged; no active implementation remains. BLOCKED refers only to separate live migration parity/release evidence. No live deployment occurred.",
-  "next_authorized_checkpoint": null,
-  "next_authorized_scope": "No remaining Phase 14 repository implementation or feature merge. Documentation closure is recorded in #688. Live parity/release and any later implementation phase require separate owner direction.",
+  "active_candidate_note": "All Phase 14A\u2013D implementations are repository-certified and merged; no active implementation remains. BLOCKED refers only to separate live migration parity/release evidence. No live deployment occurred.",
+  "next_authorized_checkpoint": "PHASE-15A",
+  "next_authorized_scope": "Complete read-only canonical reconciliation. Later tranches remain gated by the owner's Phase 15A-F instruction.",
   "remaining_dependency_order": [],
   "release_state": {
     "phase12_merged_to_main": true,
@@ -5088,5 +5096,19 @@
       "artifact_id": 10542858609,
       "artifact_sha256": "f5cb9cf5fe42a4e4a2f7dcef5e2991553f756a4475512653016df3a60ea3389f"
     }
-  ]
+  ],
+  "phase15": {
+    "program": "BETA-LIVE-MIGRATION-PARITY-001",
+    "authorizedAt": "2026-09-20",
+    "authorization": "Owner requested the full controlled Phase 15A-F program; production only after 15A-15E certification.",
+    "branch": "fix/phase15-live-migration-parity-v1",
+    "sourceMain": "22dc9ce5023eb200a6608d5bb90a9ac30cb36c90",
+    "status": "IN_PROGRESS",
+    "activeTranche": "15A",
+    "hardGate": "BLOCKED",
+    "evidence": "docs/operations/evidence/phase15-live-parity/2026-09-20/",
+    "stagingMutated": false,
+    "productionMutated": false,
+    "certifiedTranches": []
+  }
 }
