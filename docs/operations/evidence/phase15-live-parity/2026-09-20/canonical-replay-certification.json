@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-20",
+  "scope": "Clean repository replay only; not live parity, upgrade behavior or runtime certification.",
+  "sourceCommit": "6219b0605e632f1aec248b11028deb5164d18d03",
+  "canonicalMigrationSource": "22dc9ce5023eb200a6608d5bb90a9ac30cb36c90",
+  "migrationCount": 435,
+  "migrationFilesChanged": false,
+  "workflowRun": 35478763313,
+  "job": 105992641547,
+  "workflowUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763313",
+  "artifact": {
+    "id": 10594539481,
+    "name": "phase15-clean-replay-6219b0605e632f1aec248b11028deb5164d18d03",
+    "sha256": "2091cab884a440b72f313f12192b701fe5733631f6495566a0d41a3e7ae9acbf",
+    "sizeBytes": 694559,
+    "downloadDigestVerified": true,
+    "retentionDays": 30
+  },
+  "replays": 2,
+  "freshResetEachReplay": true,
+  "applicationSchema": {
+    "matched": true,
+    "sha256": "b94617ca343e1d99be228bd76f7347a8a928505bf13dd136232f2f2e33c4d509",
+    "differences": 0
+  },
+  "runtimeCatalog": {
+    "matched": true,
+    "sha256": "1e28a2caf0884a65ee29e090726dcb4129cca0365b5acce3db0cb6e34c5ed451",
+    "differences": 0
+  },
+  "databaseLint": "PASS",
+  "liveUpgradeRehearsal": "NOT_RUN",
+  "stagingCertified": false,
+  "productionCertified": false,
+  "earlierAttempt": {
+    "sourceCommit": "ffc03d3b4ec6cd003331a6f3fa7628e4665a6aff",
+    "workflowRun": 35478665377,
+    "job": 105992314334,
+    "conclusion": "cancelled",
+    "reason": "Superseded by a new candidate head while in progress; not a demonstrated defect or fix."
+  },
+  "artifactPreservation": "The verified artifact was downloaded before the local execution environment disconnected. Its durable identity and digests are recorded here; its archive is not committed in this checkpoint. Reproduce from the exact workflow source if the GitHub artifact expires."
+}

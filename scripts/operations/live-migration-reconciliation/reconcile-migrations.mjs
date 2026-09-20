@@ -2,6 +2,7 @@
 import { createHash } from "node:crypto";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const MIGRATION_RE = /^(\d{14})_(.+)\.sql$/;
 
@@ -58,13 +59,16 @@ function assertUnique(rows, label) {
   }
 }
 
-async function loadRepositoryMigrations(directory) {
+export async function loadRepositoryMigrations(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const rows = [];
   for (const entry of entries) {
     if (!entry.isFile()) continue;
     const match = MIGRATION_RE.exec(entry.name);
-    if (!match) continue;
+    if (!match) {
+      if (entry.name.endsWith(".sql")) throw new Error(`Invalid migration filename: ${entry.name}`);
+      continue;
+    }
     const path = join(directory, entry.name);
     const bytes = await readFile(path);
     rows.push({
@@ -209,7 +213,7 @@ async function main() {
   if (result.blocking) process.exitCode = 2;
 }
 
-main().catch((error) => {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main().catch((error) => {
   console.error(error instanceof Error ? error.stack : String(error));
   process.exitCode = 1;
 });

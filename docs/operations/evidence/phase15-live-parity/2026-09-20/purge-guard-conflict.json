@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-20",
+  "status": "CONFIRMED_EFFECT_CONFLICT",
+  "blocker": "BETA-LIVE-MIGRATION-PARITY-001",
+  "method": "Read-only function-definition inspection plus read-only metadata digest RPCs. Purge execution/finalization was not called.",
+  "environments": {
+    "staging": {
+      "actualMetadata": {
+        "registry": {
+          "table_count": 133,
+          "registry_sha256": "0967d19098bfcc7b013c5f1bed9fcb2918126fe432e779ad4c8465be6f87eaeb"
+        },
+        "deleteOrder": {
+          "table_count": 129,
+          "order_sha256": "7c146263607baaf025a4153f5c2007d9e4c955e19e4532f5d530b7248741b8f3"
+        },
+        "foreignKeys": {
+          "edge_count": 224,
+          "fk_graph_sha256": "8d82b09bae9d4cf0703b7bc388c2e621258e277afc4592d28006e5670d11092a"
+        }
+      },
+      "functions": [
+        {
+          "name": "execute_game_data_purge_db_batch_v2",
+          "arguments": "p_request_id uuid, p_batch_size integer",
+          "definitionSha256": "d37ae27bff5a545b29c82a0cdeccd585862ef23f671e55e5b4b24dfd4aa4ac2f",
+          "expectedForeignKeyGraphSha256": "8d82b09bae9d4cf0703b7bc388c2e621258e277afc4592d28006e5670d11092a",
+          "expectedEdgeCount": 224,
+          "matchesActual": true
+        },
+        {
+          "name": "finalize_game_data_purge_v1",
+          "arguments": "p_request_id uuid",
+          "definitionSha256": "c20946894bcd85fe656e9bd05680cea0113545b60e4860b0707bb179b08bf9bb",
+          "expectedForeignKeyGraphSha256": "8d82b09bae9d4cf0703b7bc388c2e621258e277afc4592d28006e5670d11092a",
+          "expectedEdgeCount": 224,
+          "matchesActual": true
+        }
+      ]
+    },
+    "production": {
+      "actualMetadata": {
+        "registry": {
+          "table_count": 133,
+          "registry_sha256": "0967d19098bfcc7b013c5f1bed9fcb2918126fe432e779ad4c8465be6f87eaeb"
+        },
+        "deleteOrder": {
+          "table_count": 129,
+          "order_sha256": "7c146263607baaf025a4153f5c2007d9e4c955e19e4532f5d530b7248741b8f3"
+        },
+        "foreignKeys": {
+          "edge_count": 224,
+          "fk_graph_sha256": "8d82b09bae9d4cf0703b7bc388c2e621258e277afc4592d28006e5670d11092a"
+        }
+      },
+      "functions": [
+        {
+          "name": "execute_game_data_purge_db_batch_v2",
+          "arguments": "p_request_id uuid, p_batch_size integer",
+          "definitionSha256": "f59de3e33b9e53f58c3e1924c7dd7778128b726880a8cb00c9a8aac1067a5eb8",
+          "expectedForeignKeyGraphSha256": "72aa93c5ab2a84f915a3e025879bb71db9b740256e17f295107e1039870eadb0",
+          "expectedEdgeCount": 213,
+          "matchesActual": false
+        },
+        {
+          "name": "finalize_game_data_purge_v1",
+          "arguments": "p_request_id uuid",
+          "definitionSha256": "b853d1926de46ca5a1933052609033a677179d2b9dd08d903124f2e79a907925",
+          "expectedForeignKeyGraphSha256": "72aa93c5ab2a84f915a3e025879bb71db9b740256e17f295107e1039870eadb0",
+          "expectedEdgeCount": 213,
+          "matchesActual": false
+        }
+      ]
+    }
+  },
+  "assessment": "Production guards would raise GAME_PURGE_FK_GRAPH_DRIFT when reached. This is a static control-flow inference, not an observed invocation failure. Staging guards match current metadata. No live repair is authorized before the pre-production gates; a future forward repair must account for the complete target registry and populated-state upgrade."
+}

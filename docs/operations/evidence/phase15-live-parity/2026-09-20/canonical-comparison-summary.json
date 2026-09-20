@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "status": "BLOCKED",
+  "canonicalSourceCommit": "6219b0605e632f1aec248b11028deb5164d18d03",
+  "canonicalSchemaSha256": "b94617ca343e1d99be228bd76f7347a8a928505bf13dd136232f2f2e33c4d509",
+  "method": "Identity-keyed structural comparison of the two-replay canonical artifact and full public/private/economy_private live exports; explicit nulls restored where an earlier compact supplement omitted them. Function definitions compare exact pg_get_functiondef hashes; no whitespace or environment allowlist approved. These are structural counts, not migration parity classifications or an approved mutation sequence.",
+  "canonicalCounts": {
+    "relations": 261,
+    "columns": 3669,
+    "constraints": 3101,
+    "indexes": 1060,
+    "routines": 749,
+    "triggers": 269,
+    "schemas": 3
+  },
+  "environments": {
+    "staging": {
+      "liveSchemaSha256": "83a534f6d01617eca96855b820660c74f8776082711e21e5faf52a46574a7c84",
+      "counts": {
+        "relations": {
+          "canonicalOnly": 70,
+          "liveOnly": 1,
+          "changed": 0
+        },
+        "columns": {
+          "canonicalOnly": 1204,
+          "liveOnly": 8,
+          "changed": 6
+        },
+        "constraints": {
+          "canonicalOnly": 1111,
+          "liveOnly": 6,
+          "changed": 5
+        },
+        "indexes": {
+          "canonicalOnly": 397,
+          "liveOnly": 2,
+          "changed": 0
+        },
+        "routines": {
+          "canonicalOnly": 349,
+          "liveOnly": 12,
+          "changed": 83
+        },
+        "triggers": {
+          "canonicalOnly": 134,
+          "liveOnly": 1,
+          "changed": 1
+        }
+      },
+      "liveOnlyRelations": [
+        "private.platform_storage_health"
+      ],
+      "liveOnlyRoutines": [
+        {
+          "schema": "private",
+          "name": "build_game_data_purge_review_v2",
+          "arguments": "p_request_id uuid",
+          "definitionSha256": "d62ff79e9c8ed0b65cec0954c81674cd541e589e52b2a1e75782dc63703e3c26"
+        },
+        {
+          "schema": "private",
+          "name": "upsert_stock_price_candles",
+          "arguments": "p_game_session_id uuid, p_range_start timestamp with time zone, p_range_end timestamp with time zone",
+          "definitionSha256": "f16d7afa4f1b947e7935923c19d8e4159d79e6c364e3d3d617a7dd633665ac45"
+        },
+        {
+          "schema": "private",
+          "name": "upsert_stock_price_candles",
+          "arguments": "p_game_session_id uuid, p_range_start timestamp with time zone, p_range_end timestamp with time zone, p_min_tick_index integer, p_max_tick_index integer",
+          "definitionSha256": "22e9e9427e0e1153655aab2aa1991b089c0bae4ad206ea105e1f6aa2ec8796f7"
+        },
+        {
+          "schema": "public",
+          "name": "configure_platform_storage_health_scheduler_v1",
+          "arguments": "p_environment_name text",
+          "definitionSha256": "8fcd1a9f3bab9fd6ec3c05b564e1405460fd963fe6eb94e0b507c31db0802769"
+        },
+        {
+          "schema": "public",
+          "name": "configure_stock_candle_retention_scheduler_v1",
+          "arguments": "",
+          "definitionSha256": "4d0685063961e4ed7a397949dc9ad93442923aab28dd0bba54ae654affb24ca3"
+        },
+        {
+          "schema": "public",
+          "name": "confirm_game_data_purge_v2",
+          "arguments": "p_request_id uuid, p_actor_staff_user_id uuid, p_confirmation_phrase text",
+          "definitionSha256": "c46685c46222d223e0ad24e52352e3b596eb29e34893418cc74ce06760b7440a"
+        },
+        {
+          "schema": "public",
+          "name": "get_game_data_purge_review_v2",
+          "arguments": "p_request_id uuid",
+          "definitionSha256": "d6d5a2f7efcfb0d6a5be30a2fd8304f02cb7a93ef76b3c83810b126623bee78a"
+        },
+        {
+          "schema": "public",
+          "name": "get_platform_storage_health_v1",
+          "arguments": "",
+          "definitionSha256": "b0b8301bc907f423d2b05205d6533a74816d52eefe08123afdbbc10f998c9e14"
+        },
+        {
+          "schema": "public",
+          "name": "issue_game_data_purge_confirmation_v2",
+          "arguments": "p_game_session_id uuid, p_actor_staff_user_id uuid",
+          "definitionSha256": "752b8653d49e8b1e9e9883efd65b53b1ee0dab82337cadab9008dc0be23a17c6"
+        },
+        {
+          "schema": "public",
+          "name": "maintain_stock_candle_retention_v1",
+          "arguments": "p_now timestamp with time zone",
+          "definitionSha256": "3c2450a2f7249109dae39da2c87710e3818b4a56cbcc51ac64a64e409f07cec0"
+        },
+        {
+          "schema": "public",
+          "name": "purge_verified_stock_tick_archive",
+          "arguments": "p_archive_id uuid",
+          "definitionSha256": "507a57c57d53c2c93f281f217a6f6830bd7f3f3281f38e9675dd400153315c63"
+        },
+        {
+          "schema": "public",
+          "name": "register_verified_stock_tick_archive",
+          "arguments": "p_game_session_id uuid, p_range_start timestamp with time zone, p_range_end timestamp with time zone, p_min_tick_index integer, p_max_tick_index integer, p_row_count bigint, p_object_key text, p_object_etag text, p_sha256 text, p_compressed_bytes bigint",
+          "definitionSha256": "be2ec15447ef8619c83b951c2642a71bbd3a2b91ff73eaf4d29b9e7bf65926e6"
+        },
+        {
+          "schema": "public",
+          "name": "run_platform_storage_health_check_v1",
+          "arguments": "p_environment_name text",
+          "definitionSha256": "6069083baf57ec33be6340a95e09df8b369da62b38fa49319c62735607cdc44b"
+        }
+      ],
+      "authorization": "Captured in existing snapshots and new schema-grant supplement; differences remain unapproved."
+    },
+    "production": {
+      "liveSchemaSha256": "8ede631fd91913a8c55a9ac84e2838762a71de83a56da9327d45303f83481a25",
+      "counts": {
+        "relations": {
+          "canonicalOnly": 74,
+          "liveOnly": 1,
+          "changed": 0
+        },
+        "columns": {
+          "canonicalOnly": 1271,
+          "liveOnly": 8,
+          "changed": 26
+        },
+        "constraints": {
+          "canonicalOnly": 1171,
+          "liveOnly": 6,
+          "changed": 5
+        },
+        "indexes": {
+          "canonicalOnly": 416,
+          "liveOnly": 2,
+          "changed": 0
+        },
+        "routines": {
+          "canonicalOnly": 366,
+          "liveOnly": 12,
+          "changed": 64
+        },
+        "triggers": {
+          "canonicalOnly": 134,
+          "liveOnly": 1,
+          "changed": 1
+        }
+      },
+      "liveOnlyRelations": [
+        "private.platform_storage_health"
+      ],
+      "liveOnlyRoutines": [
+        {
+          "schema": "private",
+          "name": "build_game_data_purge_review_v2",
+          "arguments": "p_request_id uuid",
+          "definitionSha256": "7669a2da7af283939b9c66a15be65c26bd2e6f32f1feb906273fedaa28e21f6a"
+        },
+        {
+          "schema": "private",
+          "name": "upsert_stock_price_candles",
+          "arguments": "p_game_session_id uuid, p_range_start timestamp with time zone, p_range_end timestamp with time zone",
+          "definitionSha256": "1efaa9ffc8bde4859cfe1af021ce78595a493905c76bfe02abfa2275c74e9831"
+        },
+        {
+          "schema": "private",
+          "name": "upsert_stock_price_candles",
+          "arguments": "p_game_session_id uuid, p_range_start timestamp with time zone, p_range_end timestamp with time zone, p_min_tick_index integer, p_max_tick_index integer",
+          "definitionSha256": "dd29cb983c165dee31cf9f7252732ef809ec546fff1a4581fbe5e9c387339c78"
+        },
+        {
+          "schema": "public",
+          "name": "configure_platform_storage_health_scheduler_v1",
+          "arguments": "p_environment_name text",
+          "definitionSha256": "21ee859c81550a408704fd23ccc0f47d3db53406fef5fee436a0839dffe65b8e"
+        },
+        {
+          "schema": "public",
+          "name": "configure_stock_candle_retention_scheduler_v1",
+          "arguments": "",
+          "definitionSha256": "d25ec634dcc91be5670800a09c8b494e420c7314399657dda8dbf6251833300f"
+        },
+        {
+          "schema": "public",
+          "name": "confirm_game_data_purge_v2",
+          "arguments": "p_request_id uuid, p_actor_staff_user_id uuid, p_confirmation_phrase text",
+          "definitionSha256": "014f98e3a0f1e153f7c67d786293b8f266ab86fe33a0f66c4f99f1f1093a5eae"
+        },
+        {
+          "schema": "public",
+          "name": "get_game_data_purge_review_v2",
+          "arguments": "p_request_id uuid",
+          "definitionSha256": "f035eb3b5e66215bb4ea7b95d84de823922864e0c10c7f033ede5832aef8f9c3"
+        },
+        {
+          "schema": "public",
+          "name": "get_platform_storage_health_v1",
+          "arguments": "",
+          "definitionSha256": "36ebaec342c8a04e2b3b8be8bb97f92d02927f5e9722592327b39c16650a0fbb"
+        },
+        {
+          "schema": "public",
+          "name": "issue_game_data_purge_confirmation_v2",
+          "arguments": "p_game_session_id uuid, p_actor_staff_user_id uuid",
+          "definitionSha256": "b8086d96ce9abd60d32e44011872c5ece89ebb98ca09c909e4fd300144bc53a0"
+        },
+        {
+          "schema": "public",
+          "name": "maintain_stock_candle_retention_v1",
+          "arguments": "p_now timestamp with time zone",
+          "definitionSha256": "b2fb96cf3e0d2121a3c0bb29d73f497c93ac323958737378a0253e14d6b61e9e"
+        },
+        {
+          "schema": "public",
+          "name": "purge_verified_stock_tick_archive",
+          "arguments": "p_archive_id uuid",
+          "definitionSha256": "18cca215c799758497e5e0449e394277e26e694d00e9e36dd7d1cd7094362818"
+        },
+        {
+          "schema": "public",
+          "name": "register_verified_stock_tick_archive",
+          "arguments": "p_game_session_id uuid, p_range_start timestamp with time zone, p_range_end timestamp with time zone, p_min_tick_index integer, p_max_tick_index integer, p_row_count bigint, p_object_key text, p_object_etag text, p_sha256 text, p_compressed_bytes bigint",
+          "definitionSha256": "aa54aa2a9e2e4ad4198cbbffed6aab73b7b6e4770ad7b89893cc5ae196a7088c"
+        },
+        {
+          "schema": "public",
+          "name": "run_platform_storage_health_check_v1",
+          "arguments": "p_environment_name text",
+          "definitionSha256": "fe6971b6c12384cda2f8be5f2033810e20b6cf17518df457e811568877b74ec8"
+        }
+      ],
+      "authorization": "Captured in existing snapshots and new schema-grant supplement; differences remain unapproved."
+    }
+  },
+  "limitations": [
+    "No populated live-state upgrade replay has passed.",
+    "Full local comparison reports were generated before workspace disconnection but are not committed here; this summary preserves observed counts and live-only identities, not a complete effect-equivalence proof.",
+    "Platform-managed schemas and cron require separate runtime-catalog review."
+  ]
+}
