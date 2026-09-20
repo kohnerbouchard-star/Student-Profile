@@ -24,7 +24,8 @@ concurrency:
 env:
   STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
   PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
-  POPULATED_STAGING_CERTIFIED_SHA: 2fc71be96e4126ee2253cb91afb2d9ebe5004c44
+  POPULATED_STAGING_APPLY_SHA: 2fc71be96e4126ee2253cb91afb2d9ebe5004c44
+  POPULATED_STAGING_APPLY_RUN_ID: 35509654209
   SUPABASE_CLI_VERSION: 2.109.1
   MANIFEST_PATH: backend/supabase/edge-function-manifest.json
   RELEASE_BRANCH: release/production
@@ -101,20 +102,21 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
-          [[ "$POPULATED_STAGING_CERTIFIED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$POPULATED_STAGING_APPLY_SHA" =~ ^[a-f0-9]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
           git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-          git merge-base --is-ancestor "$POPULATED_STAGING_CERTIFIED_SHA" "$SOURCE_COMMIT"
+          git merge-base --is-ancestor "$POPULATED_STAGING_APPLY_SHA" "$SOURCE_COMMIT"
           changed=0
           while IFS= read -r path; do
             test -n "$path" || continue
             changed=$((changed + 1))
             case "$path" in
               .github/workflows/database-replay.yml|.github/workflows/phase15-controlled-staging.yml|.github/workflows/phase15-controlled-production.yml|scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs) ;;
+              scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs|scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs|scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh) ;;
               *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
             esac
-          done < <(git diff --name-only "$POPULATED_STAGING_CERTIFIED_SHA" "$SOURCE_COMMIT")
+          done < <(git diff --name-only "$POPULATED_STAGING_APPLY_SHA" "$SOURCE_COMMIT")
           test "$changed" -gt 0
           echo "source_commit=$SOURCE_COMMIT" >> "$GITHUB_OUTPUT"
           echo "staging_run_id=$STAGING_RUN_ID" >> "$GITHUB_OUTPUT"
@@ -139,30 +141,33 @@ jobs:
           run-id: ${{ env.STAGING_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ runner.temp }}/phase15-authority/current-lifecycle
-      - name: Resolve successful populated-staging baseline run
+      - name: Validate exact populated-staging apply evidence run
         id: baseline
         shell: bash
         run: |
           set -euo pipefail
-          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/phase15-controlled-staging.yml/runs?head_sha=$POPULATED_STAGING_CERTIFIED_SHA&event=push&per_page=20"
+          [[ "$POPULATED_STAGING_APPLY_RUN_ID" =~ ^[0-9]+$ ]]
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$POPULATED_STAGING_APPLY_RUN_ID"
           response="$(curl --fail --silent --show-error -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' "$api")"
-          run_id="$(RESPONSE="$response" BASELINE="$POPULATED_STAGING_CERTIFIED_SHA" node - <<'NODE'
+          run_id="$(RESPONSE="$response" BASELINE="$POPULATED_STAGING_APPLY_SHA" EXPECTED_RUN_ID="$POPULATED_STAGING_APPLY_RUN_ID" node - <<'NODE'
           const body = JSON.parse(process.env.RESPONSE);
-          const run = (body.workflow_runs || []).find((value) =>
-            value.head_sha === process.env.BASELINE &&
-            value.event === "push" &&
-            value.status === "completed" &&
-            value.conclusion === "success");
-          if (!run) throw new Error("Successful populated-staging baseline run not found.");
-          process.stdout.write(String(run.id));
+          if (String(body.id) !== process.env.EXPECTED_RUN_ID ||
+              body.head_sha !== process.env.BASELINE ||
+              body.event !== "push" ||
+              body.status !== "completed" ||
+              body.conclusion !== "failure" ||
+              body.path !== ".github/workflows/phase15-controlled-staging.yml") {
+            throw new Error("Populated-staging apply evidence run envelope mismatch.");
+          }
+          process.stdout.write(String(body.id));
           NODE
           )"
           [[ "$run_id" =~ ^[0-9]+$ ]]
           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
-      - name: Download populated-staging rollback/apply certificate
+      - name: Download populated-staging rollback/apply evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: phase15-staging-database-${{ env.POPULATED_STAGING_CERTIFIED_SHA }}
+          name: phase15-staging-database-${{ env.POPULATED_STAGING_APPLY_SHA }}
           run-id: ${{ steps.baseline.outputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ runner.temp }}/phase15-authority/populated-baseline
@@ -223,8 +228,16 @@ jobs:
           const root = process.env.AUTHORITY_ROOT;
           const source = process.env.SOURCE_COMMIT;
           const current = await json(path.join(root, "current-database"), "summary.json");
-          const baseline = await json(path.join(root, "populated-baseline"), "summary.json");
+          const baselinePreLedger = await json(path.join(root, "populated-baseline"), "pre-ledger.json");
+          const baselineRollbackLedger = await json(path.join(root, "populated-baseline"), "post-rollback-ledger.json");
+          const baselinePostLedger = await json(path.join(root, "populated-baseline"), "post-ledger.json");
+          const baselineRollbackEconomic = await json(path.join(root, "populated-baseline"), "rollback-economic-invariants.json");
+          const baselineApplyEconomic = await json(path.join(root, "populated-baseline"), "apply-economic-invariants.json");
+          const baselineLedgerVerification = await json(path.join(root, "populated-baseline"), "ledger-verification.json");
+          const baselineRollbackSchema = await json(path.join(root, "populated-baseline"), "rollback-schema-comparison.json");
+          const baselineHostedMismatch = await json(path.join(root, "populated-baseline"), "canonical-schema-comparison.json");
           const scheduler = await json(path.join(root, "populated-baseline"), "scheduler-maintenance.json");
+          const currentSchema = await json(path.join(root, "current-database"), "canonical-schema-comparison.json");
           const runtime = await json(path.join(root, "current-runtime"), "staging-attestation.json");
           const fixture = await json(path.join(root, "current-lifecycle"), "fixture-verification.json");
           const browser = await json(path.join(root, "current-lifecycle"), "golden-five-browser-acceptance.json");
@@ -245,13 +258,22 @@ jobs:
             purgeSafetyMatched: true,
             schedulerHealthMatched: true,
           })) if (current[field] !== value) throw new Error("Current staging certificate mismatch: " + field);
-          if (baseline.status !== "PASS" ||
-              baseline.sourceCommit !== process.env.POPULATED_STAGING_CERTIFIED_SHA ||
-              baseline.applyStatus !== "applied" ||
-              baseline.rollbackRehearsalPassed !== true ||
-              baseline.migrationCount !== 150 ||
-              baseline.economicInvariantsMatched !== true) {
+          if (baselinePreLedger.length !== 0 || baselineRollbackLedger.length !== 0 ||
+              baselinePostLedger.length !== 150 ||
+              baselineRollbackEconomic.mode !== "rollback" ||
+              baselineRollbackEconomic.migrationCount !== 150 ||
+              baselineRollbackEconomic.economicInvariantsMatched !== true ||
+              baselineApplyEconomic.mode !== "apply" ||
+              baselineApplyEconomic.migrationCount !== 150 ||
+              baselineApplyEconomic.economicInvariantsMatched !== true ||
+              baselineLedgerVerification.ok !== true ||
+              baselineRollbackSchema.matched !== true) {
             throw new Error("Populated staging rollback/apply certificate mismatch.");
+          }
+          if (baselineHostedMismatch.matched !== false ||
+              !baselineHostedMismatch.differences.every(({ path: value }) =>
+                value.startsWith("$.authorization.roleMemberships"))) {
+            throw new Error("Populated staging apply failure was not bounded to hosted role topology.");
           }
           if (scheduler.status !== "PASS" ||
               scheduler.activeCountBefore !== scheduler.activeCountAfter ||
@@ -267,6 +289,11 @@ jobs:
               runtime.retiredPresent.length !== 0) {
             throw new Error("Staging runtime certificate mismatch.");
           }
+          if (currentSchema.matched !== true ||
+              currentSchema.profile !== "supabase-hosted-live-v1" ||
+              currentSchema.differences.length !== 0) {
+            throw new Error("Current hosted staging schema certificate mismatch.");
+          }
           if (fixture.decision !== "PASS" || browser.decision !== "PASS") {
             throw new Error("Golden Five staging acceptance did not pass.");
           }
@@ -275,7 +302,7 @@ jobs:
             status: "PASS",
             sourceCommit: source,
             stagingRunId: Number(process.env.STAGING_RUN_ID),
-            populatedBaselineCommit: process.env.POPULATED_STAGING_CERTIFIED_SHA,
+            populatedBaselineCommit: process.env.POPULATED_STAGING_APPLY_SHA,
             populatedBaselineRunId: Number(process.env.BASELINE_RUN_ID),
             replayRunId: Number(process.env.REPLAY_RUN_ID),
             databaseCertified: true,
