@@ -9,6 +9,8 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/phase15-controlled-production.yml",
+    ".github/workflows/phase15-controlled-staging.yml",
     "backend/supabase/migrations/20260920082200_phase15_close_database_advisor_findings_v1.sql",
     "docs/operations/contracts/player-cross-cutting/pr-718.json",
     "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs",
@@ -59,5 +61,5 @@
     "admin-business-supervision-database",
     "admin-business-supervision-browser"
   ],
-  "authorizationNote": "Owner authorized the full gated Phase 15A-F program. This exact-path forward-only correction removes browser-role EXECUTE access from three internal SECURITY DEFINER trigger functions, retires one redundant unreferenced index, and extends the bounded Phase 15 bundle by exactly one migration. It changes no historical migration, environment identity, destructive purge lever, Edge runtime, secret value, hosted database or production deployment directly; protected replay and controlled staging remain mandatory before promotion."
+  "authorizationNote": "Owner authorized the full gated Phase 15A-F program. This exact-path forward-only correction removes browser-role EXECUTE access from three internal SECURITY DEFINER trigger functions, retires one redundant unreferenced index, extends the bounded Phase 15 bundle by exactly one migration, and updates the staging/production certificate counts and exact source allowlist required to promote that migration. It changes no historical migration, environment identity, destructive purge lever, Edge runtime, secret value, hosted database or production deployment directly; protected replay and controlled staging remain mandatory before promotion."
 }

@@ -66,7 +66,7 @@ jobs:
           node --test scripts/vercel-git-release-contract.test.mjs
           bash -n scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh
           node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs --environment production --mode rollback --format manifest > "$RUNNER_TEMP/production-forward-manifest.json"
-          test "$(jq -r '.migrationCount' "$RUNNER_TEMP/production-forward-manifest.json")" = 168
+          test "$(jq -r '.migrationCount' "$RUNNER_TEMP/production-forward-manifest.json")" = 169
 
   certify-staging:
     name: Certify exact populated staging authority
@@ -121,8 +121,11 @@ jobs:
             changed=$((changed + 1))
             case "$path" in
               .github/workflows/database-replay.yml|.github/workflows/phase15-controlled-staging.yml|.github/workflows/phase15-controlled-production.yml|scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs) ;;
-              scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs|scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs|scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh|scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh) ;;
+              scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs|scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs|scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs|scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh|scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh) ;;
               scripts/staging/golden-five-contract.test.mjs|scripts/staging/golden-five-verify.mjs|scripts/staging/golden-five-browser-acceptance.mjs) ;;
+              scripts/phase15-storage-lifecycle-convergence.test.mjs) ;;
+              backend/supabase/migrations/20260920082200_phase15_close_database_advisor_findings_v1.sql) ;;
+              docs/operations/contracts/player-cross-cutting/pr-718.json) ;;
               backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts|backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts) ;;
               backend/src/domains/world/services/playerWorldRuntimeService.ts|backend/src/domains/world/services/playerWorldRuntimeService.test.ts) ;;
               *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
@@ -262,14 +265,19 @@ jobs:
             environment: "staging",
             expectedProjectRef: process.env.STAGING_PROJECT_REF,
             sourceCommit: source,
-            applyStatus: "already-applied",
-            migrationCount: 150,
+            migrationCount: 151,
             exactLedgerVerified: true,
             canonicalApplicationSchemaMatched: true,
             economicInvariantsMatched: true,
             purgeSafetyMatched: true,
             schedulerHealthMatched: true,
           })) if (current[field] !== value) throw new Error("Current staging certificate mismatch: " + field);
+          const stagingApplyIsExact =
+            (current.applyStatus === "applied" && current.rollbackRehearsalPassed === true) ||
+            (current.applyStatus === "already-applied" && current.rollbackRehearsalPassed === false);
+          if (!stagingApplyIsExact) {
+            throw new Error("Current staging apply/rollback certificate mismatch.");
+          }
           if (baselinePreLedger.length !== 0 || baselineRollbackLedger.length !== 0 ||
               baselinePostLedger.length !== 150 ||
               baselineRollbackEconomic.mode !== "rollback" ||
@@ -866,7 +874,7 @@ jobs:
             expectedProjectRef: process.env.PRODUCTION_PROJECT_REF,
             sourceCommit: process.env.SOURCE_COMMIT,
             applyStatus: "applied",
-            migrationCount: 168,
+            migrationCount: 169,
             rollbackRehearsalPassed: true,
             exactLedgerVerified: true,
             canonicalApplicationSchemaMatched: true,
