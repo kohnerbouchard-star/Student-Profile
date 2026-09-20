@@ -12,6 +12,7 @@ on:
       - "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
       - "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
       - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh"
       - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
       - "docs/operations/contracts/player-cross-cutting/pr-699.json"
       - "scripts/player-cross-cutting-authority.test.mjs"
@@ -25,6 +26,7 @@ on:
       - "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
       - "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
       - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh"
       - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
 
 permissions:
@@ -180,9 +182,18 @@ jobs:
             const summaryPath = await find(path.join(process.env.CERTIFICATE_ROOT, environment), 'summary.json');
             if (!summaryPath) throw new Error(`${environment} certificate is missing.`);
             const value = JSON.parse(await readFile(summaryPath, 'utf8'));
+            const executionIsExact =
+              (value.executionMode === 'forward-rehearsal' &&
+                value.remoteLedgerPresentCount === 0 &&
+                value.appliedMigrationCount === expectedApplied) ||
+              (value.executionMode === 'already-current' &&
+                value.remoteLedgerPresentCount === expectedApplied &&
+                value.remoteLedgerVerified === true &&
+                value.appliedMigrationCount === 0);
             if (value.status !== 'PASS' || value.sourceCommit !== source ||
                 value.preludeMigrationCount !== expectedPrelude ||
-                value.appliedMigrationCount !== expectedApplied ||
+                value.certifiedMigrationCount !== expectedApplied ||
+                !executionIsExact ||
                 value.canonicalApplicationSchemaMatched !== true) {
               throw new Error(`${environment} live-shaped certificate failed validation.`);
             }

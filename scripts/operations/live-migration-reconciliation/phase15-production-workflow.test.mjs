@@ -20,6 +20,7 @@ test("production promotion is bound to exact successful Phase 15 staging evidenc
     "phase15-staging-lifecycle-${{ env.SOURCE_COMMIT }}",
     "rollbackRehearsalPassed",
     "supabase-hosted-live-v1",
+    "rehearse-live-shaped-upgrade.sh",
     "golden-five-browser-acceptance.json",
     "fixture-verification.json",
     "git merge-base --is-ancestor",
