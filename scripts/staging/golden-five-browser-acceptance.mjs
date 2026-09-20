@@ -22,6 +22,11 @@ const ROUTES = Object.freeze([
   "inventory",
   "progression",
 ]);
+const ROUTE_GROUP_ENTRY = Object.freeze({
+  banking: "market",
+  inventory: "store",
+  progression: "profile",
+});
 
 function required(name) {
   const value = String(process.env[name] ?? "").trim();
@@ -139,6 +144,45 @@ async function dismissPendingStoryCutscenes(page, journey, label) {
   assertNoFailedRequests(journey, `${label} story briefing`, requestStart);
 }
 
+async function revealRouteControl(page, journey, route) {
+  let control = page.locator(`[data-route="${route}"]:visible`).first();
+  if (await control.isVisible().catch(() => false)) return control;
+
+  const groupEntry = ROUTE_GROUP_ENTRY[route];
+  if (!groupEntry) {
+    await control.waitFor({ state: "visible", timeout: 30_000 });
+    return control;
+  }
+
+  const groupControl = page.locator(`[data-route="${groupEntry}"]:visible`).first();
+  await groupControl.waitFor({ state: "visible", timeout: 30_000 });
+  const groupUnavailable = await groupControl.evaluate(
+    (node) => node.getAttribute("aria-disabled") === "true" || Boolean(node.disabled),
+  );
+  if (groupUnavailable) {
+    throw new Error(
+      `Player ${journey.slot} route group ${groupEntry} is visible but disabled.`,
+    );
+  }
+
+  await groupControl.click();
+  await page.waitForFunction(
+    (expected) => window.location.hash === `#${expected}`,
+    groupEntry,
+    { timeout: 30_000 },
+  );
+  await page.waitForTimeout(1000);
+  await dismissPendingStoryCutscenes(
+    page,
+    journey,
+    `Player ${journey.slot} opening ${groupEntry} for ${route}`,
+  );
+
+  control = page.locator(`[data-route="${route}"]:visible`).first();
+  await control.waitFor({ state: "visible", timeout: 30_000 });
+  return control;
+}
+
 async function loginPlayer(browser, player) {
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
@@ -200,8 +244,7 @@ async function visitRoute(session, route) {
     `Player ${journey.slot} before ${route}`,
   );
   const requestStart = journey.requests.length;
-  const control = page.locator(`[data-route="${route}"]:visible`).first();
-  await control.waitFor({ state: "visible", timeout: 30_000 });
+  const control = await revealRouteControl(page, journey, route);
   const unavailable = await control.evaluate(
     (node) => node.getAttribute("aria-disabled") === "true" || Boolean(node.disabled),
   );
