@@ -288,3 +288,15 @@ test("Phase 15 schema parity correction binds PR 698 and remains deployment-deni
   assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionDeploymentAllowed: true } }), /deny production deployment/u);
   assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, secretValuesAllowed: true } }), /deny secret-value handling/u);
 });
+
+test("Phase 15 controlled staging convergence binds PR 699 and keeps production denied", async () => {
+  const manifestPath = authorityPathForPullRequest(699);
+  const value = JSON.parse(await readFile(manifestPath, "utf8"));
+  const input = { manifest: value, changedPaths: value.allowedPaths, pullRequestNumber: 699, baseRef: "main", manifestPath };
+  assert.equal(verifyAuthority(input).changedPathCount, value.allowedPaths.length);
+  assert.throws(() => verifyAuthority({ ...input, pullRequestNumber: 698 }), /not bound/u);
+  assert.throws(() => verifyAuthority({ ...input, changedPaths: [...value.allowedPaths, ".github/workflows/phase15-controlled-production.yml"] }), /does not allow/u);
+  assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionMutationAllowed: true } }), /deny production mutation/u);
+  assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionDeploymentAllowed: true } }), /deny production deployment/u);
+  assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, secretValuesAllowed: true } }), /deny secret-value handling/u);
+});
