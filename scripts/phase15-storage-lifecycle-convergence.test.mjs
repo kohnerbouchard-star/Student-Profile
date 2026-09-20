@@ -139,6 +139,9 @@ test("purge worker and SQL share the current deterministic Story-aware contract"
   assertContains(internal, `db_delete_cursor < ${EXPECTED.finalizeCursor}`, "purge SQL");
   assertContains(reasserted, "'environmentName', v_control.environment_name", "purge preflight");
   assertContains(reasserted, "'r2BucketName', v_control.r2_bucket_name", "purge preflight");
+  assertContains(reasserted, "GAME_PURGE_EXECUTION_IN_PROGRESS", "purge environment binding");
+  assertContains(reasserted, "v_expected_prefix", "purge R2 binding");
+  assertContains(reasserted, "db_delete_token_hash = null", "purge failure recovery");
   assertContains(purger, "assertPurgeRuntimeBinding", "purge worker");
 });
 

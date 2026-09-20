@@ -11,6 +11,404 @@ begin;
 set local lock_timeout='5s';
 set local statement_timeout='120s';
 
+-- Preserve the current pre-import digest, environment, dispatch, R2-progress,
+-- and failure-recovery contracts exactly as reviewed by Phase 11.
+create or replace function public.get_game_data_purge_registry_digest_v1()
+returns table(registry_sha256 text, table_count bigint)
+language sql
+stable
+security definer
+set search_path = pg_catalog, private, extensions
+as $function$
+  select
+    encode(
+      extensions.digest(
+        string_agg(
+          registry_row.table_schema || '.' || registry_row.table_name,
+          E'\n' order by registry_row.table_schema, registry_row.table_name
+        ),
+        'sha256'
+      ),
+      'hex'
+    ),
+    count(*)
+  from private.game_data_purge_table_registry as registry_row;
+$function$;
+
+create or replace function public.get_game_data_purge_delete_order_digest_v1()
+returns table(order_sha256 text, table_count bigint)
+language sql
+stable
+security definer
+set search_path = pg_catalog, private, extensions
+as $function$
+  select
+    encode(
+      extensions.digest(
+        string_agg(
+          order_row.position || '|' || order_row.table_schema || '.'
+            || order_row.table_name || '|' || order_row.dependency_depth,
+          E'\n' order by order_row.position
+        ),
+        'sha256'
+      ),
+      'hex'
+    ),
+    count(*)
+  from private.game_data_purge_delete_order_v1 as order_row;
+$function$;
+
+create or replace function public.get_game_data_purge_fk_graph_digest_v1()
+returns table(fk_graph_sha256 text, edge_count bigint)
+language sql
+stable
+security definer
+set search_path = pg_catalog, private, extensions
+as $function$
+with registry as (
+  select table_schema, table_name
+  from private.game_data_purge_table_registry
+), edges as (
+  select
+    child_namespace.nspname as child_schema,
+    child.relname as child_table,
+    constraint_row.conname,
+    parent_namespace.nspname as parent_schema,
+    parent.relname as parent_table,
+    constraint_row.confdeltype::text as delete_rule,
+    string_agg(
+      child_attribute.attname || '->' || parent_attribute.attname,
+      ',' order by subscript.i
+    ) as column_map
+  from pg_catalog.pg_constraint as constraint_row
+  join pg_catalog.pg_class as child
+    on child.oid = constraint_row.conrelid
+  join pg_catalog.pg_namespace as child_namespace
+    on child_namespace.oid = child.relnamespace
+  join pg_catalog.pg_class as parent
+    on parent.oid = constraint_row.confrelid
+  join pg_catalog.pg_namespace as parent_namespace
+    on parent_namespace.oid = parent.relnamespace
+  join lateral generate_subscripts(constraint_row.conkey, 1) as subscript(i)
+    on true
+  join pg_catalog.pg_attribute as child_attribute
+    on child_attribute.attrelid = constraint_row.conrelid
+   and child_attribute.attnum = constraint_row.conkey[subscript.i]
+  join pg_catalog.pg_attribute as parent_attribute
+    on parent_attribute.attrelid = constraint_row.confrelid
+   and parent_attribute.attnum = constraint_row.confkey[subscript.i]
+  where constraint_row.contype = 'f'
+    and child_namespace.nspname in ('public', 'private')
+    and exists (
+      select 1
+      from registry as registry_row
+      where registry_row.table_schema = parent_namespace.nspname
+        and registry_row.table_name = parent.relname
+    )
+  group by
+    child_namespace.nspname,
+    child.relname,
+    constraint_row.conname,
+    parent_namespace.nspname,
+    parent.relname,
+    constraint_row.confdeltype
+)
+select
+  encode(
+    extensions.digest(
+      string_agg(
+        child_schema || '.' || child_table || '|' || conname || '|'
+          || parent_schema || '.' || parent_table || '|' || delete_rule
+          || '|' || column_map,
+        E'\n' order by child_schema, child_table, conname
+      ),
+      'sha256'
+    ),
+    'hex'
+  ),
+  count(*)
+from edges;
+$function$;
+
+create or replace function public.configure_game_data_purge_environment_v1(
+  p_environment_name text,
+  p_r2_bucket_name text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, private
+as $function$
+declare
+  v_environment text := lower(btrim(coalesce(p_environment_name, '')));
+  v_bucket text := btrim(coalesce(p_r2_bucket_name, ''));
+begin
+  if v_environment not in ('production', 'staging') then
+    raise exception 'INVALID_GAME_PURGE_ENVIRONMENT' using errcode = '22023';
+  end if;
+  if length(v_bucket) = 0 then
+    raise exception 'GAME_PURGE_R2_BUCKET_REQUIRED' using errcode = '22023';
+  end if;
+
+  perform 1
+  from private.game_data_purge_control as control_row
+  where control_row.singleton
+  for update;
+  if not found then
+    raise exception 'GAME_PURGE_CONTROL_NOT_FOUND' using errcode = 'P0001';
+  end if;
+  if exists (
+    select 1
+    from private.game_data_purge_requests as request_row
+    where request_row.status in ('r2_deleting', 'r2_deleted', 'db_deleting')
+  ) then
+    raise exception 'GAME_PURGE_EXECUTION_IN_PROGRESS'
+      using errcode = 'P0001';
+  end if;
+
+  update private.game_data_purge_control
+  set environment_name = v_environment,
+      r2_bucket_name = v_bucket,
+      arm_id = null,
+      armed_until = null,
+      armed_by_staff_user_id = null,
+      disarmed_at = clock_timestamp(),
+      updated_at = clock_timestamp()
+  where singleton;
+
+  return jsonb_build_object(
+    'environment', v_environment,
+    'r2Bucket', v_bucket,
+    'leverArmed', false
+  );
+end;
+$function$;
+
+-- The dispatcher may claim work only after the destructive R2 namespace has
+-- been configured. The Edge worker separately compares these exact values to
+-- its runtime environment and bucket before constructing an S3 client.
+create or replace function public.claim_confirmed_game_data_purge_v1()
+returns table (
+  request_id uuid,
+  game_session_id uuid,
+  stage text
+)
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private
+as $function$
+declare
+  v_request private.game_data_purge_requests%rowtype;
+  v_control private.game_data_purge_control%rowtype;
+  v_now timestamptz := clock_timestamp();
+  v_cross_refs bigint;
+begin
+  select * into v_control
+  from private.game_data_purge_control as control_row
+  where control_row.singleton
+  for update;
+  if not found
+     or v_control.environment_name is null
+     or v_control.r2_bucket_name is null
+     or v_control.arm_id is null
+     or v_control.armed_until is null
+     or v_control.armed_until <= v_now
+  then
+    return;
+  end if;
+
+  select * into v_request
+  from private.game_data_purge_requests as request_row
+  where request_row.status in ('confirmed', 'r2_deleted')
+    and request_row.confirmed_arm_id = v_control.arm_id
+    and request_row.purge_not_before is not null
+    and request_row.purge_not_before <= v_now
+  order by request_row.confirmed_at nulls last, request_row.created_at
+  for update skip locked
+  limit 1;
+  if not found then
+    return;
+  end if;
+  if not exists (
+    select 1
+    from public.game_sessions as game_row
+    where game_row.id = v_request.game_session_id
+      and not game_row.data_purge_protected
+  ) then
+    return;
+  end if;
+  if v_request.status = 'confirmed' or v_request.db_delete_cursor = 0 then
+    if not exists (
+      select 1
+      from public.entitlements as entitlement_row
+      where entitlement_row.id = v_request.entitlement_id
+        and entitlement_row.game_session_id = v_request.game_session_id
+        and entitlement_row.status = 'expired'
+        and entitlement_row.license_expires_at <= v_now
+    ) then
+      return;
+    end if;
+  end if;
+
+  select count(*) into v_cross_refs
+  from public.game_feature_activation_evidence as evidence_row
+  where evidence_row.source_game_session_id = v_request.game_session_id
+    and evidence_row.game_session_id <> v_request.game_session_id;
+  if v_cross_refs > 0 then
+    update private.game_data_purge_requests
+    set last_error = 'cross_game_reference_blocked',
+        updated_at = v_now
+    where id = v_request.id;
+    return;
+  end if;
+
+  request_id := v_request.id;
+  game_session_id := v_request.game_session_id;
+  if v_request.status = 'confirmed' then
+    update private.game_data_purge_requests
+    set status = 'r2_deleting',
+        attempt_count = attempt_count + 1,
+        last_attempt_at = v_now,
+        updated_at = v_now
+    where id = v_request.id;
+    stage := 'r2';
+  else
+    if v_request.r2_prefix is distinct from
+         v_control.environment_name || '/game_session='
+           || v_request.game_session_id::text || '/'
+    then
+      raise exception 'GAME_PURGE_R2_BINDING_MISMATCH'
+        using errcode = 'P0001';
+    end if;
+    update private.game_data_purge_requests
+    set status = 'db_deleting',
+        db_started_at = coalesce(db_started_at, v_now),
+        attempt_count = attempt_count + 1,
+        last_attempt_at = v_now,
+        updated_at = v_now
+    where id = v_request.id;
+    stage := 'db';
+  end if;
+  return next;
+end;
+$function$;
+
+create or replace function public.record_game_data_purge_r2_progress_v1(
+  p_request_id uuid,
+  p_r2_prefix text,
+  p_deleted_objects bigint,
+  p_deleted_bytes bigint,
+  p_complete boolean
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, private
+as $function$
+declare
+  v_control private.game_data_purge_control%rowtype;
+  v_request private.game_data_purge_requests%rowtype;
+  v_status text;
+  v_now timestamptz := clock_timestamp();
+  v_expected_prefix text;
+begin
+  if p_deleted_objects is null
+     or p_deleted_objects < 0
+     or p_deleted_bytes is null
+     or p_deleted_bytes < 0
+     or p_complete is null
+  then
+    raise exception 'INVALID_PURGE_PROGRESS' using errcode = '22023';
+  end if;
+
+  select * into v_control
+  from private.game_data_purge_control as control_row
+  where control_row.singleton
+  for update;
+  select * into v_request
+  from private.game_data_purge_requests as request_row
+  where request_row.id = p_request_id
+  for update;
+  if not found or v_request.status <> 'r2_deleting' then
+    raise exception 'PURGE_REQUEST_STAGE_CONFLICT' using errcode = 'P0001';
+  end if;
+  if v_control.environment_name is null
+     or v_control.r2_bucket_name is null
+     or v_control.arm_id is null
+     or v_control.armed_until is null
+     or v_control.armed_until <= v_now
+     or v_control.arm_id <> v_request.confirmed_arm_id
+  then
+    raise exception 'GAME_PURGE_R2_BINDING_MISMATCH'
+      using errcode = 'P0001';
+  end if;
+  v_expected_prefix := v_control.environment_name || '/game_session='
+    || v_request.game_session_id::text || '/';
+  if p_r2_prefix is distinct from v_expected_prefix then
+    raise exception 'GAME_PURGE_R2_BINDING_MISMATCH'
+      using errcode = 'P0001';
+  end if;
+
+  v_status := case when p_complete then 'r2_deleted' else 'confirmed' end;
+  update private.game_data_purge_requests
+  set status = v_status,
+      r2_prefix = v_expected_prefix,
+      r2_deleted_objects = r2_deleted_objects + p_deleted_objects,
+      r2_deleted_bytes = r2_deleted_bytes + p_deleted_bytes,
+      r2_deleted_at = case when p_complete then v_now else r2_deleted_at end,
+      last_error = null,
+      updated_at = v_now
+  where id = p_request_id;
+  return jsonb_build_object(
+    'requestId', p_request_id,
+    'status', v_status,
+    'r2Prefix', v_expected_prefix
+  );
+end;
+$function$;
+
+create or replace function public.record_game_data_purge_failure_v1(
+  p_request_id uuid,
+  p_stage text,
+  p_error text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = pg_catalog, private
+as $function$
+begin
+  if p_stage = 'db' then
+    update private.game_data_purge_requests
+    set status = 'r2_deleted',
+        db_delete_token_hash = null,
+        db_delete_target_schema = null,
+        db_delete_target_table = null,
+        db_delete_target_position = null,
+        last_error = left(
+          coalesce(p_error, 'unknown database purge failure'),
+          1000
+        ),
+        updated_at = clock_timestamp()
+    where id = p_request_id
+      and status in ('db_deleting', 'r2_deleted');
+  elsif p_stage = 'r2' then
+    update private.game_data_purge_requests
+    set status = 'confirmed',
+        last_error = left(
+          coalesce(p_error, 'unknown object purge failure'),
+          1000
+        ),
+        updated_at = clock_timestamp()
+    where id = p_request_id
+      and status = 'r2_deleting';
+  else
+    raise exception 'GAME_PURGE_FAILURE_STAGE_INVALID' using errcode = '22023';
+  end if;
+  return found;
+end;
+$function$;
+
 create or replace function public.get_game_data_purge_preflight_v1(
   p_request_id uuid
 )
