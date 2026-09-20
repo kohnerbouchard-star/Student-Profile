@@ -125,7 +125,7 @@ jobs:
               scripts/staging/golden-five-contract.test.mjs|scripts/staging/golden-five-verify.mjs|scripts/staging/golden-five-browser-acceptance.mjs) ;;
               scripts/phase15-storage-lifecycle-convergence.test.mjs) ;;
               backend/supabase/migrations/20260920082200_phase15_close_database_advisor_findings_v1.sql) ;;
-              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json) ;;
+              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json|docs/operations/contracts/player-cross-cutting/pr-722.json) ;;
               backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts|backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts) ;;
               backend/src/domains/world/services/playerWorldRuntimeService.ts|backend/src/domains/world/services/playerWorldRuntimeService.test.ts) ;;
               *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
@@ -566,27 +566,42 @@ jobs:
             --file "$plain_root/roles.sql" --role-only
           supabase db dump --db-url "$PHASE15_REMOTE_DATABASE_URL" \
             --file "$plain_root/schema.sql"
+          # Retain the CLI's complete platform data scope for recovery on a
+          # current-version Supabase target. The two explicit exclusions are
+          # nonportable vector-index metadata already excluded by this gate.
           supabase db dump --db-url "$PHASE15_REMOTE_DATABASE_URL" \
             --file "$plain_root/data.sql" --use-copy --data-only \
             -x "storage.buckets_vectors" -x "storage.vector_indexes"
-          for backup_file in roles.sql schema.sql data.sql; do
+          # Independently prove restoration of the only application-owned
+          # schemas Phase 15 can mutate. Managed Auth/Storage data remains in
+          # data.sql, but requires a target with matching managed schemas.
+          supabase db dump --db-url "$PHASE15_REMOTE_DATABASE_URL" \
+            --file "$plain_root/application-data.sql" --use-copy --data-only \
+            --schema public,private
+          for backup_file in roles.sql schema.sql data.sql application-data.sql; do
             test -s "$plain_root/$backup_file"
           done
-          copy_statement_count="$(grep -c '^COPY ' "$plain_root/data.sql" || true)"
-          test "$copy_statement_count" -gt 0
+          full_copy_statement_count="$(grep -c '^COPY ' "$plain_root/data.sql" || true)"
+          application_copy_statement_count="$(grep -c '^COPY ' "$plain_root/application-data.sql" || true)"
+          test "$full_copy_statement_count" -gt 0
+          test "$application_copy_statement_count" -gt 0
 
           created_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
           roles_sha256="$(sha256sum "$plain_root/roles.sql" | awk '{print $1}')"
           schema_sha256="$(sha256sum "$plain_root/schema.sql" | awk '{print $1}')"
           data_sha256="$(sha256sum "$plain_root/data.sql" | awk '{print $1}')"
+          application_data_sha256="$(sha256sum "$plain_root/application-data.sql" | awk '{print $1}')"
           CREATED_AT="$created_at" \
           ROLES_SHA256="$roles_sha256" \
           SCHEMA_SHA256="$schema_sha256" \
           DATA_SHA256="$data_sha256" \
+          APPLICATION_DATA_SHA256="$application_data_sha256" \
           ROLES_BYTES="$(stat --format='%s' "$plain_root/roles.sql")" \
           SCHEMA_BYTES="$(stat --format='%s' "$plain_root/schema.sql")" \
           DATA_BYTES="$(stat --format='%s' "$plain_root/data.sql")" \
-          COPY_STATEMENT_COUNT="$copy_statement_count" \
+          APPLICATION_DATA_BYTES="$(stat --format='%s' "$plain_root/application-data.sql")" \
+          FULL_COPY_STATEMENT_COUNT="$full_copy_statement_count" \
+          APPLICATION_COPY_STATEMENT_COUNT="$application_copy_statement_count" \
           OUTPUT="$plain_root/backup-manifest.json" \
           node --input-type=module - <<'NODE'
           import { writeFile } from "node:fs/promises";
@@ -596,23 +611,38 @@ jobs:
             bytes: Number(bytes),
           });
           await writeFile(process.env.OUTPUT, JSON.stringify({
-            schemaVersion: 1,
-            backupFormat: "supabase-cli-logical-v1",
+            schemaVersion: 2,
+            backupFormat: "supabase-cli-logical-v2",
+            backupScope: "full-logical-export-plus-application-restore-proof-v1",
             projectRef: process.env.PRODUCTION_PROJECT_REF,
             sourceCommit: process.env.SOURCE_COMMIT,
             createdAt: process.env.CREATED_AT,
             supabaseCliVersion: process.env.SUPABASE_CLI_VERSION,
+            platformDataDumpIncluded: true,
+            platformDataDumpExcludedTables: [
+              "storage.buckets_vectors",
+              "storage.vector_indexes",
+            ],
+            applicationRestoreSchemas: ["public", "private"],
+            managedPlatformDataIncluded: true,
+            managedPlatformRestoreRequiresCurrentTargetVersion: true,
             files: [
               file("roles.sql", process.env.ROLES_SHA256, process.env.ROLES_BYTES),
               file("schema.sql", process.env.SCHEMA_SHA256, process.env.SCHEMA_BYTES),
               file("data.sql", process.env.DATA_SHA256, process.env.DATA_BYTES),
+              file(
+                "application-data.sql",
+                process.env.APPLICATION_DATA_SHA256,
+                process.env.APPLICATION_DATA_BYTES,
+              ),
             ],
-            copyStatementCount: Number(process.env.COPY_STATEMENT_COUNT),
+            fullCopyStatementCount: Number(process.env.FULL_COPY_STATEMENT_COUNT),
+            applicationCopyStatementCount: Number(process.env.APPLICATION_COPY_STATEMENT_COUNT),
           }, null, 2) + "\n");
           NODE
 
           tar --create --gzip --file "$archive" --directory "$plain_root" \
-            roles.sql schema.sql data.sql backup-manifest.json
+            roles.sql schema.sql data.sql application-data.sql backup-manifest.json
           archive_sha256="$(sha256sum "$archive" | awk '{print $1}')"
           BACKUP_ACCESS_TOKEN="$SUPABASE_ACCESS_TOKEN" \
           BACKUP_DATABASE_URL="$PHASE15_REMOTE_DATABASE_URL" \
@@ -635,7 +665,7 @@ jobs:
             -in "$encrypted_archive" -out "$decrypted_archive" -pass "file:$key_file"
           test "$(sha256sum "$decrypted_archive" | awk '{print $1}')" = "$archive_sha256"
           tar --extract --gzip --file "$decrypted_archive" --directory "$validation_root"
-          for backup_file in roles.sql schema.sql data.sql backup-manifest.json; do
+          for backup_file in roles.sql schema.sql data.sql application-data.sql backup-manifest.json; do
             cmp -s "$plain_root/$backup_file" "$validation_root/$backup_file"
           done
 
@@ -680,13 +710,13 @@ jobs:
             -v ON_ERROR_STOP=1 -c 'select rolsuper from pg_roles where rolname = current_user')" = "t"
           docker cp "$validation_root/roles.sql" "$db_container:/tmp/phase15-roles.sql"
           docker cp "$validation_root/schema.sql" "$db_container:/tmp/phase15-schema.sql"
-          docker cp "$validation_root/data.sql" "$db_container:/tmp/phase15-data.sql"
+          docker cp "$validation_root/application-data.sql" "$db_container:/tmp/phase15-application-data.sql"
           docker exec "$db_container" psql -U supabase_admin -d postgres -X \
             --single-transaction --variable ON_ERROR_STOP=1 \
             --file /tmp/phase15-roles.sql \
             --file /tmp/phase15-schema.sql \
             --command 'SET session_replication_role = replica' \
-            --file /tmp/phase15-data.sql
+            --file /tmp/phase15-application-data.sql
 
           psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
             < scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql \
@@ -744,15 +774,23 @@ jobs:
             throw new Error("Restored logical backup schema does not match production.");
           }
           await writeFile(process.env.OUTPUT, JSON.stringify({
-            schemaVersion: 1,
+            schemaVersion: 2,
             status: "PASS",
             projectRef: process.env.PRODUCTION_PROJECT_REF,
             sourceCommit: process.env.SOURCE_COMMIT,
-            recoveryMethod: "supabase-cli-logical-backup-v1",
+            recoveryMethod: "supabase-cli-logical-backup-v2",
+            backupScope: manifest.backupScope,
             createdAt: manifest.createdAt,
             supabaseCliVersion: manifest.supabaseCliVersion,
+            platformDataDumpIncluded: manifest.platformDataDumpIncluded,
+            platformDataDumpExcludedTables: manifest.platformDataDumpExcludedTables,
+            managedPlatformDataIncluded: manifest.managedPlatformDataIncluded,
+            managedPlatformRestoreRequiresCurrentTargetVersion:
+              manifest.managedPlatformRestoreRequiresCurrentTargetVersion,
             backupFiles: manifest.files,
-            copyStatementCount: manifest.copyStatementCount,
+            restoreScope: manifest.applicationRestoreSchemas,
+            fullCopyStatementCount: manifest.fullCopyStatementCount,
+            applicationCopyStatementCount: manifest.applicationCopyStatementCount,
             archiveSha256: process.env.ARCHIVE_SHA256,
             cipherSha256: process.env.CIPHER_SHA256,
             cipherBytes: Number(process.env.CIPHER_BYTES),
@@ -771,7 +809,9 @@ jobs:
 
           shred -u "$key_file" "$archive" "$decrypted_archive" \
             "$plain_root/roles.sql" "$plain_root/schema.sql" "$plain_root/data.sql" \
+            "$plain_root/application-data.sql" \
             "$validation_root/roles.sql" "$validation_root/schema.sql" "$validation_root/data.sql" \
+            "$validation_root/application-data.sql" \
             2>/dev/null || true
           test -s "$encrypted_archive"
 
@@ -801,7 +841,14 @@ jobs:
           if (logical.status !== "PASS" ||
               logical.projectRef !== process.env.PRODUCTION_PROJECT_REF ||
               logical.sourceCommit !== process.env.SOURCE_COMMIT ||
-              logical.recoveryMethod !== "supabase-cli-logical-backup-v1" ||
+              logical.recoveryMethod !== "supabase-cli-logical-backup-v2" ||
+              logical.backupScope !== "full-logical-export-plus-application-restore-proof-v1" ||
+              logical.platformDataDumpIncluded !== true ||
+              logical.managedPlatformDataIncluded !== true ||
+              logical.managedPlatformRestoreRequiresCurrentTargetVersion !== true ||
+              JSON.stringify(logical.restoreScope) !== JSON.stringify(["public", "private"]) ||
+              !logical.backupFiles?.some(({ name }) => name === "data.sql") ||
+              !logical.backupFiles?.some(({ name }) => name === "application-data.sql") ||
               logical.encryption?.encrypted !== true ||
               logical.restoreValidated !== true ||
               logical.schemaMatched !== true) {
@@ -816,7 +863,7 @@ jobs:
             status: "PASS",
             projectRef: process.env.PRODUCTION_PROJECT_REF,
             sourceCommit: process.env.SOURCE_COMMIT,
-            recoveryMethod: "supabase-cli-logical-backup-v1",
+            recoveryMethod: "supabase-cli-logical-backup-v2",
             pitrEnabled: managed.pitrEnabled,
             recentCompletedBackup: managed.recentCompletedBackup,
             latestCompletedBackupAt: managed.latestCompletedBackupAt,
@@ -1190,8 +1237,15 @@ jobs:
           if (recovery.status !== "PASS" ||
               recovery.sourceCommit !== process.env.SOURCE_COMMIT ||
               recovery.projectRef !== process.env.PRODUCTION_PROJECT_REF ||
-              recovery.recoveryMethod !== "supabase-cli-logical-backup-v1" ||
+              recovery.recoveryMethod !== "supabase-cli-logical-backup-v2" ||
               recovery.logicalBackup?.status !== "PASS" ||
+              recovery.logicalBackup?.backupScope !== "full-logical-export-plus-application-restore-proof-v1" ||
+              recovery.logicalBackup?.platformDataDumpIncluded !== true ||
+              recovery.logicalBackup?.managedPlatformDataIncluded !== true ||
+              recovery.logicalBackup?.managedPlatformRestoreRequiresCurrentTargetVersion !== true ||
+              JSON.stringify(recovery.logicalBackup?.restoreScope) !== JSON.stringify(["public", "private"]) ||
+              !recovery.logicalBackup?.backupFiles?.some(({ name }) => name === "data.sql") ||
+              !recovery.logicalBackup?.backupFiles?.some(({ name }) => name === "application-data.sql") ||
               recovery.logicalBackup?.encryption?.encrypted !== true ||
               recovery.logicalBackup?.restoreValidated !== true ||
               recovery.logicalBackup?.schemaMatched !== true ||

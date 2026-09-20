@@ -52,6 +52,13 @@ test("production writes are recovery-gated and runtime/release evidence is exact
     "supabase db dump",
     "--role-only",
     "--data-only",
+    "--schema public,private",
+    "application-data.sql",
+    "full-logical-export-plus-application-restore-proof-v1",
+    "platformDataDumpIncluded",
+    "managedPlatformDataIncluded",
+    "managedPlatformRestoreRequiresCurrentTargetVersion",
+    "restoreScope",
     "openssl enc -aes-256-cbc",
     "supabase start --workdir \"$restore_project\"",
     "docker exec \"$db_container\" psql -U supabase_admin",
@@ -60,7 +67,7 @@ test("production writes are recovery-gated and runtime/release evidence is exact
     "restoreValidated",
     "schemaMatched",
     "offsiteUploaded",
-    "supabase-cli-logical-backup-v1",
+    "supabase-cli-logical-backup-v2",
     "phase15-production-recovery-${{ env.SOURCE_COMMIT }}",
     "supabase db advisors",
     "auth_leaked_password_protection",
@@ -85,6 +92,15 @@ test("production writes are recovery-gated and runtime/release evidence is exact
     source,
     /Create and restore-verify encrypted logical production backup[\s\S]*Upload encrypted production recovery set before mutation[\s\S]*Finalize fail-closed production recovery gate[\s\S]*Run rollback proof and atomic production convergence/u,
   );
+  assert.match(
+    source,
+    /--file "\$plain_root\/data\.sql"[\s\S]*--file "\$plain_root\/application-data\.sql"[\s\S]*roles\.sql schema\.sql data\.sql application-data\.sql backup-manifest\.json/u,
+  );
+  assert.match(
+    source,
+    /docker cp "\$validation_root\/application-data\.sql"[\s\S]*--file \/tmp\/phase15-application-data\.sql/u,
+  );
+  assert.doesNotMatch(source, /--file \/tmp\/phase15-data\.sql/u);
   assert.doesNotMatch(source, /continue-on-error:\s*true/u);
   assert.doesNotMatch(source, /update\s+cron\.job/iu);
   assert.doesNotMatch(source, /VERCEL_TOKEN|vercel deploy|vercel promote/u);
