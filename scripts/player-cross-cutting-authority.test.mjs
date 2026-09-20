@@ -264,3 +264,15 @@ test("Phase 15 protected database URL materialization binds PR 692", async () =>
   assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionDeploymentAllowed: true } }), /deny production deployment/u);
   assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, secretValuesAllowed: true } }), /deny secret-value handling/u);
 });
+
+test("Phase 15 forward convergence binds PR 697 and remains deployment-denied", async () => {
+  const manifestPath = authorityPathForPullRequest(697);
+  const value = JSON.parse(await readFile(manifestPath, "utf8"));
+  const input = { manifest: value, changedPaths: value.allowedPaths, pullRequestNumber: 697, baseRef: "main", manifestPath };
+  assert.equal(verifyAuthority(input).changedPathCount, value.allowedPaths.length);
+  assert.throws(() => verifyAuthority({ ...input, pullRequestNumber: 696 }), /not bound/u);
+  assert.throws(() => verifyAuthority({ ...input, changedPaths: [...value.allowedPaths, "backend/supabase/migrations/20260920082100_unreviewed.sql"] }), /does not allow/u);
+  assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionMutationAllowed: true } }), /deny production mutation/u);
+  assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionDeploymentAllowed: true } }), /deny production deployment/u);
+  assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, secretValuesAllowed: true } }), /deny secret-value handling/u);
+});
