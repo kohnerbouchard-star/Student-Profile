@@ -67,6 +67,7 @@ test("production writes are recovery-gated and runtime/release evidence is exact
     "pg_default_acl",
     "aclexplode",
     "disposableDefaultPrivilegesReset",
+    "Disposable target default ACL reset left rows behind",
     "openssl enc -aes-256-cbc",
     "supabase start --workdir \"$restore_project\"",
     "docker exec \"$db_container\" psql -U supabase_admin",
@@ -113,6 +114,10 @@ test("production writes are recovery-gated and runtime/release evidence is exact
     /--file \/tmp\/phase15-roles\.sql[\s\S]*--file \/tmp\/phase15-reset-default-privileges\.sql[\s\S]*--file \/tmp\/phase15-schema\.sql/u,
   );
   assert.doesNotMatch(source, /--file \/tmp\/phase15-data\.sql/u);
+  assert.doesNotMatch(
+    source,
+    /WHERE pg_catalog\.pg_get_userbyid\(default_acl\.defaclrole\) = 'postgres'/u,
+  );
   assert.match(
     source,
     /compare-schema-snapshots\.mjs[\s\S]*--left "\$recovery_root\/restored-schema\.json"[\s\S]*--right "\$recovery_root\/remote-schema\.json"[\s\S]*--profile supabase-application-restore-v1/u,
