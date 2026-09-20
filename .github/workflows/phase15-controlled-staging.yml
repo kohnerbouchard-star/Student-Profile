@@ -19,6 +19,8 @@ on:
       - "scripts/staging/golden-five-browser-acceptance.mjs"
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts"
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts"
+      - "backend/src/domains/world/services/playerWorldRuntimeService.ts"
+      - "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
       - "docs/operations/contracts/player-cross-cutting/pr-699.json"
       - "scripts/player-cross-cutting-authority.test.mjs"
   push:
@@ -38,6 +40,8 @@ on:
       - "scripts/staging/golden-five-browser-acceptance.mjs"
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts"
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts"
+      - "backend/src/domains/world/services/playerWorldRuntimeService.ts"
+      - "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
 
 permissions:
   contents: read

@@ -261,6 +261,17 @@ function buildPublicContext(
       affectedLocationIds: snapshot.campaign.affectedLocationIds,
     })
     : null;
+  const scoreResult = snapshot.arrivalAssignment?.scoreResult;
+  const arrivalScores = Array.isArray(scoreResult?.scores)
+    ? scoreResult.scores.filter((score) =>
+      score &&
+      typeof score.classId === "string" &&
+      Number.isFinite(score.total)
+    )
+    : [];
+  const arrivalExplanation = typeof scoreResult?.explanation === "string"
+    ? scoreResult.explanation
+    : null;
 
   return Object.freeze({
     campaign,
@@ -273,11 +284,11 @@ function buildPublicContext(
           source: snapshot.arrivalAssignment.source,
           countryId: snapshot.arrivalAssignment.countryId,
           revision: snapshot.arrivalAssignment.revision,
-          explanation: snapshot.arrivalAssignment.scoreResult?.explanation ?? null,
+          explanation: arrivalExplanation,
           scores: Object.freeze(
-            snapshot.arrivalAssignment.scoreResult?.scores.map((score) =>
+            arrivalScores.map((score) =>
               Object.freeze({ classId: score.classId, total: score.total })
-            ) ?? [],
+            ),
           ),
           economicRestrictions: Object.freeze([]),
         })

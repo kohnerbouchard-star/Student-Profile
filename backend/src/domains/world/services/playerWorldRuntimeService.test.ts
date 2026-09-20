@@ -44,6 +44,36 @@ Deno.test("runtime context exposes questionnaire before assignment and strips ow
   }
 });
 
+Deno.test("runtime context tolerates older persisted arrival score metadata without scores", async () => {
+  const repository = memoryRepository();
+  repository.state.assignment = {
+    assignmentId: "prior-arrival-assignment",
+    gameId: SCOPE.gameId,
+    gameSessionId: SCOPE.gameId,
+    playerUuid: SCOPE.playerUuid,
+    countryId: "eldoran",
+    classId: "maker",
+    source: "questionnaire",
+    questionnaireId: "persisted-fixture",
+    questionnaireVersion: "1",
+    scoreResult: {
+      fixture: true,
+      selectedClass: "maker",
+    } as unknown as ArrivalClassAssignment["scoreResult"],
+    overrideReason: null,
+    revision: 0,
+    assignedAt: NOW,
+    updatedAt: NOW,
+    economicRestrictions: [],
+  };
+
+  const context = await createService(repository).readContext(SCOPE);
+  assertEquals(context.arrival.required, false);
+  assertEquals(context.arrival.assignment?.classId, "maker");
+  assertEquals(context.arrival.assignment?.explanation, null);
+  assertEquals(context.arrival.assignment?.scores, []);
+});
+
 Deno.test("arrival assignment scores deterministically and sends definition references atomically", async () => {
   const repository = memoryRepository();
   const service = createService(repository);
