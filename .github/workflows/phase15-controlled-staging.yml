@@ -609,6 +609,193 @@ jobs:
           end;
           $phase15_validate_fixture_scope$;
 
+          do $phase15_validate_fx_macro_alignment_scope$
+          declare
+            v_rows integer;
+            v_profiles integer;
+          begin
+            select count(*), count(distinct snapshot_row.country_profile_id)
+            into v_rows, v_profiles
+            from public.country_economic_snapshots as snapshot_row
+            join public.game_sessions as game_row
+              on game_row.id = snapshot_row.game_session_id
+            where game_row.name = 'Econovaria Golden Five'
+              and snapshot_row.effective_at = game_row.provisioned_at;
+            if v_rows not in (0, 10) or v_profiles <> v_rows then
+              raise exception 'PHASE15_GOLDEN_FX_MACRO_ALIGNMENT_SCOPE_INVALID';
+            end if;
+          end;
+          $phase15_validate_fx_macro_alignment_scope$;
+
+          create temp table phase15_golden_fx_macro_alignment on commit drop as
+          with target_game as (
+            select id, provisioned_at
+            from public.game_sessions
+            where name = 'Econovaria Golden Five'
+          ), latest_snapshots as (
+            select distinct on (snapshot_row.country_profile_id) snapshot_row.*
+            from public.country_economic_snapshots as snapshot_row
+            where snapshot_row.game_session_id = (select id from target_game)
+            order by
+              snapshot_row.country_profile_id,
+              snapshot_row.snapshot_sequence desc,
+              snapshot_row.effective_at desc,
+              snapshot_row.created_at desc,
+              snapshot_row.id desc
+          ), inserted as (
+            insert into public.country_economic_snapshots (
+              game_session_id,
+              country_profile_id,
+              snapshot_sequence,
+              effective_at,
+              snapshot_label,
+              difficulty_policy_profile_id,
+              difficulty_preset,
+              price_difficulty_modifier,
+              event_volatility_modifier,
+              scarcity_difficulty_modifier,
+              income_difficulty_modifier,
+              trade_difficulty_modifier,
+              credit_difficulty_modifier,
+              real_gdp_index,
+              gdp_growth_rate,
+              inflation_rate,
+              unemployment_rate,
+              interest_rate,
+              consumer_confidence_index,
+              business_confidence_index,
+              cost_of_living_index,
+              regional_price_multiplier,
+              supply_constraint_index,
+              import_dependency_index,
+              tax_rate,
+              subsidy_rate,
+              exchange_rate_index,
+              currency_stability_index,
+              trade_balance_index,
+              export_strength_index,
+              market_risk_index,
+              political_stability_index,
+              infrastructure_index,
+              energy_security_index,
+              metadata
+            )
+            select
+              snapshot_row.game_session_id,
+              snapshot_row.country_profile_id,
+              snapshot_row.snapshot_sequence + 1,
+              game_row.provisioned_at,
+              'Phase 15 Golden FX bootstrap alignment',
+              snapshot_row.difficulty_policy_profile_id,
+              snapshot_row.difficulty_preset,
+              snapshot_row.price_difficulty_modifier,
+              snapshot_row.event_volatility_modifier,
+              snapshot_row.scarcity_difficulty_modifier,
+              snapshot_row.income_difficulty_modifier,
+              snapshot_row.trade_difficulty_modifier,
+              snapshot_row.credit_difficulty_modifier,
+              snapshot_row.real_gdp_index,
+              snapshot_row.gdp_growth_rate,
+              snapshot_row.inflation_rate,
+              snapshot_row.unemployment_rate,
+              snapshot_row.interest_rate,
+              snapshot_row.consumer_confidence_index,
+              snapshot_row.business_confidence_index,
+              snapshot_row.cost_of_living_index,
+              snapshot_row.regional_price_multiplier,
+              snapshot_row.supply_constraint_index,
+              snapshot_row.import_dependency_index,
+              snapshot_row.tax_rate,
+              snapshot_row.subsidy_rate,
+              snapshot_row.exchange_rate_index,
+              snapshot_row.currency_stability_index,
+              snapshot_row.trade_balance_index,
+              snapshot_row.export_strength_index,
+              snapshot_row.market_risk_index,
+              snapshot_row.political_stability_index,
+              snapshot_row.infrastructure_index,
+              snapshot_row.energy_security_index,
+              coalesce(snapshot_row.metadata, '{}'::jsonb) || jsonb_build_object(
+                'authority', 'phase15-staging-golden-fx-alignment-v1',
+                'sourceSnapshotSequence', snapshot_row.snapshot_sequence,
+                'sourceEffectiveAt', snapshot_row.effective_at
+              )
+            from latest_snapshots as snapshot_row
+            cross join target_game as game_row
+            where not exists (
+              select 1
+              from public.country_economic_snapshots as existing_row
+              where existing_row.game_session_id = game_row.id
+                and existing_row.effective_at = game_row.provisioned_at
+            )
+            returning 1
+          )
+          select count(*)::integer as inserted_count from inserted;
+
+          do $phase15_validate_fx_macro_alignment$
+          begin
+            if (
+              select inserted_count
+              from phase15_golden_fx_macro_alignment
+            ) not in (0, 10) then
+              raise exception 'PHASE15_GOLDEN_FX_MACRO_ALIGNMENT_WRITE_INVALID';
+            end if;
+            if (
+              select count(distinct snapshot_row.country_profile_id)
+              from public.country_economic_snapshots as snapshot_row
+              join public.game_sessions as game_row
+                on game_row.id = snapshot_row.game_session_id
+              where game_row.name = 'Econovaria Golden Five'
+                and snapshot_row.effective_at = game_row.provisioned_at
+            ) <> 10 then
+              raise exception 'PHASE15_GOLDEN_FX_MACRO_ALIGNMENT_INCOMPLETE';
+            end if;
+          end;
+          $phase15_validate_fx_macro_alignment$;
+
+          create temp table phase15_golden_fx_authority on commit drop as
+          select public.initialize_fx_authority_for_game_v1(
+            (select id from public.game_sessions where name = 'Econovaria Golden Five'),
+            (select provisioned_at from public.game_sessions where name = 'Econovaria Golden Five'),
+            false
+          ) as result;
+
+          do $phase15_validate_fx_authority$
+          begin
+            if (
+              select count(*)
+              from phase15_golden_fx_authority
+              where result ->> 'cutoverStatus' = 'ready'
+                and result ->> 'outcome' in ('initialized', 'replayed')
+            ) <> 1 then
+              raise exception 'PHASE15_GOLDEN_FX_BOOTSTRAP_FAILED';
+            end if;
+            if (
+              select count(*)
+              from private.fx_runtime_state as runtime_row
+              where runtime_row.game_session_id = (
+                select id from public.game_sessions where name = 'Econovaria Golden Five'
+              )
+                and runtime_row.cutover_status = 'ready'
+                and runtime_row.current_fixing_id is not null
+                and (
+                  select count(*)
+                  from public.fx_fixing_currency_values as value_row
+                  where value_row.game_session_id = runtime_row.game_session_id
+                    and value_row.fixing_id = runtime_row.current_fixing_id
+                ) = 11
+                and (
+                  select count(*)
+                  from public.fx_fixing_macro_snapshots as snapshot_row
+                  where snapshot_row.game_session_id = runtime_row.game_session_id
+                    and snapshot_row.fixing_id = runtime_row.current_fixing_id
+                ) = 10
+            ) <> 1 then
+              raise exception 'PHASE15_GOLDEN_FX_AUTHORITY_INCOMPLETE';
+            end if;
+          end;
+          $phase15_validate_fx_authority$;
+
           create temp table phase15_golden_lifecycle_transition on commit drop as
           select *
           from public.transition_game_lifecycle_atomic_v1(
@@ -656,6 +843,31 @@ jobs:
             end if;
           end;
           $phase15_validate_active_fixture$;
+
+          create temp table phase15_golden_readiness on commit drop as
+          select public.verify_provisioned_game_v1(
+            (select id from public.game_sessions where name = 'Econovaria Golden Five'),
+            (select owner_staff_user_id from public.game_sessions where name = 'Econovaria Golden Five')
+          ) as result;
+
+          do $phase15_validate_readiness$
+          begin
+            if (
+              select count(*)
+              from phase15_golden_readiness
+              where result ->> 'ready' = 'true'
+                and result ->> 'provisioningStatus' = 'ready'
+                and result #>> '{bankingFx,runtimeStatus}' = 'ready'
+                and (result #>> '{bankingFx,activeCurrencies}')::integer = 11
+                and (result #>> '{bankingFx,fixingValues}')::integer = 11
+                and (result #>> '{bankingFx,liquidityCapSnapshots}')::integer = 11
+                and (result #>> '{bankingFx,systemAccounts}')::integer = 44
+                and (result #>> '{bankingFx,systemAccountProjections}')::integer = 44
+            ) <> 1 then
+              raise exception 'PHASE15_GOLDEN_PROVISIONING_READINESS_FAILED';
+            end if;
+          end;
+          $phase15_validate_readiness$;
 
           with target_players as (
             select player_row.game_session_id, player_row.id as player_id
@@ -763,6 +975,9 @@ jobs:
             browserCredentialContract: 'publishable-key-only',
             fixtureLifecycleAction: 'resume',
             fixtureLifecycleState: 'active',
+            fxAuthorityState: 'ready',
+            bankingFxReadiness: 'ready',
+            fxMacroAlignment: 'bounded-latest-snapshot-copy-v1',
             decision: 'PASS',
           }, null, 2)}\n`);
           NODE

@@ -129,6 +129,10 @@ with target_game as (
     coalesce(jsonb_agg(distinct name order by name), '[]'::jsonb) as applied
   from supabase_migrations.schema_migrations
   where name in (${requiredMigrationSql})
+), fx_runtime as (
+  select runtime_row.*
+  from private.fx_runtime_state as runtime_row
+  where runtime_row.game_session_id = (select id from target_game)
 )
 select jsonb_build_object(
   'schemaVersion', 1,
@@ -151,6 +155,28 @@ select jsonb_build_object(
     'requiredCount', ${REQUIRED_MIGRATIONS.length},
     'appliedCount', (select applied_count from migration_state),
     'applied', (select applied from migration_state)
+  ),
+  'fx', jsonb_build_object(
+    'runtimeStatus', coalesce((select cutover_status from fx_runtime), ''),
+    'hasCurrentFixing', coalesce((select current_fixing_id is not null from fx_runtime), false),
+    'fixingValues', coalesce((
+      select count(*)
+      from public.fx_fixing_currency_values as value_row
+      where value_row.game_session_id = (select id from target_game)
+        and value_row.fixing_id = (select current_fixing_id from fx_runtime)
+    ), 0),
+    'macroSnapshots', coalesce((
+      select count(*)
+      from public.fx_fixing_macro_snapshots as snapshot_row
+      where snapshot_row.game_session_id = (select id from target_game)
+        and snapshot_row.fixing_id = (select current_fixing_id from fx_runtime)
+    ), 0),
+    'liquidityCapSnapshots', coalesce((
+      select count(*)
+      from public.fx_liquidity_cap_snapshots as cap_row
+      where cap_row.game_session_id = (select id from target_game)
+        and cap_row.fixing_id = (select current_fixing_id from fx_runtime)
+    ), 0)
   ),
   'content', jsonb_build_object(
     'marketAssets', coalesce((select count(*) from public.game_session_stock_assets where game_session_id = (select id from target_game) and is_active), 0),
@@ -190,6 +216,10 @@ if (evidence.game?.lifecycleState !== "active") failures.push("The golden game l
 if (evidence.game?.provisioningStatus !== "ready") failures.push("The golden game is not provisioned.");
 if (evidence.game?.joinCodeMatches !== true) failures.push("The golden game code does not match the fixture contract.");
 if (evidence.migrations?.appliedCount !== REQUIRED_MIGRATIONS.length) failures.push("Required staging migrations are missing.");
+if (evidence.fx?.runtimeStatus !== "ready" || evidence.fx?.hasCurrentFixing !== true) failures.push("The golden game FX authority is not ready.");
+if (Number(evidence.fx?.fixingValues) !== 11) failures.push("The golden game current FX fixing is incomplete.");
+if (Number(evidence.fx?.macroSnapshots) !== 10) failures.push("The golden game FX macro snapshot set is incomplete.");
+if (Number(evidence.fx?.liquidityCapSnapshots) !== 11) failures.push("The golden game FX liquidity cap set is incomplete.");
 
 const expectedContent = {
   marketAssets: 240,
@@ -239,6 +269,7 @@ const finalEvidence = {
     exactStagingBinding: true,
     productionDenied: true,
     migrationContractComplete: evidence.migrations?.appliedCount === REQUIRED_MIGRATIONS.length,
+    fxAuthorityReady: evidence.fx?.runtimeStatus === "ready" && evidence.fx?.hasCurrentFixing === true,
     fixtureComplete: failures.length === 0,
     sanitized: !UUID_PATTERN.test(serialized),
   },

@@ -307,7 +307,10 @@ jobs:
               credentialAuthority.plaintextPersisted !== false ||
               credentialAuthority.browserCredentialContract !== "publishable-key-only" ||
               credentialAuthority.fixtureLifecycleAction !== "resume" ||
-              credentialAuthority.fixtureLifecycleState !== "active") {
+              credentialAuthority.fixtureLifecycleState !== "active" ||
+              credentialAuthority.fxAuthorityState !== "ready" ||
+              credentialAuthority.bankingFxReadiness !== "ready" ||
+              credentialAuthority.fxMacroAlignment !== "bounded-latest-snapshot-copy-v1") {
             throw new Error("Current staging fixture-credential authority mismatch.");
           }
           if (fixture.decision !== "PASS" || browser.decision !== "PASS") {
