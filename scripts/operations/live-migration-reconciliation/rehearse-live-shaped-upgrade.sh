@@ -36,6 +36,7 @@ dump_path="$PHASE15_WORK_DIR/${PHASE15_ENVIRONMENT}-schema.sql"
 ca_path="$repo_root/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt"
 ca_container_path="/tmp/supabase-prod-ca-2021.crt"
 ca_sha256="700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7"
+pg_cron_version="1.6.4"
 applied_path="$PHASE15_EVIDENCE_DIR/applied-migrations.txt"
 failure_path="$PHASE15_EVIDENCE_DIR/failure.json"
 status="FAILED"
@@ -198,6 +199,15 @@ drop schema if exists public cascade;
 SQL
 docker exec -i "$container" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 < "$dump_path"
 schema_restored=true
+
+# The hosted application schema dump deliberately excludes extension schemas. Recreate the
+# exact pg_cron prerequisite already installed in both hosted environments, but only inside
+# this disposable local database, so catalog export and the forward FX migration can run.
+docker exec "$container" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 \
+  -c "create extension if not exists pg_cron with schema pg_catalog;"
+test "$(docker exec "$container" psql -U supabase_admin -d postgres -X -qAt -v ON_ERROR_STOP=1 \
+  -c "select e.extversion || ':' || n.nspname || ':' || to_regclass('cron.job')::text from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pg_cron'")" \
+  = "$pg_cron_version:pg_catalog:cron.job"
 
 docker exec -i "$container" psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 \
   < "$repo_root/scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql" \
