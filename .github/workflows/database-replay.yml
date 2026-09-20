@@ -165,19 +165,26 @@ jobs:
         run: npx supabase stop --workdir backend --no-backup || true
 
   live-shaped-rehearsal:
-    name: Rehearse live-shaped forward migration convergence
+    name: Rehearse ${{ matrix.environment }}-shaped forward migration convergence
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: replay
     runs-on: ubuntu-24.04
     timeout-minutes: 90
-    environment: production
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment: staging
+            expected_project_ref: eecvbssdvarfcykcfrny
+          - environment: production
+            expected_project_ref: cgiukdjwicykrmtkhudh
+    environment: ${{ matrix.environment }}
     env:
-      STAGING_SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
-      PRODUCTION_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      SUPABASE_DB_CA_CERT: ${{ secrets.SUPABASE_DB_CA_CERT }}
-      STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
-      PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_CLI_VERSION: 2.109.1
+      PHASE15_ENVIRONMENT: ${{ matrix.environment }}
+      PHASE15_EXPECTED_PROJECT_REF: ${{ matrix.expected_project_ref }}
 
     steps:
       - name: Check out exact merged main
@@ -197,29 +204,31 @@ jobs:
         with:
           version: 2.109.1
 
-      - name: Enforce exact merged-main and protected read-only inputs
+      - name: Bind exact merged main to the environment-scoped database
         shell: bash
         run: |
           set -euo pipefail
           test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
-          test -n "$STAGING_SUPABASE_DB_URL"
-          test -n "$PRODUCTION_SUPABASE_DB_URL"
-          test -n "$SUPABASE_DB_CA_CERT"
-          test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-          node scripts/release-integrity/cli.mjs validate-db-url \
-            --url-env STAGING_SUPABASE_DB_URL \
-            --expected-project-ref "$STAGING_PROJECT_REF"
-          node scripts/release-integrity/cli.mjs validate-db-url \
-            --url-env PRODUCTION_SUPABASE_DB_URL \
-            --expected-project-ref "$PRODUCTION_PROJECT_REF"
-          cert_path="$RUNNER_TEMP/supabase-db-ca.crt"
-          umask 077
-          printf '%s\n' "$SUPABASE_DB_CA_CERT" > "$cert_path"
-          test -s "$cert_path"
-          echo "PHASE15_CA_CERT=$cert_path" >> "$GITHUB_ENV"
+          (
+            cd backend
+            supabase --yes link \
+              --project-ref "$PHASE15_EXPECTED_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD"
+          )
+          pooler_path="backend/supabase/.temp/pooler-url"
+          test -s "$pooler_path"
+          pooler_url="$(tr -d '\r\n' < "$pooler_path")"
+          echo "::add-mask::$pooler_url"
+          PHASE15_REMOTE_DATABASE_URL="$pooler_url" \
+            node scripts/release-integrity/cli.mjs validate-db-url \
+              --url-env PHASE15_REMOTE_DATABASE_URL \
+              --expected-project-ref "$PHASE15_EXPECTED_PROJECT_REF"
+          printf 'PHASE15_REMOTE_DATABASE_URL=%s\n' "$pooler_url" >> "$GITHUB_ENV"
 
       - name: Download exact clean-replay schema
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -227,56 +236,20 @@ jobs:
           name: phase15-clean-replay-${{ github.sha }}
           path: ${{ runner.temp }}/phase15-canonical
 
-      - name: Rehearse staging-shaped upgrade
-        id: staging-rehearsal
-        continue-on-error: true
+      - name: Rehearse environment-shaped upgrade
         shell: bash
         env:
-          PHASE15_ENVIRONMENT: staging
-          PHASE15_EXPECTED_PROJECT_REF: ${{ env.STAGING_PROJECT_REF }}
-          PHASE15_REMOTE_DATABASE_URL: ${{ env.STAGING_SUPABASE_DB_URL }}
-          PHASE15_WORK_DIR: ${{ runner.temp }}/phase15-staging-work
-          PHASE15_EVIDENCE_DIR: ${{ runner.temp }}/phase15-evidence/staging
+          PHASE15_WORK_DIR: ${{ runner.temp }}/phase15-${{ matrix.environment }}-work
+          PHASE15_EVIDENCE_DIR: ${{ runner.temp }}/phase15-evidence/${{ matrix.environment }}
           PHASE15_CANONICAL_SCHEMA: ${{ runner.temp }}/phase15-canonical/schema-1.json
           PHASE15_CANONICAL_CATALOG: ${{ runner.temp }}/phase15-canonical/catalog-1.json
         run: bash scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh
-
-      - name: Rehearse production-shaped upgrade
-        id: production-rehearsal
-        continue-on-error: true
-        shell: bash
-        env:
-          PHASE15_ENVIRONMENT: production
-          PHASE15_EXPECTED_PROJECT_REF: ${{ env.PRODUCTION_PROJECT_REF }}
-          PHASE15_REMOTE_DATABASE_URL: ${{ env.PRODUCTION_SUPABASE_DB_URL }}
-          PHASE15_WORK_DIR: ${{ runner.temp }}/phase15-production-work
-          PHASE15_EVIDENCE_DIR: ${{ runner.temp }}/phase15-evidence/production
-          PHASE15_CANONICAL_SCHEMA: ${{ runner.temp }}/phase15-canonical/schema-1.json
-          PHASE15_CANONICAL_CATALOG: ${{ runner.temp }}/phase15-canonical/catalog-1.json
-        run: bash scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh
-
-      - name: Remove TLS material
-        if: always()
-        shell: bash
-        run: |
-          rm -f "$PHASE15_CA_CERT"
 
       - name: Upload sanitized live-shaped rehearsal evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: phase15-live-shaped-rehearsal-${{ github.sha }}
-          path: ${{ runner.temp }}/phase15-evidence
+          name: phase15-live-shaped-rehearsal-${{ matrix.environment }}-${{ github.sha }}
+          path: ${{ runner.temp }}/phase15-evidence/${{ matrix.environment }}
           if-no-files-found: error
           retention-days: 30
-
-      - name: Enforce both isolated upgrade rehearsals
-        if: always()
-        shell: bash
-        env:
-          STAGING_OUTCOME: ${{ steps.staging-rehearsal.outcome }}
-          PRODUCTION_OUTCOME: ${{ steps.production-rehearsal.outcome }}
-        run: |
-          set -euo pipefail
-          test "$STAGING_OUTCOME" = success
-          test "$PRODUCTION_OUTCOME" = success
