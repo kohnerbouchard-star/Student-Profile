@@ -54,6 +54,8 @@ test("production writes are recovery-gated and runtime/release evidence is exact
     "--data-only",
     "openssl enc -aes-256-cbc",
     "supabase start --workdir \"$restore_project\"",
+    "docker exec \"$db_container\" psql -U supabase_admin",
+    "select rolsuper from pg_roles where rolname = current_user",
     "--single-transaction",
     "restoreValidated",
     "schemaMatched",
