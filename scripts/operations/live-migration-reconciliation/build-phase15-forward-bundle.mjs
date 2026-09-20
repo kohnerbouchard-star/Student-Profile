@@ -226,21 +226,38 @@ as $phase15_invariants$
 $phase15_invariants$;`;
 }
 
-export function buildForwardBundle({ environment, mode, migrations }) {
+export function buildForwardBundle({
+  environment,
+  mode,
+  migrations,
+  startIndex = 0,
+  totalMigrationCount = migrations.length,
+}) {
   if (mode !== "rollback" && mode !== "apply") fail("Mode must be rollback or apply.");
   const expectedCount = environment === "production"
     ? PHASE15_COMMON_COUNT + PRODUCTION_PRELUDE.length
     : PHASE15_COMMON_COUNT;
-  if (migrations.length !== expectedCount) {
-    fail(`Expected ${expectedCount} selected migrations, found ${migrations.length}.`);
+  if (totalMigrationCount !== expectedCount) {
+    fail(`Expected ${expectedCount} certified migrations, found ${totalMigrationCount}.`);
   }
+  if (!Number.isSafeInteger(startIndex) || startIndex < 0 || startIndex >= expectedCount) {
+    fail("Start index must select a non-empty certified migration suffix.");
+  }
+  if (migrations.length !== expectedCount - startIndex) {
+    fail(`Expected ${expectedCount - startIndex} suffix migrations, found ${migrations.length}.`);
+  }
+  migrations.forEach((migration, index) => {
+    if (migration.order !== startIndex + index + 1) {
+      fail("Migration suffix is not a contiguous tail of the certified bundle.");
+    }
+  });
 
   const versions = migrations.map(({ version }) => `('${version}')`).join(",\n  ");
   const sections = migrations.map((migration) => {
     const source = dollarQuote(migration.source, migration.version);
     const name = migration.name.replaceAll("'", "''");
     return String.raw`
--- phase15 migration ${migration.order}/${migrations.length}: ${migration.filename}
+-- phase15 migration ${migration.order}/${totalMigrationCount}: ${migration.filename}
 ${migration.body}
 
 insert into supabase_migrations.schema_migrations(version, name, statements)
@@ -378,6 +395,8 @@ select jsonb_build_object(
   'environment', '${environment}',
   'mode', '${mode}',
   'migrationCount', ${migrations.length},
+  'certifiedMigrationCount', ${totalMigrationCount},
+  'startIndex', ${startIndex},
   'economicInvariantsMatched', true,
   'economicInvariants', pg_temp.phase15_economic_invariants_v1(),
   'accountProjectionProof', jsonb_build_object(
@@ -412,13 +431,16 @@ function parseArguments(argv) {
   const environment = values.get("--environment");
   const mode = values.get("--mode") || "rollback";
   const format = values.get("--format") || "sql";
+  const startIndex = Number(values.get("--start-index") || 0);
   if (format !== "sql" && format !== "manifest") fail("Format must be sql or manifest.");
-  return { environment, mode, format };
+  if (!Number.isSafeInteger(startIndex) || startIndex < 0) fail("Start index must be a non-negative integer.");
+  if (format === "manifest" && startIndex !== 0) fail("Manifest format always describes the full certified bundle.");
+  return { environment, mode, format, startIndex };
 }
 
 async function main() {
   const options = parseArguments(process.argv.slice(2));
-  const migrations = await loadPhase15Migrations(options.environment);
+  const allMigrations = await loadPhase15Migrations(options.environment);
   if (options.format === "manifest") {
     process.stdout.write(`${JSON.stringify({
       schemaVersion: 1,
@@ -426,8 +448,8 @@ async function main() {
       cutoff: PHASE15_CUTOFF,
       commonMigrationCount: PHASE15_COMMON_COUNT,
       preludeMigrationCount: options.environment === "production" ? PRODUCTION_PRELUDE.length : 0,
-      migrationCount: migrations.length,
-      migrations: migrations.map(({ order, filename, version, name, sourceSha256, outerTransactionStripped }) => ({
+      migrationCount: allMigrations.length,
+      migrations: allMigrations.map(({ order, filename, version, name, sourceSha256, outerTransactionStripped }) => ({
         order,
         filename,
         version,
@@ -439,7 +461,14 @@ async function main() {
     }, null, 2)}\n`);
     return;
   }
-  process.stdout.write(buildForwardBundle({ ...options, migrations }));
+  const migrations = allMigrations.slice(options.startIndex);
+  process.stdout.write(buildForwardBundle({
+    environment: options.environment,
+    mode: options.mode,
+    migrations,
+    startIndex: options.startIndex,
+    totalMigrationCount: allMigrations.length,
+  }));
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

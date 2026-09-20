@@ -51,6 +51,7 @@ local_started=false
 schema_restored=false
 prelude_migrations=()
 migrations=()
+pending_migrations=()
 
 mkdir -p "$supabase_root/supabase/migrations" "$PHASE15_EVIDENCE_DIR"
 : > "$applied_path"
@@ -312,6 +313,7 @@ SQL
 remote_present_count="$(jq 'length' "$remote_ledger_path")"
 if test "$remote_present_count" -eq 0; then
   execution_mode="forward-rehearsal"
+  pending_migrations=("${selected_migrations[@]}")
 elif test "$remote_present_count" -eq "${#selected_migrations[@]}"; then
   execution_mode="already-current"
   node "$repo_root/scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs" \
@@ -319,9 +321,14 @@ elif test "$remote_present_count" -eq "${#selected_migrations[@]}"; then
     --live "$remote_ledger_path" \
     > "$PHASE15_EVIDENCE_DIR/remote-ledger-verification.json"
 else
-  PHASE15_REMOTE_PRESENT_COUNT="$remote_present_count" \
-  PHASE15_EXPECTED_COUNT="${#selected_migrations[@]}" \
-    node --input-type=module - <<'NODE' > "$failure_path"
+  if ! node "$repo_root/scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs" \
+      --manifest "$manifest_path" \
+      --live "$remote_ledger_path" \
+      --mode prefix \
+      > "$PHASE15_EVIDENCE_DIR/remote-ledger-verification.json"; then
+    PHASE15_REMOTE_PRESENT_COUNT="$remote_present_count" \
+    PHASE15_EXPECTED_COUNT="${#selected_migrations[@]}" \
+      node --input-type=module - <<'NODE' > "$failure_path"
 process.stdout.write(`${JSON.stringify({
   schemaVersion: 1,
   errorClass: "PARTIAL_REMOTE_MIGRATION_LEDGER",
@@ -329,12 +336,16 @@ process.stdout.write(`${JSON.stringify({
   expectedCount: Number(process.env.PHASE15_EXPECTED_COUNT),
 }, null, 2)}\n`);
 NODE
-  echo "Partial Phase 15 ledger detected in $PHASE15_ENVIRONMENT: $remote_present_count of ${#selected_migrations[@]}." >&2
-  exit 1
+    echo "Non-prefix Phase 15 ledger detected in $PHASE15_ENVIRONMENT: $remote_present_count of ${#selected_migrations[@]}." >&2
+    exit 1
+  fi
+  execution_mode="forward-suffix-rehearsal"
+  pending_migrations=("${selected_migrations[@]:remote_present_count}")
+  test "${#pending_migrations[@]}" -eq "$(("${#selected_migrations[@]}" - remote_present_count))"
 fi
 
-if test "$execution_mode" = "forward-rehearsal"; then
-  for migration in "${selected_migrations[@]}"; do
+if test "$execution_mode" != "already-current"; then
+  for migration in "${pending_migrations[@]}"; do
     test -s "$repo_root/backend/supabase/migrations/$migration"
     failed_migration="$migration"
     echo "Applying $migration"

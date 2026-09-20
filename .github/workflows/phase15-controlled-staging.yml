@@ -201,6 +201,11 @@ jobs:
               (value.executionMode === 'forward-rehearsal' &&
                 value.remoteLedgerPresentCount === 0 &&
                 value.appliedMigrationCount === expectedApplied) ||
+              (value.executionMode === 'forward-suffix-rehearsal' &&
+                value.remoteLedgerPresentCount > 0 &&
+                value.remoteLedgerPresentCount < expectedApplied &&
+                value.remoteLedgerVerified === true &&
+                value.appliedMigrationCount === expectedApplied - value.remoteLedgerPresentCount) ||
               (value.executionMode === 'already-current' &&
                 value.remoteLedgerPresentCount === expectedApplied &&
                 value.remoteLedgerVerified === true &&

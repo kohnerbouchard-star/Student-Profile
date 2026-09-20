@@ -43,10 +43,6 @@ node "$repo_root/scripts/release-integrity/cli.mjs" validate-db-url \
 
 node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs" \
   --environment "$PHASE15_ENVIRONMENT" --mode rollback --format manifest > "$manifest"
-node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs" \
-  --environment "$PHASE15_ENVIRONMENT" --mode rollback --format sql > "$rollback_bundle"
-node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs" \
-  --environment "$PHASE15_ENVIRONMENT" --mode apply --format sql > "$apply_bundle"
 
 expected_count="$(jq -r '.migrationCount' "$manifest")"
 versions="$(jq -r '.migrations[].version' "$manifest" | paste -sd, -)"
@@ -273,18 +269,44 @@ psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
 capture_ledger "$evidence_dir/pre-ledger.json"
 
 present_count="$(jq 'length' "$evidence_dir/pre-ledger.json")"
+preexisting_count="$present_count"
+applied_count=0
 apply_status=""
-if test "$present_count" -eq 0; then
+if test "$present_count" -lt "$expected_count"; then
+  if test "$present_count" -gt 0; then
+    node "$repo_root/scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs" \
+      --manifest "$manifest" \
+      --live "$evidence_dir/pre-ledger.json" \
+      --mode prefix \
+      > "$evidence_dir/pre-ledger-prefix-verification.json"
+  fi
+
+  node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs" \
+    --environment "$PHASE15_ENVIRONMENT" --mode rollback --format sql \
+    --start-index "$present_count" > "$rollback_bundle"
+  node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs" \
+    --environment "$PHASE15_ENVIRONMENT" --mode apply --format sql \
+    --start-index "$present_count" > "$apply_bundle"
+  applied_count=$((expected_count - present_count))
+
   echo "Installing fail-safe scheduler maintenance and draining runtime jobs."
   quiesce_runtime_schedulers
 
-  echo "Running rollback-only populated $PHASE15_ENVIRONMENT rehearsal."
+  echo "Running rollback-only populated $PHASE15_ENVIRONMENT suffix rehearsal."
   psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
     -f "$rollback_bundle" | tee "$work_dir/rollback-output.log"
   extract_bundle_evidence "$work_dir/rollback-output.log" "$evidence_dir/rollback-economic-invariants.json"
 
   capture_ledger "$evidence_dir/post-rollback-ledger.json"
-  test "$(jq 'length' "$evidence_dir/post-rollback-ledger.json")" -eq 0
+  test "$(jq 'length' "$evidence_dir/post-rollback-ledger.json")" -eq "$present_count"
+  cmp -s "$evidence_dir/pre-ledger.json" "$evidence_dir/post-rollback-ledger.json"
+  if test "$present_count" -gt 0; then
+    node "$repo_root/scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs" \
+      --manifest "$manifest" \
+      --live "$evidence_dir/post-rollback-ledger.json" \
+      --mode prefix \
+      > "$evidence_dir/post-rollback-prefix-verification.json"
+  fi
   psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
     < "$repo_root/scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql" \
     > "$evidence_dir/post-rollback-schema.json"
@@ -293,7 +315,7 @@ if test "$present_count" -eq 0; then
     --right "$evidence_dir/post-rollback-schema.json" \
     > "$evidence_dir/rollback-schema-comparison.json"
 
-  echo "Applying the rollback-proven forward bundle to $PHASE15_ENVIRONMENT."
+  echo "Applying the rollback-proven forward suffix to $PHASE15_ENVIRONMENT."
   psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
     -f "$apply_bundle" | tee "$work_dir/apply-output.log"
   extract_bundle_evidence "$work_dir/apply-output.log" "$evidence_dir/apply-economic-invariants.json"
@@ -305,7 +327,7 @@ elif test "$present_count" -eq "$expected_count"; then
   echo "All expected Phase 15 ledger identities already exist; verifying the completed apply."
   apply_status="already-applied"
 else
-  echo "Partial Phase 15 ledger detected: $present_count of $expected_count identities." >&2
+  echo "Phase 15 ledger contains more identities than the certified manifest." >&2
   exit 1
 fi
 
@@ -378,6 +400,8 @@ SQL
 PHASE15_RUNTIME_AUDIT="$evidence_dir/runtime-safety-audit.json" \
 PHASE15_APPLY_STATUS="$apply_status" \
 PHASE15_EXPECTED_COUNT="$expected_count" \
+PHASE15_PREEXISTING_COUNT="$preexisting_count" \
+PHASE15_APPLIED_COUNT="$applied_count" \
 PHASE15_SOURCE_COMMIT="$(git rev-parse HEAD)" \
 node --input-type=module - <<'NODE' > "$evidence_dir/summary.json"
 import { readFileSync } from "node:fs";
@@ -407,6 +431,8 @@ process.stdout.write(`${JSON.stringify({
   sourceCommit: process.env.PHASE15_SOURCE_COMMIT,
   applyStatus: process.env.PHASE15_APPLY_STATUS,
   migrationCount: Number(process.env.PHASE15_EXPECTED_COUNT),
+  preexistingMigrationCount: Number(process.env.PHASE15_PREEXISTING_COUNT),
+  appliedMigrationCount: Number(process.env.PHASE15_APPLIED_COUNT),
   rollbackRehearsalPassed: process.env.PHASE15_APPLY_STATUS === "applied",
   exactLedgerVerified: true,
   canonicalApplicationSchemaMatched: true,
