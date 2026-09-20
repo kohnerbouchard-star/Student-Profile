@@ -67,18 +67,31 @@ capture_local_snapshot() {
 
 write_summary() {
   local exit_code="$1"
+  local schema_compare_exit=""
+  local catalog_compare_exit=""
+  if test -s "$PHASE15_EVIDENCE_DIR/schema-comparison-exit.txt"; then
+    schema_compare_exit="$(cat "$PHASE15_EVIDENCE_DIR/schema-comparison-exit.txt")"
+  fi
+  if test -s "$PHASE15_EVIDENCE_DIR/catalog-comparison-exit.txt"; then
+    catalog_compare_exit="$(cat "$PHASE15_EVIDENCE_DIR/catalog-comparison-exit.txt")"
+  fi
   PHASE15_EXIT_CODE="$exit_code" \
   PHASE15_STATUS="$status" \
   PHASE15_FAILED_MIGRATION="$failed_migration" \
   PHASE15_CUTOFF="$cutoff" \
   PHASE15_SOURCE_COMMIT="$(git rev-parse HEAD)" \
   PHASE15_APPLIED_PATH="$applied_path" \
+  PHASE15_SCHEMA_COMPARE_EXIT="$schema_compare_exit" \
+  PHASE15_CATALOG_COMPARE_EXIT="$catalog_compare_exit" \
   node --input-type=module - <<'NODE' > "$PHASE15_EVIDENCE_DIR/summary.json"
 import { readFileSync } from "node:fs";
 
 const applied = readFileSync(process.env.PHASE15_APPLIED_PATH, "utf8")
   .split("\n")
   .filter(Boolean);
+const optionalExit = (value) => /^\d+$/.test(value ?? "") ? Number(value) : null;
+const schemaComparisonExit = optionalExit(process.env.PHASE15_SCHEMA_COMPARE_EXIT);
+const catalogComparisonExit = optionalExit(process.env.PHASE15_CATALOG_COMPARE_EXIT);
 process.stdout.write(`${JSON.stringify({
   schemaVersion: 1,
   environment: process.env.PHASE15_ENVIRONMENT,
@@ -94,6 +107,10 @@ process.stdout.write(`${JSON.stringify({
   sourceDatabaseAccess: "schema-only-read-only",
   sourceRowsCopied: false,
   rawSchemaDumpRetained: false,
+  canonicalApplicationSchemaComparisonExit: schemaComparisonExit,
+  canonicalApplicationSchemaMatched: schemaComparisonExit === 0,
+  runtimeCatalogComparisonExit: catalogComparisonExit,
+  runtimeCatalogComparisonIsInformational: true,
 }, null, 2)}\n`);
 NODE
 }
@@ -205,4 +222,31 @@ NODE
 done
 
 failed_migration=""
+capture_local_snapshot
+set +e
+node "$repo_root/scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs" \
+  --left "$PHASE15_CANONICAL_SCHEMA" \
+  --right "$PHASE15_EVIDENCE_DIR/post-schema.json" \
+  > "$PHASE15_EVIDENCE_DIR/schema-comparison.json"
+schema_compare_exit=$?
+node "$repo_root/scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs" \
+  --left "$PHASE15_CANONICAL_CATALOG" \
+  --right "$PHASE15_EVIDENCE_DIR/post-catalog.json" \
+  > "$PHASE15_EVIDENCE_DIR/catalog-comparison.json"
+catalog_compare_exit=$?
+set -e
+printf '%s\n' "$schema_compare_exit" > "$PHASE15_EVIDENCE_DIR/schema-comparison-exit.txt"
+printf '%s\n' "$catalog_compare_exit" > "$PHASE15_EVIDENCE_DIR/catalog-comparison-exit.txt"
+
+if test "$schema_compare_exit" -ne 0; then
+  node --input-type=module - <<'NODE' > "$failure_path"
+process.stdout.write(`${JSON.stringify({
+  schemaVersion: 1,
+  environment: process.env.PHASE15_ENVIRONMENT,
+  errorClass: "CANONICAL_APPLICATION_SCHEMA_MISMATCH",
+}, null, 2)}\n`);
+NODE
+  exit 1
+fi
+
 status="PASS"
