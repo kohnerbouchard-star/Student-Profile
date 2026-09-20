@@ -26,6 +26,7 @@
     "scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql",
     "scripts/operations/live-migration-reconciliation/export-runtime-catalog-v2.sql",
     "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
+    "scripts/business-store-sales-convergence-contract.mjs",
     "scripts/phase15-storage-lifecycle-convergence.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"

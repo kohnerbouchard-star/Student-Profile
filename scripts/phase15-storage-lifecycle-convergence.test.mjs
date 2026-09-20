@@ -8,6 +8,10 @@ const paths = {
   manifest: new URL("backend/supabase/edge-function-manifest.json", ROOT),
   archiver: new URL("backend/supabase/functions/stock-tick-archiver/index.ts", ROOT),
   purger: new URL("backend/supabase/functions/game-data-purger/index.ts", ROOT),
+  phase11Contract: new URL(
+    "scripts/business-store-sales-convergence-contract.mjs",
+    ROOT,
+  ),
   schemaExporter: new URL(
     "scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql",
     ROOT,
@@ -115,9 +119,11 @@ test("stock archival requires verified R2 content before source deletion", async
 test("purge worker and SQL share the current deterministic Story-aware contract", async () => {
   const purger = await text(paths.purger);
   const internal = await text(paths.purgeInternal);
+  const reasserted = await text(paths.reassertPurge);
+  const phase11Contract = await text(paths.phase11Contract);
   const runbook = await text(paths.runbook);
 
-  for (const source of [purger, internal, runbook]) {
+  for (const source of [purger, internal, phase11Contract, runbook]) {
     assertContains(source, EXPECTED.registrySha, "purge contract");
     assertContains(source, EXPECTED.fkSha, "purge contract");
     assertContains(source, EXPECTED.orderSha, "purge contract");
@@ -131,6 +137,8 @@ test("purge worker and SQL share the current deterministic Story-aware contract"
   assertContains(internal, `v_edge_count <> ${EXPECTED.fkCount}`, "purge SQL");
   assertContains(internal, `v_order_count <> ${EXPECTED.orderCount}`, "purge SQL");
   assertContains(internal, `db_delete_cursor < ${EXPECTED.finalizeCursor}`, "purge SQL");
+  assertContains(reasserted, "'environmentName', v_control.environment_name", "purge preflight");
+  assertContains(reasserted, "'r2BucketName', v_control.r2_bucket_name", "purge preflight");
   assertContains(purger, "assertPurgeRuntimeBinding", "purge worker");
 });
 

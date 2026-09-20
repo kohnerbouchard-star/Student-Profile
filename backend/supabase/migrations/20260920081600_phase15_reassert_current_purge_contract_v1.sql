@@ -1,6 +1,7 @@
 -- Phase 15 reasserts the final Phase 14D purge contract after importing the
--- environment-neutral lifecycle reconciliation. This is intentionally the
--- reviewed 20260918095220 function body at a new forward-only identity.
+-- environment-neutral lifecycle reconciliation. This retains the reviewed
+-- 20260831232719 preflight response and the 20260918095220 execution/finalizer
+-- bodies at a new forward-only identity.
 
 -- Phase 14D fingerprints observed on fresh replay of 55d26fefddf44510d693205886c77b12d1b48c59.
 -- Run 35331471197, job 105556554568: 207 registry / 456 FK / 206 order / 207 final cursor.
@@ -9,6 +10,113 @@
 begin;
 set local lock_timeout='5s';
 set local statement_timeout='120s';
+
+create or replace function public.get_game_data_purge_preflight_v1(
+  p_request_id uuid
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog, public, private, extensions
+as $function$
+declare
+  v_request private.game_data_purge_requests%rowtype;
+  v_game public.game_sessions%rowtype;
+  v_entitlement public.entitlements%rowtype;
+  v_control private.game_data_purge_control%rowtype;
+  v_registry_sha text;
+  v_registry_count bigint;
+  v_fk_sha text;
+  v_fk_count bigint;
+  v_order_sha text;
+  v_order_count bigint;
+  v_cross_refs bigint;
+  v_now timestamptz := clock_timestamp();
+begin
+  select * into v_request
+  from private.game_data_purge_requests as request_row
+  where request_row.id = p_request_id;
+  if not found then
+    raise exception 'PURGE_REQUEST_NOT_FOUND' using errcode = 'P0001';
+  end if;
+
+  select * into v_game
+  from public.game_sessions as game_row
+  where game_row.id = v_request.game_session_id;
+
+  select * into v_entitlement
+  from public.entitlements as entitlement_row
+  where entitlement_row.id = v_request.entitlement_id
+    and entitlement_row.game_session_id = v_request.game_session_id;
+
+  select * into v_control
+  from private.game_data_purge_control as control_row
+  where control_row.singleton;
+
+  select digest_row.registry_sha256, digest_row.table_count
+  into v_registry_sha, v_registry_count
+  from public.get_game_data_purge_registry_digest_v1() as digest_row;
+
+  select digest_row.fk_graph_sha256, digest_row.edge_count
+  into v_fk_sha, v_fk_count
+  from public.get_game_data_purge_fk_graph_digest_v1() as digest_row;
+
+  select digest_row.order_sha256, digest_row.table_count
+  into v_order_sha, v_order_count
+  from public.get_game_data_purge_delete_order_digest_v1() as digest_row;
+
+  select count(*) into v_cross_refs
+  from public.game_feature_activation_evidence as evidence_row
+  where evidence_row.source_game_session_id = v_request.game_session_id
+    and evidence_row.game_session_id <> v_request.game_session_id;
+
+  return jsonb_build_object(
+    'requestId', v_request.id,
+    'gameSessionId', v_request.game_session_id,
+    'gameName', v_request.game_name_snapshot,
+    'requestStatus', v_request.status,
+    'purgeNotBefore', v_request.purge_not_before,
+    'licenseExpiresAt', v_request.license_expires_at,
+    'gameExists', v_game.id is not null,
+    'purgeProtected', coalesce(v_game.data_purge_protected, false),
+    'entitlementExpired', coalesce(
+      v_entitlement.status = 'expired'
+      and v_entitlement.license_expires_at is not null
+      and v_entitlement.license_expires_at <= v_now,
+      false
+    ),
+    'leverArmed', coalesce(
+      v_control.arm_id is not null
+      and v_control.armed_until > v_now,
+      false
+    ),
+    'armMatches', coalesce(
+      v_request.confirmed_arm_id = v_control.arm_id,
+      false
+    ),
+    'environmentConfigured', coalesce(
+      v_control.environment_name is not null
+      and v_control.r2_bucket_name is not null,
+      false
+    ),
+    'environmentName', v_control.environment_name,
+    'r2BucketName', v_control.r2_bucket_name,
+    'registrySha256', v_registry_sha,
+    'registryTableCount', v_registry_count,
+    'fkGraphSha256', v_fk_sha,
+    'fkGraphEdgeCount', v_fk_count,
+    'deleteOrderSha256', v_order_sha,
+    'deleteOrderTableCount', v_order_count,
+    'crossGameBlockingReferences', v_cross_refs,
+    'r2DeletedAt', v_request.r2_deleted_at,
+    'dbDeleteCursor', v_request.db_delete_cursor,
+    'dbStartedAt', v_request.db_started_at,
+    'deletedRows', v_request.db_deleted_rows
+  );
+end;
+$function$;
+
 create or replace function public.execute_game_data_purge_db_batch_v2(
   p_request_id uuid,
   p_batch_size integer default 20
