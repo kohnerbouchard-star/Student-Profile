@@ -244,8 +244,8 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.stack : String(error));
+  main().catch(() => {
+    process.stderr.write("Schema comparison failed validation.\n");
     process.exitCode = 1;
   });
 }
