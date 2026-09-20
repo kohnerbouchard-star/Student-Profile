@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -74,4 +75,19 @@ test("ledger verifier rejects source, name, and statement-count drift", async ()
   assert.throws(() => verifyLedger(manifest, [{ ...valid[0], name: "renamed" }]), /name mismatch/u);
   assert.throws(() => verifyLedger(manifest, [{ ...valid[0], sha256: "b".repeat(64) }]), /digest mismatch/u);
   assert.throws(() => verifyLedger(manifest, [{ ...valid[0], statementCount: 2 }]), /one immutable source/u);
+});
+
+test("live runner quiesces schedulers behind a self-restoring maintenance lease", async () => {
+  const source = await readFile(
+    "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh",
+    "utf8",
+  );
+  assert.match(source, /phase15-scheduler-auto-restore-v1/u);
+  assert.match(source, /cron\.alter_job\(jobid, active => false\)/u);
+  assert.match(source, /cron\.alter_job\(job_row\.jobid, active => true\)/u);
+  assert.match(source, /run_row\.status = 'running'/u);
+  assert.match(source, /sleep 30/u);
+  assert.match(source, /trap cleanup_runtime_schedulers EXIT/u);
+  assert.match(source, /restore_runtime_schedulers\n/u);
+  assert.doesNotMatch(source, /update\s+cron\.job/iu);
 });

@@ -30,6 +30,10 @@ work_dir="${PHASE15_WORK_DIR:-$RUNNER_TEMP/phase15-live-$PHASE15_ENVIRONMENT}"
 manifest="$work_dir/forward-manifest.json"
 rollback_bundle="$work_dir/forward-rollback.sql"
 apply_bundle="$work_dir/forward-apply.sql"
+scheduler_snapshot="$evidence_dir/pre-scheduler-maintenance.json"
+scheduler_maintenance_evidence="$evidence_dir/scheduler-maintenance.json"
+scheduler_restore_deadline=""
+scheduler_maintenance_active=false
 mkdir -p "$evidence_dir" "$work_dir"
 
 export PHASE15_REMOTE_DATABASE_URL
@@ -68,6 +72,175 @@ where version = any (string_to_array(:'phase15_versions', ','));
 SQL
 }
 
+restore_runtime_schedulers() {
+  if test "$scheduler_maintenance_active" != true; then
+    return 0
+  fi
+
+  psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL'
+begin;
+do $phase15_restore_schedulers$
+begin
+  perform cron.alter_job(job_row.jobid, active => true)
+  from cron.job as job_row
+  where job_row.jobname like 'econovaria-%'
+    and not job_row.active;
+
+  if exists (
+    select 1 from cron.job
+    where jobname = 'phase15-scheduler-auto-restore-v1'
+  ) then
+    perform cron.unschedule('phase15-scheduler-auto-restore-v1');
+  end if;
+end;
+$phase15_restore_schedulers$;
+commit;
+SQL
+
+  local restored_state
+  restored_state="$(psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL'
+select jsonb_build_object(
+  'activeCount', count(*) filter (where active),
+  'inactiveCount', count(*) filter (where not active),
+  'guardPresent', exists (
+    select 1 from cron.job
+    where jobname = 'phase15-scheduler-auto-restore-v1'
+  ),
+  'jobs', coalesce(jsonb_agg(
+    jsonb_build_object('jobName', jobname, 'active', active)
+    order by jobname
+  ), '[]'::jsonb)
+)::text
+from cron.job
+where jobname like 'econovaria-%';
+SQL
+)"
+  RESTORED_STATE="$restored_state" \
+  SCHEDULER_SNAPSHOT="$scheduler_snapshot" \
+  RESTORE_DEADLINE="$scheduler_restore_deadline" \
+  node --input-type=module - <<'NODE' > "$scheduler_maintenance_evidence"
+import { readFileSync } from "node:fs";
+const before = JSON.parse(readFileSync(process.env.SCHEDULER_SNAPSHOT, "utf8"));
+const after = JSON.parse(process.env.RESTORED_STATE);
+const beforeNames = before.jobs.map(({ jobName }) => jobName).sort();
+const afterNames = after.jobs.map(({ jobName }) => jobName).sort();
+if (after.inactiveCount !== 0 || after.guardPresent !== false ||
+    after.activeCount !== before.activeCount ||
+    JSON.stringify(afterNames) !== JSON.stringify(beforeNames)) {
+  throw new Error("Phase 15 scheduler restoration did not recover the exact active count.");
+}
+process.stdout.write(`${JSON.stringify({
+  schemaVersion: 1,
+  status: "PASS",
+  restoreDeadline: process.env.RESTORE_DEADLINE,
+  activeCountBefore: before.activeCount,
+  activeCountAfter: after.activeCount,
+  inFlightRunsDrained: true,
+  autoRestoreGuardRemoved: true,
+}, null, 2)}\n`);
+NODE
+  scheduler_maintenance_active=false
+}
+
+cleanup_runtime_schedulers() {
+  local status="$?"
+  trap - EXIT
+  if test "$scheduler_maintenance_active" = true; then
+    if ! restore_runtime_schedulers; then
+      status=1
+    fi
+  fi
+  exit "$status"
+}
+trap cleanup_runtime_schedulers EXIT
+
+quiesce_runtime_schedulers() {
+  psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' \
+    > "$scheduler_snapshot"
+select jsonb_build_object(
+  'jobCount', count(*),
+  'activeCount', count(*) filter (where active),
+  'inactiveCount', count(*) filter (where not active),
+  'guardPresent', exists (
+    select 1 from cron.job
+    where jobname = 'phase15-scheduler-auto-restore-v1'
+  ),
+  'jobs', coalesce(jsonb_agg(
+    jsonb_build_object('jobId', jobid, 'jobName', jobname, 'active', active)
+    order by jobname
+  ), '[]'::jsonb)
+)::text
+from cron.job
+where jobname like 'econovaria-%';
+SQL
+
+  jq -e '
+    .jobCount > 0 and
+    .activeCount == .jobCount and
+    .inactiveCount == 0 and
+    .guardPresent == false and
+    ([.jobs[].active] | all)
+  ' "$scheduler_snapshot" >/dev/null
+
+  scheduler_restore_deadline="$(date -u -d '+45 minutes' '+%Y-%m-%dT%H:%M:%SZ')"
+  [[ "$scheduler_restore_deadline" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]
+
+  psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
+    -v phase15_restore_after="$scheduler_restore_deadline" <<'SQL'
+begin;
+select cron.schedule(
+  'phase15-scheduler-auto-restore-v1',
+  '* * * * *',
+  pg_catalog.format(
+    'with due as (select clock_timestamp() >= %L::timestamptz as ready), restored as (select cron.alter_job(job_row.jobid, active => true) from cron.job as job_row cross join due where due.ready and job_row.jobname like %L and not job_row.active), counted as (select count(*) from restored) select cron.unschedule(%L) from due cross join counted where due.ready',
+    :'phase15_restore_after',
+    'econovaria-%',
+    'phase15-scheduler-auto-restore-v1'
+  )
+);
+select cron.alter_job(jobid, active => false)
+from cron.job
+where jobname like 'econovaria-%'
+  and active;
+commit;
+SQL
+  scheduler_maintenance_active=true
+
+  local running_count
+  for attempt in $(seq 1 90); do
+    running_count="$(psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL'
+select count(*)
+from cron.job_run_details as run_row
+join cron.job as job_row using (jobid)
+where job_row.jobname like 'econovaria-%'
+  and run_row.status = 'running';
+SQL
+)"
+    if test "$running_count" -eq 0; then
+      break
+    fi
+    if test "$attempt" -eq 90; then
+      echo 'Timed out draining in-flight Econovaria scheduler jobs.' >&2
+      return 1
+    fi
+    sleep 2
+  done
+
+  # net.http scheduler calls can finish their pg_cron row before the invoked
+  # Edge worker releases its database transaction. Give those bounded workers
+  # one full request timeout, then prove no scheduler row restarted.
+  sleep 30
+  running_count="$(psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL'
+select count(*)
+from cron.job_run_details as run_row
+join cron.job as job_row using (jobid)
+where job_row.jobname like 'econovaria-%'
+  and run_row.status = 'running';
+SQL
+)"
+  test "$running_count" -eq 0
+}
+
 extract_bundle_evidence() {
   local source="$1"
   local destination="$2"
@@ -102,6 +275,9 @@ capture_ledger "$evidence_dir/pre-ledger.json"
 present_count="$(jq 'length' "$evidence_dir/pre-ledger.json")"
 apply_status=""
 if test "$present_count" -eq 0; then
+  echo "Installing fail-safe scheduler maintenance and draining runtime jobs."
+  quiesce_runtime_schedulers
+
   echo "Running rollback-only populated $PHASE15_ENVIRONMENT rehearsal."
   psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
     -f "$rollback_bundle" | tee "$work_dir/rollback-output.log"
@@ -122,6 +298,9 @@ if test "$present_count" -eq 0; then
     -f "$apply_bundle" | tee "$work_dir/apply-output.log"
   extract_bundle_evidence "$work_dir/apply-output.log" "$evidence_dir/apply-economic-invariants.json"
   apply_status="applied"
+
+  echo "Restoring the exact pre-migration scheduler activity state."
+  restore_runtime_schedulers
 elif test "$present_count" -eq "$expected_count"; then
   echo "All expected Phase 15 ledger identities already exist; verifying the completed apply."
   apply_status="already-applied"

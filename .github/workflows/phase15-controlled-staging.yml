@@ -272,6 +272,28 @@ jobs:
           PHASE15_EVIDENCE_DIR: ${{ runner.temp }}/phase15-staging-evidence
           PHASE15_WORK_DIR: ${{ runner.temp }}/phase15-staging-work
         run: bash scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh
+      - name: Recover an interrupted scheduler maintenance lease
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -z "${PHASE15_REMOTE_DATABASE_URL:-}"; then exit 0; fi
+          guard_count="$(psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
+            -c "select count(*) from cron.job where jobname = 'phase15-scheduler-auto-restore-v1'")"
+          if test "$guard_count" -eq 0; then exit 0; fi
+          psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          do $phase15_recover_schedulers$
+          begin
+            perform cron.alter_job(job_row.jobid, active => true)
+            from cron.job as job_row
+            where job_row.jobname like 'econovaria-%'
+              and not job_row.active;
+            perform cron.unschedule('phase15-scheduler-auto-restore-v1');
+          end;
+          $phase15_recover_schedulers$;
+          commit;
+          SQL
       - name: Upload sanitized staging database certificate
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
