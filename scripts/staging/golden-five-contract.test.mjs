@@ -99,6 +99,7 @@ test("Golden Five browser acceptance handles authoritative story briefings", asy
   );
   assert.match(source, /dismissPendingStoryCutscenes/u);
   assert.match(source, /data-player-story-action/u);
+  assert.match(source, /pendingAction\.disabled/u);
   assert.match(source, /storyCutscenesHandled/u);
   assert.match(source, /assertNoFailedRequests/u);
 });
