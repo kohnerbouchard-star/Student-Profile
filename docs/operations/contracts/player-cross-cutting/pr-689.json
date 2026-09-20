@@ -57,6 +57,7 @@
     "scripts/operations/live-migration-reconciliation/phase15-audit.mjs",
     "scripts/operations/live-migration-reconciliation/phase15-audit.test.mjs",
     "scripts/operations/live-migration-reconciliation/reconcile-migrations.mjs",
+    "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
     "scripts/operations/live-migration-reconciliation/verify-immutable-manifest.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
@@ -67,6 +68,7 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "docs/operations/contracts/database-parity-v1.json",
     "scripts/operations/live-migration-reconciliation/phase15-audit.mjs",
+    "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
     "scripts/operations/live-migration-reconciliation/verify-immutable-manifest.mjs",
     "docs/operations/evidence/phase15-live-parity/2026-09-20/repository-migration-manifest.json",
     "docs/operations/evidence/phase15-live-parity/2026-09-20/BLOCKED.md"
@@ -107,5 +109,5 @@
     "admin-business-supervision-database",
     "admin-business-supervision-browser"
   ],
-  "authorizationNote": "Owner explicitly authorized the controlled Phase 15A-F program. This bounded PR owns read-only 15A audit evidence, canonical replay/immutability tooling, roadmap updates and retained verification only. Phase 15A is BLOCKED; no corrective migration, live write, production deployment, scheduler change, secret value, or application runtime edit is in this exact allowlist. The existing verifier and all checks remain intact. Later tranches require their hard gates and separately reviewed scope."
+  "authorizationNote": "Owner explicitly authorized the controlled Phase 15A-F program. This bounded PR owns read-only 15A audit evidence, canonical replay/immutability tooling, a merged-main-only schema-only rehearsal in disposable local Postgres, roadmap updates and retained verification. The rehearsal copies no application rows, applies no hosted write and retains no raw live dump. Phase 15A remains blocked until that rehearsal passes and its differences are reviewed; no corrective migration, live write, production deployment, scheduler change, secret value, or application runtime edit is in this exact allowlist. The existing verifier and all checks remain intact. Later tranches require their hard gates and separately reviewed scope."
 }
