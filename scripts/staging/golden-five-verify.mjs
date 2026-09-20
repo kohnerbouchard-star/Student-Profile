@@ -71,7 +71,7 @@ function runPsql(sql) {
       env: {
         ...process.env,
         PGPASSWORD: dbPassword,
-        PGSSLMODE: "require",
+        PGSSLMODE: "verify-full",
       },
       maxBuffer: 8 * 1024 * 1024,
     },

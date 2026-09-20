@@ -460,6 +460,8 @@ jobs:
       ECONOVARIA_GOLDEN_CHARLIE_ACCESS_CODE: ${{ secrets.GOLDEN_CHARLIE_ACCESS_CODE }}
       ECONOVARIA_GOLDEN_DELTA_ACCESS_CODE: ${{ secrets.GOLDEN_DELTA_ACCESS_CODE }}
       ECONOVARIA_GOLDEN_ECHO_ACCESS_CODE: ${{ secrets.GOLDEN_ECHO_ACCESS_CODE }}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt
     steps:
       - name: Check out exact runtime-certified main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -499,7 +501,7 @@ jobs:
             POOLER_URL="$(RAW_POOLER_URL="$(tr -d '\r\n' < "$pooler_path")" DATABASE_PASSWORD="$SUPABASE_DB_PASSWORD" node --input-type=module - <<'NODE'
           const parsed = new URL(process.env.RAW_POOLER_URL);
           parsed.password = process.env.DATABASE_PASSWORD;
-          parsed.searchParams.set('sslmode', 'require');
+          parsed.searchParams.set('sslmode', 'verify-full');
           parsed.searchParams.delete('sslrootcert');
           process.stdout.write(parsed.href);
           NODE
@@ -558,7 +560,7 @@ jobs:
           done
 
           mkdir -p /tmp/econovaria-golden-five
-          PGSSLMODE=require psql "$POOLER_URL" -X -q -v ON_ERROR_STOP=1 \
+          PGSSLMODE=verify-full psql "$POOLER_URL" -X -q -v ON_ERROR_STOP=1 \
             -v golden_alpha="$GOLDEN_ALPHA_DIGEST" \
             -v golden_bravo="$GOLDEN_BRAVO_DIGEST" \
             -v golden_charlie="$GOLDEN_CHARLIE_DIGEST" \
