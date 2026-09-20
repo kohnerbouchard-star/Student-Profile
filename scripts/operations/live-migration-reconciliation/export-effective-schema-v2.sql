@@ -46,7 +46,9 @@ select jsonb_build_object(
         'schema', n.nspname,
         'name', c.relname,
         'kind', c.relkind,
-        'persistence', c.relpersistence
+        'persistence', c.relpersistence,
+        'options', c.reloptions,
+        'replicaIdentity', c.relreplident
       ) order by n.nspname, c.relname), '[]'::jsonb)
       from pg_class c
       join pg_namespace n on n.oid = c.relnamespace
@@ -64,7 +66,25 @@ select jsonb_build_object(
         'nullable', is_nullable,
         'default', column_default,
         'identity', is_identity,
-        'generated', is_generated
+        'generated', is_generated,
+        'ordinalPosition', ordinal_position,
+        'characterMaximumLength', character_maximum_length,
+        'numericPrecision', numeric_precision,
+        'numericPrecisionRadix', numeric_precision_radix,
+        'numericScale', numeric_scale,
+        'datetimePrecision', datetime_precision,
+        'intervalType', interval_type,
+        'collationSchema', collation_schema,
+        'collationName', collation_name,
+        'domainSchema', domain_schema,
+        'domainName', domain_name,
+        'identityGeneration', identity_generation,
+        'identityStart', identity_start,
+        'identityIncrement', identity_increment,
+        'identityMinimum', identity_minimum,
+        'identityMaximum', identity_maximum,
+        'identityCycle', identity_cycle,
+        'generationExpression', generation_expression
       ) order by table_schema, table_name, column_name), '[]'::jsonb)
       from information_schema.columns
       where table_schema in ('public', 'private', 'economy_private')
@@ -75,7 +95,10 @@ select jsonb_build_object(
         'table', c.relname,
         'name', con.conname,
         'type', con.contype,
-        'definition', pg_get_constraintdef(con.oid, true)
+        'definition', pg_get_constraintdef(con.oid, true),
+        'validated', con.convalidated,
+        'deferrable', con.condeferrable,
+        'initiallyDeferred', con.condeferred
       ) order by n.nspname, c.relname, con.conname), '[]'::jsonb)
       from pg_constraint con
       join pg_class c on c.oid = con.conrelid
@@ -125,6 +148,18 @@ select jsonb_build_object(
     )
   ),
   'authorization', jsonb_build_object(
+    'schemaGrants', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'schema', n.nspname,
+        'grantor', pg_get_userbyid(a.grantor),
+        'grantee', case when a.grantee = 0 then 'PUBLIC' else pg_get_userbyid(a.grantee) end,
+        'privilege', a.privilege_type,
+        'grantable', a.is_grantable
+      ) order by n.nspname, case when a.grantee = 0 then 'PUBLIC' else pg_get_userbyid(a.grantee) end, a.privilege_type), '[]'::jsonb)
+      from pg_namespace n
+      cross join lateral aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) a
+      where n.nspname in ('public', 'private', 'economy_private')
+    ),
     'schemaOwners', (
       select coalesce(jsonb_agg(jsonb_build_object(
         'schema', n.nspname,
