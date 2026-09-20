@@ -114,6 +114,8 @@ test("Golden Five browser acceptance traverses grouped Player navigation", async
   assert.match(source, /inventory: "store"/u);
   assert.match(source, /progression: "profile"/u);
   assert.match(source, /revealRouteControl/u);
+  assert.match(source, /visitRoute\(session, "profile"\)/u);
+  assert.match(source, /journey\.routes\.pop/u);
 });
 
 test("Golden Five source never commits plaintext fixture access codes", async () => {
