@@ -165,21 +165,30 @@ as $phase15_invariants$
     'accountBalances', (
       select jsonb_build_object(
         'rows', count(*),
-        'balance', coalesce(sum(balance), 0)::text,
+        'balance', pg_catalog.trim_scale(coalesce(sum(balance), 0)::numeric)::text,
         'digest', pg_catalog.md5(coalesce(pg_catalog.string_agg(
           pg_catalog.concat_ws('|', id::text, game_session_id::text, coalesce(player_id::text, ''),
-            account_type, balance::text, currency_code, coalesce(last_ledger_entry_id::text, '')),
+            account_type, pg_catalog.trim_scale(balance)::text, currency_code,
+            coalesce(last_ledger_entry_id::text, '')),
           E'\n' order by id
-        ), ''))
+        ), '')),
+        'nonZeroRows', count(*) filter (where balance <> 0),
+        'nonZeroDigest', pg_catalog.md5(coalesce(pg_catalog.string_agg(
+          pg_catalog.concat_ws('|', id::text, game_session_id::text, coalesce(player_id::text, ''),
+            account_type, pg_catalog.trim_scale(balance)::text, currency_code,
+            coalesce(last_ledger_entry_id::text, '')),
+          E'\n' order by id
+        ) filter (where balance <> 0), ''))
       ) from public.account_balances
     ),
     'ledgerEntries', (
       select jsonb_build_object(
         'rows', count(*),
-        'amount', coalesce(sum(amount), 0)::text,
+        'amount', pg_catalog.trim_scale(coalesce(sum(amount), 0)::numeric)::text,
         'digest', pg_catalog.md5(coalesce(pg_catalog.string_agg(
           pg_catalog.concat_ws('|', id::text, game_session_id::text, coalesce(player_id::text, ''),
-            account_type, amount::text, currency_code, entry_type, source_domain, source_action,
+            account_type, pg_catalog.trim_scale(amount)::text, currency_code, entry_type,
+            source_domain, source_action,
             coalesce(source_id::text, '')),
           E'\n' order by id
         ), ''))
@@ -188,11 +197,12 @@ as $phase15_invariants$
     'inventoryHoldings', (
       select jsonb_build_object(
         'rows', count(*),
-        'owned', coalesce(sum(quantity_owned), 0)::text,
-        'reserved', coalesce(sum(quantity_reserved), 0)::text,
+        'owned', pg_catalog.trim_scale(coalesce(sum(quantity_owned), 0)::numeric)::text,
+        'reserved', pg_catalog.trim_scale(coalesce(sum(quantity_reserved), 0)::numeric)::text,
         'digest', pg_catalog.md5(coalesce(pg_catalog.string_agg(
           pg_catalog.concat_ws('|', id::text, game_session_id::text, player_id::text,
-            store_item_id::text, quantity_owned::text, quantity_reserved::text),
+            store_item_id::text, pg_catalog.trim_scale(quantity_owned::numeric)::text,
+            pg_catalog.trim_scale(quantity_reserved::numeric)::text),
           E'\n' order by id
         ), ''))
       ) from public.inventory_holdings
@@ -200,12 +210,14 @@ as $phase15_invariants$
     'stockHoldings', (
       select jsonb_build_object(
         'rows', count(*),
-        'quantity', coalesce(sum(quantity), 0)::text,
-        'reserved', coalesce(sum(reserved_quantity), 0)::text,
+        'quantity', pg_catalog.trim_scale(coalesce(sum(quantity), 0)::numeric)::text,
+        'reserved', pg_catalog.trim_scale(coalesce(sum(reserved_quantity), 0)::numeric)::text,
         'digest', pg_catalog.md5(coalesce(pg_catalog.string_agg(
           pg_catalog.concat_ws('|', id::text, game_session_id::text, player_id::text,
-            stock_asset_id::text, ticker, quantity::text, reserved_quantity::text,
-            average_cost::text, realized_pnl::text),
+            stock_asset_id::text, ticker, pg_catalog.trim_scale(quantity)::text,
+            pg_catalog.trim_scale(reserved_quantity)::text,
+            pg_catalog.trim_scale(average_cost)::text,
+            pg_catalog.trim_scale(realized_pnl)::text),
           E'\n' order by id
         ), ''))
       ) from public.stock_holdings
@@ -265,6 +277,23 @@ create temp table phase15_economic_before(payload jsonb not null) on commit drop
 insert into phase15_economic_before(payload)
 select pg_temp.phase15_economic_invariants_v1();
 
+-- The banking identity tranche intentionally materializes missing canonical
+-- projections at zero. Preserve every pre-existing projection exactly while
+-- permitting only new, unposted zero-balance rows.
+create temp table phase15_account_balances_before on commit drop as
+select
+  id,
+  game_session_id,
+  player_id,
+  account_type,
+  pg_catalog.trim_scale(balance)::text as balance,
+  currency_code,
+  last_ledger_entry_id
+from public.account_balances;
+
+create unique index phase15_account_balances_before_id_idx
+  on phase15_account_balances_before(id);
+
 ${sections.join("\n")}
 
 do $phase15_postconditions$
@@ -272,11 +301,67 @@ declare
   v_before jsonb;
   v_after jsonb;
   v_ledger_count integer;
+  v_existing_account_mismatches bigint;
+  v_new_account_count bigint;
+  v_invalid_new_accounts bigint;
 begin
   select payload into strict v_before from phase15_economic_before;
   v_after := pg_temp.phase15_economic_invariants_v1();
-  if v_before is distinct from v_after then
+
+  if (v_before - 'accountBalances') is distinct from (v_after - 'accountBalances')
+    or (v_before #> '{accountBalances,balance}') is distinct from
+      (v_after #> '{accountBalances,balance}')
+    or (v_before #> '{accountBalances,nonZeroRows}') is distinct from
+      (v_after #> '{accountBalances,nonZeroRows}')
+    or (v_before #> '{accountBalances,nonZeroDigest}') is distinct from
+      (v_after #> '{accountBalances,nonZeroDigest}')
+  then
     raise exception 'PHASE15_ECONOMIC_INVARIANT_DRIFT before=% after=%', v_before, v_after;
+  end if;
+
+  select count(*) into v_existing_account_mismatches
+  from pg_temp.phase15_account_balances_before as prior_row
+  left join public.account_balances as current_row on current_row.id = prior_row.id
+  where current_row.id is null
+    or current_row.game_session_id is distinct from prior_row.game_session_id
+    or current_row.player_id is distinct from prior_row.player_id
+    or current_row.account_type is distinct from prior_row.account_type
+    or pg_catalog.trim_scale(current_row.balance)::text is distinct from prior_row.balance
+    or current_row.currency_code is distinct from prior_row.currency_code
+    or current_row.last_ledger_entry_id is distinct from prior_row.last_ledger_entry_id;
+  if v_existing_account_mismatches <> 0 then
+    raise exception 'PHASE15_EXISTING_ACCOUNT_PROJECTION_DRIFT:%',
+      v_existing_account_mismatches;
+  end if;
+
+  select count(*) into v_new_account_count
+  from public.account_balances as current_row
+  where not exists (
+    select 1
+    from pg_temp.phase15_account_balances_before as prior_row
+    where prior_row.id = current_row.id
+  );
+
+  select count(*) into v_invalid_new_accounts
+  from public.account_balances as current_row
+  where not exists (
+    select 1
+    from pg_temp.phase15_account_balances_before as prior_row
+    where prior_row.id = current_row.id
+  )
+    and (
+      current_row.balance is distinct from 0::numeric
+      or current_row.last_ledger_entry_id is not null
+      or current_row.bank_account_id is null
+    );
+  if v_invalid_new_accounts <> 0 then
+    raise exception 'PHASE15_INVALID_NEW_ACCOUNT_PROJECTION:%', v_invalid_new_accounts;
+  end if;
+
+  if (v_after #>> '{accountBalances,rows}')::integer <>
+    (v_before #>> '{accountBalances,rows}')::integer + v_new_account_count
+  then
+    raise exception 'PHASE15_ACCOUNT_PROJECTION_COUNT_DRIFT';
   end if;
 
   select count(*) into v_ledger_count
@@ -289,12 +374,27 @@ end;
 $phase15_postconditions$;
 
 select jsonb_build_object(
-  'schemaVersion', 1,
+  'schemaVersion', 2,
   'environment', '${environment}',
   'mode', '${mode}',
   'migrationCount', ${migrations.length},
   'economicInvariantsMatched', true,
-  'economicInvariants', pg_temp.phase15_economic_invariants_v1()
+  'economicInvariants', pg_temp.phase15_economic_invariants_v1(),
+  'accountProjectionProof', jsonb_build_object(
+    'rowsBefore', (select count(*) from pg_temp.phase15_account_balances_before),
+    'rowsAfter', (select count(*) from public.account_balances),
+    'newZeroBalanceRows', (
+      select count(*)
+      from public.account_balances as current_row
+      where not exists (
+        select 1
+        from pg_temp.phase15_account_balances_before as prior_row
+        where prior_row.id = current_row.id
+      )
+    ),
+    'existingEconomicFieldsMatched', true,
+    'newRowsAreCanonicalUnpostedZeroBalances', true
+  )
 )::text;
 
 ${terminator}

@@ -45,6 +45,14 @@ test("bundles are one fail-closed transaction with exact ledger sources and econ
   const apply = buildForwardBundle({ environment: "staging", mode: "apply", migrations });
   assert.match(rollback, /^\\set ON_ERROR_STOP on\nbegin isolation level repeatable read;/u);
   assert.match(rollback, /PHASE15_ECONOMIC_INVARIANT_DRIFT/u);
+  assert.match(rollback, /pg_catalog\.trim_scale\(coalesce\(sum\(balance\), 0\)::numeric\)::text/u);
+  assert.match(rollback, /phase15_account_balances_before/u);
+  assert.match(rollback, /PHASE15_EXISTING_ACCOUNT_PROJECTION_DRIFT/u);
+  assert.match(rollback, /PHASE15_INVALID_NEW_ACCOUNT_PROJECTION/u);
+  assert.match(rollback, /current_row\.balance is distinct from 0::numeric/u);
+  assert.match(rollback, /current_row\.bank_account_id is null/u);
+  assert.match(rollback, /'existingEconomicFieldsMatched', true/u);
+  assert.match(rollback, /'newRowsAreCanonicalUnpostedZeroBalances', true/u);
   assert.match(rollback, /PHASE15_EXPECTED_LEDGER_VERSION_ALREADY_PRESENT/u);
   assert.match(rollback, /economicInvariantsMatched/u);
   assert.match(rollback, /rollback;\s*$/u);
