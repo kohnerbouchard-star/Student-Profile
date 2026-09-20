@@ -50,8 +50,15 @@ test("Golden Five verifier matches the current canonical fixture and lifecycle",
   assert.match(verifier, /contracts: 35,/u);
   assert.match(verifier, /storyEvents: 15,/u);
   assert.match(workflow, /transition_game_lifecycle_atomic_v1/u);
+  assert.match(workflow, /initialize_fx_authority_for_game_v1/u);
+  assert.match(workflow, /verify_provisioned_game_v1/u);
   assert.match(workflow, /'resume'/u);
   assert.match(workflow, /fixtureLifecycleState: 'active'/u);
+  assert.match(workflow, /fxAuthorityState: 'ready'/u);
+  assert.match(workflow, /bankingFxReadiness: 'ready'/u);
+  assert.match(workflow, /phase15-staging-golden-fx-alignment-v1/u);
+  assert.match(workflow, /bounded-latest-snapshot-copy-v1/u);
+  assert.match(verifier, /fxAuthorityReady/u);
   assert.match(workflow, /Production database selection is prohibited\./u);
   assert.match(workflow, /PGSSLMODE: verify-full/u);
   assert.match(workflow, /sslmode', 'verify-full'/u);
