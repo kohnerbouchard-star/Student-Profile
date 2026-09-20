@@ -43,6 +43,8 @@ status="FAILED"
 failed_migration=""
 local_started=false
 schema_restored=false
+prelude_migrations=()
+migrations=()
 
 mkdir -p "$supabase_root/supabase/migrations" "$PHASE15_EVIDENCE_DIR"
 : > "$applied_path"
@@ -85,6 +87,8 @@ write_summary() {
   PHASE15_STATUS="$status" \
   PHASE15_FAILED_MIGRATION="$failed_migration" \
   PHASE15_CUTOFF="$cutoff" \
+  PHASE15_PRELUDE_COUNT="${#prelude_migrations[@]}" \
+  PHASE15_COMMON_FORWARD_COUNT="${#migrations[@]}" \
   PHASE15_SOURCE_COMMIT="$(git rev-parse HEAD)" \
   PHASE15_APPLIED_PATH="$applied_path" \
   PHASE15_SCHEMA_COMPARE_EXIT="$schema_compare_exit" \
@@ -104,6 +108,8 @@ process.stdout.write(`${JSON.stringify({
   expectedProjectRef: process.env.PHASE15_EXPECTED_PROJECT_REF,
   sourceCommit: process.env.PHASE15_SOURCE_COMMIT,
   migrationCutoff: process.env.PHASE15_CUTOFF,
+  preludeMigrationCount: Number(process.env.PHASE15_PRELUDE_COUNT),
+  commonForwardMigrationCount: Number(process.env.PHASE15_COMMON_FORWARD_COUNT),
   appliedMigrationCount: applied.length,
   firstAppliedMigration: applied[0] ?? null,
   lastAppliedMigration: applied.at(-1) ?? null,
@@ -216,6 +222,32 @@ docker exec -i "$container" psql -U postgres -d postgres -X -qAt -v ON_ERROR_STO
   < "$repo_root/scripts/operations/live-migration-reconciliation/export-runtime-catalog-v2.sql" \
   > "$PHASE15_EVIDENCE_DIR/pre-catalog.json"
 
+if test "$PHASE15_ENVIRONMENT" = production; then
+  # Production never received these canonical migrations. Staging did. Run their
+  # immutable repository bytes first so the disposable upgrade follows the exact
+  # production ledger delta instead of hiding it inside a new repair migration.
+  prelude_migrations=(
+    20260812081410_add_license_expiration_and_purge_confirmation_foundation_v1.sql
+    20260812081833_restrict_game_purge_to_dedicated_permission_v1.sql
+    20260812082207_harden_game_purge_grace_and_arm_binding_v1.sql
+    20260812082436_add_game_purge_dispatch_state_machine_v1.sql
+    20260812082727_add_resumable_game_purge_database_cursor_v1.sql
+    20260812082927_add_atomic_game_purge_finalizer_v1.sql
+    20260812082948_patch_game_purge_failure_recovery_v1.sql
+    20260812103000_seed_meridian_customs_security_intrusion_v1.sql
+    20260812111000_seed_meridian_security_center_attack_v1.sql
+    20260812114000_seed_meridian_emergency_response_v1.sql
+    20260813090000_add_durable_license_issuance_queue_v1.sql
+    20260813091500_harden_license_email_idempotency_window_v1.sql
+    20260813093000_add_license_issuance_scheduler_safety_switch_v1.sql
+    20260813100000_harden_license_fulfillment_snapshots_v1.sql
+    20260813103000_add_license_email_outbox_schema_v1.sql
+    20260813103100_add_atomic_license_materialization_outbox_v2.sql
+    20260813103200_add_durable_license_email_worker_queue_v1.sql
+    20260813103300_add_license_delivery_operations_v1.sql
+  )
+fi
+
 mapfile -t migrations < <(
   find "$repo_root/backend/supabase/migrations" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' \
     | LC_ALL=C sort \
@@ -226,7 +258,8 @@ if test "${#migrations[@]}" -ne 138; then
   exit 1
 fi
 
-for migration in "${migrations[@]}"; do
+for migration in "${prelude_migrations[@]}" "${migrations[@]}"; do
+  test -s "$repo_root/backend/supabase/migrations/$migration"
   failed_migration="$migration"
   echo "Applying $migration"
   if ! docker exec -i "$container" psql -U postgres -d postgres -X -q -v ON_ERROR_STOP=1 \
