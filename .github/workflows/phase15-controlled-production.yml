@@ -8,6 +8,8 @@ on:
       - ".github/workflows/phase15-controlled-staging.yml"
       - ".github/workflows/database-replay.yml"
       - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+      - "scripts/staging/golden-five-contract.test.mjs"
+      - "scripts/staging/golden-five-verify.mjs"
   workflow_run:
     workflows: ["Phase 15 Controlled Staging Convergence"]
     types: [completed]
@@ -52,6 +54,7 @@ jobs:
           set -euo pipefail
           node --test scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs
           node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
+          node --test scripts/staging/golden-five-contract.test.mjs
           node --test scripts/edge-function-inventory/validate.test.mjs
           node --test scripts/local-edge-runtime-contract.test.mjs
           node --test scripts/runtime-config-contract.test.mjs
@@ -114,6 +117,7 @@ jobs:
             case "$path" in
               .github/workflows/database-replay.yml|.github/workflows/phase15-controlled-staging.yml|.github/workflows/phase15-controlled-production.yml|scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs) ;;
               scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs|scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs|scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh|scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh) ;;
+              scripts/staging/golden-five-contract.test.mjs|scripts/staging/golden-five-verify.mjs) ;;
               *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
             esac
           done < <(git diff --name-only "$POPULATED_STAGING_APPLY_SHA" "$SOURCE_COMMIT")
@@ -239,6 +243,7 @@ jobs:
           const scheduler = await json(path.join(root, "populated-baseline"), "scheduler-maintenance.json");
           const currentSchema = await json(path.join(root, "current-database"), "canonical-schema-comparison.json");
           const runtime = await json(path.join(root, "current-runtime"), "staging-attestation.json");
+          const credentialAuthority = await json(path.join(root, "current-lifecycle"), "fixture-credential-authority.json");
           const fixture = await json(path.join(root, "current-lifecycle"), "fixture-verification.json");
           const browser = await json(path.join(root, "current-lifecycle"), "golden-five-browser-acceptance.json");
           const sourcePath = await find(path.join(root, "clean-replay"), "source-commit.txt");
@@ -293,6 +298,17 @@ jobs:
               currentSchema.profile !== "supabase-hosted-live-v1" ||
               currentSchema.differences.length !== 0) {
             throw new Error("Current hosted staging schema certificate mismatch.");
+          }
+          if (credentialAuthority.decision !== "PASS" ||
+              credentialAuthority.sourceCommit !== source ||
+              credentialAuthority.projectRef !== process.env.STAGING_PROJECT_REF ||
+              credentialAuthority.productionSelected !== false ||
+              credentialAuthority.credentialCount !== 5 ||
+              credentialAuthority.plaintextPersisted !== false ||
+              credentialAuthority.browserCredentialContract !== "publishable-key-only" ||
+              credentialAuthority.fixtureLifecycleAction !== "resume" ||
+              credentialAuthority.fixtureLifecycleState !== "active") {
+            throw new Error("Current staging fixture-credential authority mismatch.");
           }
           if (fixture.decision !== "PASS" || browser.decision !== "PASS") {
             throw new Error("Golden Five staging acceptance did not pass.");

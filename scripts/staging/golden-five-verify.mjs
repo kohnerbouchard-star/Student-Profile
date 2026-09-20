@@ -193,7 +193,7 @@ if (evidence.migrations?.appliedCount !== REQUIRED_MIGRATIONS.length) failures.p
 
 const expectedContent = {
   marketAssets: 240,
-  contracts: 30,
+  contracts: 35,
   storeItems: 50,
   craftingItems: 144,
   craftingRecipes: 60,
@@ -202,7 +202,7 @@ const expectedContent = {
   worldRoutes: 13,
   arrivalClassGrants: 8,
   storylines: 1,
-  storyEvents: 3,
+  storyEvents: 15,
 };
 for (const [name, expected] of Object.entries(expectedContent)) {
   if (Number(evidence.content?.[name]) !== expected) {

@@ -41,6 +41,20 @@ test("Golden Five package commands remain registered", async () => {
   }
 });
 
+test("Golden Five verifier matches the current canonical fixture and lifecycle", async () => {
+  const verifier = await readFile("scripts/staging/golden-five-verify.mjs", "utf8");
+  const workflow = await readFile(
+    ".github/workflows/phase15-controlled-staging.yml",
+    "utf8",
+  );
+  assert.match(verifier, /contracts: 35,/u);
+  assert.match(verifier, /storyEvents: 15,/u);
+  assert.match(workflow, /transition_game_lifecycle_atomic_v1/u);
+  assert.match(workflow, /'resume'/u);
+  assert.match(workflow, /fixtureLifecycleState: 'active'/u);
+  assert.match(workflow, /Production database selection is prohibited\./u);
+});
+
 test("Golden Five source never commits plaintext fixture access codes", async () => {
   const plaintextAccessCode = /GOLD-[1-5]-[A-Z0-9]{8}/;
   for (const path of TEXT_PATHS) {
