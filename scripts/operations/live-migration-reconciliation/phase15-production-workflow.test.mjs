@@ -63,6 +63,10 @@ test("production writes are recovery-gated and runtime/release evidence is exact
     "schemaComparisonProfile",
     "comparison_status=0",
     "phase15-production-database-evidence/restore-schema-comparison.json",
+    "reset-default-privileges.sql",
+    "pg_default_acl",
+    "aclexplode",
+    "disposableDefaultPrivilegesReset",
     "openssl enc -aes-256-cbc",
     "supabase start --workdir \"$restore_project\"",
     "docker exec \"$db_container\" psql -U supabase_admin",
@@ -103,6 +107,10 @@ test("production writes are recovery-gated and runtime/release evidence is exact
   assert.match(
     source,
     /docker cp "\$validation_root\/application-data\.sql"[\s\S]*--file \/tmp\/phase15-application-data\.sql/u,
+  );
+  assert.match(
+    source,
+    /--file \/tmp\/phase15-roles\.sql[\s\S]*--file \/tmp\/phase15-reset-default-privileges\.sql[\s\S]*--file \/tmp\/phase15-schema\.sql/u,
   );
   assert.doesNotMatch(source, /--file \/tmp\/phase15-data\.sql/u);
   assert.match(

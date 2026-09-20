@@ -125,7 +125,7 @@ jobs:
               scripts/staging/golden-five-contract.test.mjs|scripts/staging/golden-five-verify.mjs|scripts/staging/golden-five-browser-acceptance.mjs) ;;
               scripts/phase15-storage-lifecycle-convergence.test.mjs) ;;
               backend/supabase/migrations/20260920082200_phase15_close_database_advisor_findings_v1.sql) ;;
-              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json|docs/operations/contracts/player-cross-cutting/pr-722.json|docs/operations/contracts/player-cross-cutting/pr-723.json|docs/operations/contracts/player-cross-cutting/pr-724.json) ;;
+              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json|docs/operations/contracts/player-cross-cutting/pr-722.json|docs/operations/contracts/player-cross-cutting/pr-723.json|docs/operations/contracts/player-cross-cutting/pr-724.json|docs/operations/contracts/player-cross-cutting/pr-725.json) ;;
               backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts|backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts) ;;
               backend/src/domains/world/services/playerWorldRuntimeService.ts|backend/src/domains/world/services/playerWorldRuntimeService.test.ts) ;;
               *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
@@ -708,12 +708,75 @@ jobs:
           test "$(docker inspect --format '{{.State.Health.Status}}' "$db_container")" = "healthy"
           test "$(docker exec "$db_container" psql -U supabase_admin -d postgres -X -qAt \
             -v ON_ERROR_STOP=1 -c 'select rolsuper from pg_roles where rolname = current_user')" = "t"
+          # Supabase's local image carries explicit postgres default ACLs that
+          # are not the PostgreSQL built-ins assumed by pg_dump. Reset only the
+          # disposable postgres role defaults before replaying the source dump so
+          # object ACLs are reconstructed from the backup instead of inherited
+          # from the validation target.
+          cat > "$validation_root/reset-default-privileges.sql" <<'SQL'
+          DO $reset$
+          DECLARE
+            privilege_row record;
+            object_kind text;
+            schema_clause text;
+            grantee_clause text;
+          BEGIN
+            FOR privilege_row IN
+              SELECT DISTINCT
+                default_acl.defaclnamespace,
+                namespace_row.nspname AS schema_name,
+                default_acl.defaclobjtype,
+                exploded_acl.grantee,
+                pg_catalog.pg_get_userbyid(default_acl.defaclrole) AS owner_name,
+                CASE
+                  WHEN exploded_acl.grantee = 0 THEN NULL
+                  ELSE pg_catalog.pg_get_userbyid(exploded_acl.grantee)
+                END AS grantee_name
+              FROM pg_catalog.pg_default_acl AS default_acl
+              LEFT JOIN pg_catalog.pg_namespace AS namespace_row
+                ON namespace_row.oid = default_acl.defaclnamespace
+              CROSS JOIN LATERAL pg_catalog.aclexplode(default_acl.defaclacl) AS exploded_acl
+              WHERE pg_catalog.pg_get_userbyid(default_acl.defaclrole) = 'postgres'
+            LOOP
+              object_kind := CASE privilege_row.defaclobjtype
+                WHEN 'r' THEN 'TABLES'
+                WHEN 'S' THEN 'SEQUENCES'
+                WHEN 'f' THEN 'FUNCTIONS'
+                WHEN 'T' THEN 'TYPES'
+                WHEN 'n' THEN 'SCHEMAS'
+                ELSE NULL
+              END;
+              IF object_kind IS NULL THEN
+                RAISE EXCEPTION 'Unsupported default ACL object type';
+              END IF;
+              schema_clause := CASE
+                WHEN privilege_row.defaclnamespace = 0 THEN ''
+                ELSE format(' IN SCHEMA %I', privilege_row.schema_name)
+              END;
+              grantee_clause := CASE
+                WHEN privilege_row.grantee = 0 THEN 'PUBLIC'
+                ELSE format('%I', privilege_row.grantee_name)
+              END;
+              EXECUTE format(
+                'ALTER DEFAULT PRIVILEGES FOR ROLE %I%s REVOKE ALL PRIVILEGES ON %s FROM %s',
+                privilege_row.owner_name,
+                schema_clause,
+                object_kind,
+                grantee_clause
+              );
+            END LOOP;
+          END;
+          $reset$;
+          SQL
           docker cp "$validation_root/roles.sql" "$db_container:/tmp/phase15-roles.sql"
+          docker cp "$validation_root/reset-default-privileges.sql" \
+            "$db_container:/tmp/phase15-reset-default-privileges.sql"
           docker cp "$validation_root/schema.sql" "$db_container:/tmp/phase15-schema.sql"
           docker cp "$validation_root/application-data.sql" "$db_container:/tmp/phase15-application-data.sql"
           docker exec "$db_container" psql -U supabase_admin -d postgres -X \
             --single-transaction --variable ON_ERROR_STOP=1 \
             --file /tmp/phase15-roles.sql \
+            --file /tmp/phase15-reset-default-privileges.sql \
             --file /tmp/phase15-schema.sql \
             --command 'SET session_replication_role = replica' \
             --file /tmp/phase15-application-data.sql
@@ -822,6 +885,7 @@ jobs:
             schemaMatched: true,
             schemaComparisonProfile: schema.profile,
             schemaComparisonValidation: schema.profileValidation,
+            disposableDefaultPrivilegesReset: true,
             restoredData: data,
           }, null, 2) + "\n");
           NODE
@@ -874,7 +938,8 @@ jobs:
               logical.schemaComparisonProfile !== "supabase-application-restore-v1" ||
               logical.schemaComparisonValidation?.profile !== "supabase-application-restore-v1" ||
               logical.schemaComparisonValidation?.hostedTopology?.profile !==
-                "supabase-hosted-live-v1") {
+                "supabase-hosted-live-v1" ||
+              logical.disposableDefaultPrivilegesReset !== true) {
             throw new Error("Production logical recovery proof is incomplete.");
           }
           if (!/^[0-9]+$/u.test(process.env.RECOVERY_ARTIFACT_ID || "") ||
@@ -1277,6 +1342,7 @@ jobs:
                 "supabase-application-restore-v1" ||
               recovery.logicalBackup?.schemaComparisonValidation?.hostedTopology?.profile !==
                 "supabase-hosted-live-v1" ||
+              recovery.logicalBackup?.disposableDefaultPrivilegesReset !== true ||
               recovery.logicalBackup?.offsiteUploaded !== true ||
               !Number.isSafeInteger(recovery.logicalBackup?.artifactId) ||
               !/^(?:sha256:)?[a-f0-9]{64}$/u.test(recovery.logicalBackup?.artifactDigest || "")) {
