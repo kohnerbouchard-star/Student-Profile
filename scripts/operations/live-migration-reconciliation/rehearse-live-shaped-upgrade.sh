@@ -253,8 +253,8 @@ mapfile -t migrations < <(
     | LC_ALL=C sort \
     | awk -v cutoff="$cutoff" 'substr($0,1,14) >= cutoff'
 )
-if test "${#migrations[@]}" -ne 149; then
-  echo "Expected 149 forward migrations, found ${#migrations[@]}." >&2
+if test "${#migrations[@]}" -ne 150; then
+  echo "Expected 150 forward migrations, found ${#migrations[@]}." >&2
   exit 1
 fi
 

@@ -276,3 +276,15 @@ test("Phase 15 forward convergence binds PR 697 and remains deployment-denied", 
   assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionDeploymentAllowed: true } }), /deny production deployment/u);
   assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, secretValuesAllowed: true } }), /deny secret-value handling/u);
 });
+
+test("Phase 15 schema parity correction binds PR 698 and remains deployment-denied", async () => {
+  const manifestPath = authorityPathForPullRequest(698);
+  const value = JSON.parse(await readFile(manifestPath, "utf8"));
+  const input = { manifest: value, changedPaths: value.allowedPaths, pullRequestNumber: 698, baseRef: "main", manifestPath };
+  assert.equal(verifyAuthority(input).changedPathCount, value.allowedPaths.length);
+  assert.throws(() => verifyAuthority({ ...input, pullRequestNumber: 697 }), /not bound/u);
+  assert.throws(() => verifyAuthority({ ...input, changedPaths: [...value.allowedPaths, "backend/supabase/migrations/20260920082200_unreviewed.sql"] }), /does not allow/u);
+  assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionMutationAllowed: true } }), /deny production mutation/u);
+  assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionDeploymentAllowed: true } }), /deny production deployment/u);
+  assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, secretValuesAllowed: true } }), /deny secret-value handling/u);
+});

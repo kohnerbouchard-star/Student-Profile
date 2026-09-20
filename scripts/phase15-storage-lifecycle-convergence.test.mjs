@@ -52,6 +52,14 @@ const paths = {
     "backend/supabase/migrations/20260920082000_phase15_retire_superseded_live_contracts_v1.sql",
     ROOT,
   ),
+  closeSchemaParity: new URL(
+    "backend/supabase/migrations/20260920082100_phase15_close_live_shaped_schema_parity_v1.sql",
+    ROOT,
+  ),
+  liveShapedRehearsal: new URL(
+    "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
+    ROOT,
+  ),
   runbook: new URL("docs/operations/econovaria-storage-lifecycle.md", ROOT),
 };
 
@@ -233,4 +241,24 @@ test("superseded live aliases are retired without weakening current contracts", 
   }
   assertContains(retirement, "revoke usage on schema public from public", "retirement migration");
   assertNotContains(retirement, "drop function if exists public.execute_game_data_purge_db_batch_v2", "retirement migration");
+});
+
+test("final live-shaped parity correction is additive and reasserts the canonical candle overload", async () => {
+  const migration = await text(paths.closeSchemaParity);
+  const rehearsal = await text(paths.liveShapedRehearsal);
+
+  for (const column of ["review_manifest jsonb", "review_sha256 text", "review_generated_at timestamptz"]) {
+    assertContains(migration, `add column if not exists ${column}`, "schema parity migration");
+  }
+  assertContains(
+    migration,
+    "create or replace function private.upsert_stock_price_candles(",
+    "schema parity migration",
+  );
+  assertContains(migration, "union all select '1d', interval '1 day'", "canonical candle overload");
+  assertNotContains(migration, "drop column", "schema parity migration");
+  assertNotContains(migration, "drop function", "schema parity migration");
+  assertNotContains(migration, "cron.schedule", "schema parity migration");
+  assertContains(rehearsal, 'if test "${#migrations[@]}" -ne 150', "live-shaped rehearsal");
+  assertContains(rehearsal, "Expected 150 forward migrations", "live-shaped rehearsal");
 });
