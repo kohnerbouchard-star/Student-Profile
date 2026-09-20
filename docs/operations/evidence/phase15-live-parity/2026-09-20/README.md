@@ -1,6 +1,6 @@
 # Phase 15A evidence — 2026-09-20
 
-Status: **BLOCKED / read-only audit in progress**. This is not a staging or production certificate.
+Status: **BLOCKED at 15A**. This is not a staging or production certificate. See [BLOCKED.md](BLOCKED.md) for the current checkpoint and resumption requirements.
 
 Source main: `22dc9ce5023eb200a6608d5bb90a9ac30cb36c90`.
 Owner: `fix/phase15-live-migration-parity-v1`.
@@ -23,7 +23,7 @@ The immutable manifest digest hashes canonical JSON of the ordered migration arr
 
 ## Hard-gate work remaining
 
-1. Obtain two identical clean 435-migration replay fingerprints at the audit candidate; compare the canonical result with both live environments.
+1. Two clean 435-migration replays now match at `6219b0605e632f1aec248b11028deb5164d18d03`; see `canonical-replay-certification.json`. The initial canonical/live comparison finds substantive differences; complete effect review is still required.
 2. Resolve all candidate aliases and live-only effects using immutable migration statement evidence and isolated effective-schema/data-effect review.
 3. Explain the eleven routine differences and scheduler differences without broad allowlisting. Establish the exact staging upgrade path and production delta.
 4. Only after 15A passes, construct and verify 15B corrections. Staging recovery evidence precedes 15C; production remains behind 15A–15E.
@@ -39,3 +39,7 @@ node --test scripts/operations/live-migration-reconciliation/phase15-audit.test.
 The Database Replay workflow now captures two application-schema and runtime-catalog snapshots and enforces equality using the existing comparison utility. It uses a disposable local database and no hosted credentials. The local Work workspace has no Docker/Postgres binaries; that limitation is not evidence that the repository replay fails.
 
 Do not run the historical `apply-pending-via-psql.sh` or `normalize-outer-transactions.py` for Phase 15: they contain old ledger-recording/version assumptions and source rewriting. They are retained as history, not approved convergence procedures.
+
+## Follow-up evidence
+
+`canonical-comparison-summary.json` records the canonical/live structural differences and live-only identities. `purge-guard-conflict.json` records the confirmed production guard mismatch. `historical-ledger-revalidation.json` rechecks the old alias map against current ledgers. `scheduler-comparison.json` retains the remaining command-hash differences. `*-column-access-details.json` adds explicit-null column dimensions, relation metadata, constraint flags and schema grants to the original snapshots. `deployment-health-verification.json` records bounded HTTP health/version probes. `candidate-6219-ci-evidence.json` retains the failed authority checks before their bounded correction.

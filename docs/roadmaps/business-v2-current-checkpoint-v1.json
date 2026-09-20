@@ -262,7 +262,7 @@
   "active_candidate_parent_sha": null,
   "active_candidate_implementation_sha": "dee709fcbe5bfdf23c66347447eeb70c1408dcd9",
   "active_candidate_state": "BLOCKED",
-  "active_candidate_note": "All Phase 14A\u2013D implementations are repository-certified and merged; no active implementation remains. BLOCKED refers only to separate live migration parity/release evidence. No live deployment occurred.",
+  "active_candidate_note": "All Phase 14A–D implementations are repository-certified and merged; no active implementation remains. BLOCKED refers only to separate live migration parity/release evidence. No live deployment occurred.",
   "next_authorized_checkpoint": "PHASE-15A",
   "next_authorized_scope": "Complete read-only canonical reconciliation. Later tranches remain gated by the owner's Phase 15A-F instruction.",
   "remaining_dependency_order": [],
@@ -5103,12 +5103,24 @@
     "authorization": "Owner requested the full controlled Phase 15A-F program; production only after 15A-15E certification.",
     "branch": "fix/phase15-live-migration-parity-v1",
     "sourceMain": "22dc9ce5023eb200a6608d5bb90a9ac30cb36c90",
-    "status": "IN_PROGRESS",
+    "status": "BLOCKED",
     "activeTranche": "15A",
     "hardGate": "BLOCKED",
     "evidence": "docs/operations/evidence/phase15-live-parity/2026-09-20/",
     "stagingMutated": false,
     "productionMutated": false,
-    "certifiedTranches": []
+    "certifiedTranches": [],
+    "pullRequest": 689,
+    "blockedCheckpoint": "docs/operations/evidence/phase15-live-parity/2026-09-20/BLOCKED.md",
+    "cleanReplayEvidence": "docs/operations/evidence/phase15-live-parity/2026-09-20/canonical-replay-certification.json",
+    "canonicalReplayCandidate": "6219b0605e632f1aec248b11028deb5164d18d03",
+    "unresolved": [
+      "Historical alias effective-state and data-effect proof",
+      "Live-only table and twelve routines in each environment",
+      "Confirmed stale production purge foreign-key graph guards",
+      "Three scheduler command differences after project-reference normalization",
+      "Safe staging convergence sequence and isolated live-shaped upgrade evidence"
+    ],
+    "executionConstraint": "Local execution environment disconnected (409 environment_offline); GitHub and read-only Supabase access remain available."
   }
 }

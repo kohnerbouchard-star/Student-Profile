@@ -17,5 +17,11 @@
     "migrationCountEqualityIsParity": false,
     "ordinaryPrRequiresProductionCredentials": false
   },
-  "blockingReason": "Phase 15A read-only reconciliation is incomplete. No live convergence or release certification."
+  "blockingReason": "15A remains blocked by unproved historical aliases/live-only effects, stale production purge guards, scheduler differences, and no approved safe convergence sequence. Clean repository replay does not certify live parity.",
+  "cleanRepositoryReplay": {
+    "sourceCommit": "6219b0605e632f1aec248b11028deb5164d18d03",
+    "schemaFingerprint": "b94617ca343e1d99be228bd76f7347a8a928505bf13dd136232f2f2e33c4d509",
+    "runtimeCatalogFingerprint": "1e28a2caf0884a65ee29e090726dcb4129cca0365b5acce3db0cb6e34c5ed451",
+    "evidence": "docs/operations/evidence/phase15-live-parity/2026-09-20/canonical-replay-certification.json"
+  }
 }
