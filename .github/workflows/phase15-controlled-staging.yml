@@ -38,8 +38,8 @@ permissions:
   actions: read
 
 concurrency:
-  group: phase15-controlled-staging
-  cancel-in-progress: false
+  group: phase15-controlled-staging-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
