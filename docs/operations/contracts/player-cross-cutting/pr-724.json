@@ -15,7 +15,8 @@
     "docs/operations/contracts/player-cross-cutting/pr-724.json",
     "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "scripts/verify-player-cross-cutting-authority.mjs"
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    ".github/workflows/phase15-codeql-diagnostic.yml"
   ],
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting/pr-724.json",
