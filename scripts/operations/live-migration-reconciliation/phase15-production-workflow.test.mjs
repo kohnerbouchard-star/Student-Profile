@@ -49,8 +49,17 @@ test("production writes are recovery-gated and runtime/release evidence is exact
   const source = await readFile(workflowPath, "utf8");
   for (const marker of [
     "/database/backups",
-    "pitrEnabled",
-    "recentCompletedBackup",
+    "supabase db dump",
+    "--role-only",
+    "--data-only",
+    "openssl enc -aes-256-cbc",
+    "supabase start --workdir \"$restore_project\"",
+    "--single-transaction",
+    "restoreValidated",
+    "schemaMatched",
+    "offsiteUploaded",
+    "supabase-cli-logical-backup-v1",
+    "phase15-production-recovery-${{ env.SOURCE_COMMIT }}",
     "supabase db advisors",
     "auth_leaked_password_protection",
     "rls_enabled_no_policy",
@@ -70,6 +79,10 @@ test("production writes are recovery-gated and runtime/release evidence is exact
     "value.sourceCommit!==process.env.SOURCE_COMMIT",
   ]) assert.ok(source.includes(marker), `missing production safety marker: ${marker}`);
 
+  assert.match(
+    source,
+    /Create and restore-verify encrypted logical production backup[\s\S]*Upload encrypted production recovery set before mutation[\s\S]*Finalize fail-closed production recovery gate[\s\S]*Run rollback proof and atomic production convergence/u,
+  );
   assert.doesNotMatch(source, /continue-on-error:\s*true/u);
   assert.doesNotMatch(source, /update\s+cron\.job/iu);
   assert.doesNotMatch(source, /VERCEL_TOKEN|vercel deploy|vercel promote/u);
