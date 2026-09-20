@@ -158,6 +158,17 @@ select jsonb_build_object(
         'hex'
       )
       from target_game
+    ), false),
+    'newsIdentifiersValid', coalesce((
+      select not exists (
+        select 1
+        from public.stock_market_events as event_row
+        where event_row.game_session_id = target_game.id
+          and event_row.visibility = 'public'
+          and event_row.is_active
+          and event_row.shock_id !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
+      )
+      from target_game
     ), false)
   ),
   'migrations', jsonb_build_object(
@@ -226,6 +237,7 @@ if (evidence.game?.provisioningStatus !== "ready") failures.push("The golden gam
 if (evidence.game?.joinCodeMatches !== true) failures.push("The golden game code does not match the fixture contract.");
 if (evidence.game?.joinCodeStatus !== "active") failures.push("The golden game code is not active.");
 if (evidence.game?.joinCodeHashMatches !== true) failures.push("The golden game code hash does not match.");
+if (evidence.game?.newsIdentifiersValid !== true) failures.push("The golden game has a browser-unsafe news identifier.");
 if (evidence.migrations?.appliedCount !== REQUIRED_MIGRATIONS.length) failures.push("Required staging migrations are missing.");
 if (evidence.fx?.runtimeStatus !== "ready" || evidence.fx?.hasCurrentFixing !== true) failures.push("The golden game FX authority is not ready.");
 if (Number(evidence.fx?.fixingValues) !== 11) failures.push("The golden game current FX fixing is incomplete.");

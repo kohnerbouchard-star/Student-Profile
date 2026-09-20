@@ -48,6 +48,49 @@ Deno.test("story market news writer schedules a deterministic system shock for t
   });
 });
 
+Deno.test("story market news writer bounds UUID-derived shock identities for browser reads", async () => {
+  const repository = new FakeMarketNewsRepository();
+  const writer = new StockMarketStoryNewsWriter(repository);
+  const gameSessionId = "9fb2d0a0-cc20-48e6-b069-2f93f49d1fc4";
+  const storylineEventId = "68cea474-b682-46d0-ac27-927da1d9f8c9";
+  const shockKey = "meridian-customs-security-intrusion-v1";
+  const idempotencyKey = [
+    "story_market_news",
+    gameSessionId,
+    storylineEventId,
+    shockKey,
+  ].join(":");
+  const input = {
+    gameSessionId,
+    storylineEventId,
+    shockKey,
+    idempotencyKey,
+    payload: {
+      shockKey,
+      headline: "Meridian verification records diverge",
+      explanation: "Cargo and payment records no longer reconcile reliably.",
+      category: "supply_chain",
+      scope: "global",
+      sentiment: "negative",
+      impactStrength: "medium",
+      durationTicks: 5,
+    },
+  };
+
+  assertEquals(idempotencyKey.length > 128, true);
+  await writer.createMarketNews(input);
+  await writer.createMarketNews(input);
+
+  const first = repository.created[0]?.shockId ?? "";
+  const second = repository.created[1]?.shockId ?? "";
+  assertEquals(repository.created.length, 2);
+  assertEquals(first, second);
+  assertEquals(/^story_market_news:[0-9a-f]{64}$/.test(first), true);
+  assertEquals(first.length, 82);
+  assertEquals(first.includes(gameSessionId), false);
+  assertEquals(first.includes(storylineEventId), false);
+});
+
 class FakeMarketNewsRepository implements StockMarketNewsRepository {
   readonly created: StockMarketNewsInsertInput[] = [];
 
