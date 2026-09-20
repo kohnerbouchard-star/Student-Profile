@@ -143,7 +143,7 @@ cleanup() {
   fi
   rm -f "$dump_path"
   if test "$local_started" = true; then
-    npx supabase stop --workdir "$supabase_root" --no-backup >/dev/null 2>&1 || true
+    supabase stop --workdir "$supabase_root" --no-backup >/dev/null 2>&1 || true
   fi
   write_summary "$exit_code"
   exit "$exit_code"
@@ -154,14 +154,14 @@ excluded="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,got
 startup_status=1
 for attempt in 1 2 3; do
   set +e
-  npx supabase start --workdir "$supabase_root" --exclude "$excluded"
+  supabase start --workdir "$supabase_root" --exclude "$excluded"
   startup_status=$?
   set -e
   if test "$startup_status" -eq 0; then
     local_started=true
     break
   fi
-  npx supabase stop --workdir "$supabase_root" --no-backup >/dev/null 2>&1 || true
+  supabase stop --workdir "$supabase_root" --no-backup >/dev/null 2>&1 || true
   sleep $((attempt * 10))
 done
 test "$startup_status" -eq 0
@@ -171,6 +171,8 @@ test "$(sha256sum "$ca_path" | awk '{print $1}')" = "$ca_sha256"
 openssl x509 -in "$ca_path" -noout -checkend 2592000
 docker cp "$ca_path" "$container:$ca_container_path"
 docker exec "$container" chmod 0444 "$ca_container_path"
+test "$(docker exec "$container" psql -U supabase_admin -d postgres -X -qAt -v ON_ERROR_STOP=1 \
+  -c "select rolsuper from pg_roles where rolname = 'supabase_admin'")" = "t"
 
 echo "Capturing $PHASE15_ENVIRONMENT schema without application rows."
 docker exec \
@@ -189,12 +191,12 @@ if grep -Eq '^(COPY|INSERT INTO) ' "$dump_path"; then
 fi
 sha256sum "$dump_path" | awk '{print $1}' > "$PHASE15_EVIDENCE_DIR/source-schema-dump-sha256.txt"
 
-docker exec -i "$container" psql -U postgres -d postgres -X -q -v ON_ERROR_STOP=1 <<'SQL'
+docker exec -i "$container" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 <<'SQL'
 drop schema if exists economy_private cascade;
 drop schema if exists private cascade;
 drop schema if exists public cascade;
 SQL
-docker exec -i "$container" psql -U postgres -d postgres -X -q -v ON_ERROR_STOP=1 < "$dump_path"
+docker exec -i "$container" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 < "$dump_path"
 schema_restored=true
 
 docker exec -i "$container" psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 \
