@@ -143,7 +143,7 @@ cleanup() {
   fi
   rm -f "$dump_path"
   if test "$local_started" = true; then
-    npx supabase stop --workdir "$supabase_root" --no-backup >/dev/null 2>&1 || true
+    supabase stop --workdir "$supabase_root" --no-backup >/dev/null 2>&1 || true
   fi
   write_summary "$exit_code"
   exit "$exit_code"
@@ -154,14 +154,14 @@ excluded="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,got
 startup_status=1
 for attempt in 1 2 3; do
   set +e
-  npx supabase start --workdir "$supabase_root" --exclude "$excluded"
+  supabase start --workdir "$supabase_root" --exclude "$excluded"
   startup_status=$?
   set -e
   if test "$startup_status" -eq 0; then
     local_started=true
     break
   fi
-  npx supabase stop --workdir "$supabase_root" --no-backup >/dev/null 2>&1 || true
+  supabase stop --workdir "$supabase_root" --no-backup >/dev/null 2>&1 || true
   sleep $((attempt * 10))
 done
 test "$startup_status" -eq 0
