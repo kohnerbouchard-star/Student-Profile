@@ -35,6 +35,8 @@ test("production promotion is bound to exact successful Phase 15 staging evidenc
     "scripts/staging/golden-five-browser-acceptance.mjs",
     "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts",
     "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
   ]) assert.ok(source.includes(marker), `missing staging authority marker: ${marker}`);
 
   assert.match(source, /certify-staging:[\s\S]*?environment: staging/u);
