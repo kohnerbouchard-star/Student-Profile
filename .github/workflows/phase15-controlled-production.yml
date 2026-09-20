@@ -438,7 +438,7 @@ jobs:
           retention-days: 30
 
   converge-production-database:
-    name: Backup-gate and converge populated production database
+    name: Recovery-gate and converge populated production database
     if: >-
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
@@ -446,7 +446,7 @@ jobs:
       github.event.workflow_run.head_branch == 'main'
     needs: certify-staging
     runs-on: ubuntu-24.04
-    timeout-minutes: 100
+    timeout-minutes: 150
     environment: production
     env:
       SOURCE_COMMIT: ${{ needs.certify-staging.outputs.source_commit }}
@@ -507,39 +507,319 @@ jobs:
           echo "::add-mask::$database_url"
           PHASE15_REMOTE_DATABASE_URL="$database_url" node scripts/release-integrity/cli.mjs validate-db-url --url-env PHASE15_REMOTE_DATABASE_URL --expected-project-ref "$PRODUCTION_PROJECT_REF"
           printf 'PHASE15_REMOTE_DATABASE_URL=%s\n' "$database_url" >> "$GITHUB_ENV"
-      - name: Require PITR or a recent completed production backup
+      - name: Inspect managed production recovery state
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/database/backups" > "$RUNNER_TEMP/production-backups.json"
-          BACKUPS="$RUNNER_TEMP/production-backups.json" OUTPUT="$RUNNER_TEMP/phase15-production-database-evidence/recovery-readiness.json" node --input-type=module - <<'NODE'
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/database/backups" \
+            > "$RUNNER_TEMP/production-backups.json"
+          BACKUPS="$RUNNER_TEMP/production-backups.json" \
+          OUTPUT="$RUNNER_TEMP/phase15-production-database-evidence/managed-recovery.json" \
+          node --input-type=module - <<'NODE'
           import { readFile, writeFile } from "node:fs/promises";
           const body = JSON.parse(await readFile(process.env.BACKUPS, "utf8"));
-          const rows = Array.isArray(body.backups) ? body.backups : [];
+          const rows = Array.isArray(body?.backups)
+            ? body.backups
+            : (Array.isArray(body) ? body : []);
           const completed = rows
             .filter((row) => String(row.status || "").toUpperCase() === "COMPLETED")
             .map((row) => ({
               status: "COMPLETED",
-              timestamp: String(row.inserted_at || row.created_at || row.started_at || row.completed_at || ""),
+              timestamp: String(
+                row.inserted_at || row.created_at || row.started_at || row.completed_at || "",
+              ),
             }))
             .filter((row) => Number.isFinite(Date.parse(row.timestamp)))
-            .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+            .sort((left, right) => Date.parse(right.timestamp) - Date.parse(left.timestamp));
           const latest = completed[0] || null;
-          const recentCompletedBackup = Boolean(latest) &&
-            Date.now() - Date.parse(latest.timestamp) >= 0 &&
-            Date.now() - Date.parse(latest.timestamp) <= 48 * 60 * 60 * 1000;
-          const pitrEnabled = body.pitr_enabled === true;
-          if (!pitrEnabled && !recentCompletedBackup) {
-            throw new Error("Production has neither PITR nor a completed backup within 48 hours.");
+          const ageMilliseconds = latest ? Date.now() - Date.parse(latest.timestamp) : null;
+          await writeFile(process.env.OUTPUT, JSON.stringify({
+            schemaVersion: 1,
+            status: "PASS",
+            projectRef: process.env.PRODUCTION_PROJECT_REF,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            pitrEnabled: body?.pitr_enabled === true || body?.pitrEnabled === true,
+            recentCompletedBackup: Number.isFinite(ageMilliseconds) &&
+              ageMilliseconds >= 0 &&
+              ageMilliseconds <= 48 * 60 * 60 * 1000,
+            latestCompletedBackupAt: latest?.timestamp || null,
+          }, null, 2) + "\n");
+          NODE
+
+      - name: Create and restore-verify encrypted logical production backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          recovery_root="$RUNNER_TEMP/phase15-production-recovery"
+          plain_root="$recovery_root/plain"
+          validation_root="$recovery_root/validation"
+          restore_project="$RUNNER_TEMP/phase15-production-restore"
+          encrypted_archive="$recovery_root/phase15-production-$SOURCE_COMMIT.tar.gz.enc"
+          archive="$recovery_root/phase15-production-$SOURCE_COMMIT.tar.gz"
+          decrypted_archive="$validation_root/phase15-production-$SOURCE_COMMIT.tar.gz"
+          key_file="$recovery_root/.backup-key"
+          mkdir -p "$plain_root" "$validation_root" "$restore_project/supabase"
+
+          supabase db dump --db-url "$PHASE15_REMOTE_DATABASE_URL" \
+            --file "$plain_root/roles.sql" --role-only
+          supabase db dump --db-url "$PHASE15_REMOTE_DATABASE_URL" \
+            --file "$plain_root/schema.sql"
+          supabase db dump --db-url "$PHASE15_REMOTE_DATABASE_URL" \
+            --file "$plain_root/data.sql" --use-copy --data-only \
+            -x "storage.buckets_vectors" -x "storage.vector_indexes"
+          for backup_file in roles.sql schema.sql data.sql; do
+            test -s "$plain_root/$backup_file"
+          done
+          copy_statement_count="$(grep -c '^COPY ' "$plain_root/data.sql" || true)"
+          test "$copy_statement_count" -gt 0
+
+          created_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          roles_sha256="$(sha256sum "$plain_root/roles.sql" | awk '{print $1}')"
+          schema_sha256="$(sha256sum "$plain_root/schema.sql" | awk '{print $1}')"
+          data_sha256="$(sha256sum "$plain_root/data.sql" | awk '{print $1}')"
+          CREATED_AT="$created_at" \
+          ROLES_SHA256="$roles_sha256" \
+          SCHEMA_SHA256="$schema_sha256" \
+          DATA_SHA256="$data_sha256" \
+          ROLES_BYTES="$(stat --format='%s' "$plain_root/roles.sql")" \
+          SCHEMA_BYTES="$(stat --format='%s' "$plain_root/schema.sql")" \
+          DATA_BYTES="$(stat --format='%s' "$plain_root/data.sql")" \
+          COPY_STATEMENT_COUNT="$copy_statement_count" \
+          OUTPUT="$plain_root/backup-manifest.json" \
+          node --input-type=module - <<'NODE'
+          import { writeFile } from "node:fs/promises";
+          const file = (name, sha256, bytes) => ({
+            name,
+            sha256,
+            bytes: Number(bytes),
+          });
+          await writeFile(process.env.OUTPUT, JSON.stringify({
+            schemaVersion: 1,
+            backupFormat: "supabase-cli-logical-v1",
+            projectRef: process.env.PRODUCTION_PROJECT_REF,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            createdAt: process.env.CREATED_AT,
+            supabaseCliVersion: process.env.SUPABASE_CLI_VERSION,
+            files: [
+              file("roles.sql", process.env.ROLES_SHA256, process.env.ROLES_BYTES),
+              file("schema.sql", process.env.SCHEMA_SHA256, process.env.SCHEMA_BYTES),
+              file("data.sql", process.env.DATA_SHA256, process.env.DATA_BYTES),
+            ],
+            copyStatementCount: Number(process.env.COPY_STATEMENT_COUNT),
+          }, null, 2) + "\n");
+          NODE
+
+          tar --create --gzip --file "$archive" --directory "$plain_root" \
+            roles.sql schema.sql data.sql backup-manifest.json
+          archive_sha256="$(sha256sum "$archive" | awk '{print $1}')"
+          BACKUP_ACCESS_TOKEN="$SUPABASE_ACCESS_TOKEN" \
+          BACKUP_DATABASE_URL="$PHASE15_REMOTE_DATABASE_URL" \
+          BACKUP_SOURCE_COMMIT="$SOURCE_COMMIT" \
+          node --input-type=module - <<'NODE' > "$key_file"
+          import { createHmac } from "node:crypto";
+          process.stdout.write(createHmac("sha256", process.env.BACKUP_ACCESS_TOKEN)
+            .update(process.env.BACKUP_DATABASE_URL)
+            .update(String.fromCharCode(0))
+            .update(process.env.BACKUP_SOURCE_COMMIT)
+            .digest("hex"));
+          NODE
+          chmod 600 "$key_file"
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 600000 -md sha256 \
+            -in "$archive" -out "$encrypted_archive" -pass "file:$key_file"
+          test -s "$encrypted_archive"
+          cipher_sha256="$(sha256sum "$encrypted_archive" | awk '{print $1}')"
+
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -md sha256 \
+            -in "$encrypted_archive" -out "$decrypted_archive" -pass "file:$key_file"
+          test "$(sha256sum "$decrypted_archive" | awk '{print $1}')" = "$archive_sha256"
+          tar --extract --gzip --file "$decrypted_archive" --directory "$validation_root"
+          for backup_file in roles.sql schema.sql data.sql backup-manifest.json; do
+            cmp -s "$plain_root/$backup_file" "$validation_root/$backup_file"
+          done
+
+          rsync -a --exclude migrations --exclude .temp backend/supabase/ "$restore_project/supabase/"
+          test "$restore_project" = "$RUNNER_TEMP/phase15-production-restore"
+          rm -rf "$restore_project/supabase/migrations"
+          mkdir -p "$restore_project/supabase/migrations"
+          : > "$restore_project/supabase/seed.sql"
+          sed -i -E \
+            "s|^project_id = .+$|project_id = \"phase15-restore-$GITHUB_RUN_ID\"|" \
+            "$restore_project/supabase/config.toml"
+
+          restore_started=false
+          cleanup_restore() {
+            local status="$?"
+            trap - EXIT
+            if test "$restore_started" = true; then
+              supabase stop --workdir "$restore_project" --no-backup || status=1
+            fi
+            exit "$status"
+          }
+          trap cleanup_restore EXIT
+          excluded="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
+          for attempt in 1 2 3; do
+            if supabase start --workdir "$restore_project" --exclude "$excluded"; then
+              restore_started=true
+              break
+            fi
+            supabase stop --workdir "$restore_project" --no-backup || true
+            sleep $((attempt * 10))
+          done
+          test "$restore_started" = true
+          supabase status --workdir "$restore_project" --output json \
+            > "$recovery_root/restore-status.json"
+          restore_url="$(jq -r '.DB_URL // .db_url // empty' "$recovery_root/restore-status.json")"
+          test -n "$restore_url"
+          echo "::add-mask::$restore_url"
+
+          PGSSLMODE=disable psql "$restore_url" -X \
+            --single-transaction --variable ON_ERROR_STOP=1 \
+            --file "$validation_root/roles.sql" \
+            --file "$validation_root/schema.sql" \
+            --command 'SET session_replication_role = replica' \
+            --file "$validation_root/data.sql"
+
+          psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
+            < scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql \
+            > "$recovery_root/remote-schema.json"
+          PGSSLMODE=disable psql "$restore_url" -X -qAt -v ON_ERROR_STOP=1 \
+            < scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql \
+            > "$recovery_root/restored-schema.json"
+          node scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs \
+            --left "$recovery_root/remote-schema.json" \
+            --right "$recovery_root/restored-schema.json" \
+            --profile supabase-hosted-live-v1 \
+            > "$recovery_root/restore-schema-comparison.json"
+          jq -e '.matched == true and .differences == []' \
+            "$recovery_root/restore-schema-comparison.json" >/dev/null
+
+          PGSSLMODE=disable psql "$restore_url" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' \
+            > "$recovery_root/restored-data-verification.json"
+          select jsonb_build_object(
+            'schemaVersion', 1,
+            'applicationTableCount', (
+              select count(*) from pg_catalog.pg_class class_row
+              join pg_catalog.pg_namespace namespace_row
+                on namespace_row.oid = class_row.relnamespace
+              where class_row.relkind in ('r', 'p')
+                and namespace_row.nspname in ('public', 'private')
+            ),
+            'players', (select count(*) from public.players),
+            'gameSessions', (select count(*) from public.game_sessions),
+            'accountBalances', (select count(*) from public.account_balances),
+            'ledgerEntries', (select count(*) from public.ledger_entries),
+            'inventoryHoldings', (select count(*) from public.inventory_holdings),
+            'stockHoldings', (select count(*) from public.stock_holdings)
+          )::text;
+          SQL
+          jq -e '.applicationTableCount > 0' \
+            "$recovery_root/restored-data-verification.json" >/dev/null
+
+          supabase stop --workdir "$restore_project" --no-backup
+          restore_started=false
+          trap - EXIT
+
+          LOGICAL_MANIFEST="$plain_root/backup-manifest.json" \
+          SCHEMA_COMPARISON="$recovery_root/restore-schema-comparison.json" \
+          DATA_VERIFICATION="$recovery_root/restored-data-verification.json" \
+          ARCHIVE_SHA256="$archive_sha256" \
+          CIPHER_SHA256="$cipher_sha256" \
+          CIPHER_BYTES="$(stat --format='%s' "$encrypted_archive")" \
+          OUTPUT="$RUNNER_TEMP/phase15-production-database-evidence/logical-backup-validation.json" \
+          node --input-type=module - <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const manifest = JSON.parse(await readFile(process.env.LOGICAL_MANIFEST, "utf8"));
+          const schema = JSON.parse(await readFile(process.env.SCHEMA_COMPARISON, "utf8"));
+          const data = JSON.parse(await readFile(process.env.DATA_VERIFICATION, "utf8"));
+          if (schema.matched !== true || schema.differences.length !== 0) {
+            throw new Error("Restored logical backup schema does not match production.");
           }
           await writeFile(process.env.OUTPUT, JSON.stringify({
             schemaVersion: 1,
             status: "PASS",
             projectRef: process.env.PRODUCTION_PROJECT_REF,
             sourceCommit: process.env.SOURCE_COMMIT,
-            pitrEnabled,
-            recentCompletedBackup,
-            latestCompletedBackupAt: latest?.timestamp || null,
+            recoveryMethod: "supabase-cli-logical-backup-v1",
+            createdAt: manifest.createdAt,
+            supabaseCliVersion: manifest.supabaseCliVersion,
+            backupFiles: manifest.files,
+            copyStatementCount: manifest.copyStatementCount,
+            archiveSha256: process.env.ARCHIVE_SHA256,
+            cipherSha256: process.env.CIPHER_SHA256,
+            cipherBytes: Number(process.env.CIPHER_BYTES),
+            encryption: {
+              encrypted: true,
+              cipher: "aes-256-cbc",
+              kdf: "pbkdf2-hmac-sha256",
+              iterations: 600000,
+              keyAuthority: "production-environment-secrets-v1",
+            },
+            restoreValidated: true,
+            schemaMatched: true,
+            restoredData: data,
+          }, null, 2) + "\n");
+          NODE
+
+          shred -u "$key_file" "$archive" "$decrypted_archive" \
+            "$plain_root/roles.sql" "$plain_root/schema.sql" "$plain_root/data.sql" \
+            "$validation_root/roles.sql" "$validation_root/schema.sql" "$validation_root/data.sql" \
+            2>/dev/null || true
+          test -s "$encrypted_archive"
+
+      - name: Upload encrypted production recovery set before mutation
+        id: upload-production-recovery
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-production-recovery-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-recovery/phase15-production-${{ env.SOURCE_COMMIT }}.tar.gz.enc
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+      - name: Finalize fail-closed production recovery gate
+        shell: bash
+        env:
+          RECOVERY_ARTIFACT_ID: ${{ steps.upload-production-recovery.outputs.artifact-id }}
+          RECOVERY_ARTIFACT_DIGEST: ${{ steps.upload-production-recovery.outputs.artifact-digest }}
+        run: |
+          set -euo pipefail
+          MANAGED="$RUNNER_TEMP/phase15-production-database-evidence/managed-recovery.json" \
+          LOGICAL="$RUNNER_TEMP/phase15-production-database-evidence/logical-backup-validation.json" \
+          OUTPUT="$RUNNER_TEMP/phase15-production-database-evidence/recovery-readiness.json" \
+          node --input-type=module - <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const managed = JSON.parse(await readFile(process.env.MANAGED, "utf8"));
+          const logical = JSON.parse(await readFile(process.env.LOGICAL, "utf8"));
+          if (logical.status !== "PASS" ||
+              logical.projectRef !== process.env.PRODUCTION_PROJECT_REF ||
+              logical.sourceCommit !== process.env.SOURCE_COMMIT ||
+              logical.recoveryMethod !== "supabase-cli-logical-backup-v1" ||
+              logical.encryption?.encrypted !== true ||
+              logical.restoreValidated !== true ||
+              logical.schemaMatched !== true) {
+            throw new Error("Production logical recovery proof is incomplete.");
+          }
+          if (!/^[0-9]+$/u.test(process.env.RECOVERY_ARTIFACT_ID || "") ||
+              !/^(?:sha256:)?[a-f0-9]{64}$/u.test(process.env.RECOVERY_ARTIFACT_DIGEST || "")) {
+            throw new Error("Encrypted production recovery artifact was not durably uploaded.");
+          }
+          await writeFile(process.env.OUTPUT, JSON.stringify({
+            schemaVersion: 2,
+            status: "PASS",
+            projectRef: process.env.PRODUCTION_PROJECT_REF,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            recoveryMethod: "supabase-cli-logical-backup-v1",
+            pitrEnabled: managed.pitrEnabled,
+            recentCompletedBackup: managed.recentCompletedBackup,
+            latestCompletedBackupAt: managed.latestCompletedBackupAt,
+            logicalBackup: {
+              ...logical,
+              artifactName: `phase15-production-recovery-${process.env.SOURCE_COMMIT}`,
+              artifactId: Number(process.env.RECOVERY_ARTIFACT_ID),
+              artifactDigest: process.env.RECOVERY_ARTIFACT_DIGEST,
+              offsiteUploaded: true,
+            },
           }, null, 2) + "\n");
           NODE
       - name: Download exact canonical clean schema
@@ -902,7 +1182,15 @@ jobs:
           }
           if (recovery.status !== "PASS" ||
               recovery.sourceCommit !== process.env.SOURCE_COMMIT ||
-              (recovery.pitrEnabled !== true && recovery.recentCompletedBackup !== true)) {
+              recovery.projectRef !== process.env.PRODUCTION_PROJECT_REF ||
+              recovery.recoveryMethod !== "supabase-cli-logical-backup-v1" ||
+              recovery.logicalBackup?.status !== "PASS" ||
+              recovery.logicalBackup?.encryption?.encrypted !== true ||
+              recovery.logicalBackup?.restoreValidated !== true ||
+              recovery.logicalBackup?.schemaMatched !== true ||
+              recovery.logicalBackup?.offsiteUploaded !== true ||
+              !Number.isSafeInteger(recovery.logicalBackup?.artifactId) ||
+              !/^(?:sha256:)?[a-f0-9]{64}$/u.test(recovery.logicalBackup?.artifactDigest || "")) {
             throw new Error("Production recovery-readiness certificate mismatch.");
           }
           if (advisors.status !== "PASS" || advisors.phase !== "post" ||
