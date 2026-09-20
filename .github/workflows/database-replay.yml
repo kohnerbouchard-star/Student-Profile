@@ -13,6 +13,7 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/database-replay.yml"
+      - ".github/workflows/phase15-controlled-staging.yml"
   push:
     branches:
       - main
@@ -27,6 +28,7 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/database-replay.yml"
+      - ".github/workflows/phase15-controlled-staging.yml"
   workflow_dispatch:
 
 permissions:
