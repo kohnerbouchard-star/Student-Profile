@@ -16,6 +16,8 @@ on:
       - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
       - "scripts/staging/golden-five-contract.test.mjs"
       - "scripts/staging/golden-five-verify.mjs"
+      - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts"
+      - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts"
       - "docs/operations/contracts/player-cross-cutting/pr-699.json"
       - "scripts/player-cross-cutting-authority.test.mjs"
   push:
@@ -32,6 +34,8 @@ on:
       - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
       - "scripts/staging/golden-five-contract.test.mjs"
       - "scripts/staging/golden-five-verify.mjs"
+      - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts"
+      - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts"
 
 permissions:
   contents: read
@@ -626,6 +630,37 @@ jobs:
               'hex'
             );
 
+          update public.stock_market_events as event_row
+          set shock_id = 'story_market_news:' || encode(
+                extensions.digest(event_row.shock_id, 'sha256'),
+                'hex'
+              ),
+              updated_at = clock_timestamp()
+          where event_row.game_session_id = (
+              select id
+              from public.game_sessions
+              where name = 'Econovaria Golden Five'
+            )
+            and event_row.metadata ->> 'sourceType' = 'story_event'
+            and event_row.shock_id !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$';
+
+          do $phase15_validate_golden_news_identifiers$
+          begin
+            if exists (
+              select 1
+              from public.stock_market_events as event_row
+              join public.game_sessions as game_row
+                on game_row.id = event_row.game_session_id
+              where game_row.name = 'Econovaria Golden Five'
+                and event_row.visibility = 'public'
+                and event_row.is_active
+                and event_row.shock_id !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
+            ) then
+              raise exception 'PHASE15_GOLDEN_NEWS_IDENTIFIER_INVALID';
+            end if;
+          end;
+          $phase15_validate_golden_news_identifiers$;
+
           do $phase15_validate_fx_macro_alignment_scope$
           declare
             v_rows integer;
@@ -998,6 +1033,7 @@ jobs:
             fixtureLifecycleAction: 'resume',
             fixtureLifecycleState: 'active',
             fixtureJoinCodeStatus: 'active',
+            newsIdentifierAuthority: 'bounded-sha256-v1',
             fxAuthorityState: 'ready',
             bankingFxReadiness: 'ready',
             fxMacroAlignment: 'bounded-latest-snapshot-copy-v1',

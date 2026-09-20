@@ -1,3 +1,4 @@
+import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import type { JsonObject } from "../../../supabase/tableTypes.ts";
 import type {
   StoryEffectMarketNewsWriter,
@@ -34,12 +35,19 @@ export class StockMarketStoryNewsWriter implements StoryEffectMarketNewsWriter {
     }
     const result = await this.repository.create({
       ...createInput,
-      shockId: input.idempotencyKey,
+      shockId: await buildBrowserSafeShockId(input.idempotencyKey),
       createdTick,
     });
 
     return { id: result.news.id };
   }
+}
+
+async function buildBrowserSafeShockId(idempotencyKey: string): Promise<string> {
+  const value = String(idempotencyKey ?? "").trim();
+  if (!value) throw new Error("Story market news idempotencyKey is required.");
+  if (/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(value)) return value;
+  return `story_market_news:${await sha256Hex(value)}`;
 }
 
 function readFrozenCreatedTick(payload: JsonObject): number | null {

@@ -32,6 +32,8 @@ test("production promotion is bound to exact successful Phase 15 staging evidenc
     "fixture-verification.json",
     "git merge-base --is-ancestor",
     "phase15-clean-replay-${{ env.SOURCE_COMMIT }}",
+    "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts",
+    "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts",
   ]) assert.ok(source.includes(marker), `missing staging authority marker: ${marker}`);
 
   assert.match(source, /certify-staging:[\s\S]*?environment: staging/u);

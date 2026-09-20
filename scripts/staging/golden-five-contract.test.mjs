@@ -66,6 +66,9 @@ test("Golden Five verifier matches the current canonical fixture and lifecycle",
   assert.match(workflow, /fixtureJoinCodeStatus: 'active'/u);
   assert.match(verifier, /joinCodeStatus/u);
   assert.match(verifier, /joinCodeHashMatches/u);
+  assert.match(workflow, /phase15_validate_golden_news_identifiers/u);
+  assert.match(workflow, /newsIdentifierAuthority: 'bounded-sha256-v1'/u);
+  assert.match(verifier, /newsIdentifiersValid/u);
   assert.match(verifier, /fxAuthorityReady/u);
   assert.match(verifier, /balance_row\.currency_code = country_row\.currency_code/u);
   assert.match(workflow, /Production database selection is prohibited\./u);
