@@ -53,6 +53,9 @@ test("Golden Five verifier matches the current canonical fixture and lifecycle",
   assert.match(workflow, /'resume'/u);
   assert.match(workflow, /fixtureLifecycleState: 'active'/u);
   assert.match(workflow, /Production database selection is prohibited\./u);
+  assert.match(workflow, /PGSSLMODE: verify-full/u);
+  assert.match(workflow, /sslmode', 'verify-full'/u);
+  assert.doesNotMatch(workflow, /PGSSLMODE=require/u);
 });
 
 test("Golden Five source never commits plaintext fixture access codes", async () => {
