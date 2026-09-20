@@ -59,6 +59,10 @@ test("production writes are recovery-gated and runtime/release evidence is exact
     "managedPlatformDataIncluded",
     "managedPlatformRestoreRequiresCurrentTargetVersion",
     "restoreScope",
+    "supabase-application-restore-v1",
+    "schemaComparisonProfile",
+    "comparison_status=0",
+    "phase15-production-database-evidence/restore-schema-comparison.json",
     "openssl enc -aes-256-cbc",
     "supabase start --workdir \"$restore_project\"",
     "docker exec \"$db_container\" psql -U supabase_admin",
@@ -103,7 +107,7 @@ test("production writes are recovery-gated and runtime/release evidence is exact
   assert.doesNotMatch(source, /--file \/tmp\/phase15-data\.sql/u);
   assert.match(
     source,
-    /compare-schema-snapshots\.mjs[\s\S]*--left "\$recovery_root\/restored-schema\.json"[\s\S]*--right "\$recovery_root\/remote-schema\.json"[\s\S]*--profile supabase-hosted-live-v1/u,
+    /compare-schema-snapshots\.mjs[\s\S]*--left "\$recovery_root\/restored-schema\.json"[\s\S]*--right "\$recovery_root\/remote-schema\.json"[\s\S]*--profile supabase-application-restore-v1/u,
   );
   assert.doesNotMatch(
     source,

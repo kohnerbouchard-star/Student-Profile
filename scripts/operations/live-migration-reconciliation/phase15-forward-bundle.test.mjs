@@ -9,7 +9,10 @@ import {
   PRODUCTION_PRELUDE,
   stripOuterTransaction,
 } from "./build-phase15-forward-bundle.mjs";
-import { normalizeSupabaseHostedPair } from "./compare-schema-snapshots.mjs";
+import {
+  normalizeSupabaseApplicationRestorePair,
+  normalizeSupabaseHostedPair,
+} from "./compare-schema-snapshots.mjs";
 import { verifyLedger, verifyLedgerPrefix } from "./verify-phase15-ledger.mjs";
 
 test("outer transaction normalization preserves comments and procedural BEGIN blocks", () => {
@@ -196,4 +199,94 @@ test("hosted schema normalization accepts only the exact Supabase-managed role t
     }),
     /role-membership topology mismatch/u,
   );
+});
+
+
+test("application restore normalization preserves exact application schema authority", () => {
+  const structural = {
+    schemas: [{ name: "public" }, { name: "private" }],
+    relations: [],
+    columns: [],
+    constraints: [],
+    indexes: [],
+    routines: [],
+    triggers: [],
+  };
+  const commonMembership = {
+    role: "anon",
+    member: "authenticator",
+    grantor: "supabase_admin",
+    adminOption: false,
+  };
+  const authorization = ({ memberships, superuser, globalAcl }) => ({
+    schemaGrants: [],
+    schemaOwners: [{ schema: "public", owner: "postgres" }],
+    relationOwners: [],
+    routineOwners: [],
+    roleAttributes: [{ role: "postgres", superuser }],
+    roleMemberships: [commonMembership, ...memberships],
+    rowSecurity: [],
+    policies: [],
+    tableGrants: [],
+    routineGrants: [],
+    defaultPrivileges: [
+      { role: "postgres", schema: "public", objectType: "r", acl: "{=r/postgres}" },
+      { role: "postgres", schema: "", objectType: "r", acl: globalAcl },
+    ],
+  });
+  const canonical = {
+    schemaVersion: "v2",
+    structural,
+    authorization: authorization({
+      superuser: true,
+      globalAcl: "{canonical}",
+      memberships: [
+        {
+          role: "supabase_functions_admin",
+          member: "postgres",
+          grantor: "supabase_admin",
+          adminOption: false,
+        },
+        {
+          role: "supabase_realtime_admin",
+          member: "postgres",
+          grantor: "supabase_admin",
+          adminOption: false,
+        },
+      ],
+    }),
+  };
+  const hosted = {
+    schemaVersion: "v2",
+    structural,
+    authorization: authorization({
+      superuser: false,
+      globalAcl: "{hosted}",
+      memberships: [
+        {
+          role: "postgres",
+          member: "cli_login_postgres",
+          grantor: "supabase_admin",
+          adminOption: false,
+        },
+      ],
+    }),
+  };
+  const normalized = normalizeSupabaseApplicationRestorePair(canonical, hosted);
+  assert.deepEqual(normalized.left, normalized.right);
+  assert.equal(normalized.validation.profile, "supabase-application-restore-v1");
+  assert.equal(normalized.validation.hostedTopology.profile, "supabase-hosted-live-v1");
+  assert.deepEqual(
+    normalized.validation.excludedManagedAuthorizationKeys,
+    ["roleAttributes", "roleMemberships"],
+  );
+  assert.deepEqual(
+    normalized.validation.excludedGlobalDefaultPrivilegeRows,
+    { canonical: 1, hosted: 1 },
+  );
+
+  const changedOwner = structuredClone(hosted);
+  changedOwner.authorization.schemaOwners[0].owner = "different_owner";
+  const different = normalizeSupabaseApplicationRestorePair(canonical, changedOwner);
+  assert.notDeepEqual(different.left, different.right);
 });

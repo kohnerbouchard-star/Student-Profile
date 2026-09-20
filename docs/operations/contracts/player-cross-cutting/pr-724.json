@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.phase15-application-restore-profile-pr-724.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 724,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/phase15-controlled-production.yml",
+    "scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+    "docs/operations/contracts/player-cross-cutting/pr-724.json",
+    "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-724.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-financial-reporting-source",
+    "business-financial-reporting-database",
+    "business-financial-reporting-browser",
+    "business-common-equity-source",
+    "business-common-equity-database",
+    "business-primary-ipo-source",
+    "business-primary-ipo-database",
+    "business-primary-ipo-browser",
+    "business-financial-market-source",
+    "business-financial-market-database",
+    "business-financial-market-browser",
+    "admin-business-supervision-source",
+    "admin-business-supervision-database",
+    "admin-business-supervision-browser"
+  ],
+  "criticalJobChecks": [
+    "business-financial-reporting-source",
+    "business-financial-reporting-database",
+    "business-financial-reporting-browser",
+    "business-common-equity-source",
+    "business-common-equity-database",
+    "business-primary-ipo-source",
+    "business-primary-ipo-database",
+    "business-primary-ipo-browser",
+    "business-financial-market-source",
+    "business-financial-market-database",
+    "business-financial-market-browser",
+    "admin-business-supervision-source",
+    "admin-business-supervision-database",
+    "admin-business-supervision-browser"
+  ],
+  "authorizationNote": "Owner authorized the full gated Phase 15A-F program. This exact-path correction adds a tested application-restore comparison profile: it still validates the established local-versus-hosted Supabase managed-role topology, then requires exact application structures, owners, grants, row security, policies, and schema-scoped default privileges while excluding target-managed role attributes/memberships and global defaults from equality. The encrypted roles/schema/platform-data backup and transactional public/private restore remain mandatory. Any mismatch is now copied into sanitized evidence and printed before the gate fails. Production run 35540072704 never uploaded its recovery artifact or reached mutation. No migration bytes, hosted data, secret values, environment identity, purge controls, Edge runtime code, or production deployment are altered directly; protected replay and exact controlled staging remain mandatory."
+}
