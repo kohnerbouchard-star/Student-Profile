@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.phase15-database-advisor-closure-pr-718.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 718,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/supabase/migrations/20260920082200_phase15_close_database_advisor_findings_v1.sql",
+    "docs/operations/contracts/player-cross-cutting/pr-718.json",
+    "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+    "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
+    "scripts/phase15-storage-lifecycle-convergence.test.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-718.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-financial-reporting-source",
+    "business-financial-reporting-database",
+    "business-financial-reporting-browser",
+    "business-common-equity-source",
+    "business-common-equity-database",
+    "business-primary-ipo-source",
+    "business-primary-ipo-database",
+    "business-primary-ipo-browser",
+    "business-financial-market-source",
+    "business-financial-market-database",
+    "business-financial-market-browser",
+    "admin-business-supervision-source",
+    "admin-business-supervision-database",
+    "admin-business-supervision-browser"
+  ],
+  "criticalJobChecks": [
+    "business-financial-reporting-source",
+    "business-financial-reporting-database",
+    "business-financial-reporting-browser",
+    "business-common-equity-source",
+    "business-common-equity-database",
+    "business-primary-ipo-source",
+    "business-primary-ipo-database",
+    "business-primary-ipo-browser",
+    "business-financial-market-source",
+    "business-financial-market-database",
+    "business-financial-market-browser",
+    "admin-business-supervision-source",
+    "admin-business-supervision-database",
+    "admin-business-supervision-browser"
+  ],
+  "authorizationNote": "Owner authorized the full gated Phase 15A-F program. This exact-path forward-only correction removes browser-role EXECUTE access from three internal SECURITY DEFINER trigger functions, retires one redundant unreferenced index, and extends the bounded Phase 15 bundle by exactly one migration. It changes no historical migration, environment identity, destructive purge lever, Edge runtime, secret value, hosted database or production deployment directly; protected replay and controlled staging remain mandatory before promotion."
+}

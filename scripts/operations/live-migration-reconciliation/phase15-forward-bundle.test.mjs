@@ -31,14 +31,14 @@ test("outer transaction normalization fails closed on an incomplete wrapper", ()
   );
 });
 
-test("staging and production selections bind the certified 150 plus exact prelude", async () => {
+test("staging and production selections bind the certified 151 plus exact prelude", async () => {
   const staging = await loadPhase15Migrations("staging");
   const production = await loadPhase15Migrations("production");
   assert.equal(staging.length, PHASE15_COMMON_COUNT);
   assert.equal(production.length, PHASE15_COMMON_COUNT + PRODUCTION_PRELUDE.length);
   assert.deepEqual(production.slice(0, PRODUCTION_PRELUDE.length).map((row) => row.filename), PRODUCTION_PRELUDE);
   assert.deepEqual(production.slice(PRODUCTION_PRELUDE.length).map((row) => row.filename), staging.map((row) => row.filename));
-  assert.equal(staging.at(-1).filename, "20260920082100_phase15_close_live_shaped_schema_parity_v1.sql");
+  assert.equal(staging.at(-1).filename, "20260920082200_phase15_close_database_advisor_findings_v1.sql");
 });
 
 test("bundles are one fail-closed transaction with exact ledger sources and economic assertions", async () => {

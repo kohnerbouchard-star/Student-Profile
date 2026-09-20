@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const PHASE15_CUTOFF = "20260819062000";
-export const PHASE15_COMMON_COUNT = 150;
+export const PHASE15_COMMON_COUNT = 151;
 
 export const PRODUCTION_PRELUDE = Object.freeze([
   "20260812081410_add_license_expiration_and_purge_confirmation_foundation_v1.sql",

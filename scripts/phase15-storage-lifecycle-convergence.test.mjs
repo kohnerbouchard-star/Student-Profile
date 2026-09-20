@@ -259,6 +259,6 @@ test("final live-shaped parity correction is additive and reasserts the canonica
   assertNotContains(migration, "drop column", "schema parity migration");
   assertNotContains(migration, "drop function", "schema parity migration");
   assertNotContains(migration, "cron.schedule", "schema parity migration");
-  assertContains(rehearsal, 'if test "${#migrations[@]}" -ne 150', "live-shaped rehearsal");
-  assertContains(rehearsal, "Expected 150 forward migrations", "live-shaped rehearsal");
+  assertContains(rehearsal, 'if test "${#migrations[@]}" -ne 151', "live-shaped rehearsal");
+  assertContains(rehearsal, "Expected 151 forward migrations", "live-shaped rehearsal");
 });
