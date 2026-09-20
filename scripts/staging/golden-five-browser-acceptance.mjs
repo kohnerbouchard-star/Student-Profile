@@ -135,7 +135,17 @@ async function dismissPendingStoryCutscenes(page, journey, label) {
     await action.waitFor({ state: "visible", timeout: 30_000 });
     await action.click({ timeout: 30_000 });
     journey.storyCutscenesHandled += 1;
-    await page.waitForTimeout(500);
+    await page.waitForFunction(
+      () => {
+        const pendingAction = document.querySelector(
+          ".player-story-cutscene-modal [data-player-story-action]",
+        );
+        return !pendingAction || !pendingAction.disabled;
+      },
+      undefined,
+      { timeout: 30_000 },
+    );
+    assertNoFailedRequests(journey, `${label} story briefing`, requestStart);
   }
 
   if (await modal.isVisible().catch(() => false)) {
