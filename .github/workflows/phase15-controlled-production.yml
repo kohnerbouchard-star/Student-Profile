@@ -125,7 +125,7 @@ jobs:
               scripts/staging/golden-five-contract.test.mjs|scripts/staging/golden-five-verify.mjs|scripts/staging/golden-five-browser-acceptance.mjs) ;;
               scripts/phase15-storage-lifecycle-convergence.test.mjs) ;;
               backend/supabase/migrations/20260920082200_phase15_close_database_advisor_findings_v1.sql) ;;
-              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json|docs/operations/contracts/player-cross-cutting/pr-722.json|docs/operations/contracts/player-cross-cutting/pr-723.json|docs/operations/contracts/player-cross-cutting/pr-724.json|docs/operations/contracts/player-cross-cutting/pr-725.json) ;;
+              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json|docs/operations/contracts/player-cross-cutting/pr-722.json|docs/operations/contracts/player-cross-cutting/pr-723.json|docs/operations/contracts/player-cross-cutting/pr-724.json|docs/operations/contracts/player-cross-cutting/pr-725.json|docs/operations/contracts/player-cross-cutting/pr-726.json) ;;
               backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts|backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts) ;;
               backend/src/domains/world/services/playerWorldRuntimeService.ts|backend/src/domains/world/services/playerWorldRuntimeService.test.ts) ;;
               *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
@@ -708,11 +708,11 @@ jobs:
           test "$(docker inspect --format '{{.State.Health.Status}}' "$db_container")" = "healthy"
           test "$(docker exec "$db_container" psql -U supabase_admin -d postgres -X -qAt \
             -v ON_ERROR_STOP=1 -c 'select rolsuper from pg_roles where rolname = current_user')" = "t"
-          # Supabase's local image carries explicit postgres default ACLs that
-          # are not the PostgreSQL built-ins assumed by pg_dump. Reset only the
-          # disposable postgres role defaults before replaying the source dump so
-          # object ACLs are reconstructed from the backup instead of inherited
-          # from the validation target.
+          # Supabase's local image carries explicit target default ACLs that
+          # are not the PostgreSQL built-ins assumed by pg_dump. Reset every
+          # pre-existing disposable-target default ACL before replaying the source
+          # dump so objects created by the supabase_admin restore executor do not
+          # inherit grants that are absent from the hosted source.
           cat > "$validation_root/reset-default-privileges.sql" <<'SQL'
           DO $reset$
           DECLARE
@@ -736,7 +736,6 @@ jobs:
               LEFT JOIN pg_catalog.pg_namespace AS namespace_row
                 ON namespace_row.oid = default_acl.defaclnamespace
               CROSS JOIN LATERAL pg_catalog.aclexplode(default_acl.defaclacl) AS exploded_acl
-              WHERE pg_catalog.pg_get_userbyid(default_acl.defaclrole) = 'postgres'
             LOOP
               object_kind := CASE privilege_row.defaclobjtype
                 WHEN 'r' THEN 'TABLES'
@@ -765,6 +764,12 @@ jobs:
                 grantee_clause
               );
             END LOOP;
+            IF EXISTS (
+              SELECT 1
+              FROM pg_catalog.pg_default_acl
+            ) THEN
+              RAISE EXCEPTION 'Disposable target default ACL reset left rows behind';
+            END IF;
           END;
           $reset$;
           SQL
