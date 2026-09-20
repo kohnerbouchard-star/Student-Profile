@@ -87,7 +87,7 @@ jobs:
           node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs \
             --environment staging --mode rollback --format manifest \
             > "$RUNNER_TEMP/staging-forward-manifest.json"
-          test "$(jq -r '.migrationCount' "$RUNNER_TEMP/staging-forward-manifest.json")" = 150
+          test "$(jq -r '.migrationCount' "$RUNNER_TEMP/staging-forward-manifest.json")" = 151
 
   certify-source:
     name: Require exact-main replay and both live-shaped certificates
@@ -191,8 +191,8 @@ jobs:
             throw new Error('Clean replay source identity mismatch.');
           }
           for (const [environment, expectedPrelude, expectedApplied] of [
-            ['staging', 0, 150],
-            ['production', 18, 168],
+            ['staging', 0, 151],
+            ['production', 18, 169],
           ]) {
             const summaryPath = await find(path.join(process.env.CERTIFICATE_ROOT, environment), 'summary.json');
             if (!summaryPath) throw new Error(`${environment} certificate is missing.`);
