@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/phase15-controlled-staging.yml"
+      - ".github/workflows/phase15-controlled-production.yml"
       - ".github/workflows/database-replay.yml"
       - ".github/workflows/player-multiplayer-load-e2e.yml"
       - "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs"
       - "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
       - "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
       - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
       - "docs/operations/contracts/player-cross-cutting/pr-699.json"
       - "scripts/player-cross-cutting-authority.test.mjs"
@@ -17,9 +19,12 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/phase15-controlled-staging.yml"
+      - ".github/workflows/phase15-controlled-production.yml"
+      - ".github/workflows/database-replay.yml"
       - "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs"
       - "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
       - "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
       - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
 
 permissions:
@@ -57,6 +62,7 @@ jobs:
         run: |
           set -euo pipefail
           node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs
           node --test scripts/edge-function-inventory/validate.test.mjs
           node --test scripts/local-edge-runtime-contract.test.mjs
           node --test scripts/runtime-config-contract.test.mjs
