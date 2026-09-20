@@ -103,6 +103,18 @@ test("Golden Five browser acceptance handles authoritative story briefings", asy
   assert.match(source, /assertNoFailedRequests/u);
 });
 
+test("Golden Five browser acceptance traverses grouped Player navigation", async () => {
+  const source = await readFile(
+    "scripts/staging/golden-five-browser-acceptance.mjs",
+    "utf8",
+  );
+  assert.match(source, /ROUTE_GROUP_ENTRY/u);
+  assert.match(source, /banking: "market"/u);
+  assert.match(source, /inventory: "store"/u);
+  assert.match(source, /progression: "profile"/u);
+  assert.match(source, /revealRouteControl/u);
+});
+
 test("Golden Five source never commits plaintext fixture access codes", async () => {
   const plaintextAccessCode = /GOLD-[1-5]-[A-Z0-9]{8}/;
   for (const path of TEXT_PATHS) {
