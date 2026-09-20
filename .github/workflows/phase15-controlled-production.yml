@@ -125,7 +125,7 @@ jobs:
               scripts/staging/golden-five-contract.test.mjs|scripts/staging/golden-five-verify.mjs|scripts/staging/golden-five-browser-acceptance.mjs) ;;
               scripts/phase15-storage-lifecycle-convergence.test.mjs) ;;
               backend/supabase/migrations/20260920082200_phase15_close_database_advisor_findings_v1.sql) ;;
-              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json|docs/operations/contracts/player-cross-cutting/pr-722.json|docs/operations/contracts/player-cross-cutting/pr-723.json|docs/operations/contracts/player-cross-cutting/pr-724.json|docs/operations/contracts/player-cross-cutting/pr-725.json|docs/operations/contracts/player-cross-cutting/pr-726.json) ;;
+              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json|docs/operations/contracts/player-cross-cutting/pr-722.json|docs/operations/contracts/player-cross-cutting/pr-723.json|docs/operations/contracts/player-cross-cutting/pr-724.json|docs/operations/contracts/player-cross-cutting/pr-725.json|docs/operations/contracts/player-cross-cutting/pr-726.json|docs/operations/contracts/player-cross-cutting/pr-727.json) ;;
               backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts|backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts) ;;
               backend/src/domains/world/services/playerWorldRuntimeService.ts|backend/src/domains/world/services/playerWorldRuntimeService.test.ts) ;;
               *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
@@ -708,6 +708,30 @@ jobs:
           test "$(docker inspect --format '{{.State.Health.Status}}' "$db_container")" = "healthy"
           test "$(docker exec "$db_container" psql -U supabase_admin -d postgres -X -qAt \
             -v ON_ERROR_STOP=1 -c 'select rolsuper from pg_roles where rolname = current_user')" = "t"
+
+          # Preserve the current-version disposable target's managed default ACLs.
+          # They must be disabled while source objects are created, then restored
+          # after schema replay so they affect future objects without broadening
+          # grants on the restored routines themselves.
+          docker exec "$db_container" pg_dump -U supabase_admin -d postgres \
+            --format=custom --schema-only \
+            --file /tmp/phase15-target-default-acls.dump
+          docker exec "$db_container" pg_restore --list \
+            /tmp/phase15-target-default-acls.dump \
+            > "$validation_root/target-default-acls.archive.list"
+          grep -F ' DEFAULT ACL ' \
+            "$validation_root/target-default-acls.archive.list" \
+            > "$validation_root/target-default-acls.selected.list"
+          target_default_acl_entry_count="$(wc -l < "$validation_root/target-default-acls.selected.list" | tr -d ' ')"
+          test "$target_default_acl_entry_count" -gt 0
+          docker cp "$validation_root/target-default-acls.selected.list" \
+            "$db_container:/tmp/phase15-target-default-acls.selected.list"
+          docker exec "$db_container" pg_restore \
+            --use-list=/tmp/phase15-target-default-acls.selected.list \
+            --file=/tmp/phase15-target-default-acls.sql \
+            /tmp/phase15-target-default-acls.dump
+          docker exec "$db_container" test -s /tmp/phase15-target-default-acls.sql
+
           # Supabase's local image carries explicit target default ACLs that
           # are not the PostgreSQL built-ins assumed by pg_dump. Reset every
           # pre-existing disposable-target default ACL before replaying the source
@@ -783,6 +807,7 @@ jobs:
             --file /tmp/phase15-roles.sql \
             --file /tmp/phase15-reset-default-privileges.sql \
             --file /tmp/phase15-schema.sql \
+            --file /tmp/phase15-target-default-acls.sql \
             --command 'SET session_replication_role = replica' \
             --file /tmp/phase15-application-data.sql
 
@@ -845,6 +870,7 @@ jobs:
           ARCHIVE_SHA256="$archive_sha256" \
           CIPHER_SHA256="$cipher_sha256" \
           CIPHER_BYTES="$(stat --format='%s' "$encrypted_archive")" \
+          TARGET_DEFAULT_ACL_ENTRY_COUNT="$target_default_acl_entry_count" \
           OUTPUT="$RUNNER_TEMP/phase15-production-database-evidence/logical-backup-validation.json" \
           node --input-type=module - <<'NODE'
           import { readFile, writeFile } from "node:fs/promises";
@@ -891,6 +917,9 @@ jobs:
             schemaComparisonProfile: schema.profile,
             schemaComparisonValidation: schema.profileValidation,
             disposableDefaultPrivilegesReset: true,
+            disposableTargetDefaultPrivilegesRestoredAfterSchema: true,
+            disposableTargetDefaultPrivilegeEntryCount:
+              Number(process.env.TARGET_DEFAULT_ACL_ENTRY_COUNT),
             restoredData: data,
           }, null, 2) + "\n");
           NODE
@@ -944,7 +973,10 @@ jobs:
               logical.schemaComparisonValidation?.profile !== "supabase-application-restore-v1" ||
               logical.schemaComparisonValidation?.hostedTopology?.profile !==
                 "supabase-hosted-live-v1" ||
-              logical.disposableDefaultPrivilegesReset !== true) {
+              logical.disposableDefaultPrivilegesReset !== true ||
+              logical.disposableTargetDefaultPrivilegesRestoredAfterSchema !== true ||
+              !Number.isSafeInteger(logical.disposableTargetDefaultPrivilegeEntryCount) ||
+              logical.disposableTargetDefaultPrivilegeEntryCount <= 0) {
             throw new Error("Production logical recovery proof is incomplete.");
           }
           if (!/^[0-9]+$/u.test(process.env.RECOVERY_ARTIFACT_ID || "") ||
@@ -1348,6 +1380,11 @@ jobs:
               recovery.logicalBackup?.schemaComparisonValidation?.hostedTopology?.profile !==
                 "supabase-hosted-live-v1" ||
               recovery.logicalBackup?.disposableDefaultPrivilegesReset !== true ||
+              recovery.logicalBackup?.disposableTargetDefaultPrivilegesRestoredAfterSchema !== true ||
+              !Number.isSafeInteger(
+                recovery.logicalBackup?.disposableTargetDefaultPrivilegeEntryCount,
+              ) ||
+              recovery.logicalBackup.disposableTargetDefaultPrivilegeEntryCount <= 0 ||
               recovery.logicalBackup?.offsiteUploaded !== true ||
               !Number.isSafeInteger(recovery.logicalBackup?.artifactId) ||
               !/^(?:sha256:)?[a-f0-9]{64}$/u.test(recovery.logicalBackup?.artifactDigest || "")) {

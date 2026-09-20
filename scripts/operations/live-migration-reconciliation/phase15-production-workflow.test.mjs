@@ -68,6 +68,14 @@ test("production writes are recovery-gated and runtime/release evidence is exact
     "aclexplode",
     "disposableDefaultPrivilegesReset",
     "Disposable target default ACL reset left rows behind",
+    "phase15-target-default-acls.dump",
+    "pg_restore --list",
+    "grep -F ' DEFAULT ACL '",
+    "pg_restore",
+    "--use-list=/tmp/phase15-target-default-acls.selected.list",
+    "--file=/tmp/phase15-target-default-acls.sql",
+    "disposableTargetDefaultPrivilegesRestoredAfterSchema",
+    "disposableTargetDefaultPrivilegeEntryCount",
     "openssl enc -aes-256-cbc",
     "supabase start --workdir \"$restore_project\"",
     "docker exec \"$db_container\" psql -U supabase_admin",
@@ -108,6 +116,10 @@ test("production writes are recovery-gated and runtime/release evidence is exact
   assert.match(
     source,
     /docker cp "\$validation_root\/application-data\.sql"[\s\S]*--file \/tmp\/phase15-application-data\.sql/u,
+  );
+  assert.match(
+    source,
+    /pg_dump -U supabase_admin[\s\S]*--file \/tmp\/phase15-target-default-acls\.dump[\s\S]*--file \/tmp\/phase15-reset-default-privileges\.sql[\s\S]*--file \/tmp\/phase15-schema\.sql[\s\S]*--file \/tmp\/phase15-target-default-acls\.sql/u,
   );
   assert.match(
     source,
