@@ -47,6 +47,10 @@ test("Golden Five verifier matches the current canonical fixture and lifecycle",
     ".github/workflows/phase15-controlled-staging.yml",
     "utf8",
   );
+  const databaseReplayWorkflow = await readFile(
+    ".github/workflows/database-replay.yml",
+    "utf8",
+  );
   assert.match(verifier, /contracts: 35,/u);
   assert.match(verifier, /storyEvents: 15,/u);
   assert.match(workflow, /transition_game_lifecycle_atomic_v1/u);
@@ -64,6 +68,16 @@ test("Golden Five verifier matches the current canonical fixture and lifecycle",
   assert.match(workflow, /PGSSLMODE: verify-full/u);
   assert.match(workflow, /sslmode', 'verify-full'/u);
   assert.doesNotMatch(workflow, /PGSSLMODE=require/u);
+  for (const path of [
+    "scripts/staging/golden-five-contract.test.mjs",
+    "scripts/staging/golden-five-verify.mjs",
+  ]) {
+    assert.equal(
+      databaseReplayWorkflow.split(`- \"${path}\"`).length - 1,
+      2,
+      `${path} must trigger Database Replay for both pull requests and main pushes.`,
+    );
+  }
 });
 
 test("Golden Five source never commits plaintext fixture access codes", async () => {
