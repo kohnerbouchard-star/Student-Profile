@@ -321,6 +321,7 @@ psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
 node "$repo_root/scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs" \
   --left "$PHASE15_CANONICAL_SCHEMA" \
   --right "$evidence_dir/post-schema.json" \
+  --profile supabase-hosted-live-v1 \
   > "$evidence_dir/canonical-schema-comparison.json"
 
 psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \

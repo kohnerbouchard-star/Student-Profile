@@ -1,0 +1,946 @@
+name: Phase 15 Controlled Production Promotion
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/phase15-controlled-production.yml"
+      - ".github/workflows/phase15-controlled-staging.yml"
+      - ".github/workflows/database-replay.yml"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+  workflow_run:
+    workflows: ["Phase 15 Controlled Staging Convergence"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: phase15-controlled-production-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+env:
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  POPULATED_STAGING_APPLY_SHA: 2fc71be96e4126ee2253cb91afb2d9ebe5004c44
+  POPULATED_STAGING_APPLY_RUN_ID: 35509654209
+  SUPABASE_CLI_VERSION: 2.109.1
+  MANIFEST_PATH: backend/supabase/edge-function-manifest.json
+  RELEASE_BRANCH: release/production
+
+jobs:
+  static-contract:
+    name: Validate fail-closed production promotion contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Validate production construction and shared release contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
+          node --test scripts/edge-function-inventory/validate.test.mjs
+          node --test scripts/local-edge-runtime-contract.test.mjs
+          node --test scripts/runtime-config-contract.test.mjs
+          node --test scripts/vercel-git-release-contract.test.mjs
+          bash -n scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh
+          node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs --environment production --mode rollback --format manifest > "$RUNNER_TEMP/production-forward-manifest.json"
+          test "$(jq -r '.migrationCount' "$RUNNER_TEMP/production-forward-manifest.json")" = 168
+
+  certify-staging:
+    name: Certify exact populated staging authority
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    needs: static-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: staging
+    outputs:
+      source_commit: ${{ steps.identity.outputs.source_commit }}
+      staging_run_id: ${{ steps.identity.outputs.staging_run_id }}
+      replay_run_id: ${{ steps.replay.outputs.run_id }}
+    env:
+      SOURCE_COMMIT: ${{ github.event.workflow_run.head_sha }}
+      STAGING_RUN_ID: ${{ github.event.workflow_run.id }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CONFIGURED_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt
+      PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000
+    steps:
+      - name: Check out exact staging-certified main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Enforce exact protected-main source and bounded change set
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$POPULATED_STAGING_APPLY_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          git merge-base --is-ancestor "$POPULATED_STAGING_APPLY_SHA" "$SOURCE_COMMIT"
+          changed=0
+          while IFS= read -r path; do
+            test -n "$path" || continue
+            changed=$((changed + 1))
+            case "$path" in
+              .github/workflows/database-replay.yml|.github/workflows/phase15-controlled-staging.yml|.github/workflows/phase15-controlled-production.yml|scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs) ;;
+              scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs|scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs|scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh) ;;
+              *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
+            esac
+          done < <(git diff --name-only "$POPULATED_STAGING_APPLY_SHA" "$SOURCE_COMMIT")
+          test "$changed" -gt 0
+          echo "source_commit=$SOURCE_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "staging_run_id=$STAGING_RUN_ID" >> "$GITHUB_OUTPUT"
+      - name: Download exact current staging database certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-staging-database-${{ env.SOURCE_COMMIT }}
+          run-id: ${{ env.STAGING_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-authority/current-database
+      - name: Download exact current staging runtime certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-staging-runtime-${{ env.SOURCE_COMMIT }}
+          run-id: ${{ env.STAGING_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-authority/current-runtime
+      - name: Download exact current staging lifecycle certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-staging-lifecycle-${{ env.SOURCE_COMMIT }}
+          run-id: ${{ env.STAGING_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-authority/current-lifecycle
+      - name: Validate exact populated-staging apply evidence run
+        id: baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$POPULATED_STAGING_APPLY_RUN_ID" =~ ^[0-9]+$ ]]
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$POPULATED_STAGING_APPLY_RUN_ID"
+          response="$(curl --fail --silent --show-error -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' "$api")"
+          run_id="$(RESPONSE="$response" BASELINE="$POPULATED_STAGING_APPLY_SHA" EXPECTED_RUN_ID="$POPULATED_STAGING_APPLY_RUN_ID" node - <<'NODE'
+          const body = JSON.parse(process.env.RESPONSE);
+          if (String(body.id) !== process.env.EXPECTED_RUN_ID ||
+              body.head_sha !== process.env.BASELINE ||
+              body.event !== "push" ||
+              body.status !== "completed" ||
+              body.conclusion !== "failure" ||
+              body.path !== ".github/workflows/phase15-controlled-staging.yml") {
+            throw new Error("Populated-staging apply evidence run envelope mismatch.");
+          }
+          process.stdout.write(String(body.id));
+          NODE
+          )"
+          [[ "$run_id" =~ ^[0-9]+$ ]]
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+      - name: Download populated-staging rollback/apply evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-staging-database-${{ env.POPULATED_STAGING_APPLY_SHA }}
+          run-id: ${{ steps.baseline.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-authority/populated-baseline
+      - name: Resolve exact successful Database Replay
+        id: replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/database-replay.yml/runs?head_sha=$SOURCE_COMMIT&event=push&per_page=20"
+          response="$(curl --fail --silent --show-error -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' "$api")"
+          run_id="$(RESPONSE="$response" SOURCE_COMMIT="$SOURCE_COMMIT" node - <<'NODE'
+          const body = JSON.parse(process.env.RESPONSE);
+          const run = (body.workflow_runs || []).find((value) =>
+            value.head_sha === process.env.SOURCE_COMMIT &&
+            value.event === "push" &&
+            value.status === "completed" &&
+            value.conclusion === "success");
+          if (!run) throw new Error("Exact successful Database Replay not found.");
+          process.stdout.write(String(run.id));
+          NODE
+          )"
+          [[ "$run_id" =~ ^[0-9]+$ ]]
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+      - name: Download exact canonical clean replay certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-clean-replay-${{ env.SOURCE_COMMIT }}
+          run-id: ${{ steps.replay.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-authority/clean-replay
+      - name: Validate staging database, runtime, and five-player lifecycle authority
+        shell: bash
+        env:
+          AUTHORITY_ROOT: ${{ runner.temp }}/phase15-authority
+          BASELINE_RUN_ID: ${{ steps.baseline.outputs.run_id }}
+          REPLAY_RUN_ID: ${{ steps.replay.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/phase15-staging-authority-evidence"
+          node --input-type=module - <<'NODE'
+          import { readFile, readdir, writeFile } from "node:fs/promises";
+          import path from "node:path";
+          async function find(root, filename) {
+            for (const entry of await readdir(root, { withFileTypes: true })) {
+              const candidate = path.join(root, entry.name);
+              if (entry.isDirectory()) {
+                const nested = await find(candidate, filename);
+                if (nested) return nested;
+              } else if (entry.name === filename) return candidate;
+            }
+            return null;
+          }
+          async function json(root, filename) {
+            const found = await find(root, filename);
+            if (!found) throw new Error("Missing staging authority file: " + filename);
+            return JSON.parse(await readFile(found, "utf8"));
+          }
+          const root = process.env.AUTHORITY_ROOT;
+          const source = process.env.SOURCE_COMMIT;
+          const current = await json(path.join(root, "current-database"), "summary.json");
+          const baselinePreLedger = await json(path.join(root, "populated-baseline"), "pre-ledger.json");
+          const baselineRollbackLedger = await json(path.join(root, "populated-baseline"), "post-rollback-ledger.json");
+          const baselinePostLedger = await json(path.join(root, "populated-baseline"), "post-ledger.json");
+          const baselineRollbackEconomic = await json(path.join(root, "populated-baseline"), "rollback-economic-invariants.json");
+          const baselineApplyEconomic = await json(path.join(root, "populated-baseline"), "apply-economic-invariants.json");
+          const baselineLedgerVerification = await json(path.join(root, "populated-baseline"), "ledger-verification.json");
+          const baselineRollbackSchema = await json(path.join(root, "populated-baseline"), "rollback-schema-comparison.json");
+          const baselineHostedMismatch = await json(path.join(root, "populated-baseline"), "canonical-schema-comparison.json");
+          const scheduler = await json(path.join(root, "populated-baseline"), "scheduler-maintenance.json");
+          const currentSchema = await json(path.join(root, "current-database"), "canonical-schema-comparison.json");
+          const runtime = await json(path.join(root, "current-runtime"), "staging-attestation.json");
+          const fixture = await json(path.join(root, "current-lifecycle"), "fixture-verification.json");
+          const browser = await json(path.join(root, "current-lifecycle"), "golden-five-browser-acceptance.json");
+          const sourcePath = await find(path.join(root, "clean-replay"), "source-commit.txt");
+          if (!sourcePath || (await readFile(sourcePath, "utf8")).trim() !== source) {
+            throw new Error("Clean replay source identity mismatch.");
+          }
+          for (const [field, value] of Object.entries({
+            status: "PASS",
+            environment: "staging",
+            expectedProjectRef: process.env.STAGING_PROJECT_REF,
+            sourceCommit: source,
+            applyStatus: "already-applied",
+            migrationCount: 150,
+            exactLedgerVerified: true,
+            canonicalApplicationSchemaMatched: true,
+            economicInvariantsMatched: true,
+            purgeSafetyMatched: true,
+            schedulerHealthMatched: true,
+          })) if (current[field] !== value) throw new Error("Current staging certificate mismatch: " + field);
+          if (baselinePreLedger.length !== 0 || baselineRollbackLedger.length !== 0 ||
+              baselinePostLedger.length !== 150 ||
+              baselineRollbackEconomic.mode !== "rollback" ||
+              baselineRollbackEconomic.migrationCount !== 150 ||
+              baselineRollbackEconomic.economicInvariantsMatched !== true ||
+              baselineApplyEconomic.mode !== "apply" ||
+              baselineApplyEconomic.migrationCount !== 150 ||
+              baselineApplyEconomic.economicInvariantsMatched !== true ||
+              baselineLedgerVerification.ok !== true ||
+              baselineRollbackSchema.matched !== true) {
+            throw new Error("Populated staging rollback/apply certificate mismatch.");
+          }
+          if (baselineHostedMismatch.matched !== false ||
+              !baselineHostedMismatch.differences.every(({ path: value }) =>
+                value.startsWith("$.authorization.roleMemberships"))) {
+            throw new Error("Populated staging apply failure was not bounded to hosted role topology.");
+          }
+          if (scheduler.status !== "PASS" ||
+              scheduler.activeCountBefore !== scheduler.activeCountAfter ||
+              scheduler.activeCountAfter !== 13 ||
+              scheduler.inFlightRunsDrained !== true ||
+              scheduler.autoRestoreGuardRemoved !== true) {
+            throw new Error("Populated staging scheduler-maintenance certificate mismatch.");
+          }
+          if (runtime.ok !== true || runtime.environment !== "staging" ||
+              runtime.projectRef !== process.env.STAGING_PROJECT_REF ||
+              runtime.missing.length !== 0 || runtime.unexpected.length !== 0 ||
+              runtime.jwtMismatches.length !== 0 || runtime.invalidDigests.length !== 0 ||
+              runtime.retiredPresent.length !== 0) {
+            throw new Error("Staging runtime certificate mismatch.");
+          }
+          if (currentSchema.matched !== true ||
+              currentSchema.profile !== "supabase-hosted-live-v1" ||
+              currentSchema.differences.length !== 0) {
+            throw new Error("Current hosted staging schema certificate mismatch.");
+          }
+          if (fixture.decision !== "PASS" || browser.decision !== "PASS") {
+            throw new Error("Golden Five staging acceptance did not pass.");
+          }
+          const authority = {
+            schemaVersion: 1,
+            status: "PASS",
+            sourceCommit: source,
+            stagingRunId: Number(process.env.STAGING_RUN_ID),
+            populatedBaselineCommit: process.env.POPULATED_STAGING_APPLY_SHA,
+            populatedBaselineRunId: Number(process.env.BASELINE_RUN_ID),
+            replayRunId: Number(process.env.REPLAY_RUN_ID),
+            databaseCertified: true,
+            runtimeCertified: true,
+            goldenFiveCertified: true,
+          };
+          await writeFile(
+            path.join(process.env.RUNNER_TEMP, "phase15-staging-authority-evidence", "staging-authority.json"),
+            JSON.stringify(authority, null, 2) + "\n",
+          );
+          NODE
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Bind staging read-only advisor session
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          database_url="$CONFIGURED_SUPABASE_DB_URL"
+          if test -z "$database_url"; then
+            test -n "$SUPABASE_DB_PASSWORD"
+            (cd backend && supabase --yes link --project-ref "$STAGING_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+            test -s backend/supabase/.temp/pooler-url
+            database_url="$(POOLER_URL="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)" DATABASE_PASSWORD="$SUPABASE_DB_PASSWORD" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.POOLER_URL);
+          parsed.password = process.env.DATABASE_PASSWORD;
+          process.stdout.write(parsed.href);
+          NODE
+            )"
+          fi
+          database_url="$(DATABASE_URL="$database_url" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.DATABASE_URL);
+          parsed.searchParams.set("sslmode", "verify-full");
+          parsed.searchParams.delete("sslrootcert");
+          process.stdout.write(parsed.href);
+          NODE
+          )"
+          echo "::add-mask::$database_url"
+          PHASE15_ADVISOR_DATABASE_URL="$database_url" node scripts/release-integrity/cli.mjs validate-db-url --url-env PHASE15_ADVISOR_DATABASE_URL --expected-project-ref "$STAGING_PROJECT_REF"
+          printf 'PHASE15_ADVISOR_DATABASE_URL=%s\n' "$database_url" >> "$GITHUB_ENV"
+      - name: Require known-only staging advisor findings
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db advisors --db-url "$PHASE15_ADVISOR_DATABASE_URL" --type all --level info --fail-on error --output-format json > "$RUNNER_TEMP/staging-advisors-raw.json"
+          ADVISORS="$RUNNER_TEMP/staging-advisors-raw.json" OUTPUT="$RUNNER_TEMP/phase15-staging-authority-evidence/staging-advisors.json" node --input-type=module - <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const value = JSON.parse(await readFile(process.env.ADVISORS, "utf8"));
+          const findings = [];
+          const walk = (node) => {
+            if (Array.isArray(node)) return node.forEach(walk);
+            if (!node || typeof node !== "object") return;
+            if (typeof node.name === "string" && typeof node.level === "string") {
+              findings.push({ name: node.name, level: node.level.toUpperCase() });
+            }
+            for (const child of Object.values(node)) walk(child);
+          };
+          walk(value);
+          const allowed = new Set([
+            "auth_leaked_password_protection",
+            "rls_enabled_no_policy",
+            "unindexed_foreign_keys",
+            "unused_index",
+          ]);
+          const unknown = findings.filter(({ name }) => !allowed.has(name));
+          const errors = findings.filter(({ level }) => level === "ERROR");
+          if (unknown.length || errors.length) {
+            throw new Error("Staging advisors contain unknown or ERROR findings.");
+          }
+          const unique = [...new Map(findings.map((row) => [row.name + "|" + row.level, row])).values()]
+            .sort((a, b) => a.name.localeCompare(b.name) || a.level.localeCompare(b.level));
+          await writeFile(process.env.OUTPUT, JSON.stringify({
+            schemaVersion: 1,
+            status: "PASS",
+            environment: "staging",
+            sourceCommit: process.env.SOURCE_COMMIT,
+            classification: "known-owner-reviewed-findings-only",
+            findings: unique,
+          }, null, 2) + "\n");
+          NODE
+      - name: Upload exact staging authority
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-staging-authority-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-staging-authority-evidence/
+          if-no-files-found: error
+          retention-days: 30
+
+  converge-production-database:
+    name: Backup-gate and converge populated production database
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    needs: certify-staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    environment: production
+    env:
+      SOURCE_COMMIT: ${{ needs.certify-staging.outputs.source_commit }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CONFIGURED_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PHASE15_ENVIRONMENT: production
+      PHASE15_EXPECTED_PROJECT_REF: cgiukdjwicykrmtkhudh
+      PHASE15_LIVE_APPLY_AUTHORIZED: production
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt
+    steps:
+      - name: Check out exact staging-authorized main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.certify-staging.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Initialize sanitized production evidence
+        shell: bash
+        run: mkdir -p "$RUNNER_TEMP/phase15-production-database-evidence"
+      - name: Bind exact production database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          database_url="$CONFIGURED_SUPABASE_DB_URL"
+          if test -z "$database_url"; then
+            test -n "$SUPABASE_DB_PASSWORD"
+            (cd backend && supabase --yes link --project-ref "$PRODUCTION_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+            test -s backend/supabase/.temp/pooler-url
+            database_url="$(POOLER_URL="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)" DATABASE_PASSWORD="$SUPABASE_DB_PASSWORD" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.POOLER_URL);
+          parsed.password = process.env.DATABASE_PASSWORD;
+          process.stdout.write(parsed.href);
+          NODE
+            )"
+          fi
+          database_url="$(DATABASE_URL="$database_url" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.DATABASE_URL);
+          parsed.searchParams.set("sslmode", "verify-full");
+          parsed.searchParams.delete("sslrootcert");
+          process.stdout.write(parsed.href);
+          NODE
+          )"
+          echo "::add-mask::$database_url"
+          PHASE15_REMOTE_DATABASE_URL="$database_url" node scripts/release-integrity/cli.mjs validate-db-url --url-env PHASE15_REMOTE_DATABASE_URL --expected-project-ref "$PRODUCTION_PROJECT_REF"
+          printf 'PHASE15_REMOTE_DATABASE_URL=%s\n' "$database_url" >> "$GITHUB_ENV"
+      - name: Require PITR or a recent completed production backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/database/backups" > "$RUNNER_TEMP/production-backups.json"
+          BACKUPS="$RUNNER_TEMP/production-backups.json" OUTPUT="$RUNNER_TEMP/phase15-production-database-evidence/recovery-readiness.json" node --input-type=module - <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const body = JSON.parse(await readFile(process.env.BACKUPS, "utf8"));
+          const rows = Array.isArray(body.backups) ? body.backups : [];
+          const completed = rows
+            .filter((row) => String(row.status || "").toUpperCase() === "COMPLETED")
+            .map((row) => ({
+              status: "COMPLETED",
+              timestamp: String(row.inserted_at || row.created_at || row.started_at || row.completed_at || ""),
+            }))
+            .filter((row) => Number.isFinite(Date.parse(row.timestamp)))
+            .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+          const latest = completed[0] || null;
+          const recentCompletedBackup = Boolean(latest) &&
+            Date.now() - Date.parse(latest.timestamp) >= 0 &&
+            Date.now() - Date.parse(latest.timestamp) <= 48 * 60 * 60 * 1000;
+          const pitrEnabled = body.pitr_enabled === true;
+          if (!pitrEnabled && !recentCompletedBackup) {
+            throw new Error("Production has neither PITR nor a completed backup within 48 hours.");
+          }
+          await writeFile(process.env.OUTPUT, JSON.stringify({
+            schemaVersion: 1,
+            status: "PASS",
+            projectRef: process.env.PRODUCTION_PROJECT_REF,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            pitrEnabled,
+            recentCompletedBackup,
+            latestCompletedBackupAt: latest?.timestamp || null,
+          }, null, 2) + "\n");
+          NODE
+      - name: Download exact canonical clean schema
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-clean-replay-${{ env.SOURCE_COMMIT }}
+          run-id: ${{ needs.certify-staging.outputs.replay_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-production-canonical
+      - name: Resolve canonical schema path
+        shell: bash
+        run: |
+          set -euo pipefail
+          schema="$(find "$RUNNER_TEMP/phase15-production-canonical" -type f -name schema-1.json -print -quit)"
+          test -s "$schema"
+          printf 'PHASE15_CANONICAL_SCHEMA=%s\n' "$schema" >> "$GITHUB_ENV"
+      - name: Require known-only pre-convergence production advisors
+        shell: bash
+        env:
+          PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000
+        run: |
+          set -euo pipefail
+          supabase db advisors --db-url "$PHASE15_REMOTE_DATABASE_URL" --type all --level info --fail-on error --output-format json > "$RUNNER_TEMP/production-advisors-pre-raw.json"
+          ADVISORS="$RUNNER_TEMP/production-advisors-pre-raw.json" OUTPUT="$RUNNER_TEMP/phase15-production-database-evidence/advisors-pre.json" PHASE="pre" node --input-type=module - <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const value = JSON.parse(await readFile(process.env.ADVISORS, "utf8"));
+          const findings = [];
+          const walk = (node) => {
+            if (Array.isArray(node)) return node.forEach(walk);
+            if (!node || typeof node !== "object") return;
+            if (typeof node.name === "string" && typeof node.level === "string") {
+              findings.push({ name: node.name, level: node.level.toUpperCase() });
+            }
+            for (const child of Object.values(node)) walk(child);
+          };
+          walk(value);
+          const allowed = new Set([
+            "auth_leaked_password_protection",
+            "rls_enabled_no_policy",
+            "unindexed_foreign_keys",
+            "unused_index",
+          ]);
+          if (findings.some(({ name }) => !allowed.has(name)) ||
+              findings.some(({ level }) => level === "ERROR")) {
+            throw new Error("Production advisors contain unknown or ERROR findings.");
+          }
+          const unique = [...new Map(findings.map((row) => [row.name + "|" + row.level, row])).values()]
+            .sort((a, b) => a.name.localeCompare(b.name) || a.level.localeCompare(b.level));
+          await writeFile(process.env.OUTPUT, JSON.stringify({
+            schemaVersion: 1,
+            status: "PASS",
+            phase: process.env.PHASE,
+            environment: "production",
+            sourceCommit: process.env.SOURCE_COMMIT,
+            classification: "known-owner-reviewed-findings-only",
+            findings: unique,
+          }, null, 2) + "\n");
+          NODE
+      - name: Run rollback proof and atomic production convergence
+        shell: bash
+        env:
+          PHASE15_EVIDENCE_DIR: ${{ runner.temp }}/phase15-production-database-evidence
+          PHASE15_WORK_DIR: ${{ runner.temp }}/phase15-production-work
+        run: bash scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh
+      - name: Recover an interrupted production scheduler maintenance lease
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -z "${PHASE15_REMOTE_DATABASE_URL:-}"; then exit 0; fi
+          guard_count="$(psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select count(*) from cron.job where jobname = 'phase15-scheduler-auto-restore-v1'")"
+          if test "$guard_count" -eq 0; then exit 0; fi
+          psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          do $phase15_recover_schedulers$
+          begin
+            perform cron.alter_job(job_row.jobid, active => true)
+            from cron.job as job_row
+            where job_row.jobname like 'econovaria-%'
+              and not job_row.active;
+            perform cron.unschedule('phase15-scheduler-auto-restore-v1');
+          end;
+          $phase15_recover_schedulers$;
+          commit;
+          SQL
+      - name: Require known-only post-convergence production advisors
+        shell: bash
+        env:
+          PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000
+        run: |
+          set -euo pipefail
+          supabase db advisors --db-url "$PHASE15_REMOTE_DATABASE_URL" --type all --level info --fail-on error --output-format json > "$RUNNER_TEMP/production-advisors-post-raw.json"
+          ADVISORS="$RUNNER_TEMP/production-advisors-post-raw.json" OUTPUT="$RUNNER_TEMP/phase15-production-database-evidence/advisors-post.json" PHASE="post" node --input-type=module - <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const value = JSON.parse(await readFile(process.env.ADVISORS, "utf8"));
+          const findings = [];
+          const walk = (node) => {
+            if (Array.isArray(node)) return node.forEach(walk);
+            if (!node || typeof node !== "object") return;
+            if (typeof node.name === "string" && typeof node.level === "string") {
+              findings.push({ name: node.name, level: node.level.toUpperCase() });
+            }
+            for (const child of Object.values(node)) walk(child);
+          };
+          walk(value);
+          const allowed = new Set([
+            "auth_leaked_password_protection",
+            "rls_enabled_no_policy",
+            "unindexed_foreign_keys",
+            "unused_index",
+          ]);
+          if (findings.some(({ name }) => !allowed.has(name)) ||
+              findings.some(({ level }) => level === "ERROR")) {
+            throw new Error("Production advisors contain unknown or ERROR findings.");
+          }
+          const unique = [...new Map(findings.map((row) => [row.name + "|" + row.level, row])).values()]
+            .sort((a, b) => a.name.localeCompare(b.name) || a.level.localeCompare(b.level));
+          await writeFile(process.env.OUTPUT, JSON.stringify({
+            schemaVersion: 1,
+            status: "PASS",
+            phase: process.env.PHASE,
+            environment: "production",
+            sourceCommit: process.env.SOURCE_COMMIT,
+            classification: "known-owner-reviewed-findings-only",
+            findings: unique,
+          }, null, 2) + "\n");
+          NODE
+      - name: Upload sanitized production database certificate
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-production-database-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-database-evidence/
+          if-no-files-found: error
+          retention-days: 30
+
+  converge-production-runtime:
+    name: Deploy and attest exact production Edge runtime
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    needs: [certify-staging, converge-production-database]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: production
+    env:
+      SOURCE_COMMIT: ${{ needs.certify-staging.outputs.source_commit }}
+      STAGING_RUN_ID: ${{ needs.certify-staging.outputs.staging_run_id }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Check out exact database-certified main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.certify-staging.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Enforce exact production runtime source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          node --test scripts/edge-function-inventory/validate.test.mjs
+          node --test scripts/local-edge-runtime-contract.test.mjs
+          node --test scripts/runtime-config-contract.test.mjs
+      - name: Download exact staging runtime inventory
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-staging-runtime-${{ env.SOURCE_COMMIT }}
+          run-id: ${{ env.STAGING_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-staging-runtime
+      - name: Resolve exact staging inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          inventory="$(find "$RUNNER_TEMP/phase15-staging-runtime" -type f -name staging-functions.json -print -quit)"
+          test -s "$inventory"
+          printf 'PHASE15_STAGING_INVENTORY=%s\n' "$inventory" >> "$GITHUB_ENV"
+      - name: Deploy every canonical production function from the manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          MANIFEST="$MANIFEST_PATH" node --input-type=module - <<'NODE' > "$RUNNER_TEMP/deployable-production-functions.txt"
+          import { readFileSync } from "node:fs";
+          const manifest = JSON.parse(readFileSync(process.env.MANIFEST, "utf8"));
+          for (const entry of [...manifest.canonicalFunctions, ...manifest.compatibilityFunctions]) {
+            process.stdout.write(entry.slug + "|" + String(entry.verifyJwt) + "\n");
+          }
+          NODE
+          while IFS='|' read -r slug verify_jwt; do
+            test -n "$slug"
+            args=(functions deploy "$slug" --workdir backend --project-ref "$PRODUCTION_PROJECT_REF")
+            if test "$verify_jwt" = false; then args+=(--no-verify-jwt); fi
+            supabase "${args[@]}"
+          done < "$RUNNER_TEMP/deployable-production-functions.txt"
+      - name: Remove only manifest-retired production functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/functions" > "$RUNNER_TEMP/production-before-retirement.json"
+          INVENTORY="$RUNNER_TEMP/production-before-retirement.json" MANIFEST="$MANIFEST_PATH" node - <<'NODE' > "$RUNNER_TEMP/production-retire.txt"
+          const fs = require("node:fs");
+          const rows = JSON.parse(fs.readFileSync(process.env.INVENTORY, "utf8"));
+          const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST, "utf8"));
+          const present = new Set(rows.map((row) => String(row.slug || "")));
+          for (const slug of manifest.retiredFunctions) if (present.has(slug)) process.stdout.write(slug + "\n");
+          NODE
+          while IFS= read -r slug; do
+            test -n "$slug" || continue
+            curl --fail --silent --show-error --request DELETE -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/functions/$slug" >/dev/null
+          done < "$RUNNER_TEMP/production-retire.txt"
+      - name: Require exact cross-environment runtime digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$PRODUCTION_PROJECT_REF/functions" > "$RUNNER_TEMP/production-functions.json"
+          node scripts/edge-function-inventory/validate.mjs --manifest "$MANIFEST_PATH" --staging "$PHASE15_STAGING_INVENTORY" --production "$RUNNER_TEMP/production-functions.json" --source-commit "$SOURCE_COMMIT" | tee "$RUNNER_TEMP/production-runtime-attestation.json"
+          ATTESTATION="$RUNNER_TEMP/production-runtime-attestation.json" node - <<'NODE'
+          const fs = require("node:fs");
+          const value = JSON.parse(fs.readFileSync(process.env.ATTESTATION, "utf8"));
+          if (value.ok !== true ||
+              value.sourceCommit !== process.env.SOURCE_COMMIT ||
+              value.production?.projectRef !== process.env.PRODUCTION_PROJECT_REF ||
+              (value.digestMismatches || []).length !== 0) {
+            throw new Error("Exact production runtime attestation failed.");
+          }
+          NODE
+      - name: Run production unauthenticated security-boundary smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          specs=(
+            'POST banking-fx-orchestrator'
+            'POST business-operations-worker'
+            'POST campaign-orchestrator'
+            'POST fx-orchestrator'
+            'POST game-data-purger'
+            'POST stock-market-orchestrator'
+            'POST stock-tick-archiver'
+            'POST web-session-api/logout'
+          )
+          for spec in "${specs[@]}"; do
+            read -r method slug <<< "$spec"
+            status="$(curl --silent --show-error --request "$method" --output /dev/null --write-out '%{http_code}' --max-time 30 "https://$PRODUCTION_PROJECT_REF.supabase.co/functions/v1/$slug")"
+            case "$status" in
+              400|401|403|405|422) ;;
+              *) echo "Unexpected unauthenticated production response for $slug: $status" >&2; exit 1 ;;
+            esac
+          done
+      - name: Upload exact production runtime certificate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-production-runtime-${{ env.SOURCE_COMMIT }}
+          path: |
+            ${{ runner.temp }}/production-functions.json
+            ${{ runner.temp }}/production-runtime-attestation.json
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-production-release:
+    name: Fast-forward and verify the canonical production release
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    needs: [certify-staging, converge-production-runtime]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: production
+    permissions:
+      contents: write
+      actions: read
+    env:
+      SOURCE_COMMIT: ${{ needs.certify-staging.outputs.source_commit }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out exact runtime-certified main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.certify-staging.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Download exact production database certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-production-database-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-release/database
+      - name: Download exact production runtime certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-production-runtime-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-release/runtime
+      - name: Enforce exact production database and runtime certificates
+        shell: bash
+        env:
+          RELEASE_EVIDENCE_ROOT: ${{ runner.temp }}/phase15-production-release
+        run: |
+          set -euo pipefail
+          node --input-type=module - <<'NODE'
+          import { readFile, readdir } from "node:fs/promises";
+          import path from "node:path";
+          async function find(root, filename) {
+            for (const entry of await readdir(root, { withFileTypes: true })) {
+              const candidate = path.join(root, entry.name);
+              if (entry.isDirectory()) {
+                const nested = await find(candidate, filename);
+                if (nested) return nested;
+              } else if (entry.name === filename) return candidate;
+            }
+            return null;
+          }
+          async function json(root, filename) {
+            const found = await find(root, filename);
+            if (!found) throw new Error("Missing production release certificate: " + filename);
+            return JSON.parse(await readFile(found, "utf8"));
+          }
+          const root = process.env.RELEASE_EVIDENCE_ROOT;
+          const database = await json(path.join(root, "database"), "summary.json");
+          const scheduler = await json(path.join(root, "database"), "scheduler-maintenance.json");
+          const recovery = await json(path.join(root, "database"), "recovery-readiness.json");
+          const advisors = await json(path.join(root, "database"), "advisors-post.json");
+          const runtime = await json(path.join(root, "runtime"), "production-runtime-attestation.json");
+          for (const [field, value] of Object.entries({
+            status: "PASS",
+            environment: "production",
+            expectedProjectRef: process.env.PRODUCTION_PROJECT_REF,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            applyStatus: "applied",
+            migrationCount: 168,
+            rollbackRehearsalPassed: true,
+            exactLedgerVerified: true,
+            canonicalApplicationSchemaMatched: true,
+            economicInvariantsMatched: true,
+            purgeSafetyMatched: true,
+            schedulerHealthMatched: true,
+          })) if (database[field] !== value) throw new Error("Production database certificate mismatch: " + field);
+          if (scheduler.status !== "PASS" ||
+              scheduler.activeCountBefore !== scheduler.activeCountAfter ||
+              scheduler.activeCountAfter !== 13 ||
+              scheduler.autoRestoreGuardRemoved !== true) {
+            throw new Error("Production scheduler restoration certificate mismatch.");
+          }
+          if (recovery.status !== "PASS" ||
+              recovery.sourceCommit !== process.env.SOURCE_COMMIT ||
+              (recovery.pitrEnabled !== true && recovery.recentCompletedBackup !== true)) {
+            throw new Error("Production recovery-readiness certificate mismatch.");
+          }
+          if (advisors.status !== "PASS" || advisors.phase !== "post" ||
+              advisors.sourceCommit !== process.env.SOURCE_COMMIT) {
+            throw new Error("Production post-convergence advisor certificate mismatch.");
+          }
+          if (runtime.ok !== true ||
+              runtime.sourceCommit !== process.env.SOURCE_COMMIT ||
+              runtime.production?.projectRef !== process.env.PRODUCTION_PROJECT_REF ||
+              (runtime.digestMismatches || []).length !== 0) {
+            throw new Error("Production runtime certificate mismatch.");
+          }
+          NODE
+      - name: Enforce exact main and release-branch ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main' '+refs/heads/release/production:refs/remotes/origin/release/production'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          git merge-base --is-ancestor origin/release/production HEAD
+          node - <<'NODE'
+          const config = require("./vercel.json");
+          if (config.git?.deploymentEnabled?.main !== false) throw new Error("main must remain disabled for Vercel Git deployment.");
+          if (config.git?.deploymentEnabled?.["release/production"] !== true) throw new Error("release/production must remain enabled for Vercel Git deployment.");
+          NODE
+      - name: Fast-forward production release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test "$(git rev-parse origin/release/production)" != "$SOURCE_COMMIT"; then
+            git push origin "$SOURCE_COMMIT:refs/heads/$RELEASE_BRANCH"
+          fi
+          git fetch --no-tags origin "+refs/heads/$RELEASE_BRANCH:refs/remotes/origin/$RELEASE_BRANCH"
+          test "$(git rev-parse "origin/$RELEASE_BRANCH")" = "$SOURCE_COMMIT"
+      - name: Verify canonical production health at the exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/phase15-production-release/final"
+          health="$RUNNER_TEMP/phase15-production-release/final/canonical-health.json"
+          for attempt in $(seq 1 120); do
+            if curl --fail --silent --show-error --location --connect-timeout 5 --max-time 20 "https://www.econovaria.com/api/health" > "$health"; then
+              if HEALTH="$health" node - <<'NODE'
+          const fs = require("node:fs");
+          const value = JSON.parse(fs.readFileSync(process.env.HEALTH, "utf8"));
+          if(value.ok!==true || value.status!=="ready" || value.environment!=="production" ||
+             value.projectRef!==process.env.PRODUCTION_PROJECT_REF ||
+             value.sourceCommit!==process.env.SOURCE_COMMIT) process.exit(1);
+          NODE
+              then break; fi
+            fi
+            if test "$attempt" -eq 120; then
+              echo "Canonical production health did not converge to the exact release source." >&2
+              exit 1
+            fi
+            sleep 10
+          done
+          curl --fail --silent --show-error --location --connect-timeout 5 --max-time 20 "https://econovaria.com/api/health" > "$RUNNER_TEMP/phase15-production-release/final/apex-health.json"
+          HEALTH="$RUNNER_TEMP/phase15-production-release/final/apex-health.json" node - <<'NODE'
+          const fs = require("node:fs");
+          const value = JSON.parse(fs.readFileSync(process.env.HEALTH, "utf8"));
+          if(value.ok!==true || value.status!=="ready" || value.environment!=="production" ||
+             value.projectRef!==process.env.PRODUCTION_PROJECT_REF ||
+             value.sourceCommit!==process.env.SOURCE_COMMIT) {
+            throw new Error("Apex production health is not bound to the exact release source.");
+          }
+          NODE
+          node - <<'NODE' > "$RUNNER_TEMP/phase15-production-release/final/release-branch.json"
+          process.stdout.write(JSON.stringify({
+            schemaVersion: 1,
+            status: "PASS",
+            sourceCommit: process.env.SOURCE_COMMIT,
+            releaseBranch: process.env.RELEASE_BRANCH,
+            publication: "fast-forward-only",
+            databaseCertified: true,
+            runtimeCertified: true,
+            canonicalHealthCertified: true,
+          }, null, 2) + "\n");
+          NODE
+      - name: Upload final production release evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-production-release-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-release/final/
+          if-no-files-found: error
+          retention-days: 30

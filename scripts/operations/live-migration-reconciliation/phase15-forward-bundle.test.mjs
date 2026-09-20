@@ -9,6 +9,7 @@ import {
   PRODUCTION_PRELUDE,
   stripOuterTransaction,
 } from "./build-phase15-forward-bundle.mjs";
+import { normalizeSupabaseHostedPair } from "./compare-schema-snapshots.mjs";
 import { verifyLedger } from "./verify-phase15-ledger.mjs";
 
 test("outer transaction normalization preserves comments and procedural BEGIN blocks", () => {
@@ -90,4 +91,52 @@ test("live runner quiesces schedulers behind a self-restoring maintenance lease"
   assert.match(source, /trap cleanup_runtime_schedulers EXIT/u);
   assert.match(source, /restore_runtime_schedulers\n/u);
   assert.doesNotMatch(source, /update\s+cron\.job/iu);
+  assert.match(source, /--profile supabase-hosted-live-v1/u);
+});
+
+test("hosted schema normalization accepts only the exact Supabase-managed role topology", () => {
+  const common = [
+    { role: "anon", member: "authenticator", grantor: "supabase_admin", adminOption: false },
+  ];
+  const canonical = {
+    authorization: {
+      roleMemberships: [
+        ...common,
+        { role: "supabase_functions_admin", member: "postgres", grantor: "supabase_admin", adminOption: false },
+        { role: "supabase_realtime_admin", member: "postgres", grantor: "supabase_admin", adminOption: false },
+      ],
+    },
+  };
+  const hosted = {
+    authorization: {
+      roleMemberships: [
+        ...common,
+        { role: "postgres", member: "cli_login_postgres", grantor: "supabase_admin", adminOption: false },
+      ],
+    },
+  };
+  const normalized = normalizeSupabaseHostedPair(canonical, hosted);
+  assert.deepEqual(normalized.left, normalized.right);
+  assert.equal(normalized.validation.profile, "supabase-hosted-live-v1");
+
+  const unexpected = normalizeSupabaseHostedPair(canonical, {
+      authorization: {
+        roleMemberships: [
+          ...hosted.authorization.roleMemberships,
+          { role: "postgres", member: "unexpected_login", grantor: "supabase_admin", adminOption: false },
+        ],
+      },
+    });
+  assert.notDeepEqual(unexpected.left, unexpected.right);
+  assert.throws(
+    () => normalizeSupabaseHostedPair(canonical, {
+      authorization: {
+        roleMemberships: [
+          ...common,
+          { role: "postgres", member: "cli_login_postgres", grantor: "wrong_grantor", adminOption: false },
+        ],
+      },
+    }),
+    /role-membership topology mismatch/u,
+  );
 });
