@@ -68,6 +68,11 @@ test("Golden Five verifier matches the current canonical fixture and lifecycle",
   assert.match(workflow, /PGSSLMODE: verify-full/u);
   assert.match(workflow, /sslmode', 'verify-full'/u);
   assert.doesNotMatch(workflow, /PGSSLMODE=require/u);
+  assert.ok(
+    workflow.includes("group: phase15-controlled-staging-${{ github.event_name }}-${{ github.ref }}"),
+    "Controlled staging must isolate PR concurrency and supersede stale main runs.",
+  );
+  assert.match(workflow, /cancel-in-progress: true/u);
   for (const path of [
     "scripts/staging/golden-five-contract.test.mjs",
     "scripts/staging/golden-five-verify.mjs",
