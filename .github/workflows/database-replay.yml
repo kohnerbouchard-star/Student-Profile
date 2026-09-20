@@ -238,6 +238,13 @@ jobs:
             rm -f "$password_url"
           fi
           test -n "$remote_url"
+          remote_url="$(DATABASE_URL="$remote_url" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.DATABASE_URL);
+          parsed.searchParams.set('sslmode', 'verify-full');
+          parsed.searchParams.delete('sslrootcert');
+          process.stdout.write(parsed.href);
+          NODE
+          )"
           echo "::add-mask::$remote_url"
           export PHASE15_REMOTE_DATABASE_URL="$remote_url"
           node scripts/release-integrity/cli.mjs validate-db-url \

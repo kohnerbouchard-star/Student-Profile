@@ -33,11 +33,15 @@ project_id="econovaria_phase15_${PHASE15_ENVIRONMENT}"
 container="supabase_db_${project_id}"
 supabase_root="$PHASE15_WORK_DIR/backend"
 dump_path="$PHASE15_WORK_DIR/${PHASE15_ENVIRONMENT}-schema.sql"
+ca_path="$repo_root/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt"
+ca_container_path="/tmp/supabase-prod-ca-2021.crt"
+ca_sha256="700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7"
 applied_path="$PHASE15_EVIDENCE_DIR/applied-migrations.txt"
 failure_path="$PHASE15_EVIDENCE_DIR/failure.json"
 status="FAILED"
 failed_migration=""
 local_started=false
+schema_restored=false
 
 mkdir -p "$supabase_root/supabase/migrations" "$PHASE15_EVIDENCE_DIR"
 : > "$applied_path"
@@ -52,6 +56,9 @@ node "$repo_root/scripts/release-integrity/cli.mjs" validate-db-url \
   --expected-project-ref "$PHASE15_EXPECTED_PROJECT_REF"
 
 capture_local_snapshot() {
+  if test "$schema_restored" != true; then
+    return 0
+  fi
   if ! docker ps --format '{{.Names}}' | grep -Fxq "$container"; then
     return 0
   fi
@@ -117,7 +124,8 @@ cleanup() {
   local exit_code=$?
   trap - EXIT
   capture_local_snapshot
-  if test -s "$PHASE15_EVIDENCE_DIR/post-schema.json"; then
+  if test -s "$PHASE15_EVIDENCE_DIR/post-schema.json" \
+      && test -s "$PHASE15_EVIDENCE_DIR/post-catalog.json"; then
     set +e
     node "$repo_root/scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs" \
       --left "$PHASE15_CANONICAL_SCHEMA" \
@@ -158,11 +166,17 @@ for attempt in 1 2 3; do
 done
 test "$startup_status" -eq 0
 
+test -s "$ca_path"
+test "$(sha256sum "$ca_path" | awk '{print $1}')" = "$ca_sha256"
+openssl x509 -in "$ca_path" -noout -checkend 2592000
+docker cp "$ca_path" "$container:$ca_container_path"
+docker exec "$container" chmod 0444 "$ca_container_path"
+
 echo "Capturing $PHASE15_ENVIRONMENT schema without application rows."
 docker exec \
   -e DATABASE_URL="$PHASE15_REMOTE_DATABASE_URL" \
   -e PGSSLMODE=verify-full \
-  -e PGSSLROOTCERT=/etc/ssl/certs/ca-certificates.crt \
+  -e PGSSLROOTCERT="$ca_container_path" \
   -e 'PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=120000 -c lock_timeout=5000' \
   "$container" \
   sh -ceu 'test -s "$PGSSLROOTCERT"; pg_dump "$DATABASE_URL" --schema-only --schema=public --schema=private --schema=economy_private --no-publications --no-subscriptions' \
@@ -181,6 +195,7 @@ drop schema if exists private cascade;
 drop schema if exists public cascade;
 SQL
 docker exec -i "$container" psql -U postgres -d postgres -X -q -v ON_ERROR_STOP=1 < "$dump_path"
+schema_restored=true
 
 docker exec -i "$container" psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 \
   < "$repo_root/scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql" \
