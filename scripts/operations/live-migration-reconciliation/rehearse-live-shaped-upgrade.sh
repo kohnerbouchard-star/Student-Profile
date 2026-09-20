@@ -6,7 +6,6 @@ required=(
   PHASE15_ENVIRONMENT
   PHASE15_EXPECTED_PROJECT_REF
   PHASE15_REMOTE_DATABASE_URL
-  PHASE15_CA_CERT
   PHASE15_WORK_DIR
   PHASE15_EVIDENCE_DIR
   PHASE15_CANONICAL_SCHEMA
@@ -25,7 +24,6 @@ case "$PHASE15_ENVIRONMENT" in
   *) echo "PHASE15_ENVIRONMENT must be staging or production." >&2; exit 1 ;;
 esac
 
-test -s "$PHASE15_CA_CERT"
 test -s "$PHASE15_CANONICAL_SCHEMA"
 test -s "$PHASE15_CANONICAL_CATALOG"
 
@@ -161,16 +159,14 @@ done
 test "$startup_status" -eq 0
 
 echo "Capturing $PHASE15_ENVIRONMENT schema without application rows."
-docker cp "$PHASE15_CA_CERT" "$container:/tmp/phase15-supabase-ca.crt"
 docker exec \
   -e DATABASE_URL="$PHASE15_REMOTE_DATABASE_URL" \
   -e PGSSLMODE=verify-full \
-  -e PGSSLROOTCERT=/tmp/phase15-supabase-ca.crt \
+  -e PGSSLROOTCERT=/etc/ssl/certs/ca-certificates.crt \
   -e 'PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=120000 -c lock_timeout=5000' \
   "$container" \
-  sh -ceu 'pg_dump "$DATABASE_URL" --schema-only --schema=public --schema=private --schema=economy_private --no-publications --no-subscriptions' \
+  sh -ceu 'test -s "$PGSSLROOTCERT"; pg_dump "$DATABASE_URL" --schema-only --schema=public --schema=private --schema=economy_private --no-publications --no-subscriptions' \
   > "$dump_path"
-docker exec "$container" rm -f /tmp/phase15-supabase-ca.crt
 
 test -s "$dump_path"
 if grep -Eq '^(COPY|INSERT INTO) ' "$dump_path"; then
