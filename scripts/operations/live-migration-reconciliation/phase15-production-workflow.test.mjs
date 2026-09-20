@@ -101,6 +101,14 @@ test("production writes are recovery-gated and runtime/release evidence is exact
     /docker cp "\$validation_root\/application-data\.sql"[\s\S]*--file \/tmp\/phase15-application-data\.sql/u,
   );
   assert.doesNotMatch(source, /--file \/tmp\/phase15-data\.sql/u);
+  assert.match(
+    source,
+    /compare-schema-snapshots\.mjs[\s\S]*--left "\$recovery_root\/restored-schema\.json"[\s\S]*--right "\$recovery_root\/remote-schema\.json"[\s\S]*--profile supabase-hosted-live-v1/u,
+  );
+  assert.doesNotMatch(
+    source,
+    /compare-schema-snapshots\.mjs[\s\S]*--left "\$recovery_root\/remote-schema\.json"[\s\S]*--right "\$recovery_root\/restored-schema\.json"/u,
+  );
   assert.doesNotMatch(source, /continue-on-error:\s*true/u);
   assert.doesNotMatch(source, /update\s+cron\.job/iu);
   assert.doesNotMatch(source, /VERCEL_TOKEN|vercel deploy|vercel promote/u);

@@ -125,7 +125,7 @@ jobs:
               scripts/staging/golden-five-contract.test.mjs|scripts/staging/golden-five-verify.mjs|scripts/staging/golden-five-browser-acceptance.mjs) ;;
               scripts/phase15-storage-lifecycle-convergence.test.mjs) ;;
               backend/supabase/migrations/20260920082200_phase15_close_database_advisor_findings_v1.sql) ;;
-              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json|docs/operations/contracts/player-cross-cutting/pr-722.json) ;;
+              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json|docs/operations/contracts/player-cross-cutting/pr-722.json|docs/operations/contracts/player-cross-cutting/pr-723.json) ;;
               backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts|backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts) ;;
               backend/src/domains/world/services/playerWorldRuntimeService.ts|backend/src/domains/world/services/playerWorldRuntimeService.test.ts) ;;
               *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
@@ -724,9 +724,11 @@ jobs:
           PGSSLMODE=disable psql "$restore_url" -X -qAt -v ON_ERROR_STOP=1 \
             < scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql \
             > "$recovery_root/restored-schema.json"
+          # The hosted comparison profile is directional: canonical disposable
+          # topology is left and the hosted target is right.
           node scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs \
-            --left "$recovery_root/remote-schema.json" \
-            --right "$recovery_root/restored-schema.json" \
+            --left "$recovery_root/restored-schema.json" \
+            --right "$recovery_root/remote-schema.json" \
             --profile supabase-hosted-live-v1 \
             > "$recovery_root/restore-schema-comparison.json"
           jq -e '.matched == true and .differences == []' \
