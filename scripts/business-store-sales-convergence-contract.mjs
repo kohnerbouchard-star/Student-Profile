@@ -16,6 +16,19 @@ const migrationPaths = Object.freeze({
 
 const purgeFingerprint = Object.freeze({
   registrySha256:
+    "7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3",
+  registryTableCount: 207,
+  fkGraphSha256:
+    "fe88cafd56ca4c21ab3c1d34385e21f4c3d8be201eae44ee7f5539a34a98f329",
+  fkGraphEdgeCount: 456,
+  deleteOrderSha256:
+    "19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897",
+  deleteOrderTableCount: 206,
+  finalizeCursor: 207,
+});
+
+const phase11MigrationPurgeFingerprint = Object.freeze({
+  registrySha256:
     "68695d3995661af72de99b01fffe0ed301071f1131e6a8e6b92f03febfedb960",
   registryTableCount: 202,
   fkGraphSha256:
@@ -676,10 +689,10 @@ assert.ok(
   )].length >= 3,
   "both legacy progress RPC bodies and their install assertion must be retired",
 );
-for (const value of Object.values(purgeFingerprint)) {
+for (const value of Object.values(phase11MigrationPurgeFingerprint)) {
   assert.ok(
     assertions.includes(String(value)),
-    `the database executor must bind exact purge authority ${value}`,
+    `the immutable Phase 11 database executor must bind its reviewed purge authority ${value}`,
   );
 }
 assert.match(assertions, /BUSINESS_STORE_CONVERGENCE_PURGE_REGISTRY_INCOMPLETE/u);

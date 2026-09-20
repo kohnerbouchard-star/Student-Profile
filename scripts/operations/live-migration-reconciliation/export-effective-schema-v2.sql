@@ -1,6 +1,9 @@
 -- Phase 15 extends the established release fingerprint to all application schemas.
 -- Derived from scripts/release-integrity/export-schema-fingerprint.sql.
 -- Pair with export-runtime-catalog-v2.sql for views, extension and scheduler hashes.
+-- Column ordinals and OID-derived purge-guard clone names are deliberately
+-- normalized: neither changes callable behavior, constraints, grants or the
+-- trigger-to-table binding, and both vary after forward-only live convergence.
 begin transaction read only;
 
 with relevant_role_oids as (
@@ -34,7 +37,7 @@ relevant_roles as (
   from relevant_role_oids
 )
 select jsonb_build_object(
-  'schemaVersion', 'econovaria.release-integrity.raw-schema-evidence.v1',
+  'schemaVersion', 'econovaria.release-integrity.raw-schema-evidence.v2',
   'structural', jsonb_build_object(
     'schemas', (
       select coalesce(jsonb_agg(jsonb_build_object('name', n.nspname) order by n.nspname), '[]'::jsonb)
@@ -67,7 +70,6 @@ select jsonb_build_object(
         'default', column_default,
         'identity', is_identity,
         'generated', is_generated,
-        'ordinalPosition', ordinal_position,
         'characterMaximumLength', character_maximum_length,
         'numericPrecision', numeric_precision,
         'numericPrecisionRadix', numeric_precision_radix,
@@ -132,13 +134,19 @@ select jsonb_build_object(
       join pg_language l on l.oid = p.prolang
       where n.nspname in ('public', 'private', 'economy_private')
         and p.prokind in ('f', 'p')
+        and p.proname !~ '^game_purge_guard_[0-9]+_[0-9]+_v1$'
     ),
     'triggers', (
       select coalesce(jsonb_agg(jsonb_build_object(
         'schema', n.nspname,
         'table', c.relname,
         'name', t.tgname,
-        'definition', pg_get_triggerdef(t.oid, true)
+        'definition', regexp_replace(
+          pg_get_triggerdef(t.oid, true),
+          'game_purge_guard_[0-9]+_[0-9]+_v1',
+          'game_purge_guard_dynamic_v1',
+          'g'
+        )
       ) order by n.nspname, c.relname, t.tgname), '[]'::jsonb)
       from pg_trigger t
       join pg_class c on c.oid = t.tgrelid
@@ -191,6 +199,7 @@ select jsonb_build_object(
       join pg_namespace n on n.oid = p.pronamespace
       where n.nspname in ('public', 'private', 'economy_private')
         and p.prokind in ('f', 'p')
+        and p.proname !~ '^game_purge_guard_[0-9]+_[0-9]+_v1$'
     ),
     'roleAttributes', (
       select coalesce(jsonb_agg(jsonb_build_object(
@@ -283,6 +292,7 @@ select jsonb_build_object(
       cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) as grant_acl
       where n.nspname in ('public', 'private', 'economy_private')
         and p.prokind in ('f', 'p')
+        and p.proname !~ '^game_purge_guard_[0-9]+_[0-9]+_v1$'
     ),
     'defaultPrivileges', (
       select coalesce(jsonb_agg(jsonb_build_object(
