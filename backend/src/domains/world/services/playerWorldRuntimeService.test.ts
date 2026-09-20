@@ -44,17 +44,17 @@ Deno.test("runtime context exposes questionnaire before assignment and strips ow
   }
 });
 
-Deno.test("runtime context tolerates legacy arrival score metadata without scores", async () => {
+Deno.test("runtime context tolerates older persisted arrival score metadata without scores", async () => {
   const repository = memoryRepository();
   repository.state.assignment = {
-    assignmentId: "legacy-arrival-assignment",
+    assignmentId: "prior-arrival-assignment",
     gameId: SCOPE.gameId,
     gameSessionId: SCOPE.gameId,
     playerUuid: SCOPE.playerUuid,
     countryId: "eldoran",
     classId: "maker",
     source: "questionnaire",
-    questionnaireId: "legacy-fixture",
+    questionnaireId: "persisted-fixture",
     questionnaireVersion: "1",
     scoreResult: {
       fixture: true,
