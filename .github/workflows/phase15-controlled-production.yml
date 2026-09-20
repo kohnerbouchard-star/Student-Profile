@@ -125,7 +125,7 @@ jobs:
               scripts/staging/golden-five-contract.test.mjs|scripts/staging/golden-five-verify.mjs|scripts/staging/golden-five-browser-acceptance.mjs) ;;
               scripts/phase15-storage-lifecycle-convergence.test.mjs) ;;
               backend/supabase/migrations/20260920082200_phase15_close_database_advisor_findings_v1.sql) ;;
-              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json|docs/operations/contracts/player-cross-cutting/pr-722.json|docs/operations/contracts/player-cross-cutting/pr-723.json) ;;
+              docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json|docs/operations/contracts/player-cross-cutting/pr-722.json|docs/operations/contracts/player-cross-cutting/pr-723.json|docs/operations/contracts/player-cross-cutting/pr-724.json) ;;
               backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts|backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts) ;;
               backend/src/domains/world/services/playerWorldRuntimeService.ts|backend/src/domains/world/services/playerWorldRuntimeService.test.ts) ;;
               *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
@@ -724,14 +724,25 @@ jobs:
           PGSSLMODE=disable psql "$restore_url" -X -qAt -v ON_ERROR_STOP=1 \
             < scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql \
             > "$recovery_root/restored-schema.json"
-          # The hosted comparison profile is directional: canonical disposable
-          # topology is left and the hosted target is right.
+          # The restore profile validates the expected local/hosted managed-role
+          # topology, then compares every application structure and object-level
+          # authorization fact while excluding target-managed role attributes,
+          # memberships, and global default privileges from equality.
+          comparison_status=0
           node scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs \
             --left "$recovery_root/restored-schema.json" \
             --right "$recovery_root/remote-schema.json" \
-            --profile supabase-hosted-live-v1 \
-            > "$recovery_root/restore-schema-comparison.json"
-          jq -e '.matched == true and .differences == []' \
+            --profile supabase-application-restore-v1 \
+            > "$recovery_root/restore-schema-comparison.json" || comparison_status=$?
+          cp "$recovery_root/restore-schema-comparison.json" \
+            "$RUNNER_TEMP/phase15-production-database-evidence/restore-schema-comparison.json"
+          cat "$recovery_root/restore-schema-comparison.json"
+          test "$comparison_status" -eq 0
+          jq -e '.matched == true and
+            .differences == [] and
+            .profile == "supabase-application-restore-v1" and
+            .profileValidation.profile == "supabase-application-restore-v1" and
+            .profileValidation.hostedTopology.profile == "supabase-hosted-live-v1"' \
             "$recovery_root/restore-schema-comparison.json" >/dev/null
 
           PGSSLMODE=disable psql "$restore_url" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' \
@@ -772,8 +783,12 @@ jobs:
           const manifest = JSON.parse(await readFile(process.env.LOGICAL_MANIFEST, "utf8"));
           const schema = JSON.parse(await readFile(process.env.SCHEMA_COMPARISON, "utf8"));
           const data = JSON.parse(await readFile(process.env.DATA_VERIFICATION, "utf8"));
-          if (schema.matched !== true || schema.differences.length !== 0) {
-            throw new Error("Restored logical backup schema does not match production.");
+          if (schema.matched !== true ||
+              schema.differences.length !== 0 ||
+              schema.profile !== "supabase-application-restore-v1" ||
+              schema.profileValidation?.profile !== "supabase-application-restore-v1" ||
+              schema.profileValidation?.hostedTopology?.profile !== "supabase-hosted-live-v1") {
+            throw new Error("Restored logical backup application schema does not match production.");
           }
           await writeFile(process.env.OUTPUT, JSON.stringify({
             schemaVersion: 2,
@@ -805,6 +820,8 @@ jobs:
             },
             restoreValidated: true,
             schemaMatched: true,
+            schemaComparisonProfile: schema.profile,
+            schemaComparisonValidation: schema.profileValidation,
             restoredData: data,
           }, null, 2) + "\n");
           NODE
@@ -853,7 +870,11 @@ jobs:
               !logical.backupFiles?.some(({ name }) => name === "application-data.sql") ||
               logical.encryption?.encrypted !== true ||
               logical.restoreValidated !== true ||
-              logical.schemaMatched !== true) {
+              logical.schemaMatched !== true ||
+              logical.schemaComparisonProfile !== "supabase-application-restore-v1" ||
+              logical.schemaComparisonValidation?.profile !== "supabase-application-restore-v1" ||
+              logical.schemaComparisonValidation?.hostedTopology?.profile !==
+                "supabase-hosted-live-v1") {
             throw new Error("Production logical recovery proof is incomplete.");
           }
           if (!/^[0-9]+$/u.test(process.env.RECOVERY_ARTIFACT_ID || "") ||
@@ -1251,6 +1272,11 @@ jobs:
               recovery.logicalBackup?.encryption?.encrypted !== true ||
               recovery.logicalBackup?.restoreValidated !== true ||
               recovery.logicalBackup?.schemaMatched !== true ||
+              recovery.logicalBackup?.schemaComparisonProfile !== "supabase-application-restore-v1" ||
+              recovery.logicalBackup?.schemaComparisonValidation?.profile !==
+                "supabase-application-restore-v1" ||
+              recovery.logicalBackup?.schemaComparisonValidation?.hostedTopology?.profile !==
+                "supabase-hosted-live-v1" ||
               recovery.logicalBackup?.offsiteUploaded !== true ||
               !Number.isSafeInteger(recovery.logicalBackup?.artifactId) ||
               !/^(?:sha256:)?[a-f0-9]{64}$/u.test(recovery.logicalBackup?.artifactDigest || "")) {
