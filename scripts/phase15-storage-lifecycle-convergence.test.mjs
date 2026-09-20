@@ -56,6 +56,10 @@ const paths = {
     "backend/supabase/migrations/20260920082100_phase15_close_live_shaped_schema_parity_v1.sql",
     ROOT,
   ),
+  liveShapedRehearsal: new URL(
+    "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
+    ROOT,
+  ),
   runbook: new URL("docs/operations/econovaria-storage-lifecycle.md", ROOT),
 };
 
@@ -241,6 +245,7 @@ test("superseded live aliases are retired without weakening current contracts", 
 
 test("final live-shaped parity correction is additive and reasserts the canonical candle overload", async () => {
   const migration = await text(paths.closeSchemaParity);
+  const rehearsal = await text(paths.liveShapedRehearsal);
 
   for (const column of ["review_manifest jsonb", "review_sha256 text", "review_generated_at timestamptz"]) {
     assertContains(migration, `add column if not exists ${column}`, "schema parity migration");
@@ -254,4 +259,6 @@ test("final live-shaped parity correction is additive and reasserts the canonica
   assertNotContains(migration, "drop column", "schema parity migration");
   assertNotContains(migration, "drop function", "schema parity migration");
   assertNotContains(migration, "cron.schedule", "schema parity migration");
+  assertContains(rehearsal, 'if test "${#migrations[@]}" -ne 150', "live-shaped rehearsal");
+  assertContains(rehearsal, "Expected 150 forward migrations", "live-shaped rehearsal");
 });

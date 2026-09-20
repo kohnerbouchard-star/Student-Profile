@@ -11,6 +11,7 @@
   "allowedPaths": [
     "backend/supabase/migrations/20260920082100_phase15_close_live_shaped_schema_parity_v1.sql",
     "docs/operations/contracts/player-cross-cutting/pr-698.json",
+    "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
     "scripts/phase15-storage-lifecycle-convergence.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
