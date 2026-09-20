@@ -113,6 +113,32 @@ function assertNoFailedRequests(journey, label, startIndex = 0) {
   }
 }
 
+async function dismissPendingStoryCutscenes(page, journey, label) {
+  const requestStart = journey.requests.length;
+  const modal = page.locator(".player-story-cutscene-modal:visible").first();
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    if (!(await modal.isVisible().catch(() => false))) {
+      await page.waitForTimeout(250);
+      if (!(await modal.isVisible().catch(() => false))) {
+        assertNoFailedRequests(journey, `${label} story briefing`, requestStart);
+        return;
+      }
+    }
+
+    const action = modal.locator("[data-player-story-action]:visible").last();
+    await action.waitFor({ state: "visible", timeout: 30_000 });
+    await action.click({ timeout: 30_000 });
+    journey.storyCutscenesHandled += 1;
+    await page.waitForTimeout(500);
+  }
+
+  if (await modal.isVisible().catch(() => false)) {
+    throw new Error(`${label} left more than 12 pending story briefings.`);
+  }
+  assertNoFailedRequests(journey, `${label} story briefing`, requestStart);
+}
+
 async function loginPlayer(browser, player) {
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
@@ -127,6 +153,7 @@ async function loginPlayer(browser, player) {
     consoleErrors: [],
     pageErrors: [],
     securityFailures: [],
+    storyCutscenesHandled: 0,
     refreshPersisted: false,
     loggedOut: false,
   };
@@ -159,6 +186,7 @@ async function loginPlayer(browser, player) {
   await page.waitForURL(/\/player-terminal\/(?:index\.html)?(?:#.*)?$/, { timeout: 120_000 });
   await page.locator(".player-terminal-app-root").waitFor({ state: "visible", timeout: 120_000 });
   await page.waitForTimeout(1000);
+  await dismissPendingStoryCutscenes(page, journey, `Player ${player.slot} login`);
   assertNoFailedRequests(journey, `Player ${player.slot} login`, requestStart);
 
   return { context, page, journey, player };
@@ -166,6 +194,11 @@ async function loginPlayer(browser, player) {
 
 async function visitRoute(session, route) {
   const { page, journey } = session;
+  await dismissPendingStoryCutscenes(
+    page,
+    journey,
+    `Player ${journey.slot} before ${route}`,
+  );
   const requestStart = journey.requests.length;
   const control = page.locator(`[data-route="${route}"]:visible`).first();
   await control.waitFor({ state: "visible", timeout: 30_000 });

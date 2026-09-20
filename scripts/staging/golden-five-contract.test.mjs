@@ -92,6 +92,17 @@ test("Golden Five verifier matches the current canonical fixture and lifecycle",
   }
 });
 
+test("Golden Five browser acceptance handles authoritative story briefings", async () => {
+  const source = await readFile(
+    "scripts/staging/golden-five-browser-acceptance.mjs",
+    "utf8",
+  );
+  assert.match(source, /dismissPendingStoryCutscenes/u);
+  assert.match(source, /data-player-story-action/u);
+  assert.match(source, /storyCutscenesHandled/u);
+  assert.match(source, /assertNoFailedRequests/u);
+});
+
 test("Golden Five source never commits plaintext fixture access codes", async () => {
   const plaintextAccessCode = /GOLD-[1-5]-[A-Z0-9]{8}/;
   for (const path of TEXT_PATHS) {

@@ -10,6 +10,7 @@ on:
       - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
       - "scripts/staging/golden-five-contract.test.mjs"
       - "scripts/staging/golden-five-verify.mjs"
+      - "scripts/staging/golden-five-browser-acceptance.mjs"
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts"
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts"
   workflow_run:
@@ -119,7 +120,7 @@ jobs:
             case "$path" in
               .github/workflows/database-replay.yml|.github/workflows/phase15-controlled-staging.yml|.github/workflows/phase15-controlled-production.yml|scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs) ;;
               scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs|scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs|scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh|scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh) ;;
-              scripts/staging/golden-five-contract.test.mjs|scripts/staging/golden-five-verify.mjs) ;;
+              scripts/staging/golden-five-contract.test.mjs|scripts/staging/golden-five-verify.mjs|scripts/staging/golden-five-browser-acceptance.mjs) ;;
               backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts|backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts) ;;
               *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
             esac
