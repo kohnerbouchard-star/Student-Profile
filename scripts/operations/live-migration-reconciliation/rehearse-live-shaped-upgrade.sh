@@ -38,9 +38,15 @@ ca_container_path="/tmp/supabase-prod-ca-2021.crt"
 ca_sha256="700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7"
 pg_cron_version="1.6.4"
 applied_path="$PHASE15_EVIDENCE_DIR/applied-migrations.txt"
+certified_path="$PHASE15_EVIDENCE_DIR/certified-migrations.txt"
+remote_ledger_path="$PHASE15_EVIDENCE_DIR/remote-ledger.json"
+manifest_path="$PHASE15_WORK_DIR/forward-manifest.json"
 failure_path="$PHASE15_EVIDENCE_DIR/failure.json"
 status="FAILED"
 failed_migration=""
+execution_mode="unresolved"
+remote_present_count=0
+certified_count=0
 local_started=false
 schema_restored=false
 prelude_migrations=()
@@ -48,6 +54,7 @@ migrations=()
 
 mkdir -p "$supabase_root/supabase/migrations" "$PHASE15_EVIDENCE_DIR"
 : > "$applied_path"
+: > "$certified_path"
 rm -f "$failure_path"
 
 cp "$repo_root/backend/supabase/config.toml" "$supabase_root/supabase/config.toml"
@@ -89,6 +96,10 @@ write_summary() {
   PHASE15_CUTOFF="$cutoff" \
   PHASE15_PRELUDE_COUNT="${#prelude_migrations[@]}" \
   PHASE15_COMMON_FORWARD_COUNT="${#migrations[@]}" \
+  PHASE15_EXECUTION_MODE="$execution_mode" \
+  PHASE15_REMOTE_PRESENT_COUNT="$remote_present_count" \
+  PHASE15_REMOTE_LEDGER_VERIFIED="$(test -s "$PHASE15_EVIDENCE_DIR/remote-ledger-verification.json" && echo true || echo false)" \
+  PHASE15_CERTIFIED_COUNT="$certified_count" \
   PHASE15_SOURCE_COMMIT="$(git rev-parse HEAD)" \
   PHASE15_APPLIED_PATH="$applied_path" \
   PHASE15_SCHEMA_COMPARE_EXIT="$schema_compare_exit" \
@@ -110,13 +121,17 @@ process.stdout.write(`${JSON.stringify({
   migrationCutoff: process.env.PHASE15_CUTOFF,
   preludeMigrationCount: Number(process.env.PHASE15_PRELUDE_COUNT),
   commonForwardMigrationCount: Number(process.env.PHASE15_COMMON_FORWARD_COUNT),
+  executionMode: process.env.PHASE15_EXECUTION_MODE,
+  remoteLedgerPresentCount: Number(process.env.PHASE15_REMOTE_PRESENT_COUNT),
+  remoteLedgerVerified: process.env.PHASE15_REMOTE_LEDGER_VERIFIED === "true",
+  certifiedMigrationCount: Number(process.env.PHASE15_CERTIFIED_COUNT),
   appliedMigrationCount: applied.length,
   firstAppliedMigration: applied[0] ?? null,
   lastAppliedMigration: applied.at(-1) ?? null,
   failedMigration: process.env.PHASE15_FAILED_MIGRATION || null,
   status: process.env.PHASE15_STATUS,
   exitCode: Number(process.env.PHASE15_EXIT_CODE),
-  sourceDatabaseAccess: "schema-only-read-only",
+  sourceDatabaseAccess: "schema-and-migration-ledger-read-only",
   sourceRowsCopied: false,
   rawSchemaDumpRetained: false,
   canonicalApplicationSchemaComparisonExit: schemaComparisonExit,
@@ -258,13 +273,74 @@ if test "${#migrations[@]}" -ne 150; then
   exit 1
 fi
 
-for migration in "${prelude_migrations[@]}" "${migrations[@]}"; do
-  test -s "$repo_root/backend/supabase/migrations/$migration"
-  failed_migration="$migration"
-  echo "Applying $migration"
-  if ! docker exec -i "$container" psql -U postgres -d postgres -X -q -v ON_ERROR_STOP=1 \
-    < "$repo_root/backend/supabase/migrations/$migration"; then
-    PHASE15_FAILED_MIGRATION="$migration" node --input-type=module - <<'NODE' > "$failure_path"
+selected_migrations=("${prelude_migrations[@]}" "${migrations[@]}")
+node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs" \
+  --environment "$PHASE15_ENVIRONMENT" --mode rollback --format manifest > "$manifest_path"
+test "$(jq -r '.migrationCount' "$manifest_path")" -eq "${#selected_migrations[@]}"
+mapfile -t manifest_migrations < <(jq -r '.migrations[].filename' "$manifest_path")
+test "${#manifest_migrations[@]}" -eq "${#selected_migrations[@]}"
+for index in "${!selected_migrations[@]}"; do
+  test "${selected_migrations[$index]}" = "${manifest_migrations[$index]}"
+done
+
+versions="$(jq -r '.migrations[].version' "$manifest_path" | paste -sd, -)"
+[[ "$versions" =~ ^[0-9]{14}(,[0-9]{14})*$ ]]
+docker exec \
+  -e DATABASE_URL="$PHASE15_REMOTE_DATABASE_URL" \
+  -e PGSSLMODE=verify-full \
+  -e PGSSLROOTCERT="$ca_container_path" \
+  -e 'PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=120000 -c lock_timeout=5000' \
+  -e PHASE15_VERSIONS="$versions" \
+  -i "$container" \
+  sh -ceu 'psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -v phase15_versions="$PHASE15_VERSIONS"' <<'SQL' \
+  > "$remote_ledger_path"
+select coalesce(
+  jsonb_agg(
+    jsonb_build_object(
+      'version', version,
+      'name', coalesce(name, ''),
+      'statementCount', cardinality(statements),
+      'sha256', encode(extensions.digest(coalesce(statements[1], ''), 'sha256'), 'hex')
+    ) order by version
+  ),
+  '[]'::jsonb
+)::text
+from supabase_migrations.schema_migrations
+where version = any (string_to_array(:'phase15_versions', ','));
+SQL
+
+remote_present_count="$(jq 'length' "$remote_ledger_path")"
+if test "$remote_present_count" -eq 0; then
+  execution_mode="forward-rehearsal"
+elif test "$remote_present_count" -eq "${#selected_migrations[@]}"; then
+  execution_mode="already-current"
+  node "$repo_root/scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs" \
+    --manifest "$manifest_path" \
+    --live "$remote_ledger_path" \
+    > "$PHASE15_EVIDENCE_DIR/remote-ledger-verification.json"
+else
+  PHASE15_REMOTE_PRESENT_COUNT="$remote_present_count" \
+  PHASE15_EXPECTED_COUNT="${#selected_migrations[@]}" \
+    node --input-type=module - <<'NODE' > "$failure_path"
+process.stdout.write(`${JSON.stringify({
+  schemaVersion: 1,
+  errorClass: "PARTIAL_REMOTE_MIGRATION_LEDGER",
+  remotePresentCount: Number(process.env.PHASE15_REMOTE_PRESENT_COUNT),
+  expectedCount: Number(process.env.PHASE15_EXPECTED_COUNT),
+}, null, 2)}\n`);
+NODE
+  echo "Partial Phase 15 ledger detected in $PHASE15_ENVIRONMENT: $remote_present_count of ${#selected_migrations[@]}." >&2
+  exit 1
+fi
+
+if test "$execution_mode" = "forward-rehearsal"; then
+  for migration in "${selected_migrations[@]}"; do
+    test -s "$repo_root/backend/supabase/migrations/$migration"
+    failed_migration="$migration"
+    echo "Applying $migration"
+    if ! docker exec -i "$container" psql -U postgres -d postgres -X -q -v ON_ERROR_STOP=1 \
+      < "$repo_root/backend/supabase/migrations/$migration"; then
+      PHASE15_FAILED_MIGRATION="$migration" node --input-type=module - <<'NODE' > "$failure_path"
 process.stdout.write(`${JSON.stringify({
   schemaVersion: 1,
   environment: process.env.PHASE15_ENVIRONMENT,
@@ -272,10 +348,16 @@ process.stdout.write(`${JSON.stringify({
   errorClass: "MIGRATION_APPLICATION_FAILED",
 }, null, 2)}\n`);
 NODE
-    exit 1
-  fi
-  printf '%s\n' "$migration" >> "$applied_path"
-done
+      exit 1
+    fi
+    printf '%s\n' "$migration" >> "$applied_path"
+  done
+else
+  echo "The exact $PHASE15_ENVIRONMENT migration ledger is already current; certifying its restored schema without reapplying migrations."
+fi
+
+printf '%s\n' "${selected_migrations[@]}" > "$certified_path"
+certified_count="${#selected_migrations[@]}"
 
 failed_migration=""
 capture_local_snapshot

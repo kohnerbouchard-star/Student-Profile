@@ -94,6 +94,27 @@ test("live runner quiesces schedulers behind a self-restoring maintenance lease"
   assert.match(source, /--profile supabase-hosted-live-v1/u);
 });
 
+test("live-shaped rehearsal is idempotent only for an exact complete remote ledger", async () => {
+  const rehearsal = await readFile(
+    "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
+    "utf8",
+  );
+  const stagingWorkflow = await readFile(
+    ".github/workflows/phase15-controlled-staging.yml",
+    "utf8",
+  );
+  assert.match(rehearsal, /default_transaction_read_only=on/u);
+  assert.match(rehearsal, /verify-phase15-ledger\.mjs/u);
+  assert.match(rehearsal, /PARTIAL_REMOTE_MIGRATION_LEDGER/u);
+  assert.match(rehearsal, /execution_mode="forward-rehearsal"/u);
+  assert.match(rehearsal, /execution_mode="already-current"/u);
+  assert.match(rehearsal, /certifiedMigrationCount/u);
+  assert.match(stagingWorkflow, /value\.certifiedMigrationCount !== expectedApplied/u);
+  assert.match(stagingWorkflow, /value\.remoteLedgerPresentCount === expectedApplied/u);
+  assert.match(stagingWorkflow, /value\.remoteLedgerVerified === true/u);
+  assert.match(stagingWorkflow, /value\.appliedMigrationCount === 0/u);
+});
+
 test("hosted schema normalization accepts only the exact Supabase-managed role topology", () => {
   const common = [
     { role: "anon", member: "authenticator", grantor: "supabase_admin", adminOption: false },
