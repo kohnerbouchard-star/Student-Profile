@@ -67,8 +67,12 @@ jobs:
       - name: Validate immutable migration and reconciliation contracts
         run: |
           node --test scripts/operations/live-migration-reconciliation/phase15-audit.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
           node scripts/operations/live-migration-reconciliation/verify-immutable-manifest.mjs
+          node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs --environment staging --mode rollback --format manifest > /tmp/phase15-staging-forward-manifest.json
+          node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs --environment production --mode rollback --format manifest > /tmp/phase15-production-forward-manifest.json
           bash -n scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh
+          bash -n scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh
 
       - name: Validate Contract public-key repair contract
         run: node --test scripts/player-contract-public-key-resolution-migration.test.mjs

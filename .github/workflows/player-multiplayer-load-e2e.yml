@@ -6,6 +6,7 @@ on:
     branches: [main, agent/pr377-validation-base, feat/business-financial-reporting-v2, feat/business-common-equity-v2, feat/business-ipo-issuance-v2]
     paths:
       - ".github/workflows/player-multiplayer-load-e2e.yml"
+      - ".github/workflows/phase15-controlled-staging.yml"
       - "index.html"
       - "frontend/src/core/**"
       - "player-terminal/**"

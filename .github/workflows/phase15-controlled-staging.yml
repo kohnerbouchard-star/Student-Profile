@@ -1,0 +1,480 @@
+name: Phase 15 Controlled Staging Convergence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/phase15-controlled-staging.yml"
+      - ".github/workflows/database-replay.yml"
+      - ".github/workflows/player-multiplayer-load-e2e.yml"
+      - "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs"
+      - "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
+      - "docs/operations/contracts/player-cross-cutting/pr-699.json"
+      - "scripts/player-cross-cutting-authority.test.mjs"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/phase15-controlled-staging.yml"
+      - "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs"
+      - "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: phase15-controlled-staging
+  cancel-in-progress: false
+
+env:
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SUPABASE_CLI_VERSION: 2.109.1
+  MANIFEST_PATH: backend/supabase/edge-function-manifest.json
+
+jobs:
+  static-contract:
+    name: Validate fail-closed staging release contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Validate release construction and runtime inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
+          node --test scripts/edge-function-inventory/validate.test.mjs
+          node --test scripts/local-edge-runtime-contract.test.mjs
+          node --test scripts/runtime-config-contract.test.mjs
+          bash -n scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh
+          node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs \
+            --environment staging --mode rollback --format manifest \
+            > "$RUNNER_TEMP/staging-forward-manifest.json"
+          test "$(jq -r '.migrationCount' "$RUNNER_TEMP/staging-forward-manifest.json")" = 150
+
+  certify-source:
+    name: Require exact-main replay and both live-shaped certificates
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: static-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    outputs:
+      replay_run_id: ${{ steps.replay.outputs.run_id }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out exact merged main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce exact protected-main identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+      - name: Wait for exact-SHA Database Replay success
+        id: replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/database-replay.yml/runs?head_sha=$GITHUB_SHA&event=push&per_page=20"
+          for attempt in $(seq 1 300); do
+            response="$(curl --fail --silent --show-error \
+              -H 'Accept: application/vnd.github+json' \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "$api")"
+            state="$(RESPONSE="$response" SOURCE_COMMIT="$GITHUB_SHA" node - <<'NODE'
+          const body = JSON.parse(process.env.RESPONSE);
+          const run = (body.workflow_runs || []).find((value) =>
+            value.head_sha === process.env.SOURCE_COMMIT && value.event === 'push');
+          if (!run) process.stdout.write('missing');
+          else process.stdout.write(`${run.id}|${run.status}|${run.conclusion || ''}`);
+          NODE
+            )"
+            if [ "$state" = missing ]; then sleep 15; continue; fi
+            IFS='|' read -r run_id status conclusion <<< "$state"
+            if [ "$status" = completed ]; then
+              test "$conclusion" = success
+              echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo 'Timed out waiting for exact-SHA Database Replay.' >&2
+          exit 1
+      - name: Download exact clean replay certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-clean-replay-${{ github.sha }}
+          run-id: ${{ steps.replay.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-certificates/clean
+      - name: Download exact staging-shaped certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-live-shaped-rehearsal-staging-${{ github.sha }}
+          run-id: ${{ steps.replay.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-certificates/staging
+      - name: Download exact production-shaped certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-live-shaped-rehearsal-production-${{ github.sha }}
+          run-id: ${{ steps.replay.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-certificates/production
+      - name: Validate all exact-source certificates
+        shell: bash
+        env:
+          CERTIFICATE_ROOT: ${{ runner.temp }}/phase15-certificates
+        run: |
+          set -euo pipefail
+          node --input-type=module - <<'NODE'
+          import { readFile, readdir } from 'node:fs/promises';
+          import path from 'node:path';
+          async function find(root, filename) {
+            const entries = await readdir(root, { withFileTypes: true });
+            for (const entry of entries) {
+              const candidate = path.join(root, entry.name);
+              if (entry.isDirectory()) {
+                const nested = await find(candidate, filename);
+                if (nested) return nested;
+              } else if (entry.name === filename) return candidate;
+            }
+            return null;
+          }
+          const source = process.env.GITHUB_SHA;
+          const cleanSourcePath = await find(path.join(process.env.CERTIFICATE_ROOT, 'clean'), 'source-commit.txt');
+          if (!cleanSourcePath || (await readFile(cleanSourcePath, 'utf8')).trim() !== source) {
+            throw new Error('Clean replay source identity mismatch.');
+          }
+          for (const [environment, expectedPrelude, expectedApplied] of [
+            ['staging', 0, 150],
+            ['production', 18, 168],
+          ]) {
+            const summaryPath = await find(path.join(process.env.CERTIFICATE_ROOT, environment), 'summary.json');
+            if (!summaryPath) throw new Error(`${environment} certificate is missing.`);
+            const value = JSON.parse(await readFile(summaryPath, 'utf8'));
+            if (value.status !== 'PASS' || value.sourceCommit !== source ||
+                value.preludeMigrationCount !== expectedPrelude ||
+                value.appliedMigrationCount !== expectedApplied ||
+                value.canonicalApplicationSchemaMatched !== true) {
+              throw new Error(`${environment} live-shaped certificate failed validation.`);
+            }
+          }
+          NODE
+      - name: Upload source gate evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-source-gate-${{ github.sha }}
+          path: ${{ runner.temp }}/phase15-certificates/
+          if-no-files-found: error
+          retention-days: 30
+
+  converge-staging-database:
+    name: Rehearse and converge populated staging database
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: certify-source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CONFIGURED_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PHASE15_ENVIRONMENT: staging
+      PHASE15_EXPECTED_PROJECT_REF: eecvbssdvarfcykcfrny
+      PHASE15_LIVE_APPLY_AUTHORIZED: staging
+      PHASE15_EVIDENCE_DIR: ${{ runner.temp }}/phase15-staging-evidence
+      PHASE15_WORK_DIR: ${{ runner.temp }}/phase15-staging-work
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt
+    steps:
+      - name: Check out exact certified main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Bind exact staging database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          remote_url="$CONFIGURED_SUPABASE_DB_URL"
+          if test -z "$remote_url"; then
+            test -n "$SUPABASE_DB_PASSWORD"
+            (cd backend && supabase --yes link --project-ref "$STAGING_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+            pooler_path="backend/supabase/.temp/pooler-url"
+            test -s "$pooler_path"
+            remote_url="$(POOLER_URL="$(tr -d '\r\n' < "$pooler_path")" DATABASE_PASSWORD="$SUPABASE_DB_PASSWORD" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.POOLER_URL);
+          parsed.password = process.env.DATABASE_PASSWORD;
+          process.stdout.write(parsed.href);
+          NODE
+            )"
+          fi
+          remote_url="$(DATABASE_URL="$remote_url" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.DATABASE_URL);
+          parsed.searchParams.set('sslmode', 'verify-full');
+          parsed.searchParams.delete('sslrootcert');
+          process.stdout.write(parsed.href);
+          NODE
+          )"
+          echo "::add-mask::$remote_url"
+          printf 'PHASE15_REMOTE_DATABASE_URL=%s\n' "$remote_url" >> "$GITHUB_ENV"
+      - name: Download exact canonical clean schema
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-clean-replay-${{ github.sha }}
+          run-id: ${{ needs.certify-source.outputs.replay_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-canonical
+      - name: Resolve canonical schema path
+        shell: bash
+        run: |
+          set -euo pipefail
+          schema="$(find "$RUNNER_TEMP/phase15-canonical" -type f -name schema-1.json -print -quit)"
+          test -s "$schema"
+          printf 'PHASE15_CANONICAL_SCHEMA=%s\n' "$schema" >> "$GITHUB_ENV"
+      - name: Run rollback proof and atomic staging convergence
+        shell: bash
+        run: bash scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh
+      - name: Upload sanitized staging database certificate
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-staging-database-${{ github.sha }}
+          path: ${{ runner.temp }}/phase15-staging-evidence/
+          if-no-files-found: error
+          retention-days: 30
+
+  converge-staging-runtime:
+    name: Deploy and attest current staging Edge runtime
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: converge-staging-database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Check out exact database-certified main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Enforce runtime source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          node --test scripts/edge-function-inventory/validate.test.mjs
+      - name: Deploy every canonical staging function from the manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          MANIFEST="$MANIFEST_PATH" node --input-type=module - <<'NODE' > "$RUNNER_TEMP/deployable-functions.txt"
+          import { readFileSync } from 'node:fs';
+          const manifest = JSON.parse(readFileSync(process.env.MANIFEST, 'utf8'));
+          for (const entry of [...manifest.canonicalFunctions, ...manifest.compatibilityFunctions]) {
+            process.stdout.write(`${entry.slug}|${entry.verifyJwt}\n`);
+          }
+          NODE
+          while IFS='|' read -r slug verify_jwt; do
+            test -n "$slug"
+            args=(functions deploy "$slug" --workdir backend --project-ref "$STAGING_PROJECT_REF")
+            if test "$verify_jwt" = false; then args+=(--no-verify-jwt); fi
+            supabase "${args[@]}"
+          done < "$RUNNER_TEMP/deployable-functions.txt"
+      - name: Remove only manifest-retired staging functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/staging-before-retirement.json"
+          INVENTORY="$RUNNER_TEMP/staging-before-retirement.json" MANIFEST="$MANIFEST_PATH" node - <<'NODE' > "$RUNNER_TEMP/staging-retire.txt"
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.INVENTORY, 'utf8'));
+          const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST, 'utf8'));
+          const present = new Set(rows.map((row) => String(row.slug || '')));
+          for (const slug of manifest.retiredFunctions) if (present.has(slug)) process.stdout.write(`${slug}\n`);
+          NODE
+          while IFS= read -r slug; do
+            test -n "$slug" || continue
+            curl --fail --silent --show-error --request DELETE \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions/$slug" >/dev/null
+          done < "$RUNNER_TEMP/staging-retire.txt"
+      - name: Validate exact staging inventory and security boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/staging-functions.json"
+          node scripts/edge-function-inventory/validate.mjs \
+            --manifest "$MANIFEST_PATH" \
+            --environment staging \
+            --inventory "$RUNNER_TEMP/staging-functions.json" \
+            | tee "$RUNNER_TEMP/staging-attestation.json"
+          for spec in \
+            'POST banking-fx-orchestrator' \
+            'POST business-operations-worker' \
+            'POST campaign-orchestrator' \
+            'POST fx-orchestrator' \
+            'POST game-data-purger' \
+            'POST stock-market-orchestrator' \
+            'POST stock-tick-archiver' \
+            'POST web-session-api/logout'; do
+            read -r method slug <<< "$spec"
+            status="$(curl --silent --show-error --request "$method" --output /dev/null \
+              --write-out '%{http_code}' --max-time 30 \
+              "https://$STAGING_PROJECT_REF.supabase.co/functions/v1/$slug")"
+            case "$status" in 400|401|403|405|422) ;; *) echo "Unexpected unauthenticated response for $slug: $status" >&2; exit 1 ;; esac
+          done
+      - name: Upload staging runtime certificate
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-staging-runtime-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/staging-functions.json
+            ${{ runner.temp }}/staging-attestation.json
+          if-no-files-found: error
+          retention-days: 30
+
+  exercise-staging:
+    name: Exercise real staging browser lifecycle and isolation
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: converge-staging-runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: staging
+    env:
+      SUPABASE_PROJECT_REF: eecvbssdvarfcykcfrny
+      EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+      PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+      POOLER_URL: ${{ secrets.STAGING_POOLER_URL || secrets.SUPABASE_DB_URL }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD || secrets.SUPABASE_DB_PASSWORD }}
+      ECONOVARIA_PROJECT_REF: eecvbssdvarfcykcfrny
+      ECONOVARIA_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+      ECONOVARIA_BROWSER_BASE_URL: http://127.0.0.1:4173
+      ECONOVARIA_GOLDEN_EVIDENCE_PATH: /tmp/econovaria-golden-five/fixture-verification.json
+      ECONOVARIA_GOLDEN_BROWSER_OUTPUT_DIR: /tmp/econovaria-golden-five/browser
+      ECONOVARIA_GOLDEN_ALPHA_ACCESS_CODE: ${{ secrets.GOLDEN_ALPHA_ACCESS_CODE }}
+      ECONOVARIA_GOLDEN_BRAVO_ACCESS_CODE: ${{ secrets.GOLDEN_BRAVO_ACCESS_CODE }}
+      ECONOVARIA_GOLDEN_CHARLIE_ACCESS_CODE: ${{ secrets.GOLDEN_CHARLIE_ACCESS_CODE }}
+      ECONOVARIA_GOLDEN_DELTA_ACCESS_CODE: ${{ secrets.GOLDEN_DELTA_ACCESS_CODE }}
+      ECONOVARIA_GOLDEN_ECHO_ACCESS_CODE: ${{ secrets.GOLDEN_ECHO_ACCESS_CODE }}
+    steps:
+      - name: Check out exact runtime-certified main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Validate staging-only secret boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test -n "$POOLER_URL"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY"
+          case "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY" in sb_publishable_*) ;; *) exit 1 ;; esac
+          case "$POOLER_URL" in *"$SUPABASE_PROJECT_REF"*) ;; *) echo 'Staging pooler identity mismatch.' >&2; exit 1 ;; esac
+      - name: Install exact test dependencies and Chromium
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          npm run test:staging:scripts
+          npx playwright install --with-deps chromium
+      - name: Start same-origin staging gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/econovaria-local-gateway.py \
+            --root "$GITHUB_WORKSPACE" \
+            --project-ref "$SUPABASE_PROJECT_REF" \
+            --publishable-key "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY" \
+            --port 4173 > /tmp/econovaria-staging-gateway.log 2>&1 &
+          echo $! > /tmp/econovaria-staging-gateway.pid
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent --show-error http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/econovaria-staging-gateway.log >&2
+          exit 1
+      - name: Run connected five-player staging acceptance
+        run: npm run test:staging
+      - name: Stop staging gateway
+        if: always()
+        shell: bash
+        run: |
+          if test -f /tmp/econovaria-staging-gateway.pid; then
+            kill "$(cat /tmp/econovaria-staging-gateway.pid)" 2>/dev/null || true
+          fi
+      - name: Upload sanitized staging lifecycle certificate
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-staging-lifecycle-${{ github.sha }}
+          path: |
+            /tmp/econovaria-golden-five/
+            /tmp/econovaria-staging-gateway.log
+          if-no-files-found: error
+          retention-days: 30
