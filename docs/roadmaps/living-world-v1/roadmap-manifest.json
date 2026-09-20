@@ -1,14 +1,30 @@
 {
   "schemaVersion": 1,
   "roadmapId": "econovaria.living-world.v1",
+  "revision": "1.1.0-planning",
   "status": "PLANNED",
   "repository": "kohnerbouchard-star/Student-Profile",
   "baselineMainSha": "22dc9ce5023eb200a6608d5bb90a9ac30cb36c90",
+  "roadmapPredecessorSha": "7cbe0e3a51c9f08744a87e0df72dd535465026ca",
   "directory": "docs/roadmaps/living-world-v1",
   "productionDeploymentAuthorized": false,
   "liveDatabaseMutationAuthorized": false,
+  "implementationAuthorized": false,
   "phase15ReleaseWorkSeparate": true,
   "master": "00-MASTER-ROADMAP.md",
+  "masterRole": "Preserved v1 technical baseline; read with required addenda. Current counts, dependencies and integration gates supersede its predecessor summaries.",
+  "requiredAddenda": [
+    "10-player-delight-flavor.md",
+    "11-player-value-gates.md"
+  ],
+  "dependencyGraph": "dependency-graph.json",
+  "integrationGates": "09-integration-certification.md",
+  "scopeAndAcceptanceSource": "Markdown workstream documents plus required addenda; graph contains exact prerequisites.",
+  "productTrackCount": 8,
+  "productMilestoneCount": 64,
+  "foundationMilestoneCount": 4,
+  "integrationMilestoneCount": 2,
+  "milestoneCount": 70,
   "workstreams": [
     {
       "id": "FND",
@@ -119,6 +135,20 @@
       ]
     },
     {
+      "id": "DELIGHT",
+      "file": "10-player-delight-flavor.md",
+      "milestones": [
+        "DELIGHT-01",
+        "DELIGHT-02",
+        "DELIGHT-03",
+        "DELIGHT-04",
+        "DELIGHT-05",
+        "DELIGHT-06",
+        "DELIGHT-07",
+        "DELIGHT-08"
+      ]
+    },
+    {
       "id": "INT",
       "file": "09-integration-certification.md",
       "milestones": [
@@ -128,12 +158,11 @@
     }
   ],
   "recommendedStart": [
-    "FND-01",
-    "FND-02",
-    "FND-03",
-    "FND-04",
-    "PILOT-01"
+    "FND-01"
   ],
-  "implementationRule": "Re-audit live main and relevant ownership before every milestone; roadmap status alone is not implementation evidence.",
-  "releaseRule": "No production deployment, live SQL, secret mutation, scheduler mutation, or release bypass is authorized by this roadmap."
+  "firstIntegratedTarget": "PILOT-01",
+  "playerValueGateRequiredForEveryMilestone": true,
+  "enjoymentAcceptanceRequiresHumanPlaytests": true,
+  "implementationRule": "Re-audit live main and ownership before every milestone; original technical gates remain required and roadmap publication is not implementation evidence.",
+  "releaseRule": "No production deployment, live SQL, secret mutation, scheduler mutation, merge or release bypass is authorized by this planning addition."
 }
