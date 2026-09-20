@@ -191,6 +191,17 @@ test("live parity exporters normalize only non-semantic physical identities", as
   assertNotContains(schema, "'ordinalPosition'", "effective schema exporter");
   assertContains(schema, "'game_purge_guard_dynamic_v1'", "effective schema exporter");
   assertContains(catalog, "'game_purge_guard_dynamic_v1'", "runtime catalog exporter");
+  assertContains(
+    catalog,
+    "p.proname !~ '^game_purge_guard_[0-9]+_[0-9]+_v1$' and not exists",
+    "runtime catalog exporter",
+  );
+  assertNotContains(catalog, "\\n", "runtime catalog exporter");
+  assert.equal(
+    catalog.match(/^rollback;$/gmu)?.length,
+    1,
+    "runtime catalog exporter must close exactly one read-only transaction",
+  );
   assert.equal(
     schema.match(/p\.proname !~ '\^game_purge_guard_/gu)?.length,
     3,
