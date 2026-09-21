@@ -144,7 +144,7 @@ jobs:
 
       - name: Upload clean schema evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: phase15-clean-replay-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ runner.temp }}/phase15-clean-replay/
@@ -164,7 +164,7 @@ jobs:
 
       - name: Upload replay diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: database-replay-diagnostics
           path: |
@@ -220,7 +220,7 @@ jobs:
           node-version: "22.23.1"
 
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v1
         with:
           version: 2.109.1
 
@@ -272,7 +272,7 @@ jobs:
           printf 'PHASE15_REMOTE_DATABASE_URL=%s\n' "$remote_url" >> "$GITHUB_ENV"
 
       - name: Download exact clean-replay schema
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: phase15-clean-replay-${{ github.sha }}
           path: ${{ runner.temp }}/phase15-canonical
@@ -288,7 +288,7 @@ jobs:
 
       - name: Upload sanitized live-shaped rehearsal evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: phase15-live-shaped-rehearsal-${{ matrix.environment }}-${{ github.sha }}
           path: ${{ runner.temp }}/phase15-evidence/${{ matrix.environment }}
