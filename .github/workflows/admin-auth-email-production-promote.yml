@@ -64,7 +64,7 @@ jobs:
           [[ "${{ inputs.staging_source_digest }}" =~ ^[a-f0-9]{64}$ ]]
 
       - name: Check out exact current main source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.source_commit }}
           fetch-depth: 0
@@ -79,7 +79,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
 
       - name: Download exact staging email evidence
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: admin-auth-email-staging-${{ inputs.source_commit }}
           run-id: ${{ inputs.candidate_run_id }}
@@ -111,12 +111,12 @@ jobs:
           SOURCE_DIGEST: ${{ inputs.staging_source_digest }}
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "22.23.1"
 
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.109.1
 
@@ -261,7 +261,7 @@ jobs:
           rm -rf "$RUNNER_TEMP/admin-auth-email-production-patches"
 
       - name: Upload production template, SMTP, and rollback evidence
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: admin-auth-email-production-${{ inputs.source_commit }}
           if-no-files-found: error

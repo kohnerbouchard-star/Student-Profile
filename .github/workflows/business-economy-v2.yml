@@ -44,8 +44,8 @@ jobs:
     name: Business economy authority contract
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: node scripts/business-formation-authority-contract.mjs
@@ -62,7 +62,7 @@ jobs:
           git diff --exit-code -- \
             docs/architecture/inventories/econovaria-architecture-inventory-v2.json
       - name: Upload Business V2 review bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: business-v2-review-bundle
           path: |
@@ -80,8 +80,8 @@ jobs:
     name: Backend typecheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm

@@ -145,21 +145,21 @@ jobs:
           echo 'Timed out waiting for exact-SHA Database Replay.' >&2
           exit 1
       - name: Download exact clean replay certificate
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: phase15-clean-replay-${{ github.sha }}
           run-id: ${{ steps.replay.outputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ runner.temp }}/phase15-certificates/clean
       - name: Download exact staging-shaped certificate
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: phase15-live-shaped-rehearsal-staging-${{ github.sha }}
           run-id: ${{ steps.replay.outputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ runner.temp }}/phase15-certificates/staging
       - name: Download exact production-shaped certificate
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: phase15-live-shaped-rehearsal-production-${{ github.sha }}
           run-id: ${{ steps.replay.outputs.run_id }}
@@ -220,7 +220,7 @@ jobs:
           }
           NODE
       - name: Upload source gate evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: phase15-source-gate-${{ github.sha }}
           path: ${{ runner.temp }}/phase15-certificates/
@@ -255,7 +255,7 @@ jobs:
         with:
           node-version: "22.23.1"
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v1
         with:
           version: 2.109.1
       - name: Bind exact staging database
@@ -290,7 +290,7 @@ jobs:
           echo "::add-mask::$remote_url"
           printf 'PHASE15_REMOTE_DATABASE_URL=%s\n' "$remote_url" >> "$GITHUB_ENV"
       - name: Download exact canonical clean schema
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: phase15-clean-replay-${{ github.sha }}
           run-id: ${{ needs.certify-source.outputs.replay_run_id }}
@@ -333,7 +333,7 @@ jobs:
           SQL
       - name: Upload sanitized staging database certificate
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: phase15-staging-database-${{ github.sha }}
           path: ${{ runner.temp }}/phase15-staging-evidence/
@@ -361,7 +361,7 @@ jobs:
         with:
           node-version: "22.23.1"
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v1
         with:
           version: 2.109.1
       - name: Enforce runtime source boundary
@@ -442,7 +442,7 @@ jobs:
           done
       - name: Upload staging runtime certificate
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: phase15-staging-runtime-${{ github.sha }}
           path: |
@@ -490,7 +490,7 @@ jobs:
           node-version: "22.23.1"
           cache: npm
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v1
         with:
           version: 2.109.1
       - name: Prepare and validate staging-only fixture authority
@@ -1087,7 +1087,7 @@ jobs:
           fi
       - name: Upload sanitized staging lifecycle certificate
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: phase15-staging-lifecycle-${{ github.sha }}
           path: |
