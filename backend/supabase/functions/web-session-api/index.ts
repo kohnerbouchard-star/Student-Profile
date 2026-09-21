@@ -1,6 +1,7 @@
 import {
   createAuthClient,
   createServiceClient,
+  createServiceRoleClient,
   readEdgeSupabaseEnv,
   requirePublishableRequest,
 } from "../_shared/econovariaAuth.ts";
@@ -93,6 +94,14 @@ interface TrustedClientIp {
   readonly address: string;
 }
 
+function readReplayProtectionServiceRoleKey(): string {
+  try {
+    return String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim();
+  } catch {
+    return "";
+  }
+}
+
 Deno.serve(async (incomingRequest: Request) => {
   const route = routePath(new URL(incomingRequest.url).pathname);
 
@@ -113,7 +122,13 @@ Deno.serve(async (incomingRequest: Request) => {
   const env = readEdgeSupabaseEnv();
   if (!env.ok) return serviceUnavailable(incomingRequest);
 
-  const replayClient = createServiceClient(env.value);
+  const replayServiceRoleKey = readReplayProtectionServiceRoleKey();
+  if (!replayServiceRoleKey) return serviceUnavailable(incomingRequest);
+  const replayClient = createServiceRoleClient(
+    env.value.supabaseUrl,
+    replayServiceRoleKey,
+    "econovaria-admin-bff-replay-v1",
+  );
   const authorization = await authorizeAdminBffRequest(incomingRequest, {
     supabaseUrl: env.value.supabaseUrl,
     dependencies: {
