@@ -10,6 +10,9 @@ const trigger = read("scripts/trigger-stock-market-tick.mjs");
 const migration = read(
   "backend/supabase/migrations/20260726097000_add_internal_runner_nonce_replay_v2.sql",
 );
+const nonceAuthorityReconciliation = read(
+  "backend/supabase/migrations/20260921044500_reconcile_internal_runner_nonce_service_role_authority_v1.sql",
+);
 
 test("stock runner network boundary requires timestamped project-bound HMAC", () => {
   for (const contract of [
@@ -71,4 +74,26 @@ test("nonce replay ledger is private, service-role-only, and stores no raw nonce
   assert.ok(migration.includes("on conflict on constraint internal_runner_nonce_claims_pkey do nothing"));
   assert.ok(migration.includes("grant execute on function public.claim_internal_runner_nonce_v2"));
   assert.ok(migration.includes("to service_role"));
+});
+
+
+test("nonce authority reconciliation uses database grants instead of JWT auth.role", () => {
+  assert.ok(nonceAuthorityReconciliation.includes(
+    "create or replace function public.claim_internal_runner_nonce_v2",
+  ));
+  assert.ok(nonceAuthorityReconciliation.includes("security definer"));
+  assert.ok(nonceAuthorityReconciliation.includes(
+    "set search_path = pg_catalog, private, public",
+  ));
+  assert.equal(nonceAuthorityReconciliation.includes("auth.role()"), false);
+  assert.ok(nonceAuthorityReconciliation.includes(
+    "from public, anon, authenticated",
+  ));
+  assert.ok(nonceAuthorityReconciliation.includes(
+    "grant execute on function public.claim_internal_runner_nonce_v2",
+  ));
+  assert.ok(nonceAuthorityReconciliation.includes("to service_role"));
+  assert.ok(nonceAuthorityReconciliation.includes(
+    "on conflict on constraint internal_runner_nonce_claims_pkey do nothing",
+  ));
 });
