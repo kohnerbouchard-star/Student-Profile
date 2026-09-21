@@ -6,6 +6,7 @@ import {
   buildForwardBundle,
   loadPhase15Migrations,
   PHASE15_COMMON_COUNT,
+  PHASE15_END,
   PRODUCTION_PRELUDE,
   stripOuterTransaction,
 } from "./build-phase15-forward-bundle.mjs";
@@ -41,7 +42,12 @@ test("staging and production selections bind the certified 151 plus exact prelud
   assert.equal(production.length, PHASE15_COMMON_COUNT + PRODUCTION_PRELUDE.length);
   assert.deepEqual(production.slice(0, PRODUCTION_PRELUDE.length).map((row) => row.filename), PRODUCTION_PRELUDE);
   assert.deepEqual(production.slice(PRODUCTION_PRELUDE.length).map((row) => row.filename), staging.map((row) => row.filename));
+  assert.equal(PHASE15_END, "20260920082200");
   assert.equal(staging.at(-1).filename, "20260920082200_phase15_close_database_advisor_findings_v1.sql");
+  assert.equal(
+    staging.some((row) => row.filename.includes("20260921044500_reconcile_internal_runner_nonce_service_role_authority_v1")),
+    false,
+  );
 });
 
 test("bundles are one fail-closed transaction with exact ledger sources and economic assertions", async () => {
