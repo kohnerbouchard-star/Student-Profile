@@ -39,6 +39,14 @@ on:
       - "scripts/build-physical-economy-runtime-pack.mjs"
       - "docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json"
       - "docs/seed-content/executable/beta-pack-v1/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/player-multiplayer-load-e2e.yml"
+      - ".github/workflows/phase15-controlled-production.yml"
+      - "scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.test.mjs"
+      - "docs/operations/contracts/phase15-acceptance-evidence-v1.json"
 
 permissions:
   contents: read
@@ -352,6 +360,187 @@ jobs:
         continue-on-error: true
         run: node scripts/player-runtime-load-profile.mjs
 
+      - name: Build exact-source Phase 15 load acceptance summary
+        if: always()
+        shell: bash
+        env:
+          EXPECTED_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          PLAYER_BROWSER_OUTCOME: ${{ steps.player_browser.outcome }}
+          PLAYER_MUTATIONS_OUTCOME: ${{ steps.player_mutations.outcome }}
+          PLAYER_STATE_CONTROLS_OUTCOME: ${{ steps.player_state_controls.outcome }}
+          PLAYER_COMMERCE_OUTCOME: ${{ steps.player_commerce.outcome }}
+          PLAYER_INVENTORY_OUTCOME: ${{ steps.player_inventory.outcome }}
+          PLAYER_CONTRACTS_OUTCOME: ${{ steps.player_contracts.outcome }}
+          PLAYER_MARKET_OUTCOME: ${{ steps.player_market.outcome }}
+          PLAYER_BUSINESS_OUTCOME: ${{ steps.player_business.outcome }}
+          PLAYER_WORLD_OUTCOME: ${{ steps.player_world.outcome }}
+          PLAYER_LOAD_OUTCOME: ${{ steps.player_load.outcome }}
+        run: |
+          set -euo pipefail
+          for OUTCOME in \
+            "$PLAYER_BROWSER_OUTCOME" \
+            "$PLAYER_MUTATIONS_OUTCOME" \
+            "$PLAYER_STATE_CONTROLS_OUTCOME" \
+            "$PLAYER_COMMERCE_OUTCOME" \
+            "$PLAYER_INVENTORY_OUTCOME" \
+            "$PLAYER_CONTRACTS_OUTCOME" \
+            "$PLAYER_MARKET_OUTCOME" \
+            "$PLAYER_BUSINESS_OUTCOME" \
+            "$PLAYER_WORLD_OUTCOME" \
+            "$PLAYER_LOAD_OUTCOME"; do
+            test "$OUTCOME" = "success"
+          done
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_COMMIT"
+          export SOURCE_TREE="$(git rev-parse 'HEAD^{tree}')"
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readdir, readFile, writeFile } from "node:fs/promises";
+          import path from "node:path";
+
+          const loadPath = "/tmp/econovaria-player-load/player-runtime-load-profile.json";
+          const browserDirectory = "/tmp/econovaria-player-browser";
+          const summaryPath = "/tmp/econovaria-player-load/phase15-load-summary.json";
+          const load = JSON.parse(await readFile(loadPath, "utf8"));
+
+          function statusCount(statuses, predicate) {
+            return Object.entries(statuses || {}).reduce(
+              (total, [status, count]) => total + (predicate(Number(status)) ? Number(count) : 0),
+              0,
+            );
+          }
+
+          function browserErrorCount(value) {
+            if (Array.isArray(value)) {
+              return value.reduce((total, entry) => total + browserErrorCount(entry), 0);
+            }
+            if (!value || typeof value !== "object") return 0;
+            return Object.entries(value).reduce((total, [key, entry]) => {
+              const normalizedKey = key.toLowerCase();
+              const own =
+                (normalizedKey.endsWith("consoleerrors") || normalizedKey.endsWith("pageerrors")) &&
+                  Array.isArray(entry)
+                  ? entry.length
+                  : 0;
+              return total + own + browserErrorCount(entry);
+            }, 0);
+          }
+
+          function serverStatusCount(value) {
+            if (Array.isArray(value)) {
+              return value.reduce((total, entry) => total + serverStatusCount(entry), 0);
+            }
+            if (!value || typeof value !== "object") return 0;
+            return Object.entries(value).reduce((total, [key, entry]) => {
+              const own = key === "status" && Number.isFinite(Number(entry)) && Number(entry) >= 500 ? 1 : 0;
+              return total + own + serverStatusCount(entry);
+            }, 0);
+          }
+
+          assert.equal(load.failure, undefined, "The load profile recorded a failure.");
+          assert.deepEqual(
+            {
+              expectedConcurrentPlayers: load.profile?.expectedConcurrentPlayers,
+              maximumConcurrentPlayers: load.profile?.maximumConcurrentPlayers,
+              readPathsPerPlayer: load.profile?.readPathsPerPlayer,
+            },
+            { expectedConcurrentPlayers: 30, maximumConcurrentPlayers: 40, readPathsPerPlayer: 7 },
+          );
+          assert.deepEqual(load.players, { requested: 40, provisioned: 40, activeCredentials: 40 });
+          assert.equal(load.baseline30?.peakConcurrentRequests, 30);
+          assert.equal(load.baseline30?.login?.count, 30);
+          assert.equal(load.baseline30?.reads?.count, 210);
+          assert.equal(load.burst40?.peakConcurrentRequests, 40);
+          assert.equal(load.burst40?.addedLogin?.count, 10);
+          assert.equal(load.burst40?.reads?.count, 280);
+          assert.ok(load.baseline30.login.p95Ms <= 15_000);
+          assert.ok(load.baseline30.reads.p95Ms <= 8_000);
+          assert.ok(load.burst40.addedLogin.p95Ms <= 15_000);
+          assert.ok(load.burst40.reads.p95Ms <= 8_000);
+
+          const baselineLoginErrors = statusCount(load.baseline30.loginStatuses, (status) => status !== 200);
+          const baselineReadErrors = statusCount(load.baseline30.readStatuses, (status) => status !== 200);
+          const burstLoginErrors = statusCount(load.burst40.addedLoginStatuses, (status) => status !== 200);
+          const burstReadErrors = statusCount(load.burst40.readStatuses, (status) => status !== 200);
+          const baselineServerErrors =
+            statusCount(load.baseline30.loginStatuses, (status) => status >= 500) +
+            statusCount(load.baseline30.readStatuses, (status) => status >= 500);
+          const burstServerErrors =
+            statusCount(load.burst40.addedLoginStatuses, (status) => status >= 500) +
+            statusCount(load.burst40.readStatuses, (status) => status >= 500);
+          assert.equal(baselineLoginErrors + baselineReadErrors + burstLoginErrors + burstReadErrors, 0);
+          assert.equal(baselineServerErrors + burstServerErrors, 0);
+
+          const browserFiles = (await readdir(browserDirectory))
+            .filter((file) => file.endsWith(".json"))
+            .sort();
+          assert.ok(browserFiles.length >= 9, "Expected every connected browser journey to emit JSON evidence.");
+          const browserEvidence = await Promise.all(browserFiles.map(async (file) =>
+            JSON.parse(await readFile(path.join(browserDirectory, file), "utf8"))
+          ));
+          const browserErrors = browserEvidence.reduce(
+            (total, evidence) => total + browserErrorCount(evidence),
+            0,
+          );
+          const browserServerErrors = browserEvidence.reduce(
+            (total, evidence) => total + serverStatusCount(evidence),
+            0,
+          );
+          assert.equal(browserErrors, 0);
+          assert.equal(browserServerErrors, 0);
+
+          const summary = {
+            schemaVersion: 1,
+            sourceCommit: process.env.EXPECTED_SOURCE_COMMIT,
+            sourceTree: process.env.SOURCE_TREE,
+            decision: "PASS",
+            workflow: {
+              runId: Number(process.env.GITHUB_RUN_ID || 0),
+              runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT || 0),
+              job: String(process.env.GITHUB_JOB || ""),
+              name: String(process.env.GITHUB_WORKFLOW || ""),
+              path: ".github/workflows/player-multiplayer-load-e2e.yml",
+              event: String(process.env.GITHUB_EVENT_NAME || ""),
+            },
+            profile: {
+              expectedConcurrentPlayers: 30,
+              maximumConcurrentPlayers: 40,
+              readPathsPerPlayer: 7,
+            },
+            thresholds: {
+              loginP95Ms: 15_000,
+              readP95Ms: 8_000,
+            },
+            players: { requested: 40, provisioned: 40, activeCredentials: 40 },
+            baseline30: {
+              concurrentPlayers: 30,
+              loginCount: 30,
+              readCount: 210,
+              loginErrors: baselineLoginErrors,
+              readErrors: baselineReadErrors,
+              serverErrors: baselineServerErrors,
+              loginP95Ms: load.baseline30.login.p95Ms,
+              readP95Ms: load.baseline30.reads.p95Ms,
+            },
+            burst40: {
+              concurrentPlayers: 40,
+              loginCount: 10,
+              incrementalLoginCount: 10,
+              readCount: 280,
+              loginErrors: burstLoginErrors,
+              readErrors: burstReadErrors,
+              serverErrors: burstServerErrors,
+              loginP95Ms: load.burst40.addedLogin.p95Ms,
+              readP95Ms: load.burst40.reads.p95Ms,
+            },
+            retryEvents: Array.isArray(load.profile?.readRetries) ? load.profile.readRetries.length : 0,
+            browserEvidenceFiles: browserFiles.length,
+            serverErrors: baselineServerErrors + burstServerErrors + browserServerErrors,
+            browserErrors,
+            browserServerErrors,
+          };
+          await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
+          NODE
+
       - name: Capture sanitized Player diagnostics
         if: steps.player_browser.outcome == 'failure' || steps.player_mutations.outcome == 'failure' || steps.player_state_controls.outcome == 'failure' || steps.player_commerce.outcome == 'failure' || steps.player_inventory.outcome == 'failure' || steps.player_contracts.outcome == 'failure' || steps.player_market.outcome == 'failure' || steps.player_business.outcome == 'failure' || steps.player_world.outcome == 'failure' || steps.player_load.outcome == 'failure'
         shell: bash
@@ -383,8 +572,8 @@ jobs:
             /tmp/player-runtime-source-provisioning.log
             /tmp/player-runtime-gateway.log
             /tmp/player-runtime-server-diagnostics.log
-          if-no-files-found: warn
-          retention-days: 30
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Enforce connected Player results
         if: always()

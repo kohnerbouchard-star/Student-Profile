@@ -300,3 +300,17 @@ test("Phase 15 controlled staging convergence binds PR 699 and keeps production 
   assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionDeploymentAllowed: true } }), /deny production deployment/u);
   assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, secretValuesAllowed: true } }), /deny secret-value handling/u);
 });
+
+test("Phase 15 final certification repair binds PR 731 to exact paths and critical checks", async () => {
+  const manifestPath = authorityPathForPullRequest(731);
+  const value = JSON.parse(await readFile(manifestPath, "utf8"));
+  const input = { manifest: value, changedPaths: value.allowedPaths, pullRequestNumber: 731, baseRef: "main", manifestPath };
+  assert.equal(verifyAuthority(input).changedPathCount, value.allowedPaths.length);
+  assert.throws(() => verifyAuthority({ ...input, pullRequestNumber: 730 }), /not bound/u);
+  assert.throws(() => verifyAuthority({ ...input, baseRef: "release/production" }), /base ref/u);
+  assert.throws(() => verifyAuthority({ ...input, changedPaths: [...value.allowedPaths, "backend/supabase/migrations/20260921000000_unreviewed.sql"] }), /does not allow/u);
+  assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionMutationAllowed: true } }), /deny production mutation/u);
+  assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionDeploymentAllowed: true } }), /deny production deployment/u);
+  assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, secretValuesAllowed: true } }), /deny secret-value handling/u);
+  for (const gate of ["quality", "dependency-review", "verify-and-attest", "Verify static release integrity", "Verify production promotion remains fail-closed"]) assert.ok(value.criticalJobChecks.includes(gate));
+});

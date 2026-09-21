@@ -1,24 +1,64 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "status": "planned",
-  "sourceProjectRef": "REQUIRED_SOURCE_REF",
+  "recoveryClaim": "isolated-phase15-application-database-restore-rehearsal",
+  "sourceProjectRef": "REQUIRED_PRODUCTION_SOURCE_REF",
   "targetProjectRef": "REQUIRED_DISTINCT_ISOLATED_TARGET_REF",
-  "productionProjectRef": "REQUIRED_PRODUCTION_GUARD_REF",
+  "productionProjectRef": "REQUIRED_PRODUCTION_SOURCE_REF",
   "releaseCommit": "REQUIRED_FULL_COMMIT_SHA",
-  "backupSha256": "REQUIRED_ARCHIVE_SHA256",
+  "backupCipherSha256": "REQUIRED_CIPHERTEXT_SHA256",
   "startedAt": null,
   "completedAt": null,
   "rpoMinutes": null,
   "rtoMinutes": null,
+  "dumpComparison": {
+    "profile": "supabase-copy-application-data-comparison-v1",
+    "dataSchemas": [
+      "public",
+      "private"
+    ],
+    "schemaOnlySchemas": [
+      "economy_private"
+    ],
+    "sourceComparatorEvidenceSha256": null,
+    "restoredComparatorEvidenceSha256": null,
+    "sourceDumpSha256": null,
+    "restoredDumpSha256": null,
+    "sourceContentSha256": null,
+    "restoredContentSha256": null,
+    "sourceTableCount": null,
+    "restoredTableCount": null,
+    "sourceTotalRowCount": null,
+    "restoredTotalRowCount": null,
+    "sourceSequenceCount": null,
+    "restoredSequenceCount": null,
+    "matched": null,
+    "differences": []
+  },
+  "scopeVerification": {
+    "applicationData": "pending",
+    "managedDatabaseBackup": "recorded-separate",
+    "managedAuth": "recorded-separate",
+    "vault": "values-excluded-recorded-separate",
+    "migrationLedger": "pending",
+    "cron": "pending-inactive-in-isolated-target",
+    "supabaseStorageMetadata": "recorded-separate",
+    "supabaseStorageBlobs": "inventory-only-not-restored",
+    "r2Objects": "inventory-only-not-restored",
+    "edgeAndWebRelease": "pending-separate-identity-verification"
+  },
   "checks": {
     "targetIdentityDistinct": "pending",
+    "artifactDigest": "pending",
+    "freshRunnerDecryption": "pending",
+    "applicationSchema": "pending",
+    "dumpBoundSnapshot": "pending",
+    "applicationTableInventory": "pending",
+    "applicationRowCounts": "pending",
+    "applicationRowDigests": "pending",
     "migrationLedger": "pending",
-    "balancesAndLedger": "pending",
-    "inventoryAndContracts": "pending",
-    "stockHoldingsAndOrders": "pending",
-    "notifications": "pending",
-    "authMapping": "pending",
-    "storageInventory": "pending",
+    "cronDefinitionAndState": "pending",
+    "scopeBoundaries": "pending",
     "edgeFunctionSource": "pending",
     "adminSmoke": "pending",
     "playerSmoke": "pending"
@@ -26,5 +66,6 @@
   "manualInterventions": [],
   "failures": [],
   "productionModified": false,
-  "containsSecretValues": false
+  "containsSecretValues": false,
+  "fullDisasterRecoveryClaimed": false
 }

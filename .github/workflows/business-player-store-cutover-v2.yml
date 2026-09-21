@@ -47,6 +47,10 @@ on:
       - "scripts/validate-supabase-migrations.mjs"
       - "scripts/world-staging-provision-lib.mjs"
       - ".github/workflows/business-player-store-cutover-v2.yml"
+      - ".github/workflows/phase15-controlled-production.yml"
+      - "scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.test.mjs"
+      - "docs/operations/contracts/phase15-acceptance-evidence-v1.json"
   push:
     branches: [main]
     paths:
@@ -94,6 +98,10 @@ on:
       - "scripts/validate-supabase-migrations.mjs"
       - "scripts/world-staging-provision-lib.mjs"
       - ".github/workflows/business-player-store-cutover-v2.yml"
+      - ".github/workflows/phase15-controlled-production.yml"
+      - "scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.test.mjs"
+      - "docs/operations/contracts/phase15-acceptance-evidence-v1.json"
   workflow_dispatch:
 
 permissions:
@@ -1031,8 +1039,8 @@ jobs:
           path: |
             /tmp/econovaria-phase10a4-player-store-evidence/
             /tmp/phase10a4-connected-sanitized/
-          if-no-files-found: warn
-          retention-days: 30
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Enforce connected Player Store result
         if: always()
@@ -1049,3 +1057,215 @@ jobs:
           rm -f backend/supabase/functions/.env
           npx supabase stop --workdir backend --no-backup 2>&1 \
             | node scripts/redact-econovaria-ci-log.mjs || true
+
+  phase15-economic-acceptance:
+    name: Certify exact-source economic isolation and conservation
+    if: always()
+    needs:
+      - verify-cutover-authority
+      - verify-backend-store-runtime
+      - verify-database-settlement
+      - verify-database-replay
+      - verify-player-terminal-and-chromium
+      - verify-connected-player-store
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require every source verification dependency
+        shell: bash
+        env:
+          CUTOVER_AUTHORITY_RESULT: ${{ needs.verify-cutover-authority.result }}
+          BACKEND_RUNTIME_RESULT: ${{ needs.verify-backend-store-runtime.result }}
+          DATABASE_SETTLEMENT_RESULT: ${{ needs.verify-database-settlement.result }}
+          DATABASE_REPLAY_RESULT: ${{ needs.verify-database-replay.result }}
+          PLAYER_TERMINAL_RESULT: ${{ needs.verify-player-terminal-and-chromium.result }}
+          CONNECTED_STORE_RESULT: ${{ needs.verify-connected-player-store.result }}
+        run: |
+          set -euo pipefail
+          for RESULT in \
+            "$CUTOVER_AUTHORITY_RESULT" \
+            "$BACKEND_RUNTIME_RESULT" \
+            "$DATABASE_SETTLEMENT_RESULT" \
+            "$DATABASE_REPLAY_RESULT" \
+            "$PLAYER_TERMINAL_RESULT" \
+            "$CONNECTED_STORE_RESULT"; do
+            test "$RESULT" = "success"
+          done
+
+      - name: Check out exact workflow head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download exact connected Store evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase10a4-connected-player-store-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/phase15-connected-store-source
+
+      - name: Build exact-source economic acceptance summary
+        shell: bash
+        env:
+          EXPECTED_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          CUTOVER_AUTHORITY_RESULT: ${{ needs.verify-cutover-authority.result }}
+          BACKEND_RUNTIME_RESULT: ${{ needs.verify-backend-store-runtime.result }}
+          DATABASE_SETTLEMENT_RESULT: ${{ needs.verify-database-settlement.result }}
+          DATABASE_REPLAY_RESULT: ${{ needs.verify-database-replay.result }}
+          PLAYER_TERMINAL_RESULT: ${{ needs.verify-player-terminal-and-chromium.result }}
+          CONNECTED_STORE_RESULT: ${{ needs.verify-connected-player-store.result }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_COMMIT"
+          export SOURCE_TREE="$(git rev-parse 'HEAD^{tree}')"
+          export CONNECTED_EVIDENCE_PATH="$(find /tmp/phase15-connected-store-source -type f -name 'business-phase10-player-store-browser-acceptance.json' -print -quit)"
+          test -n "$CONNECTED_EVIDENCE_PATH"
+          mkdir -p /tmp/phase15-economic-acceptance/econovaria-phase10a4-player-store-evidence
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { copyFile, readFile, writeFile } from "node:fs/promises";
+
+          const sourcePath = process.env.CONNECTED_EVIDENCE_PATH;
+          const outputDirectory =
+            "/tmp/phase15-economic-acceptance/econovaria-phase10a4-player-store-evidence";
+          const evidence = JSON.parse(await readFile(sourcePath, "utf8"));
+          const sourceJobs = {
+            cutoverAuthority: process.env.CUTOVER_AUTHORITY_RESULT,
+            backendRuntime: process.env.BACKEND_RUNTIME_RESULT,
+            databaseSettlement: process.env.DATABASE_SETTLEMENT_RESULT,
+            databaseReplay: process.env.DATABASE_REPLAY_RESULT,
+            playerTerminal: process.env.PLAYER_TERMINAL_RESULT,
+            connectedStore: process.env.CONNECTED_STORE_RESULT,
+          };
+          for (const [job, result] of Object.entries(sourceJobs)) {
+            assert.equal(result, "success", `Required economic source job did not pass: ${job}`);
+          }
+          assert.equal(evidence.outcome, "passed");
+          assert.equal(evidence.releaseCommit, process.env.EXPECTED_SOURCE_COMMIT.slice(0, 12));
+          assert.equal(evidence.runtime?.playerBrowserContexts, 2);
+          assert.equal(evidence.provisioning?.gamesCreated, 2);
+          assert.equal(evidence.browser?.consoleErrors?.length, 0);
+          assert.equal(evidence.browser?.pageErrors?.length, 0);
+
+          const requestErrors = (evidence.browser?.requests || [])
+            .filter((request) => Number(request.status) >= 400).length;
+          const serverErrors = (evidence.browser?.requests || [])
+            .filter((request) => Number(request.status) >= 500).length;
+          assert.equal(requestErrors, 0);
+          assert.equal(serverErrors, 0);
+
+          const playerIsolation =
+            evidence.browser.game2KeysAbsentFromGame1Store === true &&
+            evidence.browser.game1KeysAbsentFromGame2Store === true &&
+            evidence.browser.game2OfferVisibleInGame2Store === true &&
+            evidence.browser.internalUuidObservedInPlayerResponse === false &&
+            evidence.browser.sensitiveValueObservedInPlayerResponse === false &&
+            evidence.browser.sensitiveValueObservedInPlayerDom === false;
+          const gameIsolationBidirectional =
+            evidence.database.game2ZeroMutation === true &&
+            evidence.database.game1ZeroMutationFromGame2Probe === true;
+          const sourceDebitsExact =
+            evidence.database.fundingSourcesDebitedExactly === true &&
+            Number(evidence.database.sourceDebitPostingCount) > 0;
+          const recipientCreditExact =
+            evidence.database.businessCashCreditedExactly === true &&
+            Number(evidence.database.recipientCreditPostingCount) === 1;
+          const inventoryTransferExact =
+            evidence.database.listingHoldingDebitedExactly === true &&
+            evidence.database.listingVersionAdvancedExactly === true &&
+            evidence.database.offerVersionAdvancedExactly === true &&
+            evidence.database.buyerInventoryCreditedExactly === true &&
+            evidence.database.buyerCostAndProvenanceExact === true &&
+            Number(evidence.database.inventoryTransactionCount) === 1 &&
+            Number(evidence.database.inventoryLineCount) === 2;
+          const economicConservation =
+            sourceDebitsExact &&
+            recipientCreditExact &&
+            inventoryTransferExact &&
+            evidence.database.targetCheckingUnchangedForAllForeign === true &&
+            evidence.database.quoteConsumedExactly === true &&
+            evidence.database.receiptExact === true &&
+            Number(evidence.database.ledgerPostingCount) >=
+              Number(evidence.database.sourceDebitPostingCount) +
+                Number(evidence.database.recipientCreditPostingCount) &&
+            Number(evidence.database.fundingReceiptCount) === 1 &&
+            Number(evidence.database.fundingTransactionCount) === 1 &&
+            Number(evidence.database.purchasedEventCount) === 1 &&
+            Number(evidence.database.businessActivityCount) === 1;
+          const connectedAuthenticatedJourneys =
+            evidence.browser.twoBrowserCrossCurrencyPurchaseCompleted === true &&
+            evidence.browser.buyerConvergedWithoutReload === true &&
+            evidence.browser.sellerConvergedWithoutReload === true &&
+            evidence.browser.sharedReceiptIdentityVisible === true &&
+            evidence.browser.retainedSeededStorePurchaseCompleted === true;
+          const orderingRacePassed =
+            sourceJobs.databaseSettlement === "success" &&
+            evidence.database.withdrawalFirstRejectedBeforePayment === true &&
+            evidence.database.purchaseFirstExcessWithdrawalRejected === true &&
+            evidence.database.purchaseFirstRemainingWithdrawalAccepted === true;
+          const concurrencyPassed = sourceJobs.databaseSettlement === "success";
+
+          assert.equal(playerIsolation, true);
+          assert.equal(gameIsolationBidirectional, true);
+          assert.equal(economicConservation, true);
+          assert.equal(connectedAuthenticatedJourneys, true);
+          assert.equal(orderingRacePassed, true);
+          assert.equal(concurrencyPassed, true);
+          assert.equal(evidence.database.replayZeroDelta, true);
+          assert.equal(evidence.database.withdrawalFirstRejectedBeforePayment, true);
+          assert.equal(evidence.database.purchaseFirstExcessWithdrawalRejected, true);
+          assert.equal(evidence.database.purchaseFirstRemainingWithdrawalAccepted, true);
+
+          const summary = {
+            schemaVersion: 1,
+            sourceCommit: process.env.EXPECTED_SOURCE_COMMIT,
+            sourceTree: process.env.SOURCE_TREE,
+            decision: "PASS",
+            workflow: {
+              runId: Number(process.env.GITHUB_RUN_ID || 0),
+              runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT || 0),
+              job: String(process.env.GITHUB_JOB || ""),
+              name: String(process.env.GITHUB_WORKFLOW || ""),
+              path: ".github/workflows/business-player-store-cutover-v2.yml",
+              event: String(process.env.GITHUB_EVENT_NAME || ""),
+            },
+            sourceJobs,
+            games: 2,
+            playerBrowserContexts: 2,
+            requestErrors,
+            serverErrors,
+            browserErrors: 0,
+            pageErrors: 0,
+            playerIsolation,
+            gameIsolationBidirectional,
+            economicConservation,
+            sourceDebitsExact,
+            recipientCreditExact,
+            inventoryTransferExact,
+            replayZeroDelta: true,
+            orderingRacePassed,
+            concurrencyPassed,
+            connectedAuthenticatedJourneys,
+            withdrawalFirstRejectedBeforePayment: true,
+            purchaseFirstExcessWithdrawalRejected: true,
+            purchaseFirstRemainingWithdrawalAccepted: true,
+          };
+          await copyFile(
+            sourcePath,
+            `${outputDirectory}/business-phase10-player-store-browser-acceptance.json`,
+          );
+          await writeFile(
+            `${outputDirectory}/phase15-economic-summary.json`,
+            `${JSON.stringify(summary, null, 2)}\n`,
+            "utf8",
+          );
+          NODE
+
+      - name: Upload exact-source Phase 15 economic acceptance
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-economic-acceptance-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/phase15-economic-acceptance/
+          if-no-files-found: error
+          retention-days: 90

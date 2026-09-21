@@ -25,7 +25,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: production-git-release
+  group: econovaria-production-release
   cancel-in-progress: false
 
 env:
@@ -262,24 +262,28 @@ jobs:
     needs: enforce-parity
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    environment: production
     permissions:
-      contents: write
+      contents: read
       actions: read
     env:
       SOURCE_COMMIT: ${{ github.sha }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PHASE15_RELEASE_DEPLOY_KEY: ${{ secrets.PHASE15_RELEASE_DEPLOY_KEY_V1 }}
     steps:
       - name: Check out exact current main source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
+          ssh-key: ${{ secrets.PHASE15_RELEASE_DEPLOY_KEY_V1 }}
           persist-credentials: true
       - name: Enforce exact main and release-branch ancestry
         id: release
         shell: bash
         run: |
           set -euo pipefail
+          test -n "$PHASE15_RELEASE_DEPLOY_KEY"
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
           git fetch --no-tags --prune origin \
             '+refs/heads/main:refs/remotes/origin/main' \

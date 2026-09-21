@@ -641,31 +641,37 @@ requireTokenCount(
   source.workflow,
   "exact-head checkout steps",
   "Check out exact workflow head",
-  6,
+  7,
 );
 requireTokenCount(
   source.workflow,
   "pinned checkout actions",
   "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-  6,
+  7,
 );
 requireTokenCount(
   source.workflow,
   "exact checked-out refs",
   "ref: ${{ github.event.pull_request.head.sha || github.sha }}",
-  6,
+  7,
 );
 requireTokenCount(
   source.workflow,
   "credential-free checkouts",
   "persist-credentials: false",
-  6,
+  7,
 );
 requireTokenCount(
   source.workflow,
   "exact checked-out SHA assertions",
   'test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"',
   6,
+);
+requireTokenCount(
+  source.workflow,
+  "exact Phase 15 economic source assertion",
+  'test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_COMMIT"',
+  1,
 );
 requireTokenCount(
   source.workflow,
