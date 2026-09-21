@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.admin-bff-replay-service-role-key-pr-734.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 734,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/supabase/functions/web-session-api/index.ts",
+    "docs/operations/contracts/player-cross-cutting/pr-734.json",
+    "scripts/admin-mfa-bff-contract.test.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-734.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience"
+  ],
+  "authorizationNote": "Bounded production Admin-login incident repair. PR #732 fixed the Vercel BFF identity/IP boundary and PR #733 restored the database nonce RPC authority, but canonical production still returns admin_bff_replay_protection_unavailable while direct database nonce claims succeed. This PR changes only web-session-api replay-protection client construction to use Supabase's built-in SUPABASE_SERVICE_ROLE_KEY, leaving login/bootstrap service-client behavior unchanged. No browser credential, Business behavior, database schema, secret value, Vercel configuration or direct production deployment is authorized by this manifest."
+}
