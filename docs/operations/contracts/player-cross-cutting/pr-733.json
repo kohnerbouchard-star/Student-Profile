@@ -13,7 +13,9 @@
     "docs/operations/contracts/player-cross-cutting/pr-733.json",
     "scripts/internal-runner-auth-contract.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "scripts/verify-player-cross-cutting-authority.mjs"
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
   ],
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting/pr-733.json",
@@ -26,5 +28,5 @@
     "player-production-secret-provision-contract",
     "player-api-read-resilience"
   ],
-  "authorizationNote": "Bounded production Admin-login incident repair. Canonical production requests reach web-session-api but fail at the service-role-only claim_internal_runner_nonce_v2 replay-protection RPC with admin_bff_replay_protection_unavailable. The routine is already SECURITY DEFINER, revoked from public/anon/authenticated and executable only by service_role. This forward-only migration removes only the redundant JWT-dependent auth.role self-check while preserving the private nonce ledger, validation, single-use conflict behavior, pinned search path and explicit database ACL. No Business behavior, user data, secret values, Edge source, Vercel configuration or direct production deployment is authorized by this PR manifest."
+  "authorizationNote": "Bounded production Admin-login incident repair. Canonical production requests reach web-session-api but fail at the service-role-only claim_internal_runner_nonce_v2 replay-protection RPC with admin_bff_replay_protection_unavailable. The routine is already SECURITY DEFINER, revoked from public/anon/authenticated and executable only by service_role. This forward-only migration removes only the redundant JWT-dependent auth.role self-check while preserving the private nonce ledger, validation, single-use conflict behavior, pinned search path and explicit database ACL. No Business behavior, user data, secret values, Edge source, Vercel configuration or direct production deployment is authorized by this PR manifest. Database Replay additionally freezes the immutable Phase 15 forward bundle through exact end version 20260920082200 so this later hotfix migration cannot silently alter the already-certified 151-migration Phase 15 set."
 }
