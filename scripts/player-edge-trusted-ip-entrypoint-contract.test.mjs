@@ -44,6 +44,74 @@ for (const functionName of functions) {
   });
 }
 
+test("Player API binds every injected service client to the exact built-in role key", async () => {
+  const runtime = await readFile(
+    "backend/supabase/functions/player-api/runtime.ts",
+    "utf8",
+  );
+
+  assert.match(runtime, /createServiceRoleClient,/u);
+  assert.doesNotMatch(runtime, /\n\s*createServiceClient,\n\s*readEdgeSupabaseEnv/u);
+  assert.equal([...runtime.matchAll(/\bcreateServiceRoleClient\(/gu)].length, 1);
+  assert.match(
+    runtime,
+    /Deno\.env\.get\("SUPABASE_SERVICE_ROLE_KEY"\)/u,
+  );
+  assert.match(
+    runtime,
+    /const createServiceClient = \(_environment: SupabaseEnv\) =>\s*createServiceRoleClient\(/u,
+  );
+  assert.match(runtime, /"econovaria-player-api"/u);
+  assert.match(
+    runtime,
+    /handlePlayerLoginRequest\(request, \{ createServiceClient \}\)/u,
+  );
+  assert.match(
+    runtime,
+    /dispatchClassroomMessagingRequest\(\s*request,\s*\{ createServiceClient \}/u,
+  );
+  assert.match(
+    runtime,
+    /dispatchPlayerBusinessRequest\(\s*request,\s*\{ createServiceClient \}/u,
+  );
+  assert.match(
+    runtime,
+    /handlePlayerAttendanceClockInRequest\(request, \{\s*createServiceClient/u,
+  );
+  const keyReader = runtime.slice(
+    runtime.indexOf("function readBuiltInPlayerServiceRoleKey"),
+    runtime.indexOf("Deno.serve("),
+  );
+  assert.doesNotMatch(keyReader, /SUPABASE_SECRET_KEY|SECRET_KEY|SUPABASE_SECRET_KEYS/u);
+
+  const keyRead = runtime.indexOf(
+    "const playerServiceRoleKey = readBuiltInPlayerServiceRoleKey()",
+  );
+  const missingKey = runtime.indexOf("if (!playerServiceRoleKey)", keyRead);
+  const factory = runtime.indexOf("const createServiceClient =", missingKey);
+  const firstRoute = runtime.indexOf(
+    "const playerCapabilityManifestRoute =",
+    factory,
+  );
+  assert.ok(
+    keyRead >= 0 && missingKey > keyRead && factory > missingKey &&
+      firstRoute > factory,
+  );
+  const serviceClientIdentifiers = [
+    ...runtime.matchAll(/\bcreateServiceClient\b/gu),
+  ].length;
+  const shorthandInjections = [
+    ...runtime.matchAll(/\{\s*createServiceClient\s*,?\s*\}/gu),
+  ].length;
+  assert.equal(
+    serviceClientIdentifiers,
+    shorthandInjections + 1,
+    "every service-client reference after the one local declaration must be a shorthand injection",
+  );
+  assert.doesNotMatch(runtime, /\bcreateServiceClient\s*:/u);
+  assert.doesNotMatch(runtime, /\bcreateClient\(/u);
+});
+
 test("Player read resilience is installed once at the outer client boundary", async () => {
   const entrypoint = await readFile(
     "backend/supabase/functions/player-web-session-api/index.ts",
