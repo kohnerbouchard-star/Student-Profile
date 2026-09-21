@@ -19,6 +19,7 @@ const passwordResetProxy = require("../api/password-reset.js");
 const ORIGINAL_FETCH = globalThis.fetch;
 const ORIGINAL_URL = process.env.ECONOVARIA_SUPABASE_URL;
 const ORIGINAL_KEY = process.env.ECONOVARIA_SUPABASE_PUBLISHABLE_KEY;
+const ORIGINAL_OIDC_TOKEN = process.env.VERCEL_OIDC_TOKEN;
 const OIDC_TOKEN = "header123456.payload123456.signature123456";
 const FIXED_NOW = new Date("2026-07-29T22:00:00Z");
 const FIXED_NONCE = "123e4567-e89b-42d3-a456-426614174000";
@@ -27,11 +28,13 @@ process.env.ECONOVARIA_SUPABASE_URL =
   "https://runtimefixture123456.supabase.co";
 process.env.ECONOVARIA_SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_runtime_fixture_contract";
+process.env.VERCEL_OIDC_TOKEN = OIDC_TOKEN;
 
 test.after(() => {
   globalThis.fetch = ORIGINAL_FETCH;
   restoreEnv("ECONOVARIA_SUPABASE_URL", ORIGINAL_URL);
   restoreEnv("ECONOVARIA_SUPABASE_PUBLISHABLE_KEY", ORIGINAL_KEY);
+  restoreEnv("VERCEL_OIDC_TOKEN", ORIGINAL_OIDC_TOKEN);
 });
 
 test("Admin BFF signs exact requests with Vercel OIDC and overwrites browser metadata", async () => {
@@ -137,9 +140,8 @@ test("Admin proxy route derives canonical suffix from request URL", async () => 
 test("Admin BFF fails closed without Vercel deployment identity", async () => {
   let called = false;
   const response = mockResponse();
-  await proxyAdminBff(adminRequest({
-    headers: { "x-vercel-oidc-token": "" },
-  }), response, {
+  await proxyAdminBff(adminRequest(), response, {
+    oidcToken: "",
     fetchImpl: async () => {
       called = true;
       return new Response("{}", { status: 200 });
@@ -156,8 +158,9 @@ test("Admin BFF fails closed without platform-owned client IP", async () => {
   const response = mockResponse();
   await proxyAdminBff(adminRequest({
     headers: {
-      "x-real-ip": "",
+      "x-forwarded-for": "",
       "x-vercel-forwarded-for": "",
+      "x-real-ip": "",
     },
   }), response, {
     fetchImpl: async () => {
@@ -176,9 +179,10 @@ test("Admin BFF rejects raw forwarding-header spoofing without Vercel client IP"
   const response = mockResponse();
   await proxyAdminBff(adminRequest({
     headers: {
+      "x-forwarded-for": "",
       "x-vercel-forwarded-for": "",
       "x-real-ip": "203.0.113.77",
-      "x-forwarded-for": "203.0.113.78",
+      forwarded: "for=203.0.113.78",
     },
   }), response, {
     fetchImpl: async () => {
@@ -249,10 +253,9 @@ function adminRequest(overrides = {}) {
   const baseHeaders = {
     host: "econovaria.example",
     "x-forwarded-host": "econovaria.example",
-    "x-vercel-forwarded-for": "203.0.113.25",
-    "x-real-ip": "198.51.100.99",
-    "x-forwarded-for": "192.0.2.44",
-    "x-vercel-oidc-token": OIDC_TOKEN,
+    "x-forwarded-for": "203.0.113.25",
+    "x-vercel-forwarded-for": "198.51.100.25",
+    "x-real-ip": "192.0.2.44",
     origin: "https://econovaria.example",
     "content-type": "application/json",
     "x-econovaria-bff-signature": "browser-forgery",

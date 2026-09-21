@@ -65,7 +65,7 @@ async function proxyAdminBff(request, response, options = {}) {
       "Idempotency-Key headers must identify the same request."
     ));
 
-    const oidcToken = vercelOidcToken(request);
+    const oidcToken = vercelOidcToken(request, options);
     if (!oidcToken) return sendJson(response, 503, retryableErrorBody(
       "admin_bff_identity_unavailable",
       "Administrator request protection is temporarily unavailable."
@@ -217,9 +217,13 @@ function requestOrigin(request) {
 }
 
 function trustedVercelClientIp(request) {
-  const value = safeHeaderValue(
+  const documented = safeHeaderValue(
+    request.headers?.["x-forwarded-for"]
+  ).trim();
+  const legacy = safeHeaderValue(
     request.headers?.["x-vercel-forwarded-for"]
   ).trim();
+  const value = documented || legacy;
   if (!value || value.includes(",")) return "";
   const normalized = value.startsWith("::ffff:") ? value.slice(7) : value;
   const bracketless = normalized.startsWith("[") && normalized.endsWith("]")
@@ -240,8 +244,15 @@ function canonicalIdempotencyHeader(request) {
     : { ok: true, value: canonical || compatibility };
 }
 
-function vercelOidcToken(request) {
-  const value = safeHeaderValue(request.headers?.["x-vercel-oidc-token"]).trim();
+function vercelOidcToken(request, options = {}) {
+  const hasOverride = Object.prototype.hasOwnProperty.call(options, "oidcToken");
+  const runtimeValue = safeHeaderValue(
+    hasOverride ? options.oidcToken : process.env.VERCEL_OIDC_TOKEN
+  ).trim();
+  const legacyValue = safeHeaderValue(
+    request.headers?.["x-vercel-oidc-token"]
+  ).trim();
+  const value = runtimeValue || legacyValue;
   if (!value || Buffer.byteLength(value, "utf8") > MAX_OIDC_TOKEN_BYTES) return "";
   return OIDC_TOKEN_PATTERN.test(value) ? value : "";
 }

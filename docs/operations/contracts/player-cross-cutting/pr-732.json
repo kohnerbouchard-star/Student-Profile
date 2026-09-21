@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.admin-bff-vercel-runtime-hotfix-pr-732.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 732,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "api/_admin-bff-proxy.js",
+    "docs/operations/contracts/player-cross-cutting/pr-732.json",
+    "scripts/auth-boundary-contract.test.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/vercel-auth-proxy-contract.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-732.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience"
+  ],
+  "authorizationNote": "Bounded production incident repair for real Admin session 503 responses observed on the current production Vercel deployment. Scope is limited to the Vercel Admin BFF runtime identity/client-IP reads and their regression contracts. The change prefers deployment-owned VERCEL_OIDC_TOKEN and Vercel's documented x-forwarded-for client-IP metadata while retaining the prior headers only as compatibility fallbacks. No database migration, Supabase mutation, Business implementation change, secret-value handling, or production deployment is authorized by this PR manifest; merge and release remain subject to the existing repository and production gates."
+}
