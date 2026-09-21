@@ -39,12 +39,17 @@ jobs:
           for origin in https://econovaria.com https://www.econovaria.com; do
             body="$RUNNER_TEMP/login-$(echo "$origin" | tr -cd 'a-zA-Z0-9').json"
             status="$(curl --silent --show-error               --connect-timeout 10 --max-time 20               --output "$body" --write-out '%{http_code}'               --request POST "$origin/api/admin-session/login"               -H "Origin: $origin"               -H "Content-Type: application/json"               --data '{}')"
-            test "$status" = "400"
-            code="$(BODY="$body" node -e "const fs=require('node:fs');const value=JSON.parse(fs.readFileSync(process.env.BODY,'utf8'));process.stdout.write(String(value?.error?.code||''));")"
+            echo "origin=$origin status=$status"
+            cat "$body" || true
+            echo
+            code="$(BODY="$body" node -e "const fs=require('node:fs');let value={};try{value=JSON.parse(fs.readFileSync(process.env.BODY,'utf8'))}catch{};process.stdout.write(String(value?.error?.code||''));")"
+            if [ "$status" != "400" ]; then
+              echo "Unexpected Admin BFF HTTP status: $status code=${code:-missing}" >&2
+              exit 1
+            fi
             case "$code" in
               ""|route_not_found|web_session_failed|WORKER_ERROR|admin_bff_unavailable|admin_bff_identity_unavailable|admin_bff_network_metadata_unavailable)
                 echo "Unexpected Admin BFF error code: ${code:-missing}" >&2
-                cat "$body" >&2 || true
                 exit 1
                 ;;
             esac
