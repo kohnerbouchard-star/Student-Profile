@@ -1,11 +1,12 @@
 # Player Production Service-Role Credential Binding
 
-**Document ID:** `ECON-BETA-PROD-PLAYER-LOGIN-006`  
-**Roadmap item:** `BETA-PROD-PLAYER-LOGIN-006`  
-**Status:** `IN_PROGRESS`  
-**Owner branch:** `fix/player-service-role-key-v1`  
-**Exact base:** `a303d9f067f8f37dbd2a57391cc8b31e7a4021e1`  
-**Pull request:** pending publication  
+**Document ID:** `ECON-BETA-PROD-PLAYER-LOGIN-006`
+**Roadmap item:** `BETA-PROD-PLAYER-LOGIN-006`
+**Status:** `IMPLEMENTED_NOT_MERGED`
+**Owner branch:** `fix/player-service-role-key-v1`
+**Exact base:** `196b88e6dec9fc951ae0e690fe96057d67bf7bf5`
+**Implementation commit:** `248018e2b6a19fa0d3e9b7a45404dcfbb3929ec4`
+**Pull request:** `#736` (ready for review)
 **Production deployment authorized:** No
 
 ## Incident evidence
@@ -102,6 +103,5 @@ that collision-sensitive ledger. Its owner must reconcile this bounded item
 after the repair merges. No staging or production mutation is performed by this
 implementation branch.
 
-**Next exact action:** publish a draft pull request, add its exact cross-cutting
-authority manifest, pass exact-head CI, then hand the immutable candidate to the
-authorized staging-to-production release controller.
+**Next exact action:** pass exact-head CI, then hand the immutable candidate to
+the authorized staging-to-production release controller.
