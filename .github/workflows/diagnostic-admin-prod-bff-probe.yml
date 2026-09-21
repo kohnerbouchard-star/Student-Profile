@@ -1,4 +1,5 @@
 name: Diagnostic Admin Production BFF Probe
+# rerun after nonce authority repair
 
 on:
   push:
