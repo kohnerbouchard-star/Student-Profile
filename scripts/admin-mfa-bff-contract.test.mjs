@@ -17,6 +17,14 @@ test("web-session BFF owns Staff MFA token elevation behind signed deployment re
   assert.match(source, /constantTimeTextEqual\(suppliedCsrf, current\.payload\.csrfToken\)/);
   assert.match(source, /authorizeAdminBffRequest\(incomingRequest/);
   assert.match(source, /claim_internal_runner_nonce_v2/);
+  assert.match(source, /Deno\.env\.get\("SUPABASE_SERVICE_ROLE_KEY"\)/);
+  assert.match(source, /createServiceRoleClient\(/);
+  assert.match(source, /"econovaria-admin-bff-replay-v1"/);
+  assert.ok(
+    source.indexOf("readReplayProtectionServiceRoleKey()") <
+      source.indexOf("claim_internal_runner_nonce_v2"),
+    "Replay protection must bind the built-in service-role key before the nonce claim.",
+  );
   assert.match(source, /const INTERNAL_TRUSTED_IP_HEADER = "x-real-ip" as const/);
   assert.match(source, /readTrustedClientIp\(request, INTERNAL_TRUSTED_IP_HEADER\)/);
   assert.match(source, /\[clientIp\.header\]: clientIp\.address/);
