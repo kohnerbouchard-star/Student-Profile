@@ -1,0 +1,61 @@
+name: Diagnostic Admin Production BFF Probe
+
+on:
+  push:
+    branches:
+      - diagnostic/admin-prod-bff-probe-20260921
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Probe canonical production Admin BFF
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify exact production health source
+        shell: bash
+        env:
+          EXPECTED_SHA: 4b1cba674b278dd481689aa56d0cc76af97f6e19
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location             --connect-timeout 10 --max-time 20             https://econovaria.com/api/health > "$RUNNER_TEMP/health.json"
+          HEALTH="$RUNNER_TEMP/health.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const value = JSON.parse(fs.readFileSync(process.env.HEALTH, 'utf8'));
+          if (value.ok !== true || value.status !== 'ready' || value.environment !== 'production') {
+            throw new Error('Canonical production health is not ready.');
+          }
+          if (value.sourceCommit !== process.env.EXPECTED_SHA) {
+            throw new Error(`Canonical production source mismatch: ${value.sourceCommit || 'missing'}`);
+          }
+          NODE
+
+      - name: Probe apex and www Admin login boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          for origin in https://econovaria.com https://www.econovaria.com; do
+            body="$RUNNER_TEMP/login-$(echo "$origin" | tr -cd 'a-zA-Z0-9').json"
+            status="$(curl --silent --show-error               --connect-timeout 10 --max-time 20               --output "$body" --write-out '%{http_code}'               --request POST "$origin/api/admin-session/login"               -H "Origin: $origin"               -H "Content-Type: application/json"               --data '{}')"
+            test "$status" = "400"
+            BODY="$body" node - <<'NODE'
+            const fs = require('node:fs');
+            const value = JSON.parse(fs.readFileSync(process.env.BODY, 'utf8'));
+            const code = String(value?.error?.code || '');
+            const forbidden = new Set([
+              '',
+              'route_not_found',
+              'web_session_failed',
+              'WORKER_ERROR',
+              'admin_bff_unavailable',
+              'admin_bff_identity_unavailable',
+              'admin_bff_network_metadata_unavailable'
+            ]);
+            if (forbidden.has(code)) {
+              throw new Error(`Unexpected Admin BFF error code: ${code || 'missing'}`);
+            }
+            process.stdout.write(`Admin login boundary returned controlled 400 code=${code}\n`);
+            NODE
+          done
