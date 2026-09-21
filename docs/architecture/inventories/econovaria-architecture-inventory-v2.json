@@ -3216,12 +3216,12 @@
         "lines": 1078
       },
       {
-        "file": "player-terminal/src/app.js",
-        "lines": 1048
+        "file": "backend/supabase/functions/web-session-api/index.ts",
+        "lines": 1054
       },
       {
-        "file": "backend/supabase/functions/web-session-api/index.ts",
-        "lines": 1033
+        "file": "player-terminal/src/app.js",
+        "lines": 1048
       },
       {
         "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.ts",
