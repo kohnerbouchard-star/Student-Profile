@@ -10,6 +10,7 @@
   "secretValuesAllowed": false,
   "allowedPaths": [
     "backend/supabase/functions/web-session-api/index.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-734.json",
     "scripts/admin-mfa-bff-contract.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
