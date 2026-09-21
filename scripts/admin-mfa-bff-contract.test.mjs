@@ -6,10 +6,11 @@ import "./login-card-auth-ui-contract.test.mjs";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
 
-test("web-session BFF owns Staff MFA token elevation behind signed deployment requests", async () => {
-  const [source, authSource] = await Promise.all([
+test("web-session BFF owns Staff MFA and exact Admin service authority", async () => {
+  const [source, authSource, staffLoginSource] = await Promise.all([
     read("backend/supabase/functions/web-session-api/index.ts"),
     read("backend/src/security/adminBffRequestAuth.ts"),
+    read("backend/src/domains/auth/api/staffLoginHttpHandler.ts"),
   ]);
 
   assert.match(source, /route === "\/mfa" \|\| route\.startsWith\("\/mfa\/"\)/);
@@ -17,6 +18,54 @@ test("web-session BFF owns Staff MFA token elevation behind signed deployment re
   assert.match(source, /constantTimeTextEqual\(suppliedCsrf, current\.payload\.csrfToken\)/);
   assert.match(source, /authorizeAdminBffRequest\(incomingRequest/);
   assert.match(source, /claim_internal_runner_nonce_v2/);
+  assert.match(source, /Deno\.env\.get\("SUPABASE_SERVICE_ROLE_KEY"\)/);
+  assert.match(source, /if \(!serviceRoleKey\) return serviceUnavailable\(incomingRequest\)/);
+  assert.match(
+    source,
+    /const adminServiceClient = createServiceRoleClient\(\s*env\.value\.supabaseUrl,\s*serviceRoleKey,/,
+  );
+  assert.match(source, /"econovaria-admin-bff-service-role-v1"/);
+  assert.ok(
+    source.indexOf("const adminServiceClient = createServiceRoleClient(") <
+      source.indexOf("claim_internal_runner_nonce_v2"),
+    "Admin service access must bind the built-in service-role key before the nonce claim.",
+  );
+  assert.match(source, /handleLogin\(request, key, adminServiceClient\)/);
+  assert.match(source, /createServiceClient: \(\) => adminServiceClient/);
+  assert.doesNotMatch(source, /^\s*createServiceClient,\s*$/m);
+  assert.match(source, /handleStatus\(request, key, adminServiceClient\)/);
+  assert.match(
+    source,
+    /handleMfa\([\s\S]*?env\.value\.supabaseAnonKey,[\s\S]*?adminServiceClient,/,
+  );
+  assert.match(
+    source,
+    /loadStaffBootstrap\([\s\S]*?adminServiceClient[\s\S]*?createServiceClient: \(\) => adminServiceClient/,
+  );
+  assert.equal(
+    source.match(
+      /loadStaffBootstrap\(\s*[^,]+,\s*adminServiceClient,\s*\)/g,
+    )?.length,
+    3,
+    "Login, status and MFA verification must all bootstrap through the exact Admin client.",
+  );
+  assert.equal(
+    source.match(/createServiceClient: \(\) => adminServiceClient/g)?.length,
+    2,
+    "Login and bootstrap must both use the exact Admin client factory.",
+  );
+  assert.match(source, /createAuthClient,[\s\S]*?createServiceClient: \(\) => adminServiceClient/);
+  assert.match(
+    staffLoginSource,
+    /const serviceClient = dependencies\.createServiceClient\(envResult\.value\)/,
+  );
+  assert.match(staffLoginSource, /enforceVolumetric\([\s\S]*?\}, serviceClient\)/);
+  assert.match(staffLoginSource, /checkThrottle\(serviceClient, buckets\)/);
+  assert.match(staffLoginSource, /recordFailure\(serviceClient, buckets\)/);
+  assert.match(staffLoginSource, /recordSuccess\(serviceClient, buckets\)/);
+  assert.match(staffLoginSource, /const initialStaffResult = await serviceClient/);
+  assert.match(staffLoginSource, /await serviceClient\.rpc<ActivatedStaffRow\[\]>/);
+  assert.match(staffLoginSource, /serviceClient\.auth\.admin\.updateUserById/);
   assert.match(source, /const INTERNAL_TRUSTED_IP_HEADER = "x-real-ip" as const/);
   assert.match(source, /readTrustedClientIp\(request, INTERNAL_TRUSTED_IP_HEADER\)/);
   assert.match(source, /\[clientIp\.header\]: clientIp\.address/);
