@@ -10,7 +10,7 @@
   "stagingFunctionName": "web-session-api",
   "verifyJwt": false,
   "customAuthenticationRequired": true,
-  "productionOrigin": "https://econovaria.vercel.app",
+  "productionOrigin": "https://www.econovaria.com",
   "databaseChangesAllowed": true,
   "allowedDatabaseChanges": [
     "canonical web-session request-rate-limit contracts",

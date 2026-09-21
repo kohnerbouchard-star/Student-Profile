@@ -41,7 +41,7 @@ env:
   DENIED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
   FUNCTION_NAME: web-session-api
   CANDIDATE_FUNCTION_NAME: web-session-api
-  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  PRODUCTION_ORIGIN: https://www.econovaria.com
 
 jobs:
   verify:
