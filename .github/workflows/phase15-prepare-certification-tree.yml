@@ -76,6 +76,15 @@ jobs:
           subprocess.run(['git','apply',str(patch)],check=True)
           for entry in payload['entries']:
               assert hashlib.sha256(Path(entry['path']).read_bytes()).hexdigest() == entry['newSha256'], entry['path']
+          # Exact one-byte formatting correction; do not suppress whitespace checks.
+          name='docs/roadmaps/business-v2-development-execution-plan-v1.md'
+          entry=next(e for e in payload['entries'] if e['path']==name)
+          assert entry['newSha256']=='3883170b81c01582162c9e97c1c96b854c18e3a9d396d020e374dd35269702fd'
+          value=Path(name).read_bytes(); assert value.endswith(b'\n\n')
+          value=value[:-1]
+          assert hashlib.sha256(value).hexdigest()=='4e870e15a3c6976a5c5945e71d4a7e13386d66a205edf9caa0f41169b58ae5c1'
+          Path(name).write_bytes(value); entry['newSha256']=hashlib.sha256(value).hexdigest()
+          (Path(os.environ['RUNNER_TEMP'])/'phase15-payload.json').write_text(json.dumps(payload))
           PY
           rm .github/workflows/phase15-control-review-source.yml .github/workflows/phase15-exact-load-dispatch.yml .github/workflows/phase15-prepare-certification-tree.yml
           git add --all
