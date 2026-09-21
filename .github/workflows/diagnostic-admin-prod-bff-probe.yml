@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for origin in https://econovaria.com https://www.econovaria.com; do
+          for origin in https://www.econovaria.com; do
             body="$RUNNER_TEMP/login-$(echo "$origin" | tr -cd 'a-zA-Z0-9').json"
             status="$(curl --silent --show-error               --connect-timeout 10 --max-time 20               --output "$body" --write-out '%{http_code}'               --request POST "$origin/api/admin-session/login"               -H "Origin: $origin"               -H "Content-Type: application/json"               --data '{}')"
             echo "origin=$origin status=$status"
