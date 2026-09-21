@@ -13,82 +13,65 @@ env:
 
 jobs:
   probe:
-    name: Isolate production nonce RPC key class
+    name: Compare production nonce RPC key classes
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 8
     environment: production
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
-      - name: Resolve production server keys without logging them
+      - name: Probe modern secret and legacy service role
         shell: bash
-        env:
-          KEYS: ${{ runner.temp }}/keys.json
-          SELECTED: ${{ runner.temp }}/selected.json
         run: |
           set -euo pipefail
           test -n "$SUPABASE_ACCESS_TOKEN"
-          test -n "$SUPABASE_DB_URL"
-          curl --fail --silent --show-error             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"             "https://api.supabase.com/v1/projects/$PROJECT_REF/api-keys?reveal=true"             > "$KEYS"
-          KEYS="$KEYS" SELECTED="$SELECTED" node - <<'NODE'
+          keys="$RUNNER_TEMP/keys.json"
+          selected="$RUNNER_TEMP/selected.json"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/api-keys?reveal=true" > "$keys"
+          KEYS="$keys" SELECTED="$selected" node - <<'NODE'
           const fs = require('node:fs');
           const rows = JSON.parse(fs.readFileSync(process.env.KEYS, 'utf8'));
           const value = (row) => String(row?.api_key || row?.apiKey || '');
           const secret = rows.find((row) => value(row).startsWith('sb_secret_'));
           const service = rows.find((row) =>
-            (row?.name === 'service_role' || row?.type === 'service_role') &&
-            value(row).split('.').length === 3
+            (row?.name === 'service_role' || row?.type === 'service_role') && value(row).split('.').length === 3
           );
-          const selected = { secret: value(secret), service: value(service) };
-          if (!selected.secret || !selected.service) throw new Error('Production server key classes unavailable.');
-          fs.writeFileSync(process.env.SELECTED, JSON.stringify(selected));
+          const out = { secret: value(secret), service: value(service) };
+          if (!out.secret || !out.service) throw new Error('Required server key classes are unavailable.');
+          fs.writeFileSync(process.env.SELECTED, JSON.stringify(out));
           NODE
-          echo "SELECTED=$SELECTED" >> "$GITHUB_ENV"
-
-      - name: Probe nonce claim with modern and legacy server keys
-        shell: bash
-        env:
-          RESULT: ${{ runner.temp }}/result.json
-        run: |
-          set -euo pipefail
           secret="$(node -p "require(process.env.SELECTED).secret")"
           service="$(node -p "require(process.env.SELECTED).service")"
           echo "::add-mask::$secret"
           echo "::add-mask::$service"
-          nonce_secret="$(node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('hex'))")"
-          nonce_service="$(node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('hex'))")"
           now="$(date +%s)"
           expires="$(date -u -d '+5 minutes' '+%Y-%m-%dT%H:%M:%SZ')"
           base="https://$PROJECT_REF.supabase.co/rest/v1/rpc/claim_internal_runner_nonce_v2"
 
           probe() {
-            key="$1"
-            hash="$2"
-            out="$3"
-            status="$(curl --silent --show-error               --connect-timeout 10 --max-time 30               --output "$out" --write-out '%{http_code}'               --request POST "$base"               -H "apikey: $key"               -H "Authorization: Bearer $key"               -H 'Content-Type: application/json'               --data "{"p_runner_name":"admin-bff-vercel","p_nonce_hash":"$hash","p_timestamp_seconds":$now,"p_expires_at":"$expires"}")"
-            code="$(OUT="$out" node -e "const fs=require('node:fs');let x=null;try{x=JSON.parse(fs.readFileSync(process.env.OUT,'utf8'))}catch{};process.stdout.write(String(x?.code||''));")"
-            value="$(OUT="$out" node -e "const fs=require('node:fs');let x=null;try{x=JSON.parse(fs.readFileSync(process.env.OUT,'utf8'))}catch{};process.stdout.write(x===true?'true':'false');")"
-            printf '%s|%s|%s' "$status" "$code" "$value"
-          }
-
-          secret_result="$(probe "$secret" "$nonce_secret" "$RUNNER_TEMP/secret.json")"
-          service_result="$(probe "$service" "$nonce_service" "$RUNNER_TEMP/service.json")"
-
-          psql "$SUPABASE_DB_URL" -X -q -v ON_ERROR_STOP=1 <<SQL
-          delete from private.internal_runner_nonce_claims
-          where nonce_hash in ('$nonce_secret', '$nonce_service');
-          SQL
-
-          SECRET_RESULT="$secret_result" SERVICE_RESULT="$service_result" node - <<'NODE'
-          const [ss, sc, sv] = process.env.SECRET_RESULT.split('|');
-          const [ls, lc, lv] = process.env.SERVICE_RESULT.split('|');
-          const result = {
-            modernSecret: { status: Number(ss), code: sc || null, claimed: sv === 'true' },
-            legacyServiceRole: { status: Number(ls), code: lc || null, claimed: lv === 'true' }
-          };
-          console.log(JSON.stringify(result));
-          if (!(result.legacyServiceRole.status === 200 && result.legacyServiceRole.claimed)) {
-            throw new Error('Legacy service_role nonce claim did not work.');
-          }
+            label="$1"
+            key="$2"
+            hash="$(openssl rand -hex 32)"
+            out="$RUNNER_TEMP/$label.json"
+            payload="$(node -e 'process.stdout.write(JSON.stringify({p_runner_name:"admin-bff-vercel",p_nonce_hash:process.argv[1],p_timestamp_seconds:Number(process.argv[2]),p_expires_at:process.argv[3]}))' "$hash" "$now" "$expires")"
+            status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+              --output "$out" --write-out '%{http_code}' --request POST "$base" \
+              -H "apikey: $key" -H "Authorization: Bearer $key" \
+              -H 'Content-Type: application/json' --data "$payload")"
+            STATUS="$status" OUT="$out" LABEL="$label" node - <<'NODE'
+          const fs = require('node:fs');
+          let body = null;
+          try { body = JSON.parse(fs.readFileSync(process.env.OUT, 'utf8')); } catch {}
+          console.log(JSON.stringify({
+            keyClass: process.env.LABEL,
+            status: Number(process.env.STATUS),
+            code: body && typeof body === 'object' ? String(body.code || '') || null : null,
+            claimed: body === true
+          }));
           NODE
+          }
+
+          probe modern_secret "$secret"
+          probe legacy_service_role "$service"
