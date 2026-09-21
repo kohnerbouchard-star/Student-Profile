@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const PHASE15_CUTOFF = "20260819062000";
+export const PHASE15_END = "20260920082200";
 export const PHASE15_COMMON_COUNT = 151;
 
 export const PRODUCTION_PRELUDE = Object.freeze([
@@ -120,7 +121,10 @@ export async function loadPhase15Migrations(environment, directory = migrationsD
   const filenames = (await readdir(directory))
     .filter((name) => /^\d{14}_.+\.sql$/u.test(name))
     .sort((left, right) => left.localeCompare(right));
-  const common = filenames.filter((name) => name.slice(0, 14) >= PHASE15_CUTOFF);
+  const common = filenames.filter((name) => {
+    const version = name.slice(0, 14);
+    return version >= PHASE15_CUTOFF && version <= PHASE15_END;
+  });
   if (common.length !== PHASE15_COMMON_COUNT) {
     fail(`Expected ${PHASE15_COMMON_COUNT} common migrations, found ${common.length}.`);
   }
