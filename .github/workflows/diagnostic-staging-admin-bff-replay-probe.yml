@@ -1,0 +1,52 @@
+name: Diagnostic Staging Admin BFF Replay Probe
+
+on:
+  push:
+    branches:
+      - diagnostic/staging-admin-bff-replay-20260921
+
+permissions:
+  contents: read
+
+env:
+  PREVIEW_ORIGIN: https://econovaria-q5zzhv59v-econovaria.vercel.app
+  EXPECTED_PROJECT_REF: eecvbssdvarfcykcfrny
+  EXPECTED_SOURCE: 4bc00e0ff5741bb79cb84ae9f45f714913a07afe
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require staging preview identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --connect-timeout 10 --max-time 20 \
+            "$PREVIEW_ORIGIN/api/health" > "$RUNNER_TEMP/health.json"
+          HEALTH="$RUNNER_TEMP/health.json" node - <<'NODE'
+          const fs = require('node:fs');
+          const v = JSON.parse(fs.readFileSync(process.env.HEALTH,'utf8'));
+          console.log(JSON.stringify({ok:v.ok,status:v.status,environment:v.environment,projectRef:v.projectRef,sourceCommit:v.sourceCommit}));
+          if (v.ok !== true || v.status !== 'ready') throw new Error('Preview health is not ready.');
+          if (v.projectRef !== process.env.EXPECTED_PROJECT_REF) throw new Error('Preview is not bound to staging.');
+          if (v.sourceCommit !== process.env.EXPECTED_SOURCE) throw new Error('Preview source mismatch.');
+          NODE
+
+      - name: Probe staging Admin login boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$RUNNER_TEMP/login.json"
+          status="$(curl --silent --show-error --connect-timeout 10 --max-time 20 \
+            --output "$body" --write-out '%{http_code}' --request POST \
+            "$PREVIEW_ORIGIN/api/admin-session/login" \
+            -H "Origin: $PREVIEW_ORIGIN" -H 'Content-Type: application/json' --data '{}')"
+          code="$(BODY="$body" node -e "const fs=require('node:fs');let v={};try{v=JSON.parse(fs.readFileSync(process.env.BODY,'utf8'))}catch{};process.stdout.write(String(v?.error?.code||''));")"
+          echo "status=$status code=${code:-missing}"
+          cat "$body"
+          test "$status" = 400
+          test -n "$code"
+          test "$code" != admin_bff_replay_protection_unavailable
+          test "$code" != admin_bff_identity_unavailable
+          test "$code" != admin_bff_network_metadata_unavailable
