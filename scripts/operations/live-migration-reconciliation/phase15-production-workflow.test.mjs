@@ -70,6 +70,7 @@ test("production writes are recovery-gated and runtime/release evidence is exact
     "Disposable target default ACL reset left rows behind",
     "phase15-target-default-acls.dump",
     "pg_restore --list",
+    "DEFAULT ACL public",
     "$NF == \"supabase_admin\"",
     'test "$target_default_acl_entry_count" -eq 3',
     "pg_restore",
@@ -134,6 +135,10 @@ test("production writes are recovery-gated and runtime/release evidence is exact
   assert.doesNotMatch(
     source,
     /grep -F ' DEFAULT ACL '/u,
+  );
+  assert.doesNotMatch(
+    source,
+    /\$0 ~ \/ DEFAULT ACL \/ && \$NF/u,
   );
   assert.match(
     source,
