@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.admin-bff-nonce-service-role-authority-pr-733.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 733,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/supabase/migrations/20260921044500_reconcile_internal_runner_nonce_service_role_authority_v1.sql",
+    "docs/operations/contracts/player-cross-cutting/pr-733.json",
+    "scripts/internal-runner-auth-contract.test.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-733.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience"
+  ],
+  "authorizationNote": "Bounded production Admin-login incident repair. Canonical production requests reach web-session-api but fail at the service-role-only claim_internal_runner_nonce_v2 replay-protection RPC with admin_bff_replay_protection_unavailable. The routine is already SECURITY DEFINER, revoked from public/anon/authenticated and executable only by service_role. This forward-only migration removes only the redundant JWT-dependent auth.role self-check while preserving the private nonce ledger, validation, single-use conflict behavior, pinned search path and explicit database ACL. No Business behavior, user data, secret values, Edge source, Vercel configuration or direct production deployment is authorized by this PR manifest."
+}
