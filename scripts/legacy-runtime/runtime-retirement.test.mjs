@@ -5,6 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { analyze } from "./analyze-traffic-export.mjs";
+import { registerRepositoryCandidateAudit } from "../architecture/refactor-candidate-audit.test.mjs";
+
+registerRepositoryCandidateAudit();
 
 const root = process.cwd();
 
