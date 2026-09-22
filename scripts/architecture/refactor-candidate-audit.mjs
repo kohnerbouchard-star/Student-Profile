@@ -22,7 +22,8 @@ export function fileKind(file, mode = "100644") {
   if (/(?:^|\/)(?:fixtures|__fixtures__)\/|\.fixture\./u.test(file)) return "fixture";
   if (/(?:^|\/)(?:tests|__tests__|e2e)\/|\.(?:test|spec)\./u.test(file)) return "test";
   if (/\.(?:md|rst|txt)$/u.test(file)) return "documentation";
-  if (/^(?:scripts|ops)\/.*\.(?:[cm]?js|ts|py|sh|zsh)$/u.test(file)) return "script";
+  if (/(?:^|\/)[^/]*\.config\.[cm]?[jt]s$/u.test(file)) return "configuration_or_data";
+  if (/^(?:scripts|ops|backend\/scripts|player-terminal\/tools)\/.*\.(?:[cm]?js|ts|py|sh|zsh)$/u.test(file)) return "script";
   if (/^(?:admin|api|auth|frontend|player-terminal|backend\/(?:src|supabase\/functions))\/.*\.(?:[cm]?js|tsx?|jsx|html|css)$/u.test(file) || file === "index.html") return "application_source";
   if (/\.(?:json|toml|ya?ml|lock)$/u.test(file) || path.posix.basename(file).startsWith(".")) return "configuration_or_data";
   return "asset_or_other";
@@ -89,7 +90,10 @@ function structuralFlags(entry) {
 
 // Literal references are discovery evidence, not a complete call graph or a zero-consumer proof.
 function referenceRows(files, review) {
-  const terms = [...new Set([path.posix.basename(review.path), ...(review.symbols || [])])];
+  const basename = path.posix.basename(review.path);
+  const ambiguous = [...files.keys()].filter((file) => path.posix.basename(file) === basename).length > 1;
+  const pathTerm = ambiguous ? review.path.split("/").slice(-2).join("/") : basename;
+  const terms = [...new Set([review.path, pathTerm, ...(review.symbols || [])])];
   const rows = [];
   for (const entry of files.values()) {
     if (entry.path === review.path || entry.source === null) continue;
@@ -144,7 +148,11 @@ export function auditSnapshot(snapshot, register) {
     candidates.push({ path: file, gitBlobSha: entry.oid, kind,
       physicalLines: entry.source === null ? null : physicalLines(entry.source), flags,
       disposition: classifyCandidate(entry, review), safeToDelete: false,
-      evidence: review ? "reviewed_source" : "unreviewed_static_candidate" });
+      evidence: review ? "reviewed_source" : "unreviewed_static_candidate",
+      owner: review?.owner || "UNRESOLVED",
+      reason: review?.reason || "Static match only; semantic review is outstanding.",
+      inboundRoots: review?.inboundRoots || "NOT_REVIEWED", externalUsage: "UNKNOWN",
+      removalConditions: review?.removalConditions || ["Resolve source ownership, all caller classes and replacement evidence before separately authorized retirement"] });
   }
   const dispositions = Object.fromEntries(DISPOSITIONS.map((key) => [key, 0]));
   for (const row of candidates) dispositions[row.disposition] += 1;
