@@ -24,6 +24,11 @@ test("categories keep test, fixture, generated, scripts and migrations separate"
   const paths = ["admin/a.test.js", "backend/src/a/fixtures/a.ts", "admin/dist/a.js", "scripts/a.mjs", "backend/supabase/migrations/a.sql", "backend/legacy/a.ts"];
   assert.deepEqual(paths.map((p) => fileKind(p)), ["test", "fixture", "generated_output", "script", "migration_history", "historical_path"]);
 });
+test("nested tooling and config files are not application source", () => {
+  assert.equal(fileKind("player-terminal/tools/verify-pr-scope.mjs"), "script");
+  assert.equal(fileKind("backend/scripts/typecheckAllEdgeRoots.mjs"), "script");
+  assert.equal(fileKind("player-terminal/playwright.config.js"), "configuration_or_data");
+});
 test("a legacy filename or no importer cannot produce confirmed dead", () => {
   assert.equal(classifyCandidate(entry("admin/legacy-v1.js")), "unknown");
   assert.equal(classifyCandidate(entry("admin/a.test.js", "fallback")), "generated_or_fixture");
@@ -43,10 +48,15 @@ test("variable dynamic loader preserves literal module references without claimi
 });
 test("external handler and test-only references are not zero-consumer proof", () => {
   const p = "backend/supabase/functions/worker/index.ts";
-  const report = auditSnapshot(fixture([entry(p, "Deno.serve(handler);"), entry("scripts/worker.test.mjs", "// index.ts fallback")]), { schemaVersion: 1, task: "REF-003", reviews: [review(p)] });
+  const report = auditSnapshot(fixture([entry(p, "Deno.serve(handler);"), entry("scripts/worker.test.mjs", "// worker/index.ts fallback")]), { schemaVersion: 1, task: "REF-003", reviews: [review(p)] });
   assert.equal(report.reviewed[0].literalReferences[0].kind, "test");
   assert.equal(report.dispositions.confirmed_dead, 0);
   assert(report.candidates.find((r) => r.path === p).flags.includes("http_entrypoint"));
+});
+test("duplicate generic basenames do not produce false worker references", () => {
+  const p = "backend/supabase/functions/worker/index.ts";
+  const report = auditSnapshot(fixture([entry(p, "Deno.serve(handler);"), entry("backend/src/index.ts"), entry("scripts/other.test.mjs", "// unrelated index.ts"), entry("scripts/worker.test.mjs", "// worker/index.ts")]), { schemaVersion: 1, task: "REF-003", reviews: [review(p)] });
+  assert.deepEqual(report.reviewed[0].literalReferences.map((r) => r.path), ["scripts/worker.test.mjs"]);
 });
 test("missing evidence fails rather than yielding a completed register", () => {
   assert.throws(() => auditSnapshot(fixture([]), { schemaVersion: 1, task: "REF-003", reviews: [review("missing.js")] }), /missing review/);
