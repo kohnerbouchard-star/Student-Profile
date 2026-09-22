@@ -358,3 +358,28 @@ Unknown hosted consumers remain downstream retention/deletion gates. They are no
 Local documentation validation covers the three tables' exact row counts, keys/methods/path syntax, preserved duplicate pairs, source SHA formats, companion links and whitespace. The reported numbers are declaration counts, never dead-code quantities. Full checkout, bundle audit execution, application build, backend/Deno tests, browser crawl and authenticated/SQL/provider probes remain NOT_RUN.
 
 No application code, generated asset, database, migration, workflow, configuration, dependency or runtime was modified. No source was deleted. Stop at REF-002.
+
+
+## Final REF-002 source-validation closeout — 2026-09-23
+
+GitHub Actions run `35796817003` checked out the complete REF-002 owner branch at `8eaedb318b21a8c051f12122ff322e36f327cdba` (tree `2fa8d52f2e04b0adc1018eb1506b2f640834565c`, 3,948 tracked files) and executed both required original audits against the repository inputs. `node scripts/admin-bundle-contract-audit.mjs` passed; `node scripts/admin-contract-review-source-audit.mjs` passed. The post-audit working tree was clean and `git diff --check` passed, so neither audit mutated tracked evidence.
+
+This closes the executable-source gap recorded above. The retained Admin declaration census, selected browser translations, dynamic export-status rejection, six Classroom proxy callsites, API/BFF file denominator, Edge manifest classes, 29 ordered Player outer-dispatch families, selected leaf-handler traces and browser lifecycle findings are the canonical R0 map for REF-006–015. The map deliberately distinguishes declaration, transport rewrite, path recognition, method acceptance/rejection, explicit disablement and source-only compatibility. It does not claim that unknown hosted/external consumers do not exist.
+
+Candidate handoffs are now explicit:
+
+- REF-006: Player Messaging enters through the Player BFF/session boundary and canonical Player runtime, which source-imports the Classroom-owned dispatcher; lifecycle parsing precedes generic Messaging parsing. The target is one Messaging-owned dispatcher implementation without changing the two public roots.
+- REF-007: Contract progress GET crosses Admin BFF/session/security/ownership, then `proxyClassroom` to the Staff Contract progress handler/repository. The target is a local Admin adapter over the existing Contracts read authority.
+- REF-008: decision, submissions-review and progress-review aliases remain distinct at the browser/permission layer and converge only at review authority. Decision approval retains its subsequent reward side effect; the target is one local review adapter preserving alias-specific policy and envelopes.
+- REF-009: reward issue is already intercepted locally and invokes `issue_contract_rewards_atomic_v1`; the target is removal of proxy-shaped coupling around that single existing authority, not a new settlement implementation.
+- REF-010/013: reset forwarding, identifier/credential behavior, session revocation and one-time credential UI consumers are mapped. Creation/credential events keep the legacy bridge retained until their scoped replacement proves disposal.
+- REF-011: neutral and Classroom Deno configurations remain strict while Admin relaxes strictness; canonical suites must move without weakening options, permissions or lock resolution.
+- REF-012: Attendance-only save is verification GET then one PATCH; combined save augments the existing request. Retry identity, event order and stale-generation protection remain required.
+- REF-014: Settings save-error behavior is DOM-observer/error reconciliation rather than a fetch interceptor; observer/listener ownership must be replaced before retirement.
+- REF-015: copied legacy assets are not loaded by built-default Admin V2, but raw retained HTML and unknown external/direct consumers remain retention gates. No shim is approved for deletion by REF-002 itself.
+
+The modern Admin V2 composition root constructs its clients on one selected-game Admin BFF transport and owns route controllers for Overview, Attendance, Store, Inventory, Market, Business, Crafting, Marketplace, Banking, Loans, Players, Contracts, World Management, News/Events, Messages, Progression, Settings and Logs. This R0 map records that composition boundary rather than inventing a second runtime registry. The complete tracked `api/` denominator is separately recorded in `entrypoints.json`; browser-facing Admin and Player requests enter their respective BFF/session proxies before Edge dispatch.
+
+Unknown hosted consumers, compatibility workers and externally callable functions remain explicit downstream retention gates. They are not evidence of dead code and are not blockers to completing this source map. REF-002 authorizes no deletion, runtime change or production assertion.
+
+Validation result: **REF-002 source mapping accepted for R0 completion.** The required source audits passed on a complete checkout, the evidence files are reconciled, aliases and rejected/disabled cases remain distinct, and the downstream targets for REF-006–015 are named. Production/database/runtime behavior was not changed or tested as part of this documentation task.
