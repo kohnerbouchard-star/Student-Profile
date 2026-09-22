@@ -120,6 +120,11 @@ export function auditSnapshot(snapshot, register) {
     assert(!reviews.has(review.path) && files.has(review.path), `Duplicate/missing review: ${review.path}`);
     for (const field of ["owner", "reason", "confidence", "externalUsage", "removalConditions"]) assert(review[field], `Missing ${field}`);
     for (const evidence of review.sourceEvidence || []) assert(files.has(evidence), `Missing evidence: ${evidence}`);
+    for (const [evidence, oid] of Object.entries(review.sourceEvidenceBlobs || {})) {
+      assert((review.sourceEvidence || []).includes(evidence), `Unlisted supporting source: ${evidence}`);
+      assert(/^[0-9a-f]{40}$/u.test(oid), `Invalid supporting source hash: ${evidence}`);
+      assert.equal(files.get(evidence)?.oid, oid, `Stale supporting source: ${evidence}`);
+    }
     classifyCandidate(files.get(review.path), review);
     reviews.set(review.path, review);
   }
@@ -143,6 +148,7 @@ export function auditSnapshot(snapshot, register) {
     else count.unmeasuredFiles += 1;
     const flags = ["application_source", "script", "test", "fixture", "generated_output", "historical_path"].includes(kind) ? structuralFlags(entry) : [];
     if (inventoryCandidates.has(file)) flags.push("existing_architecture_inventory");
+    if (kind === "historical_path") flags.push("historical_path_not_retirement_proof");
     if (!flags.length && !reviews.has(file)) continue;
     const review = reviews.get(file);
     candidates.push({ path: file, gitBlobSha: entry.oid, kind,
@@ -151,7 +157,16 @@ export function auditSnapshot(snapshot, register) {
       evidence: review ? "reviewed_source" : "unreviewed_static_candidate",
       owner: review?.owner || "UNRESOLVED",
       reason: review?.reason || "Static match only; semantic review is outstanding.",
-      inboundRoots: review?.inboundRoots || "NOT_REVIEWED", externalUsage: "UNKNOWN",
+      symbols: review?.symbols || [], symbolReview: review ? "SOURCE_REVIEWED" : "NOT_REVIEWED",
+      confidence: review?.confidence || "Discovery only; semantic ownership and reachability are unreviewed",
+      inboundRoots: review?.inboundRoots || "NOT_REVIEWED", externalUsage: review?.externalUsage || "UNKNOWN",
+      sourceEvidence: (review?.sourceEvidence || []).map((evidence) => ({ path: evidence, gitBlobSha: files.get(evidence).oid,
+        binding: review.sourceEvidenceBlobs?.[evidence] ? "HASH_BOUND_REVIEW" : "SNAPSHOT_PATH_ONLY" })),
+      consumerAudit: review?.consumerAudit || { HTTP: "NOT_REVIEWED", SQL_RPC: "NOT_REVIEWED", jobs: "NOT_REVIEWED", dynamic_HTML_build: "NOT_REVIEWED" },
+      replacement: review?.replacement || "NOT_SELECTED",
+      evidenceQuery: { executable: "node", args: ["scripts/architecture/refactor-candidate-audit.mjs", snapshot.sha],
+        literalPathSearch: ["git", "grep", "-n", "-F", "-e", file, snapshot.sha, "--"],
+        limitation: "Literal full-path search misses relative, computed and external callers; no matches never authorize deletion" },
       removalConditions: review?.removalConditions || ["Resolve source ownership, all caller classes and replacement evidence before separately authorized retirement"] });
   }
   const dispositions = Object.fromEntries(DISPOSITIONS.map((key) => [key, 0]));
@@ -162,6 +177,9 @@ export function auditSnapshot(snapshot, register) {
     inventoryBlobSha: files.get(INVENTORY).oid, inventoryCountsAsRecorded: inventory.counts,
     inventoryRecomputedHere: false, trackedFiles: files.size, denominators,
     physicalLineConvention: "UTF-8/no-NUL Git blobs; empty=0; final newline is not an extra line; symlinks/submodules/binary excluded from line totals",
+    reviewedSourceCount: reviewed.length,
+    supportingSourceBindings: reviewed.reduce((n, r) => n + Object.keys(r.sourceEvidenceBlobs || {}).length, 0),
+    historicalPathCandidates: candidates.filter((r) => r.kind === "historical_path").length,
     candidateCount: candidates.length, dispositions, candidateRecordsSha256: recordsHash, candidates, reviewed,
     observationPolicy: policy.observationPolicy, deletionShortlist: [],
     limitations: ["Static classification is not executable-code coverage or a complete reachability proof.",
