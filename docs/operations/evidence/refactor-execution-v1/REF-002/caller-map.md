@@ -6,13 +6,13 @@ Task status: **IN_PROGRESS**. This report is evidence only, not runtime configur
 
 The source tables below contain **199 declarations**: 79 retained-Admin action descriptors, 24 retained-Admin read descriptors, and 96 Player capability operations across 86 keys. The Admin tables have 98 distinct pre-translation method/path pairs after removing query strings; the Player table has 96. Preserve every caller name, including the five duplicate pair occurrences; they are multiple callers, not deletion candidates. These are 194 distinct pairs across the two named namespaces, not 194 independently verified working endpoints.
 
-The previous 23 detailed cases and 57-reference index remain preserved in [routes.json](routes.json) and [entrypoints.json](entrypoints.json). Their coverage is not additive to these counts. This report supersedes their metadata-only bundle description and any inference that copied source HTML remains the built default Admin page. It does not silently change the original task requirements.
+The original 23 detailed cases and 57 source-reference records are preserved. The reconciled [routes.json](routes.json) now contains 24 detailed cases, including the dynamic export-status case, and eight separately classified export branches. The [entrypoints.json](entrypoints.json) index now has 76 source records, including all 16 tracked API files. These overlapping counts are not additive endpoint totals. Both JSON files now carry the bundle-readability and built-default-HTML corrections rather than relying on prose to contradict stale fields. The original task requirements are unchanged.
 
 The rows were transcribed from the named immutable source tables and validated locally for counts, allowed methods, identifier uniqueness and duplicate pairs. No whole-repository extraction or application execution is claimed. Dynamic paths, browser transformations, disabled operations and server handlers require the separate classification below.
 
 ## Preserved detailed mapping
 
-The [previous immutable report](https://github.com/kohnerbouchard-star/Student-Profile/blob/fcf0489ce212207659dbe98061e58fcb113f8f62/docs/operations/evidence/refactor-execution-v1/REF-002/caller-map.md) remains the history for the original 23 cases. The unchanged JSON evidence retains their full guards, scope, persistence and response profiles. The following constraints still apply:
+The [previous immutable report](https://github.com/kohnerbouchard-star/Student-Profile/blob/fcf0489ce212207659dbe98061e58fcb113f8f62/docs/operations/evidence/refactor-execution-v1/REF-002/caller-map.md) remains the history for the original 23 cases. The reconciled JSON evidence retains the original cases, aliases, guards, scope, persistence and response profiles; caller descriptions now agree with the inspected bundle tables and adapters. The following constraints still apply:
 
 - Contract progress forwarding drops the original query when constructing the Classroom URL; changing that behavior needs a separately reviewed correction.
 - The submission-decision alias currently falls back to `game.update` and adds rewards after an approved review. Other review aliases use `contracts.manage` and do not automatically reward. The two-step decision path is not one atomic transaction.
@@ -76,7 +76,7 @@ This list is selected source evidence, not an assertion that all request-normali
 
 ## Dynamic and declaration-only cases
 
-The bundle's `getAdminTerminalExportStatusUrl` accepts a validated same-API-origin status URL or constructs `/games/:gameId/exports/:jobId`; `pollAdminTerminalExportJob` uses GET. This dynamic template is outside the two constant tables. Its server implementation and external consumers are not established here. Do not substitute a nearby method, label it a working route, or delete it from a constant-table-only scan.
+The bundle's `getAdminTerminalExportStatusUrl` accepts a validated same-API-origin status URL or constructs `/games/:gameId/exports/:jobId`; `pollAdminTerminalExportJob` uses GET. The separately inspected `queueExportJob` section prefers `downloadPath`/`downloadUrl` before `jobId`/`id`, so its direct-download path does not poll. A job-only response enters its bounded 24-attempt GET loop. These caller names and branches are preserved, not collapsed. The dynamic template remains outside the constant tables. `EXPORT-01` in routes.json records the current source boundary: no matching export-status case in gameRoutes or the inspected disabled-operation list; the unhandled owned-game fallback is **501 `admin_route_not_implemented`**, not a working asynchronous job endpoint or the non-game 404. Earlier session, permission, rate-limit and ownership failures remain possible. This is source evidence, not executed browser/runtime evidence. External consumers remain unknown and no deletion is approved.
 
 The Player manifest still labels its service `classroom-api`, while the inspected canonical Player index loads `trustedClientIpServe.ts` and `runtime.ts`. The response label is not evidence of a Classroom HTTP dependency. The 96-row manifest is an advertised catalog, not the router itself.
 
@@ -302,13 +302,58 @@ storyDeliveryState POST /players/me/story-deliveries/:deliveryId/state
 logout POST /players/me/session/logout
 ```
 
+## Source continuation: export, proxy and tracked-root reconciliation
+
+Audited application source: `f92f1075d87468d81069753428e693044b80d82d`, tree `1aa13faf5016c78df27edc2ec0e90e0330364c99`; it differs from the recorded main only in REF-002 documentation/data. Publication preflight head: `b13f7607e76844b9ef7aa6be2958b93eba437a33`. No later implementation or merge identity is predicted in this report.
+
+### Export boundary
+
+The exact direct Edge branches are now distinct from the retained browser rewrites. POST Attendance, Logs and Player Logs export handlers return 200, `status: completed`, a freshly generated job ID and a direct CSV download path. They do not create a persisted export job. GET Attendance export aliases use pages of 200 with at most 50 pages; the inspected Logs CSV path requests 500 records. These source observations do not certify the backing query implementations or a hosted export run.
+
+`GET /games/:gameId/exports/:jobId` resolves `game.read` through the permission fallback. The security guard reads staff state, requires active `game_admin` and current permission/security claims, resolves the grant, skips mutation-only AAL2 enforcement for GET, then consumes the read rate limit before the explicit owned-game check. An unknown/non-owned game returns 404 `game_not_found`. For a UUID game path, the export resource normalizes to `staff.admin.read.unknown`; a non-UUID path segment stays in the `games` resource. The eventual unimplemented response is 501 with `code`, `message` and `path`. Staff authorization/rate-limit persistence must not be misreported as an export-job or economic transaction.
+
+Alias permissions are not silently equalized: direct `logs` export branches use `audit.read`, while direct `player-logs` uses the fallback `game.read` for GET and `game.update` for POST. Retained browser normalization may transform a logical export POST into a different read transport. This discrepancy is mapped, not changed.
+
+### Complete selected proxy-callsite census
+
+The full inspected `gameRoutes.ts` contains six `proxyClassroom` callsites: progress read, access-code reset, legacy submission decision, submissions review, progress review and reward issue. The case-ID groups are recorded in routes.json. The review aliases remain separate. The reward helper call is intercepted locally and uses `issue_contract_rewards_atomic_v1`; it is not an additional Classroom HTTP call. The legacy decision route still performs review and conditional reward sequentially, not atomically as one operation.
+
+### Tracked API denominator and Player outer dispatch
+
+The immutable API tree `e552fa91e6d308d5dc2010fabe68b41aada10cc1` returned `truncated: false` and exactly **16 blob/file rows**. All are stored with source identities in entrypoints.json. A local reconstruction from the 16 path/blob/mode records reproduces that exact Git tree hash. This closes the API filename denominator only: helpers, catch-all files, dedicated requests and aliases are not sixteen verified endpoints. Body-level forwarding-target and method reconciliation remains incomplete.
+
+The canonical Player runtime's **29 outer dispatch families** are recorded in source order in entrypoints.json. `dispatchPlayerBusinessRequest` runs before `readPlayerBusinessBankingRoutePath`. The latter is not a competing first authority. Messaging is `dispatchClassroomMessagingRequest` imported as source. Inventory and Banking FX pass an application context through the reviewed limiter; the legacy Contract and Attendance clock-in paths call their handlers directly, which is not proof that the handlers contain no limiter.
+
+The runtime includes stock holdings, stock order reads, stock trades, login and Attendance clock-in paths beyond the advertised catalog. For stock orders, POST selects trading and non-POST selects the read handler; this does not establish acceptance of every non-POST method. Leaf parser and handler method checks are still required. OPTIONS and the suffix-matched health response precede publishable/environment validation; the health branch has no other method condition. No path-only parser, catalog entry or nearby method text is treated as method-specific acceptance proof.
+
+### Reproduction and execution boundary
+
+The source census used immutable connector tree/file reads. Equivalent checkout commands below are reproducibility instructions, **not commands claimed to have run against a complete application checkout here**:
+
+```bash
+SOURCE=f92f1075d87468d81069753428e693044b80d82d
+git rev-parse "$SOURCE^{tree}"
+git ls-tree -r --full-tree "$SOURCE" -- api
+git ls-tree -r --name-only "$SOURCE" -- backend/supabase/functions admin player-terminal frontend auth
+# After obtaining the exact original files and repository-pinned Node:
+node scripts/admin-bundle-contract-audit.mjs
+node scripts/admin-contract-review-source-audit.mjs
+git diff --check
+```
+
+The first original audit reads the bundle and manifest; the second writes only its local `artifacts/admin-contract-review-source.json` report. Neither was executed against complete original source in this continuation. The available excerpt/fixture is not the original bundle and was not substituted to manufacture a pass. Direct Git checkout failed at DNS resolution, archive transfer was unavailable, and Library materialization failed; connector source reads and branch writes worked. No credentials were requested, no cloud setting changed, and no workflow was edited or dispatched to evade this limitation.
+
+The local copies of all three prior evidence files were independently re-hashed to their Git blob identities before edits. Local documentation validation checks the preserved original cases and table multisets, namespace method/path uniqueness, 76 source-record IDs and SHA syntax, 16 API rows, 29 ordered Player families, JSON/Markdown count and finding agreement, links, and whitespace. It does not claim a whole-repository path census, full source audit, application typecheck or runtime certification. The backlog stays unchanged, so all 50 task objects and dependency links are preserved. Only this task's evidence and task record change; the PR stays within its existing five-file documentation/data scope.
+
+Unknown hosted consumers remain downstream retention/deletion gates. They are not the reason for withholding completion; missing source closure and unexecuted required original audits are real current acceptance gaps. Authenticated production tests, database replay and unrelated application suites are not added as requirements for this R0 task.
+
 ## Remaining acceptance work
 
-**MAP-01:** the unreadable-bundle obstacle is resolved. Its declaration tables, selected action paths, authenticated mount and actual build-input transformation are now source-inspected. Full wrapper/event-consumer reconciliation and any browser execution remain unverified; no zero-caller or deletion claim is made.
+**MAP-01:** complete remaining retained-wrapper/event-consumer and selected browser root-to-resolver closure; bundle readability and declaration tables are no longer the blocker.
 
-**MAP-02:** still IN_PROGRESS. The exact remaining source work is (a) map every current Admin V2 controller/client route through its dispatcher, including disabled methods; (b) compare the 96 advertised Player operations with actual runtime/parser dispatch, including unadvertised routes; (c) reconcile all BFF and externally callable worker roots against the complete current tracked tree; and (d) resolve dynamic paths and remaining retained-wrapper consumers. The old generated inventory belongs to an earlier source SHA and cannot close this current-tree check.
+**MAP-02:** finish every current Admin V2 client/controller operation, Player leaf-parser method acceptance/rejection (including unadvertised routes), all BFF forwarding bodies, and full function/worker/import-root reconciliation against the tracked source. The complete api filename denominator and Player outer precedence are now recorded, not substituted for those missing traces.
 
-**MAP-03:** review the final evidence and applicable exact-head checks, then normally merge only when REF-002's original requirements are satisfied. This continuation does not mark the task VERIFIED_COMPLETE or advance successors. Production login and Phase 15 remain separate; neither is used as an extra prerequisite for documentation acceptance.
+**MAP-03:** execute required original source audits against complete original inputs, finish evidence review and applicable final-head checks, then normal merge. A full checkout/archive was unavailable; no fixture or historical CI is substituted. Unknown hosted consumers remain downstream retention gates, not extra production-test prerequisites.
 
 Local documentation validation covers the three tables' exact row counts, keys/methods/path syntax, preserved duplicate pairs, source SHA formats, companion links and whitespace. The reported numbers are declaration counts, never dead-code quantities. Full checkout, bundle audit execution, application build, backend/Deno tests, browser crawl and authenticated/SQL/provider probes remain NOT_RUN.
 
