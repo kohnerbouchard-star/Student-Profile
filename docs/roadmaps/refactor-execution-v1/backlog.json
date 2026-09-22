@@ -49,7 +49,7 @@
       "id": "REF-003",
       "title": "Classify dead-code candidates with reproducible evidence",
       "file": "tasks/REF-003.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-002"
       ],
