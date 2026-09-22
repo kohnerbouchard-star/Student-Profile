@@ -11,7 +11,7 @@
   "defaultSourceFileCeiling": 15,
   "defaultSemanticDiffLineReviewThreshold": 400,
   "tasks": [
-    {"id":"REF-001","title":"Freeze the exact-main baseline and resolve owner gates","file":"tasks/REF-001.md","status":"PLANNED","dependsOn":[],"risk":"R0","architectureMapping":"ARCH-000","recheckOpenPrs":[668,730,731,735,736],"implementationSha":null,"mergeSha":null,"evidence":null},
+    {"id":"REF-001","title":"Freeze the exact-main baseline and resolve owner gates","file":"tasks/REF-001.md","status":"BLOCKED","dependsOn":[],"risk":"R0","architectureMapping":"ARCH-000","recheckOpenPrs":[668,730,731,735,736],"implementationSha":null,"mergeSha":null,"evidence":"https://github.com/kohnerbouchard-star/Student-Profile/blob/daa6acc4fb9bda82d1e04d091ed4719d16c583e8/docs/operations/evidence/refactor-execution-v1/REF-001/baseline.md"},
     {"id":"REF-002","title":"Map canonical routes, import roots and browser entrypoints","file":"tasks/REF-002.md","status":"PLANNED","dependsOn":["REF-001"],"risk":"R0","architectureMapping":"ARCH-400/ARCH-700","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
     {"id":"REF-003","title":"Classify dead-code candidates with reproducible evidence","file":"tasks/REF-003.md","status":"PLANNED","dependsOn":["REF-002"],"risk":"R1","architectureMapping":"ARCH-700","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
     {"id":"REF-004","title":"Capture bounded behavior-parity fixtures","file":"tasks/REF-004.md","status":"PLANNED","dependsOn":["REF-002"],"risk":"R1","architectureMapping":"ARCH-300/ARCH-400","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
