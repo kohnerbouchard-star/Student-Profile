@@ -11,55 +11,874 @@
   "defaultSourceFileCeiling": 15,
   "defaultSemanticDiffLineReviewThreshold": 400,
   "tasks": [
-    {"id":"REF-001","title":"Freeze the exact-main baseline and resolve owner gates","file":"tasks/REF-001.md","status":"VERIFIED_COMPLETE","dependsOn":[],"risk":"R0","architectureMapping":"ARCH-000","recheckOpenPrs":[668,730,731,735,736],"implementationSha":"554a67cc54b9bc57c4e8464382e9c278c5a46fb1","mergeSha":"346aa8235e57d31cafa6d84b9a6bb0dd33933dbb","evidence":"https://github.com/kohnerbouchard-star/Student-Profile/blob/346aa8235e57d31cafa6d84b9a6bb0dd33933dbb/docs/operations/evidence/refactor-execution-v1/REF-001/baseline.md"},
-    {"id":"REF-002","title":"Map canonical routes, import roots and browser entrypoints","file":"tasks/REF-002.md","status":"IN_PROGRESS","dependsOn":["REF-001"],"risk":"R0","architectureMapping":"ARCH-400/ARCH-700","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":"docs/operations/evidence/refactor-execution-v1/REF-002/caller-map.md"},
-    {"id":"REF-003","title":"Classify dead-code candidates with reproducible evidence","file":"tasks/REF-003.md","status":"PLANNED","dependsOn":["REF-002"],"risk":"R1","architectureMapping":"ARCH-700","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-004","title":"Capture bounded behavior-parity fixtures","file":"tasks/REF-004.md","status":"PLANNED","dependsOn":["REF-002"],"risk":"R1","architectureMapping":"ARCH-300/ARCH-400","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-005","title":"Extend existing architecture ratchets for the selected seams","file":"tasks/REF-005.md","status":"PLANNED","dependsOn":["REF-003","REF-004"],"risk":"R1","architectureMapping":"ARCH-001","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-006","title":"Move the retained Messaging dispatcher to its domain owner","file":"tasks/REF-006.md","status":"PLANNED","dependsOn":["REF-005"],"risk":"R2","architectureMapping":"ARCH-400/ARCH-402","recheckOpenPrs":[668,736],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-007","title":"Replace Contract progress GET forwarding with a local adapter","file":"tasks/REF-007.md","status":"PLANNED","dependsOn":["REF-005"],"risk":"R2","architectureMapping":"ARCH-400/ARCH-700","recheckOpenPrs":[668],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-008","title":"Converge the three Admin Contract review aliases","file":"tasks/REF-008.md","status":"PLANNED","dependsOn":["REF-007"],"risk":"R3","architectureMapping":"ARCH-208/ARCH-400","recheckOpenPrs":[668],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-009","title":"Replace Contract reward-issuance forwarding without splitting its transaction","file":"tasks/REF-009.md","status":"PLANNED","dependsOn":["REF-008"],"risk":"R3","architectureMapping":"ARCH-208/ARCH-300","recheckOpenPrs":[668],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-010","title":"Replace Player access-code-reset forwarding","file":"tasks/REF-010.md","status":"PLANNED","dependsOn":["REF-005"],"risk":"R3","architectureMapping":"ARCH-100/ARCH-400","recheckOpenPrs":[668,736],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-011","title":"Detach canonical test suites from Classroom-owned Deno configuration","file":"tasks/REF-011.md","status":"PLANNED","dependsOn":["REF-006"],"risk":"R2","architectureMapping":"ARCH-400/ARCH-700","recheckOpenPrs":[668,736],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-012","title":"Replace the legacy Attendance fetch bridge with an explicit adapter","file":"tasks/REF-012.md","status":"PLANNED","dependsOn":["REF-005"],"risk":"R2","architectureMapping":"ARCH-500/ARCH-700","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-013","title":"Converge the legacy Player access-code UI bridge","file":"tasks/REF-013.md","status":"PLANNED","dependsOn":["REF-010"],"risk":"R2","architectureMapping":"ARCH-500/ARCH-700","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-014","title":"Converge the legacy Settings save-error bridge","file":"tasks/REF-014.md","status":"PLANNED","dependsOn":["REF-005"],"risk":"R2","architectureMapping":"ARCH-500/ARCH-700","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-015","title":"Remove the first proven-unused Admin shim batch","file":"tasks/REF-015.md","status":"PLANNED","dependsOn":["REF-012","REF-013","REF-014"],"risk":"R2","architectureMapping":"ARCH-700","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-016","title":"Adopt the existing Players public boundary in one consumer family","file":"tasks/REF-016.md","status":"PLANNED","dependsOn":["REF-006"],"risk":"R2","architectureMapping":"ARCH-100/ARCH-402","recheckOpenPrs":[668,736],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-017","title":"Extract Player roster persistence into its existing owner","file":"tasks/REF-017.md","status":"PLANNED","dependsOn":["REF-016"],"risk":"R2","architectureMapping":"ARCH-100/ARCH-401","recheckOpenPrs":[668],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-018","title":"Extract Staff Attendance persistence while preserving one reward transaction","file":"tasks/REF-018.md","status":"PLANNED","dependsOn":["REF-016"],"risk":"R3","architectureMapping":"ARCH-208/ARCH-401","recheckOpenPrs":[668],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-019","title":"Extract Player clock-in persistence and reuse Attendance authority","file":"tasks/REF-019.md","status":"PLANNED","dependsOn":["REF-018"],"risk":"R3","architectureMapping":"ARCH-208/ARCH-401","recheckOpenPrs":[668,736],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-020","title":"Isolate Staff-login persistence without changing authentication","file":"tasks/REF-020.md","status":"PLANNED","dependsOn":["REF-005"],"risk":"R3","architectureMapping":"ARCH-100/ARCH-401","recheckOpenPrs":[668,736],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-021","title":"Move ledger-history queries behind an Economy read port","file":"tasks/REF-021.md","status":"PLANNED","dependsOn":["REF-016"],"risk":"R2","architectureMapping":"ARCH-205/ARCH-401","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-022","title":"Move Staff ledger adjustment behind the existing atomic command","file":"tasks/REF-022.md","status":"PLANNED","dependsOn":["REF-021"],"risk":"R3","architectureMapping":"ARCH-205/ARCH-300","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-023","title":"Expose Inventory reservation contracts to Crafting without new writes","file":"tasks/REF-023.md","status":"PLANNED","dependsOn":["REF-016"],"risk":"R3","architectureMapping":"ARCH-201/ARCH-203/ARCH-402","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-024","title":"Converge Marketplace reservation access on Inventory public ports","file":"tasks/REF-024.md","status":"PLANNED","dependsOn":["REF-023"],"risk":"R3","architectureMapping":"ARCH-204/ARCH-300","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-025","title":"Bound Business-banking and loan reads behind explicit contracts","file":"tasks/REF-025.md","status":"PLANNED","dependsOn":["REF-021"],"risk":"R2","architectureMapping":"ARCH-205/ARCH-207","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-026","title":"Remove Store-handler persistence without replacing purchase settlement","file":"tasks/REF-026.md","status":"PLANNED","dependsOn":["REF-023","REF-024"],"risk":"R3","architectureMapping":"ARCH-202/ARCH-300","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-027","title":"Contain the retained Business-creation compatibility seam","file":"tasks/REF-027.md","status":"PLANNED","dependsOn":["REF-025","REF-026"],"risk":"R3","architectureMapping":"ARCH-207/ARCH-700","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-028","title":"Separate Contract availability policy from persistence","file":"tasks/REF-028.md","status":"PLANNED","dependsOn":["REF-016"],"risk":"R2","architectureMapping":"ARCH-208/ARCH-401","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-029","title":"Extract one Contract repository read-projection family","file":"tasks/REF-029.md","status":"PLANNED","dependsOn":["REF-007","REF-008","REF-009","REF-028"],"risk":"R2","architectureMapping":"ARCH-401","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-030","title":"Separate Contract submission translation from Story decision behavior","file":"tasks/REF-030.md","status":"PLANNED","dependsOn":["REF-029"],"risk":"R3","architectureMapping":"ARCH-208/ARCH-400","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-031","title":"Separate country reference reads from game-scoped projections","file":"tasks/REF-031.md","status":"PLANNED","dependsOn":["REF-016"],"risk":"R2","architectureMapping":"ARCH-101/ARCH-402","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-032","title":"Give World runtime reads an explicit scoped application boundary","file":"tasks/REF-032.md","status":"PLANNED","dependsOn":["REF-031"],"risk":"R2","architectureMapping":"ARCH-209/ARCH-401","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-033","title":"Extract pure Story-effect preparation from persistence","file":"tasks/REF-033.md","status":"PLANNED","dependsOn":["REF-030","REF-032"],"risk":"R3","architectureMapping":"ARCH-209/ARCH-300","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-034","title":"Converge Story notification delivery through the existing transaction boundary","file":"tasks/REF-034.md","status":"PLANNED","dependsOn":["REF-033"],"risk":"R3","architectureMapping":"ARCH-402/ARCH-602","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-035","title":"Extract one Messaging thread lifecycle use case","file":"tasks/REF-035.md","status":"PLANNED","dependsOn":["REF-006","REF-016"],"risk":"R2","architectureMapping":"ARCH-401/ARCH-402","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-036","title":"Bound Progression reward requests to canonical Economy authority","file":"tasks/REF-036.md","status":"PLANNED","dependsOn":["REF-022"],"risk":"R3","architectureMapping":"ARCH-208","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-037","title":"Split Dashboard read composition without increasing query fan-out","file":"tasks/REF-037.md","status":"PLANNED","dependsOn":["REF-021","REF-026","REF-031"],"risk":"R2","architectureMapping":"ARCH-400/ARCH-401","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-038","title":"Extract one pure Stock-engine calculation family","file":"tasks/REF-038.md","status":"PLANNED","dependsOn":["REF-005"],"risk":"R3","architectureMapping":"ARCH-206","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-039","title":"Separate Stock-runner triggering from tick execution","file":"tasks/REF-039.md","status":"PLANNED","dependsOn":["REF-038"],"risk":"R3","architectureMapping":"ARCH-206/ARCH-600","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-040","title":"Expose a minimal generic Markets calculation boundary","file":"tasks/REF-040.md","status":"PLANNED","dependsOn":["REF-038"],"risk":"R2","architectureMapping":"ARCH-206/ARCH-402","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-041","title":"Centralize one Player read-resource lifecycle","file":"tasks/REF-041.md","status":"PLANNED","dependsOn":["REF-005"],"risk":"R2","architectureMapping":"ARCH-500/ARCH-502","recheckOpenPrs":[624],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-042","title":"Converge Inventory mutation invalidation in the Player Terminal","file":"tasks/REF-042.md","status":"PLANNED","dependsOn":["REF-023","REF-041"],"risk":"R2","architectureMapping":"ARCH-500/ARCH-502","recheckOpenPrs":[624],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-043","title":"Converge Admin V2 Banking response and error adaptation","file":"tasks/REF-043.md","status":"PLANNED","dependsOn":["REF-005"],"risk":"R2","architectureMapping":"ARCH-500/ARCH-501","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-044","title":"Split Admin V2 Contracts rendering from controller state","file":"tasks/REF-044.md","status":"PLANNED","dependsOn":["REF-007","REF-008","REF-009","REF-043"],"risk":"R2","architectureMapping":"ARCH-500/ARCH-501","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-045","title":"Isolate licensing issuance from worker transport","file":"tasks/REF-045.md","status":"PLANNED","dependsOn":["REF-005"],"risk":"R3","architectureMapping":"ARCH-302/ARCH-600","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-046","title":"Make Campaign scheduling a thin application trigger","file":"tasks/REF-046.md","status":"PLANNED","dependsOn":["REF-032","REF-033"],"risk":"R3","architectureMapping":"ARCH-209/ARCH-600","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-047","title":"Archive one verified historical source family and reconcile empty namespaces","file":"tasks/REF-047.md","status":"PLANNED","dependsOn":["REF-003","REF-015"],"risk":"R1","architectureMapping":"ARCH-700","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-048","title":"Prepare gated Classroom compatibility-source retirement","file":"tasks/REF-048.md","status":"PLANNED","dependsOn":["REF-006","REF-007","REF-008","REF-009","REF-010","REF-011","REF-015"],"risk":"R3","architectureMapping":"ARCH-700","recheckOpenPrs":[730,731,735,736],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-049","title":"Retire one superseded source-patching hotfix workflow","file":"tasks/REF-049.md","status":"PLANNED","dependsOn":["REF-045","REF-046","REF-048"],"risk":"R3","architectureMapping":"ARCH-700","recheckOpenPrs":[730,731,735],"implementationSha":null,"mergeSha":null,"evidence":null},
-    {"id":"REF-050","title":"Re-measure every module and certify only the proven scope","file":"tasks/REF-050.md","status":"PLANNED","dependsOn":["REF-001","REF-002","REF-003","REF-004","REF-005","REF-006","REF-007","REF-008","REF-009","REF-010","REF-011","REF-012","REF-013","REF-014","REF-015","REF-016","REF-017","REF-018","REF-019","REF-020","REF-021","REF-022","REF-023","REF-024","REF-025","REF-026","REF-027","REF-028","REF-029","REF-030","REF-031","REF-032","REF-033","REF-034","REF-035","REF-036","REF-037","REF-038","REF-039","REF-040","REF-041","REF-042","REF-043","REF-044","REF-045","REF-046","REF-047","REF-048","REF-049"],"risk":"R0","architectureMapping":"ARCH-000/final-acceptance","recheckOpenPrs":[],"implementationSha":null,"mergeSha":null,"evidence":null}
+    {
+      "id": "REF-001",
+      "title": "Freeze the exact-main baseline and resolve owner gates",
+      "file": "tasks/REF-001.md",
+      "status": "VERIFIED_COMPLETE",
+      "dependsOn": [],
+      "risk": "R0",
+      "architectureMapping": "ARCH-000",
+      "recheckOpenPrs": [
+        668,
+        730,
+        731,
+        735,
+        736
+      ],
+      "implementationSha": "554a67cc54b9bc57c4e8464382e9c278c5a46fb1",
+      "mergeSha": "346aa8235e57d31cafa6d84b9a6bb0dd33933dbb",
+      "evidence": "https://github.com/kohnerbouchard-star/Student-Profile/blob/346aa8235e57d31cafa6d84b9a6bb0dd33933dbb/docs/operations/evidence/refactor-execution-v1/REF-001/baseline.md"
+    },
+    {
+      "id": "REF-002",
+      "title": "Map canonical routes, import roots and browser entrypoints",
+      "file": "tasks/REF-002.md",
+      "status": "VERIFIED_COMPLETE",
+      "dependsOn": [
+        "REF-001"
+      ],
+      "risk": "R0",
+      "architectureMapping": "ARCH-400/ARCH-700",
+      "recheckOpenPrs": [],
+      "implementationSha": "a7b5bbaae9218a472b90991ce5cae7f22dcf54b9",
+      "mergeSha": null,
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-002/caller-map.md"
+    },
+    {
+      "id": "REF-003",
+      "title": "Classify dead-code candidates with reproducible evidence",
+      "file": "tasks/REF-003.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-002"
+      ],
+      "risk": "R1",
+      "architectureMapping": "ARCH-700",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-004",
+      "title": "Capture bounded behavior-parity fixtures",
+      "file": "tasks/REF-004.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-002"
+      ],
+      "risk": "R1",
+      "architectureMapping": "ARCH-300/ARCH-400",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-005",
+      "title": "Extend existing architecture ratchets for the selected seams",
+      "file": "tasks/REF-005.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-003",
+        "REF-004"
+      ],
+      "risk": "R1",
+      "architectureMapping": "ARCH-001",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-006",
+      "title": "Move the retained Messaging dispatcher to its domain owner",
+      "file": "tasks/REF-006.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-005"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-400/ARCH-402",
+      "recheckOpenPrs": [
+        668,
+        736
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-007",
+      "title": "Replace Contract progress GET forwarding with a local adapter",
+      "file": "tasks/REF-007.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-005"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-400/ARCH-700",
+      "recheckOpenPrs": [
+        668
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-008",
+      "title": "Converge the three Admin Contract review aliases",
+      "file": "tasks/REF-008.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-007"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-208/ARCH-400",
+      "recheckOpenPrs": [
+        668
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-009",
+      "title": "Replace Contract reward-issuance forwarding without splitting its transaction",
+      "file": "tasks/REF-009.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-008"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-208/ARCH-300",
+      "recheckOpenPrs": [
+        668
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-010",
+      "title": "Replace Player access-code-reset forwarding",
+      "file": "tasks/REF-010.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-005"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-100/ARCH-400",
+      "recheckOpenPrs": [
+        668,
+        736
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-011",
+      "title": "Detach canonical test suites from Classroom-owned Deno configuration",
+      "file": "tasks/REF-011.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-006"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-400/ARCH-700",
+      "recheckOpenPrs": [
+        668,
+        736
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-012",
+      "title": "Replace the legacy Attendance fetch bridge with an explicit adapter",
+      "file": "tasks/REF-012.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-005"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-500/ARCH-700",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-013",
+      "title": "Converge the legacy Player access-code UI bridge",
+      "file": "tasks/REF-013.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-010"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-500/ARCH-700",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-014",
+      "title": "Converge the legacy Settings save-error bridge",
+      "file": "tasks/REF-014.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-005"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-500/ARCH-700",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-015",
+      "title": "Remove the first proven-unused Admin shim batch",
+      "file": "tasks/REF-015.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-012",
+        "REF-013",
+        "REF-014"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-700",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-016",
+      "title": "Adopt the existing Players public boundary in one consumer family",
+      "file": "tasks/REF-016.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-006"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-100/ARCH-402",
+      "recheckOpenPrs": [
+        668,
+        736
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-017",
+      "title": "Extract Player roster persistence into its existing owner",
+      "file": "tasks/REF-017.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-016"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-100/ARCH-401",
+      "recheckOpenPrs": [
+        668
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-018",
+      "title": "Extract Staff Attendance persistence while preserving one reward transaction",
+      "file": "tasks/REF-018.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-016"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-208/ARCH-401",
+      "recheckOpenPrs": [
+        668
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-019",
+      "title": "Extract Player clock-in persistence and reuse Attendance authority",
+      "file": "tasks/REF-019.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-018"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-208/ARCH-401",
+      "recheckOpenPrs": [
+        668,
+        736
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-020",
+      "title": "Isolate Staff-login persistence without changing authentication",
+      "file": "tasks/REF-020.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-005"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-100/ARCH-401",
+      "recheckOpenPrs": [
+        668,
+        736
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-021",
+      "title": "Move ledger-history queries behind an Economy read port",
+      "file": "tasks/REF-021.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-016"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-205/ARCH-401",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-022",
+      "title": "Move Staff ledger adjustment behind the existing atomic command",
+      "file": "tasks/REF-022.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-021"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-205/ARCH-300",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-023",
+      "title": "Expose Inventory reservation contracts to Crafting without new writes",
+      "file": "tasks/REF-023.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-016"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-201/ARCH-203/ARCH-402",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-024",
+      "title": "Converge Marketplace reservation access on Inventory public ports",
+      "file": "tasks/REF-024.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-023"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-204/ARCH-300",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-025",
+      "title": "Bound Business-banking and loan reads behind explicit contracts",
+      "file": "tasks/REF-025.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-021"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-205/ARCH-207",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-026",
+      "title": "Remove Store-handler persistence without replacing purchase settlement",
+      "file": "tasks/REF-026.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-023",
+        "REF-024"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-202/ARCH-300",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-027",
+      "title": "Contain the retained Business-creation compatibility seam",
+      "file": "tasks/REF-027.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-025",
+        "REF-026"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-207/ARCH-700",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-028",
+      "title": "Separate Contract availability policy from persistence",
+      "file": "tasks/REF-028.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-016"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-208/ARCH-401",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-029",
+      "title": "Extract one Contract repository read-projection family",
+      "file": "tasks/REF-029.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-007",
+        "REF-008",
+        "REF-009",
+        "REF-028"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-401",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-030",
+      "title": "Separate Contract submission translation from Story decision behavior",
+      "file": "tasks/REF-030.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-029"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-208/ARCH-400",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-031",
+      "title": "Separate country reference reads from game-scoped projections",
+      "file": "tasks/REF-031.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-016"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-101/ARCH-402",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-032",
+      "title": "Give World runtime reads an explicit scoped application boundary",
+      "file": "tasks/REF-032.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-031"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-209/ARCH-401",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-033",
+      "title": "Extract pure Story-effect preparation from persistence",
+      "file": "tasks/REF-033.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-030",
+        "REF-032"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-209/ARCH-300",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-034",
+      "title": "Converge Story notification delivery through the existing transaction boundary",
+      "file": "tasks/REF-034.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-033"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-402/ARCH-602",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-035",
+      "title": "Extract one Messaging thread lifecycle use case",
+      "file": "tasks/REF-035.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-006",
+        "REF-016"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-401/ARCH-402",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-036",
+      "title": "Bound Progression reward requests to canonical Economy authority",
+      "file": "tasks/REF-036.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-022"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-208",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-037",
+      "title": "Split Dashboard read composition without increasing query fan-out",
+      "file": "tasks/REF-037.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-021",
+        "REF-026",
+        "REF-031"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-400/ARCH-401",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-038",
+      "title": "Extract one pure Stock-engine calculation family",
+      "file": "tasks/REF-038.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-005"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-206",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-039",
+      "title": "Separate Stock-runner triggering from tick execution",
+      "file": "tasks/REF-039.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-038"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-206/ARCH-600",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-040",
+      "title": "Expose a minimal generic Markets calculation boundary",
+      "file": "tasks/REF-040.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-038"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-206/ARCH-402",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-041",
+      "title": "Centralize one Player read-resource lifecycle",
+      "file": "tasks/REF-041.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-005"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-500/ARCH-502",
+      "recheckOpenPrs": [
+        624
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-042",
+      "title": "Converge Inventory mutation invalidation in the Player Terminal",
+      "file": "tasks/REF-042.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-023",
+        "REF-041"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-500/ARCH-502",
+      "recheckOpenPrs": [
+        624
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-043",
+      "title": "Converge Admin V2 Banking response and error adaptation",
+      "file": "tasks/REF-043.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-005"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-500/ARCH-501",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-044",
+      "title": "Split Admin V2 Contracts rendering from controller state",
+      "file": "tasks/REF-044.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-007",
+        "REF-008",
+        "REF-009",
+        "REF-043"
+      ],
+      "risk": "R2",
+      "architectureMapping": "ARCH-500/ARCH-501",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-045",
+      "title": "Isolate licensing issuance from worker transport",
+      "file": "tasks/REF-045.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-005"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-302/ARCH-600",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-046",
+      "title": "Make Campaign scheduling a thin application trigger",
+      "file": "tasks/REF-046.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-032",
+        "REF-033"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-209/ARCH-600",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-047",
+      "title": "Archive one verified historical source family and reconcile empty namespaces",
+      "file": "tasks/REF-047.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-003",
+        "REF-015"
+      ],
+      "risk": "R1",
+      "architectureMapping": "ARCH-700",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-048",
+      "title": "Prepare gated Classroom compatibility-source retirement",
+      "file": "tasks/REF-048.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-006",
+        "REF-007",
+        "REF-008",
+        "REF-009",
+        "REF-010",
+        "REF-011",
+        "REF-015"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-700",
+      "recheckOpenPrs": [
+        730,
+        731,
+        735,
+        736
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-049",
+      "title": "Retire one superseded source-patching hotfix workflow",
+      "file": "tasks/REF-049.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-045",
+        "REF-046",
+        "REF-048"
+      ],
+      "risk": "R3",
+      "architectureMapping": "ARCH-700",
+      "recheckOpenPrs": [
+        730,
+        731,
+        735
+      ],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    },
+    {
+      "id": "REF-050",
+      "title": "Re-measure every module and certify only the proven scope",
+      "file": "tasks/REF-050.md",
+      "status": "PLANNED",
+      "dependsOn": [
+        "REF-001",
+        "REF-002",
+        "REF-003",
+        "REF-004",
+        "REF-005",
+        "REF-006",
+        "REF-007",
+        "REF-008",
+        "REF-009",
+        "REF-010",
+        "REF-011",
+        "REF-012",
+        "REF-013",
+        "REF-014",
+        "REF-015",
+        "REF-016",
+        "REF-017",
+        "REF-018",
+        "REF-019",
+        "REF-020",
+        "REF-021",
+        "REF-022",
+        "REF-023",
+        "REF-024",
+        "REF-025",
+        "REF-026",
+        "REF-027",
+        "REF-028",
+        "REF-029",
+        "REF-030",
+        "REF-031",
+        "REF-032",
+        "REF-033",
+        "REF-034",
+        "REF-035",
+        "REF-036",
+        "REF-037",
+        "REF-038",
+        "REF-039",
+        "REF-040",
+        "REF-041",
+        "REF-042",
+        "REF-043",
+        "REF-044",
+        "REF-045",
+        "REF-046",
+        "REF-047",
+        "REF-048",
+        "REF-049"
+      ],
+      "risk": "R0",
+      "architectureMapping": "ARCH-000/final-acceptance",
+      "recheckOpenPrs": [],
+      "implementationSha": null,
+      "mergeSha": null,
+      "evidence": null
+    }
   ]
 }
