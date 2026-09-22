@@ -12,9 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout selected revision
+      - name: Checkout REF-002 owner branch
         uses: actions/checkout@v4
         with:
+          ref: docs/ref-002-route-entrypoint-map-v1
           fetch-depth: 0
 
       - name: Set up Node from repository
@@ -23,8 +24,9 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      - name: Record source identity
+      - name: Verify exact REF-002 source
         run: |
+          test "$(git branch --show-current)" = "docs/ref-002-route-entrypoint-map-v1"
           git rev-parse HEAD
           git rev-parse HEAD^{tree}
           git status --short
