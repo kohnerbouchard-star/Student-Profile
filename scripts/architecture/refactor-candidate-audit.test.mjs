@@ -77,6 +77,36 @@ test("immutable Git census ignores dirty and untracked files and does not follow
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("small historical files and binary archives remain visible without deletion approval", () => {
+  const binary = { ...entry("backend/legacy/book.xlsx"), source: null };
+  const report = auditSnapshot(fixture([entry("backend/legacy/note.md", "provenance"), binary]), { schemaVersion: 1, task: "REF-003", reviews: [] });
+  assert.equal(report.historicalPathCandidates, 2);
+  assert(report.candidates.every((r) => r.disposition === "unknown" && !r.safeToDelete));
+  assert.equal(report.candidates.find((r) => r.path === binary.path).physicalLines, null);
+});
+test("an unreviewed record exposes missing evidence instead of a fake caller clearance", () => {
+  const report = auditSnapshot(fixture([entry("admin/old.js", "// fallback")]), { schemaVersion: 1, task: "REF-003", reviews: [] });
+  const row = report.candidates[0];
+  assert.equal(row.symbolReview, "NOT_REVIEWED"); assert.equal(row.consumerAudit.jobs, "NOT_REVIEWED");
+  assert.equal(row.replacement, "NOT_SELECTED"); assert.equal(row.inboundRoots, "NOT_REVIEWED");
+  assert.deepEqual(row.evidenceQuery.args, ["scripts/architecture/refactor-candidate-audit.mjs", report.sourceSha]);
+});
+test("changed supporting caller invalidates a hash-bound source review", () => {
+  const p = "admin/bridge.js", caller = "admin/boot.js";
+  const rule = { ...review(p), sourceEvidence: [caller], sourceEvidenceBlobs: { [caller]: "a".repeat(40) } };
+  const snap = fixture([entry(p), entry(caller, 'import("./bridge.js")')]);
+  const rules = { schemaVersion: 1, task: "REF-003", reviews: [rule] };
+  assert.equal(auditSnapshot(snap, rules).supportingSourceBindings, 1);
+  snap.files.get(caller).oid = "f".repeat(40);
+  assert.throws(() => auditSnapshot(snap, rules), /Stale supporting source/);
+});
+test("an archive disposition requires a reviewed blob and never changes safeToDelete", () => {
+  const p = "backend/legacy/example.js";
+  const report = auditSnapshot(fixture([entry(p)]), { schemaVersion: 1, task: "REF-003", reviews: [review(p, "historical_archive")] });
+  assert.equal(report.candidates[0].disposition, "historical_archive");
+  assert.equal(report.candidates[0].safeToDelete, false);
+});
+
 // Called by the existing retirement suite; direct invocation above runs only synthetic unit fixtures.
 export function registerRepositoryCandidateAudit() {
   test("REF-003 reviewed source and full tracked census are reproducible", () => {
@@ -91,6 +121,8 @@ export function registerRepositoryCandidateAudit() {
     assert(snapshot.files.get("admin/admin-bootstrap.js").source.includes("await import(modulePath)"));
     assert(snapshot.files.get("backend/supabase/functions/stock-market-runner/index.ts").source.includes("Deno.serve"));
     assert.equal(report.dispositions.confirmed_dead, 0);
+    assert.equal(report.historicalPathCandidates, report.denominators.historical_path.files);
+    for (const row of report.candidates) assert(row.evidenceQuery && row.confidence && row.consumerAudit && row.replacement);
     const { candidates, reviewed, ...summary } = report;
     console.log("REF003_CENSUS " + JSON.stringify(summary));
     for (const row of reviewed) console.log("REF003_REVIEW " + JSON.stringify({ path: row.path, disposition: row.disposition, literalReferences: row.literalReferences }));
