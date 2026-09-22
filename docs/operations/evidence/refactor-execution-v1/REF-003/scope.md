@@ -45,3 +45,11 @@ git diff --check
 Use pinned Node/npm in CI. Local Node 22.16.0 is not the repository-pinned runtime; local fixture results are supplemental only. Direct clone failed at DNS resolution and archive access failed; no complete local checkout is claimed. Existing CI performs full-checkout validation, with exact source identity printed by the scanner. No backend, browser, live traffic or production acceptance credit is inferred from tooling tests.
 
 Unknown HTTP/job/external consumers retain `safeToDelete: false`. Existing observation policy is 14 pre-disable quiet days, 7 post-disable monitoring days and 30 recovery days before deletion, as recorded in the historical runtime inventory. No quiet window is claimed here. REF-004 and later tasks remain unstarted.
+
+## Source-review continuation
+
+Continuation source: `adbcc0561b4345c93a5c3023e418cf0a5de351c6`; main is unchanged and the existing eight-file scope is retained. Expand hash-bound reviews of retained Attendance/Player bridges, historical Apps Script material and intentional negative-state behavior. Historical classification must cite actual source and its handoff, not the folder name alone.
+
+Close classifier evidence gaps within the existing module: include every historical-path file even without lexical flags; attach explicit query, confidence, symbol, consumer-audit and replacement fields to generated records; preserve the distinction between discovery references and proven callers. Historical, generated and test status never imply deletion eligibility. Verify source-evidence hashes as well as the reviewed file so a changed caller invalidates its review.
+
+Use the existing retirement CI for full-checkout execution. No source archive, production probe or manual workflow is required from the owner. Keep historical measurement snapshots immutable and append the new measured checkpoint only after its actual checks execute. Do not claim all unknown records were semantically reviewed or mark the task VERIFIED_COMPLETE merely because CI is green.
