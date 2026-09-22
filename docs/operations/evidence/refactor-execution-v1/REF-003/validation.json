@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-003",
+  "status": "IN_PROGRESS",
+  "evidenceClass": "initial_classifier_and_reviewed_seed_register",
+  "repository": "kohnerbouchard-star/Student-Profile",
+  "pullRequest": 740,
+  "branch": "refactor/ref-003-dead-code-candidates",
+  "baseMainSha": "a64befd325a3b46fdc86b9bcd3dae60641545697",
+  "toolingHeadSha": "440ea2cb48cd37f59b492d3331f623ab7b9f2e34",
+  "executedCheckoutSha": "46c98747c03da66e5bc4fc2dc52156f1b8254428",
+  "executedCheckoutType": "synthetic_pull_request_test_merge_not_an_actual_merge",
+  "executedTreeSha": "e21f74f722f8a544ccb1a359a1f171278ea8b36d",
+  "treeMatchesToolingHead": true,
+  "actualMergeSha": null,
+  "snapshotNote": "Measurements below belong to the tooling checkpoint, before this validation file and task-checkpoint prose were added. Metadata commits require fresh PR CI; they do not retroactively change this immutable measurement.",
+  "sourceIdentities": {
+    "classifierBlobSha": "2bf8ed09e48d04d07e45d909c42d73d4965ccb6f",
+    "classifierTestBlobSha": "47354849216a61e14f4ed697a6807322a0210fbf",
+    "retirementSuiteBlobSha": "e2e9b5498e29d5079167aafc6fcf0a9b416ecafa",
+    "existingInventoryBlobSha": "9bf80e593e95cd2cad2b1cffc278a3af142375cc"
+  },
+  "census": {
+    "command": "node scripts/architecture/refactor-candidate-audit.mjs 440ea2cb48cd37f59b492d3331f623ab7b9f2e34",
+    "executedThrough": "npm run test:legacy-runtime -> registered real-source auditSnapshot test",
+    "trackedFiles": 3951,
+    "denominators": {
+      "configuration_or_data": {"files":561,"textFiles":561,"physicalLines":220549,"bytes":16812791,"unmeasuredFiles":0},
+      "asset_or_other": {"files":374,"textFiles":130,"physicalLines":11968,"bytes":67953556,"unmeasuredFiles":244},
+      "documentation": {"files":582,"textFiles":582,"physicalLines":80192,"bytes":3883068,"unmeasuredFiles":0},
+      "application_source": {"files":997,"textFiles":997,"physicalLines":242943,"bytes":9780012,"unmeasuredFiles":0},
+      "generated_output": {"files":2,"textFiles":2,"physicalLines":14046,"bytes":1723855,"unmeasuredFiles":0},
+      "historical_path": {"files":9,"textFiles":6,"physicalLines":9301,"bytes":2075523,"unmeasuredFiles":3},
+      "test": {"files":600,"textFiles":600,"physicalLines":114246,"bytes":3979103,"unmeasuredFiles":0},
+      "script": {"files":372,"textFiles":372,"physicalLines":105317,"bytes":4342338,"unmeasuredFiles":0},
+      "migration_history": {"files":450,"textFiles":450,"physicalLines":161859,"bytes":6112366,"unmeasuredFiles":0},
+      "fixture": {"files":4,"textFiles":4,"physicalLines":276,"bytes":14804,"unmeasuredFiles":0}
+    },
+    "physicalLineConvention": "UTF-8/no-NUL Git blobs; empty=0; final newline is not an extra line; symlinks/submodules/binary excluded from line totals",
+    "candidateCount": 738,
+    "dispositions": {"canonical":2,"confirmed_dead":0,"compatibility_required":3,"legacy_candidate":0,"historical_archive":0,"defensive_fallback":1,"generated_or_fixture":175,"unknown":557},
+    "reviewedSeedRecords": 8,
+    "reviewedRecordsOverlapDispositionCounts": true,
+    "candidateRecordsSha256": "f3ca18230598ac7564b095d95c37f02d69af181750e54fd26538d04d53b04e4d",
+    "safeToDeleteCount": 0,
+    "deletionShortlist": [],
+    "fullSemanticCallerAuditComplete": false,
+    "runtimeReachabilityCertified": false,
+    "existingInventoryRecomputedByClassifier": false,
+    "existingInventoryValidation": "The existing generator/ratchet remains unchanged and is independently invoked by npm test in Repository Quality; new physical-line categories do not replace its metrics."
+  },
+  "executedChecks": [
+    {
+      "command": "node --test scripts/architecture/refactor-candidate-audit.test.mjs",
+      "environment": "local synthetic fixtures only",
+      "node": "22.16.0",
+      "repositoryPinnedRuntime": false,
+      "result": "PASS",
+      "exitCode": 0,
+      "tests": 10,
+      "failures": 0,
+      "skipped": 0,
+      "credit": "supplemental fixture validation, not a full local repository checkout"
+    },
+    {
+      "command": "npm run test:legacy-runtime",
+      "environment": "GitHub Actions full immutable PR checkout",
+      "node": "22.23.1",
+      "npm": "10.9.8",
+      "workflowRunId": 35798323328,
+      "jobId": 106982684240,
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35798323328/job/106982684240",
+      "result": "PASS",
+      "exitCode": 0,
+      "tests": 17,
+      "testBreakdown": {"classifierFixtures":10,"realSourceCensus":1,"preservedRetirementTests":6},
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "command": "npm run audit:legacy-runtime",
+      "workflowRunId": 35798323328,
+      "jobId": 106982684240,
+      "result": "PASS",
+      "exitCode": 0,
+      "scope": "Repository inventory-policy validation and browser transport ratchet, not live-provider inspection"
+    },
+    {
+      "command": "npm run test:player-runtime-cutover",
+      "workflowRunId": 35798323328,
+      "jobId": 106982684240,
+      "result": "PASS",
+      "exitCode": 0,
+      "scope": "Existing static cutover smoke, not authenticated runtime testing"
+    },
+    {
+      "command": "npm test",
+      "workflowRunId": 35798323261,
+      "jobId": 106982684176,
+      "result": "PASS",
+      "exitCode": 0,
+      "scope": "Existing Repository Quality audit/source-check step, including architecture regeneration/ratchets and shared repository tests"
+    },
+    {
+      "command": "npm run security:secrets",
+      "workflowRunId": 35798323261,
+      "jobId": 106982684176,
+      "result": "PASS",
+      "exitCode": 0,
+      "scope": "Existing committed-source credential scan"
+    }
+  ],
+  "toolingCheckpointWorkflows": [
+    {"name":"Repository Quality","runId":35798323261,"result":"SUCCESS"},
+    {"name":"Legacy Runtime Retirement Audit","runId":35798323328,"result":"SUCCESS"},
+    {"name":"Supply Chain Security","runId":35798323305,"result":"SUCCESS"},
+    {"name":"Release Integrity","runId":35798323260,"result":"SUCCESS"},
+    {"name":"Production Runtime Promotion Contract","runId":35798323218,"result":"SUCCESS"},
+    {"name":"Release Promote Exact Artifacts","runId":35798323215,"result":"SUCCESS"},
+    {"name":"Staging Readiness Preflight","runId":35798323292,"result":"SUCCESS"},
+    {"name":"Business Player Store Cutover V2","runId":35798323349,"result":"IN_PROGRESS_AT_OBSERVATION"}
+  ],
+  "notRunByThisExecution": [
+    "Complete application checkout and application suites in the local authoring container",
+    "Standalone backend typecheck:all and backend smoke commands",
+    "Authenticated staging/production browser or API probes",
+    "Live SQL/RPC/trigger/job or external-traffic inspection",
+    "Production release or deployment"
+  ],
+  "remainingTaskWork": [
+    "Resolve semantic ownership, all caller classes and replacement evidence for unresolved candidates rather than treating unknown as dead.",
+    "Review the bounded classifier and initial seed register against the original task acceptance requirements.",
+    "Inspect final-head CI and diff before any later merge request; no task-completion or merge credit is granted here."
+  ],
+  "retentionPolicy": {"preDisableQuietWindowDays":14,"postDisableMonitoringDays":7,"preDeleteRecoveryWindowDays":30,"trafficWindowActuallyObserved":false},
+  "preservation": {"applicationSourceChanged":false,"applicationDeleted":false,"architectureCeilingsRaised":false,"workflowsChanged":false,"packageOrLockfilesChanged":false,"databaseChanged":false,"productionActions":false,"successorTasksStarted":false}
+}
