@@ -93,7 +93,7 @@ function referenceRows(files, review) {
   const basename = path.posix.basename(review.path);
   const ambiguous = [...files.keys()].filter((file) => path.posix.basename(file) === basename).length > 1;
   const pathTerm = ambiguous ? review.path.split("/").slice(-2).join("/") : basename;
-  const terms = [...new Set([review.path, pathTerm, ...(review.symbols || [])])];
+  const terms = [...new Set([review.path, pathTerm, ...(review.symbols || []), ...(review.referenceTerms || [])])];
   const rows = [];
   for (const entry of files.values()) {
     if (entry.path === review.path || entry.source === null) continue;
@@ -101,6 +101,7 @@ function referenceRows(files, review) {
     if (!hits.length) continue;
     const lines = entry.source.split("\n");
     rows.push({ path: entry.path, kind: fileKind(entry.path, entry.mode), terms: hits,
+      matchedReferenceTerms: hits.filter((term) => (review.referenceTerms || []).includes(term)),
       lines: lines.flatMap((line, i) => hits.some((term) => line.includes(term)) ? [i + 1] : []) });
   }
   return rows;
@@ -120,6 +121,11 @@ export function auditSnapshot(snapshot, register) {
     assert(!reviews.has(review.path) && files.has(review.path), `Duplicate/missing review: ${review.path}`);
     for (const field of ["owner", "reason", "confidence", "externalUsage", "removalConditions"]) assert(review[field], `Missing ${field}`);
     for (const evidence of review.sourceEvidence || []) assert(files.has(evidence), `Missing evidence: ${evidence}`);
+    assert(Array.isArray(review.referenceTerms || []), `Invalid reference terms: ${review.path}`);
+    for (const term of review.referenceTerms || []) {
+      assert(typeof term === "string" && term.trim().length > 0, `Invalid reference term: ${review.path}`);
+      assert(files.get(review.path).source?.includes(term), `Reference term absent from reviewed source: ${term}`);
+    }
     for (const [evidence, oid] of Object.entries(review.sourceEvidenceBlobs || {})) {
       assert((review.sourceEvidence || []).includes(evidence), `Unlisted supporting source: ${evidence}`);
       assert(/^[0-9a-f]{40}$/u.test(oid), `Invalid supporting source hash: ${evidence}`);
@@ -158,6 +164,7 @@ export function auditSnapshot(snapshot, register) {
       owner: review?.owner || "UNRESOLVED",
       reason: review?.reason || "Static match only; semantic review is outstanding.",
       symbols: review?.symbols || [], symbolReview: review ? "SOURCE_REVIEWED" : "NOT_REVIEWED",
+      referenceTerms: review?.referenceTerms || [],
       confidence: review?.confidence || "Discovery only; semantic ownership and reachability are unreviewed",
       inboundRoots: review?.inboundRoots || "NOT_REVIEWED", externalUsage: review?.externalUsage || "UNKNOWN",
       sourceEvidence: (review?.sourceEvidence || []).map((evidence) => ({ path: evidence, gitBlobSha: files.get(evidence).oid,
@@ -178,6 +185,7 @@ export function auditSnapshot(snapshot, register) {
     inventoryRecomputedHere: false, trackedFiles: files.size, denominators,
     physicalLineConvention: "UTF-8/no-NUL Git blobs; empty=0; final newline is not an extra line; symlinks/submodules/binary excluded from line totals",
     reviewedSourceCount: reviewed.length,
+    referenceTermReviewCount: reviewed.filter((r) => r.referenceTerms?.length).length,
     supportingSourceBindings: reviewed.reduce((n, r) => n + Object.keys(r.sourceEvidenceBlobs || {}).length, 0),
     historicalPathCandidates: candidates.filter((r) => r.kind === "historical_path").length,
     candidateCount: candidates.length, dispositions, candidateRecordsSha256: recordsHash, candidates, reviewed,
