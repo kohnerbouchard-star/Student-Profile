@@ -263,7 +263,7 @@
       "symbols": [],
       "reason": "Explicit strict=true configuration is used by stock/FX Edge checks and neutral tests in backend/package.json. It already exists and must not be recreated as an empty replacement framework.",
       "sourceEvidence": ["backend/package.json", "backend/supabase/functions/admin-api/deno.json"],
-      "sourceEvidenceBlobs": {"backend/package.json":"44c394a1bff4a3d9f7b8d483fbd7f1136bdd2b65", "backend/supabase/functions/admin-api/deno.json":"8d4d56be75966d239dde3147b30c8fd2e3c5eed5"},
+      "sourceEvidenceBlobs": {"backend/package.json":"2dc6736222b7572e602cb0d722fefe49747ab3b5", "backend/supabase/functions/admin-api/deno.json":"8d4d56be75966d239dde3147b30c8fd2e3c5eed5"},
       "inboundRoots": ["backend package typecheck:stock-edge, typecheck:fx-edge and neutral test/smoke commands"],
       "consumerAudit": {"HTTP":"Compiler configuration, not a request handler", "SQL_RPC":"No persistence", "jobs":"Package/CI command consumers; external invocations unknown", "dynamic_HTML_build":"Compile-time configuration; no browser lifecycle"},
       "externalUsage": "UNKNOWN outside recorded package commands",
@@ -280,7 +280,7 @@
       "symbols": [],
       "reason": "strict=true and a local deno check index.ts task coexist with many canonical Player suites borrowing this file. A config reference is not itself a Classroom HTTP dependency or proof the runtime is unused.",
       "sourceEvidence": ["backend/package.json", "backend/supabase/functions/deno.json"],
-      "sourceEvidenceBlobs": {"backend/package.json":"44c394a1bff4a3d9f7b8d483fbd7f1136bdd2b65", "backend/supabase/functions/deno.json":"aee0ec940fcdeddd5fb9aaa0fc8664b07fde5691"},
+      "sourceEvidenceBlobs": {"backend/package.json":"2dc6736222b7572e602cb0d722fefe49747ab3b5", "backend/supabase/functions/deno.json":"aee0ec940fcdeddd5fb9aaa0fc8664b07fde5691"},
       "inboundRoots": ["backend package Player scope/security/capability/domain suites and Classroom Edge typecheck", "Classroom-local check task"],
       "consumerAudit": {"HTTP":"No HTTP dispatch in configuration", "SQL_RPC":"No persistence", "jobs":"Compiler/test command references are active source consumers", "dynamic_HTML_build":"No browser import; local task path resolution is distinct from compiler-option parity"},
       "externalUsage": "UNKNOWN outside recorded package and local commands",
@@ -297,7 +297,7 @@
       "symbols": [],
       "reason": "Admin commands explicitly use strict=false, noImplicitAny=false and useUnknownInCatchVariables=false. These observed settings are not authorization to weaken the strict neutral or Classroom checks during REF-011.",
       "sourceEvidence": ["backend/package.json", "backend/supabase/functions/deno.json"],
-      "sourceEvidenceBlobs": {"backend/package.json":"44c394a1bff4a3d9f7b8d483fbd7f1136bdd2b65", "backend/supabase/functions/deno.json":"aee0ec940fcdeddd5fb9aaa0fc8664b07fde5691"},
+      "sourceEvidenceBlobs": {"backend/package.json":"2dc6736222b7572e602cb0d722fefe49747ab3b5", "backend/supabase/functions/deno.json":"aee0ec940fcdeddd5fb9aaa0fc8664b07fde5691"},
       "inboundRoots": ["backend package test:admin-api, test:admin-local-mutations, test:game-sessions and typecheck:admin-edge"],
       "consumerAudit": {"HTTP":"No runtime handler in JSON", "SQL_RPC":"No persistence", "jobs":"Existing Admin compiler/test commands", "dynamic_HTML_build":"Compile-time scope only"},
       "externalUsage": "UNKNOWN outside repository commands",
@@ -419,6 +419,16 @@
       "confidence": "High for complete bridge source and known state/save producers; emitted event reachability remains literal evidence",
       "removalConditions": ["Preserve bounded settling, superseded-generation suppression and connected-page checks", "Retain all mounted-event consumers and failed/cancelled-read recovery", "Do not replace UI readiness with a claim of data freshness", "Establish disposal and retained-client gates before deletion"],
       "safeToDelete": false
+    }
+  ],
+  "supportingSourceRevalidations": [
+    {
+      "task": "REF-004",
+      "pullRequest": 742,
+      "sourcePath": "backend/package.json",
+      "previousBlobSha": "44c394a1bff4a3d9f7b8d483fbd7f1136bdd2b65",
+      "reviewedBlobSha": "2dc6736222b7572e602cb0d722fefe49747ab3b5",
+      "review": "Only additive parity-fixture registration in the existing strict Player scope and Contract acceptance scripts, plus the existing Admin local-mutation suite after the unchanged smoke chain. All original configuration choices, permissions, lock flags, commands, dependencies and test cases are preserved. The three Deno-configuration dispositions and every deletion/retention condition remain unchanged. This is input-evidence maintenance, not REF-003 reimplementation or an invalidation-guard waiver. Historical measurement snapshots and task/backlog status are untouched."
     }
   ]
 }
