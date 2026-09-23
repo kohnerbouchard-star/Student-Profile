@@ -107,6 +107,30 @@ test("an archive disposition requires a reviewed blob and never changes safeToDe
   assert.equal(report.candidates[0].safeToDelete, false);
 });
 
+test("event-only consumers are retained as literal evidence without a filename reference", () => {
+  const p = "admin/saver.js", term = "econovaria:attendance-reward-saved";
+  const rule = { ...review(p, "compatibility_required"), referenceTerms: [term] };
+  const snap = fixture([entry(p, `document.dispatchEvent(new CustomEvent("${term}"));`), entry("admin/view.js", `document.addEventListener("${term}", refresh);`)]);
+  const report = auditSnapshot(snap, { schemaVersion: 1, task: "REF-003", reviews: [rule] });
+  assert.deepEqual(report.reviewed[0].literalReferences.map((r) => r.path), ["admin/view.js"]);
+  assert.deepEqual(report.reviewed[0].literalReferences[0].matchedReferenceTerms, [term]);
+  assert.deepEqual(report.candidates.find((r) => r.path === p).referenceTerms, [term]);
+  assert.equal(report.referenceTermReviewCount, 1); assert.equal(report.dispositions.confirmed_dead, 0);
+});
+test("event text in docs and tests is not reclassified as an application caller", () => {
+  const p = "admin/saver.js", term = "econovaria:settings-context-changed";
+  const snap = fixture([entry(p, `// ${term}`), entry("docs/event.md", term), entry("scripts/event.test.mjs", term)]);
+  const report = auditSnapshot(snap, { schemaVersion: 1, task: "REF-003", reviews: [{ ...review(p), referenceTerms: [term] }] });
+  assert.deepEqual(report.reviewed[0].literalReferences.map((r) => r.kind), ["documentation", "test"]);
+  assert.equal(report.candidates.find((r) => r.path === p).disposition, "unknown");
+});
+test("empty, malformed and absent event terms cannot manufacture consumer evidence", () => {
+  const p = "admin/saver.js", snap = fixture([entry(p, "known-event")]);
+  for (const referenceTerms of [[""], [" "], [null], ["missing-event"], "known-event"]) {
+    assert.throws(() => auditSnapshot(snap, { schemaVersion: 1, task: "REF-003", reviews: [{ ...review(p), referenceTerms }] }), /[Rr]eference term/);
+  }
+});
+
 // Called by the existing retirement suite; direct invocation above runs only synthetic unit fixtures.
 export function registerRepositoryCandidateAudit() {
   test("REF-003 reviewed source and full tracked census are reproducible", () => {
@@ -125,6 +149,6 @@ export function registerRepositoryCandidateAudit() {
     for (const row of report.candidates) assert(row.evidenceQuery && row.confidence && row.consumerAudit && row.replacement);
     const { candidates, reviewed, ...summary } = report;
     console.log("REF003_CENSUS " + JSON.stringify(summary));
-    for (const row of reviewed) console.log("REF003_REVIEW " + JSON.stringify({ path: row.path, disposition: row.disposition, literalReferences: row.literalReferences }));
+    for (const row of reviewed) console.log("REF003_REVIEW " + JSON.stringify({ path: row.path, disposition: row.path, literalReferences: row.literalReferences }));
   });
 }
