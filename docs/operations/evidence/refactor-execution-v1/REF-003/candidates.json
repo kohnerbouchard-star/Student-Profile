@@ -74,17 +74,18 @@
     },
     {
       "path": "backend/supabase/functions/classroom-api/messagingDispatch.ts",
-      "blobSha": "97a1b7b4adf7ec77d092b94e7551411d1cfd09d5",
+      "blobSha": "83719a1fc9edc1818a040d45f9d52ccc2665b137",
       "disposition": "compatibility_required",
       "owner": "Messaging / Player composition",
       "symbols": ["dispatchClassroomMessagingRequest"],
-      "reason": "Lifecycle parser precedes generic Messaging parsing; both use reviewed Player rate-limit dispatch. Canonical Player imports this source. The Classroom directory is not proof of disuse or a Classroom HTTP hop.",
-      "sourceEvidence": ["backend/supabase/functions/player-api/runtime.ts", "backend/supabase/functions/classroom-api/index.ts"],
-      "inboundRoots": ["Canonical Player runtime source import", "Retained Classroom composition root"],
+      "reason": "REF-006 retains this path as explicit one-way value/type exports of the single Messaging-owned dispatcher. Classroom still imports this module; canonical Player imports the domain owner directly. The domain implementation preserves lifecycle-first parsing and reviewed Player rate-limit dispatch without a Classroom HTTP hop or duplicated wrapper.",
+      "sourceEvidence": ["backend/supabase/functions/player-api/runtime.ts", "backend/supabase/functions/classroom-api/index.ts", "backend/src/domains/messaging/api/playerMessagingDispatch.ts"],
+      "sourceEvidenceBlobs": {"backend/supabase/functions/player-api/runtime.ts":"440f507730057034f34c70d4eb2883869636b290", "backend/supabase/functions/classroom-api/index.ts":"1b4691f278b8fea057851de520fdfe4773be46f7", "backend/src/domains/messaging/api/playerMessagingDispatch.ts":"643e6971d4b4bfd2980d58dc6a3ed4ec796c3e7e"},
+      "inboundRoots": ["Retained Classroom composition root imports this compatibility export", "Canonical Player imports the same domain implementation directly, not this path"],
       "consumerAudit": {"HTTP": "Routes are invoked through composition roots; this module itself does not serve", "SQL_RPC": "Delegates to existing Messaging handlers; no consumer-absence claim", "jobs": "External consumers not certified"},
       "externalUsage": "UNKNOWN; no hosted Classroom retirement proof",
-      "replacement": "REF-006 one Messaging-owned dispatcher, preserving both roots and existing handlers",
-      "confidence": "High for source import and dispatch order; no deletion proof",
+      "replacement": "backend/src/domains/messaging/api/playerMessagingDispatch.ts; old export retained until REF-048 and the existing external-retention gates",
+      "confidence": "High for exact source identities, one-way export and preserved dispatch body; no deletion or live runtime proof",
       "removalConditions": ["Wire both roots to one replacement", "Preserve limiter/parser/auth/idempotency behavior", "Resolve compatibility exports and external retention gates"],
       "safeToDelete": false
     },
@@ -429,6 +430,16 @@
       "previousBlobSha": "44c394a1bff4a3d9f7b8d483fbd7f1136bdd2b65",
       "reviewedBlobSha": "2dc6736222b7572e602cb0d722fefe49747ab3b5",
       "review": "Only additive parity-fixture registration in the existing strict Player scope and Contract acceptance scripts, plus the existing Admin local-mutation suite after the unchanged smoke chain. All original configuration choices, permissions, lock flags, commands, dependencies and test cases are preserved. The three Deno-configuration dispositions and every deletion/retention condition remain unchanged. This is input-evidence maintenance, not REF-003 reimplementation or an invalidation-guard waiver. Historical measurement snapshots and task/backlog status are untouched."
+    },
+    {
+      "task": "REF-006",
+      "pullRequest": 746,
+      "sourcePath": "backend/supabase/functions/classroom-api/messagingDispatch.ts",
+      "previousBlobSha": "97a1b7b4adf7ec77d092b94e7551411d1cfd09d5",
+      "reviewedBlobSha": "83719a1fc9edc1818a040d45f9d52ccc2665b137",
+      "sourceInspectionSha": "43cdab491f7a5191b37fb23126794d25bd83c419",
+      "previousRegisterBlobSha": "776fc61ece9be2af5cadae6ab958f3cc05c1754d",
+      "review": "The old implementation was mechanically moved to the Messaging domain with relative import changes only. The retained old path now explicitly re-exports its value and dependency type. Player changes only its import specifier; Classroom index is byte-identical. Rebind this one review to all three exact source blobs and preserve its compatibility_required disposition, owner, symbols, consumer limits, safeToDelete=false and every removal condition. Other 22 reviews, earlier revalidation, rules and historical measurement identities are unchanged. This is a reviewed source-evidence refresh, not an invalidation-guard exemption or deletion approval; parity and exact-head CI remain separate REF-006 gates."
     }
   ]
 }

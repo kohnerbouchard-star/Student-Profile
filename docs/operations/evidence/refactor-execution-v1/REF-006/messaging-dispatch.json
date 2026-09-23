@@ -31,9 +31,10 @@
         "backend/src/security/playerMessagingRateLimitDispatch.test.ts",
         "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
         "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
-        "docs/operations/evidence/refactor-execution-v1/REF-006/messaging-dispatch.json"
+        "docs/operations/evidence/refactor-execution-v1/REF-006/messaging-dispatch.json",
+        "docs/operations/contracts/player-cross-cutting/pr-746.json"
       ],
-      "reservedEighthPath": "The existing schema's docs/operations/contracts/player-cross-cutting/pr-NNN.json, resolved to this PR number after publication. No verifier or workflow change."
+      "reservedEighthPath": "Resolved to docs/operations/contracts/player-cross-cutting/pr-746.json after publication. No verifier or workflow change."
     },
     "REF-006b": {
       "purpose": "Actual accepted-merge evidence and final parent status only",
@@ -86,6 +87,31 @@
     ],
     "localEnvironment": "Node 22.16.0 is available. Git clone failed because the container cannot resolve github.com; Deno and a complete application checkout are unavailable. Exact changed-file blob checks and syntax checks are local evidence only; full-checkout pinned CI is required for acceptance.",
     "evidenceBoundary": "Existing handler/security tests plus added real-dispatcher seam fixtures are repository evidence, not live production behavior. No missing test is classified as passed."
+  },
+  "qualificationHistory": [
+    {
+      "headSha": "43cdab491f7a5191b37fb23126794d25bd83c419",
+      "treeSha": "e87eb9e25197d5715bf3e525e61109b0be0a7756",
+      "status": "NOT_ACCEPTED",
+      "repositoryQualityRun": 35832635026,
+      "repositoryQualityJob": 107088563531,
+      "outcome": "Failed at deterministic inventory diff: sourceFiles 1236 to 1237 and Messaging sourceFiles 15 to 16. All other generated counts and source lists were unchanged. The REF-003 source revalidation remained an explicit pending maintenance item. This initial failure is preserved, not counted as acceptance.",
+      "checkoutSha": "cb13cea1e836611c2845394844b98b1d43149398",
+      "passingObservedJobs": [
+        {"run": 35832634899, "job": 107088563387, "name": "Backend Typecheck", "evidence": "Backend typecheck and smoke steps succeeded; not a claim that all task commands or final-head tests ran."},
+        {"run": 35832634994, "job": 107088564204, "name": "Player Terminal Verify", "evidence": "Exact-head authorization, boundary/read-resilience checks, standalone verification and Chromium browser steps succeeded."}
+      ],
+      "logArtifactId": 10737243146,
+      "logArtifactSha256": "f74cf0844fddbbe0a658cb1f422432e5705de8aab55a222ee11c405eb9a35c0c"
+    }
+  ],
+  "sourceEvidenceRefresh": {
+    "previousInventoryBlob": "9bf80e593e95cd2cad2b1cffc278a3af142375cc",
+    "reviewedInventoryBlob": "71860e9466e730b1a597bf0050d9fc3842ac44c9",
+    "inventoryProof": "The complete original 147238-byte inventory was reproduced locally with its exact Git blob hash. Applying only the two source-count changes emitted by full-checkout CI yielded the reviewed blob. The unchanged generator must reproduce it again in fresh exact-head CI. No threshold, debt count, candidate list, entrypoint or capability was raised or removed.",
+    "previousCandidateRegisterBlob": "776fc61ece9be2af5cadae6ab958f3cc05c1754d",
+    "reviewedCandidateRegisterBlob": "31e97e0559dec63852d5703978f818b3399bbeb5",
+    "candidateReview": "Only the retained Messaging module's source review and appended REF-006 revalidation are updated. The one-way export retains compatibility_required and safeToDelete=false; explicit source hashes bind the Player root, unchanged Classroom root and new domain implementation. The other 22 reviews, earlier revalidation, historical identities, deletion conditions and fail-closed checker are preserved."
   },
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
