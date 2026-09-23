@@ -1,5 +1,6 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
+import { auditRefactorSeams } from "./refactor-seam-ratchet.mjs";
 
 const root = process.cwd();
 const readJson = async (file) => JSON.parse(await readFile(path.join(root, file), "utf8"));
@@ -73,6 +74,10 @@ for (const [name, maximum] of Object.entries(baseline.maximums)) {
 if (inventory.thresholds.oversizedSourceFileLines !== baseline.httpHandlerLineBudget) {
   failures.push("inventory and ratchet HTTP/source line budgets diverged");
 }
+
+const refactorSeams = auditRefactorSeams(root);
+failures.push(...refactorSeams.failures);
+console.log(JSON.stringify({ refactorSeams }, null, 2));
 
 if (failures.length) {
   console.error(`Architecture v2 ratchet failed:\n- ${failures.join("\n- ")}`);

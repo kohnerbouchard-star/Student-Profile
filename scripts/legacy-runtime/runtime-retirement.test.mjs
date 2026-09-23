@@ -1,3 +1,4 @@
+import { registerRepositorySeamAudit } from "../architecture/refactor-seam-ratchet.test.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -8,6 +9,7 @@ import { analyze } from "./analyze-traffic-export.mjs";
 import { registerRepositoryCandidateAudit } from "../architecture/refactor-candidate-audit.test.mjs";
 
 registerRepositoryCandidateAudit();
+registerRepositorySeamAudit();
 
 const root = process.cwd();
 
