@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-005",
+  "status": "IN_PROGRESS",
+  "sourceSha": "576bc693416a4eda4bb9e8809fad3258f2b0611f",
+  "qualification": "UNMEASURED_FAIL_CLOSED",
+  "scope": {
+    "editablePaths": [
+      "scripts/architecture/architecture-ratchet-v2.mjs",
+      "scripts/architecture/refactor-seam-ratchet.mjs",
+      "scripts/architecture/refactor-seam-ratchet.test.mjs",
+      "scripts/legacy-runtime/runtime-retirement.test.mjs",
+      "docs/operations/evidence/refactor-execution-v1/REF-005/seam-baseline.json",
+      "docs/roadmaps/refactor-execution-v1/tasks/REF-005.md",
+      "docs/roadmaps/refactor-execution-v1/backlog.json"
+    ],
+    "maximumMeaningfulFiles": 8,
+    "concept": "Add exact-site and hash-bound removal evidence guards to the existing architecture ratchet; register focused fixtures in the existing legacy-runtime suite.",
+    "protected": "All application source, generated bundles, inventory generator/output, inherited numeric ceilings and guards, workflows, dependencies/lockfiles, REF-003 classifications and REF-004 fixtures/evidence, global ledger owned by PR668, other 49 task records, all task dependencies and all runtime/cloud/database configuration.",
+    "authorization": "Owner requested Task 5 only; normal reviewed repository merge after required checks, no deployment or live mutation. REF-006 remains unstarted."
+  },
+  "scanContract": {
+    "roots": [
+      "backend/src",
+      "backend/supabase/functions",
+      "api",
+      "index.html",
+      "frontend/src",
+      "admin",
+      "player-terminal/src",
+      "auth"
+    ],
+    "sites": "Lexical named proxyClassroom/fetchClassroom/CLASSROOM_API_URL references and balanced calls, literal Classroom imports and transport strings, explicit window/globalThis/self fetch or XMLHttpRequest writes including bounded reflective writes. Identity is path plus kind plus token signature; counts may decrease, never silently relocate or grow.",
+    "exclusions": "Generated path segments node_modules/dist/build/coverage/.git; tests/test/__tests__/fixtures/fixture/__fixtures__ directories, .test/.spec. and Test/Tests filename suffixes, backend/src/smoke. Scripts, documentation, historical archives, migrations and JSON compiler registrations are outside runtime census, but selected REF-003 paths stay protected by deletion evidence. Classroom internal relative imports are not inbound coupling. No domain-wide runtime exception.",
+    "limits": "Not an AST, call graph, JS/TS module resolver or hosted traffic audit. Arbitrarily aliased globals, computed import targets and template interpolation require separate review. Literal signatures can conservatively require review on textual contract changes. Source hashes establish reviewed provenance, not a promise source stays byte-identical.",
+    "removal": "All 23 current REF-003 reviewed paths must be registered. An absent selected path needs matching owner/source/original disposition, an existing hash-bound canonical replacement, caller audit with static/dynamic/HTML-build/SQL-RPC-trigger/job/external evidence, owner retirement decision and parity test/result references. Residual literal and event/string callers block removal unless explicitly reconciled. Structural evidence consistency does not authenticate a human approver, establish live quiet windows or prove test execution. Existing 14/7/30-day retirement policy and REF-003 checks remain mandatory. No path removal approved here."
+  },
+  "sites": [],
+  "removalTargets": [],
+  "removalRecords": [],
+  "validation": {
+    "localUnitTests": {
+      "result": "PASS",
+      "count": 29,
+      "node": "22.16.0",
+      "scope": "Temporary synthetic source/evidence fixtures plus the actual inherited guard entrypoint; not a complete local repository checkout."
+    },
+    "repositoryCensus": "PENDING first pinned full-checkout qualification run; empty allowlists deliberately fail closed, never acceptance.",
+    "requiredCommands": [
+      "npm run audit:architecture",
+      "npm run audit:high-priority-boundaries",
+      "npm run audit:legacy-runtime",
+      "npm run test:legacy-runtime",
+      "npm run security:secrets",
+      "npm test",
+      "git diff --check"
+    ],
+    "headAccepted": false
+  },
+  "successorTasksStarted": false,
+  "applicationBehaviorChanged": false,
+  "productionOrDatabaseActions": false
+}

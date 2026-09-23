@@ -79,7 +79,7 @@
       "id": "REF-005",
       "title": "Extend existing architecture ratchets for the selected seams",
       "file": "tasks/REF-005.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-003",
         "REF-004"
