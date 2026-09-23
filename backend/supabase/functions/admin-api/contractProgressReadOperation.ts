@@ -117,7 +117,7 @@ async function readProgress(
       request: readRequest,
       action: normalizedStaffAction("GET", new URL(readRequest.url).pathname),
       profile: "read",
-      // The existing Staff resolver uses this fallback for /staff/game-sessions.
+      // Preserve the existing Staff identity dimension for /staff/game-sessions.
       gameId: context.actor.staffUserId,
       staffUserId: context.actor.staffUserId,
     }, service);

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref007-contract-progress-pr-748.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 748,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/supabase/functions/admin-api/gameRoutes.ts",
+    "backend/supabase/functions/admin-api/common.ts",
+    "backend/supabase/functions/admin-api/contractProgressReadOperation.ts",
+    "backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts",
+    "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
+    "backend/src/domains/contracts/services/contractRewardService.ts",
+    "backend/tests/admin/ref004RequestParity.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
+    "docs/operations/contracts/player-cross-cutting/pr-748.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/supabase/functions/admin-api/gameRoutes.ts",
+    "backend/supabase/functions/admin-api/common.ts",
+    "backend/supabase/functions/admin-api/contractProgressReadOperation.ts",
+    "backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts",
+    "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
+    "backend/src/domains/contracts/services/contractRewardService.ts",
+    "backend/tests/admin/ref004RequestParity.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
+    "docs/operations/contracts/player-cross-cutting/pr-748.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Admin API Check",
+    "Repository Quality",
+    "Beta Security Contract"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "protectedReferencePaths": [
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "baseMainSha": "a3ec93f60817746e34e124b59210f3e8ab5ebf32",
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
+  "authorizationNote": "Owner-authorized bounded REF-007 continuation on existing PR748. Replace only the Admin Contract progress GET network hop with the existing Contracts-owned reader under unchanged Admin guards and retained downstream Staff rate limiting, fresh ownership lookup, DTO/error mapping and read counts. Bind the ten exact source/test/evidence paths, including necessary explicit boolean discriminant corrections and the existing REF004 progress fixture reconciliation. The complete REF003 candidate register has no affected source binding and remains unchanged; its unused reserved slot is replaced by this manifest. The two verifier files are mandatory protected references, not editable paths. No verifier, workflow, compiler, package, security-ceiling, auth/client factory, SQL/RPC, migration, UI, live configuration or deployment change. All applicable exact-head CI and four critical Store/FX jobs remain required. This manifest grants no acceptance, merge or production certification by itself. Stop after REF-007; REF-008 remains unstarted."
+}

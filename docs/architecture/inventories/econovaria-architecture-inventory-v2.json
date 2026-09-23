@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1237,
+    "sourceFiles": 1239,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 55,
@@ -3321,7 +3321,7 @@
       },
       {
         "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
-        "lines": 724
+        "lines": 719
       },
       {
         "file": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts",
@@ -3905,6 +3905,8 @@
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
           "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
+          "backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts",
+          "backend/supabase/functions/admin-api/contractProgressReadOperation.ts",
           "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
@@ -4094,6 +4096,7 @@
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts",
           "backend/supabase/functions/admin-api/gameJoinCodeOperations.test.ts",
           "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts"
         ]

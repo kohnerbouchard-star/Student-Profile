@@ -27,12 +27,12 @@
         "backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts",
         "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
         "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
-        "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
+        "docs/operations/contracts/player-cross-cutting/pr-748.json",
         "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
         "backend/src/domains/contracts/services/contractRewardService.ts",
         "backend/tests/admin/ref004RequestParity.test.ts"
       ],
-      "unallocatedPaths": "None. The ninth path permits only the boolean discriminant correction; the tenth permits only the existing progress-read fixture reconciliation described below. No workflow, package or guard relaxation."
+      "unallocatedPaths": "None. The ninth path permits only the boolean discriminant correction; the tenth permits only the existing progress-read fixture reconciliation described below. The unused REF003 maintenance slot is replaced by the PR748 authority manifest under continuationScopeReconciliation. No workflow, package or guard relaxation."
     },
     "REF-007b": {
       "status": "PLANNED",
@@ -104,8 +104,41 @@
       "artifactId": 10743607594,
       "artifactSha256": "76a624448b9be11775c2c588637014fa6dd37d24ad20faae33930782f47f3845",
       "result": "Admin typecheck exit 0. Full Admin tests: 262 passed, one failed; all 20 REF007 parity cases passed. The sole Admin failure is the retained REF004 synthetic forwarding expectation at line 118 (actual missing-contract 404 versus fake upstream 202). No failed overall suite is credited as acceptance."
+    },
+    {
+      "headSha": "a68117bd2d84282b7c19124f2087cfa9d0d556ac",
+      "treeSha": "0323eec1963b77a43f27323ded13af7dd34199a2",
+      "status": "NOT_ACCEPTED",
+      "failedRuns": {"repositoryQuality": 35847188703, "storeCutoverInventory": 35847188682, "bankingFxAuthority": 35847188642},
+      "result": "Admin API 263/263 including 20 REF007 cases, Contract acceptance 45/45, lifecycle 1/1, smoke and TypeScript/all 28 Edge roots passed. Overall qualification remained blocked by the stale generated architecture inventory and missing PR748-specific authority manifest. Store and Banking database/browser successes do not turn those failed overall workflows into passes. Earlier results are historical and do not certify the later continuation head.",
+      "artifacts": [
+        {"id": 10744107275, "run": 35847188693, "name": "admin-api-diagnostics", "sha256": "ff34dbd861252201cc261bba583b78ba246d250e3b36b1859ec737a76ef10a12"},
+        {"id": 10743453220, "run": 35847188622, "name": "backend-smoke-diagnostics", "sha256": "85cdc64ca8796af909277aaa6dc8c4bc5391dbd8b2601bdb5fbf65173fd7b277"},
+        {"id": 10743604141, "run": 35847188622, "name": "backend-typecheck-diagnostics", "sha256": "0694e3e78dabfa40766bc92378f1db52c5cef1a8569216ee4752c25bb1ee7f71"}
+      ]
     }
   ],
+  "continuationScopeReconciliation": {
+    "ownerInstruction": "Finish task 7; retain the existing owner branch, normal guarded merge and separate closeout. Stop before REF-008.",
+    "record": "https://github.com/kohnerbouchard-star/Student-Profile/pull/748#issuecomment-5802577573",
+    "reviewedSourceSha": "a68117bd2d84282b7c19124f2087cfa9d0d556ac",
+    "candidateRegisterBlob": "31e97e0559dec63852d5703978f818b3399bbeb5",
+    "candidateRegisterReview": "The complete register contains 23 reviews and two supporting-source revalidations. None of its reviewed paths, sourceEvidence paths or sourceEvidenceBlobs bind to a REF007 changed source/test file. No candidate-register update is required. Leave its bytes, all dispositions, deletion prohibitions, supporting identities and the validator unchanged. Replace only its unused reserved editable slot with the exact PR748 manifest path; the ceiling remains ten.",
+    "authorityManifest": "docs/operations/contracts/player-cross-cutting/pr-748.json",
+    "protectedReferencePaths": ["scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+    "authorityBoundary": "Those two references are required by the unchanged manifest schema but are not editable paths. Preserve all mandatory Player verification contracts and four critical Store/FX jobs. No verifier, workflow, compiler, package, guard or ceiling change.",
+    "inventory": {
+      "run": 35847188682,
+      "artifactId": 10743144330,
+      "artifactSha256": "5215ae3b8a274978ec23e26aecd289dddadd58f66170d07c122f9f2fe32b25a8",
+      "previousCommittedBlob": "71860e9466e730b1a597bf0050d9fc3842ac44c9",
+      "completeGeneratedBlob": "ccf4e69e7b10884f500e3bc95b5fb1afba604eb6",
+      "expectedCompleteBlobAfterCommentClarification": "e45ad23e90f1cb4644570cf1a342cab7e9794008",
+      "expectedBytes": 147497,
+      "commentChange": "Clarify only the new adapter comment: Preserve the existing Staff identity dimension for /staff/game-sessions. The executable rate-limit action, identity dimension, request and service client remain byte-identical.",
+      "review": "Full exact-a681 generated artifact checksum verified. Relative to the committed baseline, sourceFiles increases 1237 to 1239, gameRoutes lines falls 724 to 719, and existing contracts.manage/game.read strings gain the new adapter/test locations. The comment-only lexical candidate is not functional debt removal. All 209 existing compatibility records, other debt lists, counts, ordering, thresholds and ceilings remain unchanged. The complete corrected inventory blob was reproduced and published without truncation. The unchanged generator must match it in fresh exact-head CI before acceptance. Unreferenced unsuccessful prior blob attempts are not used."
+    }
+  },
   "expectedMeasurements": {
     "selectedRouteClassroomHttpHops": {"before": 1, "after": 0},
     "progressReadImplementations": {"before": 1, "after": 1},
