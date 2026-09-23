@@ -12,7 +12,7 @@
   "scope": {
     "concept": "Synthetic characterization of the existing residual Admin adapters and Staff leaves; no application refactor",
     "fileCeiling": 10,
-    "currentMeaningfulFiles": 9,
+    "currentMeaningfulFiles": 10,
     "editablePaths": [
       "backend/package.json",
       "backend/supabase/functions/admin-api/common.test.ts",
@@ -22,7 +22,8 @@
       "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
       "docs/operations/evidence/refactor-execution-v1/REF-004/parity-matrix.json",
       "docs/roadmaps/refactor-execution-v1/tasks/REF-004.md",
-      "docs/roadmaps/refactor-execution-v1/backlog.json"
+      "docs/roadmaps/refactor-execution-v1/backlog.json",
+      "docs/operations/contracts/player-cross-cutting/pr-742.json"
     ],
     "consolidation": "This scope object is the evidence-root scope record. The branch-only scope.md and old source-tree copy of the request fixture are consolidated/relocated, not baseline application deletions. The two original domain test files are restored to their exact baseline blobs after direct package registration.",
     "registration": [
@@ -32,7 +33,8 @@
     ],
     "permittedPackageEdit": "Only scripts.smoke, scripts.test:player-request-scope and scripts.test:player-contract-acceptance. Append the two new fixture paths to their owning strict suites; append && npm run test:admin-local-mutations after the unchanged npm run test:smoke delegation. No existing command, permission, dependency, lockfile, workflow or assertion is weakened.",
     "packageOwnershipReview": "Open #668 modifies the inner test:smoke chain and adds Staff-bootstrap registration, not these three script keys. REF-004 preserves the complete inner chain and all other scripts; no context implementation or donor commit is imported.",
-    "supportingEvidenceMaintenance": "The package change correctly invalidated three REF-003 Deno-configuration supporting-source bindings. Re-review only those bindings against actual package blob 2dc6736222b7572e602cb0d722fefe49747ab3b5; preserve the 23 dispositions, every source/retention condition, historical snapshots, classifier code, invalidation tests and earlier task/backlog status. This necessary shared-input evidence maintenance is not a new REF-003 implementation. Restoring two source-tree test registrations keeps the whole PR at nine files.",
+    "supportingEvidenceMaintenance": "The package change correctly invalidated three REF-003 Deno-configuration supporting-source bindings. Re-review only those bindings against actual package blob 2dc6736222b7572e602cb0d722fefe49747ab3b5; preserve the 23 dispositions, every source/retention condition, historical snapshots, classifier code, invalidation tests and earlier task/backlog status. This necessary shared-input evidence maintenance is not a new REF-003 implementation. Restoring two source-tree test registrations leaves room for the required verification manifest within ten files.",
+    "verificationAuthority": "docs/operations/contracts/player-cross-cutting/pr-742.json binds this existing PR and main base to the ten actual changed files. The verifier and its regression test are mandatory protected schema references, not editable REF-004 paths. Production deployment, production mutation and secret handling remain false. No workflow, verifier, gate or other PR's authority is changed.",
     "protected": "Application source, original assertions, generated bundles, architecture generator/inventory/ceilings, database/migrations/RPCs, auth/context #668 and Player-auth #736, workflows, dependencies/lockfiles, other 49 task records and all dependency links.",
     "sideEffects": "Capture the real Admin Deno.serve handler without a listener. Substitute environment/fetch only inside test workers and restore in finally. Reject unknown destinations and unlisted persistence. All identities, credential material and receipts are synthetic. No provider calls or archived application execution."
   },
@@ -83,13 +85,19 @@
     "historicalAttempts": [
       {"sourceSha":"31ab2df9958c44ad9e8d2e052df940666dcfa2e5","workflowRunId":35808299477,"jobId":107013900601,"result":"FAIL","reason":"Source-tree fixture altered architecture inventory. Relocate synthetic code, not ceilings or production source."},
       {"sourceSha":"f1363fc93329f273eb0a153c890642c38391cbd0","workflowRunId":35812173054,"jobId":107025919291,"result":"FAIL","reason":"Strict Staff leaves imported through relaxed Admin config. Correct owning suites without --no-check or compiler changes."},
-      {"sourceSha":"3ef709d9577c7f1d17cb12aec6189635e7bed378","workflowRunId":35813816592,"jobId":107030942084,"result":"FAIL","reason":"Architecture and earlier audits passed; REF-003 rejected stale supporting backend/package.json hash after test registration. Re-review the three configuration bindings; preserve the invalidation guard and historical results."}
+      {"sourceSha":"3ef709d9577c7f1d17cb12aec6189635e7bed378","workflowRunId":35813816592,"jobId":107030942084,"result":"FAIL","reason":"Architecture and earlier audits passed; REF-003 rejected stale supporting backend/package.json hash after test registration. Re-review the three configuration bindings; preserve the invalidation guard and historical results."},
+      {"sourceSha":"6aaaa6313ea4b984ef0294fd1842f4e3f584d66a","workflowRunId":35815341231,"jobId":107035575166,"result":"FAIL_THEN_ONE_UNCHANGED_JOB_RETRY_PASSED","reason":"Existing webAdminSession.test.ts tamper test expected rejection. Its replacement of the final randomized token character with A can leave a token unchanged; this is a source-supported nondeterminism risk, not a captured-token diagnosis. No assertion or implementation was edited. The initial failure is retained."},
+      {"sourceSha":"6aaaa6313ea4b984ef0294fd1842f4e3f584d66a","workflowRunId":35815341363,"jobId":107035575738,"result":"FAIL","reason":"The actual cross-cutting verifier rejected historical default authority not bound to PR742. Add a ten-path PR742 manifest under the existing schema, not a verifier/workflow bypass. The full-range git diff --check following this failed step was not executed in this attempt."}
     ],
     "checkpointChecks": [
       {"sourceSha":"3e0fa2fba7d744aa4167f7b710c521feca57c73f","workflowRunId":35812620765,"jobId":107027290489,"command":"test:admin-api equivalent pinned deno test command","result":"PASS","evidence":"Admin API check/test enforcement succeeded."},
       {"sourceSha":"3e0fa2fba7d744aa4167f7b710c521feca57c73f","workflowRunId":35812620940,"jobId":107027291401,"command":"npm --prefix backend run smoke","result":"PASS","evidence":"Existing smoke enforcement passed before local-mutation registration."},
-      {"sourceSha":"3ef709d9577c7f1d17cb12aec6189635e7bed378","workflowRunId":35813816310,"jobId":107030941515,"command":"npm --prefix backend run smoke","result":"PASS","evidence":"Backend typecheck and smoke enforcement passed; root quality separately failed stale supporting-source evidence."}
+      {"sourceSha":"3ef709d9577c7f1d17cb12aec6189635e7bed378","workflowRunId":35813816310,"jobId":107030941515,"command":"npm --prefix backend run smoke","result":"PASS","evidence":"Backend typecheck and smoke enforcement passed; root quality separately failed stale supporting-source evidence."},
+      {"sourceSha":"6aaaa6313ea4b984ef0294fd1842f4e3f584d66a","workflowRunId":35815341591,"jobId":107035576402,"command":"npm --prefix backend run smoke","result":"PASS","evidence":"Actual full smoke logs include directly registered Contract/Player fixtures, Admin request fixtures and appended existing local-mutation suite; backend typecheck enforcement also succeeded."},
+      {"sourceSha":"6aaaa6313ea4b984ef0294fd1842f4e3f584d66a","workflowRunId":35815341249,"command":"npm test and committed-source security scan in Repository Quality","result":"PASS","evidence":"Original architecture regeneration/zero-diff and ratchets passed with the revalidated supporting bindings. No guard was disabled."},
+      {"sourceSha":"6aaaa6313ea4b984ef0294fd1842f4e3f584d66a","workflowRunId":35815341333,"command":"Admin API Check","result":"PASS","evidence":"Existing pinned Admin API suite passed."}
     ],
+    "localMetadataValidation": {"sourceSha":"6aaaa6313ea4b984ef0294fd1842f4e3f584d66a","originalMatrixBlobSha":"04492c749587d14d9e5f61d268e9ac1f7d1f929b","result":"PASS","scope":"Local copied matrix Git blob reproduced exactly; JSON, six distinct route aliases, eight unique method/path pairs and three fixture registrations validated. PR-specific manifest identity/required checks/path uniqueness/production denials checked separately. Not a complete local repository checkout."},
     "requiredFinalCommands": ["npm --prefix backend run test:admin-api","npm --prefix backend run test:admin-local-mutations","npm --prefix backend run test:player-contract-acceptance","npm --prefix backend run test:player-request-scope","npm run test:auth-boundaries","npm run test:web-session-release","npm run audit:architecture","npm run audit:high-priority-boundaries","npm run audit:legacy-runtime","npm run security:secrets","npm test","npm --prefix backend run typecheck:all","npm --prefix backend run smoke","git diff --check"],
     "localLimitation": "Source download/clone unavailable; no complete local checkout or local Deno execution claimed. Local leaf syntax checks on Node 22.16.0 are supplemental. Pinned full-checkout GitHub CI is execution evidence.",
     "finalHeadVerified": false,
