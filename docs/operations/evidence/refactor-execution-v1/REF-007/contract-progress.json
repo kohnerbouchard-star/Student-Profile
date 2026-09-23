@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-007",
+  "status": "IN_PROGRESS",
+  "baseMainSha": "a3ec93f60817746e34e124b59210f3e8ab5ebf32",
+  "ownerBranch": "refactor/ref-007-local-contract-progress",
+  "architectureMapping": ["ARCH-400", "ARCH-700"],
+  "authorization": "Owner requested Start task 7, under the existing bounded execution and normal-merge policy. Stop before REF-008. No deployment or unrelated PR merge.",
+  "dependencies": {"REF-005": "VERIFIED_COMPLETE", "precedingTask": "REF-006 VERIFIED_COMPLETE through #746 and #747"},
+  "ownership": {
+    "contextPr": 668,
+    "contextHead": "faaf908bdd5131b451c7e87e91ed4991ad8f839d",
+    "coordinationComment": "https://github.com/kohnerbouchard-star/Student-Profile/pull/668#issuecomment-5792450813",
+    "boundary": "PR668 edits the Dashboard dependency interface, optional argument and Dashboard body in gameRoutes.ts. Preserve all those symbols and the current function signature. REF007 owns only the Contract progress GET import/block and an export-only exposure of the current trusted-IP projection in common.ts. No context/bootstrap/auth factory or global-ledger ownership is transferred.",
+    "otherOpenPrs": [624, 690, 730, 731, 735, 736],
+    "existingOwnerSearch": "No open REF-007 PR or refactor/ref-007 branch before creation. All seven open PRs reviewed; no other Contract-progress implementation owner found."
+  },
+  "boundedSubsteps": {
+    "REF-007a": {
+      "status": "IN_PROGRESS",
+      "purpose": "Preserve the current progress read while removing only its Admin-to-Classroom network hop",
+      "maximumMeaningfulFiles": 10,
+      "editablePaths": [
+        "backend/supabase/functions/admin-api/gameRoutes.ts",
+        "backend/supabase/functions/admin-api/common.ts",
+        "backend/supabase/functions/admin-api/contractProgressReadOperation.ts",
+        "backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts",
+        "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
+        "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+        "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
+        "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json"
+      ],
+      "unallocatedPaths": "Two slots are not blanket authority. Resolve any additional consumer fixture/evidence maintenance explicitly before editing; no workflow, package or guard relaxation."
+    },
+    "REF-007b": {
+      "status": "PLANNED",
+      "dependsOn": ["REF-007a"],
+      "purpose": "Accepted implementation/merge evidence and parent status closeout only",
+      "maximumMeaningfulFiles": 3,
+      "editablePaths": [
+        "docs/roadmaps/refactor-execution-v1/tasks/REF-007.md",
+        "docs/roadmaps/refactor-execution-v1/backlog.json",
+        "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json"
+      ],
+      "boundary": "Only REF007 backlog fields may change; preserve all other 49 objects and every dependency. Parent completion requires checked normal merges."
+    }
+  },
+  "baselineBlobs": {
+    "backend/supabase/functions/admin-api/gameRoutes.ts": "e923f0e900681b817381b5341189de11805b0b33",
+    "backend/supabase/functions/admin-api/common.ts": "91a3b1381403dc5604e8bbef784be8367593e3f6",
+    "backend/src/domains/contracts/api/staffContractHttpHandler.ts": "069dd79023aee3c77528d026175b4e1804038a7f",
+    "backend/supabase/functions/admin-api/index.ts": "be2954b915c5b7d37cc2cd6dd08a59b1c41dcbd8",
+    "backend/supabase/functions/classroom-api/index.ts": "1b4691f278b8fea057851de520fdfe4773be46f7",
+    "backend/src/platform/supabase/edgeStaffSession.ts": "71764e6c8f4a09ae2a1dd5828d4b1a651a2045c4",
+    "backend/src/security/staffRequestRateLimit.ts": "bd86505eafeba4802502802d367e7a9f1d93989e",
+    "backend/tests/domains/contracts/ref004Parity.test.ts": "f51b287ea8b2f45a2a53a29f927213379671111d"
+  },
+  "sourceContract": {
+    "route": "GET /games/:game/contracts/:contract/progress only",
+    "domainOwner": "The existing listStaffContractProgress operation already exists in staffContractHttpHandler.ts. Expose that operation and its existing error mapper explicitly instead of copying its read/query/DTO code. Do not change either body or the mutation handlers.",
+    "authority": "Use the immutable post-guard Admin application context, contracts.manage permission and server-derived Staff/game identities. Keep the existing Admin authentication, role/claim/grant checks and Admin limiter untouched. Preserve the additional downstream Staff read limiter and fresh owned-game lookup before repository reads.",
+    "throttle": "Preserve the original forwarded-path action classification, read profile, Staff identity fallback for /staff/game-sessions paths and validated trusted-IP projection. Do not silently change throttle keys, remove the second limiter, or weaken 429/503 denials.",
+    "queries": "Reuse SupabaseContractRepository and existing scoped getGameSessionContractById then listContractProgressForStaff, in that order. No SQL, predicate, sorting, pagination, response DTO or write change.",
+    "filters": "The current Admin proxy constructs a path without query parameters. Preserve this omission here. Direct Staff filters remain unchanged; enabling Admin filters is separate behavior work.",
+    "response": "Preserve downstream status/body and the outer proxy CORS, content-type and no-store mapping, including existing error envelopes. No new UUID or credential fields.",
+    "remainingConsumers": "Direct Staff/Classroom progress reads and every review/reward/access-reset proxy remain. One removed call is not Classroom retirement."
+  },
+  "expectedMeasurements": {
+    "selectedRouteClassroomHttpHops": {"before": 1, "after": 0},
+    "progressReadImplementations": {"before": 1, "after": 1},
+    "domainRepositoryReadsOnSuccess": {"before": 2, "after": 2},
+    "freshOwnedGameReads": {"before": 1, "after": 1},
+    "downstreamStaffLimiterCalls": {"before": 1, "after": 1},
+    "economicWrites": {"before": 0, "after": 0},
+    "denominator": "Selected Contract-progress adapter only; not whole-application performance or debt-removal measurement."
+  },
+  "validation": {
+    "status": "NOT_ACCEPTED",
+    "requiredCommands": [
+      "npm --prefix backend run test:admin-api",
+      "npm --prefix backend run test:player-contract-acceptance",
+      "npm --prefix backend run test:player-contract-lifecycle",
+      "Relevant existing Admin Contracts tests",
+      "npm --prefix backend run typecheck:all",
+      "npm --prefix backend run smoke",
+      "npm run audit:architecture",
+      "npm run audit:high-priority-boundaries",
+      "npm run audit:legacy-runtime",
+      "npm run security:secrets",
+      "npm test",
+      "git diff --check"
+    ],
+    "caseMatrix": ["valid owner", "missing contract", "wrong game", "unauthorized Staff", "malformed identifier", "empty progress", "repository failure", "rate-limit deny", "rate-limit unavailable", "ignored Admin query", "unchanged direct Staff filters", "no outbound Classroom request", "no extra repository query or economic write"],
+    "localBoundary": "Container Git clone cannot resolve github.com; Deno and a complete checkout are unavailable. Admin source bytes recovered from an existing CI artifact were checked against current-main Git blob hashes. Historical CI is source material only, not current-candidate test credit. Pinned exact-candidate CI and inspected logs are required before acceptance."
+  },
+  "protected": ["auth/client factories", "context factories and Dashboard", "review/reward/access-reset routes", "repository implementations", "SQL/RPC and migrations", "UI and generated bundles", "workflows and package locks", "verifiers and security ceilings", "global beta/release ledgers", "secrets and live environments"],
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "nextTask": "REF-008",
+  "nextTaskStarted": false
+}
