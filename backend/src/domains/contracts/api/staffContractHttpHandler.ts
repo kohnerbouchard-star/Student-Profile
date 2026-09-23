@@ -302,7 +302,7 @@ function readListFilters(url: URL): {
   };
 }
 
-async function listStaffContractProgress(
+export async function listStaffContractProgress(
   request: Request,
   gameSessionId: string,
   contractId: string,
@@ -818,7 +818,7 @@ function isJsonValue(value: unknown): value is JsonValue {
   return false;
 }
 
-function contractErrorToResponse(error: unknown): Response {
+export function contractErrorToResponse(error: unknown): Response {
   if (error instanceof AdminMutationError) {
     return jsonError(error.status, {
       code: error.code,

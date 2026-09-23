@@ -29,6 +29,7 @@ import {
   loadPlayerHistoryAudit,
 } from "./attendancePlayerOperations.ts";
 import { handleGameJoinCodeReadOperation } from "./gameJoinCodeOperations.ts";
+import { handleContractProgressReadOperation } from "./contractProgressReadOperation.ts";
 import type { AdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 import { createSupabaseGameSettingsReadRepository } from "../../../src/domains/game-sessions/infrastructure/supabaseGameSettingsReadRepository.ts";
 
@@ -311,17 +312,11 @@ export async function handleGameRead(
     /^\/contracts\/([^/]+)\/progress$/,
   );
   if (contractProgressMatch) {
-    return proxyClassroom(
-      request,
-      context,
-      classroomContractPath(
-        gameId,
-        `/${
-          encodeURIComponent(decodeURIComponent(contractProgressMatch[1]))
-        }/progress`,
-      ),
-      "GET",
-    );
+    return handleContractProgressReadOperation(request, context.service, {
+      applicationContext,
+      gameSessionId: gameId,
+      contractId: decodeURIComponent(contractProgressMatch[1]),
+    });
   }
 
   if (suffix === "/contract-submissions") {
