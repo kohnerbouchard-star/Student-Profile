@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "task": "REF-004",
-  "status": "IN_PROGRESS",
+  "status": "VERIFIED_COMPLETE",
   "repository": "kohnerbouchard-star/Student-Profile",
   "pullRequest": 742,
   "ownerBranch": "refactor/ref-004-behavior-parity-fixtures",
@@ -81,7 +81,7 @@
     "downstreamUse": "Later refactors preserve these observations or separately authorize corrections. No deletion, external-consumer clearance, runtime certification or later REF implementation is granted."
   },
   "validation": {
-    "executionStatus": "VALIDATING",
+    "executionStatus": "COMPLETE",
     "historicalAttempts": [
       {"sourceSha":"31ab2df9958c44ad9e8d2e052df940666dcfa2e5","workflowRunId":35808299477,"jobId":107013900601,"result":"FAIL","reason":"Source-tree fixture altered architecture inventory. Relocate synthetic code, not ceilings or production source."},
       {"sourceSha":"f1363fc93329f273eb0a153c890642c38391cbd0","workflowRunId":35812173054,"jobId":107025919291,"result":"FAIL","reason":"Strict Staff leaves imported through relaxed Admin config. Correct owning suites without --no-check or compiler changes."},
@@ -100,10 +100,217 @@
     "localMetadataValidation": {"sourceSha":"6aaaa6313ea4b984ef0294fd1842f4e3f584d66a","originalMatrixBlobSha":"04492c749587d14d9e5f61d268e9ac1f7d1f929b","result":"PASS","scope":"Local copied matrix Git blob reproduced exactly; JSON, six distinct route aliases, eight unique method/path pairs and three fixture registrations validated. PR-specific manifest identity/required checks/path uniqueness/production denials checked separately. Not a complete local repository checkout."},
     "requiredFinalCommands": ["npm --prefix backend run test:admin-api","npm --prefix backend run test:admin-local-mutations","npm --prefix backend run test:player-contract-acceptance","npm --prefix backend run test:player-request-scope","npm run test:auth-boundaries","npm run test:web-session-release","npm run audit:architecture","npm run audit:high-priority-boundaries","npm run audit:legacy-runtime","npm run security:secrets","npm test","npm --prefix backend run typecheck:all","npm --prefix backend run smoke","git diff --check"],
     "localLimitation": "Source download/clone unavailable; no complete local checkout or local Deno execution claimed. Local leaf syntax checks on Node 22.16.0 are supplemental. Pinned full-checkout GitHub CI is execution evidence.",
-    "finalHeadVerified": false,
-    "actualMergeSha": null
+    "finalHeadVerified": true,
+    "actualMergeSha": "484001c419958f0d1977e924deffec3180297a98"
   },
   "successorTasksStarted": false,
   "applicationBehaviorChanged": false,
-  "productionOrDatabaseActions": false
+  "productionOrDatabaseActions": false,
+  "publication": {
+    "implementationPullRequest": 742,
+    "implementationSha": "744d69a76a03099368517a39e4a61319c9e98587",
+    "implementationTreeSha": "86ccdcd7148d679429d42f46f822fda35f293187",
+    "actualImplementationMergeSha": "484001c419958f0d1977e924deffec3180297a98",
+    "mergedAtUtc": "2026-09-23T04:23:23Z",
+    "mergeTreeEqualsImplementationTree": true,
+    "finalHeadWorkflows": [
+      {
+        "runId": 35816492058,
+        "name": "Admin Bundle Contract Audit",
+        "result": "success"
+      },
+      {
+        "runId": 35816492163,
+        "name": "PR361 Staging Game Provisioning Repair",
+        "result": "skipped"
+      },
+      {
+        "runId": 35816492107,
+        "name": "Supply Chain Security",
+        "result": "success"
+      },
+      {
+        "runId": 35816492011,
+        "name": "Exchange Calendar Runtime",
+        "result": "success"
+      },
+      {
+        "runId": 35816492023,
+        "name": "Runtime Interaction Wiring",
+        "result": "success"
+      },
+      {
+        "runId": 35816492065,
+        "name": "World Runtime",
+        "result": "success"
+      },
+      {
+        "runId": 35816492062,
+        "name": "Repository Quality",
+        "result": "success"
+      },
+      {
+        "runId": 35816492003,
+        "name": "Beta Security Contract",
+        "result": "success"
+      },
+      {
+        "runId": 35816492069,
+        "name": "Production Web Session Release Orchestrator",
+        "result": "success"
+      },
+      {
+        "runId": 35816492161,
+        "name": "Edge Function Inventory",
+        "result": "success"
+      },
+      {
+        "runId": 35816492319,
+        "name": "Release Integrity",
+        "result": "success"
+      },
+      {
+        "runId": 35816492240,
+        "name": "Web Session Recovery Candidate",
+        "result": "success"
+      },
+      {
+        "runId": 35816492008,
+        "name": "Release Promote Exact Artifacts",
+        "result": "success"
+      },
+      {
+        "runId": 35816492105,
+        "name": "Admin Game Lifecycle Controls",
+        "result": "success"
+      },
+      {
+        "runId": 35816492207,
+        "name": "Production Runtime Promotion Contract",
+        "result": "success"
+      },
+      {
+        "runId": 35816492265,
+        "name": "Admin API Check",
+        "result": "success"
+      },
+      {
+        "runId": 35816492241,
+        "name": "Required Game Market Timezone",
+        "result": "success"
+      },
+      {
+        "runId": 35816492283,
+        "name": "Player Multiplayer and Load E2E",
+        "result": "success"
+      },
+      {
+        "runId": 35816492322,
+        "name": "Seed Executable Beta Pack",
+        "result": "success"
+      },
+      {
+        "runId": 35816492229,
+        "name": "Business Player Store Cutover V2",
+        "result": "success"
+      },
+      {
+        "runId": 35816492116,
+        "name": "Runtime Stabilization Onboarding",
+        "result": "success"
+      },
+      {
+        "runId": 35816492288,
+        "name": "Marketplace Preconvergence",
+        "result": "success"
+      },
+      {
+        "runId": 35816492195,
+        "name": "Crafting Item Runtime",
+        "result": "success"
+      },
+      {
+        "runId": 35816492264,
+        "name": "Backend Typecheck",
+        "result": "success"
+      },
+      {
+        "runId": 35816492375,
+        "name": "Staging Readiness Preflight",
+        "result": "success"
+      },
+      {
+        "runId": 35816492407,
+        "name": "Progression Runtime",
+        "result": "success"
+      },
+      {
+        "runId": 35816492227,
+        "name": "Admin Browser E2E",
+        "result": "success"
+      },
+      {
+        "runId": 35816492262,
+        "name": "business-player-store-fx-final-v2",
+        "result": "success"
+      },
+      {
+        "runId": 35816492081,
+        "name": "banking-fx-clearing-v1",
+        "result": "success"
+      },
+      {
+        "runId": 35816492155,
+        "name": "Business Store Seller Offers V2",
+        "result": "success"
+      },
+      {
+        "runId": 35816492117,
+        "name": "Business Store Withdrawal Safety V2",
+        "result": "success"
+      },
+      {
+        "runId": 35816492070,
+        "name": "Business Store Atomic Settlement V2",
+        "result": "success"
+      },
+      {
+        "runId": 35816492135,
+        "name": "Business Store Listing Inventory V2",
+        "result": "success"
+      },
+      {
+        "runId": 35816492110,
+        "name": "Player Terminal Verify",
+        "result": "success"
+      },
+      {
+        "runId": 35816492183,
+        "name": "business-store-sales-convergence-v2",
+        "result": "success"
+      }
+    ],
+    "workflowTotals": {
+      "success": 34,
+      "expectedSkipped": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    "vercelCommitStatus": "success",
+    "proof": "Actual handler fixtures and existing owning/full-checkout CI. Not production authentication, external usage, or a claim that synthetic RPC receipts establish SQL transaction safety.",
+    "knownBehaviorObservations": [
+      "REF004-OBS-01",
+      "REF004-OBS-02",
+      "REF004-OBS-03",
+      "REF004-OBS-04"
+    ],
+    "closeoutPaths": [
+      "docs/roadmaps/refactor-execution-v1/backlog.json",
+      "docs/roadmaps/refactor-execution-v1/tasks/REF-004.md",
+      "docs/operations/evidence/refactor-execution-v1/REF-004/parity-matrix.json"
+    ],
+    "closeoutRequiresSeparateReviewedMerge": true,
+    "nextTask": "REF-005",
+    "nextTaskStarted": false
+  }
 }

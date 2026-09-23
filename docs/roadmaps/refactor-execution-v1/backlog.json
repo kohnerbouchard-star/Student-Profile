@@ -64,16 +64,16 @@
       "id": "REF-004",
       "title": "Capture bounded behavior-parity fixtures",
       "file": "tasks/REF-004.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-002"
       ],
       "risk": "R1",
       "architectureMapping": "ARCH-300/ARCH-400",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "744d69a76a03099368517a39e4a61319c9e98587",
+      "mergeSha": "484001c419958f0d1977e924deffec3180297a98",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-004/parity-matrix.json"
     },
     {
       "id": "REF-005",
