@@ -6,22 +6,34 @@
   "pullRequest": 742,
   "ownerBranch": "refactor/ref-004-behavior-parity-fixtures",
   "baseMainSha": "53c29cbda56d2f7457b43743ea4ce553bb6659ce",
-  "inspectionSourceSha": "46031b25cfee0e638186d71b60c74e40be2ec3e3",
+  "initialInspectionSourceSha": "46031b25cfee0e638186d71b60c74e40be2ec3e3",
+  "continuationInspectionSha": "31ab2df9958c44ad9e8d2e052df940666dcfa2e5",
+  "registeredFixtureCheckpoint": "3e0fa2fba7d744aa4167f7b710c521feca57c73f",
   "scope": {
-    "concept": "Synthetic characterization of the existing residual Admin adapters and their Staff leaves",
+    "concept": "Synthetic characterization of existing residual Admin adapters and their Staff leaves; no application refactor",
     "fileCeiling": 10,
     "editablePaths": [
-      "backend/supabase/functions/admin-api/ref004RequestParity.test.ts",
-      "backend/supabase/functions/admin-api/ref004LeafParity.test.ts",
-      "backend/src/domains/contracts/api/staffContractRef004Parity.test.ts",
-      "backend/src/domains/players/api/playerAccessCodeResetRef004Parity.test.ts",
+      "backend/package.json",
+      "backend/supabase/functions/admin-api/common.test.ts",
+      "backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.test.ts",
+      "backend/src/domains/players/api/playerRequestScope.test.ts",
+      "backend/tests/admin/ref004RequestParity.test.ts",
+      "backend/tests/domains/contracts/ref004Parity.test.ts",
+      "backend/tests/domains/players/ref004Parity.test.ts",
       "docs/operations/evidence/refactor-execution-v1/REF-004/parity-matrix.json",
       "docs/roadmaps/refactor-execution-v1/tasks/REF-004.md",
       "docs/roadmaps/refactor-execution-v1/backlog.json"
     ],
-    "registration": "test:admin-api already discovers admin-api/*.test.ts. ref004LeafParity.test.ts imports the two domain-owned fixture modules. No package, lockfile or workflow edit.",
-    "protected": "Application source, existing assertions, generated bundles, database/migrations/RPCs, auth/context owner #668, Player-auth owner #736, workflows, dependencies, other 49 task records and all dependency links.",
-    "sideEffects": "Tests temporarily substitute Deno.serve/env.get and fetch only inside their test worker, restore them in finally blocks, and use synthetic dependencies. The real Admin handler is captured without opening a port. Unknown network or persistence calls fail the fixture; no real credentials or provider access."
+    "consolidation": "This scope object is the authoritative evidence-root scope record. The branch-added scope.md is consolidated here and removed; the original source-tree request fixture is retained under backend/tests. Neither removal deletes baseline application code.",
+    "registration": [
+      {"fixture":"backend/tests/admin/ref004RequestParity.test.ts","via":"backend/supabase/functions/admin-api/common.test.ts","suite":"test:admin-api","config":"supabase/functions/admin-api/deno.json","change":"one additive import; original assertions preserved"},
+      {"fixture":"backend/tests/domains/contracts/ref004Parity.test.ts","via":"backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.test.ts","suite":"test:player-contract-acceptance","config":"supabase/functions/classroom-api/deno.json","change":"one additive import; original strict checking and assertions preserved"},
+      {"fixture":"backend/tests/domains/players/ref004Parity.test.ts","via":"backend/src/domains/players/api/playerRequestScope.test.ts","suite":"test:player-request-scope","config":"supabase/functions/classroom-api/deno.json","change":"one additive import; original strict checking and assertions preserved"}
+    ],
+    "permittedPackageEdit": "Only scripts.smoke: append && npm run test:admin-local-mutations after the unchanged npm run test:smoke delegation. This registers the explicitly required existing suite in existing Backend Typecheck CI. No command, permission, dependency, lockfile, workflow or test assertion is weakened.",
+    "packageOwnershipReview": "Open PR #668 modifies test:smoke and adds test:staff-bootstrap, but leaves scripts.smoke unchanged. REF-004 preserves that entire inner chain and all other scripts; no context implementation or donor commit is imported.",
+    "protected": "Application source, existing assertions, generated bundles, architecture generator/inventory/ceilings, database/migrations/RPCs, auth/context #668 and Player-auth #736, workflows, dependencies/lockfiles, other 49 task records and all dependency links.",
+    "sideEffects": "Capture the real Admin Deno.serve handler without opening a listener. Stub environment/fetch only inside the test worker and restore in finally. Reject unknown network destinations and unlisted persistence. All identities, credential material, requests and receipts are synthetic. No live provider calls or archived application execution."
   },
   "sources": {
     "backend/supabase/functions/admin-api/index.ts": "be2954b915c5b7d37cc2cd6dd08a59b1c41dcbd8",
@@ -31,32 +43,52 @@
     "backend/supabase/functions/admin-api/contractRewards.ts": "c47f1a272bf5dc433bb1ecd14f5501828642f6a0",
     "backend/supabase/functions/admin-api/mutationAdapters.ts": "a57fe571b7e274adb453e1dc09a6eaa557b39992",
     "backend/src/domains/contracts/api/staffContractHttpHandler.ts": "069dd79023aee3c77528d026175b4e1804038a7f",
-    "backend/src/domains/players/api/playerAccessCodeResetHttpHandler.ts": "602d55a39b31bcd3b60ec89024a2572fdeb0a820"
+    "backend/src/domains/contracts/contracts/contractHttpContracts.ts": "9f7583fd44f00e5de12fea4b7d2e009c4192adb3",
+    "backend/src/domains/players/api/playerAccessCodeResetHttpHandler.ts": "602d55a39b31bcd3b60ec89024a2572fdeb0a820",
+    "backend/src/domains/players/domain/playerAccessCodes.ts": "0731b4a17ac2f94202f869c17967ac71eef39554",
+    "backend/src/domains/players/domain/playerIdentifiers.ts": "32847e2bd194aed1d470fc9856d8eab676aa2ea2",
+    "backend/src/security/playerCredentialHashing.ts": "9db206a736f44ebb5d9d820bd36ab13f54825732",
+    "backend/src/platform/supabase/edgeResponse.ts": "8539e360ab4a5555b5e7c61d7f33bddc1118fd8e"
+  },
+  "preservedBaselineBlobs": {
+    "backend/package.json": "44c394a1bff4a3d9f7b8d483fbd7f1136bdd2b65",
+    "backend/supabase/functions/admin-api/common.test.ts": "7c159a0ef1ab061d83a66f88bf2b439b79bd1f77",
+    "backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.test.ts": "f334e9f0c141dbf2d92992318bf2e24eb164d0c8",
+    "backend/src/domains/players/api/playerRequestScope.test.ts": "a8ce36d515d3a7a7a77a02be1642fb74db087fbf"
   },
   "routes": [
-    {"id":"progress","method":"GET","path":"/games/:gameId/contracts/:contractId/progress","target":"GET /staff/game-sessions/:gameId/contracts/:contractId/progress","permission":"contracts.manage","currentBehavior":"Drops original query parameters before forwarding; preserves upstream body/status, filters upstream headers and adds no-store."},
-    {"id":"decision","methods":["POST","PATCH"],"path":"/games/:gameId/contract-submissions/:progressId/decision","target":"POST /staff/game-sessions/:gameId/contracts/:resolvedContractId/progress/:progressId/review","permission":"game.update","currentBehavior":"Game-scoped progress lookup precedes forwarding; approval then calls the local atomic reward authority. This sequence is not a single transaction."},
-    {"id":"submission-review","methods":["POST","PATCH"],"path":"/games/:gameId/contracts/:contractId/submissions/:progressId/review","target":"POST /staff/game-sessions/:gameId/contracts/:contractId/progress/:progressId/review","permission":"contracts.manage","currentBehavior":"Normalizes action/resultPayload; does not automatically issue rewards."},
-    {"id":"progress-review","method":"POST","path":"/games/:gameId/contracts/:contractId/progress/:progressId/review","target":"POST /staff/game-sessions/:gameId/contracts/:contractId/progress/:progressId/review","permission":"contracts.manage","currentBehavior":"Normalizes action/resultPayload; does not automatically issue rewards."},
-    {"id":"reward","method":"POST","path":"/games/:gameId/contracts/:contractId/progress/:progressId/rewards/issue","target":"issue_contract_rewards_atomic_v1","permission":"contracts.manage","currentBehavior":"Local intercept, not a Classroom HTTP mutation. One RPC per attempt, with game/contract/progress/staff and request identity, followed by scoped reads. Request-body reward authority is ignored."},
-    {"id":"reset","method":"POST","path":"/games/:gameId/players/:playerId/access-code/reset","target":"POST /games/:gameId/players/:playerId/access-code/reset -> handleResetPlayerAccessCodeRequest","permission":"players.manage","currentBehavior":"Forwarded body and request identity; Staff leaf checks ownership/player then invokes set_player_identity_and_access_credential_v2 for credential replacement. Identifier-only writes are distinct."}
+    {"id":"progress","methods":["GET"],"path":"/games/:gameId/contracts/:contractId/progress","target":"GET /staff/game-sessions/:gameId/contracts/:contractId/progress","permission":"contracts.manage","currentBehavior":"Drops original query before forwarding. Preserves upstream body/status, filters upstream headers and adds no-store. Direct Staff leaf validates filters and scopes its repository reads."},
+    {"id":"decision","methods":["POST","PATCH"],"path":"/games/:gameId/contract-submissions/:progressId/decision","target":"POST /staff/game-sessions/:gameId/contracts/:resolvedContractId/progress/:progressId/review","permission":"game.update","currentBehavior":"Game-scoped progress lookup resolves the contract before forwarding. Approval subsequently invokes the existing local atomic reward RPC. This two-step sequence is not one transaction; reward failure can follow a successful review."},
+    {"id":"submission-review","methods":["POST","PATCH"],"path":"/games/:gameId/contracts/:contractId/submissions/:progressId/review","target":"POST /staff/game-sessions/:gameId/contracts/:contractId/progress/:progressId/review","permission":"contracts.manage","currentBehavior":"Normalizes accepted to approve and merges feedback into resultPayload. Does not automatically issue rewards."},
+    {"id":"progress-review","methods":["POST"],"path":"/games/:gameId/contracts/:contractId/progress/:progressId/review","target":"POST /staff/game-sessions/:gameId/contracts/:contractId/progress/:progressId/review","permission":"contracts.manage","currentBehavior":"Normalizes the request without automatic reward. Staff leaf records approve/reject/request_revision transitions, denies forged Staff authority and rejects review after reward issuance."},
+    {"id":"reward","methods":["POST"],"path":"/games/:gameId/contracts/:contractId/progress/:progressId/rewards/issue","target":"issue_contract_rewards_atomic_v1","permission":"contracts.manage","currentBehavior":"Local intercept, not Classroom HTTP. One authoritative RPC per attempt with URL game/contract/progress, server Staff and x-request-id, followed by scoped reads. Body-supplied reward/actor authority is ignored; applied/replayed receipts are preserved."},
+    {"id":"reset","methods":["POST"],"path":"/games/:gameId/players/:playerId/access-code/reset","target":"POST /games/:gameId/players/:playerId/access-code/reset -> handleResetPlayerAccessCodeRequest","permission":"players.manage","currentBehavior":"Forwards body and retry headers. Staff leaf checks ownership and active Player before credential replacement through set_player_identity_and_access_credential_v2. Identifier-only writes do not revoke sessions."}
   ],
-  "coveragePlan": {
-    "requestBoundary": ["expired/revoked upstream auth", "stale server claims", "wrong role", "missing permission", "unowned game", "wrong URL game", "security dependency failure", "rate-limit failure and denial", "no denied forwarding or economic writes", "aliases and request transformations", "upstream status/header behavior", "one authoritative reward call per attempt", "legacy partial-success sequence", "actual unsupported-method fallback"],
-    "contractLeaf": ["method before auth", "auth before ownership", "owned-game predicates", "progress filters and exact envelopes", "review transitions", "forged authority rejection", "already rewarded review rejection", "missing contract/progress", "repository rejection"],
-    "credentialLeaf": ["method before environment/auth", "auth/ownership/player denial", "credential aliases and public response fields", "single RPC arguments", "conflict/error translation", "same request identity does not supply credential idempotency", "identifier-only does not revoke sessions"]
+  "coverage": {
+    "requestBoundary": {"state":"IMPLEMENTED","fixture":"backend/tests/admin/ref004RequestParity.test.ts","assertions":["six route cases across expired/revoked upstream auth, stale claims, wrong role, missing permission, unowned/wrong game and unavailable dependencies","no denied forwarding or economic mutation","rate denial and retry/reset/security headers","query-drop and filtered upstream headers","distinct review/decision permissions, methods, rewrites and effect order","one atomic reward RPC per attempt and preserved replay receipt","reward RPC failures and legacy partial success","credential forwarding and request identity","current Admin unsupported-route/method fallback is 501, not an invented 405"]},
+    "contractLeaf": {"state":"IMPLEMENTED","fixture":"backend/tests/domains/contracts/ref004Parity.test.ts","assertions":["method rejection before environment/auth","auth and owned-game query before repository construction","exact game/owner/contract/progress predicates and read order","progress filters and full response DTO","three review transitions and exact single write arguments","four forged Staff fields, reward-on-review and invalid body rejection before repository calls","missing contract/progress, already rewarded and repository failure without review writes","same retry key with changed review action currently causes another review; no fabricated conflict guarantee"]},
+    "credentialLeaf": {"state":"IMPLEMENTED","fixture":"backend/tests/domains/players/ref004Parity.test.ts","assertions":["method rejection before environment/auth","auth, game, Player and active-status denials before hashing or mutation","all 24 combinations of six identifier aliases and four access-code aliases","exact original/public identifier distinction and normalized credential/identifier RPC arguments","full response projection excludes internal Player UUID and verifier material","identifier and credential conflicts, missing Player and redacted dependency failures","identifier-only single scoped update and no session revocation","same request identity does not add an absent RPC idempotency parameter"]}
   },
   "proofBoundary": {
-    "fixtureLevel": "Real request/handler code with synthetic Auth/PostgREST/Classroom dependencies; not connected runtime or database execution",
-    "rewardReplay": "Verify adapter invocation count and propagation of applied/replayed RPC receipts. No claim to prove SQL locking, conservation or replay with a fake RPC.",
-    "credentialReplay": "Record the existing absence of request-id/idempotency-key RPC parameters; do not invent conflict/replay guarantees.",
-    "noNormalization": "No response/error/identity/currency/effect fields are scrubbed. Synthetic clocks and credential material supply deterministic values where the handler exposes injection."
+    "fixtureLevel": "Actual request/handler code with synthetic dependencies. Root auth-provider failure and leaf injected auth failure are distinct evidence classes, not live session-expiry/revocation tests.",
+    "rewardReplay": "Adapter invocation counts and synthetic applied/replayed receipts do not establish SQL locking, conservation, race safety or transaction replay. Preserve the single existing RPC; never substitute the older direct Staff reward-then-mark implementation.",
+    "credentialReplay": "Neither x-request-id nor idempotency-key is forwarded as a credential RPC parameter. Repeated or changed payload behavior is characterized rather than relabeled idempotent.",
+    "noNormalization": "No identity/error/order/monetary/currency/effect field is scrubbed. Contract clocks and credential material are injected; the non-injectable identifier-only updated_at is checked against its execution interval.",
+    "downstreamUse": "Future adapter refactors must retain these observations or separately authorize corrections. No deletion, external-consumer clearance, runtime certification or later REF task implementation is granted."
   },
   "validation": {
-    "executionStatus": "NOT_RUN",
-    "commands": ["npm --prefix backend run test:admin-api", "npm --prefix backend run test:admin-local-mutations", "npm --prefix backend run test:player-contract-acceptance", "npm run test:auth-boundaries", "npm run test:web-session-release", "npm run audit:architecture", "npm run audit:high-priority-boundaries", "npm run audit:legacy-runtime", "npm run security:secrets", "npm test", "npm --prefix backend run typecheck:all", "npm --prefix backend run smoke", "git diff --check"],
-    "localLimitation": "Direct Git failed at DNS resolution. No full local checkout or local Deno execution is claimed. Existing CI is the full-checkout execution path; record actual head/run/job results only after execution.",
-    "implementationSha": null,
+    "executionStatus": "VALIDATING",
+    "historicalAttempts": [
+      {"sourceSha":"31ab2df9958c44ad9e8d2e052df940666dcfa2e5","workflowRunId":35808299477,"jobId":107013900601,"result":"FAIL","reason":"New source-tree fixture changed deterministic architecture inventory. Relocate synthetic code, not ceilings or production source."},
+      {"sourceSha":"f1363fc93329f273eb0a153c890642c38391cbd0","workflowRunId":35812173054,"jobId":107025919291,"result":"FAIL","reason":"Ten type-narrowing errors from importing strict Staff leaves through relaxed Admin configuration. Correct suite ownership without --no-check or compiler changes."}
+    ],
+    "checkpointChecks": [
+      {"sourceSha":"3e0fa2fba7d744aa4167f7b710c521feca57c73f","workflowRunId":35812620765,"jobId":107027290489,"command":"test:admin-api equivalent pinned deno test command","result":"PASS","evidence":"Admin API check/test enforcement succeeded."},
+      {"sourceSha":"3e0fa2fba7d744aa4167f7b710c521feca57c73f","workflowRunId":35812620940,"jobId":107027291401,"command":"npm --prefix backend run smoke","result":"PASS","evidence":"Existing full smoke enforcement passed; required local-mutation command is not yet part of this checkpoint's smoke alias."}
+    ],
+    "requiredFinalCommands": ["npm --prefix backend run test:admin-api","npm --prefix backend run test:admin-local-mutations","npm --prefix backend run test:player-contract-acceptance","npm --prefix backend run test:player-request-scope","npm run test:auth-boundaries","npm run test:web-session-release","npm run audit:architecture","npm run audit:high-priority-boundaries","npm run audit:legacy-runtime","npm run security:secrets","npm test","npm --prefix backend run typecheck:all","npm --prefix backend run smoke","git diff --check"],
+    "localLimitation": "Direct Git DNS and archive/raw materialization were unavailable. Only leaf-source local syntax checks are credited on Node 22.16.0. No complete local checkout or local Deno run is claimed; pinned GitHub full-checkout CI is authoritative execution evidence.",
+    "finalHeadVerified": false,
     "actualMergeSha": null
   },
   "successorTasksStarted": false,
