@@ -320,10 +320,6 @@ Deno.test("legacy accepted contract decision reviews then issues atomic rewards"
       "Combined decision response omitted reward issuance.",
     );
     assert(
-      firstBody.data?.rewardIssued === true,
-      "Combined decision response omitted reward issuance.",
-    );
-    assert(
       firstBody.data?.alreadyIssued === false,
       "First reward issue was incorrectly marked as already issued.",
     );
