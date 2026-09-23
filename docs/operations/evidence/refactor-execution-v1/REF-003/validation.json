@@ -134,7 +134,7 @@
   ],
   "retentionPolicy": {"preDisableQuietWindowDays":14,"postDisableMonitoringDays":7,"preDeleteRecoveryWindowDays":30,"trafficWindowActuallyObserved":false},
   "preservation": {"applicationSourceChanged":false,"applicationDeleted":false,"architectureCeilingsRaised":false,"workflowsChanged":false,"packageOrLockfilesChanged":false,"databaseChanged":false,"productionActions":false,"successorTasksStarted":false},
-  "latestMeasurement": "sourceReviewContinuation",
+  "latestMeasurement": "archiveEventContinuation",
   "sourceReviewContinuation": {
     "observedCensusAtUtc": "2026-09-23T00:00:04Z",
     "inspectionSourceSha": "adbcc0561b4345c93a5c3023e418cf0a5de351c6",
@@ -213,6 +213,127 @@
       "Preserve the remaining explicit/dynamic callers of Player identity and Attendance save code, including literal hits in the retained generated bundle.",
       "Historical API router and stock-history helpers remain separate unreviewed source families; external Apps Script use is not certified.",
       "Review complete task acceptance and actual final-head CI/diff before a normal merge; no actual merge or VERIFIED_COMPLETE claim is made."
+    ]
+  },
+  "archiveEventContinuation": {
+    "observedCensusAtUtc": "2026-09-23T00:24:10Z",
+    "inspectionSourceSha": "32b35fb857e67d5107b8e83965f1153a2bdfc689",
+    "toolingAndReviewHeadSha": "cd5c85c5def487a141720273f63b0a78dd27e284",
+    "executedCheckoutSha": "123ebb1bb86d4295d84167f0cc1f6cc389b599c6",
+    "executedCheckoutType": "synthetic_pull_request_test_merge_not_an_actual_merge",
+    "executedTreeSha": "8e5d42f646b01032b558024edaac26a080f2ac6b",
+    "treeMatchesToolingHead": true,
+    "actualMergeSha": null,
+    "snapshotNote": "Earlier snapshots remain historical and unchanged. This snapshot precedes the new task/validation metadata; later commits require their own CI. Candidate record queries include the executed checkout SHA, so digest reproduction must use that exact revision. Supplemental source ranges below were inspected at the same application bytes; they are not extra complete-file reviews or executed runtime evidence.",
+    "sourceIdentities": {
+      "classifierBlobSha": "6b308db059b0393c993ead41f54c012a89889308",
+      "classifierTestBlobSha": "cd3fc55f71224ab21dc449d9819244a09dfab7ae",
+      "candidateRegisterBlobSha": "6ceac8d8328a8c106109bbd569b7fb79bb793ba0",
+      "existingInventoryBlobSha": "9bf80e593e95cd2cad2b1cffc278a3af142375cc",
+      "retirementSuiteBlobSha": "e2e9b5498e29d5079167aafc6fcf0a9b416ecafa",
+      "localToolingBytesMatchPublishedBlobs": true
+    },
+    "census": {
+      "command": "node scripts/architecture/refactor-candidate-audit.mjs 123ebb1bb86d4295d84167f0cc1f6cc389b599c6",
+      "executedThrough": "npm run test:legacy-runtime -> registerRepositoryCandidateAudit -> auditSnapshot",
+      "trackedFiles": 3952,
+      "denominators": {
+        "configuration_or_data": {"files":562,"textFiles":562,"physicalLines":221041,"bytes":16863078,"unmeasuredFiles":0},
+        "asset_or_other": {"files":374,"textFiles":130,"physicalLines":11968,"bytes":67953556,"unmeasuredFiles":244},
+        "documentation": {"files":582,"textFiles":582,"physicalLines":80232,"bytes":3891023,"unmeasuredFiles":0},
+        "application_source": {"files":997,"textFiles":997,"physicalLines":242943,"bytes":9780012,"unmeasuredFiles":0},
+        "generated_output": {"files":2,"textFiles":2,"physicalLines":14046,"bytes":1723855,"unmeasuredFiles":0},
+        "historical_path": {"files":9,"textFiles":6,"physicalLines":9301,"bytes":2075523,"unmeasuredFiles":3},
+        "test": {"files":600,"textFiles":600,"physicalLines":114302,"bytes":3983398,"unmeasuredFiles":0},
+        "script": {"files":372,"textFiles":372,"physicalLines":105343,"bytes":4344726,"unmeasuredFiles":0},
+        "migration_history": {"files":450,"textFiles":450,"physicalLines":161859,"bytes":6112366,"unmeasuredFiles":0},
+        "fixture": {"files":4,"textFiles":4,"physicalLines":276,"bytes":14804,"unmeasuredFiles":0}
+      },
+      "candidateCount": 746,
+      "dispositions": {"canonical":5,"confirmed_dead":0,"compatibility_required":11,"legacy_candidate":0,"historical_archive":4,"defensive_fallback":1,"generated_or_fixture":175,"unknown":550},
+      "reviewedSourceCount": 23,
+      "referenceTermReviewCount": 7,
+      "supportingSourceBindings": 32,
+      "historicalPathCandidates": 9,
+      "candidateRecordsSha256": "895402c04c0596d690a358c87bdf1e373eea00d54955f22493ed8ed043eda86f",
+      "safeToDeleteCount": 0,
+      "deletionShortlist": [],
+      "fullSemanticCallerAuditComplete": false,
+      "runtimeReachabilityCertified": false,
+      "existingInventoryRecomputedByClassifier": false,
+      "interpretation": "Six reviewed records and one newly included candidate reflect review/measurement coverage, not application changes. The 23 reviewed records overlap primary dispositions. The 550 unknown entries remain explicit; no external traffic or complete semantic graph is inferred."
+    },
+    "executedChecks": [
+      {"command":"node --test scripts/architecture/refactor-candidate-audit.test.mjs","environment":"local synthetic Git fixtures only","node":"22.16.0","repositoryPinnedRuntime":false,"tests":17,"failures":0,"skipped":0,"result":"PASS","exitCode":0},
+      {"command":"node --check scripts/architecture/refactor-candidate-audit.mjs","environment":"local source copy matching published Git blob","result":"PASS","exitCode":0},
+      {"command":"git diff --check","environment":"local two-file tooling fixture only, not a complete application checkout or whole-PR check","result":"PASS","exitCode":0},
+      {"command":"npm run test:legacy-runtime","workflowRunId":35801868541,"jobId":106993811580,"node":"22.23.1","npm":"10.9.8","tests":24,"testBreakdown":{"classifierFixtures":17,"realSourceCensus":1,"preservedRetirementTests":6},"failures":0,"skipped":0,"result":"PASS","exitCode":0},
+      {"command":"npm run audit:legacy-runtime","workflowRunId":35801868541,"jobId":106993811580,"result":"PASS","exitCode":0,"scope":"Repository inventory-policy and browser transport ratchet; no hosted inspection"},
+      {"command":"npm run test:player-runtime-cutover","workflowRunId":35801868541,"jobId":106993811580,"result":"PASS","exitCode":0,"scope":"Existing static cutover test; no new retirement"},
+      {"command":"npm test","workflowRunId":35801868512,"jobId":106993810002,"result":"PASS","exitCode":0,"scope":"Existing Repository Quality audit/source step, including unchanged architecture regeneration/ratchets"},
+      {"command":"npm run security:secrets","workflowRunId":35801868512,"jobId":106993810002,"result":"PASS","exitCode":0}
+    ],
+    "sourceReviewFindings": [
+      "The archived API router has cache-session/action dispatch and sequential sheet writes; a script lock is not modern SQL atomicity or rollback.",
+      "Stock history/news helpers expose read fallbacks and separate trigger installation, append, trimming and destructive deduplication functions. None was executed.",
+      "Player profile saving performs profile PATCH followed by credential update, with no complete post-await modal-generation guard in that function; it is not one atomic save.",
+      "Attendance-only save retains GET verification, one PATCH, payload-bound retry identity and event-before-completed ordering. Its generation checks suppress stale UI, not the request itself.",
+      "Attendance state and Settings lifecycle preserve matching-game acknowledgement and bounded frame settling. A loaded/mounted UI signal is not a successful fresh-read certificate.",
+      "Event-only references are now captured and labeled separately; shared event names and generic symbols are discovery evidence, not resolved call-graph edges."
+    ],
+    "supplementalReferenceDisambiguation": [
+      {
+        "path":"admin/player-create-ux.js",
+        "blobSha":"070a11352a85bf5149fb68fb939ae560b9a4e42f",
+        "inspectedLines":[225,310],
+        "evidenceClass":"source_range_review_not_new_whole_file_disposition",
+        "finding":"The capture-phase player-access-code-issued listener consumes lastCreateContext, clears it and schedules renderConfirmation. This is a second positive credential-event consumer, separate from PlayerCreateLifecycle modal closure. No whole-module disposal or stale-game guarantee is certified from this excerpt."
+      },
+      {
+        "path":"admin/settings-simplified.js",
+        "blobSha":"ac3eeed8b3f4faba024ff53bd1e7c4a97b52bc1a",
+        "inspectedLines":[430,635],
+        "evidenceClass":"source_range_review_not_new_whole_file_disposition",
+        "finding":"resetForPage emits settings-context-changed in a microtask only for a prior nonempty different game. The attendance-reward-saved listener acknowledges the save and captures a baseline. Shared event discovery is supported, without certifying unrelated structure/render code."
+      },
+      {
+        "path":"backend/legacy/apps-script/stock-market/classroom_stock_market_v1_5_legacy.gs.txt",
+        "blobSha":"04f88fae6d9b24ccbfa318686d592e5ef1c404f5",
+        "inspectedRanges":[[1360,1390],[1447,1468]],
+        "evidenceClass":"substring_collision_rejected_as_caller",
+        "finding":"The lexical logStockPriceHistory hit is a declaration/call of the different underscore-suffixed logStockPriceHistory_. It is not credited as a caller of the separate stock-history helper's logStockPriceHistory function. The full stock-engine file remains unreviewed."
+      },
+      {
+        "evidenceClass":"literal_symbol_collision_limit",
+        "finding":"Generic symbols including reconcile, loadPlayers and loadSettings match unrelated browser, server, workflow and documentation text. Their literal rows remain visible but do not establish shared implementation, reachability or a semantic caller."
+      }
+    ],
+    "toolingCheckpointWorkflows": [
+      {"name":"Repository Quality","runId":35801868512,"result":"SUCCESS"},
+      {"name":"Legacy Runtime Retirement Audit","runId":35801868541,"result":"SUCCESS"},
+      {"name":"Supply Chain Security","runId":35801868583,"result":"SUCCESS"},
+      {"name":"Release Integrity","runId":35801868525,"result":"SUCCESS"},
+      {"name":"Production Runtime Promotion Contract","runId":35801868521,"result":"SUCCESS"},
+      {"name":"Release Promote Exact Artifacts","runId":35801868535,"result":"SUCCESS"},
+      {"name":"Staging Readiness Preflight","runId":35801868517,"result":"SUCCESS"},
+      {"name":"Business Player Store Cutover V2","runId":35801868509,"result":"PENDING_AT_OBSERVATION"}
+    ],
+    "scope": {
+      "existingPrFileBudget":8,
+      "toolingAndTestPhysicalLinesIncludingRegistration":364,
+      "backlogChangedInThisContinuation":false,
+      "retirementRegistrationChangedInThisContinuation":false,
+      "protectedApplicationAndMigrationDenominatorsUnchanged":true,
+      "workflowsChanged":false,
+      "applicationBehaviorChanged":false,
+      "productionOrDatabaseActions":false,
+      "successorTasksStarted":false
+    },
+    "remainingAcceptance": [
+      "Review the complete REF-003 acceptance matrix and resolve missing source evidence for any candidate advanced beyond unknown; the classifier is not a complete semantic graph.",
+      "Retain unknown external consumers and the empty deletion shortlist. Unknown is an allowed classification, not an implicit clearance or deletion quota.",
+      "Inspect final-head CI, JSON/companion consistency and the whole PR diff before an authorized normal merge. Standalone backend typecheck/smoke and full-checkout whole-PR diff-check credit remain unclaimed.",
+      "No VERIFIED_COMPLETE or actual merge identity is recorded. REF-004 and all later tasks remain unopened."
     ]
   }
 }
