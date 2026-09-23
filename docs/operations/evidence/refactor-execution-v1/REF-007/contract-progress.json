@@ -36,7 +36,7 @@
     },
     "REF-007b": {
       "status": "PLANNED",
-      "dependsOn": ["REF-007a"],
+      "dependsOn": ["REF-007a", "REF-007c"],
       "purpose": "Accepted implementation/merge evidence and parent status closeout only",
       "maximumMeaningfulFiles": 3,
       "editablePaths": [
@@ -45,6 +45,18 @@
         "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json"
       ],
       "boundary": "Only REF007 backlog fields may change; preserve all other 49 objects and every dependency. Parent completion requires checked normal merges."
+    },
+    "REF-007c": {
+      "status": "IN_PROGRESS",
+      "dependsOn": ["REF-007a"],
+      "purpose": "Reviewed one-for-one exact-site evidence transfer for the removed progress GET network hop and retained limiter metadata",
+      "maximumMeaningfulFiles": 3,
+      "editablePaths": [
+        "docs/operations/evidence/refactor-execution-v1/REF-005/seam-baseline.json",
+        "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
+        "docs/operations/contracts/player-cross-cutting/pr-748.json"
+      ],
+      "boundary": "Registered before editing in issuecomment-5802656128. This child and REF007a have eleven distinct implementation paths, not an unannounced expansion of the ten-path child. Only transfer one exact site, append provenance and bind these paths. Do not edit verifier code or increase site counts/occurrence limits. Preserve every other site, all removal targets and original REF005 publication. Same existing owner PR; no replacement branch or new runtime capability."
     }
   },
   "baselineBlobs": {
@@ -116,6 +128,15 @@
         {"id": 10743453220, "run": 35847188622, "name": "backend-smoke-diagnostics", "sha256": "85cdc64ca8796af909277aaa6dc8c4bc5391dbd8b2601bdb5fbf65173fd7b277"},
         {"id": 10743604141, "run": 35847188622, "name": "backend-typecheck-diagnostics", "sha256": "0694e3e78dabfa40766bc92378f1db52c5cef1a8569216ee4752c25bb1ee7f71"}
       ]
+    },
+    {
+      "headSha": "1fa79cd816a77c503d964681641ed47310409932",
+      "treeSha": "e358159f73f127ae61ae3109ebef48f4f51a954c",
+      "status": "NOT_ACCEPTED",
+      "repositoryQualityRun": 35917816371,
+      "artifactId": 10775069854,
+      "artifactSha256": "1702d6df80ba8cb26b345057b4825b209cd9021a3ad9c0f88cf5b7601d18e5d0",
+      "result": "The complete deterministic inventory now reproduces exactly, and inherited high-priority/migration/Admin caps pass. The unchanged REF005 scanner then correctly rejects the new metadata-only Classroom literal as an unregistered relocated seam. Preserve this failure and resolve it through the explicit REF007c one-for-one site review, not obfuscation, a checker exception or a higher ceiling. This record does not assert completion of other runs on that head."
     }
   ],
   "continuationScopeReconciliation": {
@@ -138,6 +159,20 @@
       "commentChange": "Clarify only the new adapter comment: Preserve the existing Staff identity dimension for /staff/game-sessions. The executable rate-limit action, identity dimension, request and service client remain byte-identical.",
       "review": "Full exact-a681 generated artifact checksum verified. Relative to the committed baseline, sourceFiles increases 1237 to 1239, gameRoutes lines falls 724 to 719, and existing contracts.manage/game.read strings gain the new adapter/test locations. The comment-only lexical candidate is not functional debt removal. All 209 existing compatibility records, other debt lists, counts, ordering, thresholds and ceilings remain unchanged. The complete corrected inventory blob was reproduced and published without truncation. The unchanged generator must match it in fresh exact-head CI before acceptance. Unreferenced unsuccessful prior blob attempts are not used."
     }
+  },
+  "seamTransferReview": {
+    "child": "REF-007c",
+    "record": "https://github.com/kohnerbouchard-star/Student-Profile/pull/748#issuecomment-5802656128",
+    "reviewedSourceSha": "1fa79cd816a77c503d964681641ed47310409932",
+    "previousBaselineBlob": "1c74f30cef50f1901898019bae0a9f26d0e12630",
+    "reviewedBaselineBlob": "0b9443a4f5f1523c1cacf7c18743884020a1b73c",
+    "adapterBlob": "cc36b5b1c1e7b684d60d346c9a83961a2a78fff4",
+    "rule": "Remove only the retired progress GET proxyClassroom call registration and add only the exact metadata Request literal reported by the unchanged scanner. Both occurrence maxima are one. Keep 37 registered identities and 40 occurrences; preserve all other 36 sites, all 23 removal targets, removalRecords and original REF005 history. Appending transfer provenance does not recertify historical tasks.",
+    "reason": "The Request preserves the old full-path Staff throttle classification without network dispatch. Reusing or aliasing the Classroom URL constant would also require review and must not be used to evade literal/named-reference detection. No executable source is changed by REF007c.",
+    "verification": "Require the unchanged exact-site census and adversarial removal/relocation tests, plus real-root zero-Classroom-fetch, both-limiters and unchanged-query parity. Restoring the old call, duplicating the new literal or placing it in another file must remain unregistered. No global exception, new runtime source or numeric ceiling increase.",
+    "distinctImplementationPaths": 11,
+    "sourceAndTestPaths": 7,
+    "sourceAndTestDiffLines": 389
   },
   "expectedMeasurements": {
     "selectedRouteClassroomHttpHops": {"before": 1, "after": 0},

@@ -19,6 +19,7 @@
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
     "docs/operations/contracts/player-cross-cutting/pr-748.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-005/seam-baseline.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
@@ -33,6 +34,7 @@
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
     "docs/operations/contracts/player-cross-cutting/pr-748.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-005/seam-baseline.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
@@ -62,5 +64,5 @@
   ],
   "baseMainSha": "a3ec93f60817746e34e124b59210f3e8ab5ebf32",
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
-  "authorizationNote": "Owner-authorized bounded REF-007 continuation on existing PR748. Replace only the Admin Contract progress GET network hop with the existing Contracts-owned reader under unchanged Admin guards and retained downstream Staff rate limiting, fresh ownership lookup, DTO/error mapping and read counts. Bind the ten exact source/test/evidence paths, including necessary explicit boolean discriminant corrections and the existing REF004 progress fixture reconciliation. The complete REF003 candidate register has no affected source binding and remains unchanged; its unused reserved slot is replaced by this manifest. The two verifier files are mandatory protected references, not editable paths. No verifier, workflow, compiler, package, security-ceiling, auth/client factory, SQL/RPC, migration, UI, live configuration or deployment change. All applicable exact-head CI and four critical Store/FX jobs remain required. This manifest grants no acceptance, merge or production certification by itself. Stop after REF-007; REF-008 remains unstarted."
+  "authorizationNote": "Owner-authorized bounded REF-007 continuation on existing PR748. REF-007a owns ten exact source/test/evidence paths. Explicit child REF-007c owns only the existing seam-baseline JSON, REF007 evidence and this manifest, giving eleven distinct implementation paths across the two children. Replace only the Admin Contract progress GET network hop with the existing Contracts-owned reader under unchanged Admin guards and retained downstream Staff rate limiting, fresh ownership lookup, DTO/error mapping and read counts. Necessary explicit boolean discriminant corrections and the existing REF004 progress fixture reconciliation remain scoped. The REF003 candidate register has no affected source binding and remains unchanged. REF007c transfers exactly the removed GET proxy-call registration to the one inert limiter-metadata literal; it removes the former allowance, retains 37 identities/40 occurrences and all other site/removal records, and changes no checker or numeric ceiling. The two verifier files are mandatory protected references, not editable paths. No workflow, compiler, package, auth/client factory, SQL/RPC, migration, UI, live configuration or deployment change. All applicable exact-head CI and four critical Store/FX jobs remain required. This manifest grants no acceptance, merge or production certification by itself. Stop after REF-007; REF-008 remains unstarted."
 }

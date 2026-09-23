@@ -56,7 +56,7 @@
     {"file":"backend/supabase/functions/admin-api/common.ts","kind":"classroom_reference","signature":"const CLASSROOM_API_URL = `${SUPABASE_URL}/functions/v1/classroom-api`","maximum":1,"sourceBlobSha":"91a3b1381403dc5604e8bbef784be8367593e3f6"},
     {"file":"backend/supabase/functions/admin-api/common.ts","kind":"classroom_reference","signature":"function fetchClassroom ( request","maximum":1,"sourceBlobSha":"91a3b1381403dc5604e8bbef784be8367593e3f6"},
     {"file":"backend/supabase/functions/admin-api/common.ts","kind":"classroom_reference","signature":"function proxyClassroom ( request","maximum":1,"sourceBlobSha":"91a3b1381403dc5604e8bbef784be8367593e3f6"},
-    {"file":"backend/supabase/functions/admin-api/gameRoutes.ts","kind":"classroom_call","signature":"proxyClassroom ( request , context , classroomContractPath ( gameId , `/${\n          encodeURIComponent(decodeURIComponent(contractProgressMatch[1]))\n        }/progress` , ) , \"GET\" , )","maximum":1,"sourceBlobSha":"e923f0e900681b817381b5341189de11805b0b33"},
+    {"file":"backend/supabase/functions/admin-api/contractProgressReadOperation.ts","kind":"classroom_literal","signature":"`${environment.value.supabaseUrl}/functions/v1/classroom-api${path}`","maximum":1,"sourceBlobSha":"cc36b5b1c1e7b684d60d346c9a83961a2a78fff4"},
     {"file":"backend/supabase/functions/admin-api/gameRoutes.ts","kind":"classroom_call","signature":"proxyClassroom ( request , context , classroomContractPath ( gameId , `/${\n          encodeURIComponent(decodeURIComponent(progressReviewMatch[1]))\n        }/progress/${\n          encodeURIComponent(decodeURIComponent(progressReviewMatch[2]))\n        }/review` , ) , \"POST\" , )","maximum":1,"sourceBlobSha":"e923f0e900681b817381b5341189de11805b0b33"},
     {"file":"backend/supabase/functions/admin-api/gameRoutes.ts","kind":"classroom_call","signature":"proxyClassroom ( request , context , classroomContractPath ( gameId , `/${\n          encodeURIComponent(decodeURIComponent(submissionReviewMatch[1]))\n        }/progress/${\n          encodeURIComponent(decodeURIComponent(submissionReviewMatch[2]))\n        }/review` , ) , \"POST\" , )","maximum":1,"sourceBlobSha":"e923f0e900681b817381b5341189de11805b0b33"},
     {"file":"backend/supabase/functions/admin-api/gameRoutes.ts","kind":"classroom_call","signature":"proxyClassroom ( request , context , classroomContractPath ( gameId , `/${encodeURIComponent(decodeURIComponent(rewardMatch[1]))}/progress/${\n          encodeURIComponent(decodeURIComponent(rewardMatch[2]))\n        }/rewards/issue` , ) , \"POST\" , )","maximum":1,"sourceBlobSha":"e923f0e900681b817381b5341189de11805b0b33"},
@@ -282,5 +282,20 @@
     "nextTask": "REF-006",
     "nextTaskStarted": false,
     "limits": "Lexical pattern and structural-evidence checks are not exhaustive module/dataflow reachability, proof of human approval or live external-retirement evidence. Existing inherited guards and 14/7/30-day retirement rules remain binding. No application debt is removed and no production/database/cloud action is authorized."
-  }
+  },
+  "siteTransfers": [
+    {
+      "task": "REF-007c",
+      "pullRequest": 748,
+      "reviewedSourceSha": "1fa79cd816a77c503d964681641ed47310409932",
+      "previousBaselineBlobSha": "1c74f30cef50f1901898019bae0a9f26d0e12630",
+      "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
+      "scopeDecision": "https://github.com/kohnerbouchard-star/Student-Profile/pull/748#issuecomment-5802656128",
+      "removedSite": {"file":"backend/supabase/functions/admin-api/gameRoutes.ts","kind":"classroom_call","signature":"proxyClassroom ( request , context , classroomContractPath ( gameId , `/${\n          encodeURIComponent(decodeURIComponent(contractProgressMatch[1]))\n        }/progress` , ) , \"GET\" , )","maximum":1,"sourceBlobSha":"e923f0e900681b817381b5341189de11805b0b33"},
+      "addedSite": {"file":"backend/supabase/functions/admin-api/contractProgressReadOperation.ts","kind":"classroom_literal","signature":"`${environment.value.supabaseUrl}/functions/v1/classroom-api${path}`","maximum":1,"sourceBlobSha":"cc36b5b1c1e7b684d60d346c9a83961a2a78fff4"},
+      "review": "Explicit one-for-one review of the selected refactor: the old Admin-to-Classroom GET call is absent and its allowance is removed. The remaining literal constructs an in-process Request for inherited Staff rate-limit classification and the existing local reader; it is never fetched. Preserve the exact path/kind/signature and maximum of one, not a directory exemption or a renamed/computed bypass. Registered identities remain 37 and occurrence allowances remain 40; all other 36 site records and all 23 removal targets are unchanged. Original REF-005 scope/review/publication fields above are historical evidence and are not relabeled as REF-007 acceptance.",
+      "parityTests": ["backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts", "backend/tests/admin/ref004RequestParity.test.ts"],
+      "requiredVerification": "Fresh exact-head architecture census, unchanged adversarial seam/removal tests, Admin/Contract parity and shared CI. Restoring the removed GET proxy call or moving/duplicating the metadata literal must fail the unchanged exact-site checker. Existing real-root fixtures must continue to prove zero Classroom HTTP requests and unchanged read/security behavior. No source deletion or runtime-retirement approval."
+    }
+  ]
 }
