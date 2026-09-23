@@ -95,7 +95,7 @@
       "id": "REF-006",
       "title": "Move the retained Messaging dispatcher to its domain owner",
       "file": "tasks/REF-006.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-005"
       ],
@@ -105,9 +105,9 @@
         668,
         736
       ],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "dee1b16d77cc75a4ed32f6be51145fe1002d3617",
+      "mergeSha": "f823928b30cbdd740f5c304abe28e6a21b730ad3",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-006/messaging-dispatch.json"
     },
     {
       "id": "REF-007",
