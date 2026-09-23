@@ -136,6 +136,21 @@ export function registerRepositoryCandidateAudit() {
   test("REF-003 reviewed source and full tracked census are reproducible", () => {
     const snapshot = captureRevision(process.cwd());
     const rules = JSON.parse(snapshot.files.get(REGISTER).source);
+    const metadata = JSON.parse(snapshot.files.get(REGISTER.replace("candidates.json", "validation.json")).source);
+    assert.equal(metadata.schemaVersion, 1); assert.equal(metadata.task, "REF-003");
+    assert.equal(metadata.status, rules.status);
+    for (const checkpoint of [metadata, ...Object.values(metadata).filter((value) => value?.census)]) {
+      const census = checkpoint.census;
+      assert.equal(census.trackedFiles, Object.values(census.denominators).reduce((n, row) => n + row.files, 0));
+      assert.equal(census.candidateCount, Object.values(census.dispositions).reduce((n, count) => n + count, 0));
+    }
+    assert(metadata[metadata.latestMeasurement]?.census, "Missing latest measurement");
+    const taskPath = "docs/roadmaps/refactor-execution-v1/tasks/REF-003.md";
+    for (const match of snapshot.files.get(taskPath).source.matchAll(/\[[^\]]+\]\(([^)]+)\)/gu)) {
+      if (/^(?:https?:|#)/u.test(match[1])) continue;
+      const target = path.posix.normalize(path.posix.join(path.posix.dirname(taskPath), match[1].split("#")[0]));
+      assert(snapshot.files.has(target), `Missing task companion: ${target}`);
+    }
     const report = auditSnapshot(snapshot, rules);
     assert.equal(report.trackedFiles, Object.values(report.denominators).reduce((n, row) => n + row.files, 0));
     assert.equal(report.candidateCount, Object.values(report.dispositions).reduce((a, b) => a + b, 0));
