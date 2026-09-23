@@ -48,7 +48,10 @@ async function fixture(options: any, run: (send: any, calls: Call[]) => Promise<
       : json({ id: S, app_metadata: { econovaria_role: "game_admin", permission_version: 1, security_version: options.stale ? 2 : 1 } });
     if (call.path === "/rest/v1/staff_users") return options.securityError && call.query.has("id")
       ? json({ message: "synthetic unavailable" }, 503) : json([staff]);
-    if (call.path === "/rest/v1/game_sessions") return json(options.noGame ? [] : [{ id: G, name: "Fixture", status: "active" }]);
+    if (call.path === "/rest/v1/game_sessions") {
+      equal(call.method, "GET"); equal(call.query.get("owner_staff_user_id"), `eq.${S}`);
+      return json(options.noGame ? [] : [{ id: G, name: "Fixture", status: "active" }]);
+    }
     if (call.path === "/rest/v1/staff_permission_grants") return json((options.grants ?? ["contracts.manage", "players.manage", "game.update"]).map((permission: string) => ({ permission })));
     if (call.path.endsWith("/consume_request_rate_limits_v1")) return options.limiterError
       ? json({ message: "synthetic limiter unavailable" }, 503)
