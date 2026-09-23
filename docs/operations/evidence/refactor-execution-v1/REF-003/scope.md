@@ -53,3 +53,11 @@ Continuation source: `adbcc0561b4345c93a5c3023e418cf0a5de351c6`; main is unchang
 Close classifier evidence gaps within the existing module: include every historical-path file even without lexical flags; attach explicit query, confidence, symbol, consumer-audit and replacement fields to generated records; preserve the distinction between discovery references and proven callers. Historical, generated and test status never imply deletion eligibility. Verify source-evidence hashes as well as the reviewed file so a changed caller invalidates its review.
 
 Use the existing retirement CI for full-checkout execution. No source archive, production probe or manual workflow is required from the owner. Keep historical measurement snapshots immutable and append the new measured checkpoint only after its actual checks execute. Do not claim all unknown records were semantically reviewed or mark the task VERIFIED_COMPLETE merely because CI is green.
+
+## Archive and event-consumer continuation
+
+Source checkpoint: `32b35fb857e67d5107b8e83965f1153a2bdfc689`; fresh comparison confirms unchanged main and the same owner. Read the archived API router and stock-history/news helper, retained Player identity wiring, Attendance save controller/settings renderer, and Settings lifecycle bridge. Add their reviewed responsibilities, explicit partial-write/lifecycle limits, supporting hashes and retention conditions to the existing register only.
+
+Extend literal-reference discovery with separately named event/dispatch terms that must occur in the reviewed source. Label the resulting references as literal evidence, never inferred event execution or transitive reachability. Add focused tests for event-only consumers, test/document matches and invalid/missing terms. Preserve all existing tests, counts conventions and deletion denials. Local copies of the two tooling files must match the published Git blobs before editing; use pinned full-checkout CI for acceptance evidence.
+
+No new filename, application behavior change, external probe, workflow or package edit is permitted. Unresolved external use stays a retention gate; a source trace does not certify hosted inactivity or repair a pre-existing UI race. Keep REF-004 and later tasks unopened.
