@@ -28,9 +28,10 @@
         "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
         "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
         "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
-        "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json"
+        "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
+        "backend/src/domains/contracts/services/contractRewardService.ts"
       ],
-      "unallocatedPaths": "Two slots are not blanket authority. Resolve any additional consumer fixture/evidence maintenance explicitly before editing; no workflow, package or guard relaxation."
+      "unallocatedPaths": "One slot remains unallocated. The ninth path is restricted to the boolean discriminant correction below, not reward implementation work. No workflow, package or guard relaxation."
     },
     "REF-007b": {
       "status": "PLANNED",
@@ -53,11 +54,12 @@
     "backend/supabase/functions/classroom-api/index.ts": "1b4691f278b8fea057851de520fdfe4773be46f7",
     "backend/src/platform/supabase/edgeStaffSession.ts": "71764e6c8f4a09ae2a1dd5828d4b1a651a2045c4",
     "backend/src/security/staffRequestRateLimit.ts": "bd86505eafeba4802502802d367e7a9f1d93989e",
-    "backend/tests/domains/contracts/ref004Parity.test.ts": "f51b287ea8b2f45a2a53a29f927213379671111d"
+    "backend/tests/domains/contracts/ref004Parity.test.ts": "f51b287ea8b2f45a2a53a29f927213379671111d",
+    "backend/src/domains/contracts/services/contractRewardService.ts": "2f2acc891fc1469c02e2d1de8e761a5efa054e96"
   },
   "sourceContract": {
     "route": "GET /games/:game/contracts/:contract/progress only",
-    "domainOwner": "The existing listStaffContractProgress operation already exists in staffContractHttpHandler.ts. Expose that operation and its existing error mapper explicitly instead of copying its read/query/DTO code. Do not change either body or the mutation handlers.",
+    "domainOwner": "The existing listStaffContractProgress operation already exists in staffContractHttpHandler.ts. Expose that operation and its existing error mapper explicitly instead of copying its read/query/DTO code. Neither exported function body changes. The only additional handler/service edits allowed are the boolean discriminant corrections below.",
     "authority": "Use the immutable post-guard Admin application context, contracts.manage permission and server-derived Staff/game identities. Keep the existing Admin authentication, role/claim/grant checks and Admin limiter untouched. Preserve the additional downstream Staff read limiter and fresh owned-game lookup before repository reads.",
     "throttle": "Preserve the original forwarded-path action classification, read profile, Staff identity fallback for /staff/game-sessions paths and validated trusted-IP projection. Do not silently change throttle keys, remove the second limiter, or weaken 429/503 denials.",
     "queries": "Reuse SupabaseContractRepository and existing scoped getGameSessionContractById then listContractProgressForStaff, in that order. No SQL, predicate, sorting, pagination, response DTO or write change.",
@@ -65,6 +67,28 @@
     "response": "Preserve downstream status/body and the outer proxy CORS, content-type and no-store mapping, including existing error envelopes. No new UUID or credential fields.",
     "remainingConsumers": "Direct Staff/Classroom progress reads and every review/reward/access-reset proxy remain. One removed call is not Classroom retirement."
   },
+  "typeCompatibilityCorrection": {
+    "reason": "Importing the existing Contracts handler into the Admin graph exposes its strict-only truthiness narrowing under the already-existing Admin strict=false configuration. The first candidate failed typecheck before tests. Do not weaken or change compiler settings, suppress errors or copy a second reader.",
+    "allowedEdits": [
+      "staffContractHttpHandler.ts: change only staffResult, ownershipResult and rewardResult failure conditions from !value.ok to value.ok !== true",
+      "contractRewardService.ts: change only the readRewardPlan result failure condition from !validation.ok to validation.ok !== true",
+      "contractProgressReadOperation.ts: use the same explicit boolean comparison for its fresh ownership result"
+    ],
+    "preservation": "The declared results have literal true/false discriminants, so both valid branches are unchanged. Non-true malformed values remain denied rather than granting authority. No branch body, error, calculation, RPC, write, transaction, replay identity or reward route changes. This is necessary import-graph compilation work, not REF-008/009 or reward refactoring.",
+    "validation": "Require fresh Admin and strict Edge checks plus the unchanged Contract acceptance/lifecycle and backend smoke suites. A small local TypeScript 5.8.3 syntax/narrowing experiment is not acceptance for pinned CI TypeScript/Deno."
+  },
+  "qualificationHistory": [
+    {
+      "headSha": "f8ea8c50c49eb34f75a1096bb65155f5e98e57ad",
+      "treeSha": "c783dee81c5e22635cde81979ea459f0e88b32ac",
+      "status": "NOT_ACCEPTED",
+      "adminApiRun": 35845385559,
+      "adminApiJob": 107130170295,
+      "artifactId": 10743021913,
+      "artifactSha256": "421be49b3123b888aacaeb91f72ba9f81173d5d0ad5c63384f6fb10fddb12328",
+      "result": "Admin check exit 1: ten type errors in boolean union narrowing across the newly imported handler/reward service and local ownership check. Admin tests were not run. The downloaded complete diagnostic archive was hash-verified; neither workflow step labels nor uploaded runtime files count as a passing typecheck. Deterministic inventory and source-evidence reviews remain separate pending gates."
+    }
+  ],
   "expectedMeasurements": {
     "selectedRouteClassroomHttpHops": {"before": 1, "after": 0},
     "progressReadImplementations": {"before": 1, "after": 1},
@@ -93,7 +117,7 @@
     "caseMatrix": ["valid owner", "missing contract", "wrong game", "unauthorized Staff", "malformed identifier", "empty progress", "repository failure", "rate-limit deny", "rate-limit unavailable", "ignored Admin query", "unchanged direct Staff filters", "no outbound Classroom request", "no extra repository query or economic write"],
     "localBoundary": "Container Git clone cannot resolve github.com; Deno and a complete checkout are unavailable. Admin source bytes recovered from an existing CI artifact were checked against current-main Git blob hashes. Historical CI is source material only, not current-candidate test credit. Pinned exact-candidate CI and inspected logs are required before acceptance."
   },
-  "protected": ["auth/client factories", "context factories and Dashboard", "review/reward/access-reset routes", "repository implementations", "SQL/RPC and migrations", "UI and generated bundles", "workflows and package locks", "verifiers and security ceilings", "global beta/release ledgers", "secrets and live environments"],
+  "protected": ["auth/client factories", "context factories and Dashboard", "review/reward/access-reset route behavior", "repository implementations", "SQL/RPC and migrations", "UI and generated bundles", "workflows and package locks", "verifiers and security ceilings", "global beta/release ledgers", "secrets and live environments"],
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
   "nextTask": "REF-008",
