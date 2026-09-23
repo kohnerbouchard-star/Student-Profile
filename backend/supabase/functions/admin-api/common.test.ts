@@ -1,3 +1,6 @@
+import "../../../tests/admin/ref004RequestParity.test.ts";
+import "../../../tests/domains/contracts/ref004Parity.test.ts";
+import "../../../tests/domains/players/ref004Parity.test.ts";
 import { proxyClassroom } from "./common.ts";
 
 declare const Deno: {
@@ -311,6 +314,10 @@ Deno.test("legacy accepted contract decision reviews then issues atomic rewards"
     assert(
       firstBody.data?.reviewed === true,
       "Combined decision response omitted reviewed state.",
+    );
+    assert(
+      firstBody.data?.rewardIssued === true,
+      "Combined decision response omitted reward issuance.",
     );
     assert(
       firstBody.data?.rewardIssued === true,
