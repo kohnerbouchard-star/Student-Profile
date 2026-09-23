@@ -29,9 +29,10 @@
         "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
         "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
         "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
-        "backend/src/domains/contracts/services/contractRewardService.ts"
+        "backend/src/domains/contracts/services/contractRewardService.ts",
+        "backend/tests/admin/ref004RequestParity.test.ts"
       ],
-      "unallocatedPaths": "One slot remains unallocated. The ninth path is restricted to the boolean discriminant correction below, not reward implementation work. No workflow, package or guard relaxation."
+      "unallocatedPaths": "None. The ninth path permits only the boolean discriminant correction; the tenth permits only the existing progress-read fixture reconciliation described below. No workflow, package or guard relaxation."
     },
     "REF-007b": {
       "status": "PLANNED",
@@ -55,7 +56,8 @@
     "backend/src/platform/supabase/edgeStaffSession.ts": "71764e6c8f4a09ae2a1dd5828d4b1a651a2045c4",
     "backend/src/security/staffRequestRateLimit.ts": "bd86505eafeba4802502802d367e7a9f1d93989e",
     "backend/tests/domains/contracts/ref004Parity.test.ts": "f51b287ea8b2f45a2a53a29f927213379671111d",
-    "backend/src/domains/contracts/services/contractRewardService.ts": "2f2acc891fc1469c02e2d1de8e761a5efa054e96"
+    "backend/src/domains/contracts/services/contractRewardService.ts": "2f2acc891fc1469c02e2d1de8e761a5efa054e96",
+    "backend/tests/admin/ref004RequestParity.test.ts": "55e46d86f461d73d129738a059969a0dd3902225"
   },
   "sourceContract": {
     "route": "GET /games/:game/contracts/:contract/progress only",
@@ -77,6 +79,12 @@
     "preservation": "The declared results have literal true/false discriminants, so both valid branches are unchanged. Non-true malformed values remain denied rather than granting authority. No branch body, error, calculation, RPC, write, transaction, replay identity or reward route changes. This is necessary import-graph compilation work, not REF-008/009 or reward refactoring.",
     "validation": "Require fresh Admin and strict Edge checks plus the unchanged Contract acceptance/lifecycle and backend smoke suites. A small local TypeScript 5.8.3 syntax/narrowing experiment is not acceptance for pinned CI TypeScript/Deno."
   },
+  "fixtureReconciliation": {
+    "reason": "The retained REF004 positive progress fixture stubs the removed Classroom response as arbitrary HTTP 202 and provides no contract row. After the local move that exact fixture correctly returns contract_not_found 404. Its transport-shape expectation must track the selected local adapter rather than requiring the retired hop.",
+    "allowedEdits": "Add a progress-read-only synthetic repository row mode to the existing network mock, and update only the progress positive case to call the same real Admin entrypoint through the actual local reader/repository. Assert the unchanged real Contracts HTTP 200 DTO, query omission, no-store/CORS/filtered headers, both limiters, two scoped domain reads, zero Classroom requests and zero economic writes.",
+    "preserved": "Keep every root denial/role/session/permission case, original review/reward/reset fixture path, synthetic proxy 202 assertions on retained routes, economic RPC identity/replay assertions and unsupported-method expectations. Do not change global network restrictions or register another harness.",
+    "parityBoundary": "Original actual Contracts progress returns HTTP 200, independently established by the unchanged reader and 20 passing new parity cases. Replacing the synthetic transport-only 202 with that actual DTO is not permission to change an application status code. Original failed candidate and artifact remain recorded."
+  },
   "qualificationHistory": [
     {
       "headSha": "f8ea8c50c49eb34f75a1096bb65155f5e98e57ad",
@@ -87,6 +95,15 @@
       "artifactId": 10743021913,
       "artifactSha256": "421be49b3123b888aacaeb91f72ba9f81173d5d0ad5c63384f6fb10fddb12328",
       "result": "Admin check exit 1: ten type errors in boolean union narrowing across the newly imported handler/reward service and local ownership check. Admin tests were not run. The downloaded complete diagnostic archive was hash-verified; neither workflow step labels nor uploaded runtime files count as a passing typecheck. Deterministic inventory and source-evidence reviews remain separate pending gates."
+    },
+    {
+      "headSha": "635e3c0127b3885935554a7ea19560669734f9d9",
+      "treeSha": "d8f4dcb02d6b9f7ed4bd0d667f30638a9d4697e6",
+      "status": "NOT_ACCEPTED",
+      "adminApiRun": 35846337057,
+      "artifactId": 10743607594,
+      "artifactSha256": "76a624448b9be11775c2c588637014fa6dd37d24ad20faae33930782f47f3845",
+      "result": "Admin typecheck exit 0. Full Admin tests: 262 passed, one failed; all 20 REF007 parity cases passed. The sole Admin failure is the retained REF004 synthetic forwarding expectation at line 118 (actual missing-contract 404 versus fake upstream 202). No failed overall suite is credited as acceptance."
     }
   ],
   "expectedMeasurements": {
