@@ -64,7 +64,7 @@
       "id": "REF-004",
       "title": "Capture bounded behavior-parity fixtures",
       "file": "tasks/REF-004.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-002"
       ],
