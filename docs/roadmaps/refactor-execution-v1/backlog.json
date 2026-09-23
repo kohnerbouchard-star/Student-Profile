@@ -49,16 +49,16 @@
       "id": "REF-003",
       "title": "Classify dead-code candidates with reproducible evidence",
       "file": "tasks/REF-003.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-002"
       ],
       "risk": "R1",
       "architectureMapping": "ARCH-700",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "b0fc0788c3ce06fd470cbd66df1fb1e1918ed048",
+      "mergeSha": "c15d30ebe697c0cd2ca1d34c59c8e4366cb988dc",
+      "evidence": "docs/roadmaps/refactor-execution-v1/tasks/REF-003.md"
     },
     {
       "id": "REF-004",
