@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "task": "REF-007",
-  "status": "IN_PROGRESS",
+  "status": "VERIFIED_COMPLETE",
   "baseMainSha": "a3ec93f60817746e34e124b59210f3e8ab5ebf32",
   "ownerBranch": "refactor/ref-007-local-contract-progress",
   "architectureMapping": ["ARCH-400", "ARCH-700"],
@@ -17,7 +17,7 @@
   },
   "boundedSubsteps": {
     "REF-007a": {
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "purpose": "Preserve the current progress read while removing only its Admin-to-Classroom network hop",
       "maximumMeaningfulFiles": 10,
       "editablePaths": [
@@ -35,7 +35,7 @@
       "unallocatedPaths": "None. The ninth path permits only the boolean discriminant correction; the tenth permits only the existing progress-read fixture reconciliation described below. The unused REF003 maintenance slot is replaced by the PR748 authority manifest under continuationScopeReconciliation. No workflow, package or guard relaxation."
     },
     "REF-007b": {
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": ["REF-007a", "REF-007c"],
       "purpose": "Accepted implementation/merge evidence and parent status closeout only",
       "maximumMeaningfulFiles": 3,
@@ -47,7 +47,7 @@
       "boundary": "Only REF007 backlog fields may change; preserve all other 49 objects and every dependency. Parent completion requires checked normal merges."
     },
     "REF-007c": {
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": ["REF-007a"],
       "purpose": "Reviewed one-for-one exact-site evidence transfer for the removed progress GET network hop and retained limiter metadata",
       "maximumMeaningfulFiles": 3,
@@ -184,7 +184,7 @@
     "denominator": "Selected Contract-progress adapter only; not whole-application performance or debt-removal measurement."
   },
   "validation": {
-    "status": "NOT_ACCEPTED",
+    "status": "ACCEPTED",
     "requiredCommands": [
       "npm --prefix backend run test:admin-api",
       "npm --prefix backend run test:player-contract-acceptance",
@@ -206,5 +206,299 @@
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
   "nextTask": "REF-008",
-  "nextTaskStarted": false
+  "nextTaskStarted": false,
+  "publication": {
+    "implementationPullRequest": 748,
+    "implementationSha": "ad4e19d68c10511214d3b1d54db879f4b0e8d3d7",
+    "implementationTreeSha": "f4cfa0d172d677c5e5a8e5d100ecff00c6c51b78",
+    "baseMainSha": "a3ec93f60817746e34e124b59210f3e8ab5ebf32",
+    "testedPrMergeSha": "0e691fdd481c83b5245357e9e7da3eea1edbab02",
+    "actualImplementationMergeSha": "62e1730956739743c9e14d0e03f6c65b03503f11",
+    "mergedAtUtc": "2026-09-23T21:09:41Z",
+    "mergeTreeEqualsImplementationTree": true,
+    "sourceQualificationReceipt": "https://github.com/kohnerbouchard-star/Student-Profile/pull/748#issuecomment-5802933366",
+    "artifactReceipt": "https://github.com/kohnerbouchard-star/Student-Profile/pull/748#issuecomment-5802890347",
+    "workflowTotals": {
+      "total": 36,
+      "success": 35,
+      "skipped": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    "headWorkflows": [
+      {
+        "runId": 35918690534,
+        "name": "PR361 Staging Game Provisioning Repair",
+        "result": "skipped"
+      },
+      {
+        "runId": 35918690178,
+        "name": "Progression Runtime",
+        "result": "success"
+      },
+      {
+        "runId": 35918690526,
+        "name": "multicurrency-store-funding-v1",
+        "result": "success"
+      },
+      {
+        "runId": 35918690348,
+        "name": "Business Store Withdrawal Safety V2",
+        "result": "success"
+      },
+      {
+        "runId": 35918690227,
+        "name": "Exchange Calendar Runtime",
+        "result": "success"
+      },
+      {
+        "runId": 35918690537,
+        "name": "Production Runtime Promotion Contract",
+        "result": "success"
+      },
+      {
+        "runId": 35918690037,
+        "name": "Admin Browser E2E",
+        "result": "success"
+      },
+      {
+        "runId": 35918690087,
+        "name": "Business Store Listing Inventory V2",
+        "result": "success"
+      },
+      {
+        "runId": 35918690310,
+        "name": "Repository Quality",
+        "result": "success"
+      },
+      {
+        "runId": 35918690456,
+        "name": "Business Player Store Cutover V2",
+        "result": "success"
+      },
+      {
+        "runId": 35918690473,
+        "name": "Player Local Currency Authority",
+        "result": "success"
+      },
+      {
+        "runId": 35918690396,
+        "name": "Business Store Seller Offers V2",
+        "result": "success"
+      },
+      {
+        "runId": 35918690443,
+        "name": "Runtime Interaction Wiring",
+        "result": "success"
+      },
+      {
+        "runId": 35918690266,
+        "name": "Release Integrity",
+        "result": "success"
+      },
+      {
+        "runId": 35918689943,
+        "name": "business-store-sales-convergence-v2",
+        "result": "success"
+      },
+      {
+        "runId": 35918690151,
+        "name": "Admin API Check",
+        "result": "success"
+      },
+      {
+        "runId": 35918690330,
+        "name": "Admin Bundle Contract Audit",
+        "result": "success"
+      },
+      {
+        "runId": 35918690550,
+        "name": "business-player-store-fx-final-v2",
+        "result": "success"
+      },
+      {
+        "runId": 35918690336,
+        "name": "business-multicurrency-treasury-v1",
+        "result": "success"
+      },
+      {
+        "runId": 35918690379,
+        "name": "Business Workforce Payroll V2",
+        "result": "success"
+      },
+      {
+        "runId": 35918690130,
+        "name": "Release Promote Exact Artifacts",
+        "result": "success"
+      },
+      {
+        "runId": 35918690442,
+        "name": "Player Terminal Verify",
+        "result": "success"
+      },
+      {
+        "runId": 35918690486,
+        "name": "multicurrency-stock-funding-v1",
+        "result": "success"
+      },
+      {
+        "runId": 35918690168,
+        "name": "banking-fx-clearing-v1",
+        "result": "success"
+      },
+      {
+        "runId": 35918690457,
+        "name": "Runtime Stabilization Onboarding",
+        "result": "success"
+      },
+      {
+        "runId": 35918690439,
+        "name": "Business Economy V2",
+        "result": "success"
+      },
+      {
+        "runId": 35918690433,
+        "name": "Business Store Atomic Settlement V2",
+        "result": "success"
+      },
+      {
+        "runId": 35918690449,
+        "name": "Business Timed Manufacturing V2",
+        "result": "success"
+      },
+      {
+        "runId": 35918690483,
+        "name": "Required Game Market Timezone",
+        "result": "success"
+      },
+      {
+        "runId": 35918689981,
+        "name": "Edge Function Inventory",
+        "result": "success"
+      },
+      {
+        "runId": 35918690491,
+        "name": "Player Multiplayer and Load E2E",
+        "result": "success"
+      },
+      {
+        "runId": 35918690549,
+        "name": "Staging Readiness Preflight",
+        "result": "success"
+      },
+      {
+        "runId": 35918690493,
+        "name": "multicurrency-marketplace-funding-v1",
+        "result": "success"
+      },
+      {
+        "runId": 35918690434,
+        "name": "Supply Chain Security",
+        "result": "success"
+      },
+      {
+        "runId": 35918690238,
+        "name": "Backend Typecheck",
+        "result": "success"
+      },
+      {
+        "runId": 35918686699,
+        "name": "CodeQL / PR #748",
+        "result": "success"
+      }
+    ],
+    "skipBoundary": "PR361 is a historical PR-specific staging-repair workflow. No skipped protected staging/deployment job is counted as executed acceptance.",
+    "criticalStoreFxJobs": {
+      "runId": 35918690550,
+      "source": 107376765029,
+      "connected": 107376765450,
+      "playerBrowser": 107376765453,
+      "database": 107376765533,
+      "result": "success"
+    },
+    "vercelCommitStatus": "success",
+    "ciValidation": {
+      "headSha": "ad4e19d68c10511214d3b1d54db879f4b0e8d3d7",
+      "adminCases": 263,
+      "focusedRef007Cases": 20,
+      "commands": {
+        "test:player-contract-acceptance": {
+          "passed": 45,
+          "failed": 0
+        },
+        "test:player-contract-lifecycle": {
+          "passed": 1,
+          "failed": 0
+        },
+        "test:admin-api": {
+          "passed": 263,
+          "failed": 0
+        },
+        "test:player-security": {
+          "passed": 59,
+          "failed": 0
+        }
+      },
+      "edgeRoots": 28,
+      "smokeExit": 0,
+      "typecheckExit": 0,
+      "artifacts": [
+        {
+          "name": "admin",
+          "id": 10775499866,
+          "run": 35918690151,
+          "sha256": "290b872ea5823f8044516570bcb391f68364bad7fd1ccf03ad0a6473dcb8ff66"
+        },
+        {
+          "name": "smoke",
+          "id": 10776615947,
+          "run": 35918690238,
+          "sha256": "ab251162e733e0db0fa76d5173d0f8d48dab529527e443a9c8e784cb152b9207"
+        },
+        {
+          "name": "typecheck",
+          "id": 10776421190,
+          "run": 35918690238,
+          "sha256": "1627f9c0a0e46db0e6f6f35d7b8781d5fc569a813da56ea6f52a9106c1bcba29"
+        }
+      ],
+      "executionBoundary": "Pinned GitHub Actions; this local step only inspected and hash-verified complete logs."
+    },
+    "postMergeBetaSecurity": {
+      "runId": 35920687490,
+      "jobId": 107383562576,
+      "sourceSha": "62e1730956739743c9e14d0e03f6c65b03503f11",
+      "result": "success",
+      "boundary": "The standalone workflow was path-filtered out for the PR. Its configured actual-main push run completed security/authentication contracts, typechecks, privacy, MFA, HMAC/replay, BFF/gateway and credential-scan steps successfully before this closeout. It is not misrepresented as a PR-triggered run."
+    },
+    "releaseBoundary": {
+      "productionGitReleaseRun": 35920687482,
+      "contractJobId": 107383562745,
+      "contractResult": "success",
+      "liveParityAndReleaseJobs": "skipped",
+      "productionReleasePerformed": false,
+      "productionCertification": false,
+      "note": "Only tokenless release-contract validation ran. Staging/production parity capture, enforcement and release/production publication jobs were skipped. This source acceptance is not live runtime certification."
+    },
+    "closeoutScope": {
+      "paths": [
+        "docs/roadmaps/refactor-execution-v1/tasks/REF-007.md",
+        "docs/roadmaps/refactor-execution-v1/backlog.json",
+        "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json"
+      ],
+      "other49TaskObjectsPreserved": true,
+      "allDependenciesPreserved": true,
+      "allQualificationHistoryPreserved": true,
+      "applicationSourceChanged": false,
+      "implementationPathCount": 11,
+      "sourceTestPathCount": 7,
+      "sourceTestDiffLines": 389,
+      "localBoundary": "Exact original Git blobs, complete artifact checksums, JSON/task graph and isolated three-document git diff validation; not local application or Deno execution.",
+      "completionEffective": "Only after this closeout passes its applicable checks and is normally merged. Its PR discussion records the checked closeout head and actual merge; no prospective self-referential SHA is fabricated."
+    },
+    "unresolvedTaskBlockers": [],
+    "retainedLimits": "Other Classroom callers and existing source-retirement gates remain. PR668 context/Dashboard/global ledgers and PR736 authentication remain separately owned. No economic behavior, source deletion, live SQL, secrets or cloud settings change.",
+    "nextTask": "REF-008",
+    "nextTaskStarted": false
+  }
 }

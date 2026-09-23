@@ -113,7 +113,7 @@
       "id": "REF-007",
       "title": "Replace Contract progress GET forwarding with a local adapter",
       "file": "tasks/REF-007.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-005"
       ],
@@ -122,9 +122,9 @@
       "recheckOpenPrs": [
         668
       ],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "ad4e19d68c10511214d3b1d54db879f4b0e8d3d7",
+      "mergeSha": "62e1730956739743c9e14d0e03f6c65b03503f11",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json"
     },
     {
       "id": "REF-008",
