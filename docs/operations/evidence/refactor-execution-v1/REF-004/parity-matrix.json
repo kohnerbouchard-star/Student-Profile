@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-004",
+  "status": "IN_PROGRESS",
+  "repository": "kohnerbouchard-star/Student-Profile",
+  "pullRequest": 742,
+  "ownerBranch": "refactor/ref-004-behavior-parity-fixtures",
+  "baseMainSha": "53c29cbda56d2f7457b43743ea4ce553bb6659ce",
+  "inspectionSourceSha": "46031b25cfee0e638186d71b60c74e40be2ec3e3",
+  "scope": {
+    "concept": "Synthetic characterization of the existing residual Admin adapters and their Staff leaves",
+    "fileCeiling": 10,
+    "editablePaths": [
+      "backend/supabase/functions/admin-api/ref004RequestParity.test.ts",
+      "backend/supabase/functions/admin-api/ref004LeafParity.test.ts",
+      "backend/src/domains/contracts/api/staffContractRef004Parity.test.ts",
+      "backend/src/domains/players/api/playerAccessCodeResetRef004Parity.test.ts",
+      "docs/operations/evidence/refactor-execution-v1/REF-004/parity-matrix.json",
+      "docs/roadmaps/refactor-execution-v1/tasks/REF-004.md",
+      "docs/roadmaps/refactor-execution-v1/backlog.json"
+    ],
+    "registration": "test:admin-api already discovers admin-api/*.test.ts. ref004LeafParity.test.ts imports the two domain-owned fixture modules. No package, lockfile or workflow edit.",
+    "protected": "Application source, existing assertions, generated bundles, database/migrations/RPCs, auth/context owner #668, Player-auth owner #736, workflows, dependencies, other 49 task records and all dependency links.",
+    "sideEffects": "Tests temporarily substitute Deno.serve/env.get and fetch only inside their test worker, restore them in finally blocks, and use synthetic dependencies. The real Admin handler is captured without opening a port. Unknown network or persistence calls fail the fixture; no real credentials or provider access."
+  },
+  "sources": {
+    "backend/supabase/functions/admin-api/index.ts": "be2954b915c5b7d37cc2cd6dd08a59b1c41dcbd8",
+    "backend/supabase/functions/admin-api/common.ts": "91a3b1381403dc5604e8bbef784be8367593e3f6",
+    "backend/supabase/functions/admin-api/gameRoutes.ts": "e923f0e900681b817381b5341189de11805b0b33",
+    "backend/supabase/functions/admin-api/adminSecurityGuard.ts": "2bfd5cb781c7ab7c15d8966a3e738c4b8b684b97",
+    "backend/supabase/functions/admin-api/contractRewards.ts": "c47f1a272bf5dc433bb1ecd14f5501828642f6a0",
+    "backend/supabase/functions/admin-api/mutationAdapters.ts": "a57fe571b7e274adb453e1dc09a6eaa557b39992",
+    "backend/src/domains/contracts/api/staffContractHttpHandler.ts": "069dd79023aee3c77528d026175b4e1804038a7f",
+    "backend/src/domains/players/api/playerAccessCodeResetHttpHandler.ts": "602d55a39b31bcd3b60ec89024a2572fdeb0a820"
+  },
+  "routes": [
+    {"id":"progress","method":"GET","path":"/games/:gameId/contracts/:contractId/progress","target":"GET /staff/game-sessions/:gameId/contracts/:contractId/progress","permission":"contracts.manage","currentBehavior":"Drops original query parameters before forwarding; preserves upstream body/status, filters upstream headers and adds no-store."},
+    {"id":"decision","methods":["POST","PATCH"],"path":"/games/:gameId/contract-submissions/:progressId/decision","target":"POST /staff/game-sessions/:gameId/contracts/:resolvedContractId/progress/:progressId/review","permission":"game.update","currentBehavior":"Game-scoped progress lookup precedes forwarding; approval then calls the local atomic reward authority. This sequence is not a single transaction."},
+    {"id":"submission-review","methods":["POST","PATCH"],"path":"/games/:gameId/contracts/:contractId/submissions/:progressId/review","target":"POST /staff/game-sessions/:gameId/contracts/:contractId/progress/:progressId/review","permission":"contracts.manage","currentBehavior":"Normalizes action/resultPayload; does not automatically issue rewards."},
+    {"id":"progress-review","method":"POST","path":"/games/:gameId/contracts/:contractId/progress/:progressId/review","target":"POST /staff/game-sessions/:gameId/contracts/:contractId/progress/:progressId/review","permission":"contracts.manage","currentBehavior":"Normalizes action/resultPayload; does not automatically issue rewards."},
+    {"id":"reward","method":"POST","path":"/games/:gameId/contracts/:contractId/progress/:progressId/rewards/issue","target":"issue_contract_rewards_atomic_v1","permission":"contracts.manage","currentBehavior":"Local intercept, not a Classroom HTTP mutation. One RPC per attempt, with game/contract/progress/staff and request identity, followed by scoped reads. Request-body reward authority is ignored."},
+    {"id":"reset","method":"POST","path":"/games/:gameId/players/:playerId/access-code/reset","target":"POST /games/:gameId/players/:playerId/access-code/reset -> handleResetPlayerAccessCodeRequest","permission":"players.manage","currentBehavior":"Forwarded body and request identity; Staff leaf checks ownership/player then invokes set_player_identity_and_access_credential_v2 for credential replacement. Identifier-only writes are distinct."}
+  ],
+  "coveragePlan": {
+    "requestBoundary": ["expired/revoked upstream auth", "stale server claims", "wrong role", "missing permission", "unowned game", "wrong URL game", "security dependency failure", "rate-limit failure and denial", "no denied forwarding or economic writes", "aliases and request transformations", "upstream status/header behavior", "one authoritative reward call per attempt", "legacy partial-success sequence", "actual unsupported-method fallback"],
+    "contractLeaf": ["method before auth", "auth before ownership", "owned-game predicates", "progress filters and exact envelopes", "review transitions", "forged authority rejection", "already rewarded review rejection", "missing contract/progress", "repository rejection"],
+    "credentialLeaf": ["method before environment/auth", "auth/ownership/player denial", "credential aliases and public response fields", "single RPC arguments", "conflict/error translation", "same request identity does not supply credential idempotency", "identifier-only does not revoke sessions"]
+  },
+  "proofBoundary": {
+    "fixtureLevel": "Real request/handler code with synthetic Auth/PostgREST/Classroom dependencies; not connected runtime or database execution",
+    "rewardReplay": "Verify adapter invocation count and propagation of applied/replayed RPC receipts. No claim to prove SQL locking, conservation or replay with a fake RPC.",
+    "credentialReplay": "Record the existing absence of request-id/idempotency-key RPC parameters; do not invent conflict/replay guarantees.",
+    "noNormalization": "No response/error/identity/currency/effect fields are scrubbed. Synthetic clocks and credential material supply deterministic values where the handler exposes injection."
+  },
+  "validation": {
+    "executionStatus": "NOT_RUN",
+    "commands": ["npm --prefix backend run test:admin-api", "npm --prefix backend run test:admin-local-mutations", "npm --prefix backend run test:player-contract-acceptance", "npm run test:auth-boundaries", "npm run test:web-session-release", "npm run audit:architecture", "npm run audit:high-priority-boundaries", "npm run audit:legacy-runtime", "npm run security:secrets", "npm test", "npm --prefix backend run typecheck:all", "npm --prefix backend run smoke", "git diff --check"],
+    "localLimitation": "Direct Git failed at DNS resolution. No full local checkout or local Deno execution is claimed. Existing CI is the full-checkout execution path; record actual head/run/job results only after execution.",
+    "implementationSha": null,
+    "actualMergeSha": null
+  },
+  "successorTasksStarted": false,
+  "applicationBehaviorChanged": false,
+  "productionOrDatabaseActions": false
+}
