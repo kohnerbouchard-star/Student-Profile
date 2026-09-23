@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "task": "REF-006",
-  "status": "IN_PROGRESS",
+  "status": "VERIFIED_COMPLETE",
   "baseMainSha": "7e2f1022c601c33c2429de10b36a86dfcb13d2f8",
   "ownerBranch": "refactor/ref-006-messaging-domain-dispatch",
   "architectureMapping": ["ARCH-400", "ARCH-402"],
@@ -22,7 +22,7 @@
     "reason": "The existing REF-003 source-hash guard, generated inventory and PR-bound verification manifest require evidence maintenance in addition to the four-file code/test move. Separate the eight-path implementation from the three-path final status closeout rather than silently exceeding the task budget.",
     "REF-006a": {
       "purpose": "Mechanical dispatcher ownership move, registered parity fixtures and required evidence bindings",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "maximumMeaningfulFiles": 8,
       "editablePaths": [
         "backend/src/domains/messaging/api/playerMessagingDispatch.ts",
@@ -38,7 +38,7 @@
     },
     "REF-006b": {
       "purpose": "Actual accepted-merge evidence and final parent status only",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": ["REF-006a"],
       "maximumMeaningfulFiles": 3,
       "editablePaths": [
@@ -71,7 +71,7 @@
     "denominator": "One canonical Player root, one retained Classroom root and their one shared Messaging dispatcher; not a whole-application debt-removal claim."
   },
   "validation": {
-    "status": "NOT_ACCEPTED",
+    "status": "PASSED",
     "commands": [
       "npm --prefix backend run test:player-messaging",
       "npm --prefix backend run test:player-security",
@@ -116,5 +116,173 @@
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
   "nextTask": "REF-007",
-  "nextTaskStarted": false
+  "nextTaskStarted": false,
+  "acceptedQualification": {
+    "scope": "Repository-only REF-006a and its three-document REF-006b closeout. Completion status applies only on main after this closeout is checked and normally merged; an unmerged copy is proposed status, not acceptance.",
+    "implementationPr": 746,
+    "implementationHead": "dee1b16d77cc75a4ed32f6be51145fe1002d3617",
+    "implementationTree": "2a6437dddbc78deec220567d389836af42a79bbf",
+    "testedPrMergeCommit": "340fb9e0b9ef9f82772268f19d01ec3df63ed9f7",
+    "testedPrMergeTree": "2a6437dddbc78deec220567d389836af42a79bbf",
+    "actualImplementationMerge": "f823928b30cbdd740f5c304abe28e6a21b730ad3",
+    "actualImplementationMergeTree": "2a6437dddbc78deec220567d389836af42a79bbf",
+    "mergedAt": "2026-09-23T08:58:21Z",
+    "qualificationComment": "https://github.com/kohnerbouchard-star/Student-Profile/pull/746#issuecomment-5791920786",
+    "closeoutBranch": "docs/ref-006-messaging-dispatch-closeout",
+    "closeoutReceipt": "The closeout PR discussion binds its actual checked head, docs-only validation and normal merge receipt. No prospective closeout merge SHA is invented in this document.",
+    "validationOrigin": "Pinned GitHub CI on the accepted candidate or its identical-tree PR merge ref. Complete artifacts were downloaded, their ZIP digests checked and named command results inspected locally; no local Deno execution is claimed.",
+    "backendEvidence": {
+      "runId": 35835059298,
+      "smokeArtifact": {
+        "id": 10739585350,
+        "name": "backend-smoke-diagnostics",
+        "zipSha256": "177dd4a344b5dbe929c6d8057b6973f184aab00713d98aa03833f19d172bd86c",
+        "logSha256": "8a82a4b8154a38c1e56bf8919625e9831e78a46a4c2bce75426d43d589309dd4",
+        "exitStatus": 0
+      },
+      "typecheckArtifact": {
+        "id": 10739550093,
+        "name": "backend-typecheck-diagnostics",
+        "zipSha256": "0d9730cb41c7a2fabcf9be988cc3fd415f6be2d27f5d1f0ce77aa999f4c16d29",
+        "logSha256": "890487827b5305b3e577309eecccd096037c4a2369f31a00632e8e328c444057",
+        "exitStatus": 0
+      },
+      "namedCommands": [
+        {
+          "command": "npm --prefix backend run test:player-messaging",
+          "passed": 32,
+          "failed": 0
+        },
+        {
+          "command": "npm --prefix backend run test:player-request-scope",
+          "passed": 71,
+          "failed": 0
+        },
+        {
+          "command": "npm --prefix backend run test:player-security",
+          "passed": 59,
+          "failed": 0,
+          "messagingDispatchCases": 17
+        },
+        {
+          "command": "npm --prefix backend run typecheck:all",
+          "exitStatus": 0,
+          "edgeRootsChecked": 28
+        },
+        {
+          "command": "npm --prefix backend run smoke",
+          "exitStatus": 0
+        }
+      ],
+      "resolution": "The previously missing full Messaging and request-scope evidence was present in the complete smoke log. It is now verified by command and outcome, not inferred from the smoke badge or waived."
+    },
+    "candidateCi": {
+      "unfilteredRunCount": 38,
+      "successfulRuns": 35,
+      "expectedSkippedRuns": 3,
+      "failedRuns": 0,
+      "pendingRuns": 0,
+      "successfulPrRunIds": [
+        35835059050,
+        35835059068,
+        35835059198,
+        35835059159,
+        35835058979,
+        35835059132,
+        35835059099,
+        35835059244,
+        35835059211,
+        35835059073,
+        35835059092,
+        35835059174,
+        35835058926,
+        35835059137,
+        35835059139,
+        35835059028,
+        35835059066,
+        35835059095,
+        35835059062,
+        35835059034,
+        35835058995,
+        35835059109,
+        35835059179,
+        35835059010,
+        35835059072,
+        35835059129,
+        35835058967,
+        35835059041,
+        35835059112,
+        35835059045,
+        35835059164,
+        35835059298,
+        35835059122,
+        35835058980
+      ],
+      "codeQlDynamicRun": 35835056071,
+      "expectedSkippedWorkflowIds": {
+        "Economic Asset Core Staging Release": 35835059146,
+        "Economic Asset Core Staging Reconcile": 35835059182,
+        "PR361 Staging Game Provisioning Repair": 35835059057
+      },
+      "accounting": "37 pull-request-triggered runs plus separately retrieved dynamic CodeQL account for all 38 runs reported by the unfiltered Actions endpoint.",
+      "repositoryQuality": {
+        "run": 35835058926,
+        "job": 107096403982,
+        "result": "SUCCESS; npm test, architecture/high-priority/legacy audits, deterministic inventory and credential/dependency checks"
+      },
+      "playerTerminal": {
+        "run": 35835059198,
+        "job": 107096404509,
+        "result": "SUCCESS; exact-head authorization, boundary/read-resilience contracts, full verify including messaging-connected and Chromium"
+      },
+      "betaSecurity": {
+        "run": 35835059092,
+        "job": 107096404498,
+        "result": "SUCCESS; registered Player-security suite, auth boundaries and full security typechecks"
+      },
+      "criticalStoreFxJobs": {
+        "run": 35835059068,
+        "source": 107096404889,
+        "database": 107096404651,
+        "playerBrowser": 107096404881,
+        "connectedDisposableRuntime": 107096404838,
+        "result": "All four SUCCESS"
+      },
+      "commitStatuses": {
+        "Vercel": "success (preview only)",
+        "messaging/isolated-staging-harness": "success"
+      },
+      "adminApiCheck": "Standalone workflow not triggered by its unchanged Admin/migration path filters. Its Admin typecheck and tests are covered in the successful all-Edge and full smoke commands; no standalone run is claimed.",
+      "messagingHostedAcceptance": "Protected connected-isolated-staging job was SKIPPED on this PR. Harness success is not hosted staging acceptance; this structural refactor does not authorize a live release."
+    },
+    "sourceReview": {
+      "oldDispatcherBlob": "97a1b7b4adf7ec77d092b94e7551411d1cfd09d5",
+      "domainDispatcherBlob": "643e6971d4b4bfd2980d58dc6a3ed4ec796c3e7e",
+      "retainedExportBlob": "83719a1fc9edc1818a040d45f9d52ccc2665b137",
+      "playerRuntimeBlob": "440f507730057034f34c70d4eb2883869636b290",
+      "unchangedClassroomRootBlob": "1b4691f278b8fea057851de520fdfe4773be46f7",
+      "equivalence": "Exact Git blob identities verified. Declaration and dispatch body are identical after seven relative import occurrences are adjusted; all resolved import targets are unchanged. Player changes one import specifier and Classroom index is unchanged.",
+      "cycleBoundary": "Relocating one implementation node and inserting a one-way export preserves downstream edges and introduces no new cycle or Classroom dependency into the domain owner. This is not a zero-cycle census of unrelated modules.",
+      "testBoundary": "Seventeen registered dispatcher cases include three original and fourteen added cases using real handlers/parsers/limiter and synthetic RPCs. Root wiring plus two-import parity is not live invocation of both Deno.serve roots or fresh SQL atomicity proof.",
+      "actualMeasurements": {
+        "playerToClassroomDispatcherImports": 0,
+        "dispatcherImplementations": 1,
+        "retainedOneWayExports": 1,
+        "deletedSourcePaths": 0,
+        "sourceFilesBefore": 1236,
+        "sourceFilesAfter": 1237,
+        "messagingFilesBefore": 15,
+        "messagingFilesAfter": 16,
+        "otherDebtCountsAndCeilingsChanged": false
+      },
+      "retainedConsumers": "Classroom imports its retained explicit value/type export. External usage remains unknown; REF-048 and the existing retention gates still govern removal.",
+      "protectedOwnersRechecked": {
+        "736": "8070f58d4145951d8aee3e74a2b1e00d90c54385",
+        "668": "faaf908bdd5131b451c7e87e91ed4991ad8f839d"
+      }
+    },
+    "remainingBlockersForThisTask": [],
+    "runtimeBoundary": "No production deployment, database/configuration/secret mutation or unrelated PR merge was dispatched. Automatic preview status is not a production certificate. Separate auth/context/live-parity work remains with its owners.",
+    "stopAfterTask": "REF-006; REF-007 remains PLANNED and unstarted."
+  }
 }
