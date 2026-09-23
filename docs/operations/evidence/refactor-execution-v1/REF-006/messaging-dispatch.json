@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-006",
+  "status": "IN_PROGRESS",
+  "baseMainSha": "7e2f1022c601c33c2429de10b36a86dfcb13d2f8",
+  "ownerBranch": "refactor/ref-006-messaging-domain-dispatch",
+  "architectureMapping": ["ARCH-400", "ARCH-402"],
+  "dependency": "REF-005 VERIFIED_COMPLETE through implementation #744 and closeout #745",
+  "ownership": {
+    "authorization": "The product owner requested Task 6, was informed of #736's overlap, and authorized resolving the overlap and proceeding. This is an import-only handoff, not approval or release of the auth correction.",
+    "playerAuthPr": 736,
+    "playerAuthHead": "8070f58d4145951d8aee3e74a2b1e00d90c54385",
+    "handoffComment": "https://github.com/kohnerbouchard-star/Student-Profile/pull/736#issuecomment-5790672202",
+    "handedOffSymbol": "Only the dispatchClassroomMessagingRequest import specifier in player-api/runtime.ts; preserve the symbol, invocation and createServiceClient injection.",
+    "retainedAuthOwner": "#736 retains credential selection, client-factory changes, injection tests, incident documentation and release evidence. Its head is not modified, merged, closed or copied by REF-006.",
+    "globalContextPr": 668,
+    "globalContextHead": "faaf908bdd5131b451c7e87e91ed4991ad8f839d",
+    "globalContextBoundary": "#668 owns the global beta and architecture ledgers, Staff/Admin context and bootstrap work. Its changed-file list does not include either Messaging composition root or the selected security fixture. Global ledgers and context code remain untouched. A deterministic generated inventory refresh is not ownership of its application work.",
+    "existingTaskOwnerSearch": "No REF-006 pull request or refactor/ref-006 branch existed before this branch was created."
+  },
+  "boundedSubsteps": {
+    "reason": "The existing REF-003 source-hash guard, generated inventory and PR-bound verification manifest require evidence maintenance in addition to the four-file code/test move. Separate the eight-path implementation from the three-path final status closeout rather than silently exceeding the task budget.",
+    "REF-006a": {
+      "purpose": "Mechanical dispatcher ownership move, registered parity fixtures and required evidence bindings",
+      "status": "IN_PROGRESS",
+      "maximumMeaningfulFiles": 8,
+      "editablePaths": [
+        "backend/src/domains/messaging/api/playerMessagingDispatch.ts",
+        "backend/supabase/functions/classroom-api/messagingDispatch.ts",
+        "backend/supabase/functions/player-api/runtime.ts",
+        "backend/src/security/playerMessagingRateLimitDispatch.test.ts",
+        "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
+        "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+        "docs/operations/evidence/refactor-execution-v1/REF-006/messaging-dispatch.json",
+        "docs/operations/contracts/player-cross-cutting/pr-746.json"
+      ],
+      "reservedEighthPath": "Resolved to docs/operations/contracts/player-cross-cutting/pr-746.json after publication. No verifier or workflow change."
+    },
+    "REF-006b": {
+      "purpose": "Actual accepted-merge evidence and final parent status only",
+      "status": "PLANNED",
+      "dependsOn": ["REF-006a"],
+      "maximumMeaningfulFiles": 3,
+      "editablePaths": [
+        "docs/operations/evidence/refactor-execution-v1/REF-006/messaging-dispatch.json",
+        "docs/roadmaps/refactor-execution-v1/tasks/REF-006.md",
+        "docs/roadmaps/refactor-execution-v1/backlog.json"
+      ],
+      "boundary": "Only REF-006 backlog fields may change. Preserve the other 49 task objects and all dependency links. Parent completion requires both substeps."
+    }
+  },
+  "preservedSourceBlobs": {
+    "backend/supabase/functions/player-api/runtime.ts": "3bff3bdd9cc9a59d693b83cc076fe6243c58aaa7",
+    "backend/supabase/functions/classroom-api/messagingDispatch.ts": "97a1b7b4adf7ec77d092b94e7551411d1cfd09d5",
+    "backend/src/security/playerMessagingRateLimitDispatch.test.ts": "924f63ef57cd7cda6055263ed9b02ec5b94a85e1",
+    "backend/supabase/functions/classroom-api/index.ts": "1b4691f278b8fea057851de520fdfe4773be46f7"
+  },
+  "moveContract": {
+    "implementation": "Move the current dispatcher byte-for-byte except relative import specifiers. Keep existing exported names to preserve #736's source contract and existing callers.",
+    "playerRoot": "Replace only ../classroom-api/messagingDispatch.ts with ../../../src/domains/messaging/api/playerMessagingDispatch.ts. No route table, call site, authentication or factory change.",
+    "classroomRoot": "Keep its existing ./messagingDispatch.ts import; the old module becomes explicit value/type re-exports of the same domain implementation, with no wrapper or duplicate dispatch.",
+    "retainedExportOwner": "Messaging; removal requires REF-048 and the existing consumer/retirement gates. No source path is deleted here.",
+    "evidenceMaintenance": "Re-review only affected REF-003 source/supporting hashes and caller/replacement descriptions. Preserve dispositions, deletion prohibitions, initial snapshots, all other records and the guard itself.",
+    "protected": "All auth/client factories, shared rate limits, handlers, route parsers, request context, SQL/RPCs, migrations, UI, bundles, workflows, packages/lockfiles, compiler settings, inherited ratchets/ceilings, global ledgers, secrets and live configurations."
+  },
+  "expectedMeasurements": {
+    "playerToClassroomDispatcherImports": {"before": 1, "after": 0},
+    "dispatcherImplementations": {"before": 1, "after": 1},
+    "retainedOneWayExports": {"before": 0, "after": 1},
+    "deletedPaths": 0,
+    "denominator": "One canonical Player root, one retained Classroom root and their one shared Messaging dispatcher; not a whole-application debt-removal claim."
+  },
+  "validation": {
+    "status": "NOT_ACCEPTED",
+    "commands": [
+      "npm --prefix backend run test:player-messaging",
+      "npm --prefix backend run test:player-security",
+      "npm --prefix backend run test:player-request-scope",
+      "npm --prefix backend run typecheck:all",
+      "Player messaging-connected through its existing owning workflow",
+      "npm run audit:architecture",
+      "npm run audit:high-priority-boundaries",
+      "npm run audit:legacy-runtime",
+      "npm test",
+      "npm run security:secrets",
+      "git diff --check"
+    ],
+    "localEnvironment": "Node 22.16.0 is available. Git clone failed because the container cannot resolve github.com; Deno and a complete application checkout are unavailable. Exact changed-file blob checks and syntax checks are local evidence only; full-checkout pinned CI is required for acceptance.",
+    "evidenceBoundary": "Existing handler/security tests plus added real-dispatcher seam fixtures are repository evidence, not live production behavior. No missing test is classified as passed."
+  },
+  "qualificationHistory": [
+    {
+      "headSha": "43cdab491f7a5191b37fb23126794d25bd83c419",
+      "treeSha": "e87eb9e25197d5715bf3e525e61109b0be0a7756",
+      "status": "NOT_ACCEPTED",
+      "repositoryQualityRun": 35832635026,
+      "repositoryQualityJob": 107088563531,
+      "outcome": "Failed at deterministic inventory diff: sourceFiles 1236 to 1237 and Messaging sourceFiles 15 to 16. All other generated counts and source lists were unchanged. The REF-003 source revalidation remained an explicit pending maintenance item. This initial failure is preserved, not counted as acceptance.",
+      "checkoutSha": "cb13cea1e836611c2845394844b98b1d43149398",
+      "passingObservedJobs": [
+        {"run": 35832634899, "job": 107088563387, "name": "Backend Typecheck", "evidence": "Backend typecheck and smoke steps succeeded; not a claim that all task commands or final-head tests ran."},
+        {"run": 35832634994, "job": 107088564204, "name": "Player Terminal Verify", "evidence": "Exact-head authorization, boundary/read-resilience checks, standalone verification and Chromium browser steps succeeded."}
+      ],
+      "logArtifactId": 10737243146,
+      "logArtifactSha256": "f74cf0844fddbbe0a658cb1f422432e5705de8aab55a222ee11c405eb9a35c0c"
+    }
+  ],
+  "sourceEvidenceRefresh": {
+    "previousInventoryBlob": "9bf80e593e95cd2cad2b1cffc278a3af142375cc",
+    "reviewedInventoryBlob": "71860e9466e730b1a597bf0050d9fc3842ac44c9",
+    "inventoryProof": "The complete original 147238-byte inventory was reproduced locally with its exact Git blob hash. Applying only the two source-count changes emitted by full-checkout CI yielded the reviewed blob. The unchanged generator must reproduce it again in fresh exact-head CI. No threshold, debt count, candidate list, entrypoint or capability was raised or removed.",
+    "previousCandidateRegisterBlob": "776fc61ece9be2af5cadae6ab958f3cc05c1754d",
+    "reviewedCandidateRegisterBlob": "31e97e0559dec63852d5703978f818b3399bbeb5",
+    "candidateReview": "Only the retained Messaging module's source review and appended REF-006 revalidation are updated. The one-way export retains compatibility_required and safeToDelete=false; explicit source hashes bind the Player root, unchanged Classroom root and new domain implementation. The other 22 reviews, earlier revalidation, historical identities, deletion conditions and fail-closed checker are preserved."
+  },
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "nextTask": "REF-007",
+  "nextTaskStarted": false
+}
