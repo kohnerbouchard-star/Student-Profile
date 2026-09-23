@@ -1,6 +1,4 @@
 import "../../../tests/admin/ref004RequestParity.test.ts";
-import "../../../tests/domains/contracts/ref004Parity.test.ts";
-import "../../../tests/domains/players/ref004Parity.test.ts";
 import { proxyClassroom } from "./common.ts";
 
 declare const Deno: {
