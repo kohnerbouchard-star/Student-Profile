@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-007",
+  "status": "IN_PROGRESS",
+  "baseMainSha": "a3ec93f60817746e34e124b59210f3e8ab5ebf32",
+  "ownerBranch": "refactor/ref-007-local-contract-progress",
+  "architectureMapping": ["ARCH-400", "ARCH-700"],
+  "authorization": "Owner requested Start task 7, under the existing bounded execution and normal-merge policy. Stop before REF-008. No deployment or unrelated PR merge.",
+  "dependencies": {"REF-005": "VERIFIED_COMPLETE", "precedingTask": "REF-006 VERIFIED_COMPLETE through #746 and #747"},
+  "ownership": {
+    "contextPr": 668,
+    "contextHead": "faaf908bdd5131b451c7e87e91ed4991ad8f839d",
+    "coordinationComment": "https://github.com/kohnerbouchard-star/Student-Profile/pull/668#issuecomment-5792450813",
+    "boundary": "PR668 edits the Dashboard dependency interface, optional argument and Dashboard body in gameRoutes.ts. Preserve all those symbols and the current function signature. REF007 owns only the Contract progress GET import/block and an export-only exposure of the current trusted-IP projection in common.ts. No context/bootstrap/auth factory or global-ledger ownership is transferred.",
+    "otherOpenPrs": [624, 690, 730, 731, 735, 736],
+    "existingOwnerSearch": "No open REF-007 PR or refactor/ref-007 branch before creation. All seven open PRs reviewed; no other Contract-progress implementation owner found."
+  },
+  "boundedSubsteps": {
+    "REF-007a": {
+      "status": "IN_PROGRESS",
+      "purpose": "Preserve the current progress read while removing only its Admin-to-Classroom network hop",
+      "maximumMeaningfulFiles": 10,
+      "editablePaths": [
+        "backend/supabase/functions/admin-api/gameRoutes.ts",
+        "backend/supabase/functions/admin-api/common.ts",
+        "backend/supabase/functions/admin-api/contractProgressReadOperation.ts",
+        "backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts",
+        "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
+        "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+        "docs/operations/contracts/player-cross-cutting/pr-748.json",
+        "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
+        "backend/src/domains/contracts/services/contractRewardService.ts",
+        "backend/tests/admin/ref004RequestParity.test.ts"
+      ],
+      "unallocatedPaths": "None. The ninth path permits only the boolean discriminant correction; the tenth permits only the existing progress-read fixture reconciliation described below. The unused REF003 maintenance slot is replaced by the PR748 authority manifest under continuationScopeReconciliation. No workflow, package or guard relaxation."
+    },
+    "REF-007b": {
+      "status": "PLANNED",
+      "dependsOn": ["REF-007a", "REF-007c"],
+      "purpose": "Accepted implementation/merge evidence and parent status closeout only",
+      "maximumMeaningfulFiles": 3,
+      "editablePaths": [
+        "docs/roadmaps/refactor-execution-v1/tasks/REF-007.md",
+        "docs/roadmaps/refactor-execution-v1/backlog.json",
+        "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json"
+      ],
+      "boundary": "Only REF007 backlog fields may change; preserve all other 49 objects and every dependency. Parent completion requires checked normal merges."
+    },
+    "REF-007c": {
+      "status": "IN_PROGRESS",
+      "dependsOn": ["REF-007a"],
+      "purpose": "Reviewed one-for-one exact-site evidence transfer for the removed progress GET network hop and retained limiter metadata",
+      "maximumMeaningfulFiles": 3,
+      "editablePaths": [
+        "docs/operations/evidence/refactor-execution-v1/REF-005/seam-baseline.json",
+        "docs/operations/evidence/refactor-execution-v1/REF-007/contract-progress.json",
+        "docs/operations/contracts/player-cross-cutting/pr-748.json"
+      ],
+      "boundary": "Registered before editing in issuecomment-5802656128. This child and REF007a have eleven distinct implementation paths, not an unannounced expansion of the ten-path child. Only transfer one exact site, append provenance and bind these paths. Do not edit verifier code or increase site counts/occurrence limits. Preserve every other site, all removal targets and original REF005 publication. Same existing owner PR; no replacement branch or new runtime capability."
+    }
+  },
+  "baselineBlobs": {
+    "backend/supabase/functions/admin-api/gameRoutes.ts": "e923f0e900681b817381b5341189de11805b0b33",
+    "backend/supabase/functions/admin-api/common.ts": "91a3b1381403dc5604e8bbef784be8367593e3f6",
+    "backend/src/domains/contracts/api/staffContractHttpHandler.ts": "069dd79023aee3c77528d026175b4e1804038a7f",
+    "backend/supabase/functions/admin-api/index.ts": "be2954b915c5b7d37cc2cd6dd08a59b1c41dcbd8",
+    "backend/supabase/functions/classroom-api/index.ts": "1b4691f278b8fea057851de520fdfe4773be46f7",
+    "backend/src/platform/supabase/edgeStaffSession.ts": "71764e6c8f4a09ae2a1dd5828d4b1a651a2045c4",
+    "backend/src/security/staffRequestRateLimit.ts": "bd86505eafeba4802502802d367e7a9f1d93989e",
+    "backend/tests/domains/contracts/ref004Parity.test.ts": "f51b287ea8b2f45a2a53a29f927213379671111d",
+    "backend/src/domains/contracts/services/contractRewardService.ts": "2f2acc891fc1469c02e2d1de8e761a5efa054e96",
+    "backend/tests/admin/ref004RequestParity.test.ts": "55e46d86f461d73d129738a059969a0dd3902225"
+  },
+  "sourceContract": {
+    "route": "GET /games/:game/contracts/:contract/progress only",
+    "domainOwner": "The existing listStaffContractProgress operation already exists in staffContractHttpHandler.ts. Expose that operation and its existing error mapper explicitly instead of copying its read/query/DTO code. Neither exported function body changes. The only additional handler/service edits allowed are the boolean discriminant corrections below.",
+    "authority": "Use the immutable post-guard Admin application context, contracts.manage permission and server-derived Staff/game identities. Keep the existing Admin authentication, role/claim/grant checks and Admin limiter untouched. Preserve the additional downstream Staff read limiter and fresh owned-game lookup before repository reads.",
+    "throttle": "Preserve the original forwarded-path action classification, read profile, Staff identity fallback for /staff/game-sessions paths and validated trusted-IP projection. Do not silently change throttle keys, remove the second limiter, or weaken 429/503 denials.",
+    "queries": "Reuse SupabaseContractRepository and existing scoped getGameSessionContractById then listContractProgressForStaff, in that order. No SQL, predicate, sorting, pagination, response DTO or write change.",
+    "filters": "The current Admin proxy constructs a path without query parameters. Preserve this omission here. Direct Staff filters remain unchanged; enabling Admin filters is separate behavior work.",
+    "response": "Preserve downstream status/body and the outer proxy CORS, content-type and no-store mapping, including existing error envelopes. No new UUID or credential fields.",
+    "remainingConsumers": "Direct Staff/Classroom progress reads and every review/reward/access-reset proxy remain. One removed call is not Classroom retirement."
+  },
+  "typeCompatibilityCorrection": {
+    "reason": "Importing the existing Contracts handler into the Admin graph exposes its strict-only truthiness narrowing under the already-existing Admin strict=false configuration. The first candidate failed typecheck before tests. Do not weaken or change compiler settings, suppress errors or copy a second reader.",
+    "allowedEdits": [
+      "staffContractHttpHandler.ts: change only staffResult, ownershipResult and rewardResult failure conditions from !value.ok to value.ok !== true",
+      "contractRewardService.ts: change only the readRewardPlan result failure condition from !validation.ok to validation.ok !== true",
+      "contractProgressReadOperation.ts: use the same explicit boolean comparison for its fresh ownership result"
+    ],
+    "preservation": "The declared results have literal true/false discriminants, so both valid branches are unchanged. Non-true malformed values remain denied rather than granting authority. No branch body, error, calculation, RPC, write, transaction, replay identity or reward route changes. This is necessary import-graph compilation work, not REF-008/009 or reward refactoring.",
+    "validation": "Require fresh Admin and strict Edge checks plus the unchanged Contract acceptance/lifecycle and backend smoke suites. A small local TypeScript 5.8.3 syntax/narrowing experiment is not acceptance for pinned CI TypeScript/Deno."
+  },
+  "fixtureReconciliation": {
+    "reason": "The retained REF004 positive progress fixture stubs the removed Classroom response as arbitrary HTTP 202 and provides no contract row. After the local move that exact fixture correctly returns contract_not_found 404. Its transport-shape expectation must track the selected local adapter rather than requiring the retired hop.",
+    "allowedEdits": "Add a progress-read-only synthetic repository row mode to the existing network mock, and update only the progress positive case to call the same real Admin entrypoint through the actual local reader/repository. Assert the unchanged real Contracts HTTP 200 DTO, query omission, no-store/CORS/filtered headers, both limiters, two scoped domain reads, zero Classroom requests and zero economic writes.",
+    "preserved": "Keep every root denial/role/session/permission case, original review/reward/reset fixture path, synthetic proxy 202 assertions on retained routes, economic RPC identity/replay assertions and unsupported-method expectations. Do not change global network restrictions or register another harness.",
+    "parityBoundary": "Original actual Contracts progress returns HTTP 200, independently established by the unchanged reader and 20 passing new parity cases. Replacing the synthetic transport-only 202 with that actual DTO is not permission to change an application status code. Original failed candidate and artifact remain recorded."
+  },
+  "qualificationHistory": [
+    {
+      "headSha": "f8ea8c50c49eb34f75a1096bb65155f5e98e57ad",
+      "treeSha": "c783dee81c5e22635cde81979ea459f0e88b32ac",
+      "status": "NOT_ACCEPTED",
+      "adminApiRun": 35845385559,
+      "adminApiJob": 107130170295,
+      "artifactId": 10743021913,
+      "artifactSha256": "421be49b3123b888aacaeb91f72ba9f81173d5d0ad5c63384f6fb10fddb12328",
+      "result": "Admin check exit 1: ten type errors in boolean union narrowing across the newly imported handler/reward service and local ownership check. Admin tests were not run. The downloaded complete diagnostic archive was hash-verified; neither workflow step labels nor uploaded runtime files count as a passing typecheck. Deterministic inventory and source-evidence reviews remain separate pending gates."
+    },
+    {
+      "headSha": "635e3c0127b3885935554a7ea19560669734f9d9",
+      "treeSha": "d8f4dcb02d6b9f7ed4bd0d667f30638a9d4697e6",
+      "status": "NOT_ACCEPTED",
+      "adminApiRun": 35846337057,
+      "artifactId": 10743607594,
+      "artifactSha256": "76a624448b9be11775c2c588637014fa6dd37d24ad20faae33930782f47f3845",
+      "result": "Admin typecheck exit 0. Full Admin tests: 262 passed, one failed; all 20 REF007 parity cases passed. The sole Admin failure is the retained REF004 synthetic forwarding expectation at line 118 (actual missing-contract 404 versus fake upstream 202). No failed overall suite is credited as acceptance."
+    },
+    {
+      "headSha": "a68117bd2d84282b7c19124f2087cfa9d0d556ac",
+      "treeSha": "0323eec1963b77a43f27323ded13af7dd34199a2",
+      "status": "NOT_ACCEPTED",
+      "failedRuns": {"repositoryQuality": 35847188703, "storeCutoverInventory": 35847188682, "bankingFxAuthority": 35847188642},
+      "result": "Admin API 263/263 including 20 REF007 cases, Contract acceptance 45/45, lifecycle 1/1, smoke and TypeScript/all 28 Edge roots passed. Overall qualification remained blocked by the stale generated architecture inventory and missing PR748-specific authority manifest. Store and Banking database/browser successes do not turn those failed overall workflows into passes. Earlier results are historical and do not certify the later continuation head.",
+      "artifacts": [
+        {"id": 10744107275, "run": 35847188693, "name": "admin-api-diagnostics", "sha256": "ff34dbd861252201cc261bba583b78ba246d250e3b36b1859ec737a76ef10a12"},
+        {"id": 10743453220, "run": 35847188622, "name": "backend-smoke-diagnostics", "sha256": "85cdc64ca8796af909277aaa6dc8c4bc5391dbd8b2601bdb5fbf65173fd7b277"},
+        {"id": 10743604141, "run": 35847188622, "name": "backend-typecheck-diagnostics", "sha256": "0694e3e78dabfa40766bc92378f1db52c5cef1a8569216ee4752c25bb1ee7f71"}
+      ]
+    },
+    {
+      "headSha": "1fa79cd816a77c503d964681641ed47310409932",
+      "treeSha": "e358159f73f127ae61ae3109ebef48f4f51a954c",
+      "status": "NOT_ACCEPTED",
+      "repositoryQualityRun": 35917816371,
+      "artifactId": 10775069854,
+      "artifactSha256": "1702d6df80ba8cb26b345057b4825b209cd9021a3ad9c0f88cf5b7601d18e5d0",
+      "result": "The complete deterministic inventory now reproduces exactly, and inherited high-priority/migration/Admin caps pass. The unchanged REF005 scanner then correctly rejects the new metadata-only Classroom literal as an unregistered relocated seam. Preserve this failure and resolve it through the explicit REF007c one-for-one site review, not obfuscation, a checker exception or a higher ceiling. This record does not assert completion of other runs on that head."
+    }
+  ],
+  "continuationScopeReconciliation": {
+    "ownerInstruction": "Finish task 7; retain the existing owner branch, normal guarded merge and separate closeout. Stop before REF-008.",
+    "record": "https://github.com/kohnerbouchard-star/Student-Profile/pull/748#issuecomment-5802577573",
+    "reviewedSourceSha": "a68117bd2d84282b7c19124f2087cfa9d0d556ac",
+    "candidateRegisterBlob": "31e97e0559dec63852d5703978f818b3399bbeb5",
+    "candidateRegisterReview": "The complete register contains 23 reviews and two supporting-source revalidations. None of its reviewed paths, sourceEvidence paths or sourceEvidenceBlobs bind to a REF007 changed source/test file. No candidate-register update is required. Leave its bytes, all dispositions, deletion prohibitions, supporting identities and the validator unchanged. Replace only its unused reserved editable slot with the exact PR748 manifest path; the ceiling remains ten.",
+    "authorityManifest": "docs/operations/contracts/player-cross-cutting/pr-748.json",
+    "protectedReferencePaths": ["scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+    "authorityBoundary": "Those two references are required by the unchanged manifest schema but are not editable paths. Preserve all mandatory Player verification contracts and four critical Store/FX jobs. No verifier, workflow, compiler, package, guard or ceiling change.",
+    "inventory": {
+      "run": 35847188682,
+      "artifactId": 10743144330,
+      "artifactSha256": "5215ae3b8a274978ec23e26aecd289dddadd58f66170d07c122f9f2fe32b25a8",
+      "previousCommittedBlob": "71860e9466e730b1a597bf0050d9fc3842ac44c9",
+      "completeGeneratedBlob": "ccf4e69e7b10884f500e3bc95b5fb1afba604eb6",
+      "expectedCompleteBlobAfterCommentClarification": "e45ad23e90f1cb4644570cf1a342cab7e9794008",
+      "expectedBytes": 147497,
+      "commentChange": "Clarify only the new adapter comment: Preserve the existing Staff identity dimension for /staff/game-sessions. The executable rate-limit action, identity dimension, request and service client remain byte-identical.",
+      "review": "Full exact-a681 generated artifact checksum verified. Relative to the committed baseline, sourceFiles increases 1237 to 1239, gameRoutes lines falls 724 to 719, and existing contracts.manage/game.read strings gain the new adapter/test locations. The comment-only lexical candidate is not functional debt removal. All 209 existing compatibility records, other debt lists, counts, ordering, thresholds and ceilings remain unchanged. The complete corrected inventory blob was reproduced and published without truncation. The unchanged generator must match it in fresh exact-head CI before acceptance. Unreferenced unsuccessful prior blob attempts are not used."
+    }
+  },
+  "seamTransferReview": {
+    "child": "REF-007c",
+    "record": "https://github.com/kohnerbouchard-star/Student-Profile/pull/748#issuecomment-5802656128",
+    "reviewedSourceSha": "1fa79cd816a77c503d964681641ed47310409932",
+    "previousBaselineBlob": "1c74f30cef50f1901898019bae0a9f26d0e12630",
+    "reviewedBaselineBlob": "0b9443a4f5f1523c1cacf7c18743884020a1b73c",
+    "adapterBlob": "cc36b5b1c1e7b684d60d346c9a83961a2a78fff4",
+    "rule": "Remove only the retired progress GET proxyClassroom call registration and add only the exact metadata Request literal reported by the unchanged scanner. Both occurrence maxima are one. Keep 37 registered identities and 40 occurrences; preserve all other 36 sites, all 23 removal targets, removalRecords and original REF005 history. Appending transfer provenance does not recertify historical tasks.",
+    "reason": "The Request preserves the old full-path Staff throttle classification without network dispatch. Reusing or aliasing the Classroom URL constant would also require review and must not be used to evade literal/named-reference detection. No executable source is changed by REF007c.",
+    "verification": "Require the unchanged exact-site census and adversarial removal/relocation tests, plus real-root zero-Classroom-fetch, both-limiters and unchanged-query parity. Restoring the old call, duplicating the new literal or placing it in another file must remain unregistered. No global exception, new runtime source or numeric ceiling increase.",
+    "distinctImplementationPaths": 11,
+    "sourceAndTestPaths": 7,
+    "sourceAndTestDiffLines": 389
+  },
+  "expectedMeasurements": {
+    "selectedRouteClassroomHttpHops": {"before": 1, "after": 0},
+    "progressReadImplementations": {"before": 1, "after": 1},
+    "domainRepositoryReadsOnSuccess": {"before": 2, "after": 2},
+    "freshOwnedGameReads": {"before": 1, "after": 1},
+    "downstreamStaffLimiterCalls": {"before": 1, "after": 1},
+    "economicWrites": {"before": 0, "after": 0},
+    "denominator": "Selected Contract-progress adapter only; not whole-application performance or debt-removal measurement."
+  },
+  "validation": {
+    "status": "NOT_ACCEPTED",
+    "requiredCommands": [
+      "npm --prefix backend run test:admin-api",
+      "npm --prefix backend run test:player-contract-acceptance",
+      "npm --prefix backend run test:player-contract-lifecycle",
+      "Relevant existing Admin Contracts tests",
+      "npm --prefix backend run typecheck:all",
+      "npm --prefix backend run smoke",
+      "npm run audit:architecture",
+      "npm run audit:high-priority-boundaries",
+      "npm run audit:legacy-runtime",
+      "npm run security:secrets",
+      "npm test",
+      "git diff --check"
+    ],
+    "caseMatrix": ["valid owner", "missing contract", "wrong game", "unauthorized Staff", "malformed identifier", "empty progress", "repository failure", "rate-limit deny", "rate-limit unavailable", "ignored Admin query", "unchanged direct Staff filters", "no outbound Classroom request", "no extra repository query or economic write"],
+    "localBoundary": "Container Git clone cannot resolve github.com; Deno and a complete checkout are unavailable. Admin source bytes recovered from an existing CI artifact were checked against current-main Git blob hashes. Historical CI is source material only, not current-candidate test credit. Pinned exact-candidate CI and inspected logs are required before acceptance."
+  },
+  "protected": ["auth/client factories", "context factories and Dashboard", "review/reward/access-reset route behavior", "repository implementations", "SQL/RPC and migrations", "UI and generated bundles", "workflows and package locks", "verifiers and security ceilings", "global beta/release ledgers", "secrets and live environments"],
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "nextTask": "REF-008",
+  "nextTaskStarted": false
+}

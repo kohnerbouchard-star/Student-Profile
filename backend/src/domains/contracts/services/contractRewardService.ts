@@ -315,7 +315,7 @@ export async function issueContractRewards(
 
   const validation = readRewardPlan(input.rewardPayload);
 
-  if (!validation.ok) {
+  if (validation.ok !== true) {
     return validation;
   }
 

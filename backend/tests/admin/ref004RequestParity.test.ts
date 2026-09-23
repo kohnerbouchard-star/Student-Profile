@@ -66,6 +66,19 @@ async function fixture(options: any, run: (send: any, calls: Call[]) => Promise<
     if (call.path === "/rest/v1/player_contract_progress" || call.path === "/rest/v1/game_session_contracts") {
       equal(call.method, "GET", "No direct economic table mutation is permitted");
       equal(call.query.get("game_session_id"), `eq.${G}`);
+      // REF-007 exercises the existing repository instead of a synthetic Classroom response.
+      if (options.localProgress && call.path === "/rest/v1/game_session_contracts") {
+        equal(call.query.get("id"), `eq.${C}`);
+        return json([{ id: C, game_session_id: G, contract_key: "ref004-progress", source_type: "teacher",
+          created_by_staff_id: S, title: "Fixture", description: "Fixture", instructions: "Fixture", category: "general",
+          status: "active", visibility: "public", targeting_payload: { allPlayers: true }, requirements_payload: {},
+          reward_payload: {}, completion_mode: "manual_review", metadata: {}, created_at: NOW, updated_at: NOW }]);
+      }
+      if (options.localProgress && call.path === "/rest/v1/player_contract_progress") {
+        equal(call.query.get("contract_id"), `eq.${C}`); equal(call.query.has("id"), false);
+        equal(call.query.has("status"), false); equal(call.query.has("player_id"), false);
+        return json([]);
+      }
       if (call.query.get("select") === "id,contract_id") return json(options.noProgress ? [] : [{ id: P, contract_id: C }]);
       equal(call.query.get("id"), `eq.${call.path.endsWith("player_contract_progress") ? P : C}`);
       if (call.path.endsWith("player_contract_progress")) equal(call.query.get("contract_id"), `eq.${C}`);
@@ -113,12 +126,17 @@ runtime.test("REF004 root rate denial retains retry headers and has no adapter e
   equal(response.headers.get("cache-control"), "private, no-store, max-age=0"); equal(response.headers.get("x-content-type-options"), "nosniff");
   equal(writes(calls), []);
 }));
-runtime.test("REF004 progress preserves the current query-drop and filtered response headers", () => fixture({}, async (send, calls) => {
+runtime.test("REF004/REF007 progress preserves the actual reader DTO, query-drop and filtered headers locally", () => fixture({ localProgress: true }, async (send, calls) => {
   const response = await send(`${suffixes.progress}?status=submitted&playerId=${OTHER}`, "GET");
-  equal(response.status, 202); equal(await response.json(), { ok: true, progress: [], contract: { contractId: C } }); transportHeaders(response);
-  const [call] = forwarded(calls); equal(forwarded(calls).length, 1); equal(call.method, "GET"); equal(call.body, null);
-  equal(call.path, `/functions/v1/classroom-api/staff/game-sessions/${G}/contracts/${C}/progress`); equal(call.query.toString(), "");
-  equal(call.headers.get("x-request-id"), "ref004-request"); equal(call.headers.get("idempotency-key"), "ref004-retry");
+  equal(response.status, 200); equal(await response.json(), { ok: true, progress: [], contract: {
+    contractId: C, gameSessionId: G, contractKey: "ref004-progress", title: "Fixture", status: "active", sourceType: "teacher",
+    visibility: "public", completionMode: "manual_review", deadlineAt: null, expiresAt: null,
+  } }); transportHeaders(response);
+  equal(forwarded(calls), []); equal(writes(calls), []);
+  const domainReads = calls.filter((call) => ["/rest/v1/game_session_contracts", "/rest/v1/player_contract_progress"].includes(call.path));
+  equal(domainReads.map((call) => call.path), ["/rest/v1/game_session_contracts", "/rest/v1/player_contract_progress"]);
+  equal(domainReads.map((call) => call.method), ["GET", "GET"]);
+  equal(calls.filter((call) => call.path.endsWith("/consume_request_rate_limits_v1")).length, 2);
 }));
 for (const name of ["submission", "review"] as const) for (const method of name === "submission" ? ["POST", "PATCH"] : ["POST"]) {
   runtime.test(`REF004 ${name} ${method}: normalized review never automatically rewards`, () => fixture({ grants: ["contracts.manage"] }, async (send, calls) => {
