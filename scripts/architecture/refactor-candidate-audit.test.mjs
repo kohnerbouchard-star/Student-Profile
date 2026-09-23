@@ -151,6 +151,30 @@ export function registerRepositoryCandidateAudit() {
       const target = path.posix.normalize(path.posix.join(path.posix.dirname(taskPath), match[1].split("#")[0]));
       assert(snapshot.files.has(target), `Missing task companion: ${target}`);
     }
+    if (process.env.GITHUB_HEAD_REF === "refactor/ref-003-dead-code-candidates") {
+      // Exact PR changed-path fixture; never freeze unrelated future tasks against this baseline.
+      const backlogPath = "docs/roadmaps/refactor-execution-v1/backlog.json", suitePath = "scripts/legacy-runtime/runtime-retirement.test.mjs";
+      const backlog = JSON.parse(snapshot.files.get(backlogPath).source);
+      Object.assign(backlog.tasks.find((row) => row.id === "REF-003"), { status: "PLANNED", implementationSha: null, mergeSha: null, evidence: null });
+      const originals = [
+        [taskPath, snapshot.files.get(taskPath).source.split("\n## Implementation checkpoint")[0].replace(/Status: [A-Z_]+\. Risk:/u, "Status: PLANNED. Risk:"), "c1d92b9e2c6a52fa93d8ad79b85f3906afffb518"],
+        [backlogPath, JSON.stringify(backlog, null, 2) + "\n", "9b02660af1e892e451fac4b1fac5f0a59a31b641"],
+        [suitePath, snapshot.files.get(suitePath).source.replace('import { registerRepositoryCandidateAudit } from "../architecture/refactor-candidate-audit.test.mjs";\n\nregisterRepositoryCandidateAudit();\n', ""), "ee8888eb9a0b6a9db0b1d30f11c2e848c508d7cb"],
+      ];
+      const paths = [...snapshot.files.get(REGISTER.replace("candidates.json", "scope.md")).source.matchAll(/^\d+\. `([^`]+)`/gmu)].map((match) => match[1]);
+      assert.equal(paths.length, 8); assert.equal(new Set(paths).size, 8);
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ref003-diff-"));
+      const git = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+      const put = (file, source) => { fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true }); fs.writeFileSync(path.join(dir, file), source); };
+      try {
+        git("init", "-q");
+        for (const [file, source, oid] of originals) { assert.equal(execFileSync("git", ["hash-object", "--stdin"], { input: source, encoding: "utf8" }).trim(), oid, `Changed baseline: ${file}`); put(file, source); }
+        git("add", "."); git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "Verified REF-003 base blobs");
+        for (const file of paths) put(file, snapshot.files.get(file).source);
+        git("add", "-N", "."); git("diff", "--check");
+        console.log("REF003_DIFF_CHECK " + JSON.stringify({ sourceSha: snapshot.sha, baseMainSha: rules.baseMainSha, baseBlobsVerified: 3, paths, result: "PASS", scope: "complete observed PR changed-path fixture" }));
+      } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+    }
     const report = auditSnapshot(snapshot, rules);
     assert.equal(report.trackedFiles, Object.values(report.denominators).reduce((n, row) => n + row.files, 0));
     assert.equal(report.candidateCount, Object.values(report.dispositions).reduce((a, b) => a + b, 0));
