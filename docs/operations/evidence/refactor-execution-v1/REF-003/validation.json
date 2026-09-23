@@ -133,5 +133,86 @@
     "Inspect final-head CI and diff before any later merge request; no task-completion or merge credit is granted here."
   ],
   "retentionPolicy": {"preDisableQuietWindowDays":14,"postDisableMonitoringDays":7,"preDeleteRecoveryWindowDays":30,"trafficWindowActuallyObserved":false},
-  "preservation": {"applicationSourceChanged":false,"applicationDeleted":false,"architectureCeilingsRaised":false,"workflowsChanged":false,"packageOrLockfilesChanged":false,"databaseChanged":false,"productionActions":false,"successorTasksStarted":false}
+  "preservation": {"applicationSourceChanged":false,"applicationDeleted":false,"architectureCeilingsRaised":false,"workflowsChanged":false,"packageOrLockfilesChanged":false,"databaseChanged":false,"productionActions":false,"successorTasksStarted":false},
+  "latestMeasurement": "sourceReviewContinuation",
+  "sourceReviewContinuation": {
+    "observedCensusAtUtc": "2026-09-23T00:00:04Z",
+    "inspectionSourceSha": "adbcc0561b4345c93a5c3023e418cf0a5de351c6",
+    "toolingAndReviewHeadSha": "5a6bbf7c54d16a2c77d2fdd3043b419b9fd05874",
+    "executedCheckoutSha": "a4dc419e11e92a82f0f79026e612e7d1256e0eb6",
+    "executedCheckoutType": "synthetic_pull_request_test_merge_not_an_actual_merge",
+    "executedTreeSha": "604e3f9b3a59cee3660fd6ba70fc0cd542edc25a",
+    "treeMatchesToolingHead": true,
+    "actualMergeSha": null,
+    "snapshotNote": "This new immutable snapshot supplements, rather than replaces, the initial measurements above. Later task/validation metadata commits need fresh CI. The record digest now includes per-record queries containing the exact checkout SHA; reproduce that digest at the executed checkout, not merely another commit with the same tree.",
+    "sourceIdentities": {
+      "classifierBlobSha": "6752e6c7dee83487d0bc8cfa90457118b33bf231",
+      "classifierTestBlobSha": "1f64afb0dce2f107e99eb26e7f17bb23127c65db",
+      "candidateRegisterBlobSha": "3e2e56b16979dc5c2913d511da84ceef0970622f",
+      "existingInventoryBlobSha": "9bf80e593e95cd2cad2b1cffc278a3af142375cc",
+      "localToolingBytesMatchPublishedBlobs": true
+    },
+    "census": {
+      "command": "node scripts/architecture/refactor-candidate-audit.mjs a4dc419e11e92a82f0f79026e612e7d1256e0eb6",
+      "executedThrough": "npm run test:legacy-runtime -> registerRepositoryCandidateAudit -> auditSnapshot",
+      "trackedFiles": 3952,
+      "denominators": {
+        "configuration_or_data": {"files":562,"textFiles":562,"physicalLines":220843,"bytes":16836838,"unmeasuredFiles":0},
+        "asset_or_other": {"files":374,"textFiles":130,"physicalLines":11968,"bytes":67953556,"unmeasuredFiles":244},
+        "documentation": {"files":582,"textFiles":582,"physicalLines":80212,"bytes":3887174,"unmeasuredFiles":0},
+        "application_source": {"files":997,"textFiles":997,"physicalLines":242943,"bytes":9780012,"unmeasuredFiles":0},
+        "generated_output": {"files":2,"textFiles":2,"physicalLines":14046,"bytes":1723855,"unmeasuredFiles":0},
+        "historical_path": {"files":9,"textFiles":6,"physicalLines":9301,"bytes":2075523,"unmeasuredFiles":3},
+        "test": {"files":600,"textFiles":600,"physicalLines":114278,"bytes":3981475,"unmeasuredFiles":0},
+        "script": {"files":372,"textFiles":372,"physicalLines":105335,"bytes":4344072,"unmeasuredFiles":0},
+        "migration_history": {"files":450,"textFiles":450,"physicalLines":161859,"bytes":6112366,"unmeasuredFiles":0},
+        "fixture": {"files":4,"textFiles":4,"physicalLines":276,"bytes":14804,"unmeasuredFiles":0}
+      },
+      "candidateCount": 745,
+      "dispositions": {"canonical":5,"confirmed_dead":0,"compatibility_required":7,"legacy_candidate":0,"historical_archive":2,"defensive_fallback":1,"generated_or_fixture":175,"unknown":555},
+      "reviewedSourceCount": 17,
+      "supportingSourceBindings": 14,
+      "historicalPathCandidates": 9,
+      "candidateRecordsSha256": "da27cf8849dd7810993e7cb43e92a9ddc2e3a6b65b8cb5fdcbe8f7456f11b267",
+      "safeToDeleteCount": 0,
+      "deletionShortlist": [],
+      "fullSemanticCallerAuditComplete": false,
+      "runtimeReachabilityCertified": false,
+      "interpretation": "The seven additional candidates are broader measurement, not newly added application code. Seventeen reviewed records overlap the disposition totals; the remaining unreviewed state is explicit. All historical-path files are included, but only two have reviewed historical_archive dispositions."
+    },
+    "executedChecks": [
+      {"command":"node --test scripts/architecture/refactor-candidate-audit.test.mjs","environment":"local synthetic fixtures only","node":"22.16.0","repositoryPinnedRuntime":false,"tests":14,"failures":0,"skipped":0,"result":"PASS","exitCode":0},
+      {"command":"node --check scripts/architecture/refactor-candidate-audit.mjs","environment":"local source copy whose Git blob matches publication","result":"PASS","exitCode":0},
+      {"command":"npm run test:legacy-runtime","workflowRunId":35800007942,"jobId":106987970909,"node":"22.23.1","npm":"10.9.8","tests":21,"testBreakdown":{"classifierFixtures":14,"realSourceCensus":1,"preservedRetirementTests":6},"failures":0,"skipped":0,"result":"PASS","exitCode":0},
+      {"command":"npm run audit:legacy-runtime","workflowRunId":35800007942,"jobId":106987970909,"result":"PASS","exitCode":0,"scope":"Existing repository policy and browser transport ratchets; not live traffic"},
+      {"command":"npm run test:player-runtime-cutover","workflowRunId":35800007942,"jobId":106987970909,"result":"PASS","exitCode":0,"scope":"Existing static cutover test"},
+      {"command":"npm test","workflowRunId":35800007851,"jobId":106987970962,"result":"PASS","exitCode":0,"scope":"Repository Quality audit/source step, including unchanged architecture generator and ratchets"},
+      {"command":"npm run security:secrets","workflowRunId":35800007851,"jobId":106987970962,"result":"PASS","exitCode":0},
+      {"command":"git diff --no-index --check <original-tooling> <updated-tooling>","environment":"local two-file source/test comparison only","result":"PASS","scope":"Not a whole-application checkout or whole-PR diff check"}
+    ],
+    "sourceReviewFindings": [
+      "Attendance bridge retains combined-request augmentation, game checks and successful-save acknowledgement; no deletion approved.",
+      "Player credential bridge and creation lifecycle retain credential events and create-action responsibilities beyond reset.",
+      "Historical Apps Script test logger is archival reference but is not universally read-only when executed; it was not executed.",
+      "BFF path rejection is intentional validation behavior and has explicit catch-all callers.",
+      "Neutral and Classroom compiler configs are strict; Admin relaxes strictness. Source registrations were inspected without changing checking."
+    ],
+    "scope": {
+      "existingPrFileBudget": 8,
+      "toolingAndTestPhysicalLinesIncludingRegistration": 332,
+      "backlogChangedInThisContinuation": false,
+      "retirementRegistrationChangedInThisContinuation": false,
+      "protectedApplicationAndMigrationDenominatorsUnchanged": true,
+      "workflowsChanged": false,
+      "applicationBehaviorChanged": false,
+      "productionOrDatabaseActions": false,
+      "successorTasksStarted": false
+    },
+    "remainingAcceptance": [
+      "Continue semantic/caller/replacement review for unresolved candidate families; NOT_REVIEWED is not completion credit.",
+      "Preserve the remaining explicit/dynamic callers of Player identity and Attendance save code, including literal hits in the retained generated bundle.",
+      "Historical API router and stock-history helpers remain separate unreviewed source families; external Apps Script use is not certified.",
+      "Review complete task acceptance and actual final-head CI/diff before a normal merge; no actual merge or VERIFIED_COMPLETE claim is made."
+    ]
+  }
 }
