@@ -59,17 +59,17 @@ test("REF005: selected removal targets cannot be forgotten by an empty baseline"
   const f = fixture(t); f.write(CANDIDATES_PATH, { reviews: [{ path: patch, blobSha: blobSha(original.get(patch)), owner: "Admin", disposition: "compatibility_required" }] });
   assert.match(f.scan().failures.join("\n"), /Unregistered removal target/);
 });
-function removalFixture(t) {
+function removalFixture(t, extension) {
   const f = fixture(t, new Map());
-  const target = { path: "admin/retained.js", sourceBlobSha: blobSha("old code"), owner: "Admin Settings", disposition: "compatibility_required", referenceTerms: ["oldSettingsListener"] };
-  const replacement = f.write("admin/settings.mjs", "export const save = () => true;\n");
+  const target = { path: `admin/retained${extension ?? ".js"}`, sourceBlobSha: blobSha("old code"), owner: "Admin Settings", disposition: "compatibility_required", referenceTerms: ["oldSettingsListener"] };
+  const replacement = f.write(`admin/settings${extension ?? ".mjs"}`, extension === ".json" ? '{"fixture":true}\n' : extension === ".md" ? "# Synthetic replacement\n" : "export const save = () => true;\n");
   const evidence = f.write("docs/evidence/source-audit.txt", "Synthetic reviewed caller and external-retirement evidence; never live proof.\n");
   const surfaces = Object.fromEntries(["staticImports", "dynamicImports", "htmlBuild", "sqlRpcTriggers", "scheduledJobs", "externalRuntime"].map((name) => [name, { status: "VERIFIED_CLEAR", reason: "synthetic fixture only", evidence }]));
   const audit = { removedPath: target.path, replacementPath: replacement.path, owner: target.owner, surfaces };
   const callerEvidence = f.write("docs/evidence/callers.json", audit);
   const ownerDecision = f.write("docs/evidence/decision.json", { removedPath: target.path, replacementPath: replacement.path, owner: target.owner, disposition: "replaced", decision: "approve-removal", approver: "fixture-owner", approvedAt: "2026-09-23T00:00:00Z" });
-  const testRef = f.write("admin/settings.test.mjs", 'import { save } from "./settings.mjs";\n');
-  const result = f.write("docs/evidence/result.json", { sourceSha: SHA, status: "PASS" });
+  const testRef = f.write("admin/settings.test.mjs", `import "./${path.posix.basename(replacement.path)}";\n`);
+  const result = f.write("docs/evidence/result.json", { sourceSha: SHA, status: "PASS", exitCode: 0, command: "node --test admin/settings.test.mjs", testBlobSha: testRef.blobSha });
   const parityEvidence = f.write("docs/evidence/parity.json", { status: "PASS", sourceSha: SHA, command: "node --test admin/settings.test.mjs", test: testRef, result });
   const record = { path: target.path, sourceBlobSha: target.sourceBlobSha, owner: target.owner, originalDisposition: target.disposition, disposition: "replaced", canonicalReplacement: replacement, callerEvidence, ownerDecision, parityEvidence };
   return { ...f, target, record, audit, sources: new Map([[replacement.path, fs.readFileSync(path.join(f.root, replacement.path), "utf8")]]) };
@@ -134,4 +134,27 @@ export function registerRepositorySeamAudit() {
 test("REF005: copying a transport read or unrelated nested property is not global interception", (t) => {
   const f = fixture(t); f.write("admin/safe.js", 'const view = Object.assign({}, { transport: window.fetch }); Object.assign(window, { state: { fetch: window.fetch } }); Object.defineProperty(state, "fetch", { value: window.fetch });');
   assert.deepEqual(f.scan().failures, []);
+});
+
+for (const extension of [".json", ".md"]) test(`REF005: ${extension} replacement keeps all ownership/caller/parity gates`, (t) => {
+  const f = removalFixture(t, extension); assert.doesNotThrow(() => verifyRemoval(f.root, f.target, f.record, f.sources));
+  delete f.record.ownerDecision; assert.throws(() => verifyRemoval(f.root, f.target, f.record, f.sources));
+});
+test("REF005: an executable source cannot be replaced by a document", (t) => {
+  const f = removalFixture(t); f.record.canonicalReplacement = f.write("admin/explanation.md", "# Not an implementation");
+  assert.throws(() => verifyRemoval(f.root, f.target, f.record, f.sources), /preserve source/);
+});
+test("REF005: an empty directory is not retention of a selected source file", (t) => {
+  const f = removalFixture(t); f.baseline.removalTargets = [f.target]; f.write(BASELINE_PATH, f.baseline);
+  fs.mkdirSync(path.join(f.root, f.target.path)); assert.match(f.scan().failures.join("\n"), /Missing removal/);
+});
+
+test("REF005: a PASS label cannot override failed or mismatched execution evidence", (t) => {
+  const f = removalFixture(t), parityPath = f.record.parityEvidence.path;
+  const parity = JSON.parse(fs.readFileSync(path.join(f.root, parityPath), "utf8"));
+  const result = JSON.parse(fs.readFileSync(path.join(f.root, parity.result.path), "utf8"));
+  for (const change of [{ status: "FAIL" }, { exitCode: 1 }, { sourceSha: "b".repeat(40) }, { command: "other command" }, { testBlobSha: "c".repeat(40) }]) {
+    parity.result = f.write(parity.result.path, { ...result, ...change }); f.record.parityEvidence = f.write(parityPath, parity);
+    assert.throws(() => verifyRemoval(f.root, f.target, f.record, f.sources), /exact passing/);
+  }
 });

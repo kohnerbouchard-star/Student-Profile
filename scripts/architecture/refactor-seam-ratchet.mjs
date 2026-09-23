@@ -102,13 +102,16 @@ function checkedText(root, reference) {
   requireValue(text.trim() && blobSha(text) === reference.blobSha, `Missing or stale evidence: ${file}`);
   return text;
 }
+const retainedFileExists = (root, file) => fs.existsSync(path.join(root, file)) && fs.lstatSync(path.join(root, file)).isFile();
 export function verifyRemoval(root, target, record, sources) {
   requireValue(record && record.path === target.path && record.disposition === "replaced", `Missing removal record: ${target.path}`);
   requireValue(record.owner === target.owner && record.sourceBlobSha === target.sourceBlobSha && record.originalDisposition === target.disposition, `Removal ownership/disposition/source mismatch: ${target.path}`);
   requireValue(record.approved === undefined, "An approved boolean is not removal evidence");
   const replacement = record.canonicalReplacement;
   checkedText(root, replacement);
-  requireValue(replacement.path !== target.path && extensions.test(replacement.path) && sourceKind(replacement.path) === "runtime", "Replacement must be canonical source, not a fixture or the removed path");
+  const originalExtension = path.posix.extname(target.path);
+  const sameKind = [".json", ".md"].includes(originalExtension) ? path.posix.extname(replacement.path) === originalExtension : extensions.test(replacement.path);
+  requireValue(replacement.path !== target.path && sameKind && sourceKind(replacement.path) === "runtime", "Replacement must preserve source/configuration/documentation kind, not be a fixture or the removed path");
   const audit = JSON.parse(checkedText(root, record.callerEvidence));
   requireValue(audit.removedPath === target.path && audit.replacementPath === replacement.path && audit.owner === target.owner, "Caller evidence identity mismatch");
   for (const surface of ["staticImports", "dynamicImports", "htmlBuild", "sqlRpcTriggers", "scheduledJobs", "externalRuntime"]) {
@@ -122,7 +125,8 @@ export function verifyRemoval(root, target, record, sources) {
   requireValue(parity.status === "PASS" && /^[0-9a-f]{40}$/u.test(parity.sourceSha) && parity.command?.trim(), "Missing parity execution evidence");
   requireValue(sourceKind(parity.test?.path ?? "") === "test_or_fixture", "Parity must identify a real test");
   requireValue(checkedText(root, parity.test).includes(path.posix.basename(replacement.path)), "Parity test does not reference replacement");
-  requireValue(checkedText(root, parity.result).includes(parity.sourceSha), "Parity result is not bound to its source SHA");
+  const result = JSON.parse(checkedText(root, parity.result));
+  requireValue(result.status === "PASS" && result.exitCode === 0 && result.sourceSha === parity.sourceSha && result.command === parity.command && result.testBlobSha === parity.test.blobSha, "Parity result does not confirm the exact passing test/command/source");
   for (const [file, source] of sources) if (sourceKind(file) === "runtime") {
     for (const literal of tokens(source).filter((token) => /^["'`]/u.test(token)).map((token) => token.slice(1, -1))) {
       const resolved = literal.startsWith(".") ? path.posix.normalize(path.posix.join(path.posix.dirname(file), literal)) : literal.replace(/^\//u, "");
@@ -153,10 +157,10 @@ export function auditRefactorSeams(root) {
   for (const review of reviews) if (!targets.has(review.path)) failures.push(`Unregistered removal target: ${JSON.stringify({ path: review.path, sourceBlobSha: review.blobSha, owner: review.owner, disposition: review.disposition, referenceTerms: review.referenceTerms ?? [] })}`);
   const removals = new Map((baseline.removalRecords ?? []).map((record) => [record.path, record]));
   requireValue(removals.size === (baseline.removalRecords ?? []).length, "Duplicate removal proof");
-  for (const target of targets.values()) if (!fs.existsSync(path.join(root, target.path))) {
+  for (const target of targets.values()) if (!retainedFileExists(root, target.path)) {
     try { verifyRemoval(root, target, removals.get(target.path), sources); } catch (error) { failures.push(error.message); }
   }
-  for (const removedPath of removals.keys()) requireValue(targets.has(removedPath) && !fs.existsSync(path.join(root, removedPath)), `Extraneous or premature removal proof: ${removedPath}`);
+  for (const removedPath of removals.keys()) requireValue(targets.has(removedPath) && !retainedFileExists(root, removedPath), `Extraneous or premature removal proof: ${removedPath}`);
   const classifications = {};
   for (const file of sources.keys()) classifications[sourceKind(file)] = (classifications[sourceKind(file)] ?? 0) + 1;
   return { failures, classifications, registeredSites: baseline.sites.length, observedSites: sites.length, protectedRemovalTargets: targets.size };
