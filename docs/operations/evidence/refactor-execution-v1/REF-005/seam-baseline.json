@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "task": "REF-005",
-  "status": "IN_PROGRESS",
+  "status": "VERIFIED_COMPLETE",
   "sourceSha": "576bc693416a4eda4bb9e8809fad3258f2b0611f",
   "qualification": "SCOPED_SOURCE_REVIEWED",
   "scope": {
@@ -103,11 +103,11 @@
   "validation": {
     "localUnitTests": {
       "result": "PASS",
-      "count": 33,
+      "count": 38,
       "node": "22.16.0",
       "scope": "Temporary synthetic source/evidence fixtures plus the actual inherited guard entrypoint; not a complete local repository checkout."
     },
-    "repositoryCensus": "Initial 36-site/23-target full-checkout qualification retained above; 37-site reviewed baseline awaits fresh exact-head acceptance and two-read deterministic test.",
+    "repositoryCensus": "Initial qualification failure is retained in review.initialCensusOutcome. The final accepted head passed the 37-site/23-target audit and repeated full-checkout deterministic census; publication records the exact runs and actual merge.",
     "requiredCommands": [
       "npm run audit:architecture",
       "npm run audit:high-priority-boundaries",
@@ -117,7 +117,7 @@
       "npm test",
       "git diff --check"
     ],
-    "headAccepted": false
+    "headAccepted": true
   },
   "successorTasksStarted": false,
   "applicationBehaviorChanged": false,
@@ -184,5 +184,103 @@
       },
       "interpretation": "No debt removal in this tooling task. Added precision and fail-closed removal evidence gates, not reduced application debt or changed inherited caps."
     }
+  },
+  "publication": {
+    "implementationPullRequest": 744,
+    "implementationSha": "efd5142e1fa744bc7b2126d10da0a834cc6b7a6a",
+    "implementationTreeSha": "82c4717fee0aece1a8157d891e4ee0c571f344d7",
+    "actualImplementationMergeSha": "1fb96a613f5b04548b5ccb784170f72d5b505ae1",
+    "mergedAtUtc": "2026-09-23T05:50:26Z",
+    "mergeTreeEqualsImplementationTree": true,
+    "finalHeadWorkflows": [
+      {
+        "runId": 35823169617,
+        "name": "Repository Quality",
+        "result": "success"
+      },
+      {
+        "runId": 35823169636,
+        "name": "Legacy Runtime Retirement Audit",
+        "result": "success"
+      },
+      {
+        "runId": 35823169607,
+        "name": "Supply Chain Security",
+        "result": "success"
+      },
+      {
+        "runId": 35823169590,
+        "name": "Release Integrity",
+        "result": "success"
+      },
+      {
+        "runId": 35823169635,
+        "name": "Production Runtime Promotion Contract",
+        "result": "success"
+      },
+      {
+        "runId": 35823169589,
+        "name": "Release Promote Exact Artifacts",
+        "result": "success"
+      },
+      {
+        "runId": 35823169658,
+        "name": "Staging Readiness Preflight",
+        "result": "success"
+      },
+      {
+        "runId": 35823169639,
+        "name": "Business Player Store Cutover V2",
+        "result": "success"
+      }
+    ],
+    "workflowTotals": {
+      "success": 8,
+      "failed": 0,
+      "pending": 0,
+      "skipped": 0
+    },
+    "vercelCommitStatus": "success",
+    "ciExecution": {
+      "node": "22.23.1",
+      "legacyRunId": 35823169636,
+      "legacyJobId": 107059179596,
+      "checkoutSha": "e0362e731fefb124d135569d2bc40e6ee57985a9",
+      "checkoutTreeSha": "82c4717fee0aece1a8157d891e4ee0c571f344d7",
+      "focusedCases": 38,
+      "repositoryCensusCases": 1,
+      "legacySuiteTotalPassed": 63,
+      "failed": 0,
+      "skipped": 0,
+      "proof": "Observed full-checkout TAP includes all 38 focused REF005 cases, the deterministic current-repository census, retained REF003 checks and all original runtime-retirement tests. The temporary test merge has the accepted implementation tree and is not the actual merge identity."
+    },
+    "finalReview": "Final helper preserves executable/configuration/documentation replacement kinds, requires a regular retained file, and independently validates parity result PASS, zero exit code, exact source/command/test blob. These five added cases raised local focused tests from 33 to 38 without changing the 37-site or 23-target baseline.",
+    "localValidation": {
+      "node": "22.16.0",
+      "focusedTests": 38,
+      "result": "PASS",
+      "exactSevenPathDiffCheck": "PASS",
+      "originalExistingFilesReproducedByBlob": true,
+      "other49TaskObjectsPreserved": true,
+      "allDependenciesPreserved": true,
+      "scope": "Synthetic source/evidence fixtures and isolated exact changed-path Git diff, not a complete local application checkout or local Deno run."
+    },
+    "protectedCounts": {
+      "siteIdentities": 37,
+      "siteOccurrences": 40,
+      "siteFiles": 20,
+      "browserInterceptionIdentities": 9,
+      "selectedRemovalTargets": 23,
+      "removedFiles": 0
+    },
+    "closeoutPaths": [
+      "docs/operations/evidence/refactor-execution-v1/REF-005/seam-baseline.json",
+      "docs/roadmaps/refactor-execution-v1/tasks/REF-005.md",
+      "docs/roadmaps/refactor-execution-v1/backlog.json"
+    ],
+    "closeoutRequiresSeparateReviewedMerge": true,
+    "nextTask": "REF-006",
+    "nextTaskStarted": false,
+    "limits": "Lexical pattern and structural-evidence checks are not exhaustive module/dataflow reachability, proof of human approval or live external-retirement evidence. Existing inherited guards and 14/7/30-day retirement rules remain binding. No application debt is removed and no production/database/cloud action is authorized."
   }
 }

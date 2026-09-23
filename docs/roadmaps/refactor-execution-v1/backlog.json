@@ -79,7 +79,7 @@
       "id": "REF-005",
       "title": "Extend existing architecture ratchets for the selected seams",
       "file": "tasks/REF-005.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-003",
         "REF-004"
@@ -87,9 +87,9 @@
       "risk": "R1",
       "architectureMapping": "ARCH-001",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "efd5142e1fa744bc7b2126d10da0a834cc6b7a6a",
+      "mergeSha": "1fb96a613f5b04548b5ccb784170f72d5b505ae1",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-005/seam-baseline.json"
     },
     {
       "id": "REF-006",
