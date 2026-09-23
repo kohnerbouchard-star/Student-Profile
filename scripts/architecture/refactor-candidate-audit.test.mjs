@@ -149,6 +149,6 @@ export function registerRepositoryCandidateAudit() {
     for (const row of report.candidates) assert(row.evidenceQuery && row.confidence && row.consumerAudit && row.replacement);
     const { candidates, reviewed, ...summary } = report;
     console.log("REF003_CENSUS " + JSON.stringify(summary));
-    for (const row of reviewed) console.log("REF003_REVIEW " + JSON.stringify({ path: row.path, disposition: row.path, literalReferences: row.literalReferences }));
+    for (const row of reviewed) console.log("REF003_REVIEW " + JSON.stringify({ path: row.path, disposition: row.disposition, literalReferences: row.literalReferences }));
   });
 }
