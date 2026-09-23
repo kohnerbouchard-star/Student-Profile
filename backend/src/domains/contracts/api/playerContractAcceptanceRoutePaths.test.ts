@@ -1,4 +1,3 @@
-import "../../../../tests/domains/contracts/ref004Parity.test.ts";
 import { readPlayerContractAcceptanceRoutePath } from "./playerContractAcceptanceRoutePaths.ts";
 import { readPlayerContractPublicSubmitRoutePath } from "./playerContractPublicSubmitRoutePaths.ts";
 
