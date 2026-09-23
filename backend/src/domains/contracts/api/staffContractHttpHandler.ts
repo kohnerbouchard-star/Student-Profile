@@ -159,7 +159,7 @@ export async function handleStaffContractRequest(
       },
     );
 
-    if (!staffResult.ok) {
+    if (staffResult.ok !== true) {
       return jsonError(staffResult.status, staffResult.error);
     }
 
@@ -169,7 +169,7 @@ export async function handleStaffContractRequest(
       staffResult.staff.id,
     );
 
-    if (!ownershipResult.ok) {
+    if (ownershipResult.ok !== true) {
       return jsonError(ownershipResult.status, ownershipResult.error);
     }
 
@@ -466,7 +466,7 @@ async function issueStaffContractRewards(input: {
     ledger: input.rewardLedgerWriter,
   });
 
-  if (!rewardResult.ok) {
+  if (rewardResult.ok !== true) {
     return jsonError(
       rewardResult.code === "contract_reward_issue_failed" ? 500 : 400,
       {

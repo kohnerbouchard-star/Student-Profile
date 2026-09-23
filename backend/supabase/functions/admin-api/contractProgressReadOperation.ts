@@ -139,7 +139,7 @@ async function readProgress(
   const ownership = await readOwnedGameSession(
     service, context.gameSessionId, context.actor.staffUserId,
   );
-  if (!ownership.ok) return jsonError(ownership.status, ownership.error);
+  if (ownership.ok !== true) return jsonError(ownership.status, ownership.error);
   const repository = dependencies.createRepository
     ? dependencies.createRepository(service)
     : new SupabaseContractRepository(service);
