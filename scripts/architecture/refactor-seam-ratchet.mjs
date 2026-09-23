@@ -57,7 +57,7 @@ export function measureSites(sources) {
         add(next === "(" && previous !== "function" ? "classroom_call" : "classroom_reference",
           next === "(" && previous !== "function" ? callSpan(parts, index) : parts.slice(Math.max(0, index - 1), index + 3).join(" "));
       }
-      if (/^["'`]/u.test(token) && token.includes("classroom-api")) {
+      if (/^["'`]/u.test(token) && /(?:classroom-api|CLASSROOM_API_URL)/u.test(token)) {
         const literal = token.slice(1, -1);
         const imported = previous === "from" || previous === "import" || (previous === "(" && ["import", "require"].includes(parts[index - 2]));
         if (imported) {
@@ -75,7 +75,18 @@ export function measureSites(sources) {
       }
       if (["Object", "Reflect"].includes(token) && next === "." && ["defineProperty", "defineProperties", "assign", "set"].includes(parts[index + 2]) && parts[index + 3] === "(") {
         const span = callSpan(parts, index + 2);
-        if (/\b(?:window|globalThis|self)\b/u.test(span) && /\b(?:fetch|XMLHttpRequest)\b/u.test(span)) add("browser_interception", `${token} . ${span}`);
+        const targetIsGlobal = ["window", "globalThis", "self"].includes(parts[index + 4]) && parts[index + 5] === ",";
+        const property = parts[index + 6]?.replace(/^["']|["']$/gu, "");
+        let transportKey = ["defineProperty", "set"].includes(parts[index + 2]) && ["fetch", "XMLHttpRequest"].includes(property);
+        if (["assign", "defineProperties"].includes(parts[index + 2]) && parts[index + 6] === "{") {
+          let depth = 0;
+          for (let cursor = index + 6; cursor < parts.length; cursor += 1) {
+            if (parts[cursor] === "{") depth += 1;
+            if (parts[cursor] === "}" && --depth === 0) break;
+            if (depth === 1 && ["{", ","].includes(parts[cursor - 1]) && ["fetch", "XMLHttpRequest"].includes(parts[cursor].replace(/^["']|["']$/gu, "")) && [":", ",", "}"].includes(parts[cursor + 1])) transportKey = true;
+          }
+        }
+        if (targetIsGlobal && transportKey) add("browser_interception", `${token} . ${span}`);
       }
     }
   }

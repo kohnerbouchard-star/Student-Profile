@@ -38,10 +38,13 @@ for (const [name, file, source] of [
   ["new literal import", "backend/src/new.ts", 'import { dispatch } from "../supabase/functions/classroom-api/messagingDispatch.ts";'],
   ["dynamic literal import", "backend/src/new.ts", 'await import("../supabase/functions/classroom-api/messagingDispatch.ts");'],
   ["direct Classroom transport", "api/new.js", 'fetch("https://example.invalid/functions/v1/classroom-api/new");'],
+  ["Classroom URL interpolation", "api/new.js", 'fetch(`${CLASSROOM_API_URL}/new`);'],
   ["new fetch monkey patch", "admin/new.js", "window.fetch = wrapper;"],
   ["second existing monkey patch", patch, "window.fetch = retainedFetch; window.fetch = retainedFetch;"],
   ["bracket monkey patch", "admin/new.js", 'globalThis["fetch"] = wrapper;'],
   ["reflective monkey patch", "admin/new.js", 'Object.defineProperty(window, "fetch", { value: wrapper });'],
+  ["object assignment patch", "admin/new.js", 'Object.assign(window, { fetch: wrapper });'],
+  ["reflective set patch", "admin/new.js", 'Reflect.set(globalThis, "fetch", wrapper);'],
   ["XMLHttpRequest monkey patch", "admin/new.js", "self.XMLHttpRequest = replacement;"],
 ]) test(`REF005 rejects ${name}`, (t) => { const f = fixture(t); f.write(file, source); assert.match(f.scan().failures.join("\n"), /Unregistered seam/); });
 test("REF005: image/error defaults, transport reads, comments, tests and fixtures are not new runtime seams", (t) => {
@@ -127,3 +130,8 @@ export function registerRepositorySeamAudit() {
     assert.deepEqual(first, second); assert.deepEqual(auditRefactorSeams(process.cwd()).failures, []);
   });
 }
+
+test("REF005: copying a transport read or unrelated nested property is not global interception", (t) => {
+  const f = fixture(t); f.write("admin/safe.js", 'const view = Object.assign({}, { transport: window.fetch }); Object.assign(window, { state: { fetch: window.fetch } }); Object.defineProperty(state, "fetch", { value: window.fetch });');
+  assert.deepEqual(f.scan().failures, []);
+});

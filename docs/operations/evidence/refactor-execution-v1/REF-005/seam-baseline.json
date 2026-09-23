@@ -3,7 +3,7 @@
   "task": "REF-005",
   "status": "IN_PROGRESS",
   "sourceSha": "576bc693416a4eda4bb9e8809fad3258f2b0611f",
-  "qualification": "UNMEASURED_FAIL_CLOSED",
+  "qualification": "SCOPED_SOURCE_REVIEWED",
   "scope": {
     "editablePaths": [
       "scripts/architecture/architecture-ratchet-v2.mjs",
@@ -30,22 +30,84 @@
       "player-terminal/src",
       "auth"
     ],
-    "sites": "Lexical named proxyClassroom/fetchClassroom/CLASSROOM_API_URL references and balanced calls, literal Classroom imports and transport strings, explicit window/globalThis/self fetch or XMLHttpRequest writes including bounded reflective writes. Identity is path plus kind plus token signature; counts may decrease, never silently relocate or grow.",
+    "sites": "Lexical named proxyClassroom/fetchClassroom/CLASSROOM_API_URL references and balanced calls, literal Classroom imports and transport strings (including the named URL constant in templates), explicit window/globalThis/self fetch or XMLHttpRequest writes including bounded reflective writes. Identity is path plus kind plus token signature; counts may decrease, never silently relocate or grow.",
     "exclusions": "Generated path segments node_modules/dist/build/coverage/.git; tests/test/__tests__/fixtures/fixture/__fixtures__ directories, .test/.spec. and Test/Tests filename suffixes, backend/src/smoke. Scripts, documentation, historical archives, migrations and JSON compiler registrations are outside runtime census, but selected REF-003 paths stay protected by deletion evidence. Classroom internal relative imports are not inbound coupling. No domain-wide runtime exception.",
-    "limits": "Not an AST, call graph, JS/TS module resolver or hosted traffic audit. Arbitrarily aliased globals, computed import targets and template interpolation require separate review. Literal signatures can conservatively require review on textual contract changes. Source hashes establish reviewed provenance, not a promise source stays byte-identical.",
+    "limits": "Not an AST, call graph, JS/TS module resolver or hosted traffic audit. Arbitrarily aliased globals, computed import targets and template interpolation require separate review. Literal signatures can conservatively require review on textual contract changes. Source hashes establish reviewed provenance, not a promise source stays byte-identical. Reflective checks cover explicit global targets with a literal property or first literal object argument; arbitrary aliases, spreads and later computed source arguments remain manual review. Regex literals are not parsed as an AST. A passing checker is not exhaustive reachability proof.",
     "removal": "All 23 current REF-003 reviewed paths must be registered. An absent selected path needs matching owner/source/original disposition, an existing hash-bound canonical replacement, caller audit with static/dynamic/HTML-build/SQL-RPC-trigger/job/external evidence, owner retirement decision and parity test/result references. Residual literal and event/string callers block removal unless explicitly reconciled. Structural evidence consistency does not authenticate a human approver, establish live quiet windows or prove test execution. Existing 14/7/30-day retirement policy and REF-003 checks remain mandatory. No path removal approved here."
   },
-  "sites": [],
-  "removalTargets": [],
+  "sites": [
+    {"file":"admin/admin-auth.js","kind":"browser_interception","signature":"window . fetch = function","maximum":1,"sourceBlobSha":"299b29ddd7d821e21b82e1e6bffe06c5321acf9c"},
+    {"file":"admin/attendance-reward-settings-route-bridge-v2.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"5edcbb4388bfa4942afca3e6f4181c4c72afdc26"},
+    {"file":"admin/classroom-write-fallback.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"c448b68dec4fb931661772a17ac5781b4d745cb6"},
+    {"file":"admin/create-action-adapter.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"039e29f8646b65c351825a2604e80384ab3c1bbd"},
+    {"file":"admin/game-creation-runtime-bridge.js","kind":"browser_interception","signature":"window . fetch = function","maximum":1,"sourceBlobSha":"0ce82e842290de45faad789d98f643601b1c2787"},
+    {"file":"admin/player-access-code-bridge.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"0a64de2377b88f94119413fa09b2cc7c41bab230"},
+    {"file":"admin/scanner-auto-refresh.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"542c0f9472a3cd441107438a89ead0a0aff200c5"},
+    {"file":"admin/scanner-reward-localization.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"977d19d17e596387d0969c550b5bd270f6b7445a"},
+    {"file":"backend/src/domains/business/api/playerBusinessRoutePaths.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"bc8856d482bcd67a84bbfb85db8cd08f1aadb257"},
+    {"file":"backend/src/domains/players/api/playerApiRouteSegments.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"ce9f92f39ce1af9a37170ea5b80ae7e7fe749c5d"},
+    {"file":"backend/src/domains/players/api/playerCapabilityManifestRoutePaths.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":2,"sourceBlobSha":"e79e5acaa69a8fb148202b91378a715d8528312c"},
+    {"file":"backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":2,"sourceBlobSha":"f910cf5cf66edd54aa93a757edff513c105b7096"},
+    {"file":"backend/supabase/functions/admin-api/common.ts","kind":"classroom_call","signature":"fetchClassroom ( request , context , path , \"POST\" , body , )","maximum":1,"sourceBlobSha":"91a3b1381403dc5604e8bbef784be8367593e3f6"},
+    {"file":"backend/supabase/functions/admin-api/common.ts","kind":"classroom_call","signature":"fetchClassroom ( request , context , path , method , body )","maximum":1,"sourceBlobSha":"91a3b1381403dc5604e8bbef784be8367593e3f6"},
+    {"file":"backend/supabase/functions/admin-api/common.ts","kind":"classroom_call","signature":"proxyClassroom ( request , context , rewardPath , \"POST\" , { } , )","maximum":1,"sourceBlobSha":"91a3b1381403dc5604e8bbef784be8367593e3f6"},
+    {"file":"backend/supabase/functions/admin-api/common.ts","kind":"classroom_literal","signature":"`${CLASSROOM_API_URL}${path}`","maximum":1,"sourceBlobSha":"91a3b1381403dc5604e8bbef784be8367593e3f6"},
+    {"file":"backend/supabase/functions/admin-api/common.ts","kind":"classroom_literal","signature":"`${SUPABASE_URL}/functions/v1/classroom-api`","maximum":1,"sourceBlobSha":"91a3b1381403dc5604e8bbef784be8367593e3f6"},
+    {"file":"backend/supabase/functions/admin-api/common.ts","kind":"classroom_reference","signature":"const CLASSROOM_API_URL = `${SUPABASE_URL}/functions/v1/classroom-api`","maximum":1,"sourceBlobSha":"91a3b1381403dc5604e8bbef784be8367593e3f6"},
+    {"file":"backend/supabase/functions/admin-api/common.ts","kind":"classroom_reference","signature":"function fetchClassroom ( request","maximum":1,"sourceBlobSha":"91a3b1381403dc5604e8bbef784be8367593e3f6"},
+    {"file":"backend/supabase/functions/admin-api/common.ts","kind":"classroom_reference","signature":"function proxyClassroom ( request","maximum":1,"sourceBlobSha":"91a3b1381403dc5604e8bbef784be8367593e3f6"},
+    {"file":"backend/supabase/functions/admin-api/gameRoutes.ts","kind":"classroom_call","signature":"proxyClassroom ( request , context , classroomContractPath ( gameId , `/${\n          encodeURIComponent(decodeURIComponent(contractProgressMatch[1]))\n        }/progress` , ) , \"GET\" , )","maximum":1,"sourceBlobSha":"e923f0e900681b817381b5341189de11805b0b33"},
+    {"file":"backend/supabase/functions/admin-api/gameRoutes.ts","kind":"classroom_call","signature":"proxyClassroom ( request , context , classroomContractPath ( gameId , `/${\n          encodeURIComponent(decodeURIComponent(progressReviewMatch[1]))\n        }/progress/${\n          encodeURIComponent(decodeURIComponent(progressReviewMatch[2]))\n        }/review` , ) , \"POST\" , )","maximum":1,"sourceBlobSha":"e923f0e900681b817381b5341189de11805b0b33"},
+    {"file":"backend/supabase/functions/admin-api/gameRoutes.ts","kind":"classroom_call","signature":"proxyClassroom ( request , context , classroomContractPath ( gameId , `/${\n          encodeURIComponent(decodeURIComponent(submissionReviewMatch[1]))\n        }/progress/${\n          encodeURIComponent(decodeURIComponent(submissionReviewMatch[2]))\n        }/review` , ) , \"POST\" , )","maximum":1,"sourceBlobSha":"e923f0e900681b817381b5341189de11805b0b33"},
+    {"file":"backend/supabase/functions/admin-api/gameRoutes.ts","kind":"classroom_call","signature":"proxyClassroom ( request , context , classroomContractPath ( gameId , `/${encodeURIComponent(decodeURIComponent(rewardMatch[1]))}/progress/${\n          encodeURIComponent(decodeURIComponent(rewardMatch[2]))\n        }/rewards/issue` , ) , \"POST\" , )","maximum":1,"sourceBlobSha":"e923f0e900681b817381b5341189de11805b0b33"},
+    {"file":"backend/supabase/functions/admin-api/gameRoutes.ts","kind":"classroom_call","signature":"proxyClassroom ( request , context , classroomContractPath ( gameId , `/${encodeURIComponent(progress.data.contract_id)}/progress/${\n          encodeURIComponent(submissionId)\n        }/review` , ) , \"POST\" , )","maximum":1,"sourceBlobSha":"e923f0e900681b817381b5341189de11805b0b33"},
+    {"file":"backend/supabase/functions/admin-api/gameRoutes.ts","kind":"classroom_call","signature":"proxyClassroom ( request , context , classroomGamePath ( gameId , `/players/${\n          encodeURIComponent(decodeURIComponent(accessResetMatch[1]))\n        }/access-code/reset` , ) , \"POST\" , )","maximum":1,"sourceBlobSha":"e923f0e900681b817381b5341189de11805b0b33"},
+    {"file":"backend/supabase/functions/admin-api/gameRoutes.ts","kind":"classroom_reference","signature":", proxyClassroom , }","maximum":1,"sourceBlobSha":"e923f0e900681b817381b5341189de11805b0b33"},
+    {"file":"backend/supabase/functions/classroom-api/index.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":2,"sourceBlobSha":"1b4691f278b8fea057851de520fdfe4773be46f7"},
+    {"file":"backend/supabase/functions/player-api/runtime.ts","kind":"classroom_import","signature":"backend/supabase/functions/classroom-api/messagingDispatch.ts","maximum":1,"sourceBlobSha":"3bff3bdd9cc9a59d693b83cc076fe6243c58aaa7"},
+    {"file":"backend/supabase/functions/player-web-session-api/staging-compat-entrypoint-v2.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"34123bf2f0d9f8aa55826dbfce419b60d60c0e31"},
+    {"file":"backend/supabase/functions/player-web-session-api/staging-compat-entrypoint-v2.ts","kind":"classroom_literal","signature":"`${config.supabaseUrl}/functions/v1/classroom-api${route}`","maximum":1,"sourceBlobSha":"34123bf2f0d9f8aa55826dbfce419b60d60c0e31"},
+    {"file":"backend/supabase/functions/player-web-session-api/staging-compat-entrypoint.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"8494f967c806bd51ae0c7bd9ad512caf618ed8fc"},
+    {"file":"backend/supabase/functions/player-web-session-api/staging-compat-entrypoint.ts","kind":"classroom_literal","signature":"`${supabaseUrl}/functions/v1/classroom-api${route}`","maximum":1,"sourceBlobSha":"8494f967c806bd51ae0c7bd9ad512caf618ed8fc"},
+    {"file":"frontend/src/core/constants.js","kind":"browser_interception","signature":"window . fetch = function","maximum":1,"sourceBlobSha":"21bafff331da6ccc128c62cbeeb8d057aefe19aa"},
+    {"file":"frontend/src/core/constants.js","kind":"classroom_reference","signature":", CLASSROOM_API_URL , PLAYER_SESSION_STORAGE_KEY","maximum":1,"sourceBlobSha":"21bafff331da6ccc128c62cbeeb8d057aefe19aa"},
+    {"file":"frontend/src/core/constants.js","kind":"classroom_reference","signature":"const CLASSROOM_API_URL = runtimeConfig","maximum":1,"sourceBlobSha":"21bafff331da6ccc128c62cbeeb8d057aefe19aa"},
+    {"file":"player-terminal/src/integrations/student-profile-capability-manifest.js","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"df400d764f87a59273149f048530aa494746ae2f"}
+  ],
+  "removalTargets": [
+    {"path":"admin/v2/src/components/AdminMedia.js","sourceBlobSha":"d03b30d1b896238da520d25a9d990b5c4b472d33","owner":"Admin V2 media","disposition":"defensive_fallback","referenceTerms":[]},
+    {"path":"admin/settings-save-error-bridge.js","sourceBlobSha":"bd3f7f8577de7b6e37d7490c08d9b04c5a7ff834","owner":"Retained Admin Settings","disposition":"compatibility_required","referenceTerms":[]},
+    {"path":"admin/admin-bootstrap.js","sourceBlobSha":"4d960260008c1d87174e98f00c41fc4ec853d358","owner":"Retained Admin bootstrap","disposition":"compatibility_required","referenceTerms":[]},
+    {"path":"backend/supabase/functions/classroom-api/messagingDispatch.ts","sourceBlobSha":"97a1b7b4adf7ec77d092b94e7551411d1cfd09d5","owner":"Messaging / Player composition","disposition":"compatibility_required","referenceTerms":[]},
+    {"path":"backend/supabase/functions/stock-market-runner/index.ts","sourceBlobSha":"c067cfd6c87660af0b3c4cc2b3ff081f9c283fc9","owner":"Stocks runner","disposition":"canonical","referenceTerms":[]},
+    {"path":"scripts/architecture/build-architecture-inventory.mjs","sourceBlobSha":"375e6d971cf150251fc94372440ff768fd3b9467","owner":"Architecture tooling","disposition":"canonical","referenceTerms":[]},
+    {"path":"backend/supabase/functions/notification-worker/README.md","sourceBlobSha":"91f5070bc9d79b42f15a77727c4b719c4fe4f58a","owner":"Notifications planning","disposition":"unknown","referenceTerms":[]},
+    {"path":"admin/dist/admin-overview-terminal.js","sourceBlobSha":"03cf8d402136502688994e6cce670b9701f8f74f","owner":"Retained Admin generated output","disposition":"generated_or_fixture","referenceTerms":[]},
+    {"path":"admin/attendance-reward-settings-route-bridge-v2.js","sourceBlobSha":"5edcbb4388bfa4942afca3e6f4181c4c72afdc26","owner":"Retained Admin Attendance save lifecycle","disposition":"compatibility_required","referenceTerms":[]},
+    {"path":"admin/player-access-code-bridge.js","sourceBlobSha":"0a64de2377b88f94119413fa09b2cc7c41bab230","owner":"Retained Admin Player identity and creation","disposition":"compatibility_required","referenceTerms":["econovaria:player-access-code-issued","econovaria:player-identity-updated"]},
+    {"path":"admin/player-create-lifecycle.js","sourceBlobSha":"1f0eba13316bfdcceee90b970e3ffc848ea80f95","owner":"Retained Admin creation lifecycle","disposition":"compatibility_required","referenceTerms":[]},
+    {"path":"backend/legacy/README_CODEX_HANDOFF.md","sourceBlobSha":"c4968480d3b089fa204329de475de5d0d2555660","owner":"Historical Sheets and Apps Script migration reference","disposition":"historical_archive","referenceTerms":[]},
+    {"path":"backend/legacy/apps-script/testing/api_test_logger_legacy.js","sourceBlobSha":"89672adc4edd7fa92e8c19f39fa56fe4ded4bc60","owner":"Historical Apps Script API testing","disposition":"historical_archive","referenceTerms":[]},
+    {"path":"api/_canonical-bff-path.js","sourceBlobSha":"3a290336e1ac272e839f02c06f3e0152246bed1d","owner":"Admin and Player BFF path normalization","disposition":"canonical","referenceTerms":[]},
+    {"path":"backend/supabase/functions/deno.json","sourceBlobSha":"aee0ec940fcdeddd5fb9aaa0fc8664b07fde5691","owner":"Neutral Edge compiler configuration","disposition":"canonical","referenceTerms":[]},
+    {"path":"backend/supabase/functions/classroom-api/deno.json","sourceBlobSha":"34044588946121b050f8ebb282cada7946d3a4ba","owner":"Classroom and borrowed Player test configuration","disposition":"compatibility_required","referenceTerms":[]},
+    {"path":"backend/supabase/functions/admin-api/deno.json","sourceBlobSha":"8d4d56be75966d239dde3147b30c8fd2e3c5eed5","owner":"Existing Admin Edge compiler configuration","disposition":"canonical","referenceTerms":[]},
+    {"path":"backend/legacy/apps-script/api/api_router_legacy.js","sourceBlobSha":"b67e239310f2f8efd2e6f267769663b1752c8d0a","owner":"Historical Apps Script request contract","disposition":"historical_archive","referenceTerms":["GET_STOCK_HISTORY","GET_STOCK_NEWS","apiUseItem_"]},
+    {"path":"backend/legacy/apps-script/stock-market/stock_history_news_legacy.js","sourceBlobSha":"60fc3812b868686a1c7e28a55e82a8b5187e6fe6","owner":"Historical Apps Script Stocks history/news","disposition":"historical_archive","referenceTerms":["logStockPriceHistory","generateStockNewsReports"]},
+    {"path":"admin/player-identity-wiring.js","sourceBlobSha":"ff8267b3ac89fc5570dfcfe593bbd857cce636a1","owner":"Retained Admin Player profile and identity UI","disposition":"compatibility_required","referenceTerms":["confirm-player-settings-save","EconovariaPlayerAccessCodeBridge"]},
+    {"path":"admin/attendance-reward-save-controller-v3.js","sourceBlobSha":"bd8a10163ba475c5083936c81323c1b16d8e6624","owner":"Retained Admin Attendance save controller","disposition":"compatibility_required","referenceTerms":["econovaria:attendance-reward-saved","econovaria:settings-context-changed"]},
+    {"path":"admin/attendance-reward-settings-v4.js","sourceBlobSha":"ac692d46dc972bc85ada7e9fa3397d3a5935886b","owner":"Retained Admin Attendance settings state and renderer","disposition":"compatibility_required","referenceTerms":["econovaria:attendance-reward-saved"]},
+    {"path":"admin/settings-lifecycle-bridge.js","sourceBlobSha":"379d5589edbc2bdd94a9abbb7b0c2b8e8213b05d","owner":"Retained Admin Settings mounted lifecycle","disposition":"compatibility_required","referenceTerms":["econovaria:admin-settings-mounted","econovaria:admin-request-lifecycle","econovaria:settings-context-changed","econovaria:attendance-reward-saved"]}
+  ],
   "removalRecords": [],
   "validation": {
     "localUnitTests": {
       "result": "PASS",
-      "count": 29,
+      "count": 33,
       "node": "22.16.0",
       "scope": "Temporary synthetic source/evidence fixtures plus the actual inherited guard entrypoint; not a complete local repository checkout."
     },
-    "repositoryCensus": "PENDING first pinned full-checkout qualification run; empty allowlists deliberately fail closed, never acceptance.",
+    "repositoryCensus": "Initial 36-site/23-target full-checkout qualification retained above; 37-site reviewed baseline awaits fresh exact-head acceptance and two-read deterministic test.",
     "requiredCommands": [
       "npm run audit:architecture",
       "npm run audit:high-priority-boundaries",
@@ -59,5 +121,68 @@
   },
   "successorTasksStarted": false,
   "applicationBehaviorChanged": false,
-  "productionOrDatabaseActions": false
+  "productionOrDatabaseActions": false,
+  "review": {
+    "pullRequest": 744,
+    "ownerBranch": "refactor/ref-005-scoped-architecture-ratchets",
+    "initialCensusHead": "875b16a7475b11726b5a97d727a5503e293e90d5",
+    "initialCensusRunId": 35822071075,
+    "initialCensusJobId": 107055867292,
+    "initialCensusArtifactId": 10733143807,
+    "initialCensusArtifactSha256": "80827f0c49b88aa94079b6846e3330e84a12533e0db17e3d7ca4b317018db966",
+    "initialCensusOutcome": "FAIL as designed: 36 previously unregistered lexical site records and 23 previously unregistered selected removal targets. All preceding inherited high-priority/migration/Admin cap/inventory regeneration checks passed; no inherited ceiling failure was reported. Do not credit the failed run as whole-repository acceptance.",
+    "changesAfterInitialCensus": "Added explicit CLASSROOM_API_URL template detection after inspecting common.ts at the frozen main blob; its existing `${CLASSROOM_API_URL}${path}` is the 37th site. Narrowed reflective interception detection to actual global targets and direct transport property writes; ordinary Object.assign copies of window.fetch must remain allowed. Added four regression cases; 33 local focused cases pass. These are detector qualification changes, not application edits.",
+    "siteMeaning": "9 explicit global transport interception records, 9 named bridge call signatures, 6 bridge/URL references, 1 inbound Messaging import and 12 compatibility/transport literal identities. Three repeated literal occurrences make 40 occurrences across 37 identities. Literals used for namespace stripping/capability compatibility are not asserted HTTP hops or dead code.",
+    "families": [
+      {
+        "owner": "Retained Admin/browser transport",
+        "records": "Eight Admin global fetch assignments and one frontend constants wrapper; current seven broad plus one separately scoped Admin allowance remains unchanged.",
+        "evidence": "Inherited Admin cap scan and exact emitted file/signature/blob; REF-003 selected bridge dispositions retained."
+      },
+      {
+        "owner": "Admin Contracts and Player credential adapters",
+        "records": "common.ts transport, local atomic reward intercept/legacy recursive dispatch and six gameRoutes call sites; distinct aliases remain characterized by REF-004.",
+        "evidence": "Frozen common.ts source and REF-004 parity matrix; proxyClassroom name does not imply every branch issues Classroom HTTP."
+      },
+      {
+        "owner": "Player Messaging composition",
+        "records": "Canonical player-api runtime imports Classroom-owned messagingDispatch.ts once. Internal Classroom imports are not inbound coupling.",
+        "evidence": "Exact runtime.ts source import and REF-003 compatibility-required dispatcher record."
+      },
+      {
+        "owner": "Compatibility namespaces and retained staging sources",
+        "records": "Business/Player route parsers, capability contracts, Classroom root, two explicitly retained staging compatibility files and the Player terminal adapter contain literal namespace/transport references.",
+        "evidence": "Exact census source blobs; no live deployment or external-consumer absence is inferred."
+      }
+    ],
+    "inheritedBaselineBlobSha": "f5a91ca4bdcd2ba2f73edb1037dfccc972404412",
+    "inheritedArchitectureScriptBlobSha": "e9620bfc4ca2a8ef07ea34d55627571a5fc244fa",
+    "originalRetirementTestBlobSha": "e2e9b5498e29d5079167aafc6fcf0a9b416ecafa",
+    "denominators": {
+      "runtimeCensusFiles": 893,
+      "testOrFixtureFiles": 368,
+      "censusTotalFiles": 1261,
+      "originalInventorySourceFiles": 1236,
+      "originalInventoryDomains": 29
+    },
+    "beforeAfter": {
+      "runtimeSites": {
+        "before": 37,
+        "after": 37
+      },
+      "browserInterceptionSites": {
+        "before": 9,
+        "after": 9
+      },
+      "protectedRemovalPaths": 23,
+      "removedPaths": 0,
+      "originalInventory": {
+        "persistenceOutsideInfrastructure": 55,
+        "crossDomainDeepImports": 168,
+        "compatibilityMarkerFiles": 209,
+        "oversizedSourceFiles": 100
+      },
+      "interpretation": "No debt removal in this tooling task. Added precision and fail-closed removal evidence gates, not reduced application debt or changed inherited caps."
+    }
+  }
 }
