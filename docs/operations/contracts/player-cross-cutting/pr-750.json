@@ -10,7 +10,8 @@
   "secretValuesAllowed": false,
   "allowedPaths": [
     "backend/supabase/functions/admin-api/gameRoutes.ts",
-    "backend/supabase/functions/admin-api/common.ts",
+    "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
+    "backend/supabase/functions/admin-api/index.ts",
     "backend/supabase/functions/admin-api/contractReviewOperation.ts",
     "backend/src/domains/contracts/application/staffContractReviewOperation.ts",
     "backend/src/domains/contracts/infrastructure/contractReviewReadRepository.ts",
@@ -20,13 +21,14 @@
     "docs/operations/contracts/player-cross-cutting/pr-750.json",
     "docs/operations/evidence/refactor-execution-v1/REF-008/contract-review.json",
     "docs/roadmaps/refactor-execution-v1/tasks/REF-008.md",
-    "docs/roadmaps/refactor-execution-v1/backlog.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
   "requiredFiles": [
     "backend/supabase/functions/admin-api/gameRoutes.ts",
-    "backend/supabase/functions/admin-api/common.ts",
+    "backend/src/domains/contracts/application/staffContractReviewOperation.ts",
+    "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
+    "backend/supabase/functions/admin-api/index.ts",
     "backend/supabase/functions/admin-api/contractReviewOperation.ts",
     "backend/src/domains/contracts/infrastructure/contractReviewReadRepository.ts",
     "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
@@ -35,7 +37,6 @@
     "docs/operations/contracts/player-cross-cutting/pr-750.json",
     "docs/operations/evidence/refactor-execution-v1/REF-008/contract-review.json",
     "docs/roadmaps/refactor-execution-v1/tasks/REF-008.md",
-    "docs/roadmaps/refactor-execution-v1/backlog.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
@@ -65,5 +66,5 @@
   ],
   "baseMainSha": "e8e9f6fd47b6faaebee44c075a7837b10481b1e5",
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-008/contract-review.json",
-  "authorizationNote": "Owner authorized bounded Task 8 only. The twelve editable paths are named in the scope record; verifier/test paths are required protected references and are not editable. This initial source slice prepares one shared command and a game-and-submission-scoped read repository plus deterministic tests before mutation-route activation. The future local review application adapter is allowlisted but not yet a required existing file; it must be added to requiredFiles when published. Existing route methods, review normalization, permission distinctions, request identity, review/reward sequencing, original non-idempotent review behavior and immutable database-owned audit behavior must be preserved. No new RPC, schema, economic writer, compiler/package/workflow change, guard exception, live mutation or deployment. Full exact-head checks, local-route parity and focused database replay/race/audit evidence remain required before acceptance. This manifest is not completion or merge approval. Stop before REF-009."
+  "authorizationNote": "Owner authorized bounded Task 8 only. This implementation PR owns exactly twelve changed paths: the review-route wiring, existing Staff review export, one Contracts-owned thin review adapter, one scoped submission read adapter, two parity test files, deterministic inventory, task/evidence, and this manifest. The existing post-guard Admin application context is passed through the existing index call site; no constructor, security guard, auth/client factory, bootstrap or Dashboard behavior changes. The local adapter preserves the inherited sensitive Staff limiter tuple, validated trusted-IP projection, fresh owned-game lookup, existing review authority and decision-only atomic reward follow-up. Review and reward remain separate existing operations with the original partial-failure boundary and non-idempotent changed-payload review behavior. No new RPC/schema/workflow/compiler/package/UI/secret/cloud mutation or deployment. Full exact-head checks and focused database/audit evidence remain required before merge. Stop before REF-009."
 }

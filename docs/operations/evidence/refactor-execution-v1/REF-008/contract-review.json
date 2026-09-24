@@ -6,21 +6,33 @@
   "ownerBranch": "refactor/ref-008-local-contract-review",
   "authorization": "Owner requested Start task 8. Execute only bounded REF-008; do not begin REF-009 or deploy. Normal merge requires complete exact-candidate acceptance and a checked closeout.",
   "dependency": "REF-007 VERIFIED_COMPLETE on main through implementation PR748 and closeout PR749",
-  "architectureMapping": ["ARCH-208", "ARCH-400"],
+  "architectureMapping": [
+    "ARCH-208",
+    "ARCH-400"
+  ],
   "ownership": {
     "contextPr": 668,
     "contextHead": "faaf908bdd5131b451c7e87e91ed4991ad8f839d",
     "coordinationComment": "https://github.com/kohnerbouchard-star/Student-Profile/pull/668#issuecomment-5806491552",
-    "boundary": "Only the three handleGameWrite Contract review blocks; consume the existing post-guard application context without changing its constructor, signature, bootstrap, Dashboard, authentication or client factories. Any common.ts extraction is limited to review response composition below the protected context/trusted-IP helpers. Preserve PR668 and PR736 independently.",
-    "openPrsReviewed": [624, 668, 690, 730, 731, 735, 736],
+    "boundary": "Only the three handleGameWrite Contract review blocks plus the one existing index call site needed to pass the already-created post-guard application context. No constructor, security guard, bootstrap, Dashboard, authentication/client factory or global-ledger ownership changes. PR668 and PR736 remain separate.",
+    "openPrsReviewed": [
+      624,
+      668,
+      690,
+      730,
+      731,
+      735,
+      736
+    ],
     "existingOwnerSearch": "No open REF-008 PR and no refs under heads/refactor/ref-008 before branch creation. No replacement branch or donor implementation."
   },
   "scope": {
     "maximumMeaningfulFiles": 12,
-    "editablePaths": [
+    "implementationPaths": [
       "backend/supabase/functions/admin-api/gameRoutes.ts",
-      "backend/supabase/functions/admin-api/common.ts",
+      "backend/supabase/functions/admin-api/index.ts",
       "backend/supabase/functions/admin-api/contractReviewOperation.ts",
+      "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
       "backend/src/domains/contracts/application/staffContractReviewOperation.ts",
       "backend/src/domains/contracts/infrastructure/contractReviewReadRepository.ts",
       "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
@@ -28,10 +40,9 @@
       "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
       "docs/operations/contracts/player-cross-cutting/pr-750.json",
       "docs/operations/evidence/refactor-execution-v1/REF-008/contract-review.json",
-      "docs/roadmaps/refactor-execution-v1/tasks/REF-008.md",
-      "docs/roadmaps/refactor-execution-v1/backlog.json"
+      "docs/roadmaps/refactor-execution-v1/tasks/REF-008.md"
     ],
-    "closeout": "Only REF008 task/evidence and REF008 backlog fields; preserve every other task object and all dependencies. No extra path without explicit scope review."
+    "closeout": "After the implementation merge, a separate bounded closeout may update only REF008 task/evidence and REF008 backlog fields. Preserve every other task object and all dependencies."
   },
   "sourceBaseline": {
     "staffHandlerBlob": "4cf1da64cd7a926d5822516614d32a0b1ae95db3",
@@ -65,7 +76,7 @@
     "qualification": "No test execution or exact-head acceptance is claimed in this publication record. The PR discussion must identify fresh CI results and remaining failures. Preparation tests, even when passing, are not completion of the mutation cutover."
   },
   "validation": {
-    "status": "NOT_ACCEPTED",
+    "status": "PENDING_EXACT_HEAD_CI_AFTER_LOCAL_CUTOVER",
     "required": [
       "Admin API and Admin local-mutation suites",
       "Contract acceptance and lifecycle",
@@ -74,11 +85,30 @@
       "Repository architecture, high-priority, legacy, authentication, secrets and supply-chain checks",
       "Every applicable exact-head workflow, CodeQL, commit status, guarded normal merge and actual-tree comparison"
     ],
-    "cases": ["all three aliases and supported methods", "unchanged unsupported methods", "wrong role/game/contract", "missing submission/progress", "identical and conflicting review replay", "reward-already-issued denial", "repository/read/write failures", "immutable audit behavior", "single review and bounded reward calls", "normalization and header precedence", "both limiters and no Classroom request"],
+    "cases": [
+      "all three aliases and supported methods",
+      "unchanged unsupported methods",
+      "wrong role/game/contract",
+      "missing submission/progress",
+      "identical and conflicting review replay",
+      "reward-already-issued denial",
+      "repository/read/write failures",
+      "immutable audit behavior",
+      "single review and bounded reward calls",
+      "normalization and header precedence",
+      "both limiters and no Classroom request"
+    ],
     "executionBoundary": "Container has Node 22.16.0 but no Deno; direct Git clone failed DNS resolution. Downloaded Admin source artifact 10775539242 has verified SHA256 11602e6e367335fa2662bc669798811f7cae129c3c59e92c7987f03eb93d69b2. Historical source/artifacts are inputs, not new-candidate test credit. Exact-candidate pinned CI is required."
   },
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
   "nextTask": "REF-009",
-  "nextTaskStarted": false
+  "nextTaskStarted": false,
+  "localCutover": {
+    "status": "PUBLISHED_PENDING_EXACT_HEAD_QUALIFICATION",
+    "behavior": "Only the three review aliases route through the local Admin review operation. The already-created post-guard application context is passed into handleGameWrite; methods, alias permissions, decision identity lookup, existing normalization and request identity precedence are preserved.",
+    "authority": "The existing reviewStaffContractProgress body is unchanged and exported for a thin Contracts-owned local adapter. No second transition table, independent progress writer, reward path or replay cache is introduced.",
+    "transport": "The selected aliases issue zero Classroom fetches. The inherited downstream limiter remains sensitive with staff.api.write.unknown and Staff UUID dimensions, trusted-IP projection and a fresh owned-game lookup before the review authority.",
+    "rewardBoundary": "Only decision approval calls the unchanged atomic reward adapter after a successful review. Reward failure remains a post-review partial-success boundary."
+  }
 }

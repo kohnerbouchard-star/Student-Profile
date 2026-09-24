@@ -30,6 +30,7 @@ import {
 } from "./attendancePlayerOperations.ts";
 import { handleGameJoinCodeReadOperation } from "./gameJoinCodeOperations.ts";
 import { handleContractProgressReadOperation } from "./contractProgressReadOperation.ts";
+import { handleAdminContractReviewOperation } from "./contractReviewOperation.ts";
 import type { AdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 import { createSupabaseGameSettingsReadRepository } from "../../../src/domains/game-sessions/infrastructure/supabaseGameSettingsReadRepository.ts";
 
@@ -519,6 +520,7 @@ export async function handleGameWrite(
   _url: URL,
   gameId: string,
   suffix: string,
+  applicationContext: AdminRequestApplicationContext,
 ): Promise<Response | null> {
   if (["GET", "HEAD"].includes(request.method)) return null;
   const body = await request.clone().json().catch(() => ({}));
@@ -548,71 +550,12 @@ export async function handleGameWrite(
     );
   }
 
-  const submissionDecisionMatch = suffix.match(
-    /^\/contract-submissions\/([^/]+)\/decision$/,
+  const contractReviewResponse = await handleAdminContractReviewOperation(
+    request,
+    context.service,
+    { applicationContext, gameSessionId: gameId, suffix },
   );
-  if (submissionDecisionMatch && ["POST", "PATCH"].includes(request.method)) {
-    const submissionId = decodeURIComponent(submissionDecisionMatch[1]);
-    const progress = await context.service.from("player_contract_progress")
-      .select("id,contract_id").eq("game_session_id", gameId)
-      .eq("id", submissionId).maybeSingle();
-    if (progress.error) throw progress.error;
-    if (!progress.data) {
-      return json(request, 404, {
-        code: "contract_submission_not_found",
-        message: "Contract submission was not found.",
-      });
-    }
-    return proxyClassroom(
-      request,
-      context,
-      classroomContractPath(
-        gameId,
-        `/${encodeURIComponent(progress.data.contract_id)}/progress/${
-          encodeURIComponent(submissionId)
-        }/review`,
-      ),
-      "POST",
-    );
-  }
-
-  const submissionReviewMatch = suffix.match(
-    /^\/contracts\/([^/]+)\/submissions\/([^/]+)\/review$/,
-  );
-  if (submissionReviewMatch && ["POST", "PATCH"].includes(request.method)) {
-    return proxyClassroom(
-      request,
-      context,
-      classroomContractPath(
-        gameId,
-        `/${
-          encodeURIComponent(decodeURIComponent(submissionReviewMatch[1]))
-        }/progress/${
-          encodeURIComponent(decodeURIComponent(submissionReviewMatch[2]))
-        }/review`,
-      ),
-      "POST",
-    );
-  }
-
-  const progressReviewMatch = suffix.match(
-    /^\/contracts\/([^/]+)\/progress\/([^/]+)\/review$/,
-  );
-  if (progressReviewMatch && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomContractPath(
-        gameId,
-        `/${
-          encodeURIComponent(decodeURIComponent(progressReviewMatch[1]))
-        }/progress/${
-          encodeURIComponent(decodeURIComponent(progressReviewMatch[2]))
-        }/review`,
-      ),
-      "POST",
-    );
-  }
+  if (contractReviewResponse) return contractReviewResponse;
 
   const rewardMatch = suffix.match(
     /^\/contracts\/([^/]+)\/progress\/([^/]+)\/rewards\/issue$/,

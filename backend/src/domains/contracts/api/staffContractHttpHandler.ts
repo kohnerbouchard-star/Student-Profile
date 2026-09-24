@@ -328,7 +328,7 @@ export async function listStaffContractProgress(
   });
 }
 
-async function reviewStaffContractProgress(
+export async function reviewStaffContractProgress(
   request: Request,
   gameSessionId: string,
   contractId: string,

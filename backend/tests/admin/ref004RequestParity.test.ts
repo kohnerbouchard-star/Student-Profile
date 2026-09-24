@@ -33,6 +33,14 @@ const suffixes = {
 async function fixture(options: any, run: (send: any, calls: Call[]) => Promise<void>) {
   const calls: Call[] = []; const savedFetch = globalThis.fetch, savedGet = runtime.env.get;
   const upstream = options.upstream ?? { ok: true, progress: [], contract: { contractId: C } };
+  const contractRow = { id: C, game_session_id: G, contract_key: "ref004-progress", source_type: "teacher",
+    created_by_staff_id: S, title: "Fixture", description: "Fixture", instructions: "Fixture", category: "general",
+    status: "active", visibility: "public", targeting_payload: { allPlayers: true }, requirements_payload: {},
+    reward_payload: {}, completion_mode: "manual_review", published_at: null, deadline_at: null, expires_at: null,
+    metadata: {}, created_at: NOW, updated_at: NOW };
+  const progressRow = { id: P, game_session_id: G, contract_id: C, player_id: OTHER, status: "submitted",
+    evidence_payload: {}, result_payload: {}, submitted_at: NOW, completed_at: null,
+    reward_issued_at: options.rewarded ? NOW : null, created_at: NOW, updated_at: NOW };
   const staff = { id: S, supabase_auth_user_id: S, email: "fixture@example.invalid", display_name: "Fixture",
     status: "active", role: "game_admin", permission_version: 1, security_version: 1, mfa_required: true, ...options.staff };
   const token = ["fixture", btoa(JSON.stringify({ aal: options.aal ?? "aal2" })), "fixture"].join(".");
@@ -64,22 +72,28 @@ async function fixture(options: any, run: (send: any, calls: Call[]) => Promise<
       return json([{ reward_issued: count === 1, already_issued: count > 1, issued_at: NOW, reward_result: { cash: { amount: 12.34, currencyCode: "NRC" } } }]);
     }
     if (call.path === "/rest/v1/player_contract_progress" || call.path === "/rest/v1/game_session_contracts") {
-      equal(call.method, "GET", "No direct economic table mutation is permitted");
       equal(call.query.get("game_session_id"), `eq.${G}`);
-      // REF-007 exercises the existing repository instead of a synthetic Classroom response.
-      if (options.localProgress && call.path === "/rest/v1/game_session_contracts") {
-        equal(call.query.get("id"), `eq.${C}`);
-        return json([{ id: C, game_session_id: G, contract_key: "ref004-progress", source_type: "teacher",
-          created_by_staff_id: S, title: "Fixture", description: "Fixture", instructions: "Fixture", category: "general",
-          status: "active", visibility: "public", targeting_payload: { allPlayers: true }, requirements_payload: {},
-          reward_payload: {}, completion_mode: "manual_review", metadata: {}, created_at: NOW, updated_at: NOW }]);
+      if ((options.localProgress || options.localReview) && call.path === "/rest/v1/game_session_contracts") {
+        equal(call.method, "GET"); equal(call.query.get("id"), `eq.${C}`); return json([contractRow]);
       }
       if (options.localProgress && call.path === "/rest/v1/player_contract_progress") {
-        equal(call.query.get("contract_id"), `eq.${C}`); equal(call.query.has("id"), false);
-        equal(call.query.has("status"), false); equal(call.query.has("player_id"), false);
-        return json([]);
+        equal(call.method, "GET"); equal(call.query.get("contract_id"), `eq.${C}`); equal(call.query.has("id"), false);
+        equal(call.query.has("status"), false); equal(call.query.has("player_id"), false); return json([]);
       }
-      if (call.query.get("select") === "id,contract_id") return json(options.noProgress ? [] : [{ id: P, contract_id: C }]);
+      if (call.query.get("select") === "id,contract_id") {
+        equal(call.method, "GET"); return json(options.noProgress ? [] : [{ id: P, contract_id: C }]);
+      }
+      if (options.localReview && call.path === "/rest/v1/player_contract_progress") {
+        equal(call.query.get("contract_id"), `eq.${C}`); equal(call.query.get("id"), `eq.${P}`);
+        if (call.method === "GET") return json(options.noProgress ? [] : [progressRow]);
+        if (call.method === "PATCH") {
+          const updated = { ...progressRow, status: call.body.status ?? progressRow.status,
+            result_payload: call.body.result_payload ?? progressRow.result_payload,
+            completed_at: call.body.completed_at ?? progressRow.completed_at };
+          return json([updated]);
+        }
+      }
+      equal(call.method, "GET", "No unscoped economic table mutation is permitted");
       equal(call.query.get("id"), `eq.${call.path.endsWith("player_contract_progress") ? P : C}`);
       if (call.path.endsWith("player_contract_progress")) equal(call.query.get("contract_id"), `eq.${C}`);
       return json([]);
@@ -139,21 +153,25 @@ runtime.test("REF004/REF007 progress preserves the actual reader DTO, query-drop
   equal(calls.filter((call) => call.path.endsWith("/consume_request_rate_limits_v1")).length, 2);
 }));
 for (const name of ["submission", "review"] as const) for (const method of name === "submission" ? ["POST", "PATCH"] : ["POST"]) {
-  runtime.test(`REF004 ${name} ${method}: normalized review never automatically rewards`, () => fixture({ grants: ["contracts.manage"] }, async (send, calls) => {
+  runtime.test(`REF004/REF008 ${name} ${method}: local normalized review never automatically rewards`, () => fixture({ grants: ["contracts.manage"], localReview: true }, async (send, calls) => {
     const response = await send(suffixes[name], method, { payload: { decision: "accepted", feedback: "Keep this feedback", resultPayload: { score: 7 } } });
-    equal(response.status, 202); equal(await response.json(), { ok: true, progress: [], contract: { contractId: C } }); transportHeaders(response);
-    equal(writes(calls).length, 1); const [call] = forwarded(calls); equal(call.method, "POST");
-    equal(call.path, `/functions/v1/classroom-api/staff/game-sessions/${G}/contracts/${C}/progress/${P}/review`);
-    equal(call.body, { action: "approve", resultPayload: { score: 7, feedback: "Keep this feedback" } });
+    equal(response.status, 200); const body = await response.json(); equal(body.ok, true); equal(body.progress.status, "completed");
+    equal(body.progress.resultPayload, { score: 7, feedback: "Keep this feedback" }); transportHeaders(response);
+    equal(forwarded(calls), []); equal(calls.filter((c) => c.path.endsWith("/issue_contract_rewards_atomic_v1")), []);
+    const reviewWrites = calls.filter((c) => c.path === "/rest/v1/player_contract_progress" && c.method === "PATCH");
+    equal(reviewWrites.length, 1); equal(reviewWrites[0].body.status, "completed");
+    equal(calls.filter((c) => c.path.endsWith("/consume_request_rate_limits_v1")).length, 2);
   }));
 }
-for (const method of ["POST", "PATCH"]) runtime.test(`REF004 decision ${method}: game.update review then single atomic reward`, () => fixture({ grants: ["game.update"] }, async (send, calls) => {
+for (const method of ["POST", "PATCH"]) runtime.test(`REF004/REF008 decision ${method}: local review then single atomic reward`, () => fixture({ grants: ["game.update"], localReview: true }, async (send, calls) => {
   const response = await send(suffixes.decision, method, { payload: { decision: "approved" } }); equal(response.status, 200);
   const body = await response.json(); equal(Object.keys(body).sort(), ["data", "review", "reward"]); equal(body.data.rewardIssued, true);
-  equal(writes(calls).map((c) => c.path), [`/functions/v1/classroom-api/staff/game-sessions/${G}/contracts/${C}/progress/${P}/review`, "/rest/v1/rpc/issue_contract_rewards_atomic_v1"]);
+  equal(forwarded(calls), []);
+  equal(writes(calls).map((c) => c.path), ["/rest/v1/player_contract_progress", "/rest/v1/rpc/issue_contract_rewards_atomic_v1"]);
   equal(writes(calls)[1].body, { p_game_session_id: G, p_contract_id: C, p_progress_id: P, p_staff_user_id: S, p_request_id: "ref004-request" });
+  equal(calls.filter((c) => c.path.endsWith("/consume_request_rate_limits_v1")).length, 2);
 }));
-for (const [options, status, code] of [[{ noProgress: true }, 404, "contract_submission_not_found"], [{ upstreamStatus: 409, upstream: { error: { code: "contract_reward_already_issued" } } }, 409, "contract_reward_already_issued"]] as const) {
+for (const [options, status, code] of [[{ noProgress: true }, 404, "contract_submission_not_found"], [{ localReview: true, rewarded: true }, 409, "contract_reward_already_issued"]] as const) {
   runtime.test(`REF004 decision: ${code} cannot issue rewards`, () => fixture(options, async (send, calls) => {
     const response = await send(suffixes.decision, "POST", { decision: "approve" }); equal(response.status, status);
     const body = await response.json(); equal(body.code ?? body.error.code, code);
@@ -176,9 +194,9 @@ for (const [error, status, code] of [["CONTRACT_PROGRESS_NOT_FOUND", 404, "contr
     equal(await response.json(), { error: { code, message: error, retryable: false } }); equal(writes(calls).length, 1); equal(forwarded(calls), []);
   }));
 }
-runtime.test("REF004 legacy approval retains partial-success boundary on reward failure", () => fixture({ rewardError: "OUT_OF_STOCK" }, async (send, calls) => {
+runtime.test("REF004/REF008 legacy approval retains partial-success boundary on reward failure", () => fixture({ rewardError: "OUT_OF_STOCK", localReview: true }, async (send, calls) => {
   const response = await send(suffixes.decision, "POST", { decision: "approve" }); equal(response.status, 409);
-  equal((await response.json()).error.code, "contract_reward_item_out_of_stock"); equal(writes(calls).length, 2); equal(forwarded(calls).length, 1);
+  equal((await response.json()).error.code, "contract_reward_item_out_of_stock"); equal(writes(calls).length, 2); equal(forwarded(calls).length, 0);
 }));
 runtime.test("REF004 reset forwards one POST with unchanged credential aliases and retry identity", () => fixture({ upstream: { ok: true, sessionsRevoked: true }, upstreamStatus: 200 }, async (send, calls) => {
   const body = { payload: { rfidCardId: "RFID-04", pin: "AC-004" } };
