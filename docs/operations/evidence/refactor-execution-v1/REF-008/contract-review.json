@@ -26,7 +26,7 @@
       "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
       "backend/tests/admin/ref004RequestParity.test.ts",
       "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
-      "PR-specific player-cross-cutting manifest path to be bound after this PR is created",
+      "docs/operations/contracts/player-cross-cutting/pr-750.json",
       "docs/operations/evidence/refactor-execution-v1/REF-008/contract-review.json",
       "docs/roadmaps/refactor-execution-v1/tasks/REF-008.md",
       "docs/roadmaps/refactor-execution-v1/backlog.json"
@@ -53,6 +53,16 @@
     "replayBaseline": "Existing REF004 Contract review records current non-idempotent changed-payload behavior: same-key approve then reject produces two review writes. Characterize and preserve it in this refactor; no invented conflict rejection or new idempotency guarantee. Reward atomicity/replay remains owned by the unchanged reward command.",
     "audit": "Do not write or rewrite audit/story records from the adapter. Existing database-trigger behavior must remain inside the same authoritative repository mutation; focused disposable database evidence is required before completion.",
     "transport": "Target zero Classroom HTTP requests for these three aliases, one existing review call per accepted attempt and no additional reward calls. Other callers and source-retirement gates remain."
+  },
+  "sourceSlice": {
+    "pullRequest": 750,
+    "stage": "PREPARATION_ONLY",
+    "commandBlob": "63d48e2a5dfa8a1287093bf879b2f2b637b76362",
+    "identityRepositoryBlob": "bc5544ba6fd8b462b1d2872d0d2b7e81829ff4e3",
+    "testBlob": "13bade688cb90ec874cab33a82bf1b2bbe4bb267",
+    "behavior": "Add shared preparation for the five accepted alias/method combinations using the existing normalizer, approved context and unchanged transport identity precedence. Add a read-only Contracts submission lookup preserving its exact two predicates. Tests exercise preparation and the actual lookup adapter without calling a review or reward mutation.",
+    "notYetImplemented": "The existing gameRoutes/common branches remain unchanged and still forward. The Contracts local executor, retained Staff limiter/ownership composition, review and decision-reward response integration, real-entrypoint mutation parity and focused disposable database replay/race/audit acceptance are not delivered by this slice.",
+    "qualification": "No test execution or exact-head acceptance is claimed in this publication record. The PR discussion must identify fresh CI results and remaining failures. Preparation tests, even when passing, are not completion of the mutation cutover."
   },
   "validation": {
     "status": "NOT_ACCEPTED",

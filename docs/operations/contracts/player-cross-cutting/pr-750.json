@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref008-contract-review-pr-750.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 750,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/supabase/functions/admin-api/gameRoutes.ts",
+    "backend/supabase/functions/admin-api/common.ts",
+    "backend/supabase/functions/admin-api/contractReviewOperation.ts",
+    "backend/src/domains/contracts/application/staffContractReviewOperation.ts",
+    "backend/src/domains/contracts/infrastructure/contractReviewReadRepository.ts",
+    "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
+    "backend/tests/admin/ref004RequestParity.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-750.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-008/contract-review.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-008.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/supabase/functions/admin-api/gameRoutes.ts",
+    "backend/supabase/functions/admin-api/common.ts",
+    "backend/supabase/functions/admin-api/contractReviewOperation.ts",
+    "backend/src/domains/contracts/infrastructure/contractReviewReadRepository.ts",
+    "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
+    "backend/tests/admin/ref004RequestParity.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-750.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-008/contract-review.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-008.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Admin API Check",
+    "Repository Quality",
+    "Beta Security Contract"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "protectedReferencePaths": [
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "baseMainSha": "e8e9f6fd47b6faaebee44c075a7837b10481b1e5",
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-008/contract-review.json",
+  "authorizationNote": "Owner authorized bounded Task 8 only. The twelve editable paths are named in the scope record; verifier/test paths are required protected references and are not editable. This initial source slice prepares one shared command and a game-and-submission-scoped read repository plus deterministic tests before mutation-route activation. The future local review application adapter is allowlisted but not yet a required existing file; it must be added to requiredFiles when published. Existing route methods, review normalization, permission distinctions, request identity, review/reward sequencing, original non-idempotent review behavior and immutable database-owned audit behavior must be preserved. No new RPC, schema, economic writer, compiler/package/workflow change, guard exception, live mutation or deployment. Full exact-head checks, local-route parity and focused database replay/race/audit evidence remain required before acceptance. This manifest is not completion or merge approval. Stop before REF-009."
+}
