@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-008",
+  "status": "IN_PROGRESS",
+  "baseMainSha": "e8e9f6fd47b6faaebee44c075a7837b10481b1e5",
+  "ownerBranch": "refactor/ref-008-local-contract-review",
+  "authorization": "Owner requested Start task 8. Execute only bounded REF-008; do not begin REF-009 or deploy. Normal merge requires complete exact-candidate acceptance and a checked closeout.",
+  "dependency": "REF-007 VERIFIED_COMPLETE on main through implementation PR748 and closeout PR749",
+  "architectureMapping": ["ARCH-208", "ARCH-400"],
+  "ownership": {
+    "contextPr": 668,
+    "contextHead": "faaf908bdd5131b451c7e87e91ed4991ad8f839d",
+    "coordinationComment": "https://github.com/kohnerbouchard-star/Student-Profile/pull/668#issuecomment-5806491552",
+    "boundary": "Only the three handleGameWrite Contract review blocks; consume the existing post-guard application context without changing its constructor, signature, bootstrap, Dashboard, authentication or client factories. Any common.ts extraction is limited to review response composition below the protected context/trusted-IP helpers. Preserve PR668 and PR736 independently.",
+    "openPrsReviewed": [624, 668, 690, 730, 731, 735, 736],
+    "existingOwnerSearch": "No open REF-008 PR and no refs under heads/refactor/ref-008 before branch creation. No replacement branch or donor implementation."
+  },
+  "scope": {
+    "maximumMeaningfulFiles": 12,
+    "editablePaths": [
+      "backend/supabase/functions/admin-api/gameRoutes.ts",
+      "backend/supabase/functions/admin-api/common.ts",
+      "backend/supabase/functions/admin-api/contractReviewOperation.ts",
+      "backend/src/domains/contracts/application/staffContractReviewOperation.ts",
+      "backend/src/domains/contracts/infrastructure/contractReviewReadRepository.ts",
+      "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
+      "backend/tests/admin/ref004RequestParity.test.ts",
+      "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+      "PR-specific player-cross-cutting manifest path to be bound after this PR is created",
+      "docs/operations/evidence/refactor-execution-v1/REF-008/contract-review.json",
+      "docs/roadmaps/refactor-execution-v1/tasks/REF-008.md",
+      "docs/roadmaps/refactor-execution-v1/backlog.json"
+    ],
+    "closeout": "Only REF008 task/evidence and REF008 backlog fields; preserve every other task object and all dependencies. No extra path without explicit scope review."
+  },
+  "sourceBaseline": {
+    "staffHandlerBlob": "4cf1da64cd7a926d5822516614d32a0b1ae95db3",
+    "contractRepositoryBlob": "19cdac55a05665da1e193cdf448a3d52e0e2fbf0",
+    "staffSessionBlob": "71764e6c8f4a09ae2a1dd5828d4b1a651a2045c4",
+    "staffLimiterBlob": "bd86505eafeba4802502802d367e7a9f1d93989e",
+    "existingDomainParityBlob": "f51b287ea8b2f45a2a53a29f927213379671111d",
+    "existingNormalizerBlob": "a57fe571b7e274adb453e1dc09a6eaa557b39992",
+    "existingRewardAdapterBlob": "c47f1a272bf5dc433bb1ecd14f5501828642f6a0"
+  },
+  "preservation": {
+    "methods": "decision and submissions-review accept POST/PATCH; progress-review accepts POST only. Every accepted alias passes POST to the existing review authority. Unsupported root operations remain the existing 501, not a newly invented route behavior.",
+    "permission": "The decision alias retains game.update; both explicit contract-review aliases retain contracts.manage. Use server-approved Staff/game context only, before any lookup or effect.",
+    "lookup": "Decision-only identity lookup selects id,contract_id with both game_session_id and submission id predicates. Preserve the existing flat contract_submission_not_found 404. Explicit contract/progress scope remains enforced by the existing repository.",
+    "body": "Reuse normalizeContractReview, including review/payload precedence, action/status aliases, feedback aliases and result merging. Preserve original request/body and request/idempotency header precedence. Do not introduce new payload hashes or review receipt semantics.",
+    "staffLimit": "The existing forwarded request uses sensitive profile, action staff.api.write.unknown and Staff id as its dimension for the prefixed Staff path. Preserve this exact tuple and validated trusted-IP projection, fail-closed 429/503 and fresh owned-game lookup.",
+    "authority": "Reuse handleStaffContractRequest and its existing review implementation/repository. No second transition table, independent progress writer, new RPC, database migration or reward endpoint change.",
+    "rewards": "Only successful approve through decision automatically invokes the existing issue_contract_rewards_atomic_v1 adapter once. Other actions/aliases issue no reward. Preserve original combined response and partial-success behavior if subsequent reward issuance fails; do not claim review and reward form one SQL transaction.",
+    "replayBaseline": "Existing REF004 Contract review records current non-idempotent changed-payload behavior: same-key approve then reject produces two review writes. Characterize and preserve it in this refactor; no invented conflict rejection or new idempotency guarantee. Reward atomicity/replay remains owned by the unchanged reward command.",
+    "audit": "Do not write or rewrite audit/story records from the adapter. Existing database-trigger behavior must remain inside the same authoritative repository mutation; focused disposable database evidence is required before completion.",
+    "transport": "Target zero Classroom HTTP requests for these three aliases, one existing review call per accepted attempt and no additional reward calls. Other callers and source-retirement gates remain."
+  },
+  "validation": {
+    "status": "NOT_ACCEPTED",
+    "required": [
+      "Admin API and Admin local-mutation suites",
+      "Contract acceptance and lifecycle",
+      "Economic-ledger invariants and focused disposable database replay/race/audit acceptance",
+      "TypeScript, all Edge roots and complete backend smoke",
+      "Repository architecture, high-priority, legacy, authentication, secrets and supply-chain checks",
+      "Every applicable exact-head workflow, CodeQL, commit status, guarded normal merge and actual-tree comparison"
+    ],
+    "cases": ["all three aliases and supported methods", "unchanged unsupported methods", "wrong role/game/contract", "missing submission/progress", "identical and conflicting review replay", "reward-already-issued denial", "repository/read/write failures", "immutable audit behavior", "single review and bounded reward calls", "normalization and header precedence", "both limiters and no Classroom request"],
+    "executionBoundary": "Container has Node 22.16.0 but no Deno; direct Git clone failed DNS resolution. Downloaded Admin source artifact 10775539242 has verified SHA256 11602e6e367335fa2662bc669798811f7cae129c3c59e92c7987f03eb93d69b2. Historical source/artifacts are inputs, not new-candidate test credit. Exact-candidate pinned CI is required."
+  },
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "nextTask": "REF-009",
+  "nextTaskStarted": false
+}
