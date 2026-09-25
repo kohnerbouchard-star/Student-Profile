@@ -1,0 +1,40 @@
+name: Phase 15 Control Source Review
+
+on:
+  push:
+    branches: [fix/phase15-certification-controls-v1]
+    paths: [.github/workflows/phase15-control-review-source.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  source-review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact review source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Package tracked release-control source only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          mkdir -p "$RUNNER_TEMP/phase15-control-source"
+          git archive --format=tar.gz --output="$RUNNER_TEMP/phase15-control-source/source.tar.gz" HEAD \
+            AGENTS.md CONTRIBUTING.md package.json package-lock.json \
+            .github/workflows scripts docs/roadmaps docs/operations \
+            backend/package.json backend/package-lock.json \
+            backend/supabase/edge-function-manifest.json backend/supabase/migrations
+          printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/phase15-control-source/source-commit.txt"
+          sha256sum "$RUNNER_TEMP/phase15-control-source/source.tar.gz" > "$RUNNER_TEMP/phase15-control-source/source.sha256"
+      - name: Retain bounded review input without credentials or database access
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phase15-control-source-${{ github.sha }}
+          path: ${{ runner.temp }}/phase15-control-source/
+          retention-days: 1
+          if-no-files-found: error
