@@ -130,7 +130,7 @@
       "id": "REF-008",
       "title": "Converge the three Admin Contract review aliases",
       "file": "tasks/REF-008.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-007"
       ],
@@ -139,9 +139,9 @@
       "recheckOpenPrs": [
         668
       ],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "ac53c78e4a1cd1b43cfd1d24ee4293fd0fb5cbd9",
+      "mergeSha": "b3053a931bc20be0e522fa3b35586444b67344ab",
+      "evidence": "../../operations/evidence/refactor-execution-v1/REF-008/contract-review.json"
     },
     {
       "id": "REF-009",

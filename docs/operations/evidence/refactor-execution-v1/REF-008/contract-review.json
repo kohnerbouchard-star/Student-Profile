@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "task": "REF-008",
-  "status": "IN_PROGRESS",
+  "status": "VERIFIED_COMPLETE",
   "baseMainSha": "e8e9f6fd47b6faaebee44c075a7837b10481b1e5",
   "ownerBranch": "refactor/ref-008-local-contract-review",
   "authorization": "Owner requested Start task 8. Execute only bounded REF-008; do not begin REF-009 or deploy. Normal merge requires complete exact-candidate acceptance and a checked closeout.",
@@ -76,7 +76,7 @@
     "qualification": "No test execution or exact-head acceptance is claimed in this publication record. The PR discussion must identify fresh CI results and remaining failures. Preparation tests, even when passing, are not completion of the mutation cutover."
   },
   "validation": {
-    "status": "PENDING_EXACT_HEAD_CI_AFTER_INVENTORY_RECONCILIATION",
+    "status": "VERIFIED_COMPLETE",
     "required": [
       "Admin API and Admin local-mutation suites",
       "Contract acceptance and lifecycle",
@@ -103,17 +103,33 @@
       "commit": "525100c7c87af95c4cb37fbf55fc8eabb42f5ba3",
       "blob": "57a0505ba8de99ddb3f7f586657bbd038dc0c7c9",
       "method": "canonical generator output recovered from exact-head CI artifact and committed without generator or threshold changes"
-    }
+    },
+    "exactQualifiedHead": "ac53c78e4a1cd1b43cfd1d24ee4293fd0fb5cbd9",
+    "workflowAccounting": {
+      "total": 42,
+      "success": 41,
+      "skipped": 1,
+      "failed": 0,
+      "pending": 0,
+      "expectedSkip": "PR361 Staging Game Provisioning Repair"
+    },
+    "repositoryQualityRun": 36094504522
   },
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
   "nextTask": "REF-009",
   "nextTaskStarted": false,
   "localCutover": {
-    "status": "IMPLEMENTED_PENDING_EXACT_HEAD_QUALIFICATION",
+    "status": "MERGED_VERIFIED_COMPLETE",
     "behavior": "Only the three review aliases route through the local Admin review operation. The already-created post-guard application context is passed into handleGameWrite; methods, alias permissions, decision identity lookup, existing normalization and request identity precedence are preserved.",
     "authority": "The existing reviewStaffContractProgress body is unchanged and exported for a thin Contracts-owned local adapter. No second transition table, independent progress writer, reward path or replay cache is introduced.",
     "transport": "The selected aliases issue zero Classroom fetches. The inherited downstream limiter remains sensitive with staff.api.write.unknown and Staff UUID dimensions, trusted-IP projection and a fresh owned-game lookup before the review authority.",
     "rewardBoundary": "Only decision approval calls the unchanged atomic reward adapter after a successful review. Reward failure remains a post-review partial-success boundary."
+  },
+  "merge": {
+    "pullRequest": 750,
+    "mergeSha": "b3053a931bc20be0e522fa3b35586444b67344ab",
+    "method": "merge",
+    "sourceHead": "ac53c78e4a1cd1b43cfd1d24ee4293fd0fb5cbd9"
   }
 }
