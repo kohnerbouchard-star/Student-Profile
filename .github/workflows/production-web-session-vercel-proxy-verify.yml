@@ -31,7 +31,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  PRODUCTION_ORIGIN: https://www.econovaria.com
   STATUS_CONTEXT: econovaria/vercel-admin-session-route
 
 jobs:

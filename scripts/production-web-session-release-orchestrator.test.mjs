@@ -33,7 +33,7 @@ test("release request is repository-owned, bounded, and approval-gated", () => {
   assert.equal(request.stagingProjectRef, "eecvbssdvarfcykcfrny");
   assert.equal(request.productionProjectRef, "cgiukdjwicykrmtkhudh");
   assert.notEqual(request.stagingProjectRef, request.productionProjectRef);
-  assert.equal(request.productionOrigin, "https://econovaria.vercel.app");
+  assert.equal(request.productionOrigin, "https://www.econovaria.com");
   assert.equal(request.trustedClientIpHeader, "x-real-ip");
   assert.equal(request.verifyJwt, false);
   assert.equal(request.customAuthenticationRequired, true);
@@ -47,6 +47,8 @@ test("release request is repository-owned, bounded, and approval-gated", () => {
 });
 
 test("orchestrator starts from a merged release request without copied workflow inputs", () => {
+  assert.match(workflow, /PRODUCTION_ORIGIN:\s*https:\/\/www\.econovaria\.com/u);
+  assert.doesNotMatch(workflow, /PRODUCTION_ORIGIN:\s*https:\/\/econovaria\.vercel\.app/u);
   assert.match(workflow, /^\s*push:\s*$/mu);
   assert.match(workflow, /branches:\s*\n\s*- main/u);
   assert.match(workflow, /production-web-session-release-v1\.json/u);

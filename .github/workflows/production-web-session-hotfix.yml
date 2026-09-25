@@ -44,7 +44,7 @@ env:
   SOURCE_FUNCTION_NAME: web-session-api
   CANDIDATE_FUNCTION_NAME: web-session-api
   SUPABASE_CLI_VERSION: 2.109.1
-  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  PRODUCTION_ORIGIN: https://www.econovaria.com
   TRUSTED_CLIENT_IP_HEADER: x-real-ip
 
 jobs:
@@ -177,7 +177,7 @@ jobs:
           test "${{ inputs.confirm_staging_project_ref }}" = "$EXPECTED_STAGING_PROJECT_REF"
           test "$EXPECTED_STAGING_PROJECT_REF" != "$DENIED_PRODUCTION_PROJECT_REF"
           test "$SOURCE_FUNCTION_NAME" = "$CANDIDATE_FUNCTION_NAME"
-          test "$PRODUCTION_ORIGIN" = "https://econovaria.vercel.app"
+          test "$PRODUCTION_ORIGIN" = "https://www.econovaria.com"
           test "$TRUSTED_CLIENT_IP_HEADER" = "x-real-ip"
 
       - name: Download exact immutable source
@@ -262,7 +262,7 @@ jobs:
             --write-out '%{http_code}' \
             --request POST "$base/login" \
             -H "apikey: $publishable_key" \
-            -H "Origin: https://econovaria.vercel.app" \
+            -H "Origin: $PRODUCTION_ORIGIN" \
             -H "Content-Type: application/json" \
             --data '{}')"
           test "$invalid_status" = "400"
