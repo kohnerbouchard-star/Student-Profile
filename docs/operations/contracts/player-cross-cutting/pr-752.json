@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref009-contract-reward-pr-752.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 752,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/supabase/functions/admin-api/gameRoutes.ts",
+    "backend/supabase/functions/admin-api/contractRewardIssueOperation.ts",
+    "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-752.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-009.md",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/supabase/functions/admin-api/gameRoutes.ts",
+    "backend/supabase/functions/admin-api/contractRewardIssueOperation.ts",
+    "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-752.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-009.md",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Admin API Check",
+    "Repository Quality",
+    "Beta Security Contract"
+  ],
+  "criticalJobChecks": [],
+  "authorizationNote": "Owner authorized bounded REF-009 only. Localize only the Admin Contract reward-issuance route onto the existing issue_contract_rewards_atomic_v1 authority. No SQL, migration, reward formula, production mutation/deployment, or REF-010 change."
+}
