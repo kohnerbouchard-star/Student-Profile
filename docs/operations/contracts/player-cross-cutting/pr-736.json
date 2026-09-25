@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.player-service-role-binding-pr-736.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 736,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/supabase/functions/player-api/runtime.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-736.json",
+    "docs/roadmaps/player-production-service-role-binding-v1.md",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-736.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience"
+  ],
+  "authorizationNote": "Bounded production Player-login incident isolation. The canonical player-api entrypoint reads only SUPABASE_SERVICE_ROLE_KEY and uses one local createServiceRoleClient factory for every existing privileged Player client injection, including pre-auth and post-auth rate limits, authentication throttles, credential and session operations, bootstrap, Business, Messaging, Crafting and Attendance. The shared secret selector, Admin/staff/worker roots, classroom compatibility root, database grants, routes and Player authentication semantics remain unchanged. Masked diagnostics show both configured modern and built-in Supabase keys can execute the affected RPCs, so this manifest does not assert a key-class root cause; HMAC, trusted-IP, WebCrypto and RPC-shape hypotheses remain staging and production probe gates. No secret value, database mutation, configuration write, Edge deployment or production action is authorized."
+}
