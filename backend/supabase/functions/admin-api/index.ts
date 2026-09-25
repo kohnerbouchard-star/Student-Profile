@@ -539,6 +539,7 @@ Deno.serve(async (request: Request) => {
       url,
       gameId,
       suffix,
+      applicationContext,
     );
     if (writeResponse) return writeResponse;
 
