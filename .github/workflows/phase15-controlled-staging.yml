@@ -8,12 +8,37 @@ on:
       - ".github/workflows/phase15-controlled-production.yml"
       - ".github/workflows/database-replay.yml"
       - ".github/workflows/player-multiplayer-load-e2e.yml"
+      - ".github/workflows/business-player-store-cutover-v2.yml"
+      - ".github/workflows/production-git-release.yml"
       - "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs"
       - "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
       - "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
       - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-certificate.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-certificate.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-runtime-probe.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-runtime-probe.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.mjs"
+      - "scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.test.mjs"
+      - "docs/operations/contracts/phase15-production-apply-provenance-v1.json"
+      - "docs/operations/contracts/phase15-advisor-exceptions-v1.json"
+      - "docs/operations/contracts/phase15-acceptance-evidence-v1.json"
+      - "docs/operations/contracts/phase15-production-runtime-fixture-v1.json"
+      - "docs/operations/evidence/phase15-certification/**"
+      - "docs/operations/backup-manifest.template.json"
+      - "docs/operations/backup-restore-runbook.md"
+      - "docs/operations/backup-retention-policy.md"
+      - "docs/operations/restore-rehearsal.template.json"
       - "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh"
       - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
+      - "scripts/recovery-contract.mjs"
+      - "scripts/recovery-contract.test.mjs"
+      - "scripts/restore-integrity-checks.sql"
+      - "scripts/vercel-git-release-contract.test.mjs"
       - "scripts/staging/golden-five-contract.test.mjs"
       - "scripts/staging/golden-five-verify.mjs"
       - "scripts/staging/golden-five-browser-acceptance.mjs"
@@ -22,6 +47,8 @@ on:
       - "backend/src/domains/world/services/playerWorldRuntimeService.ts"
       - "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
       - "docs/operations/contracts/player-cross-cutting/pr-699.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-731.json"
+      - "scripts/business-phase10-player-store-cutover-contract.mjs"
       - "scripts/player-cross-cutting-authority.test.mjs"
   push:
     branches: [main]
@@ -29,12 +56,38 @@ on:
       - ".github/workflows/phase15-controlled-staging.yml"
       - ".github/workflows/phase15-controlled-production.yml"
       - ".github/workflows/database-replay.yml"
+      - ".github/workflows/player-multiplayer-load-e2e.yml"
+      - ".github/workflows/business-player-store-cutover-v2.yml"
+      - ".github/workflows/production-git-release.yml"
       - "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs"
       - "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
       - "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
       - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-certificate.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-certificate.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-runtime-probe.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-runtime-probe.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.mjs"
+      - "scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.test.mjs"
+      - "docs/operations/contracts/phase15-production-apply-provenance-v1.json"
+      - "docs/operations/contracts/phase15-advisor-exceptions-v1.json"
+      - "docs/operations/contracts/phase15-acceptance-evidence-v1.json"
+      - "docs/operations/contracts/phase15-production-runtime-fixture-v1.json"
+      - "docs/operations/evidence/phase15-certification/**"
+      - "docs/operations/backup-manifest.template.json"
+      - "docs/operations/backup-restore-runbook.md"
+      - "docs/operations/backup-retention-policy.md"
+      - "docs/operations/restore-rehearsal.template.json"
       - "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh"
       - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
+      - "scripts/recovery-contract.mjs"
+      - "scripts/recovery-contract.test.mjs"
+      - "scripts/restore-integrity-checks.sql"
+      - "scripts/vercel-git-release-contract.test.mjs"
       - "scripts/staging/golden-five-contract.test.mjs"
       - "scripts/staging/golden-five-verify.mjs"
       - "scripts/staging/golden-five-browser-acceptance.mjs"
@@ -42,6 +95,9 @@ on:
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts"
       - "backend/src/domains/world/services/playerWorldRuntimeService.ts"
       - "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
+      - "docs/operations/contracts/player-cross-cutting/pr-731.json"
+      - "scripts/business-phase10-player-store-cutover-contract.mjs"
+      - "scripts/player-cross-cutting-authority.test.mjs"
 
 permissions:
   contents: read
@@ -79,6 +135,10 @@ jobs:
           set -euo pipefail
           node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
           node --test scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-production-certificate.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.test.mjs
           node --test scripts/staging/golden-five-contract.test.mjs
           node --test scripts/edge-function-inventory/validate.test.mjs
           node --test scripts/local-edge-runtime-contract.test.mjs
@@ -225,7 +285,7 @@ jobs:
           name: phase15-source-gate-${{ github.sha }}
           path: ${{ runner.temp }}/phase15-certificates/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
 
   converge-staging-database:
     name: Rehearse and converge populated staging database
@@ -338,7 +398,7 @@ jobs:
           name: phase15-staging-database-${{ github.sha }}
           path: ${{ runner.temp }}/phase15-staging-evidence/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
 
   converge-staging-runtime:
     name: Deploy and attest current staging Edge runtime
@@ -449,7 +509,7 @@ jobs:
             ${{ runner.temp }}/staging-functions.json
             ${{ runner.temp }}/staging-attestation.json
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
 
   exercise-staging:
     name: Exercise real staging browser lifecycle and isolation
@@ -1094,4 +1154,4 @@ jobs:
             /tmp/econovaria-golden-five/
             /tmp/econovaria-staging-gateway.log
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90

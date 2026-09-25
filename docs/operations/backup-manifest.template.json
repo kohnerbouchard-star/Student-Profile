@@ -1,29 +1,121 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "status": "planned",
-  "environment": "isolated-staging",
-  "sourceProjectRef": "REQUIRED_NON_PRODUCTION_SOURCE_REF",
+  "environment": "production-read-only-export",
+  "recoveryClaim": "phase15-application-database-release-recovery-point",
+  "sourceProjectRef": "REQUIRED_PRODUCTION_SOURCE_REF",
   "sourceCommit": "REQUIRED_FULL_COMMIT_SHA",
   "migrationHead": "REQUIRED_MIGRATION_VERSION",
-  "createdAt": "REQUIRED_ISO_TIMESTAMP",
+  "createdAt": null,
   "completedAt": null,
-  "archive": {
-    "format": "encrypted-archive",
-    "sha256": null,
-    "sizeBytes": null,
-    "storageClass": "approved-immutable-off-platform",
-    "locationReference": null,
-    "encryptionKeyReference": "secret-name-or-custodian-reference-only"
+  "snapshot": {
+    "consistency": "pg-dump-internal-consistent-snapshot",
+    "bindingMethod": "exact-application-data-dump-sha256",
+    "applicationDataDumpSha256": null,
+    "applicationDataDumpBound": true,
+    "sourceComparatorDerivedFromDump": true,
+    "dataSchemas": [
+      "public",
+      "private"
+    ],
+    "schemaOnlySchemas": [
+      "economy_private"
+    ],
+    "sourceComparator": {
+      "profile": "supabase-copy-application-data-v1",
+      "dumpSha256": null,
+      "dumpBytes": null,
+      "tableCount": null,
+      "totalRowCount": null,
+      "sequenceCount": null,
+      "contentSha256": null,
+      "evidenceSha256": null
+    }
   },
-  "coverage": {
-    "schema": "planned",
-    "migrationLedger": "planned",
-    "applicationData": "planned",
-    "authMapping": "planned",
-    "storageInventory": "planned",
-    "edgeFunctionSource": "planned",
-    "configurationNames": "planned"
+  "archive": {
+    "format": "encrypted-tar-gzip",
+    "artifactId": null,
+    "artifactName": null,
+    "githubArtifactDigest": null,
+    "plaintextSha256": null,
+    "cipherSha256": null,
+    "sizeBytes": null,
+    "storageClass": "github-actions-phase15-release-artifact",
+    "retentionDays": 90,
+    "expiresAt": null,
+    "recurringPolicySatisfied": false,
+    "locationReference": null,
+    "encryption": {
+      "keyReference": "GitHub production environment secret PHASE15_BACKUP_ENCRYPTION_KEY_V1",
+      "keyVersion": "V1",
+      "retainWithoutRotationUntil": null,
+      "containsKeyMaterial": false
+    },
+    "freshRunnerDecryptVerification": {
+      "required": true,
+      "status": "planned",
+      "executionEnvironment": "github-production-environment",
+      "runId": null,
+      "completedAt": null,
+      "downloadedArtifactDigest": null,
+      "cipherSha256": null,
+      "plaintextSha256": null,
+      "manifestSha256": null
+    }
+  },
+  "scope": {
+    "applicationData": {
+      "disposition": "snapshot-bound-captured-and-restore-compared",
+      "dataSchemas": [
+        "public",
+        "private"
+      ],
+      "schemaOnlySchemas": [
+        "economy_private"
+      ]
+    },
+    "managedDatabaseBackup": {
+      "disposition": "provider-managed-separate",
+      "evidenceReference": null
+    },
+    "managedAuth": {
+      "disposition": "managed-platform-separate-current-version-target-required",
+      "evidenceReference": null
+    },
+    "vault": {
+      "disposition": "secret-values-excluded-reprovision-separately",
+      "containsValues": false,
+      "evidenceReference": null
+    },
+    "migrationLedger": {
+      "disposition": "snapshot-bound-captured-and-verified-separately",
+      "relation": "supabase_migrations.schema_migrations",
+      "evidenceReference": null
+    },
+    "cron": {
+      "disposition": "captured-and-verified-separately",
+      "relation": "cron.job",
+      "isolatedRestoreActivation": "disabled",
+      "evidenceReference": null
+    },
+    "supabaseStorageMetadata": {
+      "disposition": "managed-database-scope-separate-from-application-comparator",
+      "evidenceReference": null
+    },
+    "supabaseStorageBlobs": {
+      "disposition": "not-in-logical-database-artifact-separate-recovery-required",
+      "inventoryEvidenceReference": null
+    },
+    "r2Objects": {
+      "disposition": "not-in-logical-database-artifact-separate-recovery-required",
+      "inventoryEvidenceReference": null
+    },
+    "edgeAndWebRelease": {
+      "disposition": "immutable-source-and-deployment-identity-separate",
+      "evidenceReference": null
+    }
   },
   "productionModified": false,
-  "containsSecretValues": false
+  "containsSecretValues": false,
+  "fullDisasterRecoveryClaimed": false
 }

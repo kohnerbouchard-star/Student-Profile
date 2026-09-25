@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "contractId": "econovaria.phase15.production-runtime-fixture.v1",
+  "authorizationBasis": "Repository-owner Phase 15 execution scope dated 2026-09-21: run production-safe, bounded authenticated verification after deployment using approved isolated fixtures and canonical APIs.",
+  "environment": "production",
+  "projectRef": "cgiukdjwicykrmtkhudh",
+  "canonicalOrigin": "https://www.econovaria.com",
+  "fixture": {
+    "kind": "reusable-protected-synthetic-game",
+    "gameName": "[SYSTEM] Phase 15 Production Runtime Probe",
+    "playerIdentifier": "PHASE15-RUNTIME-PROBE",
+    "maximumPlayers": 1,
+    "purgeProtected": true,
+    "realUserDataPermitted": false,
+    "credentialPersistencePermitted": false,
+    "joinableOutsideProbePermitted": false,
+    "activeOutsideProbePermitted": false
+  },
+  "allowedRuntimeActions": [
+    "canonical-player-login",
+    "canonical-authenticated-read-routes",
+    "canonical-arrival-questionnaire-if-required",
+    "canonical-checking-to-savings-transfer",
+    "exact-idempotent-transfer-replay",
+    "canonical-savings-to-checking-reversal",
+    "canonical-player-logout"
+  ],
+  "containment": {
+    "revokeAllFixtureSessions": true,
+    "revokeAllFixtureCredentials": true,
+    "clearFixtureJoinCode": true,
+    "pauseFixture": true,
+    "retainOnlySyntheticFixtureHistory": true
+  },
+  "directEconomicMutationPermitted": false,
+  "evidenceMayContainSecrets": false,
+  "evidenceMayContainRawInternalIdentifiers": false
+}

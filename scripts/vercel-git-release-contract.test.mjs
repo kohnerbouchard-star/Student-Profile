@@ -8,6 +8,10 @@ const releaseWorkflow = readFileSync(
   ".github/workflows/production-git-release.yml",
   "utf8",
 );
+const controlledProductionWorkflow = readFileSync(
+  ".github/workflows/phase15-controlled-production.yml",
+  "utf8",
+);
 const verifier = readFileSync(
   ".github/workflows/vercel-git-production-verify.yml",
   "utf8",
@@ -43,13 +47,20 @@ assert.equal((edgeWorkflow.match(/test "\$GITHUB_EVENT_NAME" = "workflow_dispatc
 assert.ok(releaseWorkflow.includes("event=workflow_dispatch&per_page=20"));
 assert.match(edgeWorkflow, /production:\n[\s\S]*?needs: staging/u);
 assert.match(releaseWorkflow, /publish-release-branch:\n[\s\S]*?needs: enforce-parity/u);
+assert.match(releaseWorkflow, /publish-release-branch:\n[\s\S]*?environment: production/u);
+assert.match(releaseWorkflow, /ssh-key: \$\{\{ secrets\.PHASE15_RELEASE_DEPLOY_KEY_V1 \}\}/u);
+assert.match(releaseWorkflow, /persist-credentials: true/u);
+assert.match(releaseWorkflow, /test -n "\$PHASE15_RELEASE_DEPLOY_KEY"/u);
+assert.match(releaseWorkflow, /concurrency:\n  group: econovaria-production-release\n  cancel-in-progress: false/u);
+assert.match(controlledProductionWorkflow, /concurrency:\n  group: econovaria-production-release\n  cancel-in-progress: false/u);
 
 assert.equal(config.git?.deploymentEnabled?.main, false);
 assert.equal(config.git?.deploymentEnabled?.["release/production"], true);
 
 for (const marker of [
   "Publish parity-verified source to release/production",
-  "contents: write",
+  "contents: read",
+  "PHASE15_RELEASE_DEPLOY_KEY_V1",
   "git merge-base --is-ancestor origin/release/production HEAD",
   'git push origin "$SOURCE_COMMIT:refs/heads/$RELEASE_BRANCH"',
   "production-release-branch-${{ github.sha }}",
