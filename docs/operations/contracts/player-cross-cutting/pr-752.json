@@ -38,6 +38,5 @@
     "Repository Quality",
     "Beta Security Contract"
   ],
-  "criticalJobChecks": [],
   "authorizationNote": "Owner authorized bounded REF-009 only. Localize only the Admin Contract reward-issuance route onto the existing issue_contract_rewards_atomic_v1 authority. No SQL, migration, reward formula, production mutation/deployment, or REF-010 change."
 }
