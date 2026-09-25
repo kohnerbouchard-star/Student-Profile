@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1243,
+    "sourceFiles": 1245,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 55,
@@ -3352,12 +3352,12 @@
         "lines": 667
       },
       {
-        "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
-        "lines": 662
-      },
-      {
         "file": "admin/admin-auth.js",
         "lines": 658
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
+        "lines": 653
       },
       {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
@@ -3909,6 +3909,8 @@
           "backend/supabase/functions/admin-api/contractProgressReadOperation.ts",
           "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
           "backend/supabase/functions/admin-api/contractReviewOperation.ts",
+          "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
+          "backend/supabase/functions/admin-api/contractRewardIssueOperation.ts",
           "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
