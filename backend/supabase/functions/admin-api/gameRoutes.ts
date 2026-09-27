@@ -31,6 +31,7 @@ import {
 import { handleGameJoinCodeReadOperation } from "./gameJoinCodeOperations.ts";
 import { handleContractProgressReadOperation } from "./contractProgressReadOperation.ts";
 import { handleAdminContractReviewOperation } from "./contractReviewOperation.ts";
+import { handleAdminContractRewardIssueOperation } from "./contractRewardIssueOperation.ts";
 import type { AdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 import { createSupabaseGameSettingsReadRepository } from "../../../src/domains/game-sessions/infrastructure/supabaseGameSettingsReadRepository.ts";
 
@@ -557,22 +558,12 @@ export async function handleGameWrite(
   );
   if (contractReviewResponse) return contractReviewResponse;
 
-  const rewardMatch = suffix.match(
-    /^\/contracts\/([^/]+)\/progress\/([^/]+)\/rewards\/issue$/,
+  const contractRewardResponse = await handleAdminContractRewardIssueOperation(
+    request,
+    context.service,
+    { applicationContext, gameSessionId: gameId, suffix },
   );
-  if (rewardMatch && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomContractPath(
-        gameId,
-        `/${encodeURIComponent(decodeURIComponent(rewardMatch[1]))}/progress/${
-          encodeURIComponent(decodeURIComponent(rewardMatch[2]))
-        }/rewards/issue`,
-      ),
-      "POST",
-    );
-  }
+  if (contractRewardResponse) return contractRewardResponse;
 
   if (suffix === "/attendance/exports" && request.method === "POST") {
     const params = new URLSearchParams();
