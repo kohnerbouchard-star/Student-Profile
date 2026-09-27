@@ -136,9 +136,25 @@ function assertIssued(f: Fixture, before: State, after: State, key: string) {
   assert.equal(receipt.request_id, key);
   assert.equal(receipt.issued_by_staff_user_id, f.staff);
   const entries = after["public.ledger_entries"].filter(r => r.source_id === f.progress && r.source_action === "contract_reward_cash");
-  assert.equal(entries.length, 1);
-  assert.equal(Number(entries[0].amount), 12.34);
-  assert.equal(entries[0].currency_code, "ECO");
+  // The banking authority posts a requested credit and a non-spendable signed offset.
+  assert.equal(entries.length, 2);
+  const credit = entries.find(r => r.player_id === f.player && r.account_type === "checking")!;
+  const offset = entries.find(r => r.line_metadata?.compatibilityRole === "signed_offset")!;
+  assert.ok(credit); assert.ok(offset);
+  assert.equal(Number(credit.amount), 12.34);
+  assert.equal(credit.entry_type, "credit");
+  assert.equal(credit.currency_code, "ECO");
+  assert.equal(Number(offset.amount), -12.34);
+  assert.equal(offset.entry_type, "debit");
+  assert.equal(offset.currency_code, "ECO");
+  assert.equal(offset.player_id, null);
+  assert.equal(offset.line_metadata.nonSpendable, true);
+  assert.equal(offset.bank_transaction_id, credit.bank_transaction_id);
+  assert.notEqual(offset.bank_account_id, credit.bank_account_id);
+  assert.equal(receipt.cash_ledger_entry_id, credit.id);
+  assert.equal(after["public.bank_transactions"].filter(r => r.id === credit.bank_transaction_id).length, 1);
+  const flags = after["public.game_session_story_flags"].filter(r => r.flag_key === "ref009_reward_complete");
+  assert.equal(flags.length, 1); assert.equal(flags[0].value, true);
   const holdings = after["public.inventory_holdings"].filter(r => r.player_id === f.player && r.store_item_id === f.item);
   assert.equal(holdings.length, 1);
   assert.equal(Number(holdings[0].quantity_owned), 2);
@@ -228,6 +244,19 @@ try {
     assert.deepEqual(await snapshot(denied), deniedBefore);
   }
   checks.deniedAndWrongAssociationNoEffects = true;
+
+  for (const path of ["before", "after"] as const) {
+    const f = await seed(`${path}-duplicate-flag`);
+    await sql(`update public.game_session_contracts set reward_payload=jsonb_set(reward_payload,'{storyFlagsToSet}',
+      '[{"flagKey":"ref009_duplicate","value":true},{"flagKey":"ref009_duplicate","value":false}]'::jsonb) where id=${literal(f.contract)}`);
+    const before = await snapshot(f);
+    const response = await issue(f, path, "ref009-duplicate-flag");
+    assert.equal(response.status, 400);
+    assert.match(response.body.error.message, /CONTRACT_REWARD_STORY_FLAG_DUPLICATE/);
+    assert.deepEqual(await snapshot(f), before);
+  }
+  checks.storyFlagDuplicateRejectedWithoutEffects = true;
+  checks.moneyPosting = "One player credit and one non-spendable signed offset in one balanced bank transaction";
 
   const race = await seed("concurrent");
   const raceBefore = await snapshot(race);

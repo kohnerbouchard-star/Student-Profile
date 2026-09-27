@@ -42,7 +42,7 @@ export async function handleAdminContractRewardIssueOperation(
   const progressId = decodeURIComponent(match[2]);
   const idempotencyKey = request.headers.get("idempotency-key") ||
     request.headers.get("x-idempotency-key");
-  // Preserve the legacy audit-ID fallback; supplied retry identities are never replaced.
+  // Preserve supplied transport identity; mint an audit ID only when none was sent.
   const requestId = request.headers.get("x-request-id") || idempotencyKey ||
     (dependencies.createRequestId ?? (() => crypto.randomUUID()))();
 

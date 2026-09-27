@@ -18,7 +18,8 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     ".github/workflows/ref-009-contract-reward-qualification.yml",
-    "scripts/ref-009-contract-reward-acceptance.ts"
+    "scripts/ref-009-contract-reward-acceptance.ts",
+    "scripts/ref-009-contract-reward-parity.test.ts"
   ],
   "requiredFiles": [
     "backend/supabase/functions/admin-api/gameRoutes.ts",
@@ -30,7 +31,8 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     ".github/workflows/ref-009-contract-reward-qualification.yml",
-    "scripts/ref-009-contract-reward-acceptance.ts"
+    "scripts/ref-009-contract-reward-acceptance.ts",
+    "scripts/ref-009-contract-reward-parity.test.ts"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -46,5 +48,5 @@
   "criticalJobChecks": [
     "Contract reward database/race qualification"
   ],
-  "authorizationNote": "Owner authorized completion of bounded REF-009 on the existing branch and PR, including exact owning test registration and disposable database qualification. Localize only the Admin Contract reward-issuance route onto the existing issue_contract_rewards_atomic_v1 authority. The ten-file allowlist includes the read-only CI qualification workflow and its local-only acceptance harness. No SQL migration, reward formula, production mutation/deployment, secret handling, or REF-010 change."
+  "authorizationNote": "Owner authorized completion of bounded REF-009 on the existing branch and PR, including focused tests and exact owning test registration. Eleven locked paths include the two unchanged verifier files; nine meaningful changed files remain within the ten-file budget. The qualification workflow and local-only database/parity harnesses preserve all existing authority checks. No SQL migration, reward formula, production mutation/deployment, secret-value handling, or REF-010 change."
 }
