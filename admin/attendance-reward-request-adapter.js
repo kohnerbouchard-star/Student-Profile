@@ -11,9 +11,9 @@
     return value && typeof value === "object" && !Array.isArray(value) ? value : {};
   }
 
-  function number(value, fallback) {
+  function number(value, defaultValue) {
     const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
+    return Number.isFinite(parsed) ? parsed : defaultValue;
   }
 
   function field(name) {
