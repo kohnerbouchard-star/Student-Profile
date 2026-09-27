@@ -165,7 +165,7 @@
     return window.fetch(input, init);
   }
 
-  window.EconovariaAttendanceRewardRequestAdapter = Object.freeze({
+  const adapter = Object.freeze({
     prepareRequest,
     observeResponse,
     request,
@@ -173,5 +173,12 @@
       const resolvedGameId = text(gameId) || activeSettingsGameId();
       return resolvedGameId ? { ...currentAttendanceWindow(resolvedGameId) } : null;
     },
+  });
+  window.EconovariaAttendanceRewardRequestAdapter = adapter;
+  // The retained generated terminal reads this narrow compatibility name only
+  // when deriving the effective Settings idempotency payload. It is not a
+  // transport hook and delegates to the same source-owned adapter.
+  window.EconovariaAttendanceRewardSettingsRouteBridge = Object.freeze({
+    getCurrentAttendanceWindow: adapter.getCurrentAttendanceWindow,
   });
 })();
