@@ -13,11 +13,11 @@
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 55,
     "crossDomainDeepImports": 168,
-    "browserTransportShimFiles": 28,
-    "compatibilityMarkerFiles": 211,
+    "browserTransportShimFiles": 27,
+    "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 100,
-    "capabilityStrings": 137
+    "capabilityStrings": 136
   },
   "domains": [
     {
@@ -1841,12 +1841,6 @@
         ]
       },
       {
-        "file": "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
-        "patterns": [
-          "globalThis.fetch="
-        ]
-      },
-      {
         "file": "backend/supabase/functions/admin-api/localGameMutations.test.ts",
         "patterns": [
           "globalThis.fetch="
@@ -2879,19 +2873,6 @@
           "fallback",
           "legacycontractdto",
           "legacystoreitemdto"
-        ]
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
-        "markers": [
-          "legacy"
-        ]
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/contractRewardIssueOperation.ts",
-        "markers": [
-          "fallback",
-          "legacy"
         ]
       },
       {
@@ -4106,12 +4087,6 @@
         ]
       },
       {
-        "capability": "game.manage",
-        "locations": [
-          "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts"
-        ]
-      },
-      {
         "capability": "game.read",
         "locations": [
           "admin/admin-auth.js",
@@ -4151,6 +4126,7 @@
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
           "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
           "backend/supabase/functions/admin-api/contractReviewOperation.ts",
+          "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
           "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts",
           "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
