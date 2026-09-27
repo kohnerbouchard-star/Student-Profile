@@ -3699,8 +3699,7 @@
           "admin/v2/src/routes/overview/OverviewRoute.js",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
-          "backend/supabase/functions/admin-api/localGameMutations.test.ts",
-          "backend/supabase/functions/admin-api/playerAccessCodeResetOperation.ts"
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
       {
@@ -3912,8 +3911,7 @@
           "backend/supabase/functions/admin-api/contractReviewOperation.ts",
           "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
           "backend/supabase/functions/admin-api/contractRewardIssueOperation.ts",
-          "backend/supabase/functions/admin-api/localGameMutations.test.ts",
-          "backend/supabase/functions/admin-api/playerAccessCodeResetOperation.ts"
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
       {
@@ -4130,8 +4128,7 @@
           "backend/supabase/functions/admin-api/contractReviewOperation.ts",
           "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
           "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts",
-          "backend/supabase/functions/admin-api/localGameMutations.test.ts",
-          "backend/supabase/functions/admin-api/playerAccessCodeResetOperation.ts"
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
       {
@@ -4445,8 +4442,7 @@
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
           "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
           "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts",
-          "backend/supabase/functions/admin-api/localGameMutations.test.ts",
-          "backend/supabase/functions/admin-api/playerAccessCodeResetOperation.ts"
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
       {
@@ -4505,8 +4501,7 @@
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
           "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
-          "backend/supabase/functions/admin-api/localGameMutations.test.ts",
-          "backend/supabase/functions/admin-api/playerAccessCodeResetOperation.ts"
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
       {
