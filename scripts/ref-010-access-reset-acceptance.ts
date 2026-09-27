@@ -45,14 +45,14 @@ try {
   await load("backend/supabase/functions/classroom-api/index.ts");
 } finally { Deno.serve = originalServe; }
 assert.ok(registered, "Baseline dispatch must be captured");
-const classroom = registered!;
+const classroom = registered as unknown as Handler;
 try {
   registered = undefined;
   (Deno as any).serve = (handler: Handler) => { registered = handler; return {}; };
   await load("backend/supabase/functions/admin-api/index.ts");
 } finally { Deno.serve = originalServe; }
 assert.ok(registered, "Real Admin entrypoint must be captured");
-const admin = registered!;
+const admin = registered as unknown as Handler;
 const { createServiceClient } = await load("backend/supabase/functions/_shared/econovariaAuth.ts");
 const { createPlayerCredentialMaterial, verifyPlayerCredential } = await load("backend/src/security/playerCredentialHashing.ts");
 const { sha256Hex } = await load("backend/src/platform/supabase/edgeCrypto.ts");
@@ -126,6 +126,10 @@ async function seed(): Promise<Fixture> {
   f.token = session.access_token;
   assert.ok(f.token, "Real Staff sign-in must produce a token");
   await setCredential(f, f.code);
+  const banking = await service.rpc("ensure_player_banking_accounts_v1", {
+    p_game_session_id: f.game, p_player_id: f.player, p_currency_code: "ECO",
+  });
+  assert.ok(!banking.error, "Fixture Checking/Savings accounts must use existing Banking authority");
   return f;
 }
 async function snapshot(f: Fixture) {
