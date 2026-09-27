@@ -4,7 +4,8 @@ const G = "22222222-2222-4222-8222-222222222222", S = "11111111-1111-4111-8111-1
 const P = "44444444-4444-4444-8444-444444444444", OTHER = "55555555-5555-4555-8555-555555555555";
 const NOW = "2026-09-23T00:00:00.000Z", VERSION = "pbkdf2-sha256-v2" as const;
 type Options = { noEnv?: boolean; auth?: string; noGame?: boolean; playerId?: string; inactive?: boolean;
-  playerError?: boolean; rpcError?: { code?: string; message: string }; materialError?: boolean };
+  playerError?: boolean; rpcError?: { code?: string; message: string }; materialError?: boolean;
+  identifierWriteError?: { code?: string; message: string }; identifierWriteMissing?: boolean };
 type Call = { table: string; filters: Record<string, unknown>; update?: Record<string, unknown> };
 async function fixture(options: Options, run: (f: any) => Promise<void>) {
   const runtime = (globalThis as any).Deno, savedGet = runtime.env.get, savedFetch = globalThis.fetch;
@@ -20,6 +21,8 @@ async function fixture(options: Options, run: (f: any) => Promise<void>) {
         if (table === "game_sessions") { equal(call.filters, { id: G, owner_staff_user_id: S });
           return Promise.resolve({ data: options.noGame ? null : { id: G, name: "Fixture", status: "active", owner_staff_user_id: S }, error: null }); }
         equal(table, "players"); equal(call.filters, { game_session_id: G, id: options.playerId ?? P });
+        if (call.update) return Promise.resolve({ data: options.identifierWriteMissing ? null : { id: P },
+          error: options.identifierWriteError ?? null });
         return Promise.resolve({ data: options.playerId === OTHER ? null : { id: P, display_name: "Fixture Player", roster_label: null,
           player_identifier: "RFID-OLD", status: options.inactive ? "archived" : "active" }, error: options.playerError ? { message: "private failure" } : null });
       } }; return q;
@@ -98,4 +101,70 @@ Deno.test("REF004 identifier-only update is scoped and does not revoke sessions"
 Deno.test("REF004 credential retry has no RPC idempotency parameter or invented conflict", () => fixture({}, async (f) => {
   for (const accessCode of ["AC-004", "AC-005"]) equal((await f.send({ playerIdentifier: "rfid-04", accessCode })).status, 200);
   equal(f.rpcs, ["AC-004", "AC-005"].map((code) => ({ name: "set_player_identity_and_access_credential_v2", args: rpcArgs(code) })));
+}));
+
+// REF-010 characterization only. Exercise the existing handler; no runtime cutover.
+for (const [name, body] of [
+  ["absent", {}],
+  ["null", { accessCode: null }],
+  ["blank", { accessCode: "   " }],
+  ["empty payload", { payload: {} }],
+] as const) {
+  Deno.test(`REF010 ${name} credential preserves the identifier-only branch`, () => fixture({ materialError: true }, async (f) => {
+    const response = await f.send(body);
+    equal(response.status, 200);
+    const unchanged = expected(false);
+    equal(await response.json(), { ...unchanged, player: { ...unchanged.player, playerIdentifier: "RFID-OLD" } });
+    equal(f.rpcs, []);
+    equal(f.materials, []);
+    const writes = f.queries.filter((q: Call) => q.update);
+    equal(writes.length, 1);
+    equal(writes[0].filters, { game_session_id: G, id: P });
+    equal(writes[0].update.player_identifier, "RFID-OLD");
+    equal(writes[0].update.player_identifier_normalized, "RFID-OLD");
+    equal(Object.keys(writes[0].update).sort(), ["player_identifier", "player_identifier_normalized", "updated_at"]);
+  }));
+}
+for (const [options, status, code] of [
+  [{ identifierWriteError: { code: "23505", message: "private identifier constraint" } }, 409, "player_identifier_conflict"],
+  [{ identifierWriteError: { message: "private identifier persistence failure" } }, 500, "player_identity_update_failed"],
+  [{ identifierWriteMissing: true }, 404, "player_not_found"],
+] as const) {
+  Deno.test(`REF010 identifier-only failure ${code} never invokes credential authority`, () => fixture(options, async (f) => {
+    await error(await f.send({ playerIdentifier: "rfid-04" }), status, code);
+    equal(f.rpcs, []);
+    equal(f.materials, []);
+    const writes = f.queries.filter((q: Call) => q.update);
+    equal(writes.length, 1);
+    equal(writes[0].filters, { game_session_id: G, id: P });
+    equal(Object.keys(writes[0].update).sort(), ["player_identifier", "player_identifier_normalized", "updated_at"]);
+  }));
+}
+Deno.test("REF010 nested payload precedence preserves route-owned identity", () => fixture({}, async (f) => {
+  const response = await f.send({ playerIdentifier: "RFID-TOP", accessCode: "AC-TOP",
+    payload: { playerIdentifier: " rfid-04 ", accessCode: " ac -004 " } });
+  equal(response.status, 200);
+  equal(await response.json(), expected());
+  equal(f.materials, ["AC-004"]);
+  equal(f.rpcs, [{ name: "set_player_identity_and_access_credential_v2", args: rpcArgs() }]);
+}));
+Deno.test("REF010 identical transport keys do not invent an idempotent credential receipt", () => fixture({}, async (f) => {
+  const body = { playerIdentifier: "rfid-04", accessCode: "AC-004" };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    equal((await f.send(body)).status, 200);
+  }
+  equal(f.materials, ["AC-004", "AC-004"]);
+  equal(f.rpcs, [1, 2].map(() => ({ name: "set_player_identity_and_access_credential_v2", args: rpcArgs() })));
+}));
+Deno.test("REF010 success exposes only approved credential fields and private cache headers", () => fixture({}, async (f) => {
+  const response = await f.send({ playerIdentifier: "rfid-04", accessCode: "AC-004" });
+  equal(response.status, 200);
+  equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  equal(response.headers.get("pragma"), "no-cache");
+  equal(response.headers.get("vary"), "authorization");
+  const text = await response.text();
+  equal(JSON.parse(text), expected());
+  for (const internal of [G, S, P, "synthetic-salt", "synthetic-verifier", "digest-AC-004"]) {
+    ok(!text.includes(internal));
+  }
 }));
