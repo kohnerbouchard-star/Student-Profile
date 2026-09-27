@@ -8,12 +8,12 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1246,
+    "sourceFiles": 1247,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 55,
     "crossDomainDeepImports": 168,
-    "browserTransportShimFiles": 27,
+    "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 100,
@@ -1744,12 +1744,6 @@
         ]
       },
       {
-        "file": "admin/attendance-reward-settings-route-bridge-v2.js",
-        "patterns": [
-          "window.fetch="
-        ]
-      },
-      {
         "file": "admin/attendance-reward-settings-v4.js",
         "patterns": [
           "MutationObserver"
@@ -1919,7 +1913,7 @@
       {
         "file": "admin/attendance-reward-settings-route-bridge-v2.js",
         "markers": [
-          "fallback"
+          "compatibility"
         ]
       },
       {
