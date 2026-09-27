@@ -103,6 +103,35 @@ jobs:
             deno run --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen \
             --allow-env --allow-read --allow-run=psql --allow-write=/tmp/ref010 --allow-net=127.0.0.1:54321,localhost:54321 \
             scripts/ref-010-access-reset-acceptance.ts 2>&1 | tee /tmp/ref010/baseline.log
+      - name: Reset disposable services and qualify current local adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local > /tmp/ref010/current-replay.log 2>&1
+          REST_CONTAINER="$(docker ps --format '{{.Names}}' | grep -E '^supabase_rest_' | head -n 1)"
+          test -n "$REST_CONTAINER"
+          docker restart "$REST_CONTAINER" >/dev/null
+          npx supabase status --workdir backend -o json > "$RUNNER_TEMP/ref010-local-config.json"
+          chmod 600 "$RUNNER_TEMP/ref010-local-config.json"
+          export REF010_LOCAL_CONFIG="$RUNNER_TEMP/ref010-local-config.json"
+          python3 - <<'PY'
+          import json, os, time, urllib.request
+          config = json.load(open(os.environ['REF010_LOCAL_CONFIG']))
+          for attempt in range(30):
+              try:
+                  request = urllib.request.Request(config['API_URL'] + '/rest/v1/players?select=id&limit=0', headers={'apikey': config['SERVICE_ROLE_KEY'], 'Authorization': 'Bearer ' + config['SERVICE_ROLE_KEY']})
+                  with urllib.request.urlopen(request, timeout=5) as response:
+                      if response.status == 200:
+                          break
+              except Exception:
+                  time.sleep(1)
+          else:
+              raise SystemExit('Disposable REST schema did not become ready')
+          PY
+          REF010_VARIANT=current REF010_SOURCE_ROOT="$GITHUB_WORKSPACE" REF010_SOURCE_SHA="${{ github.event.pull_request.head.sha || github.sha }}" \
+            deno run --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen \
+            --allow-env --allow-read --allow-run=psql --allow-write=/tmp/ref010 --allow-net=127.0.0.1:54321,localhost:54321 \
+            scripts/ref-010-access-reset-acceptance.ts 2>&1 | tee /tmp/ref010/current.log
       - name: Upload sanitized exact-source evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
