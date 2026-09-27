@@ -161,7 +161,7 @@
       "symbols": ["initEconovariaAttendanceRewardSettingsRouteBridgeCompatibility", "EconovariaAttendanceRewardSettingsRouteBridge"],
       "reason": "Compatibility-only forwarding path for historical/direct consumers. The active bootstrap loads attendance-reward-request-adapter.js; this file no longer intercepts fetch and delegates its retained getCurrentAttendanceWindow read to the same source-owned adapter.",
       "sourceEvidence": ["admin/admin-bootstrap.js", "admin/attendance-reward-request-adapter.js"],
-      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"3a5078b7ade8949c0b3d8eae1742935a666ce712","admin/attendance-reward-request-adapter.js":"d1f7a9c1be376b917c809360c3969d9c8eac06ac"},
+      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"3a5078b7ade8949c0b3d8eae1742935a666ce712","admin/attendance-reward-request-adapter.js":"d07c9cc4a1a80a61378ba44e5aae4609c3ae8017"},
       "inboundRoots": ["Historical/direct consumers of the old source path", "Retained generated Settings idempotency reader uses the compatibility global name supplied by the canonical adapter"],
       "consumerAudit": {"HTTP":"No transport interception or Edge handler; compatibility import forwards to the canonical Attendance request adapter","SQL_RPC":"No direct persistence; existing Settings authority remains downstream","jobs":"No server job; browser event consumers remain owned by the canonical adapter/controller lifecycle","dynamic_HTML_build":"Active retained bootstrap loads the canonical adapter directly; this path remains only for unverified historical/direct consumers"},
       "externalUsage": "UNKNOWN; retained or separately hosted clients have no observed quiet window",
