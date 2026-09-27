@@ -162,7 +162,10 @@
   }
 
   async function request(input, init) {
-    return window.fetch(input, init);
+    const authenticatedTransport = window.EconovariaAdminAuth?.request;
+    return typeof authenticatedTransport === "function"
+      ? authenticatedTransport(input, init)
+      : window.fetch(input, init);
   }
 
   const adapter = Object.freeze({
