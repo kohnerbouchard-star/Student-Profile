@@ -600,7 +600,9 @@
     return response;
   }
 
-  window.fetch = function econovariaAdminFetch(input, init) {\n    return econovariaAdminRequest(input, init);\n  };
+  window.fetch = function econovariaAdminFetch(input, init) {
+    return econovariaAdminRequest(input, init);
+  };
 
   function completeInitialBootstrapRender(feature) {
     const model = feature?.currentModel;
