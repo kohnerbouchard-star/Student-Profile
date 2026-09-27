@@ -13,11 +13,11 @@
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 55,
     "crossDomainDeepImports": 168,
-    "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 209,
+    "browserTransportShimFiles": 28,
+    "compatibilityMarkerFiles": 211,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 100,
-    "capabilityStrings": 136
+    "capabilityStrings": 137
   },
   "domains": [
     {
@@ -1841,6 +1841,12 @@
         ]
       },
       {
+        "file": "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
+        "patterns": [
+          "globalThis.fetch="
+        ]
+      },
+      {
         "file": "backend/supabase/functions/admin-api/localGameMutations.test.ts",
         "patterns": [
           "globalThis.fetch="
@@ -2873,6 +2879,19 @@
           "fallback",
           "legacycontractdto",
           "legacystoreitemdto"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/contractRewardIssueOperation.ts",
+        "markers": [
+          "fallback",
+          "legacy"
         ]
       },
       {
@@ -4084,6 +4103,12 @@
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      },
+      {
+        "capability": "game.manage",
+        "locations": [
+          "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts"
         ]
       },
       {
