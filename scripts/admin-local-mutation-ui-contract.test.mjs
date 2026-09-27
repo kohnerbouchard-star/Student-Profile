@@ -289,7 +289,7 @@ test("REF-012 Admin auth owns adapter preparation and response observation", asy
   assert.match(source, /EconovariaAttendanceRewardRequestAdapter/);
   assert.match(source, /await attendanceAdapter\.prepareRequest\(request\)/);
   assert.match(source, /attendanceAdapter\.observeResponse\(response, attendanceMetadata\)/);
-  assert.match(source, /request: econovariaAdminFetch/);
+  assert.match(source, /request: econovariaAdminRequest/);
   assert.match(source, /window\.fetch = econovariaAdminFetch/);
   assert.doesNotMatch(source, /attendance-reward-settings-route-bridge-v2/);
 });
