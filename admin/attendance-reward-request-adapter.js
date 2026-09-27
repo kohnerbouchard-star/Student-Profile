@@ -178,7 +178,7 @@
     },
   });
   window.EconovariaAttendanceRewardRequestAdapter = adapter;
-  // The retained generated terminal reads this narrow compatibility name only
+  // The retained generated terminal reads this narrow retained read name only
   // when deriving the effective Settings idempotency payload. It is not a
   // transport hook and delegates to the same source-owned adapter.
   window.EconovariaAttendanceRewardSettingsRouteBridge = Object.freeze({
