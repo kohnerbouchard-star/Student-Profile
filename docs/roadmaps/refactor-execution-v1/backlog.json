@@ -182,7 +182,7 @@
       "id": "REF-011",
       "title": "Detach canonical test suites from Classroom-owned Deno configuration",
       "file": "tasks/REF-011.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-006"
       ],
@@ -192,9 +192,9 @@
         668,
         736
       ],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "2e15781f3d523634fc7143df73d30eb0581608fc",
+      "mergeSha": "0457e1d1f52b2be3b22e19f7b876857a11958f8c",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-011/completion.json"
     },
     {
       "id": "REF-012",
