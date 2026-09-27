@@ -169,7 +169,7 @@
       "confidence": "High for current source/bootstrap relationship; external historical/direct consumers remain unknown, so the forwarding file is retained",
       "removalConditions": ["Preserve one combined write, headers, cancellation signal and game checks", "Preserve retry identity and save/error UI", "Resolve every event consumer and observer/disposal owner", "Complete representative retained-Admin quiet-window evidence before deletion"],
       "safeToDelete": false
-    }
+    },
     {
       "path": "admin/player-access-code-bridge.js",
       "blobSha": "0a64de2377b88f94119413fa09b2cc7c41bab230",
