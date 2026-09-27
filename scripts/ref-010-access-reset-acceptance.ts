@@ -245,6 +245,18 @@ try {
   {
     const f = await seed();
     const revoke = await service.rpc("complete_staff_password_reset_security_v2", { p_auth_user_id: f.authUser });
+    // Retain the failing gate. Only schema-level diagnostics are persisted.
+    const sqlstate = String(revoke.error?.code ?? "");
+    const typeMismatch = String(revoke.error?.details ?? "").match(
+      /Returned type (integer|bigint) does not match expected type (integer|bigint) in column ([0-9]+)\./,
+    );
+    evidence.staffRevocationDiagnostic = {
+      sqlstate: /^[A-Z0-9]{5}$/.test(sqlstate) ? sqlstate : null,
+      structureMismatch: revoke.error?.message === "structure of query does not match function result type",
+      returnedType: typeMismatch?.[1] ?? null,
+      expectedType: typeMismatch?.[2] ?? null,
+      resultColumn: typeMismatch ? Number(typeMismatch[3]) : null,
+    };
     assert.ok(!revoke.error, "Existing Staff security-generation revocation command must succeed");
     const before = await snapshot(f), result = await reset(f, { accessCode: "REF010-NEW" }, 403);
     assert.equal(result.body.code, "staff_claims_outdated");
