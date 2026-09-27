@@ -571,21 +571,36 @@
       : response;
   }
 
-  window.fetch = function econovariaAdminFetch(input, init) {
+  async function econovariaAdminFetch(input, init) {
     const rawUrl = input instanceof Request
       ? input.url
       : new URL(String(input), window.location.href).href;
-    const request = input instanceof Request
+    let request = input instanceof Request
       ? new Request(input, init)
       : new Request(rawUrl, init);
-    const url = new URL(request.url, window.location.href);
+    let url = new URL(request.url, window.location.href);
 
     if (!url.pathname.startsWith(LOCAL_API_PREFIX)) {
       return nativeFetch(input, init);
     }
 
-    return forwardAdminRequest(request, url);
-  };
+    const attendanceAdapter = window.EconovariaAttendanceRewardRequestAdapter;
+    let attendanceMetadata = null;
+    if (typeof attendanceAdapter?.prepareRequest === "function") {
+      const prepared = await attendanceAdapter.prepareRequest(request);
+      request = prepared?.request instanceof Request ? prepared.request : request;
+      attendanceMetadata = prepared?.metadata || null;
+      url = new URL(request.url, window.location.href);
+    }
+
+    const response = await forwardAdminRequest(request, url);
+    if (typeof attendanceAdapter?.observeResponse === "function") {
+      return attendanceAdapter.observeResponse(response, attendanceMetadata);
+    }
+    return response;
+  }
+
+  window.fetch = econovariaAdminFetch;
 
   function completeInitialBootstrapRender(feature) {
     const model = feature?.currentModel;
@@ -651,6 +666,7 @@
       }
     },
     showSignIn,
+    request: econovariaAdminFetch,
     getSession: readStoredSession,
     getSelectedGameId: readSelectedGameId
   };
