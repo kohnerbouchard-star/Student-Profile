@@ -32,12 +32,9 @@ import { handleGameJoinCodeReadOperation } from "./gameJoinCodeOperations.ts";
 import { handleContractProgressReadOperation } from "./contractProgressReadOperation.ts";
 import { handleAdminContractReviewOperation } from "./contractReviewOperation.ts";
 import { handleAdminContractRewardIssueOperation } from "./contractRewardIssueOperation.ts";
+import { handleAdminPlayerAccessCodeResetOperation } from "./playerAccessCodeResetOperation.ts";
 import type { AdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 import { createSupabaseGameSettingsReadRepository } from "../../../src/domains/game-sessions/infrastructure/supabaseGameSettingsReadRepository.ts";
-
-function classroomGamePath(gameId: string, suffix: string): string {
-  return `/games/${encodeURIComponent(gameId)}${suffix}`;
-}
 
 function classroomContractPath(gameId: string, suffix = ""): string {
   return `/staff/game-sessions/${
@@ -534,22 +531,11 @@ export async function handleGameWrite(
   });
   if (direct.handled) return json(request, direct.status, direct.body);
 
-  const accessResetMatch = suffix.match(
-    /^\/players\/([^/]+)\/access-code\/reset$/,
+  const accessResetResponse = await handleAdminPlayerAccessCodeResetOperation(
+    request,
+    { applicationContext, gameSessionId: gameId, suffix },
   );
-  if (accessResetMatch && request.method === "POST") {
-    return proxyClassroom(
-      request,
-      context,
-      classroomGamePath(
-        gameId,
-        `/players/${
-          encodeURIComponent(decodeURIComponent(accessResetMatch[1]))
-        }/access-code/reset`,
-      ),
-      "POST",
-    );
-  }
+  if (accessResetResponse) return accessResetResponse;
 
   const contractReviewResponse = await handleAdminContractReviewOperation(
     request,
