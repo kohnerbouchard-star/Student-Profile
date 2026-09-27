@@ -1,10 +1,11 @@
 import type { AdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
-import { corsHeaders, json } from "./common.ts";
+import { json } from "./common.ts";
 import { issueContractRewardsAtomically } from "./contractRewards.ts";
 import type { EdgeSupabaseClient } from "../../../src/platform/supabase/edgeStaffSession.ts";
 
 export interface AdminContractRewardIssueDependencies {
   readonly issueRewards?: typeof issueContractRewardsAtomically;
+  readonly createRequestId?: () => string;
 }
 
 export async function handleAdminContractRewardIssueOperation(
@@ -41,7 +42,9 @@ export async function handleAdminContractRewardIssueOperation(
   const progressId = decodeURIComponent(match[2]);
   const idempotencyKey = request.headers.get("idempotency-key") ||
     request.headers.get("x-idempotency-key");
-  const requestId = request.headers.get("x-request-id") || idempotencyKey || null;
+  // Preserve the legacy audit-ID fallback; supplied retry identities are never replaced.
+  const requestId = request.headers.get("x-request-id") || idempotencyKey ||
+    (dependencies.createRequestId ?? (() => crypto.randomUUID()))();
 
   const reward = await (dependencies.issueRewards ?? issueContractRewardsAtomically)(
     serviceClient,
@@ -56,12 +59,5 @@ export async function handleAdminContractRewardIssueOperation(
   if (!reward.ok) {
     return json(request, reward.status, { error: reward.error });
   }
-  return new Response(JSON.stringify(reward.body), {
-    status: reward.status,
-    headers: {
-      ...corsHeaders(request),
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-    },
-  });
+  return json(request, reward.status, reward.body);
 }
