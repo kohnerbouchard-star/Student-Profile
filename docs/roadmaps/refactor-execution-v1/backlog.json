@@ -147,7 +147,7 @@
       "id": "REF-009",
       "title": "Replace Contract reward-issuance forwarding without splitting its transaction",
       "file": "tasks/REF-009.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-008"
       ],
@@ -156,9 +156,9 @@
       "recheckOpenPrs": [
         668
       ],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "5e85e92a00b822e8b06180c615111d17650dc87c",
+      "mergeSha": "7916fe5c833b1032dc19df008f95e66469f9d143",
+      "evidence": "docs/roadmaps/refactor-execution-v1/tasks/REF-009.md"
     },
     {
       "id": "REF-010",
