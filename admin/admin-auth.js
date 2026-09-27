@@ -571,7 +571,7 @@
       : response;
   }
 
-  async function econovariaAdminFetch(input, init) {
+  async function econovariaAdminRequest(input, init) {
     const rawUrl = input instanceof Request
       ? input.url
       : new URL(String(input), window.location.href).href;
@@ -600,7 +600,7 @@
     return response;
   }
 
-  window.fetch = econovariaAdminFetch;
+  window.fetch = function econovariaAdminFetch(input, init) {\n    return econovariaAdminRequest(input, init);\n  };
 
   function completeInitialBootstrapRender(feature) {
     const model = feature?.currentModel;
@@ -666,7 +666,7 @@
       }
     },
     showSignIn,
-    request: econovariaAdminFetch,
+    request: econovariaAdminRequest,
     getSession: readStoredSession,
     getSelectedGameId: readSelectedGameId
   };
