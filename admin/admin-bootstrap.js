@@ -47,7 +47,7 @@ const BOOTSTRAP_PHASES = Object.freeze([
       "./scanner-auto-refresh.js",
       "./scanner-lifecycle-settle.js",
       "./scanner-reward-localization.js",
-      "./attendance-reward-settings-route-bridge-v2.js",
+      "./attendance-reward-request-adapter.js",
       "./attendance-reward-save-controller-v3.js",
       "./attendance-reward-settings-v4.js",
       "./settings-simplified.js",
