@@ -3338,16 +3338,16 @@
         "lines": 683
       },
       {
+        "file": "admin/admin-auth.js",
+        "lines": 676
+      },
+      {
         "file": "admin/player-identity-wiring.js",
         "lines": 671
       },
       {
         "file": "admin/v2/src/routes/market/MarketRoute.js",
         "lines": 667
-      },
-      {
-        "file": "admin/admin-auth.js",
-        "lines": 658
       },
       {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
