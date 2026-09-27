@@ -3356,10 +3356,6 @@
         "lines": 658
       },
       {
-        "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
-        "lines": 653
-      },
-      {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
         "lines": 649
       },
@@ -3373,6 +3369,10 @@
       },
       {
         "file": "backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.ts",
+        "lines": 639
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
         "lines": 639
       },
       {
