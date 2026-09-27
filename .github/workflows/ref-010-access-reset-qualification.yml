@@ -1,0 +1,147 @@
+name: REF-010 Access Reset Qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/ref-010-access-reset-qualification.yml'
+      - 'backend/src/domains/players/api/playerAccessCodeResetHttpHandler.ts'
+      - 'backend/supabase/functions/admin-api/playerAccessCodeResetOperation.ts'
+      - 'backend/supabase/functions/admin-api/gameRoutes.ts'
+      - 'backend/tests/admin/ref004RequestParity.test.ts'
+      - 'backend/tests/domains/players/ref004Parity.test.ts'
+      - 'scripts/ref-010-*'
+      - 'docs/operations/evidence/refactor-execution-v1/REF-010/**'
+      - 'docs/roadmaps/refactor-execution-v1/tasks/REF-010.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ref010-qualification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    name: Access reset authentication and parity qualification
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      REF010_DISPOSABLE_DATABASE: '1'
+      REF010_BASELINE: 4e516916c556af4fee38d594c0518e22b7ee2545
+    steps:
+      - name: Check out exact qualification head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 10
+          persist-credentials: false
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - name: Set up pinned Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
+        with:
+          deno-version: v2.9.3
+      - name: Install pinned tooling
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ref010
+          git rev-parse HEAD > /tmp/ref010/source-sha.txt
+          npm install --global npm@10.9.8
+          npm ci
+          npm --prefix backend ci
+          deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-010-access-reset-acceptance.ts
+          npx supabase start --help > /tmp/ref010/start-help.log
+          npx supabase db reset --help > /tmp/ref010/reset-help.log
+          npx supabase status --help > /tmp/ref010/status-help.log
+      - name: Characterize security and reset boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            npm --prefix backend run test:player-security
+            npm --prefix backend run test:player-request-scope
+            npm --prefix backend run test:admin-api
+            npm run test:auth-boundaries
+            npm run test:web-session-release
+            npm --prefix backend run typecheck:all
+          } 2>&1 | tee /tmp/ref010/application-regressions.log
+      - name: Start disposable services and qualify frozen baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "$REF010_BASELINE"
+          mkdir -p "$RUNNER_TEMP/ref010-baseline"
+          git archive "$REF010_BASELINE" backend | tar -x -C "$RUNNER_TEMP/ref010-baseline"
+          npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit,edge-runtime > /tmp/ref010/database-start.log 2>&1
+          npx supabase db reset --workdir backend --local > /tmp/ref010/baseline-replay.log 2>&1
+          REST_CONTAINER="$(docker ps --format '{{.Names}}' | grep -E '^supabase_rest_' | head -n 1)"
+          test -n "$REST_CONTAINER"
+          docker restart "$REST_CONTAINER" >/dev/null
+          npx supabase status --workdir backend -o json > "$RUNNER_TEMP/ref010-local-config.json"
+          chmod 600 "$RUNNER_TEMP/ref010-local-config.json"
+          export REF010_LOCAL_CONFIG="$RUNNER_TEMP/ref010-local-config.json"
+          python3 - <<'PY'
+          import json, os, time, urllib.request
+          config = json.load(open(os.environ['REF010_LOCAL_CONFIG']))
+          for attempt in range(30):
+              try:
+                  request = urllib.request.Request(config['API_URL'] + '/rest/v1/players?select=id&limit=0', headers={'apikey': config['SERVICE_ROLE_KEY'], 'Authorization': 'Bearer ' + config['SERVICE_ROLE_KEY']})
+                  with urllib.request.urlopen(request, timeout=5) as response:
+                      if response.status == 200:
+                          break
+              except Exception:
+                  time.sleep(1)
+          else:
+              raise SystemExit('Disposable REST schema did not become ready')
+          PY
+          REF010_VARIANT=baseline REF010_SOURCE_ROOT="$RUNNER_TEMP/ref010-baseline" REF010_SOURCE_SHA="$REF010_BASELINE" \
+            deno run --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen \
+            --allow-env --allow-read --allow-run=psql --allow-write=/tmp/ref010 --allow-net=127.0.0.1:54321,localhost:54321 \
+            scripts/ref-010-access-reset-acceptance.ts 2>&1 | tee /tmp/ref010/baseline.log
+      - name: Reset disposable services and qualify current local adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase db reset --workdir backend --local > /tmp/ref010/current-replay.log 2>&1
+          REST_CONTAINER="$(docker ps --format '{{.Names}}' | grep -E '^supabase_rest_' | head -n 1)"
+          test -n "$REST_CONTAINER"
+          docker restart "$REST_CONTAINER" >/dev/null
+          npx supabase status --workdir backend -o json > "$RUNNER_TEMP/ref010-local-config.json"
+          chmod 600 "$RUNNER_TEMP/ref010-local-config.json"
+          export REF010_LOCAL_CONFIG="$RUNNER_TEMP/ref010-local-config.json"
+          python3 - <<'PY'
+          import json, os, time, urllib.request
+          config = json.load(open(os.environ['REF010_LOCAL_CONFIG']))
+          for attempt in range(30):
+              try:
+                  request = urllib.request.Request(config['API_URL'] + '/rest/v1/players?select=id&limit=0', headers={'apikey': config['SERVICE_ROLE_KEY'], 'Authorization': 'Bearer ' + config['SERVICE_ROLE_KEY']})
+                  with urllib.request.urlopen(request, timeout=5) as response:
+                      if response.status == 200:
+                          break
+              except Exception:
+                  time.sleep(1)
+          else:
+              raise SystemExit('Disposable REST schema did not become ready')
+          PY
+          REF010_VARIANT=current REF010_SOURCE_ROOT="$GITHUB_WORKSPACE" REF010_SOURCE_SHA="${{ github.event.pull_request.head.sha || github.sha }}" \
+            deno run --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen \
+            --allow-env --allow-read --allow-run=psql --allow-write=/tmp/ref010 --allow-net=127.0.0.1:54321,localhost:54321 \
+            scripts/ref-010-access-reset-acceptance.ts 2>&1 | tee /tmp/ref010/current.log
+      - name: Upload sanitized exact-source evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ref010-qualification-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/ref010/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Stop disposable services and discard local credentials
+        if: always()
+        run: |
+          npx supabase stop --workdir backend --no-backup
+          rm -f "$RUNNER_TEMP/ref010-local-config.json"
