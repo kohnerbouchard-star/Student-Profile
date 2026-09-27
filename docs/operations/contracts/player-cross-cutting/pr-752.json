@@ -20,7 +20,7 @@
     ".github/workflows/ref-009-contract-reward-qualification.yml",
     "scripts/ref-009-contract-reward-acceptance.ts",
     "scripts/ref-009-contract-reward-parity.test.ts",
-    "backend/package.json"
+    ".github/workflows/beta-security-contract.yml"
   ],
   "requiredFiles": [
     "backend/supabase/functions/admin-api/gameRoutes.ts",
@@ -34,7 +34,7 @@
     ".github/workflows/ref-009-contract-reward-qualification.yml",
     "scripts/ref-009-contract-reward-acceptance.ts",
     "scripts/ref-009-contract-reward-parity.test.ts",
-    "backend/package.json"
+    ".github/workflows/beta-security-contract.yml"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -50,5 +50,5 @@
   "criticalJobChecks": [
     "Contract reward database/race qualification"
   ],
-  "authorizationNote": "Owner authorized completion of bounded REF-009 on the existing branch and PR, including focused tests and exact owning test registration. Twelve locked paths include two unchanged verifier files; ten meaningful changed files meet the ten-file budget. The backend/package.json change only registers the retained parity test in the existing test:admin-api suite, without changing dependencies or other commands. The read-only qualification workflow and disposable database harness preserve all existing authority checks. No SQL migration, reward formula, production mutation/deployment, secret-value handling, or REF-010 change."
+  "authorizationNote": "Owner authorized completion of bounded REF-009, including focused tests and exact owning test registration. Twelve locked paths include two unchanged verifier files; ten meaningful changed files meet the task budget. backend/package.json is restored byte-for-byte to main to preserve package ownership and hash-bound source reviews. Retained parity tests are explicitly registered in the required read-only qualification workflow. The only Beta Security Contract change adds three REF-009 path triggers; all existing security steps, permissions, assertions and triggers remain unchanged. No SQL migration, reward formula, production mutation/deployment, secret-value handling, or REF-010 change."
 }

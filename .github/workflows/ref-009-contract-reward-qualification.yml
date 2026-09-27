@@ -66,6 +66,7 @@ jobs:
           set -euo pipefail
           {
             npm --prefix backend run test:admin-api
+            deno test --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-009-contract-reward-parity.test.ts
             npm --prefix backend run test:economic-ledger-invariants
             npm --prefix backend run test:player-contract-acceptance
             npm --prefix backend run test:player-contract-lifecycle
