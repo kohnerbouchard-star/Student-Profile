@@ -115,8 +115,8 @@ async function seed(): Promise<Fixture> {
   await sql(`begin;
     insert into public.staff_users (id,supabase_auth_user_id,email,display_name,status,role,mfa_required)
       values (${literal(f.staff)},${literal(f.authUser)},${literal(email)},'REF010 Staff','active','game_admin',false);
-    insert into public.game_sessions (id,owner_staff_user_id,name,status)
-      values (${literal(f.game)},${literal(f.staff)},'REF010 Game','active');
+    insert into public.game_sessions (id,owner_staff_user_id,name,status,lifecycle_state)
+      values (${literal(f.game)},${literal(f.staff)},'REF010 Game','active','active');
     insert into public.game_settings (game_session_id,stock_market_window)
       values (${literal(f.game)},'{"timezone":"UTC"}'::jsonb);
     update public.game_sessions set provisioning_status='ready',
@@ -125,8 +125,8 @@ async function seed(): Promise<Fixture> {
       provisioned_at=clock_timestamp(), game_join_code=${literal(f.joinCode)},
       game_join_code_hash=${literal(joinHash)}, game_join_code_status='active'
       where id=${literal(f.game)};
-    insert into public.game_sessions (id,owner_staff_user_id,name,status)
-      values (${literal(f.otherGame)},${literal(f.staff)},'REF010 Other Game','active');
+    insert into public.game_sessions (id,owner_staff_user_id,name,status,lifecycle_state)
+      values (${literal(f.otherGame)},${literal(f.staff)},'REF010 Other Game','active','active');
     insert into public.players (id,game_session_id,display_name,player_identifier,player_identifier_normalized,status)
       values (${literal(f.player)},${literal(f.game)},'REF010 Player',${literal(f.playerIdentifier)},${literal(f.playerIdentifier)},'active'),
       (${literal(f.otherPlayer)},${literal(f.otherGame)},'REF010 Other Player','RFID-OTHER','RFID-OTHER','active');
