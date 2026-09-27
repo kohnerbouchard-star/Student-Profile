@@ -294,11 +294,10 @@ try {
   phase = "malformed transport normalization";
   {
     const f = await seed(), before = await snapshot(f);
-    const result = await reset(f, {}, 200, { raw: "{" });
-    assert.equal(result.body.sessionsRevoked, false);
-    const after = await snapshot(f);
-    for (const table of ["public.player_access_credentials", "public.player_sessions"]) await unchanged(before[table], after[table], phase);
-    cases.malformedTransport = { passed: true, identifierOnlyPreserved: true };
+    const result = await reset(f, {}, 400, { raw: "{" });
+    assert.equal(result.body.error.code, "invalid_json_body");
+    await unchanged(before, await snapshot(f), phase);
+    cases.malformedTransport = { passed: true, rejected: true, noScopedEffects: true };
   }
   evidence.status = "pass";
 } catch (error) {
