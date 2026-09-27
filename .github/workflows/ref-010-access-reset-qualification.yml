@@ -1,0 +1,82 @@
+name: REF-010 Access Reset Qualification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/ref-010-access-reset-qualification.yml'
+      - 'backend/src/domains/players/api/playerAccessCodeResetHttpHandler.ts'
+      - 'backend/supabase/functions/admin-api/playerAccessCodeResetOperation.ts'
+      - 'backend/supabase/functions/admin-api/gameRoutes.ts'
+      - 'backend/tests/admin/ref004RequestParity.test.ts'
+      - 'backend/tests/domains/players/ref004Parity.test.ts'
+      - 'scripts/ref-010-*'
+      - 'docs/operations/evidence/refactor-execution-v1/REF-010/**'
+      - 'docs/roadmaps/refactor-execution-v1/tasks/REF-010.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ref010-qualification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    name: Access reset authentication and parity qualification
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact qualification head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Capture tracked source for bounded offline review
+        run: |
+          git rev-parse HEAD > "$RUNNER_TEMP/ref010-source-sha.txt"
+          git archive --format=tar.gz -o "$RUNNER_TEMP/ref010-source.tar.gz" HEAD backend scripts .github/workflows docs/roadmaps/refactor-execution-v1 docs/operations/contracts/player-cross-cutting docs/architecture AGENTS.md CONTRIBUTING.md package.json package-lock.json
+      - name: Upload temporary source review artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ref010-source-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ${{ runner.temp }}/ref010-source-sha.txt
+            ${{ runner.temp }}/ref010-source.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - name: Set up pinned Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
+        with:
+          deno-version: v2.9.3
+      - name: Install pinned tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          npm --prefix backend ci
+      - name: Characterize unchanged security and reset boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            npm --prefix backend run test:player-security
+            npm --prefix backend run test:player-request-scope
+            npm --prefix backend run test:admin-api
+            npm run test:auth-boundaries
+            npm run test:web-session-release
+          } 2>&1 | tee "$RUNNER_TEMP/ref010-characterization.log"
+      - name: Upload exact-source characterization evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ref010-characterization-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ${{ runner.temp }}/ref010-source-sha.txt
+            ${{ runner.temp }}/ref010-characterization.log
+          retention-days: 14
+          if-no-files-found: error
