@@ -295,7 +295,7 @@ try {
   {
     const f = await seed(), before = await snapshot(f);
     const result = await reset(f, {}, 400, { raw: "{" });
-    assert.equal(result.body.error.code, "invalid_json_body");
+    assert.equal(result.body.code, "invalid_json_body");
     await unchanged(before, await snapshot(f), phase);
     cases.malformedTransport = { passed: true, rejected: true, noScopedEffects: true };
   }
