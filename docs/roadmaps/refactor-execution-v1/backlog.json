@@ -164,7 +164,7 @@
       "id": "REF-010",
       "title": "Replace Player access-code-reset forwarding",
       "file": "tasks/REF-010.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-005"
       ],
@@ -174,9 +174,9 @@
         668,
         736
       ],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "00a21856a75b4367da75cd3a84272b6a87516d3b",
+      "mergeSha": "19a7366c5c90e77920f48a16d633383b398c76e9",
+      "evidence": "docs/roadmaps/refactor-execution-v1/tasks/REF-010.md"
     },
     {
       "id": "REF-011",
