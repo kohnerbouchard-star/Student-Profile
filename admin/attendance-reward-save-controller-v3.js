@@ -4,6 +4,12 @@
   const SAVE_SELECTOR = '[data-admin-terminal-action="save-settings"]';
   const MUTATION_KEY_PREFIX = "econovaria.admin.attendance-settings-mutation.v1";
   const delegatedFetch = window.fetch.bind(window);
+  function attendanceRequest(input, init) {
+    const adapter = window.EconovariaAttendanceRewardRequestAdapter;
+    return typeof adapter?.request === "function"
+      ? adapter.request(input, init)
+      : delegatedFetch(input, init);
+  }
   const coreDirtyKeys = new Set();
   const mutationMemory = new Map();
   let dirtyGameId = "";
@@ -216,7 +222,7 @@
 
     setSaveState(button, "processing", "Saving game settings");
     const flight = (async () => {
-      const settingsResponse = await delegatedFetch(
+      const settingsResponse = await attendanceRequest(
         `/api/admin/games/${encodeURIComponent(gameId)}/settings`,
         { method: "GET", headers: { "Accept": "application/json" } },
       );
@@ -231,7 +237,7 @@
       const attendanceWindow = draftAttendanceWindow(existingAttendance);
       const body = { attendanceWindow };
       const mutation = settingsMutation(gameId, body);
-      const response = await delegatedFetch(
+      const response = await attendanceRequest(
         `/api/admin/games/${encodeURIComponent(gameId)}/settings`,
         {
           method: "PATCH",
