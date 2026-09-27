@@ -12,6 +12,7 @@ const fixtureEnv: Record<string, string> = {
   SUPABASE_URL: "https://ref004.invalid", SUPABASE_ANON_KEY: "fixture-anon",
   SUPABASE_SERVICE_ROLE_KEY: "fixture-service", ECONOVARIA_TRUSTED_CLIENT_IP_HEADER: "x-real-ip",
   ECONOVARIA_RATE_LIMIT_HMAC_SECRET: "abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789",
+  ECONOVARIA_PLAYER_CREDENTIAL_PEPPER: "ref004_fixture_player_credential_pepper_2026_not_a_real_secret",
 };
 let handle: (request: Request) => Promise<Response>;
 const originalServe = runtime.serve, originalGet = runtime.env.get;
@@ -66,6 +67,17 @@ async function fixture(options: any, run: (send: any, calls: Call[]) => Promise<
       : json([{ allowed: !options.limited, retry_after_seconds: options.limited ? 45 : 0,
         limiting_dimension: options.limited ? "ip" : null, limit_count: 100, remaining_count: 50, reset_at: NOW }]);
     if (call.path.startsWith("/functions/v1/classroom-api/")) return json(upstream, options.upstreamStatus ?? 202, { "x-upstream-only": "not-forwarded", "retry-after": "19" });
+    if (call.path === "/rest/v1/players") {
+      equal(call.query.get("game_session_id"), `eq.${G}`);
+      equal(call.query.get("id"), `eq.${P}`);
+      return json([{ id: P, display_name: "Fixture Player", roster_label: null, player_identifier: "RFID-OLD", status: "active" }]);
+    }
+    if (call.path.endsWith("/set_player_identity_and_access_credential_v2")) {
+      equal(call.body.p_game_session_id, G); equal(call.body.p_player_id, P);
+      equal(call.body.p_player_identifier, "RFID-04"); equal(call.body.p_player_identifier_normalized, "RFID-04");
+      equal(call.body.p_credential_version, "pbkdf2-sha256-v2"); equal(call.body.p_credential_iterations, 600000);
+      return json([{ credential_created_at: NOW }]);
+    }
     if (call.path.endsWith("/issue_contract_rewards_atomic_v1")) {
       if (options.rewardError) return json({ message: options.rewardError }, 400);
       const count = calls.filter((c) => c.path.endsWith("/issue_contract_rewards_atomic_v1")).length;
@@ -198,11 +210,20 @@ runtime.test("REF004/REF008 legacy approval retains partial-success boundary on 
   const response = await send(suffixes.decision, "POST", { decision: "approve" }); equal(response.status, 409);
   equal((await response.json()).error.code, "contract_reward_item_out_of_stock"); equal(writes(calls).length, 2); equal(forwarded(calls).length, 0);
 }));
-runtime.test("REF004 reset forwards one POST with unchanged credential aliases and retry identity", () => fixture({ upstream: { ok: true, sessionsRevoked: true }, upstreamStatus: 200 }, async (send, calls) => {
+runtime.test("REF004/REF010 reset stays local with unchanged credential aliases and security boundary", () => fixture({}, async (send, calls) => {
   const body = { payload: { rfidCardId: "RFID-04", pin: "AC-004" } };
-  const response = await send(suffixes.reset, "POST", body); equal(response.status, 200); equal(await response.json(), { ok: true, sessionsRevoked: true });
-  equal(writes(calls).length, 1); const [call] = forwarded(calls); equal(call.path, `/functions/v1/classroom-api/games/${G}/players/${P}/access-code/reset`);
-  equal(call.body, body); equal(call.headers.get("x-request-id"), "ref004-request"); equal(call.headers.get("idempotency-key"), "ref004-retry");
+  const response = await send(suffixes.reset, "POST", body); equal(response.status, 200);
+  equal(await response.json(), {
+    ok: true,
+    player: { displayName: "Fixture Player", rosterLabel: null, playerIdentifier: "RFID-04", status: "active" },
+    accessCode: { studentCode: "AC-004", status: "active", createdAt: NOW, credentialVersion: "pbkdf2-sha256-v2" },
+    sessionsRevoked: true,
+  });
+  transportHeaders(response); equal(forwarded(calls), []);
+  const credentialWrites = calls.filter((call) => call.path.endsWith("/set_player_identity_and_access_credential_v2"));
+  equal(credentialWrites.length, 1);
+  equal(calls.filter((call) => call.path.endsWith("/consume_request_rate_limits_v1")).length, 2);
+  equal(calls.filter((call) => call.path === "/auth/v1/user").length, 2);
 }));
 for (const [suffix, method] of [[suffixes.progress, "POST"], [suffixes.review, "PATCH"], [suffixes.reward, "DELETE"], [suffixes.reset, "GET"]]) {
   runtime.test(`REF004 unsupported ${method} ${suffix}: current 501, not invented 405`, () => fixture({}, async (send, calls) => {
