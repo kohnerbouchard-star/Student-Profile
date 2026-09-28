@@ -688,6 +688,9 @@
         save.disabled = false;
         save.textContent = "Save settings";
       }
+      if (activeResetScope?.scope === resetScope) {
+        disposeActiveResetScope();
+      }
     }
   }
 
