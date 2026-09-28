@@ -479,7 +479,18 @@ try {
     throw new Error("REF-012 failed-write retries did not retain the exact payload-bound identity.");
   }
 
+  const priorSettingsPage = await page.locator(".admin-terminal-settings-page").elementHandle();
   await page.locator("[data-settings-segmented] [data-settings-segment-value]:not(.is-selected)").first().click();
+  // The retained terminal replaces the Settings page for a core edit. Wait for
+  // its existing mount/baseline lifecycle before editing Attendance on that page.
+  await page.waitForFunction((previous) => !previous.isConnected,
+    priorSettingsPage, { timeout: 5_000 });
+  await priorSettingsPage.dispose();
+  await page.waitForFunction(() => {
+    const root = document.querySelector(".admin-terminal-settings-page");
+    return root?.dataset.settingsUxReady === "true" && root?.dataset.settingsUxBaselineReady === "true" &&
+      window.EconovariaAttendanceRewardSettings.isLoaded() && !window.EconovariaAttendanceRewardSettings.isDirty();
+  }, null, { timeout: 5_000 });
   await present.fill("3.75");
   await page.waitForFunction(() => window.EconovariaAttendanceRewardSaveController.combinedCoreSavePending(),
     null, { timeout: 5_000 });
