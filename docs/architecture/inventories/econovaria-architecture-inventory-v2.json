@@ -3270,6 +3270,10 @@
         "lines": 851
       },
       {
+        "file": "admin/player-identity-wiring.js",
+        "lines": 845
+      },
+      {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
         "lines": 838
       },
@@ -3340,10 +3344,6 @@
       {
         "file": "admin/admin-auth.js",
         "lines": 676
-      },
-      {
-        "file": "admin/player-identity-wiring.js",
-        "lines": 671
       },
       {
         "file": "admin/v2/src/routes/market/MarketRoute.js",
