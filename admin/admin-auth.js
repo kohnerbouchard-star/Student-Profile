@@ -575,25 +575,22 @@
     const rawUrl = input instanceof Request
       ? input.url
       : new URL(String(input), window.location.href).href;
-    let request = input instanceof Request
-      ? new Request(input, init)
-      : new Request(rawUrl, init);
-    let url = new URL(request.url, window.location.href);
-
-    if (!url.pathname.startsWith(LOCAL_API_PREFIX)) {
+    if (!new URL(rawUrl).pathname.startsWith(LOCAL_API_PREFIX)) {
       return nativeFetch(input, init);
     }
 
     const attendanceAdapter = window.EconovariaAttendanceRewardRequestAdapter;
     let attendanceMetadata = null;
     if (typeof attendanceAdapter?.prepareRequest === "function") {
-      const prepared = await attendanceAdapter.prepareRequest(request);
-      request = prepared?.request instanceof Request ? prepared.request : request;
-      attendanceMetadata = prepared?.metadata || null;
-      url = new URL(request.url, window.location.href);
+      const prepared = await attendanceAdapter.prepareRequest(input, init);
+      input = prepared.input;
+      init = prepared.init;
+      attendanceMetadata = prepared.metadata;
     }
-
-    const response = await forwardAdminRequest(request, url);
+    const request = input instanceof Request
+      ? new Request(input, init)
+      : new Request(new URL(String(input), window.location.href).href, init);
+    const response = await forwardAdminRequest(request, new URL(request.url));
     if (typeof attendanceAdapter?.observeResponse === "function") {
       return attendanceAdapter.observeResponse(response, attendanceMetadata);
     }

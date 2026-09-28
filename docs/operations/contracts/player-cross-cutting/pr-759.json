@@ -19,6 +19,8 @@
     "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
     "docs/operations/evidence/refactor-execution-v1/REF-012/preflight.md",
     "scripts/admin-local-mutation-ui-contract.test.mjs",
+    "scripts/admin-attendance-reward-settings-smoke.mjs",
+    ".github/workflows/admin-shell-smoke.yml",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
@@ -33,6 +35,8 @@
     "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
     "docs/operations/evidence/refactor-execution-v1/REF-012/preflight.md",
     "scripts/admin-local-mutation-ui-contract.test.mjs",
+    "scripts/admin-attendance-reward-settings-smoke.mjs",
+    ".github/workflows/admin-shell-smoke.yml",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
@@ -49,7 +53,8 @@
     "Repository Quality",
     "Beta Security Contract",
     "Admin Browser E2E",
-    "Runtime Interaction Wiring"
+    "Runtime Interaction Wiring",
+    "Admin Shell Smoke"
   ],
   "criticalJobChecks": [
     "business-player-store-fx-final-v2-source",
@@ -77,5 +82,5 @@
     "crafting"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-012/preflight.md",
-  "authorizationNote": "Owner requested finishing REF-012 on existing PR759. The exact implementation replaces the Attendance-specific global fetch interception with a source-owned request adapter, preserves the authenticated Admin transport, generated terminal idempotency read compatibility, one combined Settings mutation, direct Attendance retry semantics, lifecycle events and required DOM observation. Ten actual implementation/evidence paths are allowed; the two authority verifier files are mandatory locked references and must remain byte-identical. Generated Admin bundle, formulas, settings schema, SQL, migrations, credentials, cloud configuration, production release, global beta ledger and REF-013 are excluded. Architecture inventory and REF-003 source identities may change only to reflect the measured shim reduction and changed reviewed source. All applicable exact-head gates remain required; this declaration grants no check waiver or completion credit."
+  "authorizationNote": "Owner requested finishing REF-012 on existing PR759. The preflight explicitly bounds children REF-012a/b/c before this continuation: repair the explicit Attendance handoff, extend its existing browser suite and register the complete focused suites in the owning Admin Shell Smoke workflow. Twelve actual implementation/evidence paths are allowed; the two authority verifier files are mandatory locked references and must remain byte-identical. Preserve authenticated Admin transport, generated terminal idempotency read compatibility, one combined Settings mutation, direct Attendance retry semantics, lifecycle events and required DOM observation. Generated Admin bundle, formulas, settings schema, SQL, migrations, credentials, cloud configuration, production release, global beta ledger and REF-013 are excluded. Architecture inventory and REF-003 source identities may change only to reflect measured output and changed reviewed source. All prior required checks and critical jobs remain; Admin Shell Smoke is additionally mandatory. This grants no check waiver or completion credit."
 }

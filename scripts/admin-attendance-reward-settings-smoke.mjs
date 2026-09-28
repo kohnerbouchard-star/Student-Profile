@@ -377,6 +377,139 @@ try {
   }
 
   await switchFixtureGame(GAME_ID);
+  // REF-012b: exercise the existing retained page, not a parallel DOM fixture.
+  const ref012Requests = [];
+  page.on("request", (request) => {
+    if (request.method() !== "PATCH" ||
+      !/\/functions\/v1\/web-session-api\/proxy\/games\/[^/]+\/settings$/.test(new URL(request.url()).pathname)) return;
+    const headers = request.headers();
+    ref012Requests.push({ body: JSON.parse(request.postData() || "{}"),
+      key: headers["x-idempotency-key"], requestId: headers["x-request-id"] });
+  });
+  await page.evaluate(async () => {
+    window.__ref012 = { events: [], fetch: window.fetch,
+      adapter: window.EconovariaAttendanceRewardRequestAdapter };
+    if (!window.__ref012.adapter) throw new Error("REF-012 adapter was not loaded.");
+    document.addEventListener("econovaria:attendance-reward-saved", (event) => {
+      window.__ref012.events.push(event.detail);
+    });
+    await import("./attendance-reward-settings-route-bridge-v2.js");
+    if (window.fetch !== window.__ref012.fetch ||
+      window.EconovariaAttendanceRewardRequestAdapter !== window.__ref012.adapter) {
+      throw new Error("The retained read facade replaced the transport or adapter.");
+    }
+  });
+  const saveSelector = '[data-admin-terminal-action="save-settings"]';
+  async function openCustom() {
+    if (await page.locator("[data-settings-custom-toggle]").getAttribute("aria-expanded") !== "true") {
+      await page.locator("[data-settings-custom-toggle]").click();
+    }
+  }
+  async function clickTwice() {
+    await page.waitForFunction((selector) => {
+      const button = document.querySelector(selector);
+      return button instanceof HTMLButtonElement && !button.disabled;
+    }, saveSelector, { timeout: 5_000 });
+    await page.locator(saveSelector).evaluate((button) => { button.click(); button.click(); });
+  }
+  async function saved(expectedRequests, expectedEvents, combined) {
+    await page.waitForFunction((count) => window.__ref012.events.length >= count &&
+      window.EconovariaAttendanceRewardSettings.isDirty() === false &&
+      window.EconovariaSimplifiedSettings.isDirty() === false,
+    expectedEvents, { timeout: 10_000 });
+    const observed = await page.evaluate(() => ({
+      events: window.__ref012.events,
+      sameFetch: window.fetch === window.__ref012.fetch,
+      sameAdapter: window.EconovariaAttendanceRewardRequestAdapter === window.__ref012.adapter,
+      corePending: window.EconovariaAttendanceRewardSaveController.combinedCoreSavePending(),
+    }));
+    if (ref012Requests.length !== expectedRequests || observed.events.length !== expectedEvents ||
+      observed.events.at(-1).combined !== combined || !observed.sameFetch || !observed.sameAdapter || observed.corePending) {
+      throw new Error(`REF-012 duplicate write/event or stale save state: ${JSON.stringify({ ref012Requests, observed })}`);
+    }
+  }
+
+  await openCustom();
+  await present.fill("3.25");
+  await clickTwice();
+  await saved(1, 1, false);
+  if (ref012Requests[0].body.attendanceWindow?.presentRewardAmount !== 3.25) {
+    throw new Error("REF-012 direct save did not preserve its draft.");
+  }
+
+  await present.fill("-1");
+  await page.locator(saveSelector).dispatchEvent("click");
+  await page.waitForFunction(() => document.querySelector('[data-attendance-reward-field="presentRewardAmount"]')
+    ?.getAttribute("aria-invalid") === "true", null, { timeout: 5_000 });
+  if (ref012Requests.length !== 1 || await page.evaluate(() => window.__ref012.events.length) !== 1) {
+    throw new Error("REF-012 malformed attendance values issued a mutation or success event.");
+  }
+
+  let rejection = 403;
+  const rejectionRoute = "**/functions/v1/web-session-api/proxy/**";
+  const rejectWrite = async (route) => {
+    const request = route.request();
+    if (rejection && request.method() === "PATCH" && new URL(request.url()).pathname.endsWith(`/games/${GAME_ID}/settings`)) {
+      await route.fulfill({ status: rejection, contentType: "application/json", headers: {
+        "access-control-allow-origin": new URL(BASE_URL).origin,
+        "access-control-allow-credentials": "true", "cache-control": "no-store",
+      }, body: JSON.stringify({ message: `REF-012 synthetic ${rejection}` }) });
+    } else await route.fallback();
+  };
+  await page.route(rejectionRoute, rejectWrite);
+  await present.fill("3.50");
+  for (const status of [403, 503]) {
+    rejection = status;
+    await clickTwice();
+    await page.waitForFunction((expected) => document.querySelector('[data-admin-terminal-action="save-settings"]')
+      ?.dataset.attendanceRewardError?.includes(`REF-012 synthetic ${expected}`), status, { timeout: 10_000 });
+    if (await page.evaluate(() => window.__ref012.events.length) !== 1 ||
+      !await page.evaluate(() => window.EconovariaAttendanceRewardSettings.isDirty())) {
+      throw new Error(`REF-012 ${status} acknowledged a failed write or discarded the draft.`);
+    }
+  }
+  rejection = 0;
+  await clickTwice();
+  await saved(4, 2, false);
+  await page.unroute(rejectionRoute, rejectWrite);
+  const retryCommands = ref012Requests.slice(1, 4);
+  const retryKey = retryCommands[0].key;
+  if (!retryKey || retryCommands.some((command) => command.key !== retryKey || command.requestId !== retryKey ||
+    command.body.idempotencyKey !== retryKey || JSON.stringify(command.body) !== JSON.stringify(retryCommands[0].body))) {
+    throw new Error("REF-012 failed-write retries did not retain the exact payload-bound identity.");
+  }
+
+  await page.locator("[data-settings-segmented] [data-settings-segment-value]:not(.is-selected)").first().click();
+  await present.fill("3.75");
+  await page.waitForFunction(() => window.EconovariaAttendanceRewardSaveController.combinedCoreSavePending(),
+    null, { timeout: 5_000 });
+  await clickTwice();
+  await saved(5, 3, true);
+  const combinedCommand = ref012Requests[4].body;
+  const combinedRoot = combinedCommand.settings || combinedCommand.payload || combinedCommand;
+  if (combinedRoot.attendanceWindow?.presentRewardAmount !== 3.75 ||
+    !difficultyKeys.some((key) => Object.hasOwn(combinedRoot, key))) {
+    throw new Error(`REF-012 combined save split or lost its command: ${JSON.stringify(combinedCommand)}`);
+  }
+
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.waitForFunction(() => {
+    const root = document.querySelector(".admin-terminal-settings-page");
+    return root?.dataset.settingsUxReady === "true" && root?.dataset.settingsUxBaselineReady === "true" &&
+      window.EconovariaAttendanceRewardSettings.isLoaded();
+  }, null, { timeout: 10_000 });
+  if (ref012Requests.length !== 5) throw new Error("REF-012 navigation caused an unsolicited mutation.");
+  await openCustom();
+  await present.fill("4.25");
+  await clickTwice();
+  await saved(6, 4, false);
+  const ref012 = { attempts: ref012Requests.length, savedEvents: 4, directSaves: 3, combinedSaves: 1,
+    rejectedWrites: [403, 503], retryIdentityPreserved: true, malformedWrites: 0,
+    remountDuplicateWrites: 0, fetchIdentityPreserved: true };
+  writeFileSync(`${harness.dir}/ref012-adapter-parity.json`, JSON.stringify(ref012, null, 2));
+  await capture("ref012-adapter-parity");
+
   await page.getByRole("button", { name: "Overview", exact: true }).click();
   await page.locator('[data-admin-terminal-action="scan-attendance"]').first().click();
   await page.locator('[data-admin-terminal-set-mode="manual"]').click();

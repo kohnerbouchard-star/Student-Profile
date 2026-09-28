@@ -20,9 +20,17 @@
     return document.querySelector(`[data-attendance-reward-field="${name}"]`);
   }
 
-  function settingsGameId(request) {
+  function absoluteUrl(input) {
+    return input instanceof Request ? input.url : new URL(String(input), window.location.href).href;
+  }
+
+  function requestMethod(input, init) {
+    return text(init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase() || "GET";
+  }
+
+  function settingsGameId(input) {
     try {
-      const match = new URL(request.url).pathname.match(
+      const match = new URL(absoluteUrl(input)).pathname.match(
         /\/api\/admin\/games\/([^/]+)\/settings(?:\/difficulty)?$/,
       );
       return match ? decodeURIComponent(match[1]) : "";
@@ -81,43 +89,48 @@
     }
   }
 
-  async function requestJson(request) {
+  async function requestJson(input, init) {
     try {
-      return object(await request.clone().json());
+      if (init?.body != null) {
+        if (typeof init.body === "string") return object(JSON.parse(init.body));
+        if (init.body instanceof URLSearchParams) return Object.fromEntries(init.body.entries());
+        return object(init.body);
+      }
+      return input instanceof Request ? object(await input.clone().json()) : {};
     } catch (_) {
       return {};
     }
   }
 
-  function acknowledgeCombinedSave(gameId, attendanceWindow) {
+  function acknowledgeCombinedSave(metadata) {
+    const { gameId, attendanceWindow, contextIdentity, combinedSave } = metadata;
     const controller = window.EconovariaAttendanceRewardSaveController;
-    if (controller?.combinedCoreSavePending?.() !== true) return;
+    if (!combinedSave || activeSettingsGameId() !== gameId ||
+      controller?.getContextIdentity?.() !== contextIdentity ||
+      controller?.combinedCoreSavePending?.() !== true) return;
     document.dispatchEvent(new CustomEvent("econovaria:attendance-reward-saved", {
       detail: { gameId, attendanceWindow, combined: true },
     }));
   }
 
-  async function prepareRequest(request) {
-    if (!(request instanceof Request)) return { request, metadata: null };
-    const gameId = settingsGameId(request);
-    if (!gameId) return { request, metadata: null };
+  async function prepareRequest(input, init) {
+    const unchanged = { input, init, metadata: null };
+    const gameId = settingsGameId(input);
+    if (!gameId) return unchanged;
 
-    const method = text(request.method).toUpperCase() || "GET";
+    const method = requestMethod(input, init);
     if (["GET", "HEAD"].includes(method)) {
-      return { request, metadata: { gameId, method, attendanceWindow: null } };
+      return { input, init, metadata: { gameId, method, attendanceWindow: null } };
     }
-
-    if (
-      !["POST", "PUT", "PATCH"].includes(method) ||
-      !document.querySelector("[data-admin-attendance-reward-settings]")
-    ) {
-      return { request, metadata: null };
-    }
-
+    if (!["POST", "PUT", "PATCH"].includes(method) ||
+      !document.querySelector("[data-admin-attendance-reward-settings]")) return unchanged;
     const activeGameId = activeSettingsGameId();
-    if (activeGameId && activeGameId !== gameId) return { request, metadata: null };
+    if (activeGameId && activeGameId !== gameId) return unchanged;
 
-    const source = await requestJson(request);
+    const controller = window.EconovariaAttendanceRewardSaveController;
+    const contextIdentity = controller?.getContextIdentity?.();
+    const combinedSave = controller?.combinedCoreSavePending?.() === true;
+    const source = await requestJson(input, init);
     const suppliedAttendanceWindow = object(
       object(source.settings).attendanceWindow ||
       object(source.payload).attendanceWindow ||
@@ -136,11 +149,21 @@
       body = { ...source, attendanceWindow };
     }
 
-    const headers = new Headers(request.headers);
+    const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
     headers.set("Content-Type", "application/json");
     return {
-      request: new Request(request, { headers, body: JSON.stringify(body) }),
-      metadata: { gameId, method, attendanceWindow },
+      input: absoluteUrl(input),
+      init: {
+        method, headers, body: JSON.stringify(body),
+        credentials: init?.credentials || (input instanceof Request ? input.credentials : undefined),
+        cache: init?.cache || (input instanceof Request ? input.cache : undefined),
+        redirect: init?.redirect || (input instanceof Request ? input.redirect : undefined),
+        referrer: init?.referrer || (input instanceof Request ? input.referrer : undefined),
+        referrerPolicy: init?.referrerPolicy || (input instanceof Request ? input.referrerPolicy : undefined),
+        mode: init?.mode || (input instanceof Request ? input.mode : undefined),
+        signal: init?.signal || (input instanceof Request ? input.signal : undefined),
+      },
+      metadata: { gameId, method, attendanceWindow, contextIdentity, combinedSave },
     };
   }
 
@@ -156,16 +179,17 @@
     }
     if (response.ok && metadata.attendanceWindow) {
       cachedAttendanceWindows.set(metadata.gameId, { ...metadata.attendanceWindow });
-      acknowledgeCombinedSave(metadata.gameId, metadata.attendanceWindow);
+      acknowledgeCombinedSave(metadata);
     }
     return response;
   }
 
   async function request(input, init) {
     const authenticatedTransport = window.EconovariaAdminAuth?.request;
-    return typeof authenticatedTransport === "function"
-      ? authenticatedTransport(input, init)
-      : window.fetch(input, init);
+    if (typeof authenticatedTransport !== "function") {
+      throw new Error("Authenticated Admin transport is unavailable.");
+    }
+    return authenticatedTransport(input, init);
   }
 
   const adapter = Object.freeze({

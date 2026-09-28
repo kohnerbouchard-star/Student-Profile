@@ -230,6 +230,7 @@
         throw new Error(`Game settings could not be read before saving (${settingsResponse.status}).`);
       }
       const settingsPayload = await settingsResponse.json();
+      if (!contextIsCurrent(gameId, generation)) return null;
       const existingAttendance = readAttendanceFromPayload(settingsPayload) || persistedAttendanceWindow();
       if (!existingAttendance) {
         throw new Error("Current attendance settings could not be verified before saving.");
@@ -339,6 +340,7 @@
 
   window.EconovariaAttendanceRewardSaveController = {
     attendanceDirty,
+    getContextIdentity: () => `${contextGeneration}:${selectedGameId()}`,
     readCoreSettings,
     combinedCoreSavePending,
   };
