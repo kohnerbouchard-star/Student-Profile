@@ -281,7 +281,7 @@ jobs:
 
       - name: Upload sanitized browser evidence
         if: always() && steps.evidence_sanitize.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: admin-browser-e2e-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
