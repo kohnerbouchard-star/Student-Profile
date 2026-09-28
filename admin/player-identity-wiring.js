@@ -1,7 +1,6 @@
 (function initEconovariaPlayerIdentityWiring() {
   "use strict";
 
-  const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
   const LOCAL_API_PREFIX = "/api/admin";
   const PROFILE_MODAL_SELECTOR = '[data-admin-terminal-modal-backdrop][data-modal-id="player-settings-editor"]';
   const LEGACY_SELECTOR = [
@@ -13,7 +12,9 @@
 
   const playerCacheByGame = new Map();
   const loadingPlayers = new Set();
+  const PLAYER_RESET_CONTEXT_STALE = "PLAYER_RESET_CONTEXT_STALE";
   let selectedPlayerId = "";
+  let activeResetScope = null;
 
   function text(value) {
     return String(value ?? "").trim();
@@ -69,6 +70,171 @@
 
   function rosterLabel(player) {
     return text(player?.rosterLabel || player?.roster_label);
+  }
+
+  function responseRecord(value) {
+    const source = object(value);
+    return {
+      ...source,
+      ...object(source.data),
+      ...object(source.payload),
+    };
+  }
+
+  function responsePlayer(value) {
+    const source = responseRecord(value);
+    return object(source.player || source.createdPlayer);
+  }
+
+  function responseAccessCode(value) {
+    const source = responseRecord(value);
+    if (typeof source.accessCode === "string") return text(source.accessCode);
+    const accessCode = object(source.accessCode);
+    return text(
+      accessCode.studentCode ||
+      accessCode.accessCode ||
+      accessCode.code ||
+      source.studentCode ||
+      source.generatedAccessCode,
+    );
+  }
+
+  function responsePlayerIdentifier(value) {
+    const source = responseRecord(value);
+    return text(
+      playerIdentifier(responsePlayer(value)) ||
+      source.playerIdentifier ||
+      source.playerId ||
+      source.rfidCardId ||
+      source.rfidId ||
+      source.cardId,
+    );
+  }
+
+  async function responseJson(response) {
+    try {
+      return object(await response.clone().json());
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function staleResetError() {
+    const error = new Error("Player selection changed. Reopen Player Settings before saving.");
+    error.code = PLAYER_RESET_CONTEXT_STALE;
+    return error;
+  }
+
+  function modalResetContextMatches(modal, gameId, playerId) {
+    return Boolean(
+      modal?.isConnected &&
+      currentGameId() === gameId &&
+      text(modal.getAttribute?.("data-player-id")) === playerId
+    );
+  }
+
+  function disposeActiveResetScope() {
+    activeResetScope?.scope?.dispose?.();
+    activeResetScope = null;
+  }
+
+  function disposeDetachedResetScope() {
+    if (activeResetScope && !activeResetScope.modal?.isConnected) {
+      disposeActiveResetScope();
+    }
+  }
+
+  function resetScopeFor(modal, gameId, playerId) {
+    if (
+      activeResetScope?.modal === modal &&
+      activeResetScope.gameId === gameId &&
+      activeResetScope.playerId === playerId &&
+      activeResetScope.scope?.isCurrent?.()
+    ) {
+      return activeResetScope.scope;
+    }
+
+    disposeActiveResetScope();
+
+    let disposed = false;
+    let requestGeneration = 0;
+    const scope = Object.freeze({
+      isCurrent() {
+        return !disposed && modalResetContextMatches(modal, gameId, playerId);
+      },
+      async updatePlayerIdentity(input = {}) {
+        if (!scope.isCurrent()) throw staleResetError();
+
+        const requestedGameId = text(input.gameId || gameId);
+        const requestedPlayerId = text(input.playerId || playerId);
+        const requestedIdentifier = text(input.playerIdentifier);
+        const requestedAccessCode = text(input.accessCode);
+
+        if (
+          requestedGameId !== gameId ||
+          requestedPlayerId !== playerId ||
+          !requestedIdentifier
+        ) {
+          throw staleResetError();
+        }
+
+        const authenticatedTransport = window.EconovariaAdminAuth?.request;
+        if (typeof authenticatedTransport !== "function") {
+          throw new Error("Player credential service is not available.");
+        }
+
+        const generation = ++requestGeneration;
+        const payload = { playerIdentifier: requestedIdentifier };
+        if (requestedAccessCode) payload.accessCode = requestedAccessCode;
+
+        const response = await authenticatedTransport(
+          `${LOCAL_API_PREFIX}/games/${encodeURIComponent(gameId)}/players/${encodeURIComponent(playerId)}/access-code/reset`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+            cache: "no-store",
+            redirect: "error",
+            referrerPolicy: "no-referrer",
+          },
+        );
+        const body = await responseJson(response);
+
+        if (!scope.isCurrent() || generation !== requestGeneration) {
+          throw staleResetError();
+        }
+        if (!response.ok || body.ok === false) {
+          const error = object(body.error);
+          throw new Error(
+            text(error.message || body.message) ||
+              "Player credentials could not be updated.",
+          );
+        }
+
+        const player = responsePlayer(body);
+        return Object.freeze({
+          body,
+          player,
+          playerIdentifier:
+            responsePlayerIdentifier(body) || requestedIdentifier,
+          studentCode: responseAccessCode(body) || requestedAccessCode,
+          displayName: text(
+            player.displayName || player.name || input.displayName,
+          ),
+        });
+      },
+      dispose() {
+        if (disposed) return;
+        disposed = true;
+        requestGeneration += 1;
+      },
+    });
+
+    activeResetScope = { modal, gameId, playerId, scope };
+    return scope;
   }
 
   function uniquePlayers(players) {
@@ -438,7 +604,6 @@
     const countryAssignment = text(fieldControl(fieldByCaption(modal, "Country assignment"))?.value) || playerCountry(player);
     const adminNote = text(fieldControl(fieldByCaption(modal, "Admin note"))?.value);
     const save = modal.querySelector('[data-admin-terminal-action="confirm-player-settings-save"]');
-    const bridge = window.EconovariaPlayerAccessCodeBridge;
 
     if (!gameId || !playerId || !modalId || modalId !== playerId) {
       setProfileStatus(modal, "Player selection changed. Reopen Player Settings before saving.", "error");
@@ -449,7 +614,8 @@
       identifierInput?.focus?.();
       return;
     }
-    if (!bridge || typeof bridge.updatePlayerIdentity !== "function") {
+    const resetScope = resetScopeFor(modal, gameId, playerId);
+    if (!resetScope) {
       setProfileStatus(modal, "Player credential service is not available.", "error");
       return;
     }
@@ -491,15 +657,15 @@
         );
       }
 
-      await bridge.updatePlayerIdentity({
+      await resetScope.updatePlayerIdentity({
         gameId,
         playerId,
         displayName,
         playerIdentifier: identifier,
         accessCode,
-        showCredentialDialog: false,
       });
 
+      if (!resetScope.isCurrent()) return;
       updateCachedPlayer(gameId, playerId, { displayName, playerIdentifier: identifier, status, countryAssignment });
       if (accessInput) accessInput.value = "";
       updateProfileSummary(modal, playerCache(gameId, false)?.get(playerId) || player);
@@ -511,20 +677,25 @@
         "success",
       );
     } catch (error) {
+      if (error?.code === PLAYER_RESET_CONTEXT_STALE) return;
       setProfileStatus(
         modal,
         error?.message || "Player profile settings could not be saved.",
         "error",
       );
     } finally {
-      if (save) {
+      if (save && modalResetContextMatches(modal, gameId, playerId)) {
         save.disabled = false;
         save.textContent = "Save settings";
+      }
+      if (activeResetScope?.scope === resetScope) {
+        disposeActiveResetScope();
       }
     }
   }
 
   function decorateProfileModal(root = document) {
+    disposeDetachedResetScope();
     removeLegacyIdentityUi(root);
     const modal = visibleProfileModal(root) || visibleProfileModal(document);
     if (!modal || modal.hasAttribute("data-admin-player-profile-identity-editor")) return;
@@ -626,8 +797,10 @@
 
     const nav = target.closest("[data-admin-section]");
     if (nav) {
-      if (nav.getAttribute("data-admin-section") !== "Players") selectedPlayerId = "";
-      else {
+      if (nav.getAttribute("data-admin-section") !== "Players") {
+        selectedPlayerId = "";
+        disposeActiveResetScope();
+      } else {
         const gameId = currentGameId();
         void loadPlayers(gameId).then(scheduleDecorate);
       }
@@ -666,5 +839,6 @@
       const gameId = currentGameId();
       return loadPlayers(gameId).then(scheduleDecorate);
     },
+    disposeResetScope: disposeActiveResetScope,
   };
 })();
