@@ -604,7 +604,6 @@
     const countryAssignment = text(fieldControl(fieldByCaption(modal, "Country assignment"))?.value) || playerCountry(player);
     const adminNote = text(fieldControl(fieldByCaption(modal, "Admin note"))?.value);
     const save = modal.querySelector('[data-admin-terminal-action="confirm-player-settings-save"]');
-    const resetScope = resetScopeFor(modal, gameId, playerId);
 
     if (!gameId || !playerId || !modalId || modalId !== playerId) {
       setProfileStatus(modal, "Player selection changed. Reopen Player Settings before saving.", "error");
@@ -615,6 +614,7 @@
       identifierInput?.focus?.();
       return;
     }
+    const resetScope = resetScopeFor(modal, gameId, playerId);
     if (!resetScope) {
       setProfileStatus(modal, "Player credential service is not available.", "error");
       return;
