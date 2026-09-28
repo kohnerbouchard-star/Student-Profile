@@ -572,10 +572,10 @@
   }
 
   async function econovariaAdminRequest(input, init) {
-    const rawUrl = input instanceof Request
+    const url = new URL(input instanceof Request
       ? input.url
-      : new URL(String(input), window.location.href).href;
-    if (!new URL(rawUrl).pathname.startsWith(LOCAL_API_PREFIX)) {
+      : String(input), window.location.href);
+    if (!url.pathname.startsWith(LOCAL_API_PREFIX)) {
       return nativeFetch(input, init);
     }
 

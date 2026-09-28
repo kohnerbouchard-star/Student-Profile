@@ -418,7 +418,8 @@ try {
   async function saved(expectedRequests, expectedEvents, combined) {
     await page.waitForFunction((count) => window.__ref012.events.length >= count &&
       window.EconovariaAttendanceRewardSettings.isDirty() === false &&
-      window.EconovariaSimplifiedSettings.isDirty() === false,
+      window.EconovariaSimplifiedSettings.isDirty() === false &&
+      document.querySelector('[data-admin-terminal-action="save-settings"]')?.hasAttribute("aria-busy") === false,
     expectedEvents, { timeout: 10_000 });
     const observed = await page.evaluate(() => ({
       events: window.__ref012.events,
@@ -502,7 +503,7 @@ try {
   const combinedCommand = ref012Requests[4].body;
   const combinedRoot = combinedCommand.settings || combinedCommand.payload || combinedCommand;
   if (combinedRoot.attendanceWindow?.presentRewardAmount !== 3.75 ||
-    !difficultyKeys.some((key) => Object.hasOwn(combinedRoot, key))) {
+    !difficultyKeys.some((key) => Object.hasOwn(combinedRoot.settings || combinedRoot, key))) {
     throw new Error(`REF-012 combined save split or lost its command: ${JSON.stringify(combinedCommand)}`);
   }
 
