@@ -293,6 +293,21 @@ jobs:
       - name: Exercise attendance scanner action
         run: node scripts/admin-attendance-action-smoke.mjs
 
+      - name: Capture exact refactor qualification inputs
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=admin-browser-smoke-artifacts/ref012
+          mkdir -p "$output"
+          git rev-parse HEAD > "$output/source-sha.txt"
+          git rev-parse 'HEAD^{tree}' > "$output/source-tree.txt"
+          cp docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json "$output/candidates.json"
+          cp docs/roadmaps/refactor-execution-v1/backlog.json "$output/backlog.json"
+          cp docs/architecture/inventories/econovaria-architecture-inventory-v2.json "$output/inventory-checked.json"
+          node scripts/architecture/build-architecture-inventory.mjs
+          cp docs/architecture/inventories/econovaria-architecture-inventory-v2.json "$output/inventory-generated.json"
+
       - name: Upload browser diagnostics
         if: always()
         uses: actions/upload-artifact@v4
