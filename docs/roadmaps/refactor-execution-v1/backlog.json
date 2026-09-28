@@ -200,16 +200,16 @@
       "id": "REF-012",
       "title": "Replace the legacy Attendance fetch bridge with an explicit adapter",
       "file": "tasks/REF-012.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-005"
       ],
       "risk": "R2",
       "architectureMapping": "ARCH-500/ARCH-700",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "74ce4ee888a99c0def0f218729093e1f95ff0649",
+      "mergeSha": "949a82acab74db35adb1b5e016d203cb3107501f",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-012/completion.json"
     },
     {
       "id": "REF-013",
