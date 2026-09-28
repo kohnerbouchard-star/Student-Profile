@@ -69,7 +69,7 @@ const harness = await createSpecializedQualityHarness("admin-player-identity", {
       marketStatus: "open",
     },
   },
-  handleProxy: ({ method, path, parsedBody }) => {
+  handleProxy: async ({ method, path, parsedBody }) => {
     const payload = flattenedBody(parsedBody);
     if (method === "POST" && path.endsWith(`/games/${GAME_ID}/players`)) {
       return {
