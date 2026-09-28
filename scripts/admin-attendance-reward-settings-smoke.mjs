@@ -410,6 +410,9 @@ try {
       const button = document.querySelector(selector);
       return button instanceof HTMLButtonElement && !button.disabled;
     }, saveSelector, { timeout: 5_000 });
+    // Move focus as a real pointer/keyboard activation would, flushing the
+    // edited input's change event before the deliberately immediate double click.
+    await page.locator(saveSelector).focus();
     await page.locator(saveSelector).evaluate((button) => { button.click(); button.click(); });
   }
   async function saved(expectedRequests, expectedEvents, combined) {
