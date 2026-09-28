@@ -215,7 +215,7 @@
       "id": "REF-013",
       "title": "Converge the legacy Player access-code UI bridge",
       "file": "tasks/REF-013.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-010"
       ],
@@ -224,7 +224,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-013/preflight.md"
     },
     {
       "id": "REF-014",
