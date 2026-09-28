@@ -587,9 +587,12 @@
       init = prepared.init;
       attendanceMetadata = prepared.metadata;
     }
+    const preparedUrl = input instanceof Request
+      ? input.url
+      : new URL(String(input), window.location.href).href;
     const request = input instanceof Request
       ? new Request(input, init)
-      : new Request(new URL(String(input), window.location.href).href, init);
+      : new Request(preparedUrl, init);
     const response = await forwardAdminRequest(request, new URL(request.url));
     if (typeof attendanceAdapter?.observeResponse === "function") {
       return attendanceAdapter.observeResponse(response, attendanceMetadata);
