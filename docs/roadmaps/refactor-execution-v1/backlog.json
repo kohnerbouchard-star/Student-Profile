@@ -215,16 +215,16 @@
       "id": "REF-013",
       "title": "Converge the legacy Player access-code UI bridge",
       "file": "tasks/REF-013.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-010"
       ],
       "risk": "R2",
       "architectureMapping": "ARCH-500/ARCH-700",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "e90bd25c78dd43a0c3b1dd3bea6a6d3fb68fa58e",
+      "mergeSha": "c8a7ccd2d519889631ca6622261786fe3e2247c8",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-013/completion.json"
     },
     {
       "id": "REF-014",
