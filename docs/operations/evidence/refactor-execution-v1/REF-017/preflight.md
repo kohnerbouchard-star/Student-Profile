@@ -50,3 +50,11 @@ Generated architecture inventory and a narrowly required cross-cutting manifest,
 ## Qualification
 
 Before merge: prove direct roster persistence is absent from the selected handler; verify the frozen query predicates/order/call count and response privacy; run roster tests, Player security/request-scope, Admin API, typecheck, architecture/high-priority/privacy/secret/diff checks, and all applicable exact-head CI. Unknown behavior or scope expansion stops the task rather than weakening a test.
+
+## Implementation checkpoint
+
+The bounded runtime extraction is published on this branch. `playerRosterHttpHandler.ts` no longer contains direct `.from("players")` or `.from("player_access_credentials")` roster reads. GET constructs `SupabasePlayerRosterReadRepository` with the already-authenticated request-scoped service client and maps only the repository's bounded persistence error back to the existing HTTP 500 envelope. POST/create code is byte-for-byte preserved inside the handler.
+
+The new repository owns the exact two frozen reads and projects only the existing response fields. Empty rosters suppress the credential query; duplicate display names remain independent records; credential rows select only `player_id`; non-string credential IDs are ignored as before; malformed selected Player rows fail closed rather than broadening scope. Focused repository tests cover query order/predicates, call count, duplicate names, active-code projection, private credential exclusion, both query failures and malformed rows.
+
+Exact-head native qualification remains pending. Do not merge or mark complete until typecheck, roster/Player/Admin/security/privacy/architecture gates and applicable CI pass. No schema, migration, RPC, global client, auth/context, POST mutation, deployment, database operation or REF-018 work is included.
