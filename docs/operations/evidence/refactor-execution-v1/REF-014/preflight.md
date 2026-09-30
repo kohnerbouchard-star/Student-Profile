@@ -19,7 +19,7 @@ REF-014a — characterize and converge the save/error lifecycle, with focused qu
 1. `admin/settings-save-error-bridge.js`: remove only redundant document observation; retain necessary stylesheet bootstrap.
 2. `admin/attendance-reward-save-controller-v3.js`: bind existing promise callbacks to route/page/game lifetime; explicit listener/timer disposal; keep request/retry contract.
 3. `admin/settings-simplified.js`: consume explicit controller error state without rewriting transport state; failed/busy state must not simultaneously present success; protect saved acknowledgement from stale context.
-4. `admin/attendance-reward-request-adapter.js`: only if necessary to bind combined Settings acknowledgement to the same lifetime; no request/formula redesign.
+4. `scripts/admin-local-mutation-ui-contract.test.mjs`: update the existing source assertion to require matching-key completion; the added executable regression proves an old completion cannot delete a newer retry key. The REF-012 request adapter stays byte-identical because it already reads the controller context identity.
 5. `scripts/admin-settings-save-lifecycle.test.mjs`: synthetic unit characterization of the actual source controller and presentation adapter.
 6. `scripts/admin-settings-disclosure-smoke.mjs`: extend the existing browser journey with denial/retry/remount/stale-response checks.
 7. `package.json`: only register the focused unit cases in the existing Admin local-mutation UI suite.
@@ -28,6 +28,10 @@ REF-014a — characterize and converge the save/error lifecycle, with focused qu
 Generated and hash-bound evidence is maintained separately and narrowly: `docs/architecture/inventories/econovaria-architecture-inventory-v2.json` and `docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json`. A PR-specific authority manifest, if the existing cross-cutting guard requires it, may authorize only the exact reviewed paths and retain production denial; the guard itself is protected.
 
 REF-014b — documentation-only closeout, dependent on merged/qualified REF-014a: update the REF-014 task, its one backlog entry, completion evidence, and this preflight with actual tested/merged identities. Parent remains incomplete until both children close. Other 49 task entries and global completion ownership remain unchanged.
+
+## Source review and test decomposition
+
+The runtime change is bounded to three files; the larger diff is primarily synthetic negative-state tests and read-only CI qualification. No module extraction, generated transport rewrite, or form change is needed. The unused adapter slot is replaced by the existing local-mutation source assertion, preserving the eight-path ceiling. Baseline owning Settings/UI/game-session checks passed in pinned CI run `36668193775` on `094b0994aa25e4f5511e9df58546ae242134aab1`; that result is characterization only, not credit for the subsequent implementation. The new regression suite is also executed against the unchanged runtime to verify that it detects the targeted lifecycle gaps.
 
 ## Verification and boundaries
 
