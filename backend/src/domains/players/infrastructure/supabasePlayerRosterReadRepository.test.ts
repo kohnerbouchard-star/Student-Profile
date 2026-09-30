@@ -1,5 +1,20 @@
-import { strict as assert } from "node:assert";
-import test from "node:test";
+declare const Deno: {
+  Deno.test(name: string, run: () => void | Promise<void>): void;
+};
+
+function assert(condition: unknown, message = "assertion failed"): asserts condition {
+  if (!condition) throw new Error(message);
+}
+function equal(actual: unknown, expected: unknown) {
+  if (actual !== expected) throw new Error(`expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+}
+function deepEqual(actual: unknown, expected: unknown) {
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+}
+async function rejects(run: () => Promise<unknown>, expected: new (...args: never[]) => Error) {
+  try { await run(); } catch (error) { if (error instanceof expected) return; throw error; }
+  throw new Error("expected rejection");
+}
 
 import {
   SupabasePlayerRosterReadRepository,
@@ -33,8 +48,8 @@ function fakeClient(plan: PlannedResponse[]) {
   const client: PlayerRosterReadClient = {
     from(table: string) {
       const response = plan.shift();
-      assert.ok(response, "unexpected query");
-      assert.equal(response.table, table);
+      if (!response) throw new Error("unexpected query");
+      equal(response.table, table);
       return {
         select(columns: string) {
           const filter = new FakeFilter(response);
@@ -57,7 +72,7 @@ const player = (id: string, displayName = "Same Name"): Row => ({
   updated_at: "2026-01-02T00:00:00Z",
 });
 
-test("readRoster preserves game scope, projection, ordering and active-code projection", async () => {
+Deno.test("readRoster preserves game scope, projection, ordering and active-code projection", async () => {
   const f = fakeClient([
     { table: "players", data: [player("p1"), player("p2")] },
     { table: "player_access_credentials", data: [
@@ -67,35 +82,35 @@ test("readRoster preserves game scope, projection, ordering and active-code proj
   ]);
   const result = await new SupabasePlayerRosterReadRepository(f.client).readRoster("game-1");
 
-  assert.deepEqual(result.map(({ id, displayName, hasActiveAccessCode }) => ({ id, displayName, hasActiveAccessCode })), [
+  deepEqual(result.map(({ id, displayName, hasActiveAccessCode }) => ({ id, displayName, hasActiveAccessCode })), [
     { id: "p1", displayName: "Same Name", hasActiveAccessCode: false },
     { id: "p2", displayName: "Same Name", hasActiveAccessCode: true },
   ]);
-  assert.equal("accessCodeHash" in result[1], false);
-  assert.equal(f.filters[0].select, "id,display_name,roster_label,player_identifier,status,created_at,updated_at");
-  assert.deepEqual(f.filters[0].filter.calls, [
+  equal("accessCodeHash" in result[1], false);
+  equal(f.filters[0].select, "id,display_name,roster_label,player_identifier,status,created_at,updated_at");
+  deepEqual(f.filters[0].filter.calls, [
     ["eq", "game_session_id", "game-1"],
     ["order", "created_at", { ascending: true }],
   ]);
-  assert.equal(f.filters[1].select, "player_id");
-  assert.deepEqual(f.filters[1].filter.calls, [
+  equal(f.filters[1].select, "player_id");
+  deepEqual(f.filters[1].filter.calls, [
     ["eq", "game_session_id", "game-1"],
     ["eq", "status", "active"],
     ["in", "player_id", ["p1", "p2"]],
   ]);
-  assert.equal(f.remaining.length, 0);
+  equal(f.remaining.length, 0);
 });
 
-test("readRoster returns empty roster without credential query", async () => {
+Deno.test("readRoster returns empty roster without credential query", async () => {
   const f = fakeClient([{ table: "players", data: [] }]);
-  assert.deepEqual(await new SupabasePlayerRosterReadRepository(f.client).readRoster("game-empty"), []);
-  assert.equal(f.filters.length, 1);
-  assert.equal(f.remaining.length, 0);
+  deepEqual(await new SupabasePlayerRosterReadRepository(f.client).readRoster("game-empty"), []);
+  equal(f.filters.length, 1);
+  equal(f.remaining.length, 0);
 });
 
-test("readRoster maps either persistence failure to the bounded repository error", async () => {
+Deno.test("readRoster maps either persistence failure to the bounded repository error", async () => {
   const first = fakeClient([{ table: "players", error: { message: "no" } }]);
-  await assert.rejects(
+  await rejects(
     () => new SupabasePlayerRosterReadRepository(first.client).readRoster("game-1"),
     PlayerRosterReadPersistenceError,
   );
@@ -104,15 +119,15 @@ test("readRoster maps either persistence failure to the bounded repository error
     { table: "players", data: [player("p1")] },
     { table: "player_access_credentials", error: { message: "no" } },
   ]);
-  await assert.rejects(
+  await rejects(
     () => new SupabasePlayerRosterReadRepository(second.client).readRoster("game-1"),
     PlayerRosterReadPersistenceError,
   );
 });
 
-test("readRoster rejects malformed selected roster rows instead of broadening scope", async () => {
+Deno.test("readRoster rejects malformed selected roster rows instead of broadening scope", async () => {
   const f = fakeClient([{ table: "players", data: [{ ...player("p1"), id: null }] }]);
-  await assert.rejects(
+  await rejects(
     () => new SupabasePlayerRosterReadRepository(f.client).readRoster("game-1"),
     PlayerRosterReadPersistenceError,
   );
