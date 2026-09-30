@@ -1,6 +1,7 @@
 import {
   AdminMutationError,
   type AdminMutationIdentity,
+  type AdminMutationRpcClient,
 } from "../../../platform/supabase/adminMutation.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
@@ -58,9 +59,9 @@ export interface RecordAttendanceMutationResult {
  */
 export async function recordAttendanceForAuthorizedStaff(
   input: RecordAttendanceMutationInput,
-  repository: AttendanceRecordRepository,
+  persistence: AttendanceRecordRepository | AdminMutationRpcClient,
 ): Promise<RecordAttendanceMutationResult> {
-  return await repository.record(input);
+  return await attendanceRepository(persistence).record(input);
 }
 
 export interface RecordManualAttendanceForAuthorizedStaffInput {
@@ -83,9 +84,9 @@ export interface RecordManualAttendanceForAuthorizedStaffResult
  */
 export async function recordManualAttendanceForAuthorizedStaff(
   input: RecordManualAttendanceForAuthorizedStaffInput,
-  serviceClient: EdgeSupabaseClient,
+  serviceClient: AdminMutationRpcClient,
   repository: AttendanceRecordRepository =
-    new SupabaseAttendanceRecordRepository(serviceClient),
+    new SupabaseAttendanceRecordRepository(serviceClient as EdgeSupabaseClient),
 ): Promise<RecordManualAttendanceForAuthorizedStaffResult> {
   const envelope = isRecord(input.body) ? input.body : {};
   const payload = isRecord(envelope.payload) ? envelope.payload : null;
@@ -225,17 +226,7 @@ export async function recordAttendanceScanForAuthorizedStaff(
     requestPayload,
     identity: input.identity,
   });
-  if (replay) {
-    if (!isRecord(replay.body.attendance) || !isRecord(replay.body.context)) {
-      throw attendanceWriteFailed();
-    }
-    return attendanceScanResult({
-      status: replay.status,
-      replayed: true,
-      attendance: replay.body.attendance,
-      context: replay.body.context,
-    });
-  }
+  if (replay) return attendanceScanResult(replay);
 
   const player = dependencies.readPlayer
     ? await dependencies.readPlayer(
@@ -337,6 +328,15 @@ function attendanceScanResult(
     },
     reward: returnedContext.reward,
   };
+}
+
+function attendanceRepository(
+  persistence: AttendanceRecordRepository | AdminMutationRpcClient,
+): AttendanceRecordRepository {
+  if ("record" in persistence) return persistence;
+  return new SupabaseAttendanceRecordRepository(
+    persistence as EdgeSupabaseClient,
+  );
 }
 
 function readAttendanceScanResponseContext(
