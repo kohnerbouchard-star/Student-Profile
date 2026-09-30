@@ -2348,8 +2348,7 @@
       {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
         "markers": [
-          "legacy",
-          "legacyhash"
+          "legacy"
         ]
       },
       {
