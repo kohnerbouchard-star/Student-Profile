@@ -1,4 +1,4 @@
-import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+import { readPlayerApiRouteSegments } from "../../players/index.ts";
 
 export type PlayerMessagingRoute =
   | { readonly kind: "list" }

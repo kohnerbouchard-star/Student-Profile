@@ -1,0 +1,92 @@
+name: REF-016 Temporary Inventory Materialization
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/ref-016-inventory-materialization.yml
+      - backend/src/domains/messaging/api/**
+
+permissions:
+  contents: read
+
+jobs:
+  materialize-exact-blob:
+    if: >-
+      github.event.pull_request.number == 766 &&
+      github.repository == 'kohnerbouchard-star/Student-Profile' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'refactor/ref-016-messaging-players-public-boundary' &&
+      github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Verify exact declared source and generator
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          test "$(node --version)" = "v22.23.1"
+          python3 - <<'PY'
+          import subprocess
+          expected = {
+            'scripts/architecture/build-architecture-inventory.mjs': '375e6d971cf150251fc94372440ff768fd3b9467',
+            'backend/src/domains/messaging/api/playerMessagingHttpHandler.ts': '137de57bdd4bd82f9c2fd5bc41af6be9abea1a97',
+            'backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.ts': '8b9f505339db7c1276b32e030cc0a63175f670c0',
+            'backend/src/domains/messaging/api/playerMessagingRoutePaths.ts': '66b1cfa0741ebd10dd2e452fcff6ffc211457ece',
+            'backend/src/domains/messaging/api/playerMessageThreadLifecycleRoutePaths.ts': 'c71bffda576b30b1aa3d3149db122ecffcff4f3c',
+            'backend/src/domains/messaging/api/playerMessagingRoutePaths.test.ts': '1aa7c83b41395ec1e61e3c283403a4578b62c5e3',
+            'backend/src/domains/players/index.ts': '674ee2156f3d28d369d31dec24555546a1406d25',
+          }
+          for path, sha in expected.items():
+              actual = subprocess.check_output(['git', 'rev-parse', f'HEAD:{path}'], text=True).strip()
+              if actual != sha:
+                  raise SystemExit(f'Unexpected source identity: {path}')
+          print('All declared source and generator identities match.')
+          PY
+      - name: Regenerate unchanged deterministic inventory
+        run: node scripts/architecture/build-architecture-inventory.mjs
+      - name: Materialize only the expected unreferenced inventory blob
+        env:
+          GH_BLOB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess, urllib.request
+          path = 'docs/architecture/inventories/econovaria-architecture-inventory-v2.json'
+          expected = '0f4501a95138d7bc89e6feae343e20be964a2536'
+          changed = subprocess.check_output(['git', 'diff', '--name-only'], text=True).splitlines()
+          if changed != [path]:
+              raise SystemExit('Only the declared generated inventory may differ.')
+          actual = subprocess.check_output(['git', 'hash-object', path], text=True).strip()
+          if actual != expected:
+              raise SystemExit('Generated inventory does not match the reviewed local blob.')
+          data = json.dumps({'content': pathlib.Path(path).read_text(), 'encoding': 'utf-8'}).encode()
+          request = urllib.request.Request(
+              'https://api.github.com/repos/kohnerbouchard-star/Student-Profile/git/blobs',
+              data=data,
+              headers={
+                  'Authorization': 'Bearer ' + os.environ['GH_BLOB_TOKEN'],
+                  'Accept': 'application/vnd.github+json',
+                  'Content-Type': 'application/json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+              },
+              method='POST',
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              result = json.load(response)
+          if result.get('sha') != expected:
+              raise SystemExit('GitHub returned an unexpected blob identity.')
+          print('REF016_INVENTORY_BLOB=' + expected)
+          print('No commit, ref, merge, deployment or database operation was performed.')
+          PY

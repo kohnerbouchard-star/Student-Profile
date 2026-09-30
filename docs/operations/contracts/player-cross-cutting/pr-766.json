@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref016-messaging-players-public-boundary-pr-766.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 766,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
+    "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.ts",
+    "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts",
+    "backend/src/domains/messaging/api/playerMessageThreadLifecycleRoutePaths.ts",
+    "backend/src/domains/messaging/api/playerMessagingRoutePaths.test.ts",
+    "docs/operations/evidence/refactor-execution-v1/REF-016/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-016.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-766.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/ref-016-inventory-materialization.yml"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
+    "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.ts",
+    "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts",
+    "backend/src/domains/messaging/api/playerMessageThreadLifecycleRoutePaths.ts",
+    "backend/src/domains/messaging/api/playerMessagingRoutePaths.test.ts",
+    "docs/operations/evidence/refactor-execution-v1/REF-016/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-016.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-766.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Beta Security Contract"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "messaging",
+    "players",
+    "security"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-016/preflight.md",
+  "authorizationNote": "Owner authorizes bounded REF-016 continuation after merged REF-015 audit PR765; REF-015 remains BLOCKED. REF-016b's predeclared temporary publication helper is restricted to materializing the exact reviewed generated inventory blob and must be removed before final qualification. All existing verifier, source/database/browser/connected checks and production-denial flags remain unchanged. No new auth/context behavior, runtime entrypoint, database or production changes."
+}
