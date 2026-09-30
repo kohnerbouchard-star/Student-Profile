@@ -1,0 +1,102 @@
+name: REF-014 Settings Qualification
+
+on:
+  pull_request:
+    paths:
+      - "admin/settings-*.js"
+      - "admin/attendance-reward-*.js"
+      - "scripts/admin-settings-*.mjs"
+      - "package.json"
+      - "docs/operations/evidence/refactor-execution-v1/REF-014/**"
+      - ".github/workflows/ref-014-settings-qualification.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ref014-settings-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  settings-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Capture tracked source for reproducible review
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ref014-source"
+          git rev-parse HEAD > "$RUNNER_TEMP/ref014-source/source-sha.txt"
+          git rev-parse 'HEAD^{tree}' > "$RUNNER_TEMP/ref014-source/source-tree.txt"
+          git archive --format=tar.gz --output="$RUNNER_TEMP/ref014-source/source.tar.gz" HEAD
+      - name: Upload tracked source review input
+        uses: actions/upload-artifact@v4
+        with:
+          name: ref014-source-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/ref014-source/
+          retention-days: 7
+          if-no-files-found: error
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Pin npm and install frozen dependencies
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          npm --prefix backend ci
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - name: Verify Settings and shared UI contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p admin-browser-smoke-artifacts/ref014
+          npm run test:admin-local-mutation-ui 2>&1 | tee admin-browser-smoke-artifacts/ref014/unit.log
+          npm run test:admin-v2 2>&1 | tee admin-browser-smoke-artifacts/ref014/admin-v2.log
+          npm --prefix backend run test:game-sessions 2>&1 | tee admin-browser-smoke-artifacts/ref014/game-sessions.log
+          npm run audit:architecture
+          node scripts/asset-reference-audit.mjs
+          npm run audit:interaction-wiring
+          git diff --check
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Exercise existing Settings browser journey
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > runtime-config.env.js <<'EOF'
+          window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
+            environment: "development",
+            projectRef: "runtimefixture123456",
+            supabaseUrl: "https://runtimefixture123456.supabase.co",
+            supabasePublishableKey: "sb_publishable_runtime_fixture_1234567890"
+          });
+          EOF
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/ref014-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/admin/ >/dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/admin-settings-disclosure-smoke.mjs 2>&1 | tee admin-browser-smoke-artifacts/ref014/settings-browser.log
+      - name: Upload qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ref014-settings-${{ github.event.pull_request.head.sha || github.sha }}
+          path: admin-browser-smoke-artifacts/
+          retention-days: 7
+          if-no-files-found: warn
