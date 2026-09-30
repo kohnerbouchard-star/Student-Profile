@@ -30,7 +30,7 @@ export class SupabaseAttendanceRecordRepository
       operation: "attendance.scan",
       requestPayload: input.requestPayload,
       identity: input.identity,
-    }, attendanceWriteFallback());
+    }, attendanceWriteErrorDescriptor());
     if (!replay) return null;
     return readMutationReceipt(replay);
   }
@@ -40,7 +40,7 @@ export class SupabaseAttendanceRecordRepository
     readonly scannedValue: string;
     readonly normalizedIdentifier: string;
     readonly currentLookupDigest: string;
-    readonly hashLegacyValue: (value: string) => Promise<string>;
+    readonly hashPriorCredentialValue: (value: string) => Promise<string>;
   }): Promise<AttendancePlayerRecord | null> {
     const identifierResponse = await this.serviceClient
       .from("players")
@@ -62,12 +62,12 @@ export class SupabaseAttendanceRecordRepository
       PLAYER_CREDENTIAL_VERSION,
     );
     if (!playerId) {
-      const legacyHash = await input.hashLegacyValue(
+      const priorCredentialHash = await input.hashPriorCredentialValue(
         normalizeStudentCode(input.scannedValue),
       );
       playerId = await this.readCredentialPlayerId(
         input.gameSessionId,
-        legacyHash,
+        priorCredentialHash,
         "sha256-v1",
       );
     }
@@ -118,7 +118,7 @@ export class SupabaseAttendanceRecordRepository
         p_idempotency_key: input.identity.idempotencyKey,
         p_request_id: input.identity.requestId,
       },
-      attendanceWriteFallback(),
+      attendanceWriteErrorDescriptor(),
     );
     return readMutationReceipt(mutation);
   }
@@ -164,7 +164,7 @@ function readMutationReceipt(input: {
   };
 }
 
-function attendanceWriteFallback() {
+function attendanceWriteErrorDescriptor() {
   return {
     code: "attendance_write_failed",
     message: "Attendance could not be recorded.",
