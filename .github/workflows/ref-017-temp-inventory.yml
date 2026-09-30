@@ -1,0 +1,34 @@
+name: REF-017 Temporary Inventory Materialization
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ref-017-temp-inventory.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Regenerate exact inventory and commit only that file
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          node scripts/architecture/build-architecture-inventory.mjs
+          test "$(git diff --name-only)" = "docs/architecture/inventories/econovaria-architecture-inventory-v2.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/architecture/inventories/econovaria-architecture-inventory-v2.json
+          git commit -m "docs: regenerate REF-017 architecture inventory"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:"${HEAD_BRANCH}"
