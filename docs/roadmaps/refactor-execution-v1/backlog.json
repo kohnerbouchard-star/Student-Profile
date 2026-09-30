@@ -280,7 +280,7 @@
       "id": "REF-017",
       "title": "Extract Player roster persistence into its existing owner",
       "file": "tasks/REF-017.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-016"
       ],
@@ -289,9 +289,9 @@
       "recheckOpenPrs": [
         668
       ],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-017/preflight.md"
+      "implementationSha": "ee5ef5da5d5cfb5eea1386666788f3a7dad2cdc6",
+      "mergeSha": "bf9066d7c53c5ddc3613633c7cc804ecac9576fb",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-017/completion.json"
     },
     {
       "id": "REF-018",
