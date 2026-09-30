@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-015",
+  "status": "IN_PROGRESS",
+  "initialBatchDeletionStatus": "BLOCKED",
+  "observedMainSha": "368db59335d9f417c818881d19e3d4d9cd56fb67",
+  "observedMainTreeSha": "820f50237f3f0441a5494393a360311c3cdddb49",
+  "ownerBranch": "refactor/ref-015-admin-shim-retirement",
+  "dependencies": {
+    "REF-012": "VERIFIED_COMPLETE",
+    "REF-013": "VERIFIED_COMPLETE",
+    "REF-014": "VERIFIED_COMPLETE"
+  },
+  "sourceProvenance": {
+    "artifactId": 11079350479,
+    "artifactSha256": "34df65ef6e15bf9daf3dfe20d66557fb3140e84ed8405b7cb8caedc0f83bd7e6",
+    "archiveCommitSha": "e9c144268ea16ecd86e051c1714585966cfedebc",
+    "verifiedArchiveTreeSha": "fd6a465b8964b710691dc204b0510e88244b637b",
+    "matchingMainMergeSha": "c9d57b9bb1e75009e158f13aea8e1750f560e86d",
+    "localReconstructionCommitSha": "553a3315455dab4fb8d35765b7b3b799f2153362",
+    "localCommitIsGithubCommit": false,
+    "reconciledMainOnlyPaths": [
+      "docs/operations/evidence/refactor-execution-v1/REF-014/completion.json",
+      "docs/operations/evidence/refactor-execution-v1/REF-014/preflight.md",
+      "docs/roadmaps/refactor-execution-v1/backlog.json",
+      "docs/roadmaps/refactor-execution-v1/tasks/REF-014.md"
+    ],
+    "runtimeBuildTestAndPolicySourcesMatchMain": true,
+    "currentMainBacklogBlobSha": "c7d3973ffff400390052a85dcfb992d352e2f0b0"
+  },
+  "reachability": {
+    "command": "node scripts/architecture/refactor-candidate-audit.mjs 553a3315455dab4fb8d35765b7b3b799f2153362",
+    "denominator": "Tree-verified archive; the four current-main closeout paths were separately reconciled, not silently added to this scan.",
+    "archivedTrackedFiles": 4000,
+    "candidateCount": 761,
+    "unknownCandidateCount": 558,
+    "reviewedSources": 23,
+    "confirmedDead": 0,
+    "initialRegisterDeletionShortlist": [],
+    "literalScanIsCompleteCallGraph": false,
+    "runtimeConsumerAbsenceCertified": false,
+    "candidateRecordsSha256": "470153124005111ea86b4564856deb01c9069c3ea5ae76168b9b4565ce59d35b"
+  },
+  "reviewedBatch": [
+    {
+      "path": "admin/attendance-reward-settings-route-bridge-v2.js",
+      "blobSha": "997c57a13c2fed2aa5b138c57e7714b1e499efa0",
+      "physicalLines": 14,
+      "replacementCommitSha": "74ce4ee888a99c0def0f218729093e1f95ff0649",
+      "replacement": "admin/attendance-reward-request-adapter.js",
+      "currentShellLoadsOldFilename": false,
+      "retainedBehavior": "Dynamic-import the canonical adapter for direct/historical users and expose its existing read getter; no fetch patch.",
+      "globalReferenceIsOldFileLoadProof": false,
+      "externalConsumers": "UNKNOWN",
+      "blocker": "No approved representative retained-client/old-URL retirement evidence.",
+      "safeToDelete": false
+    },
+    {
+      "path": "admin/player-access-code-bridge.js",
+      "blobSha": "b48bcfef6921cab7c52a5ff23861bce7fae4f8fb",
+      "physicalLines": 235,
+      "partialReplacementCommitSha": "e90bd25c78dd43a0c3b1dd3bea6a6d3fb68fa58e",
+      "replacementScope": "Existing-player reset only, not Player creation.",
+      "liveSourceRoots": [
+        "admin/index.html:42",
+        "admin/player-create-lifecycle.js:66",
+        "admin/player-create-ux.js:292"
+      ],
+      "retainedBehavior": "Creation-response wrapper, conditional create follow-up reset, and one-time credential event.",
+      "blocker": "Positive retained shell and creation-event consumers; complete behavior replacement not proven.",
+      "safeToDelete": false
+    },
+    {
+      "path": "admin/settings-save-error-bridge.js",
+      "blobSha": "453096926a5d0e897be246e8bd6828541d85af50",
+      "physicalLines": 13,
+      "partialReplacementCommitSha": "e9c144268ea16ecd86e051c1714585966cfedebc",
+      "replacementScope": "Save/error lifecycle only, not final-polish stylesheet loading.",
+      "liveSourceRoots": [
+        "admin/admin-bootstrap.js:55"
+      ],
+      "retainedBehavior": "Load css/settings-final-polish.css once.",
+      "blocker": "Positive bootstrap consumer and required stylesheet setup.",
+      "safeToDelete": false
+    }
+  ],
+  "measurements": {
+    "before": {
+      "reviewedBatchFiles": 3,
+      "reviewedBatchPhysicalLines": 262,
+      "adminRootJavascriptFiles": 66,
+      "architectureSourceFiles": 1247,
+      "architectureBrowserTransportShimFiles": 25
+    },
+    "after": {
+      "reviewedBatchFiles": 3,
+      "reviewedBatchPhysicalLines": 262,
+      "adminRootJavascriptFiles": 66,
+      "architectureSourceFiles": 1247,
+      "architectureBrowserTransportShimFiles": 25
+    },
+    "removedFiles": 0,
+    "removedPhysicalLines": 0,
+    "runtimeSourceWiringDelta": 0,
+    "browserRequestCountDelta": null,
+    "browserListenerCountDelta": null,
+    "allDeadCodePercentage": null
+  },
+  "validation": {
+    "profile": "SUPPLEMENTARY_LOCAL_UNPINNED",
+    "nodeVersion": "22.16.0",
+    "requiredNodeVersion": "22.23.1",
+    "checks": [
+      {
+        "name": "admin-mutation-ui",
+        "command": "node --test scripts/admin-local-handler-architecture-contract.test.mjs scripts/admin-local-mutation-ui-contract.test.mjs scripts/persisted-game-code-contract.test.mjs scripts/admin-settings-save-lifecycle.test.mjs",
+        "exitCode": 0,
+        "tests": 54,
+        "pass": 54,
+        "fail": 0,
+        "skipped": 0,
+        "logSha256": "521ba8eedf8e67b52c2bd6c7663589126c8b3b475f058164ebb61d40bc24128f"
+      },
+      {
+        "name": "admin-v2",
+        "command": "node --test scripts/admin-v2-unit.test.mjs scripts/admin-v2-store-api.test.mjs scripts/admin-v2-store-media.test.mjs scripts/admin-v2-market-api.test.mjs scripts/admin-v2-attendance-api.test.mjs scripts/admin-v2-crafting-api.test.mjs scripts/admin-v2-business-api.test.mjs scripts/admin-v2-marketplace.test.mjs scripts/admin-v2-logs-api.test.mjs scripts/admin-v2-runtime-ux-stabilization.test.mjs",
+        "exitCode": 0,
+        "tests": 86,
+        "pass": 86,
+        "fail": 0,
+        "skipped": 0,
+        "logSha256": "93dd412bff775d948fc663d2f9e69f006e0db4f3d0a1522835312321f7222634"
+      },
+      {
+        "name": "candidate-classifier",
+        "command": "node --test scripts/architecture/refactor-candidate-audit.test.mjs",
+        "exitCode": 0,
+        "tests": 17,
+        "pass": 17,
+        "fail": 0,
+        "skipped": 0,
+        "logSha256": "bbc784067c1586108c0c6d429890015b16e8a65e4b40f63d2ff2ba2da7857966"
+      },
+      {
+        "name": "assets",
+        "command": "node scripts/asset-reference-audit.mjs",
+        "exitCode": 0,
+        "logSha256": "39c6c2a14d3b89461c062036bb8a73f4fc7831391e3283fa881d2434b3cbcbaf"
+      },
+      {
+        "name": "interaction-wiring",
+        "command": "node scripts/runtime-interaction-wiring-audit.mjs",
+        "exitCode": 0,
+        "logSha256": "270a8ce08f7bca8f94e6bc9e331f940337bd75bb57edcd9a3005ded5e613df42"
+      },
+      {
+        "name": "legacy-runtime",
+        "command": "node scripts/legacy-runtime/audit-live-runtime-inventory.mjs",
+        "exitCode": 0,
+        "logSha256": "f304ee8f7203597951abf34d8a2b596f081c6479736ba88b872acd23dc793153"
+      },
+      {
+        "name": "legacy-browser-ratchet",
+        "command": "node scripts/legacy-runtime/legacy-browser-transport-ratchet.mjs",
+        "exitCode": 0,
+        "logSha256": "77ec62dae9a0c26511cd9cecae02c29834fe8ac50159cd09fc51f3272a8c59d9"
+      },
+      {
+        "name": "secrets",
+        "command": "node scripts/supply-chain-secret-scan.mjs",
+        "exitCode": 0,
+        "logSha256": "4535f06a8ac938d814dfae5b50ef02d906a2c8311a2a81a03566f08177527b34"
+      },
+      {
+        "name": "architecture",
+        "command": "npm run audit:architecture",
+        "exitCode": 0,
+        "logSha256": "c219ca76a909fed022882660cde11d5f785565a6a4f7a4a1d5514ed4bd0318e8"
+      },
+      {
+        "name": "high-priority-boundaries",
+        "command": "npm run audit:high-priority-boundaries",
+        "exitCode": 0,
+        "logSha256": "6c0ed14cf0a2624f1780a1ea45bb20ff862d42b884b82bb0e76198ed02b84aed"
+      },
+      {
+        "name": "runtime-retirement-tests",
+        "command": "node --test scripts/legacy-runtime/runtime-retirement.test.mjs",
+        "exitCode": 0,
+        "tests": 63,
+        "pass": 63,
+        "fail": 0,
+        "skipped": 0,
+        "logSha256": "82a5af97f79e8bdee4aba13f7d6db8bdaa4fc8c29cbb01cf91171ad79517e6f7"
+      },
+      {
+        "name": "diff-check",
+        "command": "git diff --check",
+        "exitCode": 0,
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "notRun": [
+      "Pinned exact-head CI for this new Task 15 branch",
+      "Task 15 browser load/interaction crawl and runtime request/listener comparison",
+      "Full npm test",
+      "Backend typecheck:all and smoke; Deno absent",
+      "Hosted retained-client observation / representative quiet window"
+    ],
+    "noHistoricalWorkflowReusedAsNewPass": true
+  },
+  "boundaries": {
+    "runtimeFilesChanged": 0,
+    "testsDeleted": 0,
+    "otherBacklogEntriesChanged": 0,
+    "databaseOrRuntimeOperationsInvoked": false,
+    "productionCertified": false,
+    "mergeInvoked": false,
+    "nextTaskStarted": false
+  },
+  "nextExactTask": "REF-015",
+  "nextAction": "Establish a fully evidenced eligible candidate and approved retention gate; preserve the three blocked files and existing tests in the meantime."
+}

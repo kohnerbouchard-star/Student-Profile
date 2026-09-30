@@ -245,7 +245,7 @@
       "id": "REF-015",
       "title": "Remove the first proven-unused Admin shim batch",
       "file": "tasks/REF-015.md",
-      "status": "PLANNED",
+      "status": "BLOCKED",
       "dependsOn": [
         "REF-012",
         "REF-013",
@@ -256,7 +256,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-015/final-disposition.md"
     },
     {
       "id": "REF-016",
