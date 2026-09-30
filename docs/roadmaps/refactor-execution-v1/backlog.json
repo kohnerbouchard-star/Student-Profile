@@ -262,7 +262,7 @@
       "id": "REF-016",
       "title": "Adopt the existing Players public boundary in one consumer family",
       "file": "tasks/REF-016.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-006"
       ],
@@ -272,9 +272,9 @@
         668,
         736
       ],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-016/preflight.md"
+      "implementationSha": "1ef2b3b2c5b167b2da9c6d54174d22ef09714bfe",
+      "mergeSha": "c80b0b515657eb4a0fec8797314f7ece4d53933a",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-016/completion.json"
     },
     {
       "id": "REF-017",
