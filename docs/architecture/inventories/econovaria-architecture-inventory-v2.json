@@ -14,7 +14,7 @@
     "persistenceOutsideInfrastructure": 53,
     "crossDomainDeepImports": 162,
     "browserTransportShimFiles": 25,
-    "compatibilityMarkerFiles": 211,
+    "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 99,
     "capabilityStrings": 136
@@ -2349,16 +2349,6 @@
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
         "markers": [
           "legacy"
-        ]
-      },
-      {
-        "file": "backend/src/domains/attendance/contracts/attendanceRecordRepository.ts",
-        "markers": []
-      },
-      {
-        "file": "backend/src/domains/attendance/infrastructure/supabaseAttendanceRecordRepository.ts",
-        "markers": [
-          "legacyhash"
         ]
       },
       {
