@@ -114,8 +114,8 @@ try {
 
   const bridgeSource = await page.request.get(`${BASE_URL}/settings-save-error-bridge.js`);
   const bridgeText = await bridgeSource.text();
-  if (/stopImmediatePropagation|NUMERIC_EDITOR_SELECTOR|deferredNumericControls/.test(bridgeText)) {
-    throw new Error("Settings error bridge still owns numeric input propagation.");
+  if (/MutationObserver|addEventListener|requestAnimationFrame|stopImmediatePropagation|NUMERIC_EDITOR_SELECTOR|deferredNumericControls/.test(bridgeText)) {
+    throw new Error("Settings error bridge still intercepts document or numeric input lifecycle.");
   }
 
   const presenterSource = await page.request.get(`${BASE_URL}/settings-simplified.js`);
@@ -168,10 +168,117 @@ try {
       /Edit custom settings/i.test(toggle?.textContent || "");
   }, null, { timeout: 5_000 });
 
+  // Exercise the source-owned save promise, not an alternative test controller.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.waitForFunction(() => document.querySelector(".admin-terminal-settings-page")
+    ?.getAttribute("data-settings-ux-baseline-ready") === "true", null, { timeout: 10_000 });
+  await page.locator("[data-settings-custom-toggle]").click();
+  const saveControl = page.locator('[data-admin-terminal-action="save-settings"]');
+  const amountControl = page.locator('[data-attendance-reward-field="presentRewardAmount"]');
+  const ref014Writes = [];
+  let responseStatus = 200;
+  let delayedResponse = null;
+  await page.evaluate(() => {
+    window.__ref014SavedEvents = 0;
+    document.addEventListener("econovaria:attendance-reward-saved", () => { window.__ref014SavedEvents += 1; });
+  });
+  await page.route("**/functions/v1/web-session-api/proxy/games/*/settings", async (route) => {
+    const request = route.request();
+    if (request.method() !== "PATCH") return route.fallback();
+    const headers = request.headers();
+    const body = request.postDataJSON();
+    const status = responseStatus;
+    const pending = delayedResponse;
+    delayedResponse = null;
+    ref014Writes.push({ status, body, headers });
+    if (!headers["x-econovaria-csrf-token"] || !headers["x-econovaria-game-id"] ||
+        headers.authorization || headers["x-idempotency-key"] !== body.idempotencyKey ||
+        headers["x-request-id"] !== body.idempotencyKey) {
+      errors.push("REF-014 save lost its authenticated game/retry header contract.");
+    }
+    if (pending) await pending.promise;
+    await route.fulfill({
+      status,
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": new URL(BASE_URL).origin,
+        "access-control-allow-credentials": "true", "cache-control": "no-store" },
+      body: JSON.stringify(status === 200 ? { data: { saved: true } } : {
+        message: status === 400 ? "Invalid timezone" : status === 403 ? "Wrong game or permission denied" : "Service unavailable",
+      }),
+    });
+  });
+  for (const [index, status] of [400, 403, 503].entries()) {
+    const value = String(9 + index);
+    await amountControl.fill(value);
+    responseStatus = status;
+    const savedBefore = await page.evaluate(() => window.__ref014SavedEvents);
+    await saveControl.click();
+    await page.waitForFunction(() => document.querySelector('[data-admin-terminal-action="save-settings"]')
+      ?.getAttribute("data-admin-terminal-api-state") === "error");
+    const failure = await page.locator("[data-settings-save-status]").innerText();
+    if (!/not saved/i.test(failure) || await amountControl.inputValue() !== value ||
+        await page.locator(".admin-terminal-settings-save-bar.is-saved").count() ||
+        await page.evaluate(() => window.__ref014SavedEvents) !== savedBefore) {
+      throw new Error(`REF-014 ${status} rejection lost the draft or presented success.`);
+    }
+    const failedKey = ref014Writes.at(-1).body.idempotencyKey;
+    responseStatus = 200;
+    await saveControl.click();
+    await page.waitForFunction(() => document.querySelector("[data-settings-save-status]")?.textContent === "Settings saved");
+    if (ref014Writes.at(-1).body.idempotencyKey !== failedKey) {
+      throw new Error("REF-014 same-payload retry changed its idempotency key.");
+    }
+  }
+  function delayNextResponse() {
+    let release;
+    delayedResponse = { promise: new Promise((resolve) => { release = resolve; }) };
+    return release;
+  }
+  await amountControl.fill("12.5");
+  const beforeDouble = ref014Writes.length;
+  const releaseDouble = delayNextResponse();
+  await page.evaluate(() => {
+    const button = document.querySelector('[data-admin-terminal-action="save-settings"]');
+    button.click();
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  });
+  await page.waitForFunction(() => document.querySelector('[data-admin-terminal-action="save-settings"]')?.getAttribute("aria-busy") === "true");
+  for (let attempt = 0; attempt < 100 && ref014Writes.length === beforeDouble; attempt++) await page.waitForTimeout(10);
+  if (ref014Writes.length !== beforeDouble + 1) throw new Error("REF-014 double save posted duplicate writes.");
+  releaseDouble();
+  await page.waitForFunction(() => document.querySelector("[data-settings-save-status]")?.textContent === "Settings saved");
+
+  await amountControl.fill("13.5");
+  const beforeStale = ref014Writes.length;
+  const savedBeforeStale = await page.evaluate(() => window.__ref014SavedEvents);
+  const releaseStale = delayNextResponse();
+  await saveControl.click();
+  for (let attempt = 0; attempt < 100 && ref014Writes.length === beforeStale; attempt++) await page.waitForTimeout(10);
+  if (ref014Writes.length !== beforeStale + 1) throw new Error("REF-014 stale-response fixture did not send one write.");
+  await page.evaluate(() => {
+    const oldPage = document.querySelector(".admin-terminal-settings-page");
+    const replacement = oldPage.cloneNode(true);
+    replacement.removeAttribute("data-settings-ux-ready");
+    replacement.removeAttribute("data-settings-disclosure-initialized");
+    replacement.querySelector("[data-settings-custom-toggle]")?.remove();
+    const button = replacement.querySelector('[data-admin-terminal-action="save-settings"]');
+    for (const name of ["aria-busy", "aria-disabled", "data-admin-terminal-api-state", "data-attendance-reward-status", "data-attendance-reward-direct-save"]) button.removeAttribute(name);
+    oldPage.replaceWith(replacement);
+  });
+  const staleResponse = page.waitForResponse((response) => response.request().method() === "PATCH" && response.url().endsWith("/settings"));
+  releaseStale();
+  await (await staleResponse).finished();
+  await page.waitForTimeout(200);
+  if (await page.evaluate(() => window.__ref014SavedEvents) !== savedBeforeStale ||
+      await page.locator(".admin-terminal-settings-save-bar.is-saved").count()) {
+    throw new Error("REF-014 old-page response acknowledged the replacement page.");
+  }
   await capture("settings-disclosure-persistence");
   if (errors.length) throw new Error(errors[0]);
   console.log("Shared Settings preserves native events, focus, save state, disclosure, and domain boundaries.");
-  await finish({ afterOption, duringNumericEdit, errors });
+  await finish({ afterOption, duringNumericEdit, ref014Writes, errors });
 } catch (error) {
   await capture("settings-disclosure-failure").catch(() => {});
   await finish({ failure: error.stack || error.message || String(error) });
