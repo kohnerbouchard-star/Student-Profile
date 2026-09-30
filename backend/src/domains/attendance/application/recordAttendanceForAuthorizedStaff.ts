@@ -240,7 +240,7 @@ export async function recordAttendanceScanForAuthorizedStaff(
       scannedValue,
       normalizedIdentifier,
       currentLookupDigest: scanValueLookupDigest,
-      hashLegacyValue: dependencies.hashValue ?? sha256Hex,
+      hashPriorCredentialValue: dependencies.hashValue ?? sha256Hex,
     });
 
   if (!player?.id || player.status !== "active") {
