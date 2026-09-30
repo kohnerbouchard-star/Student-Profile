@@ -230,16 +230,16 @@
       "id": "REF-014",
       "title": "Converge the legacy Settings save-error bridge",
       "file": "tasks/REF-014.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-005"
       ],
       "risk": "R2",
       "architectureMapping": "ARCH-500/ARCH-700",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "e9c144268ea16ecd86e051c1714585966cfedebc",
+      "mergeSha": "c9d57b9bb1e75009e158f13aea8e1750f560e86d",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-014/completion.json"
     },
     {
       "id": "REF-015",
