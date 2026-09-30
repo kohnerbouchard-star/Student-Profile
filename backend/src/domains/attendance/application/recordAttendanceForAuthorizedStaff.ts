@@ -1,9 +1,6 @@
 import {
   AdminMutationError,
   type AdminMutationIdentity,
-  type AdminMutationRpcClient,
-  executeAdminMutationRpc,
-  readAdminMutationReplay,
 } from "../../../platform/supabase/adminMutation.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
@@ -21,10 +18,13 @@ import {
 } from "../api/attendanceRewardPolicy.ts";
 import {
   derivePlayerCredentialLookupDigest,
-  PLAYER_CREDENTIAL_VERSION,
 } from "../../../security/playerCredentialHashing.ts";
-import { normalizeStudentCode } from "../../players/domain/playerAccessCodes.ts";
 import { normalizePlayerIdentifier } from "../../players/domain/playerIdentifiers.ts";
+import type {
+  AttendancePlayerRecord,
+  AttendanceRecordRepository,
+} from "../contracts/attendanceRecordRepository.ts";
+import { SupabaseAttendanceRecordRepository } from "../infrastructure/supabaseAttendanceRecordRepository.ts";
 
 export type AuthorizedAttendanceOperation = "manual" | "scan";
 
@@ -58,43 +58,9 @@ export interface RecordAttendanceMutationResult {
  */
 export async function recordAttendanceForAuthorizedStaff(
   input: RecordAttendanceMutationInput,
-  serviceClient: AdminMutationRpcClient,
+  repository: AttendanceRecordRepository,
 ): Promise<RecordAttendanceMutationResult> {
-  const mutation = await executeAdminMutationRpc(
-    serviceClient,
-    "admin_record_attendance_v1",
-    {
-      p_game_session_id: input.gameSessionId,
-      p_staff_user_id: input.staffUserId,
-      p_operation: input.operation,
-      p_player_id: input.playerId,
-      p_attendance_date: input.attendanceDate,
-      p_status: input.status,
-      p_clocked_in_at: input.clockedInAt,
-      p_note: input.note,
-      p_reward_amount: input.rewardAmount,
-      p_currency_code: input.currencyCode,
-      p_response_context: input.responseContext,
-      p_request_payload: input.requestPayload,
-      p_idempotency_key: input.identity.idempotencyKey,
-      p_request_id: input.identity.requestId,
-    },
-    {
-      code: "attendance_write_failed",
-      message: "Attendance could not be recorded.",
-    },
-  );
-
-  if (!isRecord(mutation.body.attendance) || !isRecord(mutation.body.context)) {
-    throw attendanceWriteFailed();
-  }
-
-  return {
-    status: mutation.status,
-    replayed: mutation.replayed,
-    attendance: mutation.body.attendance,
-    context: mutation.body.context,
-  };
+  return await repository.record(input);
 }
 
 export interface RecordManualAttendanceForAuthorizedStaffInput {
@@ -117,7 +83,9 @@ export interface RecordManualAttendanceForAuthorizedStaffResult
  */
 export async function recordManualAttendanceForAuthorizedStaff(
   input: RecordManualAttendanceForAuthorizedStaffInput,
-  serviceClient: AdminMutationRpcClient,
+  serviceClient: EdgeSupabaseClient,
+  repository: AttendanceRecordRepository =
+    new SupabaseAttendanceRecordRepository(serviceClient),
 ): Promise<RecordManualAttendanceForAuthorizedStaffResult> {
   const envelope = isRecord(input.body) ? input.body : {};
   const payload = isRecord(envelope.payload) ? envelope.payload : null;
@@ -173,18 +141,12 @@ export async function recordManualAttendanceForAuthorizedStaff(
       note,
     },
     identity: input.identity,
-  }, serviceClient);
+  }, repository);
 
   return { ...result, corrected: true };
 }
 
-interface AttendancePlayerRow {
-  readonly id: string;
-  readonly display_name: string;
-  readonly roster_label: string | null;
-  readonly player_identifier: string | null;
-  readonly status: string;
-}
+type AttendancePlayerRow = AttendancePlayerRecord;
 
 interface AttendanceScanResponseContext {
   readonly timezone: string;
@@ -216,6 +178,7 @@ export interface RecordAttendanceScanForAuthorizedStaffResult {
 }
 
 export interface AttendanceScanApplicationDependencies {
+  readonly repository?: AttendanceRecordRepository;
   readonly now?: () => Date;
   readonly deriveCredentialLookupDigest?:
     typeof derivePlayerCredentialLookupDigest;
@@ -254,15 +217,13 @@ export async function recordAttendanceScanForAuthorizedStaff(
     scanValueLookupDigest,
     deviceTimezone: input.body.deviceTimezone?.trim() || null,
   };
-  const replay = await readAdminMutationReplay(serviceClient, {
+  const repository = dependencies.repository ??
+    new SupabaseAttendanceRecordRepository(serviceClient);
+  const replay = await repository.readScanReplay({
     gameSessionId: input.gameSessionId,
     staffUserId: input.staffUserId,
-    operation: "attendance.scan",
     requestPayload,
     identity: input.identity,
-  }, {
-    code: "attendance_write_failed",
-    message: "Attendance could not be recorded.",
   });
   if (replay) {
     if (!isRecord(replay.body.attendance) || !isRecord(replay.body.context)) {
@@ -283,14 +244,13 @@ export async function recordAttendanceScanForAuthorizedStaff(
       scannedValue,
       normalizedIdentifier,
     )
-    : await readAttendancePlayer(
-      serviceClient,
-      input.gameSessionId,
+    : await repository.readPlayerForScan({
+      gameSessionId: input.gameSessionId,
       scannedValue,
       normalizedIdentifier,
-      scanValueLookupDigest,
-      dependencies.hashValue ?? sha256Hex,
-    );
+      currentLookupDigest: scanValueLookupDigest,
+      hashLegacyValue: dependencies.hashValue ?? sha256Hex,
+    });
 
   if (!player?.id || player.status !== "active") {
     throw new AdminMutationError(
@@ -300,9 +260,9 @@ export async function recordAttendanceScanForAuthorizedStaff(
     );
   }
 
-  const attendanceWindow = await (
-    dependencies.readAttendanceWindow ?? readAttendanceWindow
-  )(serviceClient, input.gameSessionId);
+  const attendanceWindow = dependencies.readAttendanceWindow
+    ? await dependencies.readAttendanceWindow(serviceClient, input.gameSessionId)
+    : await repository.readAttendanceWindow(input.gameSessionId);
   const attendanceConfig = readPlayerAttendanceWindowConfig(attendanceWindow);
   const timezone = readValidTimeZone(
     input.body.deviceTimezone,
@@ -353,7 +313,7 @@ export async function recordAttendanceScanForAuthorizedStaff(
     // RPC boundary. Derived date, status, and reward defaults are not hashed.
     requestPayload,
     identity: input.identity,
-  }, serviceClient);
+  }, repository);
 
   return attendanceScanResult(mutation);
 }
@@ -377,96 +337,6 @@ function attendanceScanResult(
     },
     reward: returnedContext.reward,
   };
-}
-
-async function readAttendancePlayer(
-  serviceClient: EdgeSupabaseClient,
-  gameSessionId: string,
-  scannedValue: string,
-  normalizedIdentifier: string,
-  currentLookupDigest: string,
-  hashValue: typeof sha256Hex,
-): Promise<AttendancePlayerRow | null> {
-  const identifierResponse = await serviceClient
-    .from("players")
-    .select("id,display_name,roster_label,player_identifier,status")
-    .eq("game_session_id", gameSessionId)
-    .eq("player_identifier_normalized", normalizedIdentifier)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (identifierResponse.error) throw attendanceScanFailed();
-  const player = identifierResponse.data as unknown as
-    | AttendancePlayerRow
-    | null;
-  if (player) return player;
-
-  let playerId = await readCredentialPlayerId(
-    serviceClient,
-    gameSessionId,
-    currentLookupDigest,
-    PLAYER_CREDENTIAL_VERSION,
-  );
-  if (!playerId) {
-    const legacyHash = await hashValue(normalizeStudentCode(scannedValue));
-    playerId = await readCredentialPlayerId(
-      serviceClient,
-      gameSessionId,
-      legacyHash,
-      "sha256-v1",
-    );
-  }
-  if (!playerId) return null;
-
-  const playerResponse = await serviceClient
-    .from("players")
-    .select("id,display_name,roster_label,player_identifier,status")
-    .eq("game_session_id", gameSessionId)
-    .eq("id", playerId)
-    .maybeSingle();
-
-  if (playerResponse.error) throw attendanceScanFailed();
-  return (playerResponse.data as unknown as AttendancePlayerRow | null) ?? null;
-}
-
-async function readCredentialPlayerId(
-  serviceClient: EdgeSupabaseClient,
-  gameSessionId: string,
-  lookupDigest: string,
-  credentialVersion: typeof PLAYER_CREDENTIAL_VERSION | "sha256-v1",
-): Promise<string | null> {
-  const response = await serviceClient
-    .from("player_access_credentials")
-    .select("player_id,status,credential_version")
-    .eq("game_session_id", gameSessionId)
-    .eq("normalized_student_code_hash", lookupDigest)
-    .eq("credential_version", credentialVersion)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (response.error) throw attendanceScanFailed();
-  if (response.data === null) return null;
-  const playerId = (response.data as {
-    readonly player_id?: unknown;
-  }).player_id;
-  if (typeof playerId !== "string" || !playerId) {
-    throw attendanceScanFailed();
-  }
-  return playerId;
-}
-
-async function readAttendanceWindow(
-  serviceClient: EdgeSupabaseClient,
-  gameSessionId: string,
-): Promise<unknown> {
-  const response = await serviceClient
-    .from("game_settings")
-    .select("attendance_window")
-    .eq("game_session_id", gameSessionId)
-    .maybeSingle();
-  if (response.error) throw attendanceScanFailed();
-  return (response.data as { readonly attendance_window?: unknown } | null)
-    ?.attendance_window;
 }
 
 function readAttendanceScanResponseContext(
