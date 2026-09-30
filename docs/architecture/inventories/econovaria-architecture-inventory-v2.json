@@ -12,7 +12,7 @@
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 55,
-    "crossDomainDeepImports": 168,
+    "crossDomainDeepImports": 162,
     "browserTransportShimFiles": 25,
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
@@ -1102,42 +1102,6 @@
       {
         "consumer": "backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts",
         "ownerDomain": "marketplace",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.ts",
-        "ownerDomain": "messaging",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.ts",
-        "ownerDomain": "messaging",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/messaging/api/playerMessageThreadLifecycleRoutePaths.ts",
-        "ownerDomain": "messaging",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
-        "ownerDomain": "messaging",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
-        "ownerDomain": "messaging",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts",
-        "ownerDomain": "messaging",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
       },
@@ -3561,7 +3525,7 @@
       },
       {
         "file": "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
-        "lines": 507
+        "lines": 509
       },
       {
         "file": "backend/supabase/functions/admin-api/playerOperations.ts",

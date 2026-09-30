@@ -20,8 +20,7 @@
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-766.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs",
-    ".github/workflows/ref-016-inventory-materialization.yml"
+    "scripts/player-cross-cutting-authority.test.mjs"
   ],
   "requiredFiles": [
     "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
@@ -62,5 +61,5 @@
     "security"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-016/preflight.md",
-  "authorizationNote": "Owner authorizes bounded REF-016 continuation after merged REF-015 audit PR765; REF-015 remains BLOCKED. REF-016b's predeclared temporary publication helper is restricted to materializing the exact reviewed generated inventory blob and must be removed before final qualification. All existing verifier, source/database/browser/connected checks and production-denial flags remain unchanged. No new auth/context behavior, runtime entrypoint, database or production changes."
+  "authorizationNote": "Owner authorizes bounded REF-016 continuation after merged REF-015 audit PR765; REF-015 remains BLOCKED. Eight meaningful source/test/documentation paths plus generated inventory and this exact PR-bound manifest. The existing verifier and its regression tests are locked but unchanged. The predeclared temporary PR766-only publication helper has been removed; no existing workflow is changed. Existing public exports only; no new context/auth behavior, backend package, runtime entrypoint, secret, database or production changes. All applicable source/database/browser/connected checks remain required; this is verification authority, not historical Business ownership or release authorization."
 }
