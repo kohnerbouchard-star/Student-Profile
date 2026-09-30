@@ -44,7 +44,7 @@ export interface AttendanceRecordRepository {
     readonly scannedValue: string;
     readonly normalizedIdentifier: string;
     readonly currentLookupDigest: string;
-    readonly hashLegacyValue: (value: string) => Promise<string>;
+    readonly hashPriorCredentialValue: (value: string) => Promise<string>;
   }): Promise<AttendancePlayerRecord | null>;
 
   readAttendanceWindow(gameSessionId: string): Promise<unknown>;
