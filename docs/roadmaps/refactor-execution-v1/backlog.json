@@ -297,7 +297,7 @@
       "id": "REF-018",
       "title": "Extract Staff Attendance persistence while preserving one reward transaction",
       "file": "tasks/REF-018.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-016"
       ],
@@ -308,7 +308,7 @@
       ],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-018/preflight.md"
     },
     {
       "id": "REF-019",

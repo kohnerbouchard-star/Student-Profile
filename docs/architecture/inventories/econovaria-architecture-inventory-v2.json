@@ -8,15 +8,15 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1250,
+    "sourceFiles": 1252,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
-    "persistenceOutsideInfrastructure": 54,
+    "persistenceOutsideInfrastructure": 53,
     "crossDomainDeepImports": 162,
     "browserTransportShimFiles": 25,
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 100,
+    "oversizedSourceFiles": 99,
     "capabilityStrings": 136
   },
   "domains": [
@@ -52,7 +52,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 10,
+      "sourceFiles": 12,
       "publicBoundaryFiles": []
     },
     {
@@ -506,10 +506,6 @@
         "layer": "api"
       },
       {
-        "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
-        "layer": "application"
-      },
-      {
         "file": "backend/src/domains/auth/api/staffBootstrapHttpHandler.ts",
         "layer": "api"
       },
@@ -721,13 +717,13 @@
         "consumer": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
         "ownerDomain": "attendance",
         "importedDomain": "players",
-        "target": "../../players/domain/playerAccessCodes.ts"
+        "target": "../../players/domain/playerIdentifiers.ts"
       },
       {
-        "consumer": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
+        "consumer": "backend/src/domains/attendance/infrastructure/supabaseAttendanceRecordRepository.ts",
         "ownerDomain": "attendance",
         "importedDomain": "players",
-        "target": "../../players/domain/playerIdentifiers.ts"
+        "target": "../../players/domain/playerAccessCodes.ts"
       },
       {
         "consumer": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts",
@@ -2352,8 +2348,7 @@
       {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
         "markers": [
-          "legacy",
-          "legacyhash"
+          "legacy"
         ]
       },
       {
@@ -3376,10 +3371,6 @@
         "lines": 600
       },
       {
-        "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
-        "lines": 598
-      },
-      {
         "file": "backend/supabase/functions/admin-api/mutationAdapters.ts",
         "lines": 595
       },
@@ -3653,7 +3644,7 @@
       {
         "capability": "attendance.scan",
         "locations": [
-          "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts"
+          "backend/src/domains/attendance/infrastructure/supabaseAttendanceRecordRepository.ts"
         ]
       },
       {
