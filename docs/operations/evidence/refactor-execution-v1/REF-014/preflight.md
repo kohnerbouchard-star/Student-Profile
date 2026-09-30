@@ -1,6 +1,6 @@
 # REF-014 — Settings save/error lifecycle preflight
 
-Status: IN_PROGRESS. Observed main: `68d1890e25c70756ceec63e74a832ffe5e6ad4d8`.
+Status: VERIFIED_COMPLETE (authoritative after merged-main closeout). Observed main: `68d1890e25c70756ceec63e74a832ffe5e6ad4d8`.
 Owner branch: `refactor/ref-014-settings-save-lifecycle`.
 Parent task: REF-014, ARCH-500/ARCH-700. Declared dependency REF-005 is merged and VERIFIED_COMPLETE in the current backlog. REF-013 implementation and closeout are merged. Owner explicitly authorizes starting, finishing and normally merging Task 14 only. No Task 15 or production action is authorized.
 
@@ -40,3 +40,13 @@ Required cases: invalid settings/timezone response, wrong-game/permission denial
 Local Git download currently fails DNS and the available Node/npm versions are not repository-pinned. The read-only qualification job publishes a Git archive and exact SHA/tree metadata for reproducible local source review; complete pinned execution remains CI evidence. Archive only tracked source, never runner credentials or environment secrets.
 
 Protected: backend APIs/schema/RPCs, authentication and cloud configuration, generated Admin bundles, payout/difficulty formulas, form defaults and layout, unrelated Player/create behavior, other open PRs and all release guards. Revert only the bounded source changes if qualification exposes a contract change or unresolved ownership. Stop before REF-015.
+
+## Final qualification and closeout — 2026-09-30
+
+REF-014a merged through PR #763 as `c9d57b9bb1e75009e158f13aea8e1750f560e86d`. Exact tested head: `e9c144268ea16ecd86e051c1714585966cfedebc`; tested and merged tree: `fd6a465b8964b710691dc204b0510e88244b637b`. All 49 exact-head PR workflows and Vercel passed, with no waived checks.
+
+The final Settings qualification artifact `11079290684` has SHA-256 `f445377be2880af68413b1980da94376a26f1f0ce41d9523a0eedbbf77f76a85`. Its logs record 54 Admin mutation UI, 86 Admin V2 and 58 backend game-session tests passing; its browser record proves rejection/retry identity, duplicate suppression and stale-page acknowledgement protection, with zero recorded errors. The tracked-source artifact `11079350479` independently matches the tested SHA/tree.
+
+The previous candidate's delayed-remount timeout is retained in completion evidence. No claim is made that the earlier failed run passed. The final run executed the bounded real-controller completion observation and stale-acknowledgement assertions successfully.
+
+REF-014b updates only this preflight, the task document, the REF-014 backlog entry and `completion.json`; it closes the parent only from merged main. No additional runtime changes, production certification, explicit deployment, live database mutation or REF-015 work are included.

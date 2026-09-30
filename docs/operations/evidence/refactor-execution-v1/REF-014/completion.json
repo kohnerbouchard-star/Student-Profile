@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-014",
+  "status": "VERIFIED_COMPLETE",
+  "scope": "Repository-only convergence of the retained Settings save/error lifecycle; no production runtime certification.",
+  "authorityCondition": "Authoritative only from the merged main copy of this documentation closeout. An unmerged branch copy does not close the task.",
+  "implementationPullRequest": 763,
+  "baseMainSha": "68d1890e25c70756ceec63e74a832ffe5e6ad4d8",
+  "implementationSha": "e9c144268ea16ecd86e051c1714585966cfedebc",
+  "mergeSha": "c9d57b9bb1e75009e158f13aea8e1750f560e86d",
+  "mergeMethod": "squash",
+  "mergeUsedExpectedHeadGuard": true,
+  "mergedAt": "2026-09-30T07:47:13Z",
+  "qualifiedTreeSha": "fd6a465b8964b710691dc204b0510e88244b637b",
+  "observedMergeTreeSha": "fd6a465b8964b710691dc204b0510e88244b637b",
+  "mergeTreeMatchesQualifiedTree": true,
+  "changedImplementationFileCount": 12,
+  "scopeDecomposition": {
+    "runtimeTestQualificationPaths": 8,
+    "evidenceInventoryAuthorityPaths": 4,
+    "runtimeSourceFilesChanged": 3,
+    "record": "docs/operations/evidence/refactor-execution-v1/REF-014/preflight.md"
+  },
+  "qualification": {
+    "headSha": "e9c144268ea16ecd86e051c1714585966cfedebc",
+    "pullRequestWorkflowCount": 49,
+    "completedSuccessfulPullRequestWorkflows": 49,
+    "failedWorkflows": 0,
+    "unfinishedWorkflows": 0,
+    "paginationChecked": true,
+    "allObservedPrWorkflowsPassed": true,
+    "vercelCommitStatus": "success",
+    "unresolvedReviewThreadsObserved": 0,
+    "waivedChecks": [],
+    "workflowRuns": {
+      "REF-014 Settings Qualification": 36673170632,
+      "Repository Quality": 36673170597,
+      "Admin Shell Smoke": 36673170762,
+      "Backend Typecheck": 36673170734,
+      "Admin Browser E2E": 36673170479,
+      "Beta Security Contract": 36673170619,
+      "Runtime Interaction Wiring": 36673170592,
+      "Environment Neutral Browser": 36673170749,
+      "Supply Chain Security": 36673170517,
+      "Player Terminal Verify": 36673170637,
+      "Business Player Store Cutover V2": 36673170530,
+      "business-player-store-fx-final-v2": 36673170692,
+      "business-multicurrency-treasury-v1": 36673170663,
+      "multicurrency-store-funding-v1": 36673170546,
+      "multicurrency-marketplace-funding-v1": 36673170476,
+      "multicurrency-stock-funding-v1": 36673170540,
+      "business-store-sales-convergence-v2": 36673170747,
+      "Database Replay": 36673170606
+    },
+    "runListing": "https://api.github.com/repos/kohnerbouchard-star/Student-Profile/actions/runs?head_sha=e9c144268ea16ecd86e051c1714585966cfedebc&event=pull_request&per_page=50",
+    "runtimeEvidenceLimit": "CI browser fixtures, disposable databases, successful previews and release-contract checks do not certify production."
+  },
+  "acceptanceEvidence": {
+    "workflowRunId": 36673170632,
+    "jobId": 109752378523,
+    "qualificationArtifact": {
+      "id": 11079290684,
+      "sha256": "f445377be2880af68413b1980da94376a26f1f0ce41d9523a0eedbbf77f76a85"
+    },
+    "trackedSourceArtifact": {
+      "id": 11079350479,
+      "sha256": "34df65ef6e15bf9daf3dfe20d66557fb3140e84ed8405b7cb8caedc0f83bd7e6",
+      "sourceSha": "e9c144268ea16ecd86e051c1714585966cfedebc",
+      "treeSha": "fd6a465b8964b710691dc204b0510e88244b637b"
+    },
+    "adminMutationUiTests": {
+      "passed": 54,
+      "failed": 0,
+      "skipped": 0
+    },
+    "adminV2Tests": {
+      "passed": 86,
+      "failed": 0,
+      "skipped": 0
+    },
+    "backendGameSessionTests": {
+      "passed": 58,
+      "failed": 0
+    },
+    "browser": {
+      "record": "settings-disclosure/runtime.json",
+      "recordedMutationAttempts": 8,
+      "rejectedStatuses": [
+        400,
+        403,
+        503
+      ],
+      "samePayloadRetryKeyPreserved": true,
+      "duplicateClickMutations": 1,
+      "stalePageAcknowledgements": 0,
+      "recordedErrors": 0,
+      "draftValuesPreservedOnRejection": true,
+      "nativeInputIdentityAndFocusPreserved": true,
+      "customDisclosurePreserved": true
+    }
+  },
+  "retainedFailureHistory": {
+    "sourceSha": "1ca9a5f77616dd496d7c52299dd3816c8bc0bd0b",
+    "workflowRunId": 36672233906,
+    "artifactId": 11078906128,
+    "failure": "Earlier delayed-response remount browser test timed out.",
+    "resolution": "Final test uses a bounded observation of the real controller consuming the matching mutation key, then verifies no stale acknowledgement. Final exact-head run passed.",
+    "historicalFailureNotRelabeledAsPass": true
+  },
+  "delivered": [
+    "Removed redundant Settings save-error document observation/listeners; retained the required stylesheet bootstrap.",
+    "Bound the existing source save promise to page, route and game lifetime with explicit listener/timer disposal and single-flight handling.",
+    "Preserved verification GET, one PATCH, request body, cookie/CSRF/device/game headers, defaults, formulas and matching-payload retry identity.",
+    "Prevented old successful completions from deleting newer retry keys or acknowledging replacement pages.",
+    "Preserved draft input and explicit errors on rejection; failed or busy saves cannot simultaneously present success.",
+    "Revalidated source/inventory evidence without changing the cross-domain verification guard or waiving any workflow."
+  ],
+  "children": {
+    "REF-014a": {
+      "status": "VERIFIED_COMPLETE",
+      "scope": "Source implementation and exact-head qualification, merged in PR #763"
+    },
+    "REF-014b": {
+      "status": "VERIFIED_COMPLETE",
+      "scope": "Documentation-only merged-main closeout"
+    }
+  },
+  "closeoutPaths": [
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-014.md",
+    "docs/operations/evidence/refactor-execution-v1/REF-014/completion.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-014/preflight.md"
+  ],
+  "backlogPreservation": {
+    "updatedTask": "REF-014",
+    "unchangedOtherTaskCount": 49,
+    "globalFieldsUnchanged": true
+  },
+  "explicitProductionPromotionInvoked": false,
+  "liveDatabaseMutationInvoked": false,
+  "productionCertified": false,
+  "generatedAdminBundleModified": false,
+  "backendSchemaModified": false,
+  "economicFormulasModified": false,
+  "nextTask": "REF-015",
+  "nextTaskStarted": false
+}
