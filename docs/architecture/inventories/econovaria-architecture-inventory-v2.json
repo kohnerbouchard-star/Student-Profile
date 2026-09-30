@@ -8,10 +8,10 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1247,
+    "sourceFiles": 1250,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
-    "persistenceOutsideInfrastructure": 55,
+    "persistenceOutsideInfrastructure": 54,
     "crossDomainDeepImports": 162,
     "browserTransportShimFiles": 25,
     "compatibilityMarkerFiles": 209,
@@ -310,7 +310,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 34,
+      "sourceFiles": 37,
       "publicBoundaryFiles": [
         "backend/src/domains/players/index.ts"
       ]
@@ -555,10 +555,6 @@
       },
       {
         "file": "backend/src/domains/players/api/playerLoginHttpHandler.ts",
-        "layer": "api"
-      },
-      {
-        "file": "backend/src/domains/players/api/playerRosterHttpHandler.ts",
         "layer": "api"
       },
       {
