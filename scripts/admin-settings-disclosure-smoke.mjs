@@ -268,12 +268,15 @@ try {
 
   enterPhase("stale page response");
   await amountControl.fill("13.5");
+  enterPhase("stale request start");
   const beforeStale = ref014Writes.length;
   const savedBeforeStale = await page.evaluate(() => window.__ref014SavedEvents);
   const releaseStale = delayNextResponse();
   await saveControl.click();
   for (let attempt = 0; attempt < 100 && ref014Writes.length === beforeStale; attempt++) await page.waitForTimeout(10);
   if (ref014Writes.length !== beforeStale + 1) throw new Error("REF-014 stale-response fixture did not send one write.");
+  const staleKey = ref014Writes.at(-1).body.idempotencyKey;
+  enterPhase("replace in-flight Settings page");
   await page.evaluate(() => {
     const oldPage = document.querySelector(".admin-terminal-settings-page");
     const replacement = oldPage.cloneNode(true);
@@ -284,10 +287,21 @@ try {
     for (const name of ["aria-busy", "aria-disabled", "data-admin-terminal-api-state", "data-attendance-reward-status", "data-attendance-reward-direct-save"]) button.removeAttribute(name);
     oldPage.replaceWith(replacement);
   });
-  const staleResponse = page.waitForResponse((response) => response.request().method() === "PATCH" && response.url().endsWith("/settings"));
+  enterPhase("release stale Settings response");
   releaseStale();
-  await (await staleResponse).finished();
-  await page.waitForTimeout(200);
+  // Wait for the application to consume the mutation result, not for a
+  // Playwright request-finished event on an intentionally delayed mock route.
+  // The controller completes the matching retry key before its stale UI guard.
+  await page.waitForFunction((key) => {
+    const prefix = "econovaria.admin.attendance-settings-mutation.v1.";
+    return !Object.keys(sessionStorage).some((name) => {
+      if (!name.startsWith(prefix)) return false;
+      try { return JSON.parse(sessionStorage.getItem(name) || "{}").key === key; }
+      catch { return false; }
+    });
+  }, staleKey, { timeout: 10_000 });
+  enterPhase("verify rejected stale acknowledgement");
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   if (await page.evaluate(() => window.__ref014SavedEvents) !== savedBeforeStale ||
       await page.locator(".admin-terminal-settings-save-bar.is-saved").count()) {
     throw new Error("REF-014 old-page response acknowledged the replacement page.");
