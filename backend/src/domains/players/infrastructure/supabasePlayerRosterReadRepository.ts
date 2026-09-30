@@ -5,7 +5,7 @@ import type {
 import { PlayerRosterReadPersistenceError } from "../contracts/playerRosterReadRepository.ts";
 
 interface QueryResponse {
-  readonly data: readonly Record<string, unknown>[] | null;
+  readonly data: unknown[] | null;
   readonly error: unknown | null;
 }
 
@@ -43,7 +43,7 @@ export class SupabasePlayerRosterReadRepository
       throw new PlayerRosterReadPersistenceError();
     }
 
-    const players = playersResponse.data ?? [];
+    const players = (playersResponse.data ?? []).map(requireRow);
     const playerIds = players.map((player) => requireString(player.id));
     const activeCredentialPlayerIds = new Set<string>();
 
@@ -59,7 +59,8 @@ export class SupabasePlayerRosterReadRepository
         throw new PlayerRosterReadPersistenceError();
       }
 
-      for (const credential of credentialResponse.data ?? []) {
+      for (const value of credentialResponse.data ?? []) {
+        const credential = requireRow(value);
         if (typeof credential.player_id === "string") {
           activeCredentialPlayerIds.add(credential.player_id);
         }
@@ -91,4 +92,11 @@ function requireString(value: unknown): string {
 
 function optionalString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
+}
+
+function requireRow(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new PlayerRosterReadPersistenceError();
+  }
+  return value as Record<string, unknown>;
 }
