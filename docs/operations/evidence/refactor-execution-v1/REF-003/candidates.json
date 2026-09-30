@@ -42,18 +42,18 @@
     },
     {
       "path": "admin/settings-save-error-bridge.js",
-      "blobSha": "bd3f7f8577de7b6e37d7490c08d9b04c5a7ff834",
+      "blobSha": "453096926a5d0e897be246e8bd6828541d85af50",
       "disposition": "compatibility_required",
       "owner": "Retained Admin Settings",
       "symbols": ["initEconovariaSettingsSaveErrorBridge"],
-      "reason": "Observes save-state attributes and attendance-save events and reconciles error presentation. This file does not assign fetch.",
+      "reason": "REF-014 retains this loaded bootstrap path only for the final-polish stylesheet. Save/error presentation is now read directly by the Settings presenter from source-controller state; the document-wide observer, animation-frame scheduling and event listeners are removed. No fetch assignment is added.",
       "sourceEvidence": ["admin/index.html", "admin/admin-bootstrap.js", "admin/settings-simplified.js"],
-      "inboundRoots": ["Raw retained Admin HTML -> admin-bootstrap attendance-settings phase -> variable dynamic import"],
-      "consumerAudit": {"HTTP": "DOM/event adapter, not an HTTP handler", "SQL_RPC": "No direct persistence", "jobs": "No scheduled job in this module"},
+      "inboundRoots": ["Serial retained Admin bootstrap; required final-polish stylesheet"],
+      "consumerAudit": {"HTTP": "Stylesheet bootstrap only, not an HTTP handler", "SQL_RPC": "No direct persistence", "jobs": "No scheduled job in this module"},
       "externalUsage": "UNKNOWN; raw retained loading is not evidence of hosted traffic",
-      "replacement": "REF-014 scoped Settings save/error owner; REF-015 must prove equivalent lifecycle first",
+      "replacement": "REF-014 source save/error lifecycle now owns response handling; the retained bootstrap still supplies the required final-polish stylesheet. REF-015 must reconcile its style consumers before retirement",
       "confidence": "High for observed source relationship; no runtime retirement proof",
-      "removalConditions": ["Replace error reconciliation and event/observer ownership", "Verify disposal and retained values after failed saves", "Resolve raw/hosted consumers under retirement policy"],
+      "removalConditions": ["Replace error reconciliation and event/observer ownership", "Verify disposal and retained values after failed saves", "Resolve raw/hosted consumers under retirement policy", "Preserve final-polish stylesheet loading until its remaining consumer is migrated"],
       "safeToDelete": false
     },
     {
@@ -366,21 +366,21 @@
     },
     {
       "path": "admin/attendance-reward-save-controller-v3.js",
-      "blobSha": "0778f3f1fd7f9bd563b3fd58f979e9b5488dc81e",
+      "blobSha": "415399df52b4d2833361d2b3ac51cf1005c6d1ce",
       "disposition": "compatibility_required",
       "owner": "Retained Admin Attendance save controller",
       "symbols": ["EconovariaAttendanceRewardSaveController", "saveAttendanceOnly", "settingsMutation", "contextIsCurrent", "combinedCoreSavePending"],
       "referenceTerms": ["econovaria:attendance-reward-saved", "econovaria:settings-context-changed"],
-      "reason": "REF-012 bootstrap loads the explicit request adapter before this controller. Attendance-only saving invokes that adapter for verification GET and one PATCH; core edits retain the generated combined save. Payload-bound retry identity and prior generation checks remain, with a new post-verification context check before any mutation.",
+      "reason": "REF-014 keeps the existing explicit adapter, verification GET, one PATCH and generated combined-save delegation. Promise success/failure is bound to the Settings page, active route and game generation. Named listeners and the completion timer have an idempotent disposer; reinstalling removes the previous owner. Matching-key cleanup cannot discard a newer payload retry identity.",
       "sourceEvidence": ["admin/admin-bootstrap.js", "admin/attendance-reward-settings-route-bridge-v2.js", "admin/attendance-reward-settings-v4.js", "admin/settings-save-error-bridge.js"],
-      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"3a5078b7ade8949c0b3d8eae1742935a666ce712", "admin/attendance-reward-settings-route-bridge-v2.js":"997c57a13c2fed2aa5b138c57e7714b1e499efa0", "admin/attendance-reward-settings-v4.js":"ac692d46dc972bc85ada7e9fa3397d3a5935886b", "admin/settings-save-error-bridge.js":"bd3f7f8577de7b6e37d7490c08d9b04c5a7ff834"},
+      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"3a5078b7ade8949c0b3d8eae1742935a666ce712", "admin/attendance-reward-settings-route-bridge-v2.js":"997c57a13c2fed2aa5b138c57e7714b1e499efa0", "admin/attendance-reward-settings-v4.js":"ac692d46dc972bc85ada7e9fa3397d3a5935886b", "admin/settings-save-error-bridge.js":"453096926a5d0e897be246e8bd6828541d85af50"},
       "inboundRoots": ["Raw HTML -> serial attendance-settings bootstrap phase", "Captured save-settings clicks when Attendance is dirty and core settings are not dirty", "Settings-context-changed and combined attendance-reward-saved events"],
-      "consumerAudit": {"HTTP":"Verification GET then PATCH /api/admin/games/:gameId/settings through the explicit authenticated adapter; the prior captured-transport fallback remains only when the adapter is absent", "SQL_RPC":"No direct SQL; authoritative Settings mutation remains downstream", "jobs":"900ms status cleanup timer and in-flight promise identity", "dynamic_HTML_build":"Dynamic bootstrap and event consumers, not an independent default V2 controller"},
-      "sourceTrace": ["settingsMutation reuses a valid key for identical serialized payload in memory/session storage; both X-Idempotency-Key and X-Request-Id use that key and the body also carries it", "Only successful PATCH clears retry memory/storage; failure retains retry identity", "Current-generation success emits attendance-reward-saved before completed state; generation mismatch suppresses owned UI/event updates", "Generation checking is not request cancellation. REF-012 now rechecks the context after verification GET and before reading the draft or issuing PATCH, and exposes the context identity for combined-save acknowledgement", "No exported whole-module disposal; saveFlight prevents simultaneous direct-save work"],
+      "consumerAudit": {"HTTP":"Verification GET then PATCH /api/admin/games/:gameId/settings through the explicit authenticated adapter; the prior captured-transport fallback remains only when the adapter is absent", "SQL_RPC":"No direct SQL; authoritative Settings mutation remains downstream", "jobs":"Owned 900ms cleanup timer, page/route/game generation and in-flight promise identity", "dynamic_HTML_build":"Dynamic bootstrap and event consumers, not an independent default V2 controller"},
+      "sourceTrace": ["settingsMutation reuses a valid key for identical serialized payload in memory/session storage; both X-Idempotency-Key and X-Request-Id use that key and the body also carries it", "Only successful PATCH clears its matching retry key; failure retains identity and an old completion cannot erase a newer key", "Current-generation success emits attendance-reward-saved before completed state; generation mismatch suppresses owned UI/event updates", "Generation checking is not request cancellation. REF-012 now rechecks the context after verification GET and before reading the draft or issuing PATCH, and exposes the context identity for combined-save acknowledgement", "An exported idempotent disposer removes all owned listeners and the completion timer; page/route changes invalidate the old flight while permitting a new context to save"],
       "externalUsage": "UNKNOWN; no live save, browser remount or quiet window executed",
       "replacement": "REF-012 explicit request adapter now owns transport preparation/response observation; this controller remains the direct-save owner and REF-015 still requires consumer-retirement evidence",
       "confidence": "High for complete controller and source ordering; no browser or economic execution claim",
-      "removalConditions": ["Preserve one PATCH plus verification GET for attendance-only saves", "Preserve payload/key identity across retry, event ordering and stale UI suppression", "Do not turn generation guarding into a claim of request cancellation", "Keep combined-save delegation and error observer consumers accounted for"],
+      "removalConditions": ["Preserve one PATCH plus verification GET for attendance-only saves", "Preserve payload/key identity across retry, event ordering and stale UI suppression", "Do not turn generation guarding into a claim of request cancellation", "Keep generated combined-save delegation and explicit Settings error presentation accounted for"],
       "safeToDelete": false
     },
     {
@@ -392,7 +392,7 @@
       "referenceTerms": ["econovaria:attendance-reward-saved"],
       "reason": "Owns per-game load sequence, draft/persisted attendance state, validation, card rendering and successful-save acknowledgement. Its getters are consumed by the bridge/save controller; removing the fetch wrapper alone would not retire this state and event owner.",
       "sourceEvidence": ["admin/admin-bootstrap.js", "admin/attendance-reward-save-controller-v3.js", "admin/attendance-reward-settings-route-bridge-v2.js"],
-      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"3a5078b7ade8949c0b3d8eae1742935a666ce712", "admin/attendance-reward-save-controller-v3.js":"0778f3f1fd7f9bd563b3fd58f979e9b5488dc81e", "admin/attendance-reward-settings-route-bridge-v2.js":"997c57a13c2fed2aa5b138c57e7714b1e499efa0"},
+      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"3a5078b7ade8949c0b3d8eae1742935a666ce712", "admin/attendance-reward-save-controller-v3.js":"415399df52b4d2833361d2b3ac51cf1005c6d1ce", "admin/attendance-reward-settings-route-bridge-v2.js":"997c57a13c2fed2aa5b138c57e7714b1e499efa0"},
       "inboundRoots": ["Serial attendance-settings bootstrap after save controller", "Save-controller and request-bridge global getters", "Attendance-reward-saved event and DOM mutation/render scheduling"],
       "consumerAudit": {"HTTP":"GET /api/admin/games/:gameId/settings through captured transport; this module sends no mutation", "SQL_RPC":"None directly; display state is not reward issuance", "jobs":"Animation-frame render queue and DOM observer", "dynamic_HTML_build":"Dynamic retained bootstrap, dynamically inserted stylesheet/card and global getters"},
       "sourceTrace": ["loadSequence and selected-game comparison reject stale load results; load failure sets loaded plus loadError and keeps normalized state", "acknowledgeSaved accepts only matching state.gameId, clears draft/dirty state and renders saved values", "normalizedWindow forces player_country currency mode and difficulty adjustment true; this behavior is preserved, not redesigned", "Observer/listener cleanup is not exported; loaded/error state does not prove authoritative settings verification"],
@@ -411,7 +411,7 @@
       "referenceTerms": ["econovaria:admin-settings-mounted", "econovaria:admin-request-lifecycle", "econovaria:settings-context-changed", "econovaria:attendance-reward-saved"],
       "reason": "Converges navigation, completed/failed/cancelled Settings reads, context changes and Attendance saves into a bounded frame-settle lifecycle. It waits for a Settings page, loaded Attendance card and simplified controller, then publishes a bubbling mounted event. This is a live source event bridge, not merely an obsolete filename.",
       "sourceEvidence": ["admin/admin-bootstrap.js", "admin/attendance-reward-save-controller-v3.js", "admin/attendance-reward-settings-v4.js"],
-      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"3a5078b7ade8949c0b3d8eae1742935a666ce712", "admin/attendance-reward-save-controller-v3.js":"0778f3f1fd7f9bd563b3fd58f979e9b5488dc81e", "admin/attendance-reward-settings-v4.js":"ac692d46dc972bc85ada7e9fa3397d3a5935886b"},
+      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"3a5078b7ade8949c0b3d8eae1742935a666ce712", "admin/attendance-reward-save-controller-v3.js":"415399df52b4d2833361d2b3ac51cf1005c6d1ce", "admin/attendance-reward-settings-v4.js":"ac692d46dc972bc85ada7e9fa3397d3a5935886b"},
       "inboundRoots": ["Raw HTML -> serial bootstrap after settings-simplified and Attendance state", "Captured Settings navigation click", "Document request-lifecycle/context/save events, window load and explicit reconcile helper"],
       "consumerAudit": {"HTTP":"Consumes pageRead request-lifecycle metadata; sends no HTTP request", "SQL_RPC":"No persistence", "jobs":"At most 120 requestAnimationFrame settle iterations per generation", "dynamic_HTML_build":"Dynamic retained module; event-only consumers are enumerated separately from filename references"},
       "sourceTrace": ["A newer reconcile generation invalidates older settle callbacks", "After controller.reconcile, the next frame checks generation and page.isConnected before refresh and bubbling mounted event", "The loaded Attendance attribute may coexist with loadError, so readiness is a UI lifecycle signal, not a successful server-read certificate", "No full listener/timer disposer is exported; do not infer removal from absence of fetch assignment"],
@@ -466,6 +466,19 @@
       "previousRegisterBlobSha": "307ebfd4d911ce7ae38a949c998a356896b5413d",
       "evidence": "docs/operations/evidence/refactor-execution-v1/REF-013/preflight.md",
       "review": "Refresh only the Player credential bridge review, Player identity UI review, and the two supporting bridge blob bindings after exact REF-013 source review. Existing-player reset ownership moved from EconovariaPlayerAccessCodeBridge.updatePlayerIdentity into the retained Player identity UI owner using EconovariaAdminAuth.request. The bridge remains compatibility_required for create-player interception, its one-time credential event and conditional create follow-up reset. The identity module remains compatibility_required and now has bounded reset scope disposal and stale-game response rejection. Preserve all safeToDelete=false decisions, unrelated reviews, historical measurement identities and deletion gates. This is hash-bound evidence maintenance, not REF-015 retirement approval or a quiet-window claim."
+    },
+    {
+      "task": "REF-014",
+      "pullRequest": 763,
+      "baseSourceInspectionSha": "094b0994aa25e4f5511e9df58546ae242134aab1",
+      "previousRegisterBlobSha": "55b4c199e462e1b983957be7e53ebec4029768cb",
+      "reviewedSourceBlobs": {
+        "admin/settings-save-error-bridge.js": "453096926a5d0e897be246e8bd6828541d85af50",
+        "admin/attendance-reward-save-controller-v3.js": "415399df52b4d2833361d2b3ac51cf1005c6d1ce",
+        "admin/settings-simplified.js": "6a1aefbc14fd06f465071e9a1f62d4feb4fed3a7"
+      },
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-014/preflight.md",
+      "review": "Rebind only the Settings error bootstrap and direct save-controller primary/supporting identities after full source review. The old filename remains loaded for its stylesheet; redundant document observation is removed. Direct promise callbacks retain requests, defaults, validation, retry and CSRF ownership while adding page/route lifetime rejection and named listener disposal. The Settings presenter reads the explicit error marker and never styles failure as success. Preserve all unrelated reviews, historical measurements, safeToDelete=false decisions and retirement guards. Baseline pinned CI passed; changed-source acceptance remains dependent on final exact-head qualification. No quiet-window or live deployment claim."
     }
   ]
 }

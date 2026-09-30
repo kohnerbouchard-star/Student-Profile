@@ -13,7 +13,7 @@
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 55,
     "crossDomainDeepImports": 168,
-    "browserTransportShimFiles": 26,
+    "browserTransportShimFiles": 25,
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 100,
@@ -1817,12 +1817,6 @@
         ]
       },
       {
-        "file": "admin/settings-save-error-bridge.js",
-        "patterns": [
-          "MutationObserver"
-        ]
-      },
-      {
         "file": "admin/settings-simplified.js",
         "patterns": [
           "MutationObserver"
@@ -3362,6 +3356,10 @@
         "lines": 641
       },
       {
+        "file": "admin/settings-simplified.js",
+        "lines": 640
+      },
+      {
         "file": "backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.ts",
         "lines": 639
       },
@@ -3372,10 +3370,6 @@
       {
         "file": "admin/v2/src/app.js",
         "lines": 638
-      },
-      {
-        "file": "admin/settings-simplified.js",
-        "lines": 637
       },
       {
         "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.ts",

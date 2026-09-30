@@ -425,11 +425,12 @@
     const count = baselineReady ? changedCount(page) : 0;
     const dirty = baselineReady && (count > 0 || attendanceDirty());
     const busy = button?.hasAttribute("aria-busy") === true;
-    const failed = button?.getAttribute("data-admin-terminal-api-state") === "error";
+    const failed = !busy && (Boolean(text(button?.dataset.attendanceRewardError)) ||
+      button?.getAttribute("data-admin-terminal-api-state") === "error");
     const saved = Date.now() < state.savedUntil;
 
     page.classList.toggle("has-unsaved-settings", dirty);
-    panel.classList.toggle("is-saved", saved && !dirty);
+    panel.classList.toggle("is-saved", saved && !dirty && !failed && !busy);
     panel.classList.toggle("is-error", failed);
     panel.hidden = !(state.disclosureOpen || dirty || busy || failed || saved);
 
@@ -513,7 +514,9 @@
     const gameId = text(detail?.gameId);
     if (gameId && gameId !== state.gameId) return;
     const page = settingsPage();
-    if (!(page instanceof HTMLElement)) return;
+    const selected = window.EconovariaAdminGameSelection?.read?.();
+    if (!(page instanceof HTMLElement) || page !== state.page ||
+        (selected && gameId && selected !== gameId)) return;
     captureBaseline(page);
     state.savedUntil = Date.now() + 1800;
     window.clearTimeout(state.savedTimer);

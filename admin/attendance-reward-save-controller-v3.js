@@ -1,6 +1,10 @@
 (function initEconovariaAttendanceRewardSaveControllerV3() {
   "use strict";
 
+  const previousController = window.EconovariaAttendanceRewardSaveController;
+  previousController?.dispose?.();
+  const previousGeneration = Number.parseInt(previousController?.getContextIdentity?.() || "-1", 10);
+  const PAGE_SELECTOR = ".admin-terminal-settings-page";
   const SAVE_SELECTOR = '[data-admin-terminal-action="save-settings"]';
   const MUTATION_KEY_PREFIX = "econovaria.admin.attendance-settings-mutation.v1";
   const delegatedFetch = window.fetch.bind(window);
@@ -13,8 +17,13 @@
   const coreDirtyKeys = new Set();
   const mutationMemory = new Map();
   let dirtyGameId = "";
-  let contextGeneration = 0;
+  let contextGeneration = Number.isFinite(previousGeneration) ? previousGeneration + 1 : 0;
   let saveFlight = null;
+  let saveFlightGeneration = -1;
+  let contextPage = document.querySelector(PAGE_SELECTOR);
+  let routeActive = true;
+  let disposed = false;
+  let savedTimer = 0;
 
   function text(value) {
     return String(value ?? "").trim();
@@ -59,11 +68,12 @@
     return { key, storageKey };
   }
 
-  function completeSettingsMutation(storageKey) {
+  function completeSettingsMutation(storageKey, key) {
     if (!storageKey) return;
-    mutationMemory.delete(storageKey);
+    if (mutationMemory.get(storageKey)?.key === key) mutationMemory.delete(storageKey);
     try {
-      window.sessionStorage.removeItem(storageKey);
+      const entry = object(JSON.parse(window.sessionStorage.getItem(storageKey) || "{}"));
+      if (entry.key === key) window.sessionStorage.removeItem(storageKey);
     } catch (_) {}
   }
 
@@ -210,16 +220,33 @@
     window.EconovariaSimplifiedSettings?.refresh?.();
   }
 
+  function synchronizePageContext() {
+    const page = document.querySelector(PAGE_SELECTOR);
+    if (page !== contextPage) {
+      contextPage = page;
+      contextGeneration += 1;
+      window.clearTimeout(savedTimer);
+    }
+  }
+
   function contextIsCurrent(gameId, generation) {
-    return generation === contextGeneration && selectedGameId() === gameId;
+    synchronizePageContext();
+    const selection = window.EconovariaAdminGameSelection;
+    return !disposed && routeActive && contextPage?.isConnected === true &&
+      generation === contextGeneration && selectedGameId() === gameId &&
+      (typeof selection?.read !== "function" || selection.read() === gameId);
   }
 
   async function saveAttendanceOnly(button) {
-    if (saveFlight) return saveFlight;
+    synchronizePageContext();
+    if (saveFlight && saveFlightGeneration === contextGeneration) return saveFlight;
     const gameId = selectedGameId();
     if (!gameId) throw new Error("active_game_required");
     const generation = contextGeneration;
+    if (!contextIsCurrent(gameId, generation) ||
+        button.closest(PAGE_SELECTOR) !== contextPage) return null;
 
+    window.clearTimeout(savedTimer);
     setSaveState(button, "processing", "Saving game settings");
     const flight = (async () => {
       const settingsResponse = await attendanceRequest(
@@ -255,10 +282,11 @@
         const payload = await response.clone().json().catch(() => ({}));
         throw new Error(text(payload.message || payload.error?.message) || "Game settings could not be saved.");
       }
-      completeSettingsMutation(mutation.storageKey);
+      completeSettingsMutation(mutation.storageKey, mutation.key);
       return { response, attendanceWindow, body, gameId };
     })();
     saveFlight = flight;
+    saveFlightGeneration = generation;
 
     try {
       const result = await flight;
@@ -275,7 +303,8 @@
         },
       }));
       setSaveState(button, "completed", "Game settings saved");
-      window.setTimeout(() => {
+      window.clearTimeout(savedTimer);
+      savedTimer = window.setTimeout(() => {
         if (!contextIsCurrent(gameId, generation) || attendanceDirty()) return;
         button.removeAttribute("data-admin-terminal-api-state");
         button.removeAttribute("data-attendance-reward-status");
@@ -298,32 +327,61 @@
       ? event.target.closest("[data-game-setting-key]")
       : null;
     const key = control?.getAttribute("data-game-setting-key");
-    if (!key) return;
+    if (!key || disposed || !control.closest(PAGE_SELECTOR)) return;
+    synchronizePageContext();
     resetDirtyKeysForGame(selectedGameId());
     coreDirtyKeys.add(key);
   }
 
-  document.addEventListener("input", markCoreEdit, true);
-  document.addEventListener("change", markCoreEdit, true);
-
-  document.addEventListener("econovaria:settings-context-changed", (event) => {
+  function contextChanged(event) {
     const detail = event instanceof CustomEvent ? event.detail : null;
     contextGeneration += 1;
+    window.clearTimeout(savedTimer);
+    synchronizePageContext();
     dirtyGameId = text(detail?.gameId) || selectedGameId();
     coreDirtyKeys.clear();
     clearAttendanceButtonState();
-  });
+  }
 
-  document.addEventListener("econovaria:attendance-reward-saved", (event) => {
+  function attendanceSaved(event) {
     const detail = event instanceof CustomEvent ? event.detail : null;
-    if (detail?.combined === true) coreDirtyKeys.clear();
-  });
+    if (disposed || !routeActive || detail?.gameId !== selectedGameId()) return;
+    if (detail?.combined === true) {
+      coreDirtyKeys.clear();
+      clearAttendanceButtonState();
+    }
+  }
 
-  document.addEventListener("click", (event) => {
-    const button = event.target instanceof Element
-      ? event.target.closest(SAVE_SELECTOR)
-      : null;
-    if (!(button instanceof HTMLButtonElement) || !attendanceDirty()) return;
+  function settingsMounted(event) {
+    const page = document.querySelector(PAGE_SELECTOR);
+    if (event.target !== page || !page?.isConnected) return;
+    synchronizePageContext();
+    routeActive = true;
+  }
+
+  function handleClick(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    const section = target?.closest("[data-admin-section]");
+    if (section) {
+      contextGeneration += 1;
+      window.clearTimeout(savedTimer);
+      routeActive = section.getAttribute("data-admin-section") === "Settings";
+      if (!routeActive) coreDirtyKeys.clear();
+    }
+    const button = target?.closest(SAVE_SELECTOR);
+    if (!(button instanceof HTMLButtonElement) ||
+        !button.closest(PAGE_SELECTOR) || !attendanceDirty()) return;
+    synchronizePageContext();
+    if (!contextIsCurrent(selectedGameId(), contextGeneration)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    if (saveFlight && saveFlightGeneration === contextGeneration) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
     if (!validateAttendance()) {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -336,12 +394,32 @@
     void saveAttendanceOnly(button).catch((error) => {
       console.error(error instanceof Error ? error.message : String(error));
     });
-  }, true);
+  }
+
+  const listeners = [
+    ["input", markCoreEdit, true],
+    ["change", markCoreEdit, true],
+    ["econovaria:settings-context-changed", contextChanged, false],
+    ["econovaria:attendance-reward-saved", attendanceSaved, false],
+    ["econovaria:admin-settings-mounted", settingsMounted, false],
+    ["click", handleClick, true],
+  ];
+  for (const args of listeners) document.addEventListener(...args);
 
   window.EconovariaAttendanceRewardSaveController = {
     attendanceDirty,
-    getContextIdentity: () => `${contextGeneration}:${selectedGameId()}`,
+    getContextIdentity() {
+      synchronizePageContext();
+      return `${contextGeneration}:${selectedGameId()}`;
+    },
     readCoreSettings,
     combinedCoreSavePending,
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      contextGeneration += 1;
+      window.clearTimeout(savedTimer);
+      for (const args of listeners) document.removeEventListener(...args);
+    },
   };
 })();

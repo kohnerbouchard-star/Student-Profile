@@ -48,13 +48,15 @@ test("direct attendance-settings save binds a stable key to its payload", async 
   assert.match(source, /mutationMemory\.get\(storageKey\)/);
   assert.match(source, /mutationMemory\.delete\(storageKey\)/);
   assert.match(source, /existing\.payload === payload/);
+  assert.match(source, /mutationMemory\.get\(storageKey\)\?\.key === key/);
+  assert.match(source, /if \(entry\.key === key\) window\.sessionStorage\.removeItem\(storageKey\)/);
   assert.match(source, /sessionStorage\.setItem\(storageKey, JSON\.stringify\(\{ key, payload \}\)\)/);
   assert.match(source, /"X-Idempotency-Key": mutation\.key/);
   assert.match(source, /"X-Request-Id": mutation\.key/);
   assert.match(source, /idempotencyKey: mutation\.key/);
-  assert.match(source, /if \(!response\.ok\)[\s\S]+completeSettingsMutation\(mutation\.storageKey\)/);
+  assert.match(source, /if \(!response\.ok\)[\s\S]+completeSettingsMutation\(mutation\.storageKey, mutation\.key\)/);
   assert.ok(
-    source.lastIndexOf("completeSettingsMutation(mutation.storageKey)") >
+    source.lastIndexOf("completeSettingsMutation(mutation.storageKey, mutation.key)") >
       source.lastIndexOf("if (!response.ok)"),
   );
 });
