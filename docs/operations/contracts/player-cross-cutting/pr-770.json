@@ -36,6 +36,7 @@
     "player-terminal-verify",
     "player-edge-trusted-ip-entrypoint-contract",
     "player-production-secret-provision-contract",
+    "player-api-read-resilience",
     "business-player-store-fx-final-v2-source",
     "business-player-store-fx-final-v2-database",
     "business-player-store-fx-final-v2-player-browser",
