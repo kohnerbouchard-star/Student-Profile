@@ -11,8 +11,10 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
-import { resolvePlayerRequestScope } from "../../players/api/playerRequestScope.ts";
+import {
+  resolveActivePlayerSession,
+  resolvePlayerRequestScope,
+} from "../../players/index.ts";
 import type { PlayerMessageThreadLifecycleRoute } from "./playerMessageThreadLifecycleRoutePaths.ts";
 
 interface RpcError {
