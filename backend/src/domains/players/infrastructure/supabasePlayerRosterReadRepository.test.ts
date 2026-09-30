@@ -1,5 +1,5 @@
 declare const Deno: {
-  Deno.test(name: string, run: () => void | Promise<void>): void;
+  test(name: string, run: () => void | Promise<void>): void;
 };
 
 function assert(condition: unknown, message = "assertion failed"): asserts condition {
@@ -25,18 +25,18 @@ import { PlayerRosterReadPersistenceError } from "../contracts/playerRosterReadR
 type Row = Record<string, unknown>;
 interface PlannedResponse {
   readonly table: string;
-  readonly data?: readonly Row[];
+  readonly data?: Row[];
   readonly error?: unknown;
 }
 
-class FakeFilter implements PromiseLike<{ data: readonly Row[] | null; error: unknown | null }> {
+class FakeFilter implements PromiseLike<{ data: unknown[] | null; error: unknown | null }> {
   readonly calls: Array<readonly [string, ...unknown[]]> = [];
   constructor(private readonly response: PlannedResponse) {}
   eq(column: string, value: unknown) { this.calls.push(["eq", column, value]); return this; }
   in(column: string, values: readonly unknown[]) { this.calls.push(["in", column, [...values]]); return this; }
   order(column: string, options?: { readonly ascending?: boolean }) { this.calls.push(["order", column, options]); return this; }
-  then<TResult1 = { data: readonly Row[] | null; error: unknown | null }, TResult2 = never>(
-    onfulfilled?: ((value: { data: readonly Row[] | null; error: unknown | null }) => TResult1 | PromiseLike<TResult1>) | null,
+  then<TResult1 = { data: unknown[] | null; error: unknown | null }, TResult2 = never>(
+    onfulfilled?: ((value: { data: unknown[] | null; error: unknown | null }) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     return Promise.resolve({ data: this.response.data ?? [], error: this.response.error ?? null }).then(onfulfilled, onrejected);
