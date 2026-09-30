@@ -2,6 +2,16 @@ import { createQualityHarness, BASE_URL } from "./admin-quality-smoke-fixture.mj
 
 const harness = await createQualityHarness("settings-disclosure");
 const { page, errors, capture, finish } = harness;
+page.setDefaultTimeout(10_000);
+page.setDefaultNavigationTimeout(30_000);
+let phase = "initial page load";
+const releases = new Set();
+const enterPhase = (value) => { phase = value; console.log(`Settings browser phase: ${phase}`); };
+const deadline = setTimeout(() => {
+  console.error(`Settings browser exceeded its bounded execution window during ${phase}.`);
+  process.exit(1);
+}, 120_000);
+deadline.unref();
 
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
@@ -169,6 +179,7 @@ try {
   }, null, { timeout: 5_000 });
 
   // Exercise the source-owned save promise, not an alternative test controller.
+  enterPhase("fresh save lifecycle page");
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
   await page.getByRole("button", { name: "Settings", exact: true }).click();
@@ -210,6 +221,7 @@ try {
     });
   });
   for (const [index, status] of [400, 403, 503].entries()) {
+    enterPhase(`denial ${status}`);
     const value = String(9 + index);
     await amountControl.fill(value);
     responseStatus = status;
@@ -225,6 +237,7 @@ try {
     }
     const failedKey = ref014Writes.at(-1).body.idempotencyKey;
     responseStatus = 200;
+    enterPhase(`retry after ${status}`);
     await saveControl.click();
     await page.waitForFunction(() => document.querySelector("[data-settings-save-status]")?.textContent === "Settings saved");
     if (ref014Writes.at(-1).body.idempotencyKey !== failedKey) {
@@ -234,8 +247,11 @@ try {
   function delayNextResponse() {
     let release;
     delayedResponse = { promise: new Promise((resolve) => { release = resolve; }) };
-    return release;
+    const releaseOnce = () => { releases.delete(releaseOnce); release(); };
+    releases.add(releaseOnce);
+    return releaseOnce;
   }
+  enterPhase("duplicate-click suppression");
   await amountControl.fill("12.5");
   const beforeDouble = ref014Writes.length;
   const releaseDouble = delayNextResponse();
@@ -250,6 +266,7 @@ try {
   releaseDouble();
   await page.waitForFunction(() => document.querySelector("[data-settings-save-status]")?.textContent === "Settings saved");
 
+  enterPhase("stale page response");
   await amountControl.fill("13.5");
   const beforeStale = ref014Writes.length;
   const savedBeforeStale = await page.evaluate(() => window.__ref014SavedEvents);
@@ -275,13 +292,17 @@ try {
       await page.locator(".admin-terminal-settings-save-bar.is-saved").count()) {
     throw new Error("REF-014 old-page response acknowledged the replacement page.");
   }
+  enterPhase("final diagnostics");
   await capture("settings-disclosure-persistence");
   if (errors.length) throw new Error(errors[0]);
   console.log("Shared Settings preserves native events, focus, save state, disclosure, and domain boundaries.");
   await finish({ afterOption, duringNumericEdit, ref014Writes, errors });
+  clearTimeout(deadline);
 } catch (error) {
-  await capture("settings-disclosure-failure").catch(() => {});
-  await finish({ failure: error.stack || error.message || String(error) });
-  console.error(error.stack || error.message || String(error));
+  console.error(`Settings browser failure during ${phase}:`, error.stack || error.message || String(error));
+  for (const release of [...releases]) release();
+  const bounded = (operation) => Promise.race([operation, new Promise((resolve) => setTimeout(resolve, 5000))]);
+  await bounded(capture("settings-disclosure-failure").catch(() => {}));
+  await bounded(finish({ phase, failure: error.stack || error.message || String(error) }).catch(() => {}));
   process.exitCode = 1;
 }
