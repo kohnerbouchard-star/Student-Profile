@@ -1,4 +1,5 @@
 import {
+  AdminMutationError,
   executeAdminMutationRpc,
   readAdminMutationReplay,
 } from "../../../platform/supabase/adminMutation.ts";
@@ -170,10 +171,18 @@ function attendanceWriteFallback() {
   } as const;
 }
 
-function attendanceScanFailed(): Error {
-  return new Error("ATTENDANCE_SCAN_PERSISTENCE_FAILED");
+function attendanceScanFailed(): AdminMutationError {
+  return new AdminMutationError(
+    "attendance_scan_failed",
+    "Attendance scan failed.",
+    500,
+  );
 }
 
-function attendanceWriteFailed(): Error {
-  return new Error("ATTENDANCE_WRITE_PERSISTENCE_FAILED");
+function attendanceWriteFailed(): AdminMutationError {
+  return new AdminMutationError(
+    "attendance_write_failed",
+    "Attendance could not be recorded.",
+    500,
+  );
 }
