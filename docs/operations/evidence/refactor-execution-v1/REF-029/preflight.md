@@ -104,3 +104,17 @@ main's new workflow asked the older head for the not-yet-inherited REF-024 scrip
 The integration includes that already-reviewed script/workflow unchanged, and
 requires fresh combined-head CI. Historical pre-integration passes do not qualify
 the new head. No workflow repair or test weakening was made in REF-029.
+
+Subsequent REF-026 verification-only closeout main
+`87bb58889c4412db023c3ccf858b116630bf77b0` was integrated normally at the
+parent's direction before final merge. Its three documentation changes are
+preserved; executable tree and the REF-029 extraction are unchanged. Inventory
+regeneration remains identical. Prior candidate `7809fd1488085e675f7ce3e164cca0926e2f54b8`
+passed Backend typecheck/full smoke (`36831044952`), REF-009 reward qualification
+(`36831045016`) and combined REF-018/022/023/024 database/race qualification
+(`36831044841`). The reward archive `11147019512` was downloaded and its SHA256
+verified as `00c8275f2361fba054b0002f636eb4d795e21f4fca8e55c1561309fc50f9e898`:
+198-table snapshot, replay/conflict, rollback/retry, denied/wrong-association
+no-effects and two observed concurrent waiters all pass; production untouched.
+Independent integration review found no defect and confirmed all eight authorized
+paths. Final documentation-combined candidate still requires its own fresh CI.

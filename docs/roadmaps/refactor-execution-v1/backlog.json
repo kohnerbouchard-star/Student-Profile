@@ -425,7 +425,7 @@
       "id": "REF-026",
       "title": "Remove Store-handler persistence without replacing purchase settlement",
       "file": "tasks/REF-026.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-023",
         "REF-024"
@@ -433,9 +433,9 @@
       "risk": "R3",
       "architectureMapping": "ARCH-202/ARCH-300",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "488bc9051dfa0e053f7c4314921617f399763d6d",
+      "mergeSha": "488bc9051dfa0e053f7c4314921617f399763d6d",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-026/preflight.md"
     },
     {
       "id": "REF-027",
