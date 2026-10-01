@@ -33,3 +33,13 @@ The owner requested a small roadmap add-on to resolve the remaining blockers and
 This request authorizes publication of the plan/options, not adoption of its recommendations, implementation, a merge of existing runtime/release PRs, cloud changes or production promotion. No architecture or lending/Markets/retirement policy is selected here. The existing modular-monolith baseline remains unchanged. Each package requires fresh ownership and scope acceptance; the decision-dependent packages also require the recorded owner selection.
 
 The historical REF-001 material above is preserved. The 50-task manifest, all original dependencies/statuses, global beta/context ledger and release authorities are unchanged. No downstream task is unblocked by adding this entry. Recommended first repair scopes are the release-rehearsal prerequisite for REF-032 and the Admin browser baseline for REF-043; original acceptance remains mandatory.
+
+## Owner selection update — REF-UNBLOCK-001 (2026-10-02)
+
+**Decision status:** D1-A APPROVED; D2-B APPROVED; D4-A APPROVED; D3 PENDING. **Work status:** PLANNED; this commit records choices, not runtime implementation.
+
+Kohner Bouchard explicitly instructed “Do these” for the small shared freshness coordinator, explicit personal/business borrowing, and one-responsibility-at-a-time compatibility retirement. This supersedes the supplemental intake's earlier options-only/no-implementation authorization for those three choices and authorizes their bounded implementation under the existing owner, exact-path, validation, compatibility and release controls. Do not request the same architectural choices again or substitute D1-B/C, D2-A/C or D4-B without a new owner decision.
+
+The current decision record and implementation boundaries are in [REF-UNBLOCK-001](BLOCKER-RESOLUTION-ADDENDUM.md#current-owner-decisions--2026-10-02). D3 remains unselected: the owner asked which choice produces the best long-term result. The documented recommendation is integration (B) as the destination, with retention (A) only as an explicit interim disposition. No feature activation, REF-040 outcome amendment, deferral, deletion or integration-completion claim is authorized by that question.
+
+The original 50 parent IDs, backlog statuses/dependencies and acceptance criteria remain unchanged. Existing release/context/Player ownership is preserved; no unrelated PR merge, hosted/database/credential/settings change, or deployment is newly authorized here. D3's pending decision is not a blanket pause on approved U3/U5/U7 work. Source implementation and required evidence must be recorded separately before any affected REF task closes.
