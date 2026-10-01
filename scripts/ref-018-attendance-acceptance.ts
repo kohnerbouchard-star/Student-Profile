@@ -60,8 +60,8 @@ async function seed(label: string): Promise<Fixture> {
       values (${literal(f.game)},${literal(f.staff)},${literal(`REF018 ${label}`)},'active');
     insert into public.players (id,game_session_id,display_name,player_identifier,player_identifier_normalized,status)
       values (${literal(f.player)},${literal(f.game)},'REF018 Player',${literal(f.code)},${literal(f.code)},'active');
-    insert into public.game_settings (game_session_id,attendance_window)
-      values (${literal(f.game)},${literal(JSON.stringify(window))}::jsonb)
+    insert into public.game_settings (game_session_id,attendance_window,stock_market_window)
+      values (${literal(f.game)},${literal(JSON.stringify(window))}::jsonb,'{"timezone":"Asia/Seoul"}'::jsonb)
       on conflict (game_session_id) do update set attendance_window=excluded.attendance_window;
     commit;`);
   initialStates.set(f.game, await snapshot(f));
