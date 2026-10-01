@@ -72,3 +72,8 @@ Local calendar 60, Player assets 73, market-flow/holdings, backend TypeScript,
 architecture/boundary/legacy guards, root tests and secrets pass. Full Edge/smoke
 remain required exact-head CI gates under the known local pinned esm.sh import
 limitation; no new local aggregate passing credit is claimed.
+
+[PR801](https://github.com/kohnerbouchard-star/Student-Profile/pull/801) binds
+`docs/operations/contracts/player-cross-cutting/pr-801.json` to the nine changed
+paths. Verifier/test paths are locked but unchanged. All eight meaningful files
+plus generated inventory remain within the approved cohesive scope.

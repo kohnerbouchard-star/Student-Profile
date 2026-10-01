@@ -1,3 +1,4 @@
+import "../calculations/stockMarketEngine.test.ts";
 import {
   handleStockMarketRunnerRequest,
 } from "./stockMarketRunnerHttpHandler.ts";
