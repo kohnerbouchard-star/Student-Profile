@@ -16,10 +16,10 @@ Deno.test("runtime cursor runner resolves next tick before base load", async () 
   const state = await repository.load({ gameSessionId: GAME_ID });
 
   assertEquals(state.tickIndex, 18);
-  assertEquals(client.rpcCalls[0], {
-    functionName: "get_next_stock_market_tick_index",
-    args: { p_game_session_id: GAME_ID },
-  });
+  assertEquals(client.rpcCalls, [
+    { functionName: "get_next_stock_market_tick_index", args: { p_game_session_id: GAME_ID } },
+    { functionName: "consume_business_market_events_v1", args: { p_game_session_id: GAME_ID, p_limit: 1000 } },
+  ]);
 });
 
 Deno.test("runtime cursor runner preserves explicit replay tick", async () => {
@@ -28,7 +28,9 @@ Deno.test("runtime cursor runner preserves explicit replay tick", async () => {
   const state = await repository.load({ gameSessionId: GAME_ID, tickIndex: 7 });
 
   assertEquals(state.tickIndex, 7);
-  assertEquals(client.rpcCalls, []);
+  assertEquals(client.rpcCalls, [
+    { functionName: "consume_business_market_events_v1", args: { p_game_session_id: GAME_ID, p_limit: 1000 } },
+  ]);
 });
 
 Deno.test("runtime cursor market news reads current authoritative tick", async () => {
@@ -56,6 +58,10 @@ class FakeClient {
     }
     if (functionName === "get_current_stock_market_tick_index_v2") {
       return { data: this.currentTick, error: null };
+    }
+    // Cursor selection does not bypass the base repository's Business observation stage.
+    if (functionName === "consume_business_market_events_v1") {
+      return { data: { schemaVersion: 1, consumed: 0, listed: 0 }, error: null };
     }
     if (functionName === "apply_stock_market_runner_tick") {
       return { data: [{ assets_updated: 1, ticks_inserted: 1 }], error: null };
