@@ -655,15 +655,15 @@
       "id": "REF-039",
       "title": "Separate Stock-runner triggering from tick execution",
       "file": "tasks/REF-039.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-038"
       ],
       "risk": "R3",
       "architectureMapping": "ARCH-206/ARCH-600",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
+      "implementationSha": "e5622d3309924cd7f72f25050a5c92e3ed0f58a6",
+      "mergeSha": "500c17a45634801ebe988204fbe138d76567920f",
       "evidence": "docs/operations/evidence/refactor-execution-v1/REF-039/execution.md"
     },
     {

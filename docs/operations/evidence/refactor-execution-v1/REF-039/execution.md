@@ -1,6 +1,6 @@
 # REF-039 Stock tick execution ownership
 
-Status: IN_PROGRESS. Base main `4e66e14d09ea838f72d3641f6f4812c97417953e`.
+Status: VERIFIED_COMPLETE. Base main `4e66e14d09ea838f72d3641f6f4812c97417953e`.
 REF-038 is VERIFIED_COMPLETE. Discovery is already canonical in the orchestrator;
 the selected misplaced owner is runStockMarketRunner and its persistence/realtime
 helpers inside stockMarketRunnerHttpHandler.ts. No overlapping release owner was
@@ -120,3 +120,47 @@ ratchet ceilings remain unchanged and pass; no second economic authority exists.
 REF039b final base is eed2b365f2314f7b788bd658b419cf05bc42200a, preserving the
 REF042 blocked diagnostic record. Local TypeScript, root, scheduler contract5,
 architecture/boundary/secrets and calendar67 checks pass. Candidate R3 is pending.
+
+## Qualified REF039b merge and parent closeout
+
+[PR809](https://github.com/kohnerbouchard-star/Student-Profile/pull/809) qualified
+head e5622d3309924cd7f72f25050a5c92e3ed0f58a6 and merged with an expected-head
+guard as 500c17a45634801ebe988204fbe138d76567920f. Both trees equal
+e9c3441c7d1280db813da69b0ac5df662ddaf248. Final b diff: 769 changed lines,
+516 conservative mechanical credit, 40 generated inventory, 213 semantic lines;
+seven paths / six meaningful. Parent a/b union is eleven meaningful paths, below twelve.
+
+All 31 PR workflows / 66 jobs pass, with four expected conditional skips, Vercel
+success and no review threads. Initial Multiplayer/load run 36881398263 returned
+one empty 503 in the 40-player read wave; unchanged retry job 110442282816 passed.
+No runtime, timeout, test threshold or gate was changed to obtain that result.
+
+Fresh actual-application R3 run 36881398177 / job 110433769611 / artifact 11171044191
+passes. Downloaded ZIP SHA256
+d0f2b914099e756462373039f178f4cf21248e55e1d4eedd22f7d987cdd84fe5 matches GitHub.
+The retained REF039a-named harness executes the new application through HTTP:
+208 scoped tables, calendar/discovery/replay, two observed lock waiters and one
+commit, existing 500/23505 concurrent loser, in-command rollback/retry and no
+additional monetary effects beyond the verified 22-row/11-transaction FX bootstrap.
+All retained DB cases, full 28-root backend typecheck/smoke and calendar 67 pass.
+Lint remains 142 findings / 17 errors with identical diagnostics, not clean DB proof.
+
+The 162→163 cross-domain import-record increase is disclosed and within the
+unchanged accepted ceiling 168; it reflects the shared realtime type dependency,
+not an added owner or transactional path. The current runner has no lease object;
+no expired-lease execution claim is made. No production or live cron certification.
+Fresh merged-main R3 run 36886551279 / job 110451226355 / artifact 11175425562
+also passes on 500c17a, including all seven DB qualifications and unchanged lint.
+Downloaded ZIP SHA256
+02e4210b951694e2ffb3ca88b6f3321bd8b4d79dacf41fb3b804bdb3a7146c56 is verified.
+Merged-main verification is terminal: 16 successful workflows and one expected
+Edge-inventory skip; 34 successful jobs and seven conditional skips (two Edge
+convergence, four explicit-release/live-evidence jobs, dependency review).
+Relevant runs: [Backend 36886551018](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36886551018),
+[Quality 36886551323](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36886551323),
+[Atomic 36886551075](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36886551075),
+[Seller Offers 36886551381](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36886551381)
+and [R3 36886551279](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36886551279).
+Both children are qualified and merged; REF039 is VERIFIED_COMPLETE for this
+bounded repository seam. Preserve every other blocked/paused item. Next eligible
+independent item is REF045 preflight; REF044 awaits REF043 completion.
