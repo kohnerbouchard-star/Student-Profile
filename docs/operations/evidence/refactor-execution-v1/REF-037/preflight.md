@@ -1,6 +1,6 @@
 # REF-037 — Internal Dashboard financial projection
 
-Status: IMPLEMENTED_NOT_MERGED. Base: `6288e2e8646771cec66402b64eec631029602091`.
+Status: VERIFIED_COMPLETE (bounded repository seam only). Base: `6288e2e8646771cec66402b64eec631029602091`.
 Risk R2; ARCH-400/401. REF-021/026/031 are VERIFIED_COMPLETE in the base manifest.
 
 ## Scope and ownership
@@ -119,3 +119,42 @@ projection is unchanged by integration; the inherited Staff qualification
 workflow now also exercises the accepted REF-036 progression harness. Fresh
 combined-head CI is required before merge; prior-head results are not reused
 as combined-head evidence.
+
+
+## Verified completion
+
+PR [#799](https://github.com/kohnerbouchard-star/Student-Profile/pull/799) merged
+as `5cce070918f517e8387e6150f62853a129111232` after independent review.
+Original implementation head `507f883c0ea9a86e8c583b5e4010ab1908620b7a`
+and combined head `09045515476881f7c04557f411c43aa7d5c3ff8d` each separately
+passed all 32 observed PR workflows (31 success, one intended conditional skip).
+Combined tree `9121dd85e2fed3a77cc6231f3c8f92f77592f361` exactly equals the
+fetched merged-main tree. Final combined qualification includes Business
+Financial Market `36859606812`, Staff/Progression qualification `36859606481`,
+and connected Player Store cutover `36859607045`; these are PR-head evidence,
+not mislabeled main runs. Local merged-main Dashboard 21/21 and architecture
+checks also pass.
+
+Merged-main checks reached terminal on 2026-10-01: 17 workflows, 16 success
+and one intended skipped Edge inventory workflow. Across their 41 jobs, 34
+succeeded and seven were expected conditional skips (two inventory, four
+release parity/publication, one dependency review); none failed or remained
+pending. Main runs include:
+- Repository Quality `36861426520`, Backend Typecheck `36861426809`
+- Player Local Currency `36861426538`, Supply Chain `36861426576`
+- Store cutover `36861426704`, Atomic Settlement `36861426812`
+- Store offers `36861426667`, withdrawal `36861426612`, listing `36861426727`
+- Timed Manufacturing `36861426748`, CodeQL `36861427267`
+- Beta Security `36861426567`, Beta Pilot `36861426775`
+- Timezone `36861426657`, Runtime Wiring `36861426557`
+- Production Git Release contract `36861426606`
+- Edge Inventory `36861426772` (both live convergence jobs intentionally skipped)
+
+Main Store cutover's six jobs passed, including full Chromium, connected
+Buyer/seller journeys in two games, twice database replay/lint, serial/race/
+isolation acceptance and all Edge roots. No new runtime deployment or production
+mutation was requested or performed. Release parity/publication jobs and
+live inventory convergence remain conditional skips, not claimed live evidence.
+Only this evidence, REF-037's task and its manifest record change in closeout;
+the other 49 task records, protected owners and global beta ledger are preserved.
+No scoped blocker remains. Next exact ticket: REF-038, independently preflighted.
