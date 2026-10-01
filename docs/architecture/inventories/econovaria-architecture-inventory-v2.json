@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1259,
+    "sourceFiles": 1260,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -141,7 +141,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 44,
+      "sourceFiles": 45,
       "publicBoundaryFiles": []
     },
     {
@@ -3229,10 +3229,6 @@
         "lines": 838
       },
       {
-        "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.ts",
-        "lines": 836
-      },
-      {
         "file": "backend/src/domains/contracts/api/staffContractHttpHandler.test.ts",
         "lines": 834
       },
@@ -3267,6 +3263,10 @@
       {
         "file": "backend/supabase/functions/license-email-worker/index.ts",
         "lines": 730
+      },
+      {
+        "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.ts",
+        "lines": 727
       },
       {
         "file": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts",
