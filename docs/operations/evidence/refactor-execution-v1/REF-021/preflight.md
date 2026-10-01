@@ -1,6 +1,6 @@
 # REF-021 ledger-history read port
 
-Base: `aaf9ea463e9a6746432e19658f9dcc22f17d8eba`. Status: IN_PROGRESS.
+Base: `aaf9ea463e9a6746432e19658f9dcc22f17d8eba`. Status: VERIFIED_COMPLETE.
 Dependency REF-016 is VERIFIED_COMPLETE. REF-015 remains blocked, REF-019 and
 its staging-access investigation are paused, and REF-020 retains its independent
 auth-baseline gate. No dependency is waived by proceeding with REF-021.
@@ -63,15 +63,16 @@ filter, retry, mutation or public response field was introduced. Runtime candida
 inventory totals are not equivalent to this selected-call measure.
 
 
-Owner draft PR: #774. Trigger audit found no production mutation workflow on this
+Implementation PR: #774 (merged; qualification below). Trigger audit found no production mutation workflow on this
 feature-branch push. On main, Production Git Release runs its static contract;
 live parity/promotion jobs require separate explicit workflow_dispatch release
 authorization. No trigger or release setting is changed by this task.
 
 Local pinned verification passed: backend TypeScript, banking-public 38 cases,
 ledger invariants 3, Player security 59, full root `npm test`, exact PR authority,
-and whitespace checks. Full Edge/Admin API/smoke qualification remains CI-required
-because this workspace cannot fetch the existing pinned esm.sh dependency.
+and whitespace checks. Full Edge/Admin API/smoke could not run locally because
+this workspace cannot fetch the existing pinned esm.sh dependency; the exact-head
+CI qualification below supplies that evidence.
 The selected adapters' ledger-data calls fell from four to zero. The inventory
 covers 1,255 source/test files; persistence-outside-infrastructure remains 53
 because the selected adapters intentionally retain their authorization reads.
@@ -85,3 +86,35 @@ one-line package registration invalidated REF-003's immutable supporting-source
 hash. The package is restored byte-for-byte; the existing Banking test module
 now imports these adjacent tests instead. All assertions and suite permissions
 remain unchanged, and no historical review hash or guard is weakened.
+
+
+## Merged repository acceptance — 2026-10-01
+
+Implementation [PR #774](https://github.com/kohnerbouchard-star/Student-Profile/pull/774)
+qualified `e85f00935afe5ed17f0f2629460a4a93c1eb9a2a`, then merged by
+expected-head-guarded squash as `124ff72e587830ac98f59efd16a18f8ec1b50749`.
+Both commits have tree `95a07d250d98ef6894b6a7358ebc0b20e54d6db7`.
+All 29 triggered pull-request workflows completed successfully, plus dynamic PR
+run `36809620937` and Vercel. No failed or pending exact-head check remained.
+
+- [Backend Typecheck/full smoke run 36809622802](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36809622802), job `110201546981`: passed. The owning `test:player-banking-public` command ran 38 cases once, including 32 REF-021 cases; zero failed. Full smoke includes the required economic-ledger invariants, Player security and Admin API suites. Retained `backend-smoke-diagnostics` artifact `11139056797` was downloaded and SHA-256 verified as `3f927a7491de024ddd3b7d168f1a87e30d2bd0d65a491b83b02882b54b4ef056`.
+- [Repository Quality run 36809622820](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36809622820), job `110201547279`: passed, including the immutable REF-003 supporting-source audit. The initial registration failure above is historical, not acceptance.
+- [Store/FX run 36809622833](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36809622833): all four required source, disposable-database, fixture-browser and connected local-runtime jobs passed (`110201547802`, `110201547606`, `110201547399`, `110201547626`). These are retained integration coverage, not live-production evidence.
+- [Player Terminal run 36809622808](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36809622808): source/security contracts and 133 Chromium cases passed. [Store Cutover run 36809622809](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36809622809) completed the final automatic gate successfully; all six jobs passed.
+- Supply Chain Security, Runtime Interaction Wiring, Player Multiplayer/Load, economic integration workflows, and static release/staging contracts passed on the same exact head. No ceilings, assertions or permissions were weakened.
+
+The meaningful implementation scope remains the ten files listed above plus the
+separately generated inventory. This closeout edits only this existing record,
+the task and its backlog entry; the other 49 task entries are unchanged. Selected
+ledger persistence falls from four adapter calls to zero; repository query count
+remains two per request and whole-inventory persistence candidates remain 53 of
+1,255 scanned source/test files. The Staff route stays reachable through retained
+Classroom/Staff roots; the older Player handler remains unbound, and canonical
+public Banking remains in its separate repository. No route/RPC/migration changed.
+
+No staging or production request, hosted-data mutation, release or credential
+change was part of this task. Live authentication evidence remains unavailable
+for REF-019/020 and is not inferred from this read-only source extraction. REF-015
+remains blocked. Next exact item is REF-022 (depends only on REF-021), beginning
+with current ownership and atomic adjustment-command reconciliation; no REF-022
+implementation is included here.
