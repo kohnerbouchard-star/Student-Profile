@@ -608,16 +608,16 @@
       "id": "REF-036",
       "title": "Bound Progression reward requests to canonical Economy authority",
       "file": "tasks/REF-036.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-022"
       ],
       "risk": "R3",
       "architectureMapping": "ARCH-208",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "74bfd82e84b0e93f5505789dbd6fae22a04f097e",
+      "mergeSha": "c20c22a5385b2c0940e1a4df53b27b7bfba26812",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-036/preflight.md"
     },
     {
       "id": "REF-037",
@@ -632,7 +632,7 @@
       "risk": "R2",
       "architectureMapping": "ARCH-400/ARCH-401",
       "recheckOpenPrs": [],
-      "implementationSha": null,
+      "implementationSha": "507f883c0ea9a86e8c583b5e4010ab1908620b7a",
       "mergeSha": null,
       "evidence": "docs/operations/evidence/refactor-execution-v1/REF-037/preflight.md"
     },

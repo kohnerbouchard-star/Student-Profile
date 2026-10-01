@@ -102,3 +102,20 @@ reserves this scope; its initial documentation commit is
 `3225c74329f7d9524e7d8f4c490b92b003e3dfa0`. Exact PR authority is
 `docs/operations/contracts/player-cross-cutting/pr-799.json`; verifier and tests
 remain unchanged. Seven meaningful paths plus one generated inventory path.
+
+## Exact-head qualification and serialized integration
+
+Implementation head `507f883c0ea9a86e8c583b5e4010ab1908620b7a`, tree
+`952f1625b0c44ca809bb47b20d0ea9ed40d854b8`, passed all 32 observed PR
+workflows (31 success, one intended skipped). This includes Business Financial
+Market, Backend Typecheck/full smoke, Player Terminal Verify, Multiplayer,
+Repository Quality and Store FX/cutover qualification. Local complete owning
+Business financial Deno suite passed 61/61; final root tests and backend tsc pass.
+
+Integrated REF-036 closeout main `09fd066c44a8b49f69b36eca1ba6b3baacddd8ce`
+once by normal merge, preserving its workflow, acceptance harness and three
+records. No conflict. Recomputed inventory is unchanged. REF-037's production
+projection is unchanged by integration; the inherited Staff qualification
+workflow now also exercises the accepted REF-036 progression harness. Fresh
+combined-head CI is required before merge; prior-head results are not reused
+as combined-head evidence.
