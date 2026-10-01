@@ -115,9 +115,12 @@ async function rejectedUnchanged(f: Fixture, action: () => Promise<unknown>, err
 }
 function assertSettlement(f: Fixture, before: any, after: any, buyer = f.buyer) {
   for (const [table, count] of [["marketplace_orders", 1], ["purchase_funding_receipts", 1], ["bank_transactions", 2],
-    ["ledger_entries", 4], ["inventory_events", 2], ["marketplace_financial_postings", 4], ["marketplace_audit_events", 1]] as const) {
+    ["ledger_entries", 4], ["inventory_events", 2], ["marketplace_financial_postings", 2], ["marketplace_audit_events", 1]] as const) {
     assert.equal(after[`public.${table}`].length - before[`public.${table}`].length, count, table);
   }
+  // The accepted compatibility patch omits zero fee/tax rows; retain exact nonzero evidence.
+  assert.deepEqual(after["public.marketplace_financial_postings"].map((r: any) => [r.posting_type, Number(r.amount), r.currency_code]).sort(),
+    [["buyer_commercial_debit", -10, f.currency], ["seller_credit", 10, f.currency]]);
   const holdings = after["public.inventory_holdings"].filter((r: any) => r.game_item_id === f.item && r.player_id);
   assert.equal(holdings.find((r: any) => r.player_id === f.seller).quantity_owned, 0);
   assert.equal(holdings.find((r: any) => r.player_id === buyer).quantity_owned, 1);

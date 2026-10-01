@@ -33,7 +33,7 @@ Fixtures use real canonical Inventory grants and balanced Banking postings.
 Even same-currency quotes require immutable FX authority, so initialization uses
 the accepted C1 snapshot/fixing pattern. Synthetic zero-fee/tax policy isolates
 one unit at price 10: settlement must create one order/receipt, two bank
-transactions, four ledger lines, two inventory events and four commercial
+transactions, four ledger lines, two inventory events and two nonzero commercial
 postings; buyer loses 10, seller gains 10, and one item changes owner. No formula
 or policy implementation changes. Expired fixture timestamps preserve the
 required expires-at-after-reserved-at constraint.
@@ -55,3 +55,11 @@ the required actual competing purchases. REF-023 proves listing/Crafting stock
 contention, not funded settlement. Docker is unavailable locally; exact-head
 disposable CI must pass before merge and merged-main verification before closeout.
 No hosted credential or production requests. No completion claim yet.
+
+Initial head `b1aba40cfd600269f73713181e0629a39c017c7d`, run `36826202172`,
+executed a funded settlement but caught the harness's four-commercial-posting
+assumption. The accepted 20260827103500 compatibility migration dynamically
+patches settlement to omit zero fee/tax rows. The zero-fee fixture now requires
+exactly the buyer debit and seller credit, with amounts/currency asserted.
+Later projection-order and posting compatibility patches were reconciled; no
+production behavior changed. This failed run is not final acceptance.
