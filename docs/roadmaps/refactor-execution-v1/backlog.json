@@ -380,7 +380,7 @@
       "id": "REF-023",
       "title": "Expose Inventory reservation contracts to Crafting without new writes",
       "file": "tasks/REF-023.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-016"
       ],
@@ -389,7 +389,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-023/preflight.md"
     },
     {
       "id": "REF-024",
