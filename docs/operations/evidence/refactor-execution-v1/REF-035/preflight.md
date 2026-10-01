@@ -45,3 +45,21 @@ and repository gates. Root/backend/Player lockfiles and existing test registrati
 are unchanged. Both credential-release workflows naming this handler are
 manual-only; no dispatch or release workflow edit is included. Exact-head CI and
 merged-main verification are required before completion.
+
+Characterization passes 37 Messaging tests before and after extraction (baseline
+34): exact six-argument single-call behavior, applied/replayed responses, eight
+error mappings and six no-call denial paths. Existing parser/policy tests remain
+unchanged. Player security 59, request scope 81, Player Messaging lifecycle,
+backend TypeScript, shared architecture/boundary/legacy guards, root tests and
+secret scan pass. Handler create RPC sites move 1→0; repository 0→1. Policy GET
+remains direct. Inventory source/test count rises 1261→1263 (Messaging 16→18),
+with all debt counts/ceilings unchanged. No registration/package change.
+
+Draft [PR794](https://github.com/kohnerbouchard-star/Student-Profile/pull/794)
+binds nine changed paths (eight meaningful plus inventory) through
+`docs/operations/contracts/player-cross-cutting/pr-794.json`. Two unchanged
+authority verifier/test paths are locked. Final exact-head CI remains required.
+Local full Edge typecheck is BLOCKED by the pinned esm.sh Supabase dependency
+connection refusal; aggregate smoke is not rerun against the same unavailable
+import. Required exact-head CI must provide full typecheck/smoke; focused passing
+results above do not substitute for those gates.

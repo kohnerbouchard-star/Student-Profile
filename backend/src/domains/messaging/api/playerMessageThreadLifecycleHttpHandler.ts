@@ -15,19 +15,13 @@ import {
   resolveActivePlayerSession,
   resolvePlayerRequestScope,
 } from "../../players/index.ts";
+import { createPlayerMessageThread } from "../application/createPlayerMessageThread.ts";
+import { createSupabasePlayerMessageThreadRepository } from "../infrastructure/supabasePlayerMessageThreadRepository.ts";
 import type { PlayerMessageThreadLifecycleRoute } from "./playerMessageThreadLifecycleRoutePaths.ts";
 
 interface RpcError {
   readonly code?: string;
   readonly message: string;
-}
-interface CreateRow {
-  readonly create_outcome?: unknown;
-  readonly thread_id?: unknown;
-  readonly message_id?: unknown;
-  readonly thread_title?: unknown;
-  readonly recipient_reference?: unknown;
-  readonly created_at?: unknown;
 }
 
 export interface PlayerMessageThreadLifecycleDependencies {
@@ -86,16 +80,10 @@ export async function handlePlayerMessageThreadLifecycleRequest(
 
     const parsed = await parseCreateCommand(request);
     if (!parsed.ok) return parsed.response;
-    const result = await client.rpc<readonly CreateRow[]>(
-      "create_player_message_thread_atomic_v1",
-      {
-        p_game_session_id: scope.gameId,
-        p_player_id: scope.playerUuid,
-        p_recipient_player_identifier: parsed.command.recipientPlayerId,
-        p_title: parsed.command.title,
-        p_initial_body: parsed.command.body,
-        p_idempotency_key: parsed.command.idempotencyKey,
-      },
+    const result = await createPlayerMessageThread(
+      scope,
+      parsed.command,
+      createSupabasePlayerMessageThreadRepository(client),
     );
     if (result.error) return mapRpcError(result.error);
     const value = normalizeCreateRow(result.data?.[0]);
