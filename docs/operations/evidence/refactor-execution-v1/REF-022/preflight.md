@@ -90,3 +90,13 @@ method/auth/ownership/player/validation/rounding/response/error boundary is
 unchanged. Only fixed command construction moves to the application; the service,
 RPC, SQL, package, workflow and economic policies stay unchanged. Its exact head
 must independently pass all mandatory checks and real R3 acceptance before merge.
+
+REF-022b owner draft PR: #777. Exact source scope is the eight meaningful changed
+paths listed in its authority manifest, plus separately generated inventory;
+backlog already reads IN_PROGRESS and is unchanged. All 25 owning-suite cases
+(22 Staff parity cases) passed against the unchanged merged baseline and after
+extraction, including savings/nonempty account forwarding and ignored body identity.
+The application adds no raw persistence call; selected RPC and whole-inventory
+persistence counts remain unchanged. Inventory scans 1,257 source/test files;
+persistence53/deep-imports162/transport26/compatibility209/oversized99 remain at
+the accepted limits. Full actual-application R3 execution remains CI-required.

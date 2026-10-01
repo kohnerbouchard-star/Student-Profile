@@ -1,3 +1,4 @@
+import { adjustLedgerForAuthorizedStaff } from "../application/adjustLedgerForAuthorizedStaff.ts";
 import {
   EdgeActivationError,
   type EdgeErrorBody,
@@ -145,27 +146,18 @@ export async function handleStaffLedgerAdjustmentRequest(
       });
     }
 
-    const ledger = await recordIdempotentStaffLedgerAdjustment(
-      staffResult.serviceClient,
+    const ledger = await adjustLedgerForAuthorizedStaff(
       {
         gameSessionId,
         playerId,
         staffUserId: staffResult.staff.id,
-        routeKey: "staff.players.ledger_adjustment",
         idempotencyKey,
         accountType: body.accountType,
         amount: body.amount,
         currencyCode: body.currencyCode,
-        entryType: body.amount > 0 ? "credit" : "debit",
-        sourceDomain: "ledger",
-        sourceAction: "staff_player_balance_adjustment",
-        sourceId: null,
-        auditMetadata: {
-          requestId: idempotencyKey,
-          reason: body.reason,
-          source: "classroom_api_edge_staff_ledger_adjustment",
-        },
+        reason: body.reason,
       },
+      input => recordIdempotentStaffLedgerAdjustment(staffResult.serviceClient, input),
     );
 
     return jsonResponse<StaffLedgerAdjustmentSuccessBody>(200, {
