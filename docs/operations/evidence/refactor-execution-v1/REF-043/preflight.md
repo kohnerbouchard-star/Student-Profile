@@ -52,3 +52,35 @@ root tests, backend typecheck/smoke and diff checks. Use pinned Node 22.23.1,
 npm 10.9.8 and Deno 2.9.3 with existing dependencies. Fixtures are synthetic;
 local browser evidence is not staging or live runtime certification.
 Rollback is a normal revert of these source/caller/tests, preserving other work.
+
+## Local candidate evidence
+
+PR #810. Baseline application SHA is the base above; characterization was run
+before changing the controller. Candidate source identity is the atomic PR
+head/tree containing this record (commit cannot self-reference its own SHA).
+All results below use that source; later edits are documentation/authority only.
+
+- `node --test scripts/admin-v2-banking.test.mjs`: 14/14 before and after
+- `npm run test:admin-v2`: 91/91 candidate (89 before final lifecycle additions)
+- `npm run test:admin-economic-writes`: 2/2 before and after
+- `npm --prefix backend run test:player-banking-public`: 38/38 before and after
+- `npm run audit:architecture`: pass; deterministic inventory sourceFiles
+  1266 to 1267, all boundary/debt counts unchanged
+- high-priority boundaries (80), legacy runtime, interaction wiring, secrets,
+  complete `npm test`, and `git diff --check`: pass
+- backend TypeScript: pass; `typecheck:all` fails during Edge imports because
+  pinned esm.sh Supabase 2.108.2 connection is refused
+- Admin browser: BLOCKED before assertions, pinned Chromium v1234 missing;
+  official pinned installer repeatedly received invalid/truncated ZIPs
+- complete backend smoke: BLOCKED at game-sessions by the same refused pinned
+  esm.sh import; no skipped or weakened test was counted as a pass
+
+Measured seam: two duplicated candidate traversals become one, with exactly
+two controller call sites. BankingController drops 19 lines; the new reader
+is 14 lines. No removed defensive policy, new normalization rule or transport
+reuse claim. Existing shared error envelopes already own error adaptation.
+The focused suite remains imported by admin-v2-unit without a package change.
+No migration, route, RPC, external service or live data changed. No staging,
+production, dedicated Banking browser or connected-runtime evidence is claimed.
+Exact-PR authority is `docs/operations/contracts/player-cross-cutting/pr-810.json`.
+CI and normal merge evidence are still required before VERIFIED_COMPLETE.

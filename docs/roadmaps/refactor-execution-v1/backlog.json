@@ -721,7 +721,7 @@
       "id": "REF-043",
       "title": "Converge Admin V2 Banking response and error adaptation",
       "file": "tasks/REF-043.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-005"
       ],
@@ -730,7 +730,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-043/preflight.md"
     },
     {
       "id": "REF-044",

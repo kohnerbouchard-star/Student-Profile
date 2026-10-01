@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref043-banking-response-pr-810.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 810,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "admin/v2/src/routes/banking/BankingController.js",
+    "admin/v2/src/routes/banking/BankingResponse.js",
+    "scripts/admin-v2-banking.test.mjs",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-043/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-043.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/operations/contracts/player-cross-cutting/pr-810.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "admin/v2/src/routes/banking/BankingController.js",
+    "admin/v2/src/routes/banking/BankingResponse.js",
+    "scripts/admin-v2-banking.test.mjs",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-043/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-043.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/operations/contracts/player-cross-cutting/pr-810.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "banking",
+    "players"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-043/preflight.md",
+  "authorizationNote": "Owner-authorized REF043 presentation-envelope extraction and characterization. Preserve candidate order, empty/invalid behavior, immutable projections, account/currency/numeric and UUID redaction rules. No transport, BFF/auth, backend, mutation, SQL or deployment change."
+}
