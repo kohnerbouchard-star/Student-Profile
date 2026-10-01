@@ -623,7 +623,7 @@
       "id": "REF-037",
       "title": "Split Dashboard read composition without increasing query fan-out",
       "file": "tasks/REF-037.md",
-      "status": "PLANNED",
+      "status": "IMPLEMENTED_NOT_MERGED",
       "dependsOn": [
         "REF-021",
         "REF-026",
@@ -632,9 +632,9 @@
       "risk": "R2",
       "architectureMapping": "ARCH-400/ARCH-401",
       "recheckOpenPrs": [],
-      "implementationSha": null,
+      "implementationSha": "507f883c0ea9a86e8c583b5e4010ab1908620b7a",
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-037/preflight.md"
     },
     {
       "id": "REF-038",
