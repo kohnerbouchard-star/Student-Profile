@@ -27,10 +27,8 @@ import {
   toPublicPlayerContractProgressDto,
 } from "../contracts/playerContractPublicListContracts.ts";
 import { SupabaseContractRepository } from "../infrastructure/supabaseContractRepository.ts";
-import {
-  listPlayerContractsAvailableNow,
-  resolveActivePlayerCountryCode,
-} from "../services/playerContractAvailabilityService.ts";
+import { listPlayerContractsAvailableNow } from "../services/playerContractAvailabilityService.ts";
+import { resolveActivePlayerCountryCode } from "../infrastructure/supabaseContractAvailabilityReadRepository.ts";
 
 export interface PlayerContractPublicListHttpHandlerDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
