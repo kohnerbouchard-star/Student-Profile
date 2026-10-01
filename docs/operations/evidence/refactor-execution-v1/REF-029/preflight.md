@@ -118,3 +118,41 @@ verified as `00c8275f2361fba054b0002f636eb4d795e21f4fca8e55c1561309fc50f9e898`:
 no-effects and two observed concurrent waiters all pass; production untouched.
 Independent integration review found no defect and confirmed all eight authorized
 paths. Final documentation-combined candidate still requires its own fresh CI.
+
+## Historical CI failures retained — candidate 8be33191
+
+All 28 other workflows passed. Player Multiplayer and Load E2E run
+`36832570071` failed twice; neither run qualifies this candidate.
+- Job `110272317029`: connected World Marketplace listing returned retryable
+  `503 player_marketplace_service_unavailable`. Earlier journeys, including
+  Contract lifecycle, passed; load skipped. Downloaded artifact `11148242849`
+  SHA256 `79ca18047af9f30d6132e48dc1e626c4a2b8812734524a38bc24acaf7dac4b2f`
+  verified. Gateway diagnostics contain repeated upstream connection resets and
+  broken pipes; a transient service explanation is a hypothesis, not established.
+- One unchanged-job retry `110276346661`: Marketplace passed. Crafting's first
+  start click timed out at 30 seconds after Playwright reported visible, enabled,
+  stable and "scrolling into view if needed". No crafting POST was observed;
+  fixture prepared, login/GETs returned 200, console/page errors were empty.
+  Primary artifact failure is `locator.click` timeout at runner line 502.
+  Later `page.waitForResponse: Target page, context or browser has been closed`
+  at line 498 is secondary: finally closes context with a pending response wait.
+  Downloaded artifact `11148791850` SHA256
+  `f8965c22d56c026440318e9488871de50238da4405d100f4cf31c9853fac19ee`
+  verified. Exact UI/scroll geometry cause remains unproven (no screenshot/trace).
+  Contract lifecycle again passed; load skipped. No further blind retry made.
+
+No source, harness, timeout, assertion, CSS or workflow was changed to bypass
+these failures. A repeated click failure after legitimate final-main integration
+requires separate focused diagnosis, not expansion of this read-refactor scope.
+
+## REF-031 verified-main integration
+
+Integrated `eabf3d032768771ebdee652a9d6d1ce35d655734` (REF-031 source and
+closeout) normally at the parent's direction. Countries source/tests, PR-788
+authority and completed records are preserved. Inventory regenerated for both
+seams: combined source/test denominator is 1,260 versus latest-main 1,259;
+Contracts count remains 45 versus latest-main 44, all debt counts unchanged.
+This source integration requires new combined-head CI, not a blind rerun of the
+old candidate. Both historical Player failures above remain unresolved evidence;
+no browser fix or root-cause resolution is claimed. Repeated click failure must
+stop this qualification for a separate diagnostic scope.

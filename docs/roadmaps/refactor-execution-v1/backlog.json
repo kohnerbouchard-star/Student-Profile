@@ -505,16 +505,16 @@
       "id": "REF-031",
       "title": "Separate country reference reads from game-scoped projections",
       "file": "tasks/REF-031.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-016"
       ],
       "risk": "R2",
       "architectureMapping": "ARCH-101/ARCH-402",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "96d9f35e4b0a83bb1bcc83931e46cecf481efa21",
+      "mergeSha": "9bc6a00c341d8ee7d3b891191541a7111d703016",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-031/preflight.md"
     },
     {
       "id": "REF-032",
