@@ -81,3 +81,54 @@ zero new entitlements or email requests; retained qualification suites also pass
 Full 28-root backend typecheck/smoke passed; lint stayed at 142 findings/17 errors.
 Fresh exact-head checks remain mandatory after the annotation change. No SQL or
 runtime correction was needed for this baseline qualification.
+
+## REF-045b application extraction
+
+Qualification PR #813 merged as `55d9755f498938b63a2c27bf345c068c59dbc4da`
+from `335ce91b4334b8500eaa9f763041158a82770f88`; this is b's exact base.
+Final a passed all eight workflows (11 successful jobs, three expected manual
+skips), Vercel, and independent source review. R3 run
+[36895008209](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36895008209),
+job `110479677335`, artifact `11179807379`, verified ZIP SHA-256
+`7d6128a0db85fd01087871ddbb7b9e37173e7bd4d47f60c7a10779c62a21e369`
+proves the unchanged worker baseline. This is not b's exact-head qualification.
+
+The selected family is processClaimedJob/materializeLicenseCode, JobFailure,
+normalizeJobFailure/redactLicenseCodes, their three types and template constant.
+Licensing had activation/redemption ownership but no issuance application; its
+redemption use case is a different atomic authority and remains untouched.
+`processClaimedLicenseJob.ts` now owns issuance/collision/retry decisions. Two
+actively used, narrowly typed materialize/retry callbacks keep Supabase RPC names
+and transport in the worker. Crypto delegates to the unchanged shared helper.
+The worker retains POST/auth/config ordering, claim normalization, batch 10,
+lease 90 seconds, chunks of five, logging and response construction.
+No new persistence command, repository scaffold or unused port is introduced.
+
+The 25 type lines, 118 execution lines and 61 failure-policy lines match the
+original after explicit export/name/dependency substitutions and removal of one
+trailing separator blank line. SHA-256:
+- Types: `b78229b09aabc0f9a3ae90bfd5884228a143b6b6088af67a01a3a128ebb01aa8`
+- Execution: `835b1ab194250438de1b77df90fced9d10357833244bb4b426b8b5e736f747e8`
+- Failure policy: `2a2e4cfbc1254ae2fce11acb06113d620336a757361e62bfc6ce54fe62e33456`
+- Residual worker, excluding those blocks/import/composition changes:
+  `158b98ccf73448736e7f43794423084156c1dc5413e44e09d59d59d9bc6a058a`
+
+Before/after traces from the original source family and extracted application are
+byte-identical for 16 cases: created/replayed, valid/invalid/exhausted collisions,
+RPC error/throw, retry recording failure, dead letter, crypto failure and retry
+attempts 1/2/8/50. The 14,856-byte result includes ordered commands, complete
+parameter payloads, results and safe logs; SHA-256
+`3a0e83235f3f2c1ea1782f0cffe92583bac6d1188d7e8c8075178446d1ae0323`.
+All 26 original contracts pass before; all 32 pass after six registered policy
+cases are added to the existing queue suite. The other existing outbox source
+contract now follows the actual application and worker binding. No test package,
+R3 harness or qualification workflow changes are needed in b.
+
+Worker size is 477→287 lines; cohesive application is 224. Inventory source files
+1267→1268 (Licensing 24→25); persistence-outside-infrastructure stays 52 and
+cross-domain imports stay 163. All ceilings remain unchanged. The first local
+candidate exposed a raw-client boundary during review; before publication it was
+replaced with the two typed commands, with identical traces and no new file.
+Application typecheck and focused contracts pass locally. Full worker dependency
+resolution and real database execution remain required CI checks on b's exact
+head; a's proof alone does not qualify the extracted application.
