@@ -61,3 +61,10 @@ failed during synthetic pack activation: canonical recipe mappings were checked
 before fixture items existed. The fixture now inserts its items before activating
 the pack. The production guard is unchanged. That run passed full backend and
 retained REF-018/022 qualification but is not REF-023 acceptance.
+
+Head `92834d826e786dc7368bac10478b6c50f338ee31`, run `36822328673`, passed
+serial replay/conflict, both reservation orders, cancellation and cross-game
+denial, then caught the fixture's incomplete paused lifecycle projection. The
+fixture now sets the required `paused`/`disabled` pair together. Remaining claim
+fixture fields were checked against table constraints and current RPC branches.
+This partial run also is not final acceptance.

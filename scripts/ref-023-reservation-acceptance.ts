@@ -187,7 +187,7 @@ try {
   await rejectedUnchanged(other, () => market({ ...other, player: f.player }, "ref023-scope-market"), /MARKETPLACE_QUANTITY_UNAVAILABLE/);
   assert.deepEqual(await snapshot(f), untouched);
   checks.crossGameNoEffects = true;
-  await sql(`update public.game_sessions set lifecycle_state='paused' where id=${q(other.game)}`);
+  await sql(`update public.game_sessions set lifecycle_state='paused',status='disabled' where id=${q(other.game)}`);
   await rejectedUnchanged(other, () => start(other, "ref023-paused"), /CRAFTING_PLAYER_SCOPE_INACTIVE/);
   checks.pausedGameNoEffects = true;
   // Force both existing deterministic failure policies on synthetic job snapshots.
