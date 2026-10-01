@@ -50,3 +50,16 @@ Local harness typecheck passes. Docker and psql are unavailable in this executor
 so database acceptance is NOT_RUN locally; CI must supply actual evidence.
 The five-path patch is below 400 lines and preserves all existing qualification
 steps. No source/risk gate is satisfied by an unexecuted harness alone.
+
+Initial real run `36853193927`, job `110339895391`, reached event apply/replay/
+conflict/out-of-order SQL but rejected the harness's first claim before any RPC:
+its synthetic POST lacked application/json. Add the required header, preserving
+the existing parser and single-call assertion. This failed candidate is not
+acceptance; fresh corrected-head execution remains mandatory.
+
+Integration uses REF-030 closeout main
+`6288e2e8646771cec66402b64eec631029602091`, preserving its qualified submission
+adapter, inventory and completed evidence plus REF-035/032 records. The fixture
+header correction is batched into this normal merge; a transport-only diagnostic
+confirms one claim RPC is reached, without awarding database acceptance credit.
+Fresh combined-head R3 execution is still required.

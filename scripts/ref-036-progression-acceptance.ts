@@ -70,7 +70,7 @@ async function event(f: Fixture, key: string, source = key, at = occurredAt) {
 async function claim(f: Fixture, reward: string, key: string, app = "ref036-claim") {
   const client = transport(app);
   const response = await handlePlayerProgressionRequest(new Request(`https://ref036.invalid/players/me/progression/rewards/${reward}/claim`, {
-    method: "POST", headers: { "x-player-session-token": "synthetic-token" }, body: JSON.stringify({ idempotencyKey: key }),
+    method: "POST", headers: { "x-player-session-token": "synthetic-token", "content-type": "application/json" }, body: JSON.stringify({ idempotencyKey: key }),
   }), { kind: "claim", rewardId: reward }, {
     createServiceClient: () => client as never, readEnvironment: () => ({ ok: true, value: {} as never }),
     hashSessionToken: async () => "synthetic-hash", now: () => now,
@@ -80,7 +80,7 @@ async function claim(f: Fixture, reward: string, key: string, app = "ref036-clai
       player: { id: f.player, display_name: "REF036", roster_label: null, status: "active" } }) as never,
   });
   const body = await response.json();
-  assert.equal(client.calls, 1);
+  assert.equal(client.calls, 1, JSON.stringify(body));
   for (const id of [f.game, f.player]) assert.ok(!JSON.stringify(body).includes(id));
   if (response.status === 200) assert.equal(response.headers.get("cache-control"), "private, no-store");
   return { status: response.status, body, errors: client.errors };

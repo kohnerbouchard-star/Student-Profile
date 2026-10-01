@@ -490,35 +490,40 @@
       "id": "REF-030",
       "title": "Separate Contract submission translation from Story decision behavior",
       "file": "tasks/REF-030.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-029"
       ],
       "risk": "R3",
       "architectureMapping": "ARCH-208/ARCH-400",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null,
+      "implementationSha": "794388fb0bd2d2f4c0782a99c422da47def397c0",
+      "mergeSha": "7f8ce00cab3cdf303c37332dcbbceb96d2163582",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-030/preflight.md",
       "children": [
         {
           "id": "REF-030a",
-          "status": "IMPLEMENTED_NOT_MERGED",
+          "status": "VERIFIED_COMPLETE",
           "scope": "Disposable existing submission/Story trigger qualification",
           "dependsOn": [
             "REF-029"
           ],
-          "implementationSha": "ef5af7d62a02ae3c45f81ab118852dcd17186f2d",
+          "implementationSha": "5a0d1630c5478a265957259cce3b0aba5695bc11",
           "pullRequest": 792,
-          "evidence": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36844450147"
+          "evidence": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36846754887",
+          "mergeSha": "16d8e06dc0204da8bfe6ba7105d2502a771befd7"
         },
         {
           "id": "REF-030b",
-          "status": "PLANNED",
+          "status": "VERIFIED_COMPLETE",
           "scope": "Bounded mechanical submission adapter extraction",
           "dependsOn": [
             "REF-030a"
-          ]
+          ],
+          "implementationSha": "794388fb0bd2d2f4c0782a99c422da47def397c0",
+          "mergeSha": "7f8ce00cab3cdf303c37332dcbbceb96d2163582",
+          "pullRequest": 795,
+          "evidence": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36853726296"
         }
       ]
     },
