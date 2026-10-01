@@ -1,0 +1,63 @@
+# REF-021 ledger-history read port
+
+Base: `aaf9ea463e9a6746432e19658f9dcc22f17d8eba`. Status: IN_PROGRESS.
+Dependency REF-016 is VERIFIED_COMPLETE. REF-015 remains blocked, REF-019 and
+its staging-access investigation are paused, and REF-020 retains its independent
+auth-baseline gate. No dependency is waived by proceeding with REF-021.
+
+No existing REF-021 owner was found. Active #668 retains Staff/context/bootstrap
+ownership and #736 retains Player service-client binding. Neither owns the selected
+history handlers. The single package edit adds a test to `test:player-banking-public`;
+#668's `test:staff-bootstrap`/smoke edits are not imported or changed.
+
+## Frozen seam
+
+Each selected handler first performs its existing audience authorization and
+Player/game checks, then reads `account_balances` followed by `ledger_entries`.
+Both queries retain `game_session_id` and `player_id` equality filters. Balances
+select account_type/balance/currency_code and order account_type ascending.
+Entries select their existing ten fields, order created_at descending, and limit
+to the validated integer (default 50, accepted 1–100). No cursor, currency/account
+filter, tie-breaker or new query exists. Null rows become empty lists; balance
+failure suppresses the second query. Strings/numbers cross the repository without
+conversion; each HTTP adapter retains its existing `readBalanceNumber` mapping,
+errors, private/no-store envelope and generated timestamp.
+
+Only the two ledger-data queries per handler move. Session/ownership/profile
+reads, authorization sequence, service-client construction and response projection
+remain unchanged. Staff route roots are retained Classroom/Staff APIs. The older
+Player handler has no current runtime import; canonical Player Banking routes use
+the separate public repository. Do not revive that handler or redesign either
+response/privacy contract as part of this extraction.
+
+## Exact meaningful file budget (ten)
+
+1–2. `backend/src/domains/economy/api/{playerLedgerHistoryHttpHandler,staffPlayerLedgerHistoryHttpHandler}.ts`
+3. `backend/src/domains/economy/contracts/ledgerHistoryReadRepository.ts`
+4. `backend/src/domains/economy/infrastructure/supabaseLedgerHistoryReadRepository.ts`
+5. `backend/src/domains/economy/api/ledgerHistoryReadRepository.test.ts`
+6. `backend/package.json` (one existing suite registration only)
+7. This preflight/evidence record
+8. `docs/roadmaps/refactor-execution-v1/tasks/REF-021.md`
+9. `docs/roadmaps/refactor-execution-v1/backlog.json` (REF-021 only)
+10. Exact PR-bound cross-cutting authority manifest, once PR identity exists
+
+Generated architecture inventory is listed separately and regenerated without
+raising ceilings. No SQL/migration, mutation, UI, auth/client factory, global
+ledger, release/workflow or production configuration edit. Characterization runs
+against the baseline first, then the same tests after extraction. Required gates:
+ledger fixtures, banking-public, ledger invariants, Player security, Admin API,
+full smoke/typecheck, root tests, architecture/privacy/secret/diff checks. Local
+esm.sh network restrictions may require exact-head CI for full Edge execution.
+
+
+## Characterization and extraction checkpoint
+
+Baseline handlers passed 31 characterization cases before source movement.
+After extraction those same cases and one raw-decimal/order repository case pass
+(32 total). The four selected balance/ledger calls are now two shared repository
+queries; adapter authorization/profile reads intentionally remain. Each adapter
+injects its existing request-scoped client through an optional repository factory,
+with the concrete Economy adapter as the default. No conversion, sorting, new
+filter, retry, mutation or public response field was introduced. Runtime candidate
+inventory totals are not equivalent to this selected-call measure.
