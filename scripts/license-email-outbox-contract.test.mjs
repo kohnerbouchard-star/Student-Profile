@@ -120,6 +120,7 @@ test("email outbox has strict lease, delivery, and idempotency invariants", asyn
 test("plaintext code is regenerated, verifier-checked, and never persisted", async () => {
   const migration = await readOutboxMigrations();
   const issuance = await readFile(ISSUANCE_WORKER, "utf8");
+  const application = await readFile(new URL("../backend/src/domains/licensing/application/processClaimedLicenseJob.ts", import.meta.url), "utf8");
   const email = await readFile(EMAIL_WORKER, "utf8");
   const shared = await readFile(SHARED_CODE, "utf8");
 
@@ -128,7 +129,10 @@ test("plaintext code is regenerated, verifier-checked, and never persisted", asy
     /\b(?:plaintext_code|plain_code|raw_code|display_code|license_code)\s+(?:text|json|jsonb|bytea)\b/iu,
   );
   assert.match(issuance, /hashIssuedPurchaseCode/u);
+  assert.match(issuance, /processClaimedLicenseJob/u);
   assert.match(issuance, /materialize_license_and_enqueue_email_v2/u);
+  assert.match(application, /commands\.materialize/u);
+  assert.match(application, /crypto\.hashIssuedPurchaseCode/u);
   assert.match(email, /deriveLicenseCode/u);
   assert.match(email, /hashIssuedPurchaseCode/u);
   assert.match(email, /constantTimeEqualHex/u);

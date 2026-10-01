@@ -132,3 +132,11 @@ replaced with the two typed commands, with identical traces and no new file.
 Application typecheck and focused contracts pass locally. Full worker dependency
 resolution and real database execution remain required CI checks on b's exact
 head; a's proof alone does not qualify the extracted application.
+
+Draft PR #814 binds this source family and exact-path verification authority.
+Eight changed paths comprise seven meaningful files plus generated inventory;
+parent union remains ten meaningful paths. Conservative unchanged-move credit is
+382 changed lines; generated inventory contributes four changed lines. The
+remaining semantic diff is below 400 lines, with no compressed/split source owner.
+Local complete root suite, backend TypeScript, application Deno check, auth suites,
+32 contracts, architecture, secret scan and exact-PR authority checks pass.
