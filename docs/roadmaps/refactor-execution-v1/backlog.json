@@ -472,7 +472,7 @@
       "id": "REF-029",
       "title": "Extract one Contract repository read-projection family",
       "file": "tasks/REF-029.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-007",
         "REF-008",
@@ -484,7 +484,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-029/preflight.md"
     },
     {
       "id": "REF-030",

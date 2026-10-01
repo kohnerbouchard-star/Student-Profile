@@ -204,3 +204,80 @@ Deno.test("REF028 list: two scoped reads, last duplicate wins, descending time, 
     equal(caught, failure);
   }
 });
+
+// Keep the existing repository lifecycle/negative cases in their owner while
+// registering them alongside the read-seam trace characterization below.
+import "../../../src/domains/contracts/infrastructure/supabaseContractRepository.test.ts";
+import { SupabaseContractRepository } from "../../../src/domains/contracts/infrastructure/supabaseContractRepository.ts";
+import { ContractRepositoryError } from "../../../src/domains/contracts/contracts/contractRepositoryContracts.ts";
+const progressColumns = "id,game_session_id,contract_id,player_id,status,evidence_payload,result_payload,submitted_at,completed_at,reward_issued_at,created_at,updated_at";
+const progressRow = { id: P, game_session_id: G, contract_id: C, player_id: U, status: "submitted",
+  evidence_payload: { answer: "synthetic", numeric: 1.25 }, result_payload: { score: 0 },
+  created_at: NOW, updated_at: NOW };
+function progressReadFixture(data: unknown, message?: string) {
+  const trace: unknown[] = [];
+  const response = { data, error: message === undefined ? null : { message } };
+  const query = {
+    eq(key: string, value: unknown) { trace.push(["eq", key, value]); return query; },
+    in(key: string, value: unknown) { trace.push(["in", key, value]); return query; },
+    order(key: string, options: unknown) { trace.push(["order", key, options]); return query; },
+    maybeSingle() { trace.push(["maybeSingle"]); return Promise.resolve(response); },
+    then(resolve: (value: unknown) => unknown, reject: (error: unknown) => unknown) {
+      trace.push(["await"]); return Promise.resolve(response).then(resolve, reject);
+    },
+  };
+  const client = { from(table: string) { trace.push(["from", table]); return {
+    select(columns: string) { trace.push(["select", columns]); return query; },
+  }; } };
+  return { repository: new SupabaseContractRepository(client as never), trace };
+}
+const progressReadCases = [
+  { method: "getPlayerContractProgress", input: { gameSessionId: G, contractId: C, playerId: U }, single: true,
+    trace: [["eq", "game_session_id", G], ["eq", "contract_id", C], ["eq", "player_id", U], ["maybeSingle"]] },
+  { method: "getContractProgressById", input: { gameSessionId: G, contractId: C, progressId: P }, single: true,
+    trace: [["eq", "game_session_id", G], ["eq", "contract_id", C], ["eq", "id", P], ["maybeSingle"]] },
+  { method: "listPlayerContractProgress", input: { gameSessionId: G, playerId: U }, single: false,
+    trace: [["eq", "game_session_id", G], ["eq", "player_id", U], ["order", "created_at", { ascending: false }], ["await"]] },
+  { method: "listContractProgressForStaff", input: { gameSessionId: G, contractId: C }, single: false,
+    trace: [["eq", "game_session_id", G], ["eq", "contract_id", C], ["order", "submitted_at", { ascending: false, nullsFirst: false }],
+      ["order", "created_at", { ascending: false }], ["await"]] },
+] as const;
+for (const scenario of progressReadCases) {
+  Deno.test(`REF029 ${scenario.method}: one exact scoped query and unchanged projection`, async () => {
+    for (const data of [null, ...(scenario.single ? [progressRow] : [[], Array.from({ length: 200 }, (_, i) => ({ ...progressRow,
+      id: `${P}-${i}`, status: i % 2 ? "completed" : "submitted", submitted_at: i % 2 ? NOW : null }))])]) {
+      const f = progressReadFixture(data);
+      const result = await f.repository[scenario.method](scenario.input as never);
+      const map = (row: typeof progressRow) => ({ id: row.id, gameSessionId: G, contractId: C, playerId: U, status: row.status,
+        evidencePayload: row.evidence_payload, resultPayload: row.result_payload,
+        submittedAt: (row as typeof row & { submitted_at?: string }).submitted_at ?? null,
+        completedAt: null, rewardIssuedAt: null, createdAt: NOW, updatedAt: NOW });
+      equal(result, data === null ? (scenario.single ? null : []) : scenario.single ? map(data as typeof progressRow) : (data as typeof progressRow[]).map(map));
+      equal(f.trace, [["from", "player_contract_progress"], ["select", progressColumns], ...scenario.trace]);
+    }
+  });
+  Deno.test(`REF029 ${scenario.method}: error precedes malformed row mapping`, async () => {
+    for (const message of ["synthetic unavailable", ""]) {
+      const f = progressReadFixture(scenario.single ? {} : [{}], message);
+      let caught: unknown;
+      try { await f.repository[scenario.method](scenario.input as never); } catch (error) { caught = error; }
+      ok(caught instanceof ContractRepositoryError);
+      equal([caught.code, caught.message, caught.tableName, caught.operation], ["contract_repository_query_failed",
+        message || "Contract repository query failed.", "player_contract_progress", "select"]);
+      equal(f.trace, [["from", "player_contract_progress"], ["select", progressColumns], ...scenario.trace]);
+    }
+  });
+}
+for (const method of ["listPlayerContractProgress", "listContractProgressForStaff"] as const) {
+  Deno.test(`REF029 ${method}: optional filters preserve empty and mixed-state semantics`, async () => {
+    for (const statuses of [undefined, [], ["submitted", "completed"]]) {
+      const f = progressReadFixture([]);
+      await f.repository[method]({ gameSessionId: G, contractId: C, playerId: U, statuses } as never);
+      const base = [["from", "player_contract_progress"], ["select", progressColumns], ["eq", "game_session_id", G],
+        ["eq", method === "listPlayerContractProgress" ? "player_id" : "contract_id", method === "listPlayerContractProgress" ? U : C]];
+      equal(f.trace, [...base, ...(statuses?.length ? [["in", "status", statuses]] : []),
+        ...(method === "listContractProgressForStaff" ? [["eq", "player_id", U], ["order", "submitted_at", { ascending: false, nullsFirst: false }]] : []),
+        ["order", "created_at", { ascending: false }], ["await"]]);
+    }
+  });
+}
