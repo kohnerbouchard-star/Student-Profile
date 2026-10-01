@@ -71,3 +71,22 @@ then rejected the harness assumption that a nonempty unknown account is invalid.
 Existing `resolve_legacy_bank_account_v1` intentionally maps it to a legacy
 identity. Denial coverage now uses the genuinely invalid empty account; accepted
 account policy and SQL remain unchanged. This partial run is not acceptance.
+
+## REF-022a qualified and merged; REF-022b in progress
+
+[PR776](https://github.com/kohnerbouchard-star/Student-Profile/pull/776) qualified
+head `7ea7ecb51b1768f42bfff5c1ff3e90c2f834b9c4` and merged with an expected-head
+merge as `7d75cc2e1b052b23594557f5d27422da4920ed86`. All eight runs and Vercel
+passed. Run `36816045774`, job `110221207810`, artifact `11141039289`, verified
+SHA256 `d473e7c2e21dc42d6b65faef0d4ef0bd6f6f99229c093a57fe35fc99d5e03c3a`,
+passed every real ledger case, 208-table snapshots, rollback/retry and both races
+with two observed waiters. Retained Attendance and full backend 28-root typecheck/
+smoke passed. Lint remained 142 findings/17 error-level, with no added diagnostics.
+This does not certify a clean database or production.
+
+REF-022b starts from that merged main. It binds the same qualified harness to the
+actual application and retains every database assertion. The existing HTTP
+method/auth/ownership/player/validation/rounding/response/error boundary is
+unchanged. Only fixed command construction moves to the application; the service,
+RPC, SQL, package, workflow and economic policies stay unchanged. Its exact head
+must independently pass all mandatory checks and real R3 acceptance before merge.
