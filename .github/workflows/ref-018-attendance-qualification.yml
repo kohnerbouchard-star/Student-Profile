@@ -73,19 +73,51 @@ jobs:
             npm --prefix backend run test:player-request-scope
             npm run test:admin-economic-writes
           } 2>&1 | tee /tmp/ref018/application-regressions.log
+      - name: Verify full backend typecheck and smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix backend run typecheck:all 2>&1 | tee /tmp/ref018/backend-typecheck.log
+          npm --prefix backend run smoke 2>&1 | tee /tmp/ref018/backend-smoke.log
       - name: Start disposable local database and replay migrations
         shell: bash
         run: |
           set -euo pipefail
           npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit,edge-runtime > /tmp/ref018/database-start.log 2>&1
           npx supabase db reset --workdir backend --local > /tmp/ref018/database-replay.log 2>&1
+      - name: Capture unchanged-schema lint baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase db lint --workdir backend --local --level warning --output json > /tmp/ref018/database-lint-before.json 2> /tmp/ref018/database-lint-before.log
       - name: Prove actual Attendance effects, replay, rollback and overlapping submissions
         shell: bash
         run: |
           set -euo pipefail
           deno run --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF018_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-018-attendance-acceptance.ts 2>&1 | tee /tmp/ref018/database-qualification.log
-      - name: Lint disposable database
-        run: npx supabase db lint --workdir backend --local --level warning
+      - name: Preserve baseline lint findings without introducing new diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase db lint --workdir backend --local --level warning --output json > /tmp/ref018/database-lint-after.json 2> /tmp/ref018/database-lint-after.log
+          python3 - <<'PYTHON'
+          import json
+          from pathlib import Path
+          root = Path('/tmp/ref018')
+          def normalized(name):
+              rows = json.loads((root / name).read_text())
+              return sorted(json.dumps({'function': row['function'], 'issue': issue}, sort_keys=True)
+                            for row in rows for issue in row['issues'])
+          before = normalized('database-lint-before.json')
+          after = normalized('database-lint-after.json')
+          report = {'unchanged': before == after, 'baselineFindingCount': len(before),
+                    'baselineErrorCount': sum(json.loads(row)['issue']['level'] == 'error' for row in before),
+                    'added': sorted(set(after) - set(before)), 'removed': sorted(set(before) - set(after)),
+                    'meaning': 'Existing findings retained; this is not a clean database certification.'}
+          (root / 'database-lint-comparison.json').write_text(json.dumps(report, indent=2) + '\n')
+          print(json.dumps(report, indent=2))
+          assert before == after, 'Qualification harness changed database lint diagnostics'
+          PYTHON
       - name: Verify deterministic inventory and unchanged architecture limits
         run: npm run audit:architecture
       - name: Upload exact-head qualification evidence
