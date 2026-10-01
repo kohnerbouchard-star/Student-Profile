@@ -92,10 +92,20 @@ remain unchanged, and no historical review hash or guard is weakened.
 
 Implementation [PR #774](https://github.com/kohnerbouchard-star/Student-Profile/pull/774)
 qualified `e85f00935afe5ed17f0f2629460a4a93c1eb9a2a`, then merged by
-expected-head-guarded squash as `124ff72e587830ac98f59efd16a18f8ec1b50749`.
+expected-head-guarded merge as `124ff72e587830ac98f59efd16a18f8ec1b50749`.
 Both commits have tree `95a07d250d98ef6894b6a7358ebc0b20e54d6db7`.
 All 29 triggered pull-request workflows completed successfully, plus dynamic PR
 run `36809620937` and Vercel. No failed or pending exact-head check remained.
+
+Merged main `124ff72e587830ac98f59efd16a18f8ec1b50749` then completed
+15 successful runs, with two expected skipped production Edge/Vercel workflows
+and zero failed or pending runs. [Backend run 36811018108](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36811018108),
+[Repository Quality run 36811018105](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36811018105)
+and the final [Store Cutover run 36811018145](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36811018145)
+passed. Skipped runs `36811018106` and `36811303374` supply no deployment or
+runtime certification. These were existing automatic checks; this documentation
+closeout did not manually rerun source suites.
+
 
 - [Backend Typecheck/full smoke run 36809622802](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36809622802), job `110201546981`: passed. The owning `test:player-banking-public` command ran 38 cases once, including 32 REF-021 cases; zero failed. Full smoke includes the required economic-ledger invariants, Player security and Admin API suites. Retained `backend-smoke-diagnostics` artifact `11139056797` was downloaded and SHA-256 verified as `3f927a7491de024ddd3b7d168f1a87e30d2bd0d65a491b83b02882b54b4ef056`.
 - [Repository Quality run 36809622820](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36809622820), job `110201547279`: passed, including the immutable REF-003 supporting-source audit. The initial registration failure above is historical, not acceptance.
