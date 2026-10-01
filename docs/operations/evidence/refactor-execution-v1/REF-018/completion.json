@@ -27,7 +27,8 @@
       "multicurrency-store-funding-v1",
       "multicurrency-stock-funding-v1",
       "multicurrency-marketplace-funding-v1"
-    ]
+    ],
+    "scopeNote": "Original #770 checks passed, but unrelated Contracts/Store database harnesses did not establish Attendance-specific R3 acceptance; the supplemental qualification below closes that gap."
   },
   "delivered": [
     "Staff Attendance selected persistence moved behind an Attendance-owned repository contract and Supabase adapter.",
@@ -47,5 +48,50 @@
     "task19Started": false
   },
   "nextTask": "REF-019",
-  "nextTaskStarted": false
+  "nextTaskStarted": false,
+  "attendanceDatabaseQualification": {
+    "pullRequest": 772,
+    "qualifiedHeadSha": "071069cc0f5af2a91809f59bff1ab8fdac6b094d",
+    "mergeSha": "af67069f412dc37c306bc1a8def68c504011d85d",
+    "mergeTreeMatchesQualifiedHead": true,
+    "workflowRunId": 36802129584,
+    "jobId": 110178567328,
+    "artifactId": 11135834418,
+    "artifactSha256": "15b3c70e5587c15151c660422514bdc770342fe5cd0dea78245e6a4d25f50935",
+    "workflowUrl": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36802129584",
+    "triggeredExactHeadWorkflows": 7,
+    "successful": 7,
+    "failed": 0,
+    "pending": 0,
+    "vercel": "success",
+    "fullBackendTypecheck": "passed; all 28 Edge roots",
+    "fullBackendSmoke": "passed",
+    "disposableDatabaseAcceptance": "passed; unchanged Staff Attendance application/repository/RPC",
+    "gameScopedSnapshotTables": 208,
+    "acceptedCases": [
+      "same-key replay and conflicting payload",
+      "locked-day rejection without effects",
+      "in-RPC failure after reward writes rolls back all effects and replay receipt; same-key retry succeeds",
+      "same-key concurrent replay with two observed database lock waiters",
+      "different-key same-player/day race with two observed waiters and exactly one attendance/reward transaction"
+    ],
+    "lint": {
+      "commandExitCode": 0,
+      "baselineFindings": 142,
+      "baselineErrorFindings": 17,
+      "beforeAfterIdentical": true,
+      "addedFindings": 0,
+      "removedFindings": 0,
+      "acceptedBaselineRunId": 36780147325,
+      "acceptedBaselineJobId": 110108497263,
+      "historicalBaselineFindingsIdentical": true,
+      "cleanDatabaseCertified": false
+    },
+    "historicalFailure": {
+      "headSha": "14aa1406464809c55b1ca857ebfbe8b5bd3f030c",
+      "runId": 36801047538,
+      "reason": "Synthetic game_settings fixture omitted required stock-market timezone; corrected without changing runtime, schema or assertions."
+    },
+    "scope": "Repository/disposable-database acceptance only; no hosted mutation or production certification."
+  }
 }
