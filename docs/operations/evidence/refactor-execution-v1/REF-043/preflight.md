@@ -17,10 +17,11 @@ Meaningful files (eight maximum, including parent closeout/authority):
 - this record
 - `docs/roadmaps/refactor-execution-v1/tasks/REF-043.md`
 - `docs/roadmaps/refactor-execution-v1/backlog.json`: REF-043 only
-- exact-PR cross-cutting verification authority, if required
+- exact-PR cross-cutting verification authority
+- `.github/workflows/admin-browser-e2e.yml`: exact existing fixture-suite step only
 
 Generated architecture inventory is separately listed. No API client, BFF,
-auth, backend, account projection, renderer, mutation/retry, package, workflow,
+auth, backend, account projection, renderer, mutation/retry, package,
 SQL or deployment change. Stop on baseline failure, API defect, ownership
 collision, privacy change, or semantic diff exceeding 400 lines.
 
@@ -84,3 +85,14 @@ No migration, route, RPC, external service or live data changed. No staging,
 production, dedicated Banking browser or connected-runtime evidence is claimed.
 Exact-PR authority is `docs/operations/contracts/player-cross-cutting/pr-810.json`.
 CI and normal merge evidence are still required before VERIFIED_COMPLETE.
+
+## Required browser gate follow-through
+
+Both official pinned Chromium and headless-shell installers failed with invalid
+ZIP downloads. The bounded scope therefore adds the eighth meaningful file:
+one Admin V2 fixture-suite step in the existing Admin Browser E2E workflow,
+after pinned browser installation. That workflow already checks out the exact
+PR head; checkout semantics, permissions, production triggers, dependency
+versions, database/connected gates and retry budgets remain unchanged. Evidence
+uses its existing sanitized artifact directory. No new workflow or package
+script is introduced, and an untriggered or skipped step is never a pass.

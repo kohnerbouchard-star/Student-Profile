@@ -123,6 +123,12 @@ jobs:
           done
           exit 1
 
+      # Run the existing fixture suite on the exact head already checked out above.
+      - name: Verify Admin V2 browser states
+        env:
+          ADMIN_V2_EVIDENCE_DIR: /tmp/econovaria-browser/admin-v2
+        run: npm run test:admin-v2:browser
+
       - name: Build exact authorized Crafting pack
         shell: bash
         run: |

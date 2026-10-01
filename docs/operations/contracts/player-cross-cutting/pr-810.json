@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/admin-browser-e2e.yml",
     "admin/v2/src/routes/banking/BankingController.js",
     "admin/v2/src/routes/banking/BankingResponse.js",
     "scripts/admin-v2-banking.test.mjs",
@@ -21,6 +22,7 @@
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
   "requiredFiles": [
+    ".github/workflows/admin-browser-e2e.yml",
     "admin/v2/src/routes/banking/BankingController.js",
     "admin/v2/src/routes/banking/BankingResponse.js",
     "scripts/admin-v2-banking.test.mjs",
