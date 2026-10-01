@@ -90,3 +90,17 @@ bodies/signatures, all ten remaining methods, row/select and mapper match base
 exactly. Equivalent direct error construction, unchanged client identity and
 acyclic imports were checked. Conservative non-move source/test surface is at
 most 177 lines. Review does not replace unavailable live/Edge aggregate evidence.
+
+## Serialized main integration
+
+Merged verified REF-024 closeout main `488bc9051dfa0e053f7c4314921617f399763d6d`
+normally into this branch. No conflicts; all REF-024 qualification and completion
+records are preserved. Recomputed architecture inventory is unchanged.
+Pre-integration head `3fb2e1e5b19f04e92cea4dd983bcb702c424affc` passed Backend
+Typecheck/full smoke (run `36829931917`), Repository Quality and REF-009 reward
+qualification (run `36829931602`). Its separate REF-018/022 qualification failure
+(run `36829931566`, job `110263974849`) was exact-head/main-workflow skew:
+main's new workflow asked the older head for the not-yet-inherited REF-024 script.
+The integration includes that already-reviewed script/workflow unchanged, and
+requires fresh combined-head CI. Historical pre-integration passes do not qualify
+the new head. No workflow repair or test weakening was made in REF-029.
