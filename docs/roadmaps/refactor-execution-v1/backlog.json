@@ -520,7 +520,7 @@
       "id": "REF-032",
       "title": "Give World runtime reads an explicit scoped application boundary",
       "file": "tasks/REF-032.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-031"
       ],
@@ -529,7 +529,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-032/preflight.md"
     },
     {
       "id": "REF-033",
