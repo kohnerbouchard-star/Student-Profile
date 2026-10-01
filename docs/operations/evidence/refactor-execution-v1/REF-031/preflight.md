@@ -56,3 +56,12 @@ Player commands passed. Six added repository parity cases pass before extraction
 (1258→1259, Countries 12→13); all debt counts remain unchanged. Initial combined
 architecture command stopped on its expected generated-file diff; the staged
 regeneration is retained and ratchets are rerun without changing any ceiling.
+
+Draft [PR788](https://github.com/kohnerbouchard-star/Student-Profile/pull/788)
+binds `docs/operations/contracts/player-cross-cutting/pr-788.json` to these eight
+changed paths (seven meaningful plus inventory). Verifier/test paths are locked
+but unchanged. Root npm test and all shared audits pass after regeneration.
+Local full Edge typecheck is BLOCKED by connection refusal fetching pinned
+`@supabase/supabase-js@2.108.2` from esm.sh; no aggregate passing credit is claimed.
+Exact-head CI must supply full backend typecheck/smoke and required cross-cutting
+checks. Local focused tests and backend TypeScript remain passing.
