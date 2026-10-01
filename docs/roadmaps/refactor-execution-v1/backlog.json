@@ -410,7 +410,7 @@
       "id": "REF-025",
       "title": "Bound Business-banking and loan reads behind explicit contracts",
       "file": "tasks/REF-025.md",
-      "status": "PLANNED",
+      "status": "BLOCKED",
       "dependsOn": [
         "REF-021"
       ],
@@ -419,7 +419,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-025/preflight.md"
     },
     {
       "id": "REF-026",
