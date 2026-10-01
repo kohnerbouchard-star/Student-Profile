@@ -754,7 +754,7 @@
       "id": "REF-045",
       "title": "Isolate licensing issuance from worker transport",
       "file": "tasks/REF-045.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-005"
       ],
@@ -763,7 +763,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-045/execution.md"
     },
     {
       "id": "REF-046",
