@@ -66,3 +66,10 @@ registration changes no package script. Inventory adds one test/source file
 (1259→1260; World 18→19); debt counts are
 unchanged; tests use the existing Players public index. Full Edge typecheck/smoke are not rerun locally under the known pinned
 esm.sh dependency connection refusal; exact-head CI must provide both gates.
+
+Draft [PR790](https://github.com/kohnerbouchard-star/Student-Profile/pull/790)
+binds its exact-path authority at `docs/operations/contracts/player-cross-cutting/pr-790.json`.
+Seven changed paths comprise six meaningful files plus generated inventory.
+Verifier/test paths are locked and unchanged. Final owning World suite still
+passes 50 + 11, including all optional dependency error branches. Shared audits,
+root npm test and diff checks pass; no architecture ceiling is changed.
