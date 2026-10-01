@@ -365,15 +365,15 @@
       "id": "REF-022",
       "title": "Move Staff ledger adjustment behind the existing atomic command",
       "file": "tasks/REF-022.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-021"
       ],
       "risk": "R3",
       "architectureMapping": "ARCH-205/ARCH-300",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
+      "implementationSha": "3bb2d9dde0393e0fd814e04b6d8f9cae08f7e7d3",
+      "mergeSha": "ff6c0614ca2936d6685a8b701e384e1f2a3037f2",
       "evidence": "docs/operations/evidence/refactor-execution-v1/REF-022/preflight.md"
     },
     {
