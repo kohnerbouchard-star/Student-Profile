@@ -23,3 +23,13 @@ Preserve #668 context; #624 Player CSS; #690 Living World/DELIGHT; #730/#731 Pha
 The current closeout changes five documentation/data files only: REF-001 baseline JSON and Markdown, this intake, REF-001's task record and the backlog manifest. No application source, historical migration, SQL routine, workflow, release request, environment variable, secret, scheduler or cloud resource is changed. Root AGENTS and all security, atomicity, isolation, privacy, validation and release controls are preserved.
 
 The original publication had 50 PLANNED packages. Current individual status is in the manifest; no other task gains completion credit from REF-001. Next is REF-002, read-only route/import mapping, after REF-001's merge/verification checkpoint. Do not start it in the same run that closes REF-001. Every later code task still requires its own dependencies, bounded scope, characterization and applicable exact-source validation.
+
+## Supplemental intake — REF-UNBLOCK-001 (2026-10-02)
+
+**Status:** PLANNED. **Observed main:** `26820b10f8ad8e74ca3606b6ad48f34c1a8bf02d`.
+
+The owner requested a small roadmap add-on to resolve the remaining blockers and asked to review architectural options before decisions are made. [REF-UNBLOCK-001 — Blocker-resolution addendum](BLOCKER-RESOLUTION-ADDENDUM.md) records that request as one supplemental work item with eight bounded packages, acceptance evidence, owner coordination and four pending decisions. It does not add a 51st primary REF task.
+
+This request authorizes publication of the plan/options, not adoption of its recommendations, implementation, a merge of existing runtime/release PRs, cloud changes or production promotion. No architecture or lending/Markets/retirement policy is selected here. The existing modular-monolith baseline remains unchanged. Each package requires fresh ownership and scope acceptance; the decision-dependent packages also require the recorded owner selection.
+
+The historical REF-001 material above is preserved. The 50-task manifest, all original dependencies/statuses, global beta/context ledger and release authorities are unchanged. No downstream task is unblocked by adding this entry. Recommended first repair scopes are the release-rehearsal prerequisite for REF-032 and the Admin browser baseline for REF-043; original acceptance remains mandatory.
