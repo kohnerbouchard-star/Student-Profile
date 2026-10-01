@@ -1,6 +1,6 @@
 # REF-035 Messaging create-thread application boundary
 
-Status: IN_PROGRESS. Exact base main `709c33778c28f7731048242e2e8393b04afd773b`.
+Status: VERIFIED_COMPLETE. Exact base main `709c33778c28f7731048242e2e8393b04afd773b`.
 REF-006/016 are VERIFIED_COMPLETE. Open REF-030 PR792 owns separate Contracts
 qualification; no current PR owns this Messaging seam. REF-015/025/032 remain
 blocked, REF-019/020 paused, and their dependent gates are preserved.
@@ -69,3 +69,54 @@ Integration: merge REF-030a qualification main
 its harness/workflow/evidence and only the REF-035 backlog delta. REF-030b has a
 separate owner. Regenerated inventory is unchanged by that qualification-only
 main change; Messaging remains 18 files. Fresh combined-head CI is mandatory.
+
+## Qualified source and guarded merge
+
+[PR794](https://github.com/kohnerbouchard-star/Student-Profile/pull/794) qualified
+combined head `b2bca113e301eb0893dd96ef9783eb4ffab184ce` and merged with an
+expected-head-guarded merge as `269adac8b3e4dcd96f45f4a01a1e24cdc75fa392`.
+Both trees equal `c3bc43d15cc32d6febf9bfa6ff519eea8a64c5b8`. The final diff is
+nine paths, eight meaningful plus inventory, 267 additions and 25 deletions.
+
+All 29 exact-head workflows passed: 62 successful jobs and five expected
+conditional skips (staging evidence, live parity, inventory materialization,
+artifact promotion and protected transactional Messaging staging execution).
+Vercel and the isolated Messaging harness status passed; no unresolved review
+threads remained. [Messaging run 36847949222](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36847949222)
+passed static harness job `110322506248`; protected execution `110323127068`
+was skipped. This does not claim hosted Messaging atomicity certification.
+
+[Backend run 36847948926](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36847948926),
+job `110322504111`, passed full typecheck and aggregate smoke, resolving the
+local dependency-fetch block. Downloaded [smoke artifact 11154542093](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36847948926/artifacts/11154542093)
+verified SHA256 `945957bf14c28a35794bf4de1ded49fad4a7effe34692192202a160bbaaa2342`,
+status 0, all three REF-035 cases and Messaging 37.
+[Store/FX run 36847949064](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36847949064)
+passed source/database/Player-browser/connected jobs
+`110323100482/110323100300/110323100279/110323100035`;
+[Store sales run 36847949020](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36847949020)
+passed, including final database job `110323094059`. These required regression
+results do not certify a production deployment or override REF-032's release
+blocker. No SQL, route, RPC signature, policy or public contract changed.
+
+## Merged-main verification and completion
+
+Automatic merged-main verification is terminal: 16 workflows, 15 successful
+and one expected skipped Edge inventory workflow; 33 successful jobs and seven
+expected conditional skips (two Edge convergence, dependency review and four
+live-parity/release jobs). No pending or failed jobs.
+
+- [Backend Typecheck 36850138802](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36850138802): passed
+- [Repository Quality 36850138852](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36850138852): passed
+- [Store Cutover 36850138760](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36850138760): passed
+- Store Atomic Settlement `36850138862`, Listing Inventory `36850138714`, Seller Offers `36850138738`, Withdrawal Safety `36850138811`: passed
+- Manufacturing `36850138765`, Supply Chain `36850138759`, Production Git Release contracts `36850138808`, timezone `36850138867`, Runtime Wiring `36850138870`, Beta Security `36850138725`, Beta Pilot `36850138807`, CodeQL `36850139850`: passed
+- Edge Inventory `36850138788`: expected skipped
+
+REF-035 is VERIFIED_COMPLETE for this bounded R2 application extraction. The
+same RPC remains canonical; no second persistence path or remaining create-RPC
+site exists in the handler. Only three existing docs close out the task. Other
+49 task records, REF-032's separate post-merge release blocker, and paused
+REF-019/020 remain unchanged. Next independent serial candidate is REF-036,
+subject to its own ownership, scope and R3 prerequisite/evidence preflight;
+REF-030b continues under its separate owner.
