@@ -503,18 +503,19 @@
       "children": [
         {
           "id": "REF-030a",
-          "status": "IMPLEMENTED_NOT_MERGED",
+          "status": "VERIFIED_COMPLETE",
           "scope": "Disposable existing submission/Story trigger qualification",
           "dependsOn": [
             "REF-029"
           ],
-          "implementationSha": "ef5af7d62a02ae3c45f81ab118852dcd17186f2d",
+          "implementationSha": "5a0d1630c5478a265957259cce3b0aba5695bc11",
           "pullRequest": 792,
-          "evidence": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36844450147"
+          "evidence": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36846754887",
+          "mergeSha": "16d8e06dc0204da8bfe6ba7105d2502a771befd7"
         },
         {
           "id": "REF-030b",
-          "status": "PLANNED",
+          "status": "IN_PROGRESS",
           "scope": "Bounded mechanical submission adapter extraction",
           "dependsOn": [
             "REF-030a"

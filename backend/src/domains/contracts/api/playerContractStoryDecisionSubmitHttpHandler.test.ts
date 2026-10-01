@@ -130,6 +130,44 @@ Deno.test("Story decision validates semantic option shape and substantive ration
   assertEquals(renders, 0);
 });
 
+Deno.test("REF030 Story validation follows auth and availability but precedes progress lookup", async () => {
+  let progressReads = 0, writes = 0;
+  const repository = { ...repositoryFor({ onUpsert: () => { writes++; } }),
+    getPlayerContractProgress: async () => { progressReads++; return progressRecord({ status: "completed" }); } };
+  const invalid = () => storyRequest({ optionKey: "invalid option", rationale: "short" });
+  const route = { kind: "submit" as const, contractKey: CONTRACT_KEY };
+  const denied = await handlePlayerContractPublicSubmitRequest(invalid(), route, {
+    ...dependencies(repository), resolvePlayerSession: async () => ({ ok: false as const, status: 401,
+      error: { code: "invalid_player_session", message: "Invalid session", retryable: false } }),
+  });
+  assertEquals(denied.status, 401);
+  for (const change of [{ gameSessionId: "other-game" }, { expiresAt: NOW }, { contractKey: "unrelated" }]) {
+    const unavailable = { ...repository, listPlayerAvailableContracts: async () => [{ ...contractRecord(), ...change }] };
+    const response = await handlePlayerContractPublicSubmitRequest(invalid(), route, dependencies(unavailable));
+    assertEquals(response.status, 404); assertEquals((await response.json()).error.code, "contract_not_available");
+  }
+  const invalidEvidence = await handlePlayerContractPublicSubmitRequest(invalid(), route, dependencies(repository));
+  assertEquals(invalidEvidence.status, 400);
+  assertEquals((await invalidEvidence.json()).error.message, "Choose one of the available Story responses.");
+  assertEquals(progressReads, 0); assertEquals(writes, 0);
+});
+
+Deno.test("REF030 only the two existing Story keys validate without normalizing stored payload", async () => {
+  for (const key of [CONTRACT_KEY, "contract.meridian.belonging-long-term-status-decision.v1", "normal-contract"]) {
+    const captured: unknown[] = [];
+    let renders = 0;
+    const repository = { ...repositoryFor({ onUpsert: input => captured.push(input) }),
+      listPlayerAvailableContracts: async () => [{ ...contractRecord(), contractKey: key }] };
+    const story = key !== "normal-contract";
+    const raw = { optionKey: story ? "  multilateral  " : "not a Story option", rationale: story ? `  ${RATIONALE}  ` : "x" };
+    const response = await handlePlayerContractPublicSubmitRequest(storyRequest(raw), { kind: "submit", contractKey: key },
+      dependencies(repository, { renderStoryRoleplay: async () => { renders++; return null; } }));
+    assertEquals(response.status, 200); assertEquals(captured.length, 1);
+    assertEquals((captured[0] as { evidencePayload: unknown }).evidencePayload, { storyDecision: raw });
+    assertEquals(renders, story ? 1 : 0);
+  }
+});
+
 function storyRequest(input: { readonly optionKey: string; readonly rationale: string }): Request {
   return new Request(`https://example.test/players/me/contracts/${CONTRACT_KEY}/submit`, {
     method: "POST",
