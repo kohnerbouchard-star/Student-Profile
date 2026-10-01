@@ -12,8 +12,11 @@ import {
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import { readBalanceNumber } from "../../../platform/supabase/edgeParsing.ts";
 import { readLedgerHistoryLimitQuery } from "./ledgerHistoryHttpHelpers.ts";
+import type { LedgerHistoryReadRepository } from "../contracts/ledgerHistoryReadRepository.ts";
+import { SupabaseLedgerHistoryReadRepository } from "../infrastructure/supabaseLedgerHistoryReadRepository.ts";
 
 interface StaffPlayerLedgerHistoryDependencies {
+  readonly createLedgerHistoryRepository?: (client: EdgeSupabaseClient) => LedgerHistoryReadRepository;
   readonly resolveStaffForRequest: (
     request: Request,
     env: SupabaseEnv,
@@ -32,25 +35,6 @@ interface StaffPlayerLedgerHistoryDependencies {
         readonly error: EdgeErrorBody["error"];
       }
   >;
-}
-
-interface AccountBalanceRow {
-  readonly account_type: string;
-  readonly balance: number | string;
-  readonly currency_code: string;
-}
-
-interface PlayerLedgerEntryRow {
-  readonly id: string;
-  readonly account_type: string;
-  readonly amount: number | string;
-  readonly currency_code: string;
-  readonly entry_type: string;
-  readonly source_domain: string;
-  readonly source_action: string;
-  readonly source_id: string | null;
-  readonly created_by_type: string;
-  readonly created_at: string;
 }
 
 interface StaffPlayerLedgerHistoryBody {
@@ -166,39 +150,13 @@ export async function handleStaffPlayerLedgerHistoryRequest(
       });
     }
 
-    const balancesResponse = await staffResult.serviceClient
-      .from("account_balances")
-      .select("account_type,balance,currency_code")
-      .eq("game_session_id", gameSessionId)
-      .eq("player_id", playerId)
-      .order("account_type", { ascending: true });
-
-    if (balancesResponse.error) {
-      return jsonError(500, {
-        code: "admin_player_ledger_history_failed",
-        message: "Player ledger history could not be loaded.",
-        retryable: false,
-      });
-    }
-
-    const ledgerResponse = await staffResult.serviceClient
-      .from("ledger_entries")
-      .select("id,account_type,amount,currency_code,entry_type,source_domain,source_action,source_id,created_by_type,created_at")
-      .eq("game_session_id", gameSessionId)
-      .eq("player_id", playerId)
-      .order("created_at", { ascending: false })
-      .limit(limit);
-
-    if (ledgerResponse.error) {
-      return jsonError(500, {
-        code: "admin_player_ledger_history_failed",
-        message: "Player ledger history could not be loaded.",
-        retryable: false,
-      });
-    }
-
-    const balances = (balancesResponse.data ?? []) as AccountBalanceRow[];
-    const ledgerRows = (ledgerResponse.data ?? []) as PlayerLedgerEntryRow[];
+    const repository = dependencies.createLedgerHistoryRepository?.(staffResult.serviceClient) ??
+      new SupabaseLedgerHistoryReadRepository(staffResult.serviceClient);
+    const { balances, entries: ledgerRows } = await repository.readHistory({
+      gameSessionId: gameSessionId,
+      playerId: playerId,
+      limit,
+    });
 
     return jsonResponse<StaffPlayerLedgerHistoryBody>(200, {
       ok: true,
