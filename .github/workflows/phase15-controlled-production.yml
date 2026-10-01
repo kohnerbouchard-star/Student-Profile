@@ -7,7 +7,34 @@ on:
       - ".github/workflows/phase15-controlled-production.yml"
       - ".github/workflows/phase15-controlled-staging.yml"
       - ".github/workflows/database-replay.yml"
+      - ".github/workflows/player-multiplayer-load-e2e.yml"
+      - ".github/workflows/business-player-store-cutover-v2.yml"
+      - ".github/workflows/production-git-release.yml"
       - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-certificate.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-certificate.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-runtime-probe.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-runtime-probe.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.mjs"
+      - "scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.test.mjs"
+      - "docs/operations/contracts/phase15-production-apply-provenance-v1.json"
+      - "docs/operations/contracts/phase15-advisor-exceptions-v1.json"
+      - "docs/operations/contracts/phase15-acceptance-evidence-v1.json"
+      - "docs/operations/contracts/phase15-production-runtime-fixture-v1.json"
+      - "docs/operations/evidence/phase15-certification/**"
+      - "docs/operations/backup-manifest.template.json"
+      - "docs/operations/backup-restore-runbook.md"
+      - "docs/operations/backup-retention-policy.md"
+      - "docs/operations/restore-rehearsal.template.json"
+      - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
+      - "scripts/recovery-contract.mjs"
+      - "scripts/recovery-contract.test.mjs"
+      - "scripts/restore-integrity-checks.sql"
+      - "scripts/vercel-git-release-contract.test.mjs"
       - "scripts/staging/golden-five-contract.test.mjs"
       - "scripts/staging/golden-five-verify.mjs"
       - "scripts/staging/golden-five-browser-acceptance.mjs"
@@ -15,6 +42,9 @@ on:
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts"
       - "backend/src/domains/world/services/playerWorldRuntimeService.ts"
       - "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
+      - "docs/operations/contracts/player-cross-cutting/pr-731.json"
+      - "scripts/business-phase10-player-store-cutover-contract.mjs"
+      - "scripts/player-cross-cutting-authority.test.mjs"
   workflow_run:
     workflows: ["Phase 15 Controlled Staging Convergence"]
     types: [completed]
@@ -25,7 +55,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: phase15-controlled-production-${{ github.event.workflow_run.head_sha || github.event.pull_request.head.sha || github.sha }}
+  group: econovaria-production-release
   cancel-in-progress: false
 
 env:
@@ -36,6 +66,8 @@ env:
   SUPABASE_CLI_VERSION: 2.109.1
   MANIFEST_PATH: backend/supabase/edge-function-manifest.json
   RELEASE_BRANCH: release/production
+  ORIGINAL_PRODUCTION_APPLY_RUN_ID: 35551077276
+  ORIGINAL_PRODUCTION_APPLY_ARTIFACT_ID: 10619430098
 
 jobs:
   static-contract:
@@ -59,6 +91,11 @@ jobs:
           set -euo pipefail
           node --test scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs
           node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-production-certificate.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-production-runtime-probe.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.test.mjs
           node --test scripts/staging/golden-five-contract.test.mjs
           node --test scripts/edge-function-inventory/validate.test.mjs
           node --test scripts/local-edge-runtime-contract.test.mjs
@@ -77,12 +114,14 @@ jobs:
       github.event.workflow_run.head_branch == 'main'
     needs: static-contract
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 180
     environment: staging
     outputs:
       source_commit: ${{ steps.identity.outputs.source_commit }}
       staging_run_id: ${{ steps.identity.outputs.staging_run_id }}
       replay_run_id: ${{ steps.replay.outputs.run_id }}
+      player_load_run_id: ${{ steps.acceptance-runs.outputs.player_load_run_id }}
+      player_store_run_id: ${{ steps.acceptance-runs.outputs.player_store_run_id }}
     env:
       SOURCE_COMMIT: ${{ github.event.workflow_run.head_sha }}
       STAGING_RUN_ID: ${{ github.event.workflow_run.id }}
@@ -90,6 +129,7 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       CONFIGURED_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PHASE15_ADVISOR_EVIDENCE_KEY_V1: ${{ secrets.PHASE15_ADVISOR_EVIDENCE_KEY_V1 }}
       PGSSLMODE: verify-full
       PGSSLROOTCERT: ${{ github.workspace }}/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt
       PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000
@@ -120,12 +160,27 @@ jobs:
             test -n "$path" || continue
             changed=$((changed + 1))
             case "$path" in
-              .github/workflows/database-replay.yml|.github/workflows/phase15-controlled-staging.yml|.github/workflows/phase15-controlled-production.yml|scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs) ;;
+              .github/workflows/database-replay.yml|.github/workflows/phase15-controlled-staging.yml|.github/workflows/phase15-controlled-production.yml|.github/workflows/player-multiplayer-load-e2e.yml|.github/workflows/business-player-store-cutover-v2.yml|.github/workflows/production-git-release.yml) ;;
               scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs|scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs|scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs|scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh|scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh|scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs) ;;
+              scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs|scripts/operations/live-migration-reconciliation/phase15-production-certificate.mjs|scripts/operations/live-migration-reconciliation/phase15-production-certificate.test.mjs) ;;
+              scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.mjs|scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.test.mjs|scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.mjs|scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.test.mjs) ;;
+              scripts/operations/live-migration-reconciliation/phase15-production-runtime-probe.mjs|scripts/operations/live-migration-reconciliation/phase15-production-runtime-probe.test.mjs) ;;
+              scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.mjs|scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.test.mjs) ;;
               scripts/staging/golden-five-contract.test.mjs|scripts/staging/golden-five-verify.mjs|scripts/staging/golden-five-browser-acceptance.mjs) ;;
               scripts/phase15-storage-lifecycle-convergence.test.mjs) ;;
+              scripts/recovery-contract.mjs|scripts/recovery-contract.test.mjs|scripts/recovery-verify.sh|scripts/restore-integrity-checks.sql|scripts/vercel-git-release-contract.test.mjs) ;;
+              scripts/operations/live-migration-reconciliation/README.md) ;;
               backend/supabase/migrations/20260920082200_phase15_close_database_advisor_findings_v1.sql) ;;
+              docs/operations/backup-manifest.template.json|docs/operations/backup-restore-runbook.md|docs/operations/backup-retention-policy.md|docs/operations/restore-rehearsal.template.json) ;;
+              docs/operations/contracts/phase15-acceptance-evidence-v1.json|docs/operations/contracts/phase15-advisor-exceptions-v1.json|docs/operations/contracts/phase15-production-apply-provenance-v1.json) ;;
+              docs/operations/contracts/phase15-production-runtime-fixture-v1.json) ;;
+              docs/operations/contracts/database-parity-v1.json) ;;
+              docs/operations/evidence/phase15-certification/*) ;;
+              docs/roadmaps/business-v2-current-checkpoint-v1.json|docs/roadmaps/business-v2-development-execution-plan-v1.md|docs/roadmaps/business-v2-development-execution-log-v1.md|docs/roadmaps/econovaria-beta-completion-roadmap-v1.md) ;;
               docs/operations/contracts/player-cross-cutting/pr-718.json|docs/operations/contracts/player-cross-cutting/pr-719.json|docs/operations/contracts/player-cross-cutting/pr-720.json|docs/operations/contracts/player-cross-cutting/pr-721.json|docs/operations/contracts/player-cross-cutting/pr-722.json|docs/operations/contracts/player-cross-cutting/pr-723.json|docs/operations/contracts/player-cross-cutting/pr-724.json|docs/operations/contracts/player-cross-cutting/pr-725.json|docs/operations/contracts/player-cross-cutting/pr-726.json|docs/operations/contracts/player-cross-cutting/pr-727.json|docs/operations/contracts/player-cross-cutting/pr-728.json|docs/operations/contracts/player-cross-cutting/pr-729.json) ;;
+              docs/operations/contracts/player-cross-cutting/pr-731.json|scripts/business-phase10-player-store-cutover-contract.mjs|scripts/player-cross-cutting-authority.test.mjs) ;;
+              api/_admin-bff-proxy.js|docs/operations/contracts/player-cross-cutting/pr-732.json|scripts/auth-boundary-contract.test.mjs|scripts/vercel-auth-proxy-contract.test.mjs) ;;
+              backend/supabase/migrations/20260921044500_reconcile_internal_runner_nonce_service_role_authority_v1.sql|docs/operations/contracts/player-cross-cutting/pr-733.json|scripts/internal-runner-auth-contract.test.mjs) ;;
               backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts|backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts) ;;
               backend/src/domains/world/services/playerWorldRuntimeService.ts|backend/src/domains/world/services/playerWorldRuntimeService.test.ts) ;;
               *) echo "Source after populated staging baseline contains an unauthorized path: $path" >&2; exit 1 ;;
@@ -212,6 +267,90 @@ jobs:
           run-id: ${{ steps.replay.outputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ runner.temp }}/phase15-authority/clean-replay
+      - name: Wait for exact-source Player load and economic acceptance runs
+        id: acceptance-runs
+        shell: bash
+        run: |
+          set -euo pipefail
+          live_root="$RUNNER_TEMP/phase15-acceptance-live"
+          mkdir -p "$live_root"
+          resolve_exact_acceptance() {
+            local workflow="$1"
+            local expected_job="$2"
+            local expected_artifact="$3"
+            local key="$4"
+            local run_file="$live_root/$key-run.json"
+            local job_file="$live_root/$key-job.json"
+            local artifact_file="$live_root/$key-artifact.json"
+            local run_id=""
+            for attempt in $(seq 1 180); do
+              curl --fail --silent --show-error \
+                -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" \
+                -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs?head_sha=$SOURCE_COMMIT&event=push&per_page=20" \
+                > "$live_root/$key-runs.json"
+              jq -c --arg sha "$SOURCE_COMMIT" \
+                '[.workflow_runs[] | select(.head_sha == $sha and .event == "push")] | sort_by(.run_attempt, .id) | last // empty' \
+                "$live_root/$key-runs.json" > "$run_file"
+              if test -s "$run_file"; then
+                status="$(jq -r '.status' "$run_file")"
+                conclusion="$(jq -r '.conclusion // ""' "$run_file")"
+                run_id="$(jq -r '.id' "$run_file")"
+                if test "$status" = completed; then
+                  test "$conclusion" = success
+                  break
+                fi
+              fi
+              if test "$attempt" -eq 180; then
+                echo "Exact-source acceptance run did not complete: $workflow" >&2
+                return 1
+              fi
+              sleep 20
+            done
+            curl --fail --silent --show-error \
+              -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?filter=latest&per_page=100" \
+              > "$live_root/$key-jobs.json"
+            jq -c --arg name "$expected_job" \
+              '.jobs | map(select(.name == $name and .status == "completed" and .conclusion == "success")) | first // empty' \
+              "$live_root/$key-jobs.json" > "$job_file"
+            test -s "$job_file"
+            curl --fail --silent --show-error \
+              -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100" \
+              > "$live_root/$key-artifacts.json"
+            jq -c --arg name "$expected_artifact" \
+              '.artifacts | map(select(.name == $name and .expired == false)) | first // empty' \
+              "$live_root/$key-artifacts.json" > "$artifact_file"
+            test -s "$artifact_file"
+            printf '%s' "$run_id"
+          }
+          player_load_run_id="$(resolve_exact_acceptance \
+            player-multiplayer-load-e2e.yml \
+            'Two-browser Player journey, secure mutations, and 30-40 Player load' \
+            "player-multiplayer-load-$SOURCE_COMMIT" player-load)"
+          player_store_run_id="$(resolve_exact_acceptance \
+            business-player-store-cutover-v2.yml \
+            'Certify exact-source economic isolation and conservation' \
+            "phase15-economic-acceptance-$SOURCE_COMMIT" player-store)"
+          echo "player_load_run_id=$player_load_run_id" >> "$GITHUB_OUTPUT"
+          echo "player_store_run_id=$player_store_run_id" >> "$GITHUB_OUTPUT"
+      - name: Download exact-source Player load acceptance artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: player-multiplayer-load-${{ env.SOURCE_COMMIT }}
+          run-id: ${{ steps.acceptance-runs.outputs.player_load_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-acceptance-live/player-load-evidence
+      - name: Download exact-source economic acceptance artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-economic-acceptance-${{ env.SOURCE_COMMIT }}
+          run-id: ${{ steps.acceptance-runs.outputs.player_store_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-acceptance-live/player-store-evidence
       - name: Validate staging database, runtime, and five-player lifecycle authority
         shell: bash
         env:
@@ -357,6 +496,385 @@ jobs:
             JSON.stringify(authority, null, 2) + "\n",
           );
           NODE
+      - name: Validate exact-candidate Phase 15D acceptance certificate
+        shell: bash
+        env:
+          ACCEPTANCE_ROOT: ${{ runner.temp }}/phase15-acceptance-live
+          AUTHORITY_ROOT: ${{ runner.temp }}/phase15-authority
+          PLAYER_LOAD_RUN_ID: ${{ steps.acceptance-runs.outputs.player_load_run_id }}
+          PLAYER_STORE_RUN_ID: ${{ steps.acceptance-runs.outputs.player_store_run_id }}
+        run: |
+          set -euo pipefail
+          candidate_tree="$(git rev-parse 'HEAD^{tree}')"
+          export CANDIDATE_TREE="$candidate_tree"
+          curl --fail --silent --show-error \
+            -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$STAGING_RUN_ID" \
+            > "$ACCEPTANCE_ROOT/golden-five-run.json"
+          curl --fail --silent --show-error \
+            -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$STAGING_RUN_ID/jobs?filter=latest&per_page=100" \
+            > "$ACCEPTANCE_ROOT/golden-five-jobs.json"
+          jq -c '.jobs | map(select(.name == "Exercise real staging browser lifecycle and isolation" and .status == "completed" and .conclusion == "success")) | first // empty' \
+            "$ACCEPTANCE_ROOT/golden-five-jobs.json" > "$ACCEPTANCE_ROOT/golden-five-job.json"
+          test -s "$ACCEPTANCE_ROOT/golden-five-job.json"
+          curl --fail --silent --show-error \
+            -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$STAGING_RUN_ID/artifacts?per_page=100" \
+            > "$ACCEPTANCE_ROOT/golden-five-artifacts.json"
+          jq -c --arg name "phase15-staging-lifecycle-$SOURCE_COMMIT" \
+            '.artifacts | map(select(.name == $name and .expired == false)) | first // empty' \
+            "$ACCEPTANCE_ROOT/golden-five-artifacts.json" > "$ACCEPTANCE_ROOT/golden-five-artifact.json"
+          test -s "$ACCEPTANCE_ROOT/golden-five-artifact.json"
+          node --input-type=module - <<'NODE'
+          import assert from "node:assert/strict";
+          import { createHash } from "node:crypto";
+          import { readFile, readdir, writeFile } from "node:fs/promises";
+          import path from "node:path";
+          const root = process.env.ACCEPTANCE_ROOT;
+          const loadPath = path.join(root, "player-load-evidence/econovaria-player-load/phase15-load-summary.json");
+          const storePath = path.join(root, "player-store-evidence/econovaria-phase10a4-player-store-evidence/phase15-economic-summary.json");
+          const json = async (filename) => JSON.parse(await readFile(filename, "utf8"));
+          async function find(rootPath, filename) {
+            for (const entry of await readdir(rootPath, { withFileTypes: true })) {
+              const candidate = path.join(rootPath, entry.name);
+              if (entry.isDirectory()) {
+                const nested = await find(candidate, filename);
+                if (nested) return nested;
+              } else if (entry.name === filename) return candidate;
+            }
+            return null;
+          }
+          const [load, store, contract] = await Promise.all([
+            json(loadPath),
+            json(storePath),
+            json("docs/operations/contracts/phase15-acceptance-evidence-v1.json"),
+          ]);
+          for (const [value, runId, workflowPath, job] of [
+            [load, process.env.PLAYER_LOAD_RUN_ID, ".github/workflows/player-multiplayer-load-e2e.yml", "connected-player-runtime"],
+            [store, process.env.PLAYER_STORE_RUN_ID, ".github/workflows/business-player-store-cutover-v2.yml", "phase15-economic-acceptance"],
+          ]) {
+            assert.equal(value.schemaVersion, 1);
+            assert.equal(value.sourceCommit, process.env.SOURCE_COMMIT);
+            assert.equal(value.sourceTree, process.env.CANDIDATE_TREE);
+            assert.equal(value.decision, "PASS");
+            assert.equal(value.workflow.runId, Number(runId));
+            assert.equal(value.workflow.job, job);
+            assert.equal(value.workflow.path, workflowPath);
+            assert.equal(value.workflow.event, "push");
+          }
+          assert.deepEqual(load.profile, {
+            expectedConcurrentPlayers: 30,
+            maximumConcurrentPlayers: 40,
+            readPathsPerPlayer: 7,
+          });
+          assert.deepEqual(load.players, { requested: 40, provisioned: 40, activeCredentials: 40 });
+          assert.equal(load.baseline30.concurrentPlayers, 30);
+          assert.equal(load.baseline30.loginCount, 30);
+          assert.equal(load.baseline30.readCount, 210);
+          assert.equal(load.burst40.concurrentPlayers, 40);
+          assert.equal(load.burst40.loginCount, 10);
+          assert.equal(load.burst40.readCount, 280);
+          for (const value of [
+            load.baseline30.loginErrors, load.baseline30.readErrors, load.baseline30.serverErrors,
+            load.burst40.loginErrors, load.burst40.readErrors, load.burst40.serverErrors,
+            load.retryEvents, load.browserErrors, load.browserServerErrors,
+          ]) assert.equal(value, 0);
+          assert.ok(load.baseline30.loginP95Ms <= 15_000);
+          assert.ok(load.baseline30.readP95Ms <= 8_000);
+          assert.ok(load.burst40.loginP95Ms <= 15_000);
+          assert.ok(load.burst40.readP95Ms <= 8_000);
+          for (const key of [
+            "playerIsolation", "gameIsolationBidirectional", "economicConservation",
+            "sourceDebitsExact", "recipientCreditExact", "inventoryTransferExact",
+            "replayZeroDelta", "orderingRacePassed", "concurrencyPassed",
+            "connectedAuthenticatedJourneys", "withdrawalFirstRejectedBeforePayment",
+            "purchaseFirstExcessWithdrawalRejected", "purchaseFirstRemainingWithdrawalAccepted",
+          ]) assert.equal(store[key], true, `Store acceptance mismatch: ${key}`);
+          for (const key of ["requestErrors", "serverErrors", "browserErrors", "pageErrors"]) {
+            assert.equal(store[key], 0, `Store error count mismatch: ${key}`);
+          }
+
+          const liveRows = [
+            {
+              key: "player-load",
+              runId: Number(process.env.PLAYER_LOAD_RUN_ID),
+              path: ".github/workflows/player-multiplayer-load-e2e.yml",
+              summaryPath: loadPath,
+              evidencePath: "econovaria-player-load/phase15-load-summary.json",
+              claims: ["authenticated-browser", "browser-server-cleanliness", "load-30", "load-40"],
+              requiredJobs: ["Two-browser Player journey, secure mutations, and 30-40 Player load"],
+              acceptance: { load },
+            },
+            {
+              key: "player-store",
+              runId: Number(process.env.PLAYER_STORE_RUN_ID),
+              path: ".github/workflows/business-player-store-cutover-v2.yml",
+              summaryPath: storePath,
+              evidencePath: "econovaria-phase10a4-player-store-evidence/phase15-economic-summary.json",
+              claims: [
+                "authenticated-browser", "browser-server-cleanliness", "economic-concurrency",
+                "economic-conservation", "ordering-race", "two-game-isolation",
+              ],
+              requiredJobs: [
+                "Verify serial settlement, ordering races, and two-game isolation",
+                "Verify connected Buyer and seller Store journey in two games",
+                "Certify exact-source economic isolation and conservation",
+              ],
+              acceptance: { economics: store },
+            },
+          ];
+          const runtimeRecords = [];
+          for (const row of liveRows) {
+            const [run, job, jobs, artifact, bytes] = await Promise.all([
+              json(path.join(root, `${row.key}-run.json`)),
+              json(path.join(root, `${row.key}-job.json`)),
+              json(path.join(root, `${row.key}-jobs.json`)),
+              json(path.join(root, `${row.key}-artifact.json`)),
+              readFile(row.summaryPath),
+            ]);
+            assert.equal(run.head_sha, process.env.SOURCE_COMMIT);
+            assert.equal(run.event, "push");
+            assert.equal(run.status, "completed");
+            assert.equal(run.conclusion, "success");
+            assert.equal(Number(artifact.workflow_run?.id), row.runId);
+            assert.equal(artifact.expired, false);
+            assert.match(artifact.digest, /^sha256:[a-f0-9]{64}$/u);
+            const requiredJobs = row.requiredJobs.map((name) => {
+              const value = jobs.jobs.find((entry) =>
+                entry.name === name && entry.status === "completed" && entry.conclusion === "success");
+              assert.ok(value, `Missing successful exact-source acceptance job: ${name}`);
+              return {
+                id: value.id,
+                runId: row.runId,
+                name: value.name,
+                status: value.status,
+                conclusion: value.conclusion,
+              };
+            });
+            assert.ok(requiredJobs.some(({ id }) => id === job.id));
+            const evidenceSha256 = createHash("sha256").update(bytes).digest("hex");
+            runtimeRecords.push({
+              id: `exact-${row.key}`,
+              role: "candidate-evidence",
+              finalAcceptanceRun: true,
+              claims: row.claims,
+              envelope: {
+                source: { head: process.env.SOURCE_COMMIT, tree: process.env.CANDIDATE_TREE, branch: "main" },
+                run: {
+                  id: row.runId,
+                  name: run.name,
+                  path: row.path,
+                  event: "push",
+                  status: "completed",
+                  conclusion: "success",
+                  attempt: run.run_attempt,
+                  head: process.env.SOURCE_COMMIT,
+                  tree: process.env.CANDIDATE_TREE,
+                },
+                jobs: requiredJobs,
+                artifacts: [{
+                  id: artifact.id,
+                  runId: row.runId,
+                  name: artifact.name,
+                  digest: artifact.digest,
+                  head: process.env.SOURCE_COMMIT,
+                  tree: process.env.CANDIDATE_TREE,
+                  expired: artifact.expired,
+                  evidenceFiles: [{
+                    path: row.evidencePath,
+                    sha256: evidenceSha256,
+                  }],
+                }],
+                review: null,
+              },
+              evidenceBindings: [{
+                artifactId: artifact.id,
+                path: row.evidencePath,
+                sha256: evidenceSha256,
+              }],
+              candidateBinding: { mode: "exact-source" },
+              acceptance: row.acceptance,
+            });
+          }
+
+          const goldenBrowserPath = await find(path.join(process.env.AUTHORITY_ROOT, "current-lifecycle"), "golden-five-browser-acceptance.json");
+          const goldenFixturePath = await find(path.join(process.env.AUTHORITY_ROOT, "current-lifecycle"), "fixture-verification.json");
+          const stagingDatabasePath = await find(path.join(process.env.AUTHORITY_ROOT, "current-database"), "summary.json");
+          const stagingRuntimePath = await find(path.join(process.env.AUTHORITY_ROOT, "current-runtime"), "staging-attestation.json");
+          const stagingAuthorityPath = path.join(process.env.RUNNER_TEMP, "phase15-staging-authority-evidence", "staging-authority.json");
+          assert.ok(goldenBrowserPath && goldenFixturePath && stagingDatabasePath && stagingRuntimePath);
+          const [
+            goldenBrowser, goldenFixture, goldenRun, goldenJobs, stagingArtifacts,
+            stagingAuthority, goldenBrowserBytes, goldenFixtureBytes, stagingDatabaseBytes,
+            stagingRuntimeBytes,
+          ] = await Promise.all([
+            json(goldenBrowserPath),
+            json(goldenFixturePath),
+            json(path.join(root, "golden-five-run.json")),
+            json(path.join(root, "golden-five-jobs.json")),
+            json(path.join(root, "golden-five-artifacts.json")),
+            json(stagingAuthorityPath),
+            readFile(goldenBrowserPath),
+            readFile(goldenFixturePath),
+            readFile(stagingDatabasePath),
+            readFile(stagingRuntimePath),
+          ]);
+          assert.equal(goldenRun.id, Number(process.env.STAGING_RUN_ID));
+          assert.equal(goldenRun.head_sha, process.env.SOURCE_COMMIT);
+          assert.equal(goldenRun.event, "push");
+          assert.equal(goldenRun.status, "completed");
+          assert.equal(goldenRun.conclusion, "success");
+          assert.equal(stagingAuthority.status, "PASS");
+          assert.equal(stagingAuthority.sourceCommit, process.env.SOURCE_COMMIT);
+          const requiredStagingJobs = [
+            "Rehearse and converge populated staging database",
+            "Deploy and attest current staging Edge runtime",
+            "Exercise real staging browser lifecycle and isolation",
+          ].map((name) => {
+            const job = goldenJobs.jobs.find((entry) =>
+              entry.name === name && entry.status === "completed" && entry.conclusion === "success");
+            assert.ok(job, `Missing successful current staging job: ${name}`);
+            return {
+              id: job.id,
+              runId: goldenRun.id,
+              name: job.name,
+              status: job.status,
+              conclusion: job.conclusion,
+            };
+          });
+          const stagingArtifactSpecs = [
+            {
+              name: `phase15-staging-database-${process.env.SOURCE_COMMIT}`,
+              files: [{ path: "summary.json", bytes: stagingDatabaseBytes }],
+            },
+            {
+              name: `phase15-staging-runtime-${process.env.SOURCE_COMMIT}`,
+              files: [{ path: "staging-attestation.json", bytes: stagingRuntimeBytes }],
+            },
+            {
+              name: `phase15-staging-lifecycle-${process.env.SOURCE_COMMIT}`,
+              files: [
+                { path: "econovaria-golden-five/browser/golden-five-browser-acceptance.json", bytes: goldenBrowserBytes },
+                { path: "econovaria-golden-five/fixture-verification.json", bytes: goldenFixtureBytes },
+              ],
+            },
+          ];
+          const currentStagingArtifacts = stagingArtifactSpecs.map((spec) => {
+            const artifact = stagingArtifacts.artifacts.find((entry) =>
+              entry.name === spec.name && entry.expired === false);
+            assert.ok(artifact, `Missing current staging artifact: ${spec.name}`);
+            assert.equal(Number(artifact.workflow_run?.id), goldenRun.id);
+            assert.match(artifact.digest, /^sha256:[a-f0-9]{64}$/u);
+            return {
+              id: artifact.id,
+              runId: goldenRun.id,
+              name: artifact.name,
+              digest: artifact.digest,
+              head: process.env.SOURCE_COMMIT,
+              tree: process.env.CANDIDATE_TREE,
+              expired: false,
+              evidenceFiles: spec.files.map((file) => ({
+                path: file.path,
+                sha256: createHash("sha256").update(file.bytes).digest("hex"),
+              })),
+            };
+          });
+          const stagingEvidenceBindings = currentStagingArtifacts
+            .flatMap((artifact) => artifact.evidenceFiles.map((file) => ({
+              artifactId: artifact.id,
+              path: file.path,
+              sha256: file.sha256,
+            })))
+            .sort((left, right) => left.artifactId - right.artifactId || left.path.localeCompare(right.path));
+          const journeys = goldenBrowser.journeys;
+          const requestStatuses = journeys.flatMap((journey) => journey.requests.map(({ status }) => status));
+          const goldenAcceptance = {
+            decision: "PASS",
+            environment: "staging",
+            projectRef: goldenFixture.environment.projectRef,
+            productionSelected: goldenFixture.environment.productionSelected,
+            playerCount: goldenFixture.players.length,
+            browserContexts: journeys.length,
+            requestedConcurrency: goldenBrowser.requestedConcurrency,
+            successfulLogins: journeys.filter(({ loginStatus }) => loginStatus === 200).length,
+            routeCount: goldenBrowser.routes.length,
+            requestErrors: requestStatuses.filter((status) => status >= 400).length,
+            serverErrors: requestStatuses.filter((status) => status >= 500).length,
+            browserErrors: journeys.reduce((count, journey) => count + journey.consoleErrors.length, 0),
+            pageErrors: journeys.reduce((count, journey) => count + journey.pageErrors.length, 0),
+            securityFailures: journeys.reduce((count, journey) => count + journey.securityFailures.length, 0),
+            fixtureComplete: goldenFixture.checks.fixtureComplete,
+            lifecycleActive: goldenFixture.game.lifecycleState === "active",
+            refreshPersistencePassed: journeys.every(({ refreshPersisted }) => refreshPersisted === true),
+            logoutPassed: journeys.every(({ loggedOut }) => loggedOut === true),
+          };
+          runtimeRecords.unshift({
+            id: "exact-hosted-staging-authority",
+            role: "candidate-evidence",
+            finalAcceptanceRun: false,
+            claims: ["authenticated-browser", "browser-server-cleanliness", "golden-five-lifecycle", "staging-authority"],
+            envelope: {
+              source: { head: process.env.SOURCE_COMMIT, tree: process.env.CANDIDATE_TREE, branch: "main" },
+              run: {
+                id: goldenRun.id,
+                name: goldenRun.name,
+                path: ".github/workflows/phase15-controlled-staging.yml",
+                event: "push",
+                status: "completed",
+                conclusion: "success",
+                attempt: goldenRun.run_attempt,
+                head: process.env.SOURCE_COMMIT,
+                tree: process.env.CANDIDATE_TREE,
+              },
+              jobs: requiredStagingJobs,
+              artifacts: currentStagingArtifacts,
+              review: null,
+            },
+            evidenceBindings: stagingEvidenceBindings,
+            candidateBinding: { mode: "exact-source" },
+            acceptance: {
+              goldenFive: goldenAcceptance,
+              authority: {
+                decision: "PASS",
+                stagingRunId: stagingAuthority.stagingRunId,
+                populatedBaselineRunId: stagingAuthority.populatedBaselineRunId,
+                replayRunId: stagingAuthority.replayRunId,
+                databaseCertified: stagingAuthority.databaseCertified,
+                runtimeCertified: stagingAuthority.runtimeCertified,
+                goldenFiveCertified: stagingAuthority.goldenFiveCertified,
+              },
+            },
+          });
+          contract.status = "PASS";
+          contract.pendingReason = null;
+          contract.candidate = {
+            head: process.env.SOURCE_COMMIT,
+            tree: process.env.CANDIDATE_TREE,
+            branch: "main",
+            stagingProjectRef: process.env.STAGING_PROJECT_REF,
+            finalAcceptanceRunIds: [
+              Number(process.env.PLAYER_LOAD_RUN_ID),
+              Number(process.env.PLAYER_STORE_RUN_ID),
+            ].sort((left, right) => left - right),
+          };
+          contract.evidence = runtimeRecords;
+          await writeFile(
+            path.join(process.env.RUNNER_TEMP, "phase15-staging-authority-evidence", "phase15-acceptance-runtime-contract.json"),
+            JSON.stringify(contract, null, 2) + "\n",
+          );
+          NODE
+          node scripts/operations/live-migration-reconciliation/phase15-acceptance-certificate.mjs \
+            --contract "$RUNNER_TEMP/phase15-staging-authority-evidence/phase15-acceptance-runtime-contract.json" \
+            --expected-head "$SOURCE_COMMIT" --expected-tree "$candidate_tree" --require-pass \
+            > "$RUNNER_TEMP/phase15-staging-authority-evidence/phase15-acceptance-certificate.json"
+          cp "$ACCEPTANCE_ROOT/player-load-evidence/econovaria-player-load/phase15-load-summary.json" \
+            "$RUNNER_TEMP/phase15-staging-authority-evidence/phase15-load-summary.json"
+          cp "$ACCEPTANCE_ROOT/player-store-evidence/econovaria-phase10a4-player-store-evidence/phase15-economic-summary.json" \
+            "$RUNNER_TEMP/phase15-staging-authority-evidence/phase15-economic-summary.json"
       - name: Install pinned Supabase CLI
         uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
         with:
@@ -389,56 +907,47 @@ jobs:
           echo "::add-mask::$database_url"
           PHASE15_ADVISOR_DATABASE_URL="$database_url" node scripts/release-integrity/cli.mjs validate-db-url --url-env PHASE15_ADVISOR_DATABASE_URL --expected-project-ref "$STAGING_PROJECT_REF"
           printf 'PHASE15_ADVISOR_DATABASE_URL=%s\n' "$database_url" >> "$GITHUB_ENV"
-      - name: Require known-only staging advisor findings
+      - name: Encrypt raw and require object-approved staging advisor findings
         shell: bash
         run: |
           set -euo pipefail
-          supabase db advisors --db-url "$PHASE15_ADVISOR_DATABASE_URL" --type all --level info --fail-on error --output-format json > "$RUNNER_TEMP/staging-advisors-raw.json"
-          ADVISORS="$RUNNER_TEMP/staging-advisors-raw.json" OUTPUT="$RUNNER_TEMP/phase15-staging-authority-evidence/staging-advisors.json" node --input-type=module - <<'NODE'
-          import { readFile, writeFile } from "node:fs/promises";
-          const value = JSON.parse(await readFile(process.env.ADVISORS, "utf8"));
-          const findings = [];
-          const walk = (node) => {
-            if (Array.isArray(node)) return node.forEach(walk);
-            if (!node || typeof node !== "object") return;
-            if (typeof node.name === "string" && typeof node.level === "string") {
-              findings.push({ name: node.name, level: node.level.toUpperCase() });
-            }
-            for (const child of Object.values(node)) walk(child);
-          };
-          walk(value);
-          const allowed = new Set([
-            "auth_leaked_password_protection",
-            "rls_enabled_no_policy",
-            "unindexed_foreign_keys",
-            "unused_index",
-          ]);
-          const unknown = findings.filter(({ name }) => !allowed.has(name));
-          const errors = findings.filter(({ level }) => level === "ERROR");
-          if (unknown.length || errors.length) {
-            throw new Error("Staging advisors contain unknown or ERROR findings.");
-          }
-          const unique = [...new Map(findings.map((row) => [row.name + "|" + row.level, row])).values()]
-            .sort((a, b) => a.name.localeCompare(b.name) || a.level.localeCompare(b.level));
-          await writeFile(process.env.OUTPUT, JSON.stringify({
-            schemaVersion: 1,
-            status: "PASS",
-            environment: "staging",
-            sourceCommit: process.env.SOURCE_COMMIT,
-            classification: "known-owner-reviewed-findings-only",
-            findings: unique,
-          }, null, 2) + "\n");
-          NODE
+          test "${#PHASE15_ADVISOR_EVIDENCE_KEY_V1}" -ge 64
+          raw="$RUNNER_TEMP/staging-advisors-raw.json"
+          key_file="$RUNNER_TEMP/staging-advisors.key"
+          private_root="$RUNNER_TEMP/phase15-staging-advisor-private"
+          mkdir -p "$private_root"
+          trap 'shred -u "$raw" "$key_file" 2>/dev/null || true' EXIT
+          supabase db advisors --db-url "$PHASE15_ADVISOR_DATABASE_URL" \
+            --type all --level info --fail-on error --output-format json > "$raw"
+          printf '%s' "$PHASE15_ADVISOR_EVIDENCE_KEY_V1" > "$key_file"
+          chmod 600 "$key_file"
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 600000 -md sha256 \
+            -in "$raw" -out "$private_root/staging-advisors-raw.json.enc" -pass "file:$key_file"
+          test -s "$private_root/staging-advisors-raw.json.enc"
+          node scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.mjs validate \
+            "$raw" docs/operations/contracts/phase15-advisor-exceptions-v1.json \
+            staging "$STAGING_PROJECT_REF" \
+            "$RUNNER_TEMP/phase15-staging-authority-evidence/staging-advisors.json"
+      - name: Upload encrypted raw staging advisor evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-staging-advisors-private-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-staging-advisor-private/*.enc
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
       - name: Upload exact staging authority
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: phase15-staging-authority-${{ env.SOURCE_COMMIT }}
           path: ${{ runner.temp }}/phase15-staging-authority-evidence/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
 
-  converge-production-database:
-    name: Recovery-gate and converge populated production database
+  prepare-production-recovery:
+    name: Create and restore-verify production recovery set
     if: >-
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
@@ -453,6 +962,7 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       CONFIGURED_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PHASE15_BACKUP_ENCRYPTION_KEY_V1: ${{ secrets.PHASE15_BACKUP_ENCRYPTION_KEY_V1 }}
       PHASE15_ENVIRONMENT: production
       PHASE15_EXPECTED_PROJECT_REF: cgiukdjwicykrmtkhudh
       PHASE15_LIVE_APPLY_AUTHORIZED: production
@@ -555,26 +1065,27 @@ jobs:
           recovery_root="$RUNNER_TEMP/phase15-production-recovery"
           plain_root="$recovery_root/plain"
           validation_root="$recovery_root/validation"
+          cipher_validation_root="$recovery_root/cipher-validation"
           restore_project="$RUNNER_TEMP/phase15-production-restore"
           encrypted_archive="$recovery_root/phase15-production-$SOURCE_COMMIT.tar.gz.enc"
           archive="$recovery_root/phase15-production-$SOURCE_COMMIT.tar.gz"
           decrypted_archive="$validation_root/phase15-production-$SOURCE_COMMIT.tar.gz"
           key_file="$recovery_root/.backup-key"
-          mkdir -p "$plain_root" "$validation_root" "$restore_project/supabase"
+          mkdir -p "$plain_root" "$validation_root" "$cipher_validation_root" "$restore_project/supabase"
+          test "${#PHASE15_BACKUP_ENCRYPTION_KEY_V1}" -ge 64
 
           supabase db dump --db-url "$PHASE15_REMOTE_DATABASE_URL" \
             --file "$plain_root/roles.sql" --role-only
           supabase db dump --db-url "$PHASE15_REMOTE_DATABASE_URL" \
             --file "$plain_root/schema.sql"
-          # Retain the CLI's complete platform data scope for recovery on a
-          # current-version Supabase target. The two explicit exclusions are
-          # nonportable vector-index metadata already excluded by this gate.
+          # Keep the CLI platform data export as supplemental current-version
+          # recovery material. It excludes CLI-managed/internal schemas and
+          # object blobs, so it is not represented as a complete platform backup.
           supabase db dump --db-url "$PHASE15_REMOTE_DATABASE_URL" \
             --file "$plain_root/data.sql" --use-copy --data-only \
             -x "storage.buckets_vectors" -x "storage.vector_indexes"
-          # Independently prove restoration of the only application-owned
-          # schemas Phase 15 can mutate. Managed Auth/Storage data remains in
-          # data.sql, but requires a target with matching managed schemas.
+          # The authoritative application-data snapshot covers every data-bearing
+          # Phase 15 application schema. economy_private is routines-only.
           supabase db dump --db-url "$PHASE15_REMOTE_DATABASE_URL" \
             --file "$plain_root/application-data.sql" --use-copy --data-only \
             --schema public,private
@@ -585,6 +1096,60 @@ jobs:
           application_copy_statement_count="$(grep -c '^COPY ' "$plain_root/application-data.sql" || true)"
           test "$full_copy_statement_count" -gt 0
           test "$application_copy_statement_count" -gt 0
+          node scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.mjs emit \
+            --dump "$plain_root/application-data.sql" \
+            --output "$plain_root/source-copy-data-evidence.json"
+          node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs \
+            --environment production --mode rollback --format manifest \
+            > "$plain_root/phase15-forward-manifest.json"
+          versions="$(jq -r '.migrations[].version' "$plain_root/phase15-forward-manifest.json" | paste -sd, -)"
+          test -n "$versions"
+          psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
+            -v phase15_versions="$versions" <<'SQL' > "$plain_root/phase15-ledger.json"
+          select coalesce(
+            jsonb_agg(
+              jsonb_build_object(
+                'version', version,
+                'name', coalesce(name, ''),
+                'statementCount', cardinality(statements),
+                'sha256', encode(extensions.digest(coalesce(statements[1], ''), 'sha256'), 'hex')
+              ) order by version
+            ),
+            '[]'::jsonb
+          )::text
+          from supabase_migrations.schema_migrations
+          where version = any (string_to_array(:'phase15_versions', ','));
+          SQL
+          node scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs \
+            --manifest "$plain_root/phase15-forward-manifest.json" \
+            --live "$plain_root/phase15-ledger.json" \
+            > "$plain_root/phase15-ledger-verification.json"
+          psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL' \
+            > "$plain_root/scheduler-reconstruction.json"
+          select jsonb_build_object(
+            'schemaVersion', 1,
+            'captureKind', 'pg-cron-separate-reconstruction-evidence',
+            'jobCount', count(*),
+            'activeCount', count(*) filter (where active),
+            'inactiveCount', count(*) filter (where not active),
+            'guardPresent', exists (
+              select 1 from cron.job where jobname = 'phase15-scheduler-auto-restore-v1'
+            ),
+            'jobs', coalesce(jsonb_agg(jsonb_build_object(
+              'jobName', jobname,
+              'schedule', schedule,
+              'command', command,
+              'database', database,
+              'username', username,
+              'active', active
+            ) order by jobname), '[]'::jsonb)
+          )::text
+          from cron.job
+          where jobname like 'econovaria-%';
+          SQL
+          jq -e '.schemaVersion == 1 and .jobCount == 13 and .activeCount == 13 and
+            .inactiveCount == 0 and .guardPresent == false and (.jobs | length) == 13' \
+            "$plain_root/scheduler-reconstruction.json" >/dev/null
 
           created_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
           roles_sha256="$(sha256sum "$plain_root/roles.sql" | awk '{print $1}')"
@@ -611,20 +1176,28 @@ jobs:
             bytes: Number(bytes),
           });
           await writeFile(process.env.OUTPUT, JSON.stringify({
-            schemaVersion: 2,
-            backupFormat: "supabase-cli-logical-v2",
-            backupScope: "full-logical-export-plus-application-restore-proof-v1",
+            schemaVersion: 3,
+            backupFormat: "supabase-cli-logical-v3",
+            backupScope: "phase15-application-logical-recovery-v3",
             projectRef: process.env.PRODUCTION_PROJECT_REF,
             sourceCommit: process.env.SOURCE_COMMIT,
             createdAt: process.env.CREATED_AT,
             supabaseCliVersion: process.env.SUPABASE_CLI_VERSION,
-            platformDataDumpIncluded: true,
+            applicationObjectSchemas: ["public", "private", "economy_private"],
+            applicationDataSchemas: ["public", "private"],
+            economyPrivateTableCount: 0,
+            supplementalPlatformDataDumpIncluded: true,
             platformDataDumpExcludedTables: [
               "storage.buckets_vectors",
               "storage.vector_indexes",
             ],
-            applicationRestoreSchemas: ["public", "private"],
-            managedPlatformDataIncluded: true,
+            supabaseCliImplicitExclusions: [
+              "vault",
+              "pgsodium",
+              "supabase_migrations",
+            ],
+            excludedExternalData: ["storage-object-blobs", "cloudflare-r2-objects"],
+            managedAuthStorageDataRestoreVerified: false,
             managedPlatformRestoreRequiresCurrentTargetVersion: true,
             files: [
               file("roles.sql", process.env.ROLES_SHA256, process.env.ROLES_BYTES),
@@ -641,33 +1214,9 @@ jobs:
           }, null, 2) + "\n");
           NODE
 
-          tar --create --gzip --file "$archive" --directory "$plain_root" \
-            roles.sql schema.sql data.sql application-data.sql backup-manifest.json
-          archive_sha256="$(sha256sum "$archive" | awk '{print $1}')"
-          BACKUP_ACCESS_TOKEN="$SUPABASE_ACCESS_TOKEN" \
-          BACKUP_DATABASE_URL="$PHASE15_REMOTE_DATABASE_URL" \
-          BACKUP_SOURCE_COMMIT="$SOURCE_COMMIT" \
-          node --input-type=module - <<'NODE' > "$key_file"
-          import { createHmac } from "node:crypto";
-          process.stdout.write(createHmac("sha256", process.env.BACKUP_ACCESS_TOKEN)
-            .update(process.env.BACKUP_DATABASE_URL)
-            .update(String.fromCharCode(0))
-            .update(process.env.BACKUP_SOURCE_COMMIT)
-            .digest("hex"));
-          NODE
-          chmod 600 "$key_file"
-          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 600000 -md sha256 \
-            -in "$archive" -out "$encrypted_archive" -pass "file:$key_file"
-          test -s "$encrypted_archive"
-          cipher_sha256="$(sha256sum "$encrypted_archive" | awk '{print $1}')"
-
-          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -md sha256 \
-            -in "$encrypted_archive" -out "$decrypted_archive" -pass "file:$key_file"
-          test "$(sha256sum "$decrypted_archive" | awk '{print $1}')" = "$archive_sha256"
-          tar --extract --gzip --file "$decrypted_archive" --directory "$validation_root"
-          for backup_file in roles.sql schema.sql data.sql application-data.sql backup-manifest.json; do
-            cmp -s "$plain_root/$backup_file" "$validation_root/$backup_file"
-          done
+          cp "$plain_root/roles.sql" "$plain_root/schema.sql" "$plain_root/data.sql" \
+            "$plain_root/application-data.sql" "$plain_root/backup-manifest.json" \
+            "$plain_root/source-copy-data-evidence.json" "$validation_root/"
 
           rsync -a --exclude migrations --exclude .temp backend/supabase/ "$restore_project/supabase/"
           test "$restore_project" = "$RUNNER_TEMP/phase15-production-restore"
@@ -812,6 +1361,74 @@ jobs:
             --command 'SET session_replication_role = replica' \
             --file /tmp/phase15-application-data.sql
 
+          docker exec "$db_container" pg_dump -U supabase_admin -d postgres \
+            --data-only --schema=public --schema=private --no-owner --no-privileges \
+            > "$plain_root/restored-application-data.sql"
+          test -s "$plain_root/restored-application-data.sql"
+          node scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.mjs emit \
+            --dump "$plain_root/restored-application-data.sql" \
+            --output "$plain_root/restored-copy-data-evidence.json"
+          node scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.mjs compare \
+            --source "$plain_root/source-copy-data-evidence.json" \
+            --restored "$plain_root/restored-copy-data-evidence.json" \
+            --output "$plain_root/copy-data-comparison.json"
+          jq -e '.matched == true and .differences == [] and
+            .profile == "supabase-copy-application-data-comparison-v1"' \
+            "$plain_root/copy-data-comparison.json" >/dev/null
+
+          BACKUP_MANIFEST="$plain_root/backup-manifest.json" \
+          SOURCE_EVIDENCE="$plain_root/source-copy-data-evidence.json" \
+          RESTORED_DUMP="$plain_root/restored-application-data.sql" \
+          RESTORED_EVIDENCE="$plain_root/restored-copy-data-evidence.json" \
+          DATA_COMPARISON="$plain_root/copy-data-comparison.json" \
+          FORWARD_MANIFEST="$plain_root/phase15-forward-manifest.json" \
+          PHASE15_LEDGER="$plain_root/phase15-ledger.json" \
+          LEDGER_VERIFICATION="$plain_root/phase15-ledger-verification.json" \
+          SCHEDULER_RECONSTRUCTION="$plain_root/scheduler-reconstruction.json" \
+          node --input-type=module - <<'NODE'
+          import { createHash } from "node:crypto";
+          import { readFile, stat, writeFile } from "node:fs/promises";
+          const manifest = JSON.parse(await readFile(process.env.BACKUP_MANIFEST, "utf8"));
+          const additions = await Promise.all([
+            ["source-copy-data-evidence.json", process.env.SOURCE_EVIDENCE],
+            ["restored-application-data.sql", process.env.RESTORED_DUMP],
+            ["restored-copy-data-evidence.json", process.env.RESTORED_EVIDENCE],
+            ["copy-data-comparison.json", process.env.DATA_COMPARISON],
+            ["phase15-forward-manifest.json", process.env.FORWARD_MANIFEST],
+            ["phase15-ledger.json", process.env.PHASE15_LEDGER],
+            ["phase15-ledger-verification.json", process.env.LEDGER_VERIFICATION],
+            ["scheduler-reconstruction.json", process.env.SCHEDULER_RECONSTRUCTION],
+          ].map(async ([name, filename]) => {
+            const bytes = await readFile(filename);
+            return { name, sha256: createHash("sha256").update(bytes).digest("hex"), bytes: (await stat(filename)).size };
+          }));
+          manifest.files.push(...additions);
+          manifest.dataComparisonProfile = "supabase-copy-application-data-comparison-v1";
+          manifest.dataComparisonMatched = true;
+          await writeFile(process.env.BACKUP_MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
+          NODE
+
+          tar --create --gzip --file "$archive" --directory "$plain_root" \
+            roles.sql schema.sql data.sql application-data.sql restored-application-data.sql \
+            source-copy-data-evidence.json restored-copy-data-evidence.json \
+            copy-data-comparison.json phase15-forward-manifest.json phase15-ledger.json \
+            phase15-ledger-verification.json scheduler-reconstruction.json backup-manifest.json
+          archive_sha256="$(sha256sum "$archive" | awk '{print $1}')"
+          printf '%s' "$PHASE15_BACKUP_ENCRYPTION_KEY_V1" > "$key_file"
+          chmod 600 "$key_file"
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 600000 -md sha256 \
+            -in "$archive" -out "$encrypted_archive" -pass "file:$key_file"
+          test -s "$encrypted_archive"
+          cipher_sha256="$(sha256sum "$encrypted_archive" | awk '{print $1}')"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -md sha256 \
+            -in "$encrypted_archive" -out "$decrypted_archive" -pass "file:$key_file"
+          test "$(sha256sum "$decrypted_archive" | awk '{print $1}')" = "$archive_sha256"
+          tar --extract --gzip --file "$decrypted_archive" --directory "$cipher_validation_root"
+          while IFS= read -r backup_file; do
+            cmp -s "$plain_root/$backup_file" "$cipher_validation_root/$backup_file"
+          done < <(jq -r '.files[].name' "$plain_root/backup-manifest.json")
+          cmp -s "$plain_root/backup-manifest.json" "$cipher_validation_root/backup-manifest.json"
+
           psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
             < scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql \
             > "$recovery_root/remote-schema.json"
@@ -868,6 +1485,9 @@ jobs:
           LOGICAL_MANIFEST="$plain_root/backup-manifest.json" \
           SCHEMA_COMPARISON="$recovery_root/restore-schema-comparison.json" \
           DATA_VERIFICATION="$recovery_root/restored-data-verification.json" \
+          COPY_DATA_COMPARISON="$plain_root/copy-data-comparison.json" \
+          LEDGER_VERIFICATION="$plain_root/phase15-ledger-verification.json" \
+          SCHEDULER_RECONSTRUCTION="$plain_root/scheduler-reconstruction.json" \
           ARCHIVE_SHA256="$archive_sha256" \
           CIPHER_SHA256="$cipher_sha256" \
           CIPHER_BYTES="$(stat --format='%s' "$encrypted_archive")" \
@@ -878,6 +1498,9 @@ jobs:
           const manifest = JSON.parse(await readFile(process.env.LOGICAL_MANIFEST, "utf8"));
           const schema = JSON.parse(await readFile(process.env.SCHEMA_COMPARISON, "utf8"));
           const data = JSON.parse(await readFile(process.env.DATA_VERIFICATION, "utf8"));
+          const copyData = JSON.parse(await readFile(process.env.COPY_DATA_COMPARISON, "utf8"));
+          const ledger = JSON.parse(await readFile(process.env.LEDGER_VERIFICATION, "utf8"));
+          const scheduler = JSON.parse(await readFile(process.env.SCHEDULER_RECONSTRUCTION, "utf8"));
           if (schema.matched !== true ||
               schema.differences.length !== 0 ||
               schema.profile !== "supabase-application-restore-v1" ||
@@ -885,22 +1508,39 @@ jobs:
               schema.profileValidation?.hostedTopology?.profile !== "supabase-hosted-live-v1") {
             throw new Error("Restored logical backup application schema does not match production.");
           }
+          if (copyData.matched !== true || copyData.differences.length !== 0 ||
+              copyData.profile !== "supabase-copy-application-data-comparison-v1") {
+            throw new Error("Restored logical backup application data does not match production.");
+          }
+          if (ledger.ok !== true || ledger.verificationMode !== "exact" ||
+              ledger.migrationCount !== 169 || scheduler.jobCount !== 13 ||
+              scheduler.activeCount !== 13 || scheduler.inactiveCount !== 0 ||
+              scheduler.guardPresent !== false) {
+            throw new Error("Separate migration-ledger or scheduler reconstruction evidence is incomplete.");
+          }
           await writeFile(process.env.OUTPUT, JSON.stringify({
-            schemaVersion: 2,
+            schemaVersion: 3,
             status: "PASS",
             projectRef: process.env.PRODUCTION_PROJECT_REF,
             sourceCommit: process.env.SOURCE_COMMIT,
-            recoveryMethod: "supabase-cli-logical-backup-v2",
+            recoveryMethod: "supabase-cli-logical-backup-v3",
             backupScope: manifest.backupScope,
             createdAt: manifest.createdAt,
             supabaseCliVersion: manifest.supabaseCliVersion,
-            platformDataDumpIncluded: manifest.platformDataDumpIncluded,
+            applicationObjectSchemas: manifest.applicationObjectSchemas,
+            applicationDataSchemas: manifest.applicationDataSchemas,
+            economyPrivateTableCount: manifest.economyPrivateTableCount,
+            supplementalPlatformDataDumpIncluded: manifest.supplementalPlatformDataDumpIncluded,
             platformDataDumpExcludedTables: manifest.platformDataDumpExcludedTables,
-            managedPlatformDataIncluded: manifest.managedPlatformDataIncluded,
+            supabaseCliImplicitExclusions: manifest.supabaseCliImplicitExclusions,
+            excludedExternalData: manifest.excludedExternalData,
+            managedAuthStorageDataRestoreVerified: manifest.managedAuthStorageDataRestoreVerified,
+            supabaseMigrationsIncludedInCliDump: false,
+            pgCronIncludedInCliDump: false,
             managedPlatformRestoreRequiresCurrentTargetVersion:
               manifest.managedPlatformRestoreRequiresCurrentTargetVersion,
             backupFiles: manifest.files,
-            restoreScope: manifest.applicationRestoreSchemas,
+            restoreScope: manifest.applicationDataSchemas,
             fullCopyStatementCount: manifest.fullCopyStatementCount,
             applicationCopyStatementCount: manifest.applicationCopyStatementCount,
             archiveSha256: process.env.ARCHIVE_SHA256,
@@ -911,7 +1551,8 @@ jobs:
               cipher: "aes-256-cbc",
               kdf: "pbkdf2-hmac-sha256",
               iterations: 600000,
-              keyAuthority: "production-environment-secrets-v1",
+              keyAuthority: "dedicated-versioned-environment-secret",
+              keyId: "PHASE15_BACKUP_ENCRYPTION_KEY_V1",
             },
             restoreValidated: true,
             schemaMatched: true,
@@ -922,15 +1563,37 @@ jobs:
             disposableTargetDefaultPrivilegeEntryCount:
               Number(process.env.TARGET_DEFAULT_ACL_ENTRY_COUNT),
             restoredData: data,
+            dataComparison: copyData,
+            migrationLedgerReconstruction: {
+              included: true,
+              restoreVerified: false,
+              migrationCount: ledger.migrationCount,
+              verificationMode: ledger.verificationMode,
+            },
+            schedulerReconstruction: {
+              included: true,
+              restoreVerified: false,
+              jobCount: scheduler.jobCount,
+              activeCount: scheduler.activeCount,
+              inactiveCount: scheduler.inactiveCount,
+              guardPresent: scheduler.guardPresent,
+            },
           }, null, 2) + "\n");
           NODE
 
           shred -u "$key_file" "$archive" "$decrypted_archive" \
             "$plain_root/roles.sql" "$plain_root/schema.sql" "$plain_root/data.sql" \
-            "$plain_root/application-data.sql" \
+            "$plain_root/application-data.sql" "$plain_root/restored-application-data.sql" \
+            "$plain_root/source-copy-data-evidence.json" \
+            "$plain_root/restored-copy-data-evidence.json" \
+            "$plain_root/copy-data-comparison.json" \
+            "$plain_root/phase15-forward-manifest.json" "$plain_root/phase15-ledger.json" \
+            "$plain_root/phase15-ledger-verification.json" \
+            "$plain_root/scheduler-reconstruction.json" \
             "$validation_root/roles.sql" "$validation_root/schema.sql" "$validation_root/data.sql" \
             "$validation_root/application-data.sql" \
             2>/dev/null || true
+          find "$cipher_validation_root" -type f -exec shred -u {} + 2>/dev/null || true
           test -s "$encrypted_archive"
 
       - name: Upload encrypted production recovery set before mutation
@@ -940,7 +1603,7 @@ jobs:
           name: phase15-production-recovery-${{ env.SOURCE_COMMIT }}
           path: ${{ runner.temp }}/phase15-production-recovery/phase15-production-${{ env.SOURCE_COMMIT }}.tar.gz.enc
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
           compression-level: 0
       - name: Finalize fail-closed production recovery gate
         shell: bash
@@ -959,16 +1622,32 @@ jobs:
           if (logical.status !== "PASS" ||
               logical.projectRef !== process.env.PRODUCTION_PROJECT_REF ||
               logical.sourceCommit !== process.env.SOURCE_COMMIT ||
-              logical.recoveryMethod !== "supabase-cli-logical-backup-v2" ||
-              logical.backupScope !== "full-logical-export-plus-application-restore-proof-v1" ||
-              logical.platformDataDumpIncluded !== true ||
-              logical.managedPlatformDataIncluded !== true ||
+              logical.recoveryMethod !== "supabase-cli-logical-backup-v3" ||
+              logical.backupScope !== "phase15-application-logical-recovery-v3" ||
+              JSON.stringify(logical.applicationObjectSchemas) !==
+                JSON.stringify(["public", "private", "economy_private"]) ||
+              JSON.stringify(logical.applicationDataSchemas) !== JSON.stringify(["public", "private"]) ||
+              logical.economyPrivateTableCount !== 0 ||
+              logical.supplementalPlatformDataDumpIncluded !== true ||
+              logical.managedAuthStorageDataRestoreVerified !== false ||
+              logical.supabaseMigrationsIncludedInCliDump !== false ||
+              logical.pgCronIncludedInCliDump !== false ||
               logical.managedPlatformRestoreRequiresCurrentTargetVersion !== true ||
-              JSON.stringify(logical.restoreScope) !== JSON.stringify(["public", "private"]) ||
               !logical.backupFiles?.some(({ name }) => name === "data.sql") ||
               !logical.backupFiles?.some(({ name }) => name === "application-data.sql") ||
+              !logical.backupFiles?.some(({ name }) => name === "restored-application-data.sql") ||
               logical.encryption?.encrypted !== true ||
+              logical.encryption?.keyId !== "PHASE15_BACKUP_ENCRYPTION_KEY_V1" ||
               logical.restoreValidated !== true ||
+              logical.dataComparison?.matched !== true ||
+              logical.dataComparison?.differences?.length !== 0 ||
+              logical.migrationLedgerReconstruction?.included !== true ||
+              logical.migrationLedgerReconstruction?.restoreVerified !== false ||
+              logical.migrationLedgerReconstruction?.migrationCount !== 169 ||
+              logical.schedulerReconstruction?.included !== true ||
+              logical.schedulerReconstruction?.restoreVerified !== false ||
+              logical.schedulerReconstruction?.jobCount !== 13 ||
+              logical.schedulerReconstruction?.activeCount !== 13 ||
               logical.schemaMatched !== true ||
               logical.schemaComparisonProfile !== "supabase-application-restore-v1" ||
               logical.schemaComparisonValidation?.profile !== "supabase-application-restore-v1" ||
@@ -985,11 +1664,11 @@ jobs:
             throw new Error("Encrypted production recovery artifact was not durably uploaded.");
           }
           await writeFile(process.env.OUTPUT, JSON.stringify({
-            schemaVersion: 2,
+            schemaVersion: 3,
             status: "PASS",
             projectRef: process.env.PRODUCTION_PROJECT_REF,
             sourceCommit: process.env.SOURCE_COMMIT,
-            recoveryMethod: "supabase-cli-logical-backup-v2",
+            recoveryMethod: "supabase-cli-logical-backup-v3",
             pitrEnabled: managed.pitrEnabled,
             recentCompletedBackup: managed.recentCompletedBackup,
             latestCompletedBackupAt: managed.latestCompletedBackupAt,
@@ -1002,6 +1681,218 @@ jobs:
             },
           }, null, 2) + "\n");
           NODE
+      - name: Upload sanitized production recovery certificate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-production-recovery-certificate-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-database-evidence/
+          if-no-files-found: error
+          retention-days: 90
+  verify-production-recovery-custody:
+    name: Re-fetch, decrypt, and verify production recovery custody
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    needs: [certify-staging, prepare-production-recovery]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production
+    env:
+      SOURCE_COMMIT: ${{ needs.certify-staging.outputs.source_commit }}
+      PHASE15_BACKUP_ENCRYPTION_KEY_V1: ${{ secrets.PHASE15_BACKUP_ENCRYPTION_KEY_V1 }}
+    steps:
+      - name: Check out exact recovery-authorized main on a fresh runner
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.certify-staging.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Download encrypted production recovery set
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-production-recovery-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-recovery-custody/encrypted
+      - name: Download sanitized production recovery certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-production-recovery-certificate-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-recovery-custody/certificate
+      - name: Independently decrypt and verify recovery data custody
+        shell: bash
+        run: |
+          set -euo pipefail
+          custody_root="$RUNNER_TEMP/phase15-recovery-custody"
+          encrypted="$(find "$custody_root/encrypted" -type f -name '*.tar.gz.enc' -print -quit)"
+          recovery="$(find "$custody_root/certificate" -type f -name recovery-readiness.json -print -quit)"
+          archive="$custody_root/recovery.tar.gz"
+          extracted="$custody_root/extracted"
+          key_file="$custody_root/.backup-key"
+          output_root="$RUNNER_TEMP/phase15-production-recovery-custody-evidence"
+          mkdir -p "$extracted" "$output_root"
+          test -s "$encrypted"
+          test -s "$recovery"
+          test "${#PHASE15_BACKUP_ENCRYPTION_KEY_V1}" -ge 64
+          printf '%s' "$PHASE15_BACKUP_ENCRYPTION_KEY_V1" > "$key_file"
+          chmod 600 "$key_file"
+          trap 'shred -u "$key_file" "$archive" 2>/dev/null || true; find "$extracted" -type f -exec shred -u {} + 2>/dev/null || true' EXIT
+          expected_cipher="$(jq -r '.logicalBackup.cipherSha256' "$recovery")"
+          expected_archive="$(jq -r '.logicalBackup.archiveSha256' "$recovery")"
+          test "$(sha256sum "$encrypted" | awk '{print $1}')" = "$expected_cipher"
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -md sha256 \
+            -in "$encrypted" -out "$archive" -pass "file:$key_file"
+          test "$(sha256sum "$archive" | awk '{print $1}')" = "$expected_archive"
+          tar --extract --gzip --file "$archive" --directory "$extracted"
+          jq -e --arg source "$SOURCE_COMMIT" '.schemaVersion == 3 and
+            .backupScope == "phase15-application-logical-recovery-v3" and
+            .sourceCommit == $source and .projectRef == "cgiukdjwicykrmtkhudh" and
+            .applicationObjectSchemas == ["public", "private", "economy_private"] and
+            .applicationDataSchemas == ["public", "private"] and
+            .economyPrivateTableCount == 0 and .managedAuthStorageDataRestoreVerified == false' \
+            "$extracted/backup-manifest.json" >/dev/null
+          while IFS=$'\t' read -r name digest bytes; do
+            test -f "$extracted/$name"
+            test "$(sha256sum "$extracted/$name" | awk '{print $1}')" = "$digest"
+            test "$(stat --format='%s' "$extracted/$name")" = "$bytes"
+          done < <(jq -r '.files[] | [.name, .sha256, (.bytes|tostring)] | @tsv' "$extracted/backup-manifest.json")
+          node scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs \
+            --manifest "$extracted/phase15-forward-manifest.json" \
+            --live "$extracted/phase15-ledger.json" \
+            > "$custody_root/ledger-verification.json"
+          cmp -s "$custody_root/ledger-verification.json" "$extracted/phase15-ledger-verification.json"
+          jq -e '.ok == true and .verificationMode == "exact" and .migrationCount == 169' \
+            "$custody_root/ledger-verification.json" >/dev/null
+          jq -e '.captureKind == "pg-cron-separate-reconstruction-evidence" and
+            .jobCount == 13 and .activeCount == 13 and .inactiveCount == 0 and
+            .guardPresent == false and (.jobs | length) == 13' \
+            "$extracted/scheduler-reconstruction.json" >/dev/null
+          node scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.mjs emit \
+            --dump "$extracted/application-data.sql" --output "$custody_root/source-evidence.json"
+          node scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.mjs emit \
+            --dump "$extracted/restored-application-data.sql" --output "$custody_root/restored-evidence.json"
+          cmp -s "$custody_root/source-evidence.json" "$extracted/source-copy-data-evidence.json"
+          cmp -s "$custody_root/restored-evidence.json" "$extracted/restored-copy-data-evidence.json"
+          node scripts/operations/live-migration-reconciliation/compare-copy-data-evidence.mjs compare \
+            --source "$custody_root/source-evidence.json" --restored "$custody_root/restored-evidence.json" \
+            --output "$custody_root/data-comparison.json"
+          cmp -s "$custody_root/data-comparison.json" "$extracted/copy-data-comparison.json"
+          jq -e '.matched == true and .differences == []' "$custody_root/data-comparison.json" >/dev/null
+          CIPHER_SHA256="$expected_cipher" ARCHIVE_SHA256="$expected_archive" \
+          RECOVERY="$recovery" OUTPUT="$output_root/recovery-custody.json" node --input-type=module - <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const recovery = JSON.parse(await readFile(process.env.RECOVERY, "utf8"));
+          await writeFile(process.env.OUTPUT, JSON.stringify({
+            schemaVersion: 1,
+            status: "PASS",
+            projectRef: process.env.PRODUCTION_PROJECT_REF,
+            sourceCommit: process.env.SOURCE_COMMIT,
+            verificationRunnerId: process.env.RUNNER_NAME,
+            recoveryArtifactId: recovery.logicalBackup.artifactId,
+            recoveryArtifactDigest: recovery.logicalBackup.artifactDigest,
+            cipherSha256: process.env.CIPHER_SHA256,
+            archiveSha256: process.env.ARCHIVE_SHA256,
+            archiveFilesVerified: true,
+            sourceAndRestoredDataRecomputed: true,
+            applicationDataMatched: true,
+            migrationLedgerReconstructionVerified: true,
+            schedulerReconstructionVerified: true,
+            reconstructionEvidenceRestoredToDisposableTarget: false,
+            keyId: "PHASE15_BACKUP_ENCRYPTION_KEY_V1",
+          }, null, 2) + "\n");
+          NODE
+      - name: Upload fresh-runner recovery custody certificate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-production-recovery-custody-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-recovery-custody-evidence/
+          if-no-files-found: error
+          retention-days: 90
+
+  converge-production-database:
+    name: Converge populated production after recovery custody verification
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    needs: [certify-staging, prepare-production-recovery, verify-production-recovery-custody]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: production
+    env:
+      SOURCE_COMMIT: ${{ needs.certify-staging.outputs.source_commit }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CONFIGURED_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PHASE15_ADVISOR_EVIDENCE_KEY_V1: ${{ secrets.PHASE15_ADVISOR_EVIDENCE_KEY_V1 }}
+      PHASE15_ENVIRONMENT: production
+      PHASE15_EXPECTED_PROJECT_REF: cgiukdjwicykrmtkhudh
+      PHASE15_LIVE_APPLY_AUTHORIZED: production
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt
+    steps:
+      - name: Check out exact staging-authorized main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.certify-staging.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Initialize sanitized production evidence
+        shell: bash
+        run: mkdir -p "$RUNNER_TEMP/phase15-production-database-evidence" "$RUNNER_TEMP/phase15-production-advisor-private"
+      - name: Bind exact production database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          database_url="$CONFIGURED_SUPABASE_DB_URL"
+          if test -z "$database_url"; then
+            test -n "$SUPABASE_DB_PASSWORD"
+            (cd backend && supabase --yes link --project-ref "$PRODUCTION_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+            test -s backend/supabase/.temp/pooler-url
+            database_url="$(POOLER_URL="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)" DATABASE_PASSWORD="$SUPABASE_DB_PASSWORD" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.POOLER_URL);
+          parsed.password = process.env.DATABASE_PASSWORD;
+          process.stdout.write(parsed.href);
+          NODE
+            )"
+          fi
+          database_url="$(DATABASE_URL="$database_url" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.DATABASE_URL);
+          parsed.searchParams.set("sslmode", "verify-full");
+          parsed.searchParams.delete("sslrootcert");
+          process.stdout.write(parsed.href);
+          NODE
+          )"
+          echo "::add-mask::$database_url"
+          PHASE15_REMOTE_DATABASE_URL="$database_url" node scripts/release-integrity/cli.mjs validate-db-url --url-env PHASE15_REMOTE_DATABASE_URL --expected-project-ref "$PRODUCTION_PROJECT_REF"
+          printf 'PHASE15_REMOTE_DATABASE_URL=%s\n' "$database_url" >> "$GITHUB_ENV"
+      - name: Download recovery readiness certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-production-recovery-certificate-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-database-evidence/recovery
+      - name: Download fresh-runner recovery custody certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-production-recovery-custody-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-database-evidence/recovery
       - name: Download exact canonical clean schema
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -1009,55 +1900,65 @@ jobs:
           run-id: ${{ needs.certify-staging.outputs.replay_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ runner.temp }}/phase15-production-canonical
-      - name: Resolve canonical schema path
+      - name: Download pinned original production application certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-production-database-5b11f344bc0e725cf7028c3f7c4a2a890e9972e3
+          run-id: 35551077276
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-original-production-apply
+      - name: Resolve immutable production inputs and original artifact metadata
         shell: bash
         run: |
           set -euo pipefail
           schema="$(find "$RUNNER_TEMP/phase15-production-canonical" -type f -name schema-1.json -print -quit)"
           test -s "$schema"
           printf 'PHASE15_CANONICAL_SCHEMA=%s\n' "$schema" >> "$GITHUB_ENV"
-      - name: Require known-only pre-convergence production advisors
+          node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs \
+            --environment production --mode rollback --format manifest \
+            > "$RUNNER_TEMP/phase15-production-forward-manifest.json"
+          curl --fail --silent --show-error \
+            -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$ORIGINAL_PRODUCTION_APPLY_ARTIFACT_ID" \
+            > "$RUNNER_TEMP/original-production-artifact-metadata.json"
+          jq -e --argjson id "$ORIGINAL_PRODUCTION_APPLY_ARTIFACT_ID" --argjson run "$ORIGINAL_PRODUCTION_APPLY_RUN_ID" \
+            '.id == $id and .expired == false and .workflow_run.id == $run' \
+            "$RUNNER_TEMP/original-production-artifact-metadata.json" >/dev/null
+          jq -e '.status == "PASS" and .sourceCommit == env.SOURCE_COMMIT and
+            .archiveFilesVerified == true and .applicationDataMatched == true and
+            .migrationLedgerReconstructionVerified == true and
+            .schedulerReconstructionVerified == true and
+            .reconstructionEvidenceRestoredToDisposableTarget == false' \
+            "$RUNNER_TEMP/phase15-production-database-evidence/recovery/recovery-custody.json" >/dev/null
+      - name: Encrypt raw and require object-approved pre-convergence production advisors
         shell: bash
         env:
           PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000
         run: |
           set -euo pipefail
-          supabase db advisors --db-url "$PHASE15_REMOTE_DATABASE_URL" --type all --level info --fail-on error --output-format json > "$RUNNER_TEMP/production-advisors-pre-raw.json"
-          ADVISORS="$RUNNER_TEMP/production-advisors-pre-raw.json" OUTPUT="$RUNNER_TEMP/phase15-production-database-evidence/advisors-pre.json" PHASE="pre" node --input-type=module - <<'NODE'
-          import { readFile, writeFile } from "node:fs/promises";
-          const value = JSON.parse(await readFile(process.env.ADVISORS, "utf8"));
-          const findings = [];
-          const walk = (node) => {
-            if (Array.isArray(node)) return node.forEach(walk);
-            if (!node || typeof node !== "object") return;
-            if (typeof node.name === "string" && typeof node.level === "string") {
-              findings.push({ name: node.name, level: node.level.toUpperCase() });
-            }
-            for (const child of Object.values(node)) walk(child);
-          };
-          walk(value);
-          const allowed = new Set([
-            "auth_leaked_password_protection",
-            "rls_enabled_no_policy",
-            "unindexed_foreign_keys",
-            "unused_index",
-          ]);
-          if (findings.some(({ name }) => !allowed.has(name)) ||
-              findings.some(({ level }) => level === "ERROR")) {
-            throw new Error("Production advisors contain unknown or ERROR findings.");
-          }
-          const unique = [...new Map(findings.map((row) => [row.name + "|" + row.level, row])).values()]
-            .sort((a, b) => a.name.localeCompare(b.name) || a.level.localeCompare(b.level));
-          await writeFile(process.env.OUTPUT, JSON.stringify({
-            schemaVersion: 1,
-            status: "PASS",
-            phase: process.env.PHASE,
-            environment: "production",
-            sourceCommit: process.env.SOURCE_COMMIT,
-            classification: "known-owner-reviewed-findings-only",
-            findings: unique,
-          }, null, 2) + "\n");
-          NODE
+          test "${#PHASE15_ADVISOR_EVIDENCE_KEY_V1}" -ge 64
+          raw="$RUNNER_TEMP/production-advisors-pre-raw.json"
+          key_file="$RUNNER_TEMP/production-advisors-pre.key"
+          trap 'shred -u "$raw" "$key_file" 2>/dev/null || true' EXIT
+          supabase db advisors --db-url "$PHASE15_REMOTE_DATABASE_URL" \
+            --type all --level info --fail-on error --output-format json > "$raw"
+          printf '%s' "$PHASE15_ADVISOR_EVIDENCE_KEY_V1" > "$key_file"
+          chmod 600 "$key_file"
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 600000 -md sha256 \
+            -in "$raw" -out "$RUNNER_TEMP/phase15-production-advisor-private/advisors-pre.json.enc" \
+            -pass "file:$key_file"
+          node scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.mjs validate \
+            "$raw" docs/operations/contracts/phase15-advisor-exceptions-v1.json \
+            production "$PRODUCTION_PROJECT_REF" \
+            "$RUNNER_TEMP/phase15-production-database-evidence/advisors-pre.json"
+      - name: Recheck protected main immediately before production mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
       - name: Run rollback proof and atomic production convergence
         shell: bash
         env:
@@ -1085,48 +1986,47 @@ jobs:
           $phase15_recover_schedulers$;
           commit;
           SQL
-      - name: Require known-only post-convergence production advisors
+      - name: Encrypt raw and require object-approved post-convergence production advisors
         shell: bash
         env:
           PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=5000
         run: |
           set -euo pipefail
-          supabase db advisors --db-url "$PHASE15_REMOTE_DATABASE_URL" --type all --level info --fail-on error --output-format json > "$RUNNER_TEMP/production-advisors-post-raw.json"
-          ADVISORS="$RUNNER_TEMP/production-advisors-post-raw.json" OUTPUT="$RUNNER_TEMP/phase15-production-database-evidence/advisors-post.json" PHASE="post" node --input-type=module - <<'NODE'
-          import { readFile, writeFile } from "node:fs/promises";
-          const value = JSON.parse(await readFile(process.env.ADVISORS, "utf8"));
-          const findings = [];
-          const walk = (node) => {
-            if (Array.isArray(node)) return node.forEach(walk);
-            if (!node || typeof node !== "object") return;
-            if (typeof node.name === "string" && typeof node.level === "string") {
-              findings.push({ name: node.name, level: node.level.toUpperCase() });
-            }
-            for (const child of Object.values(node)) walk(child);
-          };
-          walk(value);
-          const allowed = new Set([
-            "auth_leaked_password_protection",
-            "rls_enabled_no_policy",
-            "unindexed_foreign_keys",
-            "unused_index",
-          ]);
-          if (findings.some(({ name }) => !allowed.has(name)) ||
-              findings.some(({ level }) => level === "ERROR")) {
-            throw new Error("Production advisors contain unknown or ERROR findings.");
-          }
-          const unique = [...new Map(findings.map((row) => [row.name + "|" + row.level, row])).values()]
-            .sort((a, b) => a.name.localeCompare(b.name) || a.level.localeCompare(b.level));
-          await writeFile(process.env.OUTPUT, JSON.stringify({
-            schemaVersion: 1,
-            status: "PASS",
-            phase: process.env.PHASE,
-            environment: "production",
-            sourceCommit: process.env.SOURCE_COMMIT,
-            classification: "known-owner-reviewed-findings-only",
-            findings: unique,
-          }, null, 2) + "\n");
-          NODE
+          test "${#PHASE15_ADVISOR_EVIDENCE_KEY_V1}" -ge 64
+          raw="$RUNNER_TEMP/production-advisors-post-raw.json"
+          key_file="$RUNNER_TEMP/production-advisors-post.key"
+          trap 'shred -u "$raw" "$key_file" 2>/dev/null || true' EXIT
+          supabase db advisors --db-url "$PHASE15_REMOTE_DATABASE_URL" \
+            --type all --level info --fail-on error --output-format json > "$raw"
+          printf '%s' "$PHASE15_ADVISOR_EVIDENCE_KEY_V1" > "$key_file"
+          chmod 600 "$key_file"
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 600000 -md sha256 \
+            -in "$raw" -out "$RUNNER_TEMP/phase15-production-advisor-private/advisors-post.json.enc" \
+            -pass "file:$key_file"
+          node scripts/operations/live-migration-reconciliation/phase15-advisor-exceptions.mjs validate \
+            "$raw" docs/operations/contracts/phase15-advisor-exceptions-v1.json \
+            production "$PRODUCTION_PROJECT_REF" \
+            "$RUNNER_TEMP/phase15-production-database-evidence/advisors-post.json"
+      - name: Certify fresh, suffix, or pinned already-applied convergence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/operations/live-migration-reconciliation/phase15-production-certificate.mjs \
+            --contract docs/operations/contracts/phase15-production-apply-provenance-v1.json \
+            --manifest "$RUNNER_TEMP/phase15-production-forward-manifest.json" \
+            --current-evidence "$RUNNER_TEMP/phase15-production-database-evidence" \
+            --original-evidence "$RUNNER_TEMP/phase15-original-production-apply" \
+            --original-artifact-metadata "$RUNNER_TEMP/original-production-artifact-metadata.json" \
+            > "$RUNNER_TEMP/phase15-production-database-evidence/production-apply-certificate.json"
+      - name: Upload encrypted raw production advisor evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-production-advisors-private-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-advisor-private/*.enc
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
       - name: Upload sanitized production database certificate
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -1134,7 +2034,7 @@ jobs:
           name: phase15-production-database-${{ env.SOURCE_COMMIT }}
           path: ${{ runner.temp }}/phase15-production-database-evidence/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
 
   converge-production-runtime:
     name: Deploy and attest exact production Edge runtime
@@ -1271,7 +2171,7 @@ jobs:
             ${{ runner.temp }}/production-functions.json
             ${{ runner.temp }}/production-runtime-attestation.json
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
 
   publish-production-release:
     name: Fast-forward and verify the canonical production release
@@ -1285,17 +2185,19 @@ jobs:
     timeout-minutes: 35
     environment: production
     permissions:
-      contents: write
+      contents: read
       actions: read
     env:
       SOURCE_COMMIT: ${{ needs.certify-staging.outputs.source_commit }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PHASE15_RELEASE_DEPLOY_KEY_V1: ${{ secrets.PHASE15_RELEASE_DEPLOY_KEY_V1 }}
     steps:
       - name: Check out exact runtime-certified main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ needs.certify-staging.outputs.source_commit }}
           fetch-depth: 0
+          ssh-key: ${{ secrets.PHASE15_RELEASE_DEPLOY_KEY_V1 }}
           persist-credentials: true
       - name: Download exact production database certificate
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -1307,6 +2209,16 @@ jobs:
         with:
           name: phase15-production-runtime-${{ env.SOURCE_COMMIT }}
           path: ${{ runner.temp }}/phase15-production-release/runtime
+      - name: Download exact Phase 15D acceptance certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-staging-authority-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-release/acceptance
+      - name: Download fresh-runner recovery custody certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-production-recovery-custody-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-release/recovery-custody
       - name: Enforce exact production database and runtime certificates
         shell: bash
         env:
@@ -1333,47 +2245,71 @@ jobs:
           }
           const root = process.env.RELEASE_EVIDENCE_ROOT;
           const database = await json(path.join(root, "database"), "summary.json");
-          const scheduler = await json(path.join(root, "database"), "scheduler-maintenance.json");
+          const applyCertificate = await json(path.join(root, "database"), "production-apply-certificate.json");
           const recovery = await json(path.join(root, "database"), "recovery-readiness.json");
           const advisors = await json(path.join(root, "database"), "advisors-post.json");
           const runtime = await json(path.join(root, "runtime"), "production-runtime-attestation.json");
+          const acceptance = await json(path.join(root, "acceptance"), "phase15-acceptance-certificate.json");
+          const custody = await json(path.join(root, "recovery-custody"), "recovery-custody.json");
           for (const [field, value] of Object.entries({
             status: "PASS",
             environment: "production",
             expectedProjectRef: process.env.PRODUCTION_PROJECT_REF,
             sourceCommit: process.env.SOURCE_COMMIT,
-            applyStatus: "applied",
             migrationCount: 169,
-            rollbackRehearsalPassed: true,
             exactLedgerVerified: true,
             canonicalApplicationSchemaMatched: true,
             economicInvariantsMatched: true,
             purgeSafetyMatched: true,
             schedulerHealthMatched: true,
           })) if (database[field] !== value) throw new Error("Production database certificate mismatch: " + field);
-          if (database.preexistingMigrationCount !== 0 || database.appliedMigrationCount !== 169) {
-            throw new Error("Production first-apply migration counts mismatch.");
+          if (database.preexistingMigrationCount + database.appliedMigrationCount !== 169 ||
+              !["applied", "already-applied"].includes(database.applyStatus)) {
+            throw new Error("Production convergence geometry mismatch.");
           }
-          if (scheduler.status !== "PASS" ||
-              scheduler.activeCountBefore !== scheduler.activeCountAfter ||
-              scheduler.activeCountAfter !== 13 ||
-              scheduler.autoRestoreGuardRemoved !== true) {
-            throw new Error("Production scheduler restoration certificate mismatch.");
+          if (applyCertificate.status !== "PASS" ||
+              applyCertificate.environment !== "production" ||
+              applyCertificate.expectedProjectRef !== process.env.PRODUCTION_PROJECT_REF ||
+              applyCertificate.candidateSourceCommit !== process.env.SOURCE_COMMIT ||
+              !["fresh", "suffix", "already-applied"].includes(applyCertificate.convergenceMode) ||
+              applyCertificate.migrationBinding?.migrationCount !== 169 ||
+              !/^[a-f0-9]{64}$/u.test(applyCertificate.certificateSha256 || "")) {
+            throw new Error("Production apply-provenance certificate mismatch.");
+          }
+          if (applyCertificate.convergenceMode === "already-applied" &&
+              (applyCertificate.applicationProvenance?.kind !== "pinned-original-workflow-artifact" ||
+               applyCertificate.applicationProvenance?.workflowRunId !== 35551077276 ||
+               applyCertificate.applicationProvenance?.artifactId !== 10619430098 ||
+               applyCertificate.applicationProvenance?.artifactDigest !==
+                 "sha256:afccb900fc3ae20d6e59cc01130806c86bfe2f49e0db0dff2aa5a7f01dd9663f")) {
+            throw new Error("Already-applied convergence is not bound to the pinned original apply.");
           }
           if (recovery.status !== "PASS" ||
               recovery.sourceCommit !== process.env.SOURCE_COMMIT ||
               recovery.projectRef !== process.env.PRODUCTION_PROJECT_REF ||
-              recovery.recoveryMethod !== "supabase-cli-logical-backup-v2" ||
+              recovery.recoveryMethod !== "supabase-cli-logical-backup-v3" ||
               recovery.logicalBackup?.status !== "PASS" ||
-              recovery.logicalBackup?.backupScope !== "full-logical-export-plus-application-restore-proof-v1" ||
-              recovery.logicalBackup?.platformDataDumpIncluded !== true ||
-              recovery.logicalBackup?.managedPlatformDataIncluded !== true ||
+              recovery.logicalBackup?.backupScope !== "phase15-application-logical-recovery-v3" ||
+              JSON.stringify(recovery.logicalBackup?.applicationObjectSchemas) !==
+                JSON.stringify(["public", "private", "economy_private"]) ||
+              JSON.stringify(recovery.logicalBackup?.applicationDataSchemas) !==
+                JSON.stringify(["public", "private"]) ||
+              recovery.logicalBackup?.economyPrivateTableCount !== 0 ||
+              recovery.logicalBackup?.managedAuthStorageDataRestoreVerified !== false ||
+              recovery.logicalBackup?.supabaseMigrationsIncludedInCliDump !== false ||
+              recovery.logicalBackup?.pgCronIncludedInCliDump !== false ||
               recovery.logicalBackup?.managedPlatformRestoreRequiresCurrentTargetVersion !== true ||
-              JSON.stringify(recovery.logicalBackup?.restoreScope) !== JSON.stringify(["public", "private"]) ||
               !recovery.logicalBackup?.backupFiles?.some(({ name }) => name === "data.sql") ||
               !recovery.logicalBackup?.backupFiles?.some(({ name }) => name === "application-data.sql") ||
               recovery.logicalBackup?.encryption?.encrypted !== true ||
+              recovery.logicalBackup?.encryption?.keyId !== "PHASE15_BACKUP_ENCRYPTION_KEY_V1" ||
               recovery.logicalBackup?.restoreValidated !== true ||
+              recovery.logicalBackup?.dataComparison?.matched !== true ||
+              recovery.logicalBackup?.dataComparison?.differences?.length !== 0 ||
+              recovery.logicalBackup?.migrationLedgerReconstruction?.included !== true ||
+              recovery.logicalBackup?.migrationLedgerReconstruction?.restoreVerified !== false ||
+              recovery.logicalBackup?.schedulerReconstruction?.included !== true ||
+              recovery.logicalBackup?.schedulerReconstruction?.restoreVerified !== false ||
               recovery.logicalBackup?.schemaMatched !== true ||
               recovery.logicalBackup?.schemaComparisonProfile !== "supabase-application-restore-v1" ||
               recovery.logicalBackup?.schemaComparisonValidation?.profile !==
@@ -1391,8 +2327,21 @@ jobs:
               !/^(?:sha256:)?[a-f0-9]{64}$/u.test(recovery.logicalBackup?.artifactDigest || "")) {
             throw new Error("Production recovery-readiness certificate mismatch.");
           }
-          if (advisors.status !== "PASS" || advisors.phase !== "post" ||
-              advisors.sourceCommit !== process.env.SOURCE_COMMIT) {
+          if (custody.status !== "PASS" || custody.sourceCommit !== process.env.SOURCE_COMMIT ||
+              custody.projectRef !== process.env.PRODUCTION_PROJECT_REF ||
+              custody.archiveFilesVerified !== true || custody.applicationDataMatched !== true ||
+              custody.migrationLedgerReconstructionVerified !== true ||
+              custody.schedulerReconstructionVerified !== true ||
+              custody.reconstructionEvidenceRestoredToDisposableTarget !== false) {
+            throw new Error("Fresh-runner recovery custody certificate mismatch.");
+          }
+          if (acceptance.status !== "PASS" || acceptance.candidateHead !== process.env.SOURCE_COMMIT ||
+              acceptance.missingClaims?.length !== 0 || acceptance.finalAcceptanceRunIds?.length < 2) {
+            throw new Error("Exact-candidate Phase 15D acceptance certificate mismatch.");
+          }
+          if (advisors.status !== "PASS" || advisors.environment !== "production" ||
+              advisors.projectRef !== process.env.PRODUCTION_PROJECT_REF ||
+              advisors.comparison !== "APPROVED_SUBSET") {
             throw new Error("Production post-convergence advisor certificate mismatch.");
           }
           if (runtime.ok !== true ||
@@ -1419,6 +2368,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test -n "$PHASE15_RELEASE_DEPLOY_KEY_V1"
+          git remote set-url origin "git@github.com:$GITHUB_REPOSITORY.git"
           if test "$(git rev-parse origin/release/production)" != "$SOURCE_COMMIT"; then
             git push origin "$SOURCE_COMMIT:refs/heads/$RELEASE_BRANCH"
           fi
@@ -1475,4 +2426,129 @@ jobs:
           name: phase15-production-release-${{ env.SOURCE_COMMIT }}
           path: ${{ runner.temp }}/phase15-production-release/final/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
+
+  verify-production-authenticated-runtime:
+    name: Verify bounded authenticated production behavior
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    needs: [certify-staging, publish-production-release]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: production
+    permissions:
+      contents: read
+      actions: read
+    env:
+      SOURCE_COMMIT: ${{ needs.certify-staging.outputs.source_commit }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CONFIGURED_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      ECONOVARIA_PRODUCTION_ORIGIN: https://www.econovaria.com
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt
+    steps:
+      - name: Check out exact released source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.certify-staging.outputs.source_commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Enforce exact main and production-release source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git fetch --no-tags --prune origin \
+            '+refs/heads/main:refs/remotes/origin/main' \
+            '+refs/heads/release/production:refs/remotes/origin/release/production'
+          test "$(git rev-parse origin/main)" = "$SOURCE_COMMIT"
+          test "$(git rev-parse origin/release/production)" = "$SOURCE_COMMIT"
+          node --test scripts/operations/live-migration-reconciliation/phase15-production-runtime-probe.test.mjs
+      - name: Bind exact production database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          database_url="$CONFIGURED_SUPABASE_DB_URL"
+          if test -z "$database_url"; then
+            test -n "$SUPABASE_DB_PASSWORD"
+            (cd backend && supabase --yes link --project-ref "$PRODUCTION_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+            test -s backend/supabase/.temp/pooler-url
+            database_url="$(POOLER_URL="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)" DATABASE_PASSWORD="$SUPABASE_DB_PASSWORD" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.POOLER_URL);
+          parsed.password = process.env.DATABASE_PASSWORD;
+          process.stdout.write(parsed.href);
+          NODE
+            )"
+          fi
+          database_url="$(DATABASE_URL="$database_url" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.DATABASE_URL);
+          parsed.searchParams.set("sslmode", "verify-full");
+          parsed.searchParams.delete("sslrootcert");
+          process.stdout.write(parsed.href);
+          NODE
+          )"
+          echo "::add-mask::$database_url"
+          PHASE15_REMOTE_DATABASE_URL="$database_url" node scripts/release-integrity/cli.mjs validate-db-url \
+            --url-env PHASE15_REMOTE_DATABASE_URL --expected-project-ref "$PRODUCTION_PROJECT_REF"
+          printf 'PHASE15_REMOTE_DATABASE_URL=%s\n' "$database_url" >> "$GITHUB_ENV"
+      - name: Exercise canonical authenticated production behavior
+        shell: bash
+        env:
+          PHASE15_PRODUCTION_RUNTIME_EVIDENCE: ${{ runner.temp }}/phase15-production-authenticated-runtime/production-authenticated-runtime.json
+        run: |
+          set -euo pipefail
+          node scripts/operations/live-migration-reconciliation/phase15-production-runtime-probe.mjs
+      - name: Require sanitized authenticated-runtime certificate
+        if: always()
+        shell: bash
+        env:
+          PHASE15_PRODUCTION_RUNTIME_EVIDENCE: ${{ runner.temp }}/phase15-production-authenticated-runtime/production-authenticated-runtime.json
+        run: |
+          set -euo pipefail
+          test -s "$PHASE15_PRODUCTION_RUNTIME_EVIDENCE"
+          EVIDENCE="$PHASE15_PRODUCTION_RUNTIME_EVIDENCE" node --input-type=module - <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const value = JSON.parse(await readFile(process.env.EVIDENCE, "utf8"));
+          if (value.status !== "PASS" || value.environment !== "production" ||
+              value.projectRef !== process.env.PRODUCTION_PROJECT_REF ||
+              value.canonicalOrigin !== process.env.ECONOVARIA_PRODUCTION_ORIGIN ||
+              value.sourceCommit !== process.env.SOURCE_COMMIT ||
+              value.fixture?.realUserDataTouched !== false ||
+              value.authenticatedRuntime?.routes?.length !== 7 ||
+              value.authenticatedRuntime?.economics?.exactReplayRecognized !== true ||
+              value.authenticatedRuntime?.economics?.valueConserved !== true ||
+              value.authenticatedRuntime?.economics?.balancesRestored !== true ||
+              value.authenticatedRuntime?.economics?.directEconomicMutation !== false ||
+              value.authenticatedRuntime?.logout?.cookieCleared !== true ||
+              value.containment?.sessionsRevoked !== true ||
+              value.containment?.credentialsRevoked !== true ||
+              value.containment?.joinCodeCleared !== true ||
+              value.containment?.paused !== true ||
+              value.containment?.purgeProtected !== true ||
+              value.secretsRecorded !== false ||
+              value.rawInternalIdentifiersRecorded !== false) {
+            throw new Error("Authenticated production runtime certificate failed closed.");
+          }
+          NODE
+      - name: Upload sanitized authenticated production evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-production-authenticated-runtime-${{ env.SOURCE_COMMIT }}
+          path: ${{ runner.temp }}/phase15-production-authenticated-runtime/
+          if-no-files-found: error
+          retention-days: 90

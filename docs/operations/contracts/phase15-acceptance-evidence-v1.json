@@ -1,0 +1,682 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "econovaria.phase15d.acceptance-evidence.v1",
+  "status": "PENDING",
+  "pendingReason": "The exact deployed candidate has current hosted Golden Five evidence, and the retained PR 718/719 evidence proves the unchanged acceptance thresholds and prior economic/load baseline. A new exact-candidate final acceptance run has not yet been attached, so Phase 15D is not certified complete.",
+  "candidate": {
+    "head": "5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+    "tree": "e06c33db2a4db2e7fc437f7c92b1af152926b83a",
+    "branch": "main",
+    "stagingProjectRef": "eecvbssdvarfcykcfrny",
+    "finalAcceptanceRunIds": []
+  },
+  "policy": {
+    "thresholds": {
+      "goldenFivePlayers": 5,
+      "baselineConcurrentPlayers": 30,
+      "maximumConcurrentPlayers": 40,
+      "readPathsPerPlayer": 7,
+      "baselineReadCount": 210,
+      "burstReadCount": 280,
+      "maximumLoginP95Ms": 15000,
+      "maximumReadP95Ms": 8000,
+      "maximumErrors": 0
+    },
+    "requiredClaims": [
+      "authenticated-browser",
+      "browser-server-cleanliness",
+      "economic-concurrency",
+      "economic-conservation",
+      "golden-five-lifecycle",
+      "load-30",
+      "load-40",
+      "ordering-race",
+      "two-game-isolation"
+    ],
+    "equivalenceAllowedExactPaths": [
+      ".github/workflows/phase15-controlled-production.yml",
+      ".github/workflows/phase15-controlled-staging.yml",
+      ".github/workflows/production-git-release.yml"
+    ],
+    "equivalenceAllowedPathPrefixes": [
+      "docs/operations/contracts/phase15-",
+      "docs/operations/contracts/player-cross-cutting/",
+      "docs/operations/evidence/phase15-certification/",
+      "docs/roadmaps/",
+      "scripts/operations/live-migration-reconciliation/"
+    ],
+    "minimumExactFinalAcceptanceRuns": 1,
+    "requireExactStagingAuthority": true,
+    "historicalEvidenceUse": "baseline-and-equivalence-only"
+  },
+  "evidence": [
+    {
+      "id": "current-hosted-golden-five",
+      "role": "candidate-evidence",
+      "finalAcceptanceRun": false,
+      "claims": [
+        "authenticated-browser",
+        "browser-server-cleanliness",
+        "golden-five-lifecycle"
+      ],
+      "envelope": {
+        "source": {
+          "head": "5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+          "tree": "e06c33db2a4db2e7fc437f7c92b1af152926b83a",
+          "branch": "main"
+        },
+        "run": {
+          "id": 35550498273,
+          "name": "Phase 15 Controlled Staging Convergence",
+          "path": ".github/workflows/phase15-controlled-staging.yml",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "success",
+          "attempt": 1,
+          "head": "5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+          "tree": "e06c33db2a4db2e7fc437f7c92b1af152926b83a"
+        },
+        "jobs": [
+          {
+            "id": 106185465769,
+            "runId": 35550498273,
+            "name": "Exercise real staging browser lifecycle and isolation",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ],
+        "artifacts": [
+          {
+            "id": 10618496769,
+            "runId": 35550498273,
+            "name": "phase15-staging-lifecycle-5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+            "digest": "sha256:4b6f0746b89fc2bde57d478bfab357b83c9378d3d00f6156bfc8f98d61e0db99",
+            "head": "5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+            "tree": "e06c33db2a4db2e7fc437f7c92b1af152926b83a",
+            "expired": false,
+            "evidenceFiles": [
+              {
+                "path": "econovaria-golden-five/browser/golden-five-browser-acceptance.json",
+                "sha256": "51800fa24db58976e9b7fd78a972d4cbfbc77fc3eec02ec5874d190437cd9926"
+              },
+              {
+                "path": "econovaria-golden-five/fixture-verification.json",
+                "sha256": "eaf9ca501bbe79ffed030dc9a6cc06b3079a79de15add6564e26e8234c3bb659"
+              }
+            ]
+          }
+        ],
+        "review": null
+      },
+      "evidenceBindings": [
+        {
+          "artifactId": 10618496769,
+          "path": "econovaria-golden-five/browser/golden-five-browser-acceptance.json",
+          "sha256": "51800fa24db58976e9b7fd78a972d4cbfbc77fc3eec02ec5874d190437cd9926"
+        },
+        {
+          "artifactId": 10618496769,
+          "path": "econovaria-golden-five/fixture-verification.json",
+          "sha256": "eaf9ca501bbe79ffed030dc9a6cc06b3079a79de15add6564e26e8234c3bb659"
+        }
+      ],
+      "candidateBinding": {
+        "mode": "exact-source"
+      },
+      "acceptance": {
+        "goldenFive": {
+          "decision": "PASS",
+          "environment": "staging",
+          "projectRef": "eecvbssdvarfcykcfrny",
+          "productionSelected": false,
+          "playerCount": 5,
+          "browserContexts": 5,
+          "requestedConcurrency": 5,
+          "successfulLogins": 5,
+          "routeCount": 8,
+          "requestErrors": 0,
+          "serverErrors": 0,
+          "browserErrors": 0,
+          "pageErrors": 0,
+          "securityFailures": 0,
+          "fixtureComplete": true,
+          "lifecycleActive": true,
+          "refreshPersistencePassed": true,
+          "logoutPassed": true
+        }
+      }
+    },
+    {
+      "id": "current-hosted-staging-authority",
+      "role": "supporting-attestation",
+      "finalAcceptanceRun": false,
+      "claims": [
+        "staging-authority"
+      ],
+      "envelope": {
+        "source": {
+          "head": "5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+          "tree": "e06c33db2a4db2e7fc437f7c92b1af152926b83a",
+          "branch": "main"
+        },
+        "run": {
+          "id": 35551077276,
+          "name": "Phase 15 Controlled Production Promotion",
+          "path": ".github/workflows/phase15-controlled-production.yml",
+          "event": "workflow_run",
+          "status": "completed",
+          "conclusion": "success",
+          "attempt": 1,
+          "head": "5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+          "tree": "e06c33db2a4db2e7fc437f7c92b1af152926b83a"
+        },
+        "jobs": [
+          {
+            "id": 106185866655,
+            "runId": 35551077276,
+            "name": "Certify exact populated staging authority",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ],
+        "artifacts": [
+          {
+            "id": 10618262320,
+            "runId": 35551077276,
+            "name": "phase15-staging-authority-5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+            "digest": "sha256:207cfc8f652bd7d13453e72af5f68f26696633a7aa6e38c0ab169b8812f0a61d",
+            "head": "5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+            "tree": "e06c33db2a4db2e7fc437f7c92b1af152926b83a",
+            "expired": false,
+            "evidenceFiles": [
+              {
+                "path": "staging-authority.json",
+                "sha256": "48c3fe066f3e1520b3a66a8810b594f452cdb4e36a222088c1c631fe47072f87"
+              }
+            ]
+          }
+        ],
+        "review": null
+      },
+      "evidenceBindings": [
+        {
+          "artifactId": 10618262320,
+          "path": "staging-authority.json",
+          "sha256": "48c3fe066f3e1520b3a66a8810b594f452cdb4e36a222088c1c631fe47072f87"
+        }
+      ],
+      "candidateBinding": {
+        "mode": "exact-source"
+      },
+      "acceptance": {
+        "authority": {
+          "decision": "PASS",
+          "stagingRunId": 35550498273,
+          "populatedBaselineRunId": 35509654209,
+          "replayRunId": 35550498261,
+          "databaseCertified": true,
+          "runtimeCertified": true,
+          "goldenFiveCertified": true
+        }
+      }
+    },
+    {
+      "id": "pr-718-two-game-economic-baseline",
+      "role": "prior-baseline",
+      "finalAcceptanceRun": false,
+      "claims": [
+        "authenticated-browser",
+        "browser-server-cleanliness",
+        "economic-concurrency",
+        "economic-conservation",
+        "ordering-race",
+        "two-game-isolation"
+      ],
+      "envelope": {
+        "source": {
+          "head": "9c07d67bf313aeab93149812f7c26139171239f2",
+          "tree": "c404551f79a4304fda92cc6f1db7a70382abd77c",
+          "branch": "fix/phase15-database-advisor-findings"
+        },
+        "run": {
+          "id": 35530444828,
+          "name": "Business Player Store Cutover V2",
+          "path": ".github/workflows/business-player-store-cutover-v2.yml",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "attempt": 1,
+          "head": "9c07d67bf313aeab93149812f7c26139171239f2",
+          "tree": "c404551f79a4304fda92cc6f1db7a70382abd77c"
+        },
+        "jobs": [
+          {
+            "id": 106130045895,
+            "runId": 35530444828,
+            "name": "Verify connected Buyer and seller Store journey in two games",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "id": 106130045971,
+            "runId": 35530444828,
+            "name": "Verify serial settlement, ordering races, and two-game isolation",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ],
+        "artifacts": [
+          {
+            "id": 10611435529,
+            "runId": 35530444828,
+            "name": "phase10a4-connected-player-store-9c07d67bf313aeab93149812f7c26139171239f2",
+            "digest": "sha256:669ec5d2e7d10d247a8ae9e5f958d2202dc788316a8dc8c1c028d5257cc60b0b",
+            "head": "9c07d67bf313aeab93149812f7c26139171239f2",
+            "tree": "c404551f79a4304fda92cc6f1db7a70382abd77c",
+            "expired": false,
+            "evidenceFiles": [
+              {
+                "path": "econovaria-phase10a4-player-store-evidence/business-phase10-player-store-browser-acceptance.json",
+                "sha256": "03e906a2f3c35f055ab04f145580e46bac7922884c1de6ef81641fc886930ed5"
+              }
+            ]
+          }
+        ],
+        "review": {
+          "pullRequestNumber": 718,
+          "head": "9c07d67bf313aeab93149812f7c26139171239f2",
+          "headTree": "c404551f79a4304fda92cc6f1db7a70382abd77c",
+          "mergeCommit": "ea8d44b6931c21622680a8dba8b7135b71aec7e1",
+          "mergeTree": "c404551f79a4304fda92cc6f1db7a70382abd77c"
+        }
+      },
+      "evidenceBindings": [
+        {
+          "artifactId": 10611435529,
+          "path": "econovaria-phase10a4-player-store-evidence/business-phase10-player-store-browser-acceptance.json",
+          "sha256": "03e906a2f3c35f055ab04f145580e46bac7922884c1de6ef81641fc886930ed5"
+        }
+      ],
+      "candidateBinding": {
+        "mode": "relevant-surface-equivalent",
+        "fromHead": "9c07d67bf313aeab93149812f7c26139171239f2",
+        "fromTree": "c404551f79a4304fda92cc6f1db7a70382abd77c",
+        "toHead": "5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+        "toTree": "e06c33db2a4db2e7fc437f7c92b1af152926b83a",
+        "comparison": "git-diff-name-only",
+        "diffAllowlist": [
+          ".github/workflows/phase15-controlled-production.yml",
+          ".github/workflows/phase15-controlled-staging.yml",
+          "docs/operations/contracts/player-cross-cutting/pr-719.json",
+          "docs/operations/contracts/player-cross-cutting/pr-720.json",
+          "docs/operations/contracts/player-cross-cutting/pr-721.json",
+          "docs/operations/contracts/player-cross-cutting/pr-722.json",
+          "docs/operations/contracts/player-cross-cutting/pr-723.json",
+          "docs/operations/contracts/player-cross-cutting/pr-724.json",
+          "docs/operations/contracts/player-cross-cutting/pr-725.json",
+          "docs/operations/contracts/player-cross-cutting/pr-726.json",
+          "docs/operations/contracts/player-cross-cutting/pr-727.json",
+          "docs/operations/contracts/player-cross-cutting/pr-728.json",
+          "docs/operations/contracts/player-cross-cutting/pr-729.json",
+          "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs",
+          "scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs",
+          "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+          "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs",
+          "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
+          "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh",
+          "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
+        ],
+        "observedDiff": [
+          ".github/workflows/phase15-controlled-production.yml",
+          ".github/workflows/phase15-controlled-staging.yml",
+          "docs/operations/contracts/player-cross-cutting/pr-719.json",
+          "docs/operations/contracts/player-cross-cutting/pr-720.json",
+          "docs/operations/contracts/player-cross-cutting/pr-721.json",
+          "docs/operations/contracts/player-cross-cutting/pr-722.json",
+          "docs/operations/contracts/player-cross-cutting/pr-723.json",
+          "docs/operations/contracts/player-cross-cutting/pr-724.json",
+          "docs/operations/contracts/player-cross-cutting/pr-725.json",
+          "docs/operations/contracts/player-cross-cutting/pr-726.json",
+          "docs/operations/contracts/player-cross-cutting/pr-727.json",
+          "docs/operations/contracts/player-cross-cutting/pr-728.json",
+          "docs/operations/contracts/player-cross-cutting/pr-729.json",
+          "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs",
+          "scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs",
+          "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+          "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs",
+          "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
+          "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh",
+          "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
+        ],
+        "relevantSurfaceChangedPaths": []
+      },
+      "acceptance": {
+        "economics": {
+          "decision": "PASS",
+          "games": 2,
+          "playerBrowserContexts": 2,
+          "requestErrors": 0,
+          "serverErrors": 0,
+          "browserErrors": 0,
+          "pageErrors": 0,
+          "playerIsolation": true,
+          "gameIsolationBidirectional": true,
+          "concurrencyPassed": true,
+          "economicConservation": true,
+          "sourceDebitsExact": true,
+          "recipientCreditExact": true,
+          "inventoryTransferExact": true,
+          "replayZeroDelta": true,
+          "orderingRacePassed": true,
+          "withdrawalFirstRejectedBeforePayment": true,
+          "purchaseFirstExcessWithdrawalRejected": true,
+          "purchaseFirstRemainingWithdrawalAccepted": true
+        }
+      }
+    },
+    {
+      "id": "pr-718-load-baseline",
+      "role": "prior-baseline",
+      "finalAcceptanceRun": false,
+      "claims": [
+        "authenticated-browser",
+        "browser-server-cleanliness",
+        "load-30",
+        "load-40"
+      ],
+      "envelope": {
+        "source": {
+          "head": "9c07d67bf313aeab93149812f7c26139171239f2",
+          "tree": "c404551f79a4304fda92cc6f1db7a70382abd77c",
+          "branch": "fix/phase15-database-advisor-findings"
+        },
+        "run": {
+          "id": 35530444743,
+          "name": "Player Multiplayer and Load E2E",
+          "path": ".github/workflows/player-multiplayer-load-e2e.yml",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "attempt": 1,
+          "head": "9c07d67bf313aeab93149812f7c26139171239f2",
+          "tree": "c404551f79a4304fda92cc6f1db7a70382abd77c"
+        },
+        "jobs": [
+          {
+            "id": 106130016523,
+            "runId": 35530444743,
+            "name": "Two-browser Player journey, secure mutations, and 30-40 Player load",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ],
+        "artifacts": [
+          {
+            "id": 10611336082,
+            "runId": 35530444743,
+            "name": "player-multiplayer-load-9c07d67bf313aeab93149812f7c26139171239f2",
+            "digest": "sha256:c89edcbdd9ad6f76276f1d635284d15c1cb600f488c8a87ec115883463975153",
+            "head": "9c07d67bf313aeab93149812f7c26139171239f2",
+            "tree": "c404551f79a4304fda92cc6f1db7a70382abd77c",
+            "expired": false,
+            "evidenceFiles": [
+              {
+                "path": "econovaria-player-load/player-runtime-load-profile.json",
+                "sha256": "dcccee781490492cd4bcbe12b3ebecf1c2d435b94f39b2d07bc5caf35f3340c1"
+              }
+            ]
+          }
+        ],
+        "review": {
+          "pullRequestNumber": 718,
+          "head": "9c07d67bf313aeab93149812f7c26139171239f2",
+          "headTree": "c404551f79a4304fda92cc6f1db7a70382abd77c",
+          "mergeCommit": "ea8d44b6931c21622680a8dba8b7135b71aec7e1",
+          "mergeTree": "c404551f79a4304fda92cc6f1db7a70382abd77c"
+        }
+      },
+      "evidenceBindings": [
+        {
+          "artifactId": 10611336082,
+          "path": "econovaria-player-load/player-runtime-load-profile.json",
+          "sha256": "dcccee781490492cd4bcbe12b3ebecf1c2d435b94f39b2d07bc5caf35f3340c1"
+        }
+      ],
+      "candidateBinding": {
+        "mode": "relevant-surface-equivalent",
+        "fromHead": "9c07d67bf313aeab93149812f7c26139171239f2",
+        "fromTree": "c404551f79a4304fda92cc6f1db7a70382abd77c",
+        "toHead": "5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+        "toTree": "e06c33db2a4db2e7fc437f7c92b1af152926b83a",
+        "comparison": "git-diff-name-only",
+        "diffAllowlist": [
+          ".github/workflows/phase15-controlled-production.yml",
+          ".github/workflows/phase15-controlled-staging.yml",
+          "docs/operations/contracts/player-cross-cutting/pr-719.json",
+          "docs/operations/contracts/player-cross-cutting/pr-720.json",
+          "docs/operations/contracts/player-cross-cutting/pr-721.json",
+          "docs/operations/contracts/player-cross-cutting/pr-722.json",
+          "docs/operations/contracts/player-cross-cutting/pr-723.json",
+          "docs/operations/contracts/player-cross-cutting/pr-724.json",
+          "docs/operations/contracts/player-cross-cutting/pr-725.json",
+          "docs/operations/contracts/player-cross-cutting/pr-726.json",
+          "docs/operations/contracts/player-cross-cutting/pr-727.json",
+          "docs/operations/contracts/player-cross-cutting/pr-728.json",
+          "docs/operations/contracts/player-cross-cutting/pr-729.json",
+          "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs",
+          "scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs",
+          "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+          "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs",
+          "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
+          "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh",
+          "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
+        ],
+        "observedDiff": [
+          ".github/workflows/phase15-controlled-production.yml",
+          ".github/workflows/phase15-controlled-staging.yml",
+          "docs/operations/contracts/player-cross-cutting/pr-719.json",
+          "docs/operations/contracts/player-cross-cutting/pr-720.json",
+          "docs/operations/contracts/player-cross-cutting/pr-721.json",
+          "docs/operations/contracts/player-cross-cutting/pr-722.json",
+          "docs/operations/contracts/player-cross-cutting/pr-723.json",
+          "docs/operations/contracts/player-cross-cutting/pr-724.json",
+          "docs/operations/contracts/player-cross-cutting/pr-725.json",
+          "docs/operations/contracts/player-cross-cutting/pr-726.json",
+          "docs/operations/contracts/player-cross-cutting/pr-727.json",
+          "docs/operations/contracts/player-cross-cutting/pr-728.json",
+          "docs/operations/contracts/player-cross-cutting/pr-729.json",
+          "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs",
+          "scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs",
+          "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+          "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs",
+          "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
+          "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh",
+          "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
+        ],
+        "relevantSurfaceChangedPaths": []
+      },
+      "acceptance": {
+        "load": {
+          "decision": "PASS",
+          "profile": {
+            "expectedConcurrentPlayers": 30,
+            "maximumConcurrentPlayers": 40,
+            "readPathsPerPlayer": 7
+          },
+          "players": {
+            "requested": 40,
+            "provisioned": 40,
+            "activeCredentials": 40
+          },
+          "baseline30": {
+            "concurrentPlayers": 30,
+            "loginCount": 30,
+            "readCount": 210,
+            "loginErrors": 0,
+            "readErrors": 0,
+            "serverErrors": 0,
+            "loginP95Ms": 1730.37,
+            "readP95Ms": 1426.67
+          },
+          "burst40": {
+            "concurrentPlayers": 40,
+            "loginCount": 10,
+            "readCount": 280,
+            "loginErrors": 0,
+            "readErrors": 0,
+            "serverErrors": 0,
+            "loginP95Ms": 1505.73,
+            "readP95Ms": 2101.22
+          },
+          "browserErrors": 0
+        }
+      }
+    },
+    {
+      "id": "pr-719-load-baseline",
+      "role": "prior-baseline",
+      "finalAcceptanceRun": false,
+      "claims": [
+        "authenticated-browser",
+        "browser-server-cleanliness",
+        "load-30",
+        "load-40"
+      ],
+      "envelope": {
+        "source": {
+          "head": "c0714d7471d9a3228c45fad456607b68672f13b2",
+          "tree": "5929d73744aa3a2a536a379f396e222892dec097",
+          "branch": "fix/phase15-incremental-suffix-convergence"
+        },
+        "run": {
+          "id": 35531867284,
+          "name": "Player Multiplayer and Load E2E",
+          "path": ".github/workflows/player-multiplayer-load-e2e.yml",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "attempt": 1,
+          "head": "c0714d7471d9a3228c45fad456607b68672f13b2",
+          "tree": "5929d73744aa3a2a536a379f396e222892dec097"
+        },
+        "jobs": [
+          {
+            "id": 106133853448,
+            "runId": 35531867284,
+            "name": "Two-browser Player journey, secure mutations, and 30-40 Player load",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ],
+        "artifacts": [
+          {
+            "id": 10611911415,
+            "runId": 35531867284,
+            "name": "player-multiplayer-load-c0714d7471d9a3228c45fad456607b68672f13b2",
+            "digest": "sha256:3a41b84d7e09dfa4abd93d513110e1289b3adfb73142d4ab9c0f7ca32267463a",
+            "head": "c0714d7471d9a3228c45fad456607b68672f13b2",
+            "tree": "5929d73744aa3a2a536a379f396e222892dec097",
+            "expired": false,
+            "evidenceFiles": [
+              {
+                "path": "econovaria-player-load/player-runtime-load-profile.json",
+                "sha256": "b490dc34cdd2e04df7266e09dc22e36214d4ffd5365a625c8b46ad566e2e95b3"
+              }
+            ]
+          }
+        ],
+        "review": {
+          "pullRequestNumber": 719,
+          "head": "c0714d7471d9a3228c45fad456607b68672f13b2",
+          "headTree": "5929d73744aa3a2a536a379f396e222892dec097",
+          "mergeCommit": "e7890675e5a43d73a41ad5e6202da95ab28458b0",
+          "mergeTree": "5929d73744aa3a2a536a379f396e222892dec097"
+        }
+      },
+      "evidenceBindings": [
+        {
+          "artifactId": 10611911415,
+          "path": "econovaria-player-load/player-runtime-load-profile.json",
+          "sha256": "b490dc34cdd2e04df7266e09dc22e36214d4ffd5365a625c8b46ad566e2e95b3"
+        }
+      ],
+      "candidateBinding": {
+        "mode": "relevant-surface-equivalent",
+        "fromHead": "c0714d7471d9a3228c45fad456607b68672f13b2",
+        "fromTree": "5929d73744aa3a2a536a379f396e222892dec097",
+        "toHead": "5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+        "toTree": "e06c33db2a4db2e7fc437f7c92b1af152926b83a",
+        "comparison": "git-diff-name-only",
+        "diffAllowlist": [
+          ".github/workflows/phase15-controlled-production.yml",
+          "docs/operations/contracts/player-cross-cutting/pr-720.json",
+          "docs/operations/contracts/player-cross-cutting/pr-721.json",
+          "docs/operations/contracts/player-cross-cutting/pr-722.json",
+          "docs/operations/contracts/player-cross-cutting/pr-723.json",
+          "docs/operations/contracts/player-cross-cutting/pr-724.json",
+          "docs/operations/contracts/player-cross-cutting/pr-725.json",
+          "docs/operations/contracts/player-cross-cutting/pr-726.json",
+          "docs/operations/contracts/player-cross-cutting/pr-727.json",
+          "docs/operations/contracts/player-cross-cutting/pr-728.json",
+          "docs/operations/contracts/player-cross-cutting/pr-729.json",
+          "scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs",
+          "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+          "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+        ],
+        "observedDiff": [
+          ".github/workflows/phase15-controlled-production.yml",
+          "docs/operations/contracts/player-cross-cutting/pr-720.json",
+          "docs/operations/contracts/player-cross-cutting/pr-721.json",
+          "docs/operations/contracts/player-cross-cutting/pr-722.json",
+          "docs/operations/contracts/player-cross-cutting/pr-723.json",
+          "docs/operations/contracts/player-cross-cutting/pr-724.json",
+          "docs/operations/contracts/player-cross-cutting/pr-725.json",
+          "docs/operations/contracts/player-cross-cutting/pr-726.json",
+          "docs/operations/contracts/player-cross-cutting/pr-727.json",
+          "docs/operations/contracts/player-cross-cutting/pr-728.json",
+          "docs/operations/contracts/player-cross-cutting/pr-729.json",
+          "scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs",
+          "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+          "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+        ],
+        "relevantSurfaceChangedPaths": []
+      },
+      "acceptance": {
+        "load": {
+          "decision": "PASS",
+          "profile": {
+            "expectedConcurrentPlayers": 30,
+            "maximumConcurrentPlayers": 40,
+            "readPathsPerPlayer": 7
+          },
+          "players": {
+            "requested": 40,
+            "provisioned": 40,
+            "activeCredentials": 40
+          },
+          "baseline30": {
+            "concurrentPlayers": 30,
+            "loginCount": 30,
+            "readCount": 210,
+            "loginErrors": 0,
+            "readErrors": 0,
+            "serverErrors": 0,
+            "loginP95Ms": 1769.26,
+            "readP95Ms": 2446.3
+          },
+          "burst40": {
+            "concurrentPlayers": 40,
+            "loginCount": 10,
+            "readCount": 280,
+            "loginErrors": 0,
+            "readErrors": 0,
+            "serverErrors": 0,
+            "loginP95Ms": 1210.78,
+            "readP95Ms": 2155.95
+          },
+          "browserErrors": 0
+        }
+      }
+    }
+  ]
+}

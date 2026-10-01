@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "reviewer": "@kohnerbouchard-star",
+  "reviewedAtUtc": "2026-09-21T03:18:19.000Z",
+  "evidenceReference": "docs/operations/evidence/phase15-certification/2026-09-21/advisor-owner-review.json",
+  "environments": {
+    "staging": {
+      "baselineDigest": "4955adb663e015d3d48d85685a7c66bd65a76758a2a3b4e5cfa93e63fbab8803",
+      "rules": {
+        "auth_leaked_password_protection": {
+          "disposition": "ACCEPTED_TEMPORARY_EXCEPTION",
+          "rationale": "Temporarily accepted for Phase 15 because provider leaked-password screening is not enabled; enable it and re-run the advisor before the next security release."
+        },
+        "rls_enabled_no_policy": {
+          "disposition": "ACCEPTED_EXCEPTION",
+          "rationale": "Accepted for these exact fingerprints because the affected tables are intentionally deny-by-default or service-role/RPC controlled; adding permissive policies would weaken that boundary."
+        },
+        "unindexed_foreign_keys": {
+          "disposition": "ACCEPTED_TEMPORARY_EXCEPTION",
+          "rationale": "Temporarily accepted for Phase 15 with exact fingerprints retained; measure production query plans and add only justified indexes in the scheduled performance follow-up."
+        },
+        "unused_index": {
+          "disposition": "ACCEPTED_EXCEPTION",
+          "rationale": "Accepted because resettable advisor usage statistics and release-time inactivity do not prove an index is safe to remove; retain these exact indexes until a workload review."
+        }
+      }
+    },
+    "production": {
+      "baselineDigest": "f3c12b76c57a48e924268a2bc57bbf04033931fd4a7ce61ccdead6e00d2a4aae",
+      "rules": {
+        "auth_leaked_password_protection": {
+          "disposition": "ACCEPTED_TEMPORARY_EXCEPTION",
+          "rationale": "Temporarily accepted for Phase 15 because provider leaked-password screening is not enabled; enable it and re-run the advisor before the next security release."
+        },
+        "rls_enabled_no_policy": {
+          "disposition": "ACCEPTED_EXCEPTION",
+          "rationale": "Accepted for these exact fingerprints because the affected tables are intentionally deny-by-default or service-role/RPC controlled; adding permissive policies would weaken that boundary."
+        },
+        "unindexed_foreign_keys": {
+          "disposition": "ACCEPTED_TEMPORARY_EXCEPTION",
+          "rationale": "Temporarily accepted for Phase 15 with exact fingerprints retained; measure production query plans and add only justified indexes in the scheduled performance follow-up."
+        },
+        "unused_index": {
+          "disposition": "ACCEPTED_EXCEPTION",
+          "rationale": "Accepted because resettable advisor usage statistics and release-time inactivity do not prove an index is safe to remove; retain these exact indexes until a workload review."
+        }
+      }
+    }
+  }
+}

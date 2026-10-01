@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "contractId": "econovaria.phase15.production-apply-provenance.v1",
+  "environment": "production",
+  "expectedProjectRef": "cgiukdjwicykrmtkhudh",
+  "manifest": {
+    "schemaVersion": 1,
+    "migrationCount": 169,
+    "canonicalSha256": "8bcd766d22b3cf928fd891514e087d76d194dd5d81dbed142b279127f36cc01e",
+    "migrationsSha256": "2e13f9d398c98e188cbb1640594ee6936492488b3a45df5168cf997b922bf1d0",
+    "firstMigration": "20260812081410_add_license_expiration_and_purge_confirmation_foundation_v1.sql",
+    "lastMigration": "20260920082200_phase15_close_database_advisor_findings_v1.sql"
+  },
+  "schema": {
+    "comparisonProfile": "supabase-hosted-live-v1",
+    "canonicalFingerprintSha256": "71ba867f7ffa7b4d3a7944ee81f79d9b999b6241d02cc683ca16b2451b66deba"
+  },
+  "runtime": {
+    "registry": {
+      "table_count": 207,
+      "registry_sha256": "7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3"
+    },
+    "foreignKeys": {
+      "edge_count": 456,
+      "fk_graph_sha256": "fe88cafd56ca4c21ab3c1d34385e21f4c3d8be201eae44ee7f5539a34a98f329"
+    },
+    "deleteOrder": {
+      "table_count": 206,
+      "order_sha256": "19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897"
+    },
+    "scheduler": {
+      "expectedActive": 7,
+      "missingExpected": 0,
+      "activeEconovaria": 13,
+      "inactiveEconovaria": 0
+    },
+    "pgCronVersion": "1.6.4"
+  },
+  "originalApplication": {
+    "sourceCommit": "5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+    "workflowRun": {
+      "id": 35551077276,
+      "headBranch": "main",
+      "headSha": "5b11f344bc0e725cf7028c3f7c4a2a890e9972e3"
+    },
+    "artifact": {
+      "id": 10619430098,
+      "name": "phase15-production-database-5b11f344bc0e725cf7028c3f7c4a2a890e9972e3",
+      "digest": "sha256:afccb900fc3ae20d6e59cc01130806c86bfe2f49e0db0dff2aa5a7f01dd9663f"
+    },
+    "evidenceCanonicalSha256": {
+      "summary.json": "8bac70099f8796aec8b253e8ce1a6e57e0ee1ef3c08abca4b8b50aa70f3b9b14",
+      "ledger-verification.json": "cd4a838867536f9d82a6700d9b1333bd0f3710c00cce568bb447e5fd48389430",
+      "post-ledger.json": "49c4868f87ebe6f47aafcbf57d691d99d305aac9a2c50c421071ade2f75cecad",
+      "canonical-schema-comparison.json": "149ec7b8d7bb6fda93ae42b89f688252d7cf5a1fec97e1a1dd03575d355023b1",
+      "runtime-safety-audit.json": "ac77ade2c23e701e86e598a9e472c1eee285ae58b80e10e8d02878c1c13a3fae",
+      "apply-economic-invariants.json": "add187ec1a968e289c0fec3745f624c51311cc521e53c720ee6811995779b068",
+      "rollback-economic-invariants.json": "70218daa643558b0da2510c5301ce661d54da9c8fb6f4daf43d41245c3ceac82",
+      "rollback-schema-comparison.json": "42180a1d1782c620b133d79908a3d85f59d310cfe69bf62790ef48024bb4a08d",
+      "scheduler-maintenance.json": "554b9897eb1537862fa8c6c8f7219f96b101cf5ac24319b7fea051479d8fe432"
+    }
+  }
+}

@@ -43,6 +43,7 @@ node "$repo_root/scripts/release-integrity/cli.mjs" validate-db-url \
 
 node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs" \
   --environment "$PHASE15_ENVIRONMENT" --mode rollback --format manifest > "$manifest"
+cp "$manifest" "$evidence_dir/forward-manifest.json"
 
 expected_count="$(jq -r '.migrationCount' "$manifest")"
 versions="$(jq -r '.migrations[].version' "$manifest" | paste -sd, -)"

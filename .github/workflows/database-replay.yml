@@ -149,7 +149,7 @@ jobs:
           name: phase15-clean-replay-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ runner.temp }}/phase15-clean-replay/
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 90
 
       - name: Lint rebuilt database
         run: npx supabase db lint --workdir backend --local --level warning
@@ -293,4 +293,4 @@ jobs:
           name: phase15-live-shaped-rehearsal-${{ matrix.environment }}-${{ github.sha }}
           path: ${{ runner.temp }}/phase15-evidence/${{ matrix.environment }}
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
