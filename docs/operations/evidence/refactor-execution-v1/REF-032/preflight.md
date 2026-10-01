@@ -73,3 +73,12 @@ Seven changed paths comprise six meaningful files plus generated inventory.
 Verifier/test paths are locked and unchanged. Final owning World suite still
 passes 50 + 11, including all optional dependency error branches. Shared audits,
 root npm test and diff checks pass; no architecture ceiling is changed.
+
+Integration after REF-029 closeout: main `c799110e2d89d76c7d013ae49adce50c22b6c81e`
+is merged normally, preserving REF-029/031 code, evidence and backlog records.
+Inventory is regenerated for both contributions (1261 source/test files).
+Pre-integration head `557608301b15d2d48afa42c80662aa5575a808e2` passed all
+33 runs, 66 jobs and Vercel with 13 expected conditional skips. Its downloaded
+smoke artifact `11151220893` verified digest
+`453488d3ee703a08278bad95c77bcc17548989ef06caf0cbf2df423e1d8d9f12`,
+status 0 and all 13 REF-032 cases. Fresh combined-head CI remains mandatory.
