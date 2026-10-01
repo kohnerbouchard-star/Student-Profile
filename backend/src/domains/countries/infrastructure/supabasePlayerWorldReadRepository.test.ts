@@ -5,6 +5,7 @@ declare const Deno: { test(name: string, run: () => void | Promise<void>): void 
 const GAME = "00000000-0000-4000-8000-000000000001";
 const OTHER_GAME = "00000000-0000-4000-8000-000000000002";
 const PLAYER = "00000000-0000-4000-8000-000000000011";
+const OTHER_PLAYER = "00000000-0000-4000-8000-000000000012";
 const PROFILE = "00000000-0000-4000-8000-000000000021";
 const OTHER_PROFILE = "00000000-0000-4000-8000-000000000022";
 const NOW = "2026-07-18T02:00:00.000Z";
@@ -118,6 +119,75 @@ Deno.test("cross-game rows fail closed and unsafe media is removed", async () =>
   assertEquals(detail.country?.mapColor, null);
 });
 
+Deno.test("REF031 shared reference preserves distinct game snapshots and Player assignments", async () => {
+  const client = scriptedClient({
+    country_economic_snapshots: [ok([snapshot(PROFILE, GAME, 2)]), ok([snapshot(PROFILE, OTHER_GAME, 9)])],
+    country_profiles: [ok([profile(PROFILE, "NRC", "Northreach")]), ok([profile(PROFILE, "NRC", "Northreach")])],
+    player_country_assignments: [ok({ game_session_id: GAME, player_id: PLAYER, country_profile_id: PROFILE }), ok(null)],
+  });
+  const repository = new SupabasePlayerWorldReadRepository(client as never);
+  const first = await repository.readCountries({ gameId: GAME, playerUuid: PLAYER, effectiveAt: NOW });
+  const second = await repository.readCountries({ gameId: OTHER_GAME, playerUuid: OTHER_PLAYER, effectiveAt: NOW });
+  assertEquals(first.countries[0]?.countryCode, second.countries[0]?.countryCode);
+  assertEquals([first.countries[0]?.snapshot.sequence, second.countries[0]?.snapshot.sequence], [2, 9]);
+  assertEquals([first.playerCountryProfileUuid, second.playerCountryProfileUuid], [PROFILE, null]);
+  assertEquals(client.calls.filter(call => call.name === "select").map(call => call.table), [
+    "country_economic_snapshots", "country_profiles", "player_country_assignments",
+    "country_economic_snapshots", "country_profiles", "player_country_assignments",
+  ]);
+  for (const game of [GAME, OTHER_GAME]) {
+    assertCall(client.calls, "country_economic_snapshots", "eq", ["game_session_id", game]);
+    assertCall(client.calls, "player_country_assignments", "eq", ["game_session_id", game]);
+  }
+  assertCall(client.calls, "player_country_assignments", "eq", ["player_id", OTHER_PLAYER]);
+  assertCall(client.calls, "country_profiles", "select", ["id,country_code,country_name,capital_name,currency_code,status,metadata"]);
+  assertCall(client.calls, "country_profiles", "order", ["country_name", { ascending: true }]);
+  assertCall(client.calls, "country_profiles", "limit", [51]);
+  assertCall(client.calls, "country_economic_snapshots", "lte", ["effective_at", NOW]);
+  assertCall(client.calls, "country_economic_snapshots", "limit", [500]);
+});
+
+Deno.test("REF031 missing reference skips detail snapshot and retains assignment", async () => {
+  const client = scriptedClient({
+    country_profiles: [ok(null)],
+    player_country_assignments: [ok({ game_session_id: GAME, player_id: PLAYER, country_profile_id: PROFILE })],
+  });
+  const result = await new SupabasePlayerWorldReadRepository(client as never).readCountry({
+    gameId: GAME, playerUuid: PLAYER, effectiveAt: NOW, countryCode: "NRC",
+  });
+  assertEquals(result, { gameId: GAME, playerUuid: PLAYER, playerCountryProfileUuid: PROFILE, country: null });
+  assertEquals(client.calls.filter(call => call.name === "select").map(call => call.table), ["country_profiles", "player_country_assignments"]);
+  assertCall(client.calls, "country_profiles", "limit", [1]);
+});
+
+Deno.test("REF031 empty history avoids reference query and empty news stays scoped", async () => {
+  const client = scriptedClient({ country_economic_snapshots: [ok([])], player_country_assignments: [ok(null)], stock_market_events: [ok([])] });
+  const repository = new SupabasePlayerWorldReadRepository(client as never);
+  const countries = await repository.readCountries({ gameId: GAME, playerUuid: PLAYER, effectiveAt: NOW });
+  assertEquals(countries.countries, []);
+  assertEquals(await repository.readNews({ gameId: GAME, limit: 5, category: null, cursor: null }), { gameId: GAME, news: [] });
+  assertEquals(client.calls.filter(call => call.name === "select").map(call => call.table), ["country_economic_snapshots", "player_country_assignments", "stock_market_events"]);
+  assertCall(client.calls, "stock_market_events", "eq", ["game_session_id", GAME]);
+});
+
+for (const code of ["42P01", "XX000"]) {
+  Deno.test(`REF031 reference failure preserves ${code} mapping without scoped snapshot`, async () => {
+    const client = scriptedClient({ country_profiles: [ok(null, { code, message: "fixture error" })], player_country_assignments: [ok(null)] });
+    let error: unknown;
+    try {
+      await new SupabasePlayerWorldReadRepository(client as never).readCountry({ gameId: GAME, playerUuid: PLAYER, effectiveAt: NOW, countryCode: "NRC" });
+    } catch (caught) { error = caught; }
+    assertEquals((error as { code?: string })?.code, code === "42P01" ? "player_world_schema_not_applied" : "player_world_read_failed");
+    assertEquals(client.calls.filter(call => call.table === "country_economic_snapshots").length, 0);
+  });
+}
+
+Deno.test("REF031 reference collection still rejects an oversized result", async () => {
+  const client = scriptedClient({ country_economic_snapshots: [ok([snapshot(PROFILE, GAME, 1)])],
+    player_country_assignments: [ok(null)], country_profiles: [ok(Array.from({ length: 51 }, () => profile(PROFILE, "NRC", "Northreach")))] });
+  await assertRejects(() => new SupabasePlayerWorldReadRepository(client as never).readCountries({ gameId: GAME, playerUuid: PLAYER, effectiveAt: NOW }));
+});
+
 interface Call { readonly table: string; readonly name: string; readonly args: readonly unknown[] }
 
 function scriptedClient(script: Record<string, readonly ReturnType<typeof ok>[]>) {
@@ -159,7 +229,7 @@ function next(table: string, queues: Map<string, ReturnType<typeof ok>[]>): Retu
   return item;
 }
 
-function ok(data: unknown) { return { data, error: null }; }
+function ok(data: unknown, error: { readonly message: string; readonly code?: string } | null = null) { return { data, error }; }
 
 function profile(id: string, code: string, name: string) {
   return {
