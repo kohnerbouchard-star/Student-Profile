@@ -1,3 +1,4 @@
+import "../infrastructure/runtimeCursorStockMarketRepositories.test.ts";
 import "../calculations/stockMarketEngine.test.ts";
 import {
   handleStockMarketRunnerRequest,
