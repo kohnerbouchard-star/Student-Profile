@@ -1,6 +1,6 @@
 # REF-045 Licensing issuance ownership
 
-Status: IN_PROGRESS. Base main `e2dd6495456d39feb1d702c58549d2364ef9c437`.
+Status: VERIFIED_COMPLETE. Base main `e2dd6495456d39feb1d702c58549d2364ef9c437`.
 REF-005 is VERIFIED_COMPLETE. Preserve REF-043 BLOCKED and its unmerged PR #810,
 all other blocked/paused tasks, protected payment/email consumers and release owners.
 
@@ -140,3 +140,71 @@ parent union remains ten meaningful paths. Conservative unchanged-move credit is
 remaining semantic diff is below 400 lines, with no compressed/split source owner.
 Local complete root suite, backend TypeScript, application Deno check, auth suites,
 32 contracts, architecture, secret scan and exact-PR authority checks pass.
+
+## REF-045 implementation merge and final evidence
+
+PR #814 was normally merged with expected-head protection as
+`da3ed11551b19884791913cb8bd0236e09326bdf`, from qualified application head
+`c167172119d8e0403d390762f541ebbbb2cbcb07`. Both trees equal
+`98628a169174b18c4705393d805c2566af6868b8`. Source and callback-boundary reviews
+approved; all 36 PR workflows passed, with 73 successful jobs and seven expected
+conditional/manual skips, successful Vercel and no unresolved review threads.
+
+Actual extracted-application R3 passed run
+[36898108371](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36898108371),
+job `110490129115`, artifact `11180741909`, verified ZIP SHA-256
+`26d05645faaf085aa65c66e7b016f1cbe8910c7eacd563f090eded4cd6effc52`.
+The retained harness label is REF-045a; its sourceSha is the exact b candidate and
+its actual worker import invokes the new application. Every lease/provenance,
+replay, contention and rollback case passed. Effects remain seven synthetic
+payment/jobs, five verifiers/pending outbox jobs, zero new entitlements or email
+requests. Full 28-root backend typecheck/smoke and 32 contracts passed; retained
+R3 suites passed and lint stayed at 142 findings/17 errors, with no new diagnostics.
+
+Historical Multiplayer run `36898108178`, job `110490128912`, timed out for 60
+seconds waiting for a World travel quote response. Questionnaire persistence
+passed, no quote request was recorded, and console/page errors were empty.
+Relevant World/Player/browser/gateway source was unchanged; no root cause is
+asserted. One unchanged failed-job retry passed as `110495295520`. Initial artifact
+`11179974123` remains retained, verified SHA-256
+`12df4557c112fc90bcbc56728da39760d7f4170037a17eef2cd7871cef9bafcf`.
+Successful retry artifact `11181696574`, verified SHA-256
+`1e0a38d951a30a3dc3ace4eb3a25ddf1c45604f5fdfcd2fb4ceb2289c325abb9`,
+confirms World travel/residency and 30/40-player load: 210/280 final successful
+reads, with 14 read retries under the unchanged policy. It is not evidence of zero
+raw transient responses. No assertion, timeout, retry budget or runtime changed.
+
+Fresh merged-main R3 passed run
+[36901239519](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36901239519),
+job `110500653812`, artifact `11182450850`, verified ZIP SHA-256
+`b3cad107b0f101badd894a0ee42b487e8e5069b7590c3e259172277c365b9c69`.
+Its sourceSha is `da3ed11551b19884791913cb8bd0236e09326bdf`, every worker case
+passes with the same effects, full backend/contracts pass, and lint is unchanged.
+Merged main is terminal: 18 workflows passed, one expected Edge-convergence
+workflow skipped; 37 jobs passed and eight conditional/manual jobs skipped.
+Relevant run references: backend `36901239273`, quality `36901239251`, Seller
+Offers `36901239380`, Listing `36901239227`, Atomic Settlement `36901239336`,
+Withdrawal `36901239453` and Store Cutover `36901239131`. Skips cover explicit
+staging/production deployment or live-parity actions and push dependency review.
+Main Store Cutover run `36901239131` initially failed only replay job
+`110500653069`: Docker could not bind loopback PostgreSQL port 54322 (address
+already in use), before migration replay or test execution. Its other five jobs
+passed, including browser coverage. Diagnostic artifact `11182040870` records
+this startup failure (verified ZIP SHA-256
+`78267faf14aca69096a4e7da6496769796c159720c29ba4c6c09c3588ab40106`).
+One unchanged failed-job retry passed as `110507380873`, including both full
+migration replays and lint. No source, workflow, database policy or assertion was
+changed for either retained CI failure.
+The closeout changes only this evidence, REF-045 task and its backlog entry.
+No provider payment, webhook, hosted licensing, email delivery or production
+certification is included; refund/chargeback and release holds remain in force.
+
+## Next gated work
+
+The 50-ID graph now has 33 VERIFIED_COMPLETE, six BLOCKED and 11 PLANNED
+tasks. After REF-045, no independent task is eligible under current instructions.
+REF-015/025/032/040/042/043 remain BLOCKED; REF-019/020 remain explicitly paused
+with PLANNED manifest status. REF-027 depends on 025; 033/034/046 depend directly
+or transitively on 032; 044 depends on 043; 047/048 depend on 015; 049 depends on
+046/048 and 050 on the remaining tasks. Resolve a recorded gate with the owner
+before restarting that lane; no dependency or completion condition is bypassed.
