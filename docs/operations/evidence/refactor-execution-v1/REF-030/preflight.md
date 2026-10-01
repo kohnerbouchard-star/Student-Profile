@@ -50,3 +50,25 @@ Independent static review corrected the fixture source_type to the existing
 teacher enum and strengthened race winner, rationale-edit and error assertions.
 This is not yet a real database pass. Existing schema/transaction behavior is
 unchanged; no clean production or hosted-runtime certification is implied.
+
+## Accepted REF-030a database baseline
+
+Qualification head `ef5af7d62a02ae3c45f81ab118852dcd17186f2d`, tree
+`e9faeee2efa10f334302775786d40342ce8860c5`, passed all eight triggered workflows.
+[Run 36844450147](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36844450147),
+job `110311580486`, passed full migration replay, backend typecheck/smoke,
+existing economic qualifications and the new actual submission/trigger harness.
+The harness snapshots 208 game-scoped tables; both definitions, preserved raw
+payload, same-choice retry, permitted rationale edits, rejected choice changes,
+normal submission, cross-game isolation, renderer failure after commit, injected
+post-relationship rollback/retry and both races passed. Each race observed two
+real database lock waiters before releasing the held progress row.
+
+[Artifact 11153176138](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36844450147/artifacts/11153176138)
+was downloaded and independently SHA256-verified:
+`a2c3764a1f772518c3493da3a6fe1c64cde187ab19f8e4f37945f1cec5b51795`.
+Its source-bound qualification JSON reports pass. Lint parity preserves 142
+existing findings including 17 errors, with no additions/removals; this does not
+certify a clean database. Static review approved the exact tree after correcting
+a test-only same-choice replay timestamp assumption. Auth context is synthetic
+and injected; real hosted authentication and production are not exercised.

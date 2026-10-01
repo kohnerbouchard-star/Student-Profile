@@ -1,3 +1,4 @@
+import "../infrastructure/supabasePlayerWorldRuntimeRepository.test.ts";
 import type { PlayerRequestScope } from "../../players/api/playerRequestScope.ts";
 import type { ArrivalClassAssignment } from "../../arrival/contracts/arrivalClassContracts.ts";
 import type { PlayerWorldRuntimeRepository } from "./playerWorldRuntimeService.ts";

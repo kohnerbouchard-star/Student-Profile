@@ -503,11 +503,14 @@
       "children": [
         {
           "id": "REF-030a",
-          "status": "IN_PROGRESS",
+          "status": "IMPLEMENTED_NOT_MERGED",
           "scope": "Disposable existing submission/Story trigger qualification",
           "dependsOn": [
             "REF-029"
-          ]
+          ],
+          "implementationSha": "ef5af7d62a02ae3c45f81ab118852dcd17186f2d",
+          "pullRequest": 792,
+          "evidence": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36844450147"
         },
         {
           "id": "REF-030b",
@@ -538,16 +541,16 @@
       "id": "REF-032",
       "title": "Give World runtime reads an explicit scoped application boundary",
       "file": "tasks/REF-032.md",
-      "status": "PLANNED",
+      "status": "BLOCKED",
       "dependsOn": [
         "REF-031"
       ],
       "risk": "R2",
       "architectureMapping": "ARCH-209/ARCH-401",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "962d5db36ee4fe4e12b34bdce1881855c7f8e307",
+      "mergeSha": "0a3d88ceff3bb1db0b4ffcd306a21b872159cf9e",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-032/preflight.md"
     },
     {
       "id": "REF-033",
