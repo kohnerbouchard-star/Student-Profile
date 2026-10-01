@@ -1,4 +1,4 @@
-name: REF-018 Staff Attendance Qualification
+name: REF-018 and REF-022 Staff Mutation Qualification
 
 on:
   pull_request:
@@ -6,6 +6,11 @@ on:
     paths:
       - '.github/workflows/ref-018-attendance-qualification.yml'
       - 'backend/src/domains/attendance/**'
+      - 'backend/src/domains/economy/application/adjustLedgerForAuthorizedStaff.ts'
+      - 'backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts'
+      - 'backend/src/domains/economy/services/idempotentStaffLedgerAdjustment.ts'
+      - 'backend/src/domains/economy/tests/economicMutationLedgerInvariant.test.ts'
+      - 'scripts/ref-022-ledger-adjustment-acceptance.ts'
       - 'backend/src/platform/supabase/adminMutation.ts'
       - 'backend/supabase/migrations/**'
       - 'scripts/ref-018-attendance-*'
@@ -16,6 +21,11 @@ on:
     paths:
       - '.github/workflows/ref-018-attendance-qualification.yml'
       - 'backend/src/domains/attendance/**'
+      - 'backend/src/domains/economy/application/adjustLedgerForAuthorizedStaff.ts'
+      - 'backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts'
+      - 'backend/src/domains/economy/services/idempotentStaffLedgerAdjustment.ts'
+      - 'backend/src/domains/economy/tests/economicMutationLedgerInvariant.test.ts'
+      - 'scripts/ref-022-ledger-adjustment-acceptance.ts'
       - 'backend/src/platform/supabase/adminMutation.ts'
       - 'backend/supabase/migrations/**'
       - 'scripts/ref-018-attendance-*'
@@ -29,12 +39,13 @@ concurrency:
 
 jobs:
   attendance-qualification:
-    name: Staff Attendance database/race qualification
+    name: Staff Attendance and ledger adjustment database/race qualification
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       REF018_DISPOSABLE_DATABASE: '1'
+      REF022_DISPOSABLE_DATABASE: '1'
       RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Check out exact qualification head
@@ -58,6 +69,7 @@ jobs:
           npm ci
           npm --prefix backend ci
           deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-018-attendance-acceptance.ts
+          deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-022-ledger-adjustment-acceptance.ts
           npx supabase --version
           npx supabase start --help > /tmp/ref018/start-help.log
           npx supabase db reset --help > /tmp/ref018/reset-help.log
@@ -95,6 +107,11 @@ jobs:
         run: |
           set -euo pipefail
           deno run --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF018_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-018-attendance-acceptance.ts 2>&1 | tee /tmp/ref018/database-qualification.log
+      - name: Prove Staff ledger atomic replay, rollback and overlapping commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno run --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF022_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-022-ledger-adjustment-acceptance.ts 2>&1 | tee /tmp/ref018/ref022-database-qualification.log
       - name: Preserve baseline lint findings without introducing new diagnostics
         shell: bash
         run: |

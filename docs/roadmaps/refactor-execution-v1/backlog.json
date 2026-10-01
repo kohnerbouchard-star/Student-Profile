@@ -365,7 +365,7 @@
       "id": "REF-022",
       "title": "Move Staff ledger adjustment behind the existing atomic command",
       "file": "tasks/REF-022.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-021"
       ],
@@ -374,7 +374,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-022/preflight.md"
     },
     {
       "id": "REF-023",
