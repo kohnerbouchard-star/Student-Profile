@@ -55,3 +55,9 @@ These five paths do not activate production deployment jobs; the reused workflow
 uses only a loopback disposable database. No hosted credentials or dispatch.
 Parent stays IN_PROGRESS until exact-head evidence passes, source merges, and
 merged-main verification is recorded. Next dependent task: REF-024.
+
+Initial head `2675de1cd9deb8f8df399b7ed1e413243d857388`, run `36821640069`,
+failed during synthetic pack activation: canonical recipe mappings were checked
+before fixture items existed. The fixture now inserts its items before activating
+the pack. The production guard is unchanged. That run passed full backend and
+retained REF-018/022 qualification but is not REF-023 acceptance.

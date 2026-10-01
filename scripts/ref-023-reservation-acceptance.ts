@@ -72,12 +72,13 @@ async function seed(quantity = 2): Promise<Fixture> {
       values(${q(f.recipe)},'input','ref023_input',2,'fixed');
     insert into public.physical_economy_recipe_outputs(recipe_id,line_key,item_key,quantity,output_kind)
       values(${q(f.recipe)},'output','ref023_output',1,'stackable');
-    insert into public.game_session_physical_economy_packs(game_session_id,pack_id,status) values(${q(f.game)},${q(pack)},'active');
     insert into public.game_session_recipe_availability(game_session_id,recipe_id,enabled,unlocked_by_default)
       values(${q(f.game)},${q(f.recipe)},true,true);
     insert into public.game_items(id,game_session_id,canonical_key,source_kind,name,item_class)
       values(${q(f.item)},${q(f.game)},'ref023_input','admin_created','REF023 input','material'),
       (${q(output)},${q(f.game)},'ref023_output','admin_created','REF023 output','component');
+    -- Activation validates recipe mappings, so canonical items must already exist.
+    insert into public.game_session_physical_economy_packs(game_session_id,pack_id,status) values(${q(f.game)},${q(pack)},'active');
     insert into public.store_items(id,game_session_id,item_key,name,category,price,currency_code,stock_quantity,game_item_id)
       select ${q(f.store)},${q(f.game)},'ref023_input','REF023 input','goods',1,currency_code,0,${q(f.item)}
       from public.marketplace_player_country_v1(${q(f.game)},${q(f.player)});
