@@ -14,7 +14,7 @@ assert.equal(url.search + url.hash, "");
 const sourceSha = Deno.env.get("RELEASE_COMMIT") || "";
 assert.match(sourceSha, /^[a-f0-9]{40}$/);
 const q = (v: unknown) => `'${String(v).replaceAll("'", "''")}'`;
-const ident = (v: string) => { assert.match(v, /^[a-z_]+$/); return `"${v}"`; };
+const ident = (v: string) => { assert.match(v, /^[a-z_][a-z0-9_]*$/); return `"${v}"`; };
 const decoder = new TextDecoder(), checks: Record<string, unknown> = {};
 const evidence = { task: "REF-036", sourceSha, status: "running", productionTouched: false, checks };
 function command(s: string, app = "ref036-fixture", role = false) {
