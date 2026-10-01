@@ -1,0 +1,101 @@
+name: REF-018 Staff Attendance Qualification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/ref-018-attendance-qualification.yml'
+      - 'backend/src/domains/attendance/**'
+      - 'backend/src/platform/supabase/adminMutation.ts'
+      - 'backend/supabase/migrations/**'
+      - 'scripts/ref-018-attendance-*'
+      - 'docs/architecture/inventories/econovaria-architecture-inventory-v2.json'
+      - 'docs/roadmaps/refactor-execution-v1/tasks/REF-018.md'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ref-018-attendance-qualification.yml'
+      - 'backend/src/domains/attendance/**'
+      - 'backend/src/platform/supabase/adminMutation.ts'
+      - 'backend/supabase/migrations/**'
+      - 'scripts/ref-018-attendance-*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ref018-attendance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  attendance-qualification:
+    name: Staff Attendance database/race qualification
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      REF018_DISPOSABLE_DATABASE: '1'
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out exact qualification head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - name: Install pinned tooling and check qualification source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ref018
+          npm install --global npm@10.9.8
+          npm ci
+          npm --prefix backend ci
+          deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-018-attendance-acceptance.ts
+          npx supabase --version
+          npx supabase start --help > /tmp/ref018/start-help.log
+          npx supabase db reset --help > /tmp/ref018/reset-help.log
+      - name: Verify focused application and retained parity regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            npm --prefix backend run test:admin-api
+            npm --prefix backend run test:economic-ledger-invariants
+            npm --prefix backend run test:admin-local-mutations
+            npm --prefix backend run test:player-security
+            npm --prefix backend run test:player-request-scope
+            npm run test:admin-economic-writes
+          } 2>&1 | tee /tmp/ref018/application-regressions.log
+      - name: Start disposable local database and replay migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit,edge-runtime > /tmp/ref018/database-start.log 2>&1
+          npx supabase db reset --workdir backend --local > /tmp/ref018/database-replay.log 2>&1
+      - name: Prove actual Attendance effects, replay, rollback and overlapping submissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno run --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF018_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-018-attendance-acceptance.ts 2>&1 | tee /tmp/ref018/database-qualification.log
+      - name: Lint disposable database
+        run: npx supabase db lint --workdir backend --local --level warning
+      - name: Verify deterministic inventory and unchanged architecture limits
+        run: npm run audit:architecture
+      - name: Upload exact-head qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ref018-attendance-qualification-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/ref018/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Stop disposable database
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup

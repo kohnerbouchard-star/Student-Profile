@@ -53,3 +53,41 @@ Target meaningful paths remain within the task budget of twelve. If atomicity re
 ## Required qualification
 
 Focused Attendance tests must cover manual parity, present/late scans, replay short-circuit, normalized/current/legacy lookup order, missing/inactive player, invalid policy/read failures, transaction failure, same-key conflict/in-progress behavior, and duplicate/concurrent scan safety. Then run the task-required backend Admin local mutation, Player security, economic ledger invariant, Admin API, Attendance/race, root economic and architecture checks plus all applicable exact-head CI.
+
+## Missing database qualification follow-up — 2026-10-01
+
+Repository baseline: `67d29d4fe1dc51aa48143ed8143c0a8d589b2828` (merged #770).
+Inspection of the original qualification established that its disposable database
+harnesses exercised Contracts/Store, not the selected Staff Attendance seam.
+REF-018 must not receive database/race acceptance credit from those harnesses.
+
+This bounded follow-up adds only:
+- `scripts/ref-018-attendance-acceptance.ts`;
+- `.github/workflows/ref-018-attendance-qualification.yml`;
+- this existing preflight record.
+
+The original eight implementation/evidence paths plus these two new paths are
+ten unique paths; any later PR authority or completion artifact must remain
+within the twelve-path budget. No application, repository contract, SQL migration,
+reward policy, scanner UI, Player clock-in, credential or production change.
+
+The harness uses the unchanged scanner application, repository and atomic RPC
+with a real local PostgreSQL service-role transport. It creates synthetic fixtures
+only at `localhost`/`127.0.0.1:54322/postgres`, requires an explicit disposable flag,
+rejects connection-option overrides, and never reads production secrets. It tests
+same-key replay/conflict, concurrent same-key and different-key same-player/day
+scans, exact single reward/attendance effects, locked-period denial, and rollback
+of all game-scoped state including private replay receipts. Concurrent submissions
+must both be observed waiting on real database locks before they are released.
+A transient, fixture-game-scoped audit trigger raises inside the real RPC after
+attendance/reward writes; it is removed in cleanup, not committed as a migration.
+A same-key retry must succeed after rollback without an extra reward.
+
+The new exact-head PR/main workflow preserves existing gates, starts disposable
+Supabase (initial migration replay), resets it from zero, executes the focused
+application suites and harness, lints the database, checks architecture limits,
+and uploads `/tmp/ref018/` evidence. No hosted environment or manual dispatch.
+Local source/type checks are separate from database acceptance. Docker and psql
+are unavailable in the current workspace; database/race acceptance remains
+NOT_RUN until this exact candidate passes the new workflow and its artifact is
+inspected. No REF-019 work or production certification is included.
