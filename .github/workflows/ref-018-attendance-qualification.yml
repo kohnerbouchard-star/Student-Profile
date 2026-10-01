@@ -6,6 +6,9 @@ on:
     paths:
       - '.github/workflows/ref-018-attendance-qualification.yml'
       - 'backend/src/domains/attendance/**'
+      - 'backend/src/domains/crafting/**'
+      - 'backend/src/domains/inventory/**'
+      - 'backend/src/domains/marketplace/**'
       - 'backend/src/domains/economy/application/adjustLedgerForAuthorizedStaff.ts'
       - 'backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts'
       - 'backend/src/domains/economy/services/idempotentStaffLedgerAdjustment.ts'
@@ -22,6 +25,9 @@ on:
     paths:
       - '.github/workflows/ref-018-attendance-qualification.yml'
       - 'backend/src/domains/attendance/**'
+      - 'backend/src/domains/crafting/**'
+      - 'backend/src/domains/inventory/**'
+      - 'backend/src/domains/marketplace/**'
       - 'backend/src/domains/economy/application/adjustLedgerForAuthorizedStaff.ts'
       - 'backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts'
       - 'backend/src/domains/economy/services/idempotentStaffLedgerAdjustment.ts'
