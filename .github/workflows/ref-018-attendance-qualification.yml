@@ -17,6 +17,8 @@ on:
       - 'scripts/ref-023-reservation-acceptance.ts'
       - 'scripts/ref-024-marketplace-acceptance.ts'
       - 'scripts/ref-030-submission-acceptance.ts'
+      - 'scripts/ref-036-progression-acceptance.ts'
+      - 'backend/src/domains/progression/**'
       - 'backend/src/domains/contracts/**'
       - 'backend/src/platform/supabase/adminMutation.ts'
       - 'backend/supabase/migrations/**'
@@ -39,6 +41,8 @@ on:
       - 'scripts/ref-023-reservation-acceptance.ts'
       - 'scripts/ref-024-marketplace-acceptance.ts'
       - 'scripts/ref-030-submission-acceptance.ts'
+      - 'scripts/ref-036-progression-acceptance.ts'
+      - 'backend/src/domains/progression/**'
       - 'backend/src/domains/contracts/**'
       - 'backend/src/platform/supabase/adminMutation.ts'
       - 'backend/supabase/migrations/**'
@@ -63,6 +67,7 @@ jobs:
       REF023_DISPOSABLE_DATABASE: '1'
       REF024_DISPOSABLE_DATABASE: '1'
       REF030_DISPOSABLE_DATABASE: '1'
+      REF036_DISPOSABLE_DATABASE: '1'
       RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Check out exact qualification head
@@ -90,6 +95,7 @@ jobs:
           deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-023-reservation-acceptance.ts
           deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-024-marketplace-acceptance.ts
           deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-030-submission-acceptance.ts
+          deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-036-progression-acceptance.ts
           npx supabase --version
           npx supabase start --help > /tmp/ref018/start-help.log
           npx supabase db reset --help > /tmp/ref018/reset-help.log
@@ -107,6 +113,9 @@ jobs:
             npm --prefix backend run test:player-inventory
             npm --prefix backend run test:player-crafting
             npm --prefix backend run test:player-marketplace
+            npm --prefix backend run test:player-progression
+            npm run test:progression-simulation
+            npm run test:admin-progression
             npm run test:crafting-runtime
             npm --prefix player-terminal run marketplace-connected
           } 2>&1 | tee /tmp/ref018/application-regressions.log
@@ -152,6 +161,11 @@ jobs:
         run: |
           set -euo pipefail
           deno run --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF030_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-030-submission-acceptance.ts 2>&1 | tee /tmp/ref018/ref030-database-qualification.log
+      - name: Prove Progression grant replay, competing claims and in-command rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno run --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF036_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-036-progression-acceptance.ts 2>&1 | tee /tmp/ref018/ref036-database-qualification.log
       - name: Preserve baseline lint findings without introducing new diagnostics
         shell: bash
         run: |
