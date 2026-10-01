@@ -127,7 +127,18 @@ jobs:
       - name: Verify Admin V2 browser states
         env:
           ADMIN_V2_EVIDENCE_DIR: /tmp/econovaria-browser/admin-v2
-        run: npm run test:admin-v2:browser
+        shell: bash
+        run: |
+          git cat-file -e eed2b365f2314f7b788bd658b419cf05bc42200a^{commit}
+          BASELINE="$RUNNER_TEMP/ref043-browser-baseline"
+          git worktree add --detach "$BASELINE" eed2b365f2314f7b788bd658b419cf05bc42200a
+          set +e
+          ADMIN_V2_STATIC_ROOT="$BASELINE" ADMIN_V2_EVIDENCE_DIR=/tmp/econovaria-browser/admin-v2-baseline npm run test:admin-v2:browser
+          BASELINE_EXIT=$?
+          set -e
+          printf 'Baseline browser exit: %s\n' "$BASELINE_EXIT"
+          git worktree remove "$BASELINE"
+          npm run test:admin-v2:browser
 
       - name: Build exact authorized Crafting pack
         shell: bash

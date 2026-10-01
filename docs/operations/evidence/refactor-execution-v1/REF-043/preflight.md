@@ -96,3 +96,11 @@ PR head; checkout semantics, permissions, production triggers, dependency
 versions, database/connected gates and retry budgets remain unchanged. Evidence
 uses its existing sanitized artifact directory. No new workflow or package
 script is introduced, and an untriggered or skipped step is never a pass.
+
+CI head `5acc1a6` failed the newly executed fixture suite at initial ready
+Overview navigation: `route market truncates horizontally` (1440x900), before
+Banking. Run 36882836455 / job 110438661078. No navigation, renderer, CSS or
+harness file differs from base. A temporary exact-base asset run now precedes
+the enforced candidate run, with separate evidence and reported baseline exit;
+it cannot suppress candidate failure. Stop for baseline layout/test debt rather
+than change CSS or weaken assertions inside Banking extraction.
