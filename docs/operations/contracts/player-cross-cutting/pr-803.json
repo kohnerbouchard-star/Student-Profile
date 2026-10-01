@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/backend-typecheck.yml",
     "player-terminal/tests/inventory-read-model.mjs",
     "docs/operations/evidence/refactor-execution-v1/REF-041/preflight.md",
     "docs/roadmaps/refactor-execution-v1/tasks/REF-041.md",
@@ -18,6 +19,7 @@
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
   "requiredFiles": [
+    ".github/workflows/backend-typecheck.yml",
     "player-terminal/tests/inventory-read-model.mjs",
     "docs/operations/evidence/refactor-execution-v1/REF-041/preflight.md",
     "docs/roadmaps/refactor-execution-v1/tasks/REF-041.md",
@@ -31,18 +33,23 @@
     "player-edge-trusted-ip-entrypoint-contract",
     "player-production-secret-provision-contract",
     "player-api-read-resilience",
-    "business-player-store-fx-final-v2-source",
-    "business-player-store-fx-final-v2-database",
-    "business-player-store-fx-final-v2-player-browser",
-    "business-player-store-fx-final-v2-connected",
-    "Backend Typecheck",
-    "Repository Quality"
+    "Repository Quality",
+    "verify-cutover-authority",
+    "verify-backend-store-runtime",
+    "verify-database-settlement",
+    "verify-database-replay",
+    "verify-player-terminal-and-chromium",
+    "verify-connected-player-store",
+    "backend-typecheck"
   ],
   "criticalJobChecks": [
-    "business-player-store-fx-final-v2-source",
-    "business-player-store-fx-final-v2-database",
-    "business-player-store-fx-final-v2-player-browser",
-    "business-player-store-fx-final-v2-connected"
+    "verify-cutover-authority",
+    "verify-backend-store-runtime",
+    "verify-database-settlement",
+    "verify-database-replay",
+    "verify-player-terminal-and-chromium",
+    "verify-connected-player-store",
+    "backend-typecheck"
   ],
   "affectedDomains": [
     "player-inventory"

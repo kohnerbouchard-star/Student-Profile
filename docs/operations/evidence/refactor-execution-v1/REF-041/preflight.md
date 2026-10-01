@@ -14,14 +14,15 @@ Inventory read suite or shared API implementation. Preserve all those paths.
 
 Exact meaningful edit allowlist (ten maximum; fewer than 400 semantic lines):
 - `player-terminal/tests/inventory-read-model.mjs`
+- `.github/workflows/backend-typecheck.yml` (exact Inventory test filters only)
 - this evidence record
 - `docs/roadmaps/refactor-execution-v1/tasks/REF-041.md`
 - `docs/roadmaps/refactor-execution-v1/backlog.json` (REF-041 only, parent integration)
 - the PR-specific Player cross-cutting authority (after draft number is known)
 
 Generated architecture inventory is separate and serialized by the parent.
-No production source, package/lock, workflow, backend, schema, UI or protected
-owner files change. Existing inventory-read runs in Player verify and its CI.
+No production source, package/lock, backend, schema, UI or protected owner
+files change. One existing workflow receives exact test-path filters only. Existing inventory-read runs in Player verify and its CI.
 Stop on baseline failure, ownership collision or any need for runtime changes.
 
 ## Existing owner and invariants
@@ -48,8 +49,8 @@ Final expanded Inventory suite and complete Player verify pass. Architecture,
 root npm test pass. Root first attempt lacked the existing pinned root modules;
 linking the unchanged installed dependencies resolved that environment issue.
 Backend TypeScript passes; Edge typecheck and complete smoke are BLOCKED by
-refused esm.sh download of pinned Supabase 2.108.2. Exact-head CI must supply
-these results. No dependency or network control was changed.
+refused esm.sh download of pinned Supabase 2.108.2. Existing Store Cutover CI
+runs every Edge root; full backend smoke remains explicitly not completed locally. No dependency or network control was changed.
 No live credentials, data queries, runtime deployment or production proof.
 
 Rollback is a normal revert of qualification tests/evidence only. Other resource
@@ -77,7 +78,20 @@ compatibility markers; generated inventory is byte-identical. No ceiling change.
 
 Draft PR #803 reserves this bounded qualification. Exact-path authority is
 `docs/operations/contracts/player-cross-cutting/pr-803.json`; verifier and tests
-remain untouched. Five meaningful files, no generated change, below 400 semantic
-lines. Publication and exact-head CI/independent review are pending. Parent owns
+remain untouched. Six meaningful files, no generated change, below 400 semantic
+lines. Exact-head CI/independent review are pending. Parent owns
 normal merge and one integration after the separate REF-038 closeout. Local fixture
 checks are not hosted browser, authenticated staging or production evidence.
+
+
+CI scope binds the four mandatory Player contracts and all six Store Cutover
+jobs, including every Edge root, serial/race/isolation, twice replay/lint,
+Chromium and connected synthetic journeys. The older Store FX final workflow
+is not triggered by this scope; authority uses actual Store Cutover job IDs.
+CONTRIBUTING still requires complete backend smoke. After scope review, add only
+the exact Inventory test path to Backend Typecheck's PR/main-push filters and
+one explanatory comment. Its existing full smoke/typecheck commands, enforcement,
+permissions and jobs are unchanged. No deployment dependencies or workflow_run
+consumers exist for this workflow. Exact-head backend-typecheck is mandatory;
+its smoke result cannot be replaced by focused Store checks or local network
+limitations. This approved wiring makes six meaningful files, below the budget.
