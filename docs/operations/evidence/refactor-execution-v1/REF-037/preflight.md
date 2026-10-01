@@ -96,3 +96,9 @@ Rollback is a normal revert of this projection/import/test change together;
 there is no data operation. Stop on output/query parity differences, ownership
 collision or missing required checks. Next exact serial ticket is REF-038 after
 REF-036/037 review and acceptance; this record grants no completion credit yet.
+
+Root npm test passed after staging the regenerated inventory. Draft PR #799
+reserves this scope; its initial documentation commit is
+`3225c74329f7d9524e7d8f4c490b92b003e3dfa0`. Exact PR authority is
+`docs/operations/contracts/player-cross-cutting/pr-799.json`; verifier and tests
+remain unchanged. Seven meaningful paths plus one generated inventory path.
