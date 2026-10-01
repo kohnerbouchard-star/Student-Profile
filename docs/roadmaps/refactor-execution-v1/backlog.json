@@ -457,15 +457,15 @@
       "id": "REF-028",
       "title": "Separate Contract availability policy from persistence",
       "file": "tasks/REF-028.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-016"
       ],
       "risk": "R2",
       "architectureMapping": "ARCH-208/ARCH-401",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
+      "implementationSha": "e6ea82d7f92a29abcaeee99b3a2df27e4d7798e5",
+      "mergeSha": "83485695cf2ff3205ddd147b2f76420a6ca98558",
       "evidence": "docs/operations/evidence/refactor-execution-v1/REF-028/preflight.md"
     },
     {
