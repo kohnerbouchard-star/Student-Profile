@@ -64,3 +64,10 @@ Initial PR776 head `59704f75eef0ae37873dcfdbe3ca61c5d095aec7`, run
 Banking SQL inserts both a bank_transaction audit and player audit. The harness
 now requires exactly one of each per adjustment (two total); ledger/bank/replay/
 rollback assertions remain. This failed run is historical, not acceptance.
+
+Head `5ed6d90f86ba126fc35c56862d83bcbca6cacb2f`, run `36815285824`,
+passed serial credit/debit/replay/conflict and overdraft/zero/currency rejection,
+then rejected the harness assumption that a nonempty unknown account is invalid.
+Existing `resolve_legacy_bank_account_v1` intentionally maps it to a legacy
+identity. Denial coverage now uses the genuinely invalid empty account; accepted
+account policy and SQL remain unchanged. This partial run is not acceptance.

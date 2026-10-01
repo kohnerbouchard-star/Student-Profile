@@ -329,13 +329,14 @@ try {
       ["overdraft", -100, {}],
       ["zero", 0, {}],
       ["currency", 1, { currencyCode: "!" }],
-      ["account", 1, { accountType: "invalid" }],
+      ["empty-account", 1, { accountType: "" }],
       ["wrong-player", 1, { playerId: crypto.randomUUID() }],
     ] as const
   ) {
     const before = await snapshot(f);
     await assert.rejects(
       adjust(f, `ref022-${label}`, amount, service(`ref022-${label}`), patch),
+      `${label} must reject without effects`,
     );
     assert.deepEqual(await snapshot(f), before);
     checks[label + "NoEffects"] = true;
