@@ -608,7 +608,7 @@
       "id": "REF-036",
       "title": "Bound Progression reward requests to canonical Economy authority",
       "file": "tasks/REF-036.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-022"
       ],
@@ -617,7 +617,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-036/preflight.md"
     },
     {
       "id": "REF-037",
