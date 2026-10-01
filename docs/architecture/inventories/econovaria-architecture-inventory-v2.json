@@ -8,10 +8,10 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1257,
+    "sourceFiles": 1258,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
-    "persistenceOutsideInfrastructure": 53,
+    "persistenceOutsideInfrastructure": 52,
     "crossDomainDeepImports": 162,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 209,
@@ -141,7 +141,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 43,
+      "sourceFiles": 44,
       "publicBoundaryFiles": []
     },
     {
@@ -520,10 +520,6 @@
       {
         "file": "backend/src/domains/auth/api/staffSignupHttpHandler.ts",
         "layer": "api"
-      },
-      {
-        "file": "backend/src/domains/contracts/services/playerContractAvailabilityService.ts",
-        "layer": "services"
       },
       {
         "file": "backend/src/domains/economy/api/initialBalanceSeedHttpHandler.ts",

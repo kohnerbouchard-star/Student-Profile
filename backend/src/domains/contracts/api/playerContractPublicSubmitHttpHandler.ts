@@ -30,10 +30,8 @@ import {
   toPublicPlayerContractProgressDto,
 } from "../contracts/playerContractPublicListContracts.ts";
 import { SupabaseContractRepository } from "../infrastructure/supabaseContractRepository.ts";
-import {
-  listPlayerContractsAvailableNow,
-  resolveActivePlayerCountryCode,
-} from "../services/playerContractAvailabilityService.ts";
+import { listPlayerContractsAvailableNow } from "../services/playerContractAvailabilityService.ts";
+import { resolveActivePlayerCountryCode } from "../infrastructure/supabaseContractAvailabilityReadRepository.ts";
 import type { PlayerContractPublicSubmitRoute } from "./playerContractPublicSubmitRoutePaths.ts";
 
 export interface PlayerContractPublicSubmitHttpHandlerDependencies {
