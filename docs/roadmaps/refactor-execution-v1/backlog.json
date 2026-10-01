@@ -490,7 +490,7 @@
       "id": "REF-030",
       "title": "Separate Contract submission translation from Story decision behavior",
       "file": "tasks/REF-030.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-029"
       ],
@@ -499,7 +499,25 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": null,
+      "children": [
+        {
+          "id": "REF-030a",
+          "status": "IN_PROGRESS",
+          "scope": "Disposable existing submission/Story trigger qualification",
+          "dependsOn": [
+            "REF-029"
+          ]
+        },
+        {
+          "id": "REF-030b",
+          "status": "PLANNED",
+          "scope": "Bounded mechanical submission adapter extraction",
+          "dependsOn": [
+            "REF-030a"
+          ]
+        }
+      ]
     },
     {
       "id": "REF-031",
