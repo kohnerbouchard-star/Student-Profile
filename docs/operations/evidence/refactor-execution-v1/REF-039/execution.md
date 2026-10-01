@@ -53,3 +53,13 @@ no runtime behavior; parent union remains eleven meaningful paths plus inventory
 Repaired owning calendar suite passes 63 (including all three cursor cases),
 market-trigger passes 5, harness Deno check and root tests pass. REF-041 source
 merge is retained in the base; its closeout will be integrated once when ready.
+
+Initial PR805 head e1dde545 ran full backend and all retained DB harnesses, but
+run 36871848436/job110401322153 failed before runner acceptance because fixture
+readiness lacked canonical campaign metadata (CAMPAIGN_DEFAULT_GAME_NOT_READY).
+Correct the fixture, pair paused lifecycle with disabled status, and preserve
+chained transport ordering. This failed run earns no REF039 database credit.
+
+Integrate REF041 closeout main b85a337bd74683484aa6395483cecaecd55072c8 once,
+preserving its source and completion records; regenerate inventory. Fresh combined
+head must qualify, including the initial Sales DB port-bind infrastructure failure.

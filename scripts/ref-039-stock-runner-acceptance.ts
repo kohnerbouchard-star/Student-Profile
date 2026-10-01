@@ -43,7 +43,9 @@ async function seed(): Promise<Fixture> {
     insert into public.game_sessions(id,owner_staff_user_id,name,status,lifecycle_state,provisioning_status)
     values(${q(f.game)},${q(staff)},'REF039 synthetic','active','active','pending');
     insert into public.game_settings(game_session_id,stock_market_window) values(${q(f.game)},'{"timezone":"UTC"}');
-    update public.game_sessions set provisioning_status='ready',provisioned_at=clock_timestamp() where id=${q(f.game)};
+    update public.game_sessions set provisioning_status='ready',provisioned_at=clock_timestamp(),
+      provisioning_pack_id='econovaria.beta-seed-pack.v1',provisioning_pack_version='1.0.0-beta',
+      provisioning_pack_sha256=repeat('a',64),provisioning_source_game_session_id=id where id=${q(f.game)};
     insert into public.purchase_codes(id,code_hash) values(${q(purchase)},${q('ref039-' + purchase)});
     insert into public.entitlements(purchase_code_id,staff_user_id,game_session_id,license_expires_at)
     values(${q(purchase)},${q(staff)},${q(f.game)},'2099-01-01');
@@ -70,14 +72,14 @@ function transport(app: string) {
       ? `select to_jsonb(${call})::text` : `select coalesce(jsonb_agg(r),'[]')::text from ${call} r`);
   }, from(table: string) {
     assert.ok(["game_sessions", "game_session_stock_assets", "stock_price_ticks", "stock_market_events", "stock_market_regimes", "country_profiles", "country_economic_snapshots"].includes(table));
-    let columns = "*", limit = "", order = ""; const filters: string[] = [];
+    let columns = "*", limit = ""; const filters: string[] = [], orders: string[] = [];
     const run = () => query(`select coalesce(jsonb_agg(r),'[]')::text from (select ${columns} from public.${ident(table)}
-      ${filters.length ? 'where ' + filters.join(' and ') : ''} ${order} ${limit}) r`);
+      ${filters.length ? 'where ' + filters.join(' and ') : ''} ${orders.length ? 'order by ' + orders.join(',') : ''} ${limit}) r`);
     const builder = {
       select(v: string) { columns = v.split(',').map(ident).join(','); return builder; },
       eq(k: string, v: unknown) { filters.push(`${ident(k)}=${q(v)}`); return builder; },
       in(k: string, v: unknown[]) { filters.push(v.length ? `${ident(k)} in (${v.map(q)})` : 'false'); return builder; },
-      order(k: string, o?: { ascending?: boolean }) { order = `order by ${ident(k)} ${o?.ascending === false ? 'desc' : 'asc'}`; return builder; },
+      order(k: string, o?: { ascending?: boolean }) { orders.push(`${ident(k)} ${o?.ascending === false ? 'desc' : 'asc'}`); return builder; },
       limit(n: number) { assert.ok(Number.isSafeInteger(n) && n > 0); limit = `limit ${n}`; return builder; },
       async maybeSingle() { const r = await run(); assert.ok(!r.data || r.data.length <= 1); return { ...r, data: r.data?.[0] ?? null }; },
       then(resolve: (r: unknown) => unknown, reject: (e: unknown) => unknown) { return run().then(resolve, reject); },
@@ -167,7 +169,7 @@ try {
   checks.authCalendarCursorReplayAndPostCommitFailures = true;
   const due = async (limit = 100) => JSON.parse(await sql(`select coalesce(jsonb_agg(r),'[]')::text from public.list_due_stock_market_games_v2(${q(open.toISOString())},${limit}) r`, "ref039-discovery", true));
   assert.ok((await due()).some((r: any) => r.game_session_id === other.game)); assert.equal((await due(101)).length, 0);
-  for (const change of ["update public.game_sessions set lifecycle_state='paused'", "update public.game_sessions set provisioning_status='pending'",
+  for (const change of ["update public.game_sessions set status='disabled',lifecycle_state='paused'", "update public.game_sessions set provisioning_status='pending'",
     "update private.stock_market_runtime_state set runtime_mode='suspended'", "update private.stock_market_runtime_state set next_due_at='2099-01-01'",
     "update public.entitlements set status='expired'"]) {
     const candidate = await seed();

@@ -1,6 +1,6 @@
 # REF-041 — Inventory shared read lifecycle qualification
 
-Status: IN_PROGRESS; verification-only disposition, not completion or deployment.
+Status: VERIFIED_COMPLETE (bounded repository qualification only). No deployment.
 Base: `900ab8691959dca8cb9279fde871de711355abed`. Risk R2; dependency REF-005
 is VERIFIED_COMPLETE. Ticket maps ARCH-500/502; actual Player client belongs to
 ARCH-501. This qualification does not rewrite the wider architecture ledger.
@@ -115,3 +115,39 @@ After REF-038 closeout, integrate main
 Stock source, tests, evidence and manifest records. Inventory regeneration is
 unchanged. Fresh combined-head CI is required; prior-head success is not reused
 as combined-head evidence. Parent retains independent review and merge authority.
+
+
+## Verified completion
+
+PR [#803](https://github.com/kohnerbouchard-star/Student-Profile/pull/803) merged
+as `4e66e14d09ea838f72d3641f6f4812c97417953e` after independent review.
+Accepted combined head `b8f83b5221c01c1c7c44fe3b3dae7522f273f2f0` passed all
+16 workflows on its first combined attempt, including Multiplayer/load
+`36868987910`, Player Verify `36868987852`, Store Cutover `36868987896`, and
+full backend smoke/typecheck `36868987807`. Merged-main tree
+`c0ec2a04c1fed6dc9ac59e6b82186898225cba4c` exactly equals the accepted tree.
+Local merged Inventory lifecycle and architecture checks pass.
+
+Merged-main observation on 2026-10-01 reached terminal: 13 workflow runs,
+11 success and two conditional Vercel verification skips, no failed/pending run.
+Passed main workflows:
+- Player Verify `36870971546`, Backend Typecheck/full smoke `36870971301`
+- Store Cutover `36870971319`: all six jobs, including Chromium, two-game
+  connected journeys, all Edge roots, serial/race/isolation and twice replay/lint
+- Repository Quality `36870971612`, Supply Chain `36870971340`
+- Beta Security `36870971902`, Beta Pilot `36870971285`
+- Runtime Wiring `36870971334`, Timezone `36870971438`
+- CodeQL push `36870972251`, Production Git Release contract `36870971362`
+
+Vercel verification `36871621896`/`36871879564` skipped. Production Git Release
+ran its static contract only; live staging/production parity and publication
+jobs were conditional skips. These do not constitute deployment/live evidence.
+The initial-head 503 and successful retry above remain historical evidence;
+combined-head and main gates are separately recorded, not silently substituted.
+
+This closeout changes only this evidence, the REF-041 task and its manifest
+record. Other 49 tasks, protected owners, runtime and generated inventory are
+unchanged. No scoped blocker remains. Next serial work is REF-039a qualified
+runner preparation, which was separately preflighted while REF-041 closed;
+REF-042 remains its own ownership-gated task. Broader beta/release completion
+and production health are not certified by this Inventory qualification.
