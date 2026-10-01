@@ -350,7 +350,7 @@
       "id": "REF-021",
       "title": "Move ledger-history queries behind an Economy read port",
       "file": "tasks/REF-021.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-016"
       ],
@@ -359,7 +359,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-021/preflight.md"
     },
     {
       "id": "REF-022",

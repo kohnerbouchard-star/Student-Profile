@@ -8,12 +8,12 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1252,
+    "sourceFiles": 1255,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 53,
     "crossDomainDeepImports": 162,
-    "browserTransportShimFiles": 25,
+    "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 99,
@@ -177,7 +177,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 15,
+      "sourceFiles": 18,
       "publicBoundaryFiles": [
         "backend/src/domains/economy/index.ts"
       ]
@@ -1776,6 +1776,12 @@
         "file": "admin/settings-simplified.js",
         "patterns": [
           "MutationObserver"
+        ]
+      },
+      {
+        "file": "backend/src/domains/economy/api/ledgerHistoryReadRepository.test.ts",
+        "patterns": [
+          "globalThis.fetch="
         ]
       },
       {
