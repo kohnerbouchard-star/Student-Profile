@@ -155,7 +155,7 @@ async function removeInjection() {
 try {
   tables = await json(`select jsonb_agg(jsonb_build_object('schema',c.table_schema,'name',c.table_name) order by c.table_schema,c.table_name)::text
     from information_schema.columns c join information_schema.tables t using(table_schema,table_name)
-    where c.column_name='game_session_id' and c.table_schema in ('public','economy_private') and t.table_type='BASE TABLE'`);
+    where c.column_name='game_session_id' and c.table_schema in ('public','private','economy_private') and t.table_type='BASE TABLE'`);
   checks.scopedSnapshotTables = tables.length;
   const { f, reward, first } = await ready(), beforeReplay = await snapshot(f);
   for (const key of ["first", "new-delivery-key"]) {

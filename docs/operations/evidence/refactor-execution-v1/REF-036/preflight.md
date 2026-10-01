@@ -63,3 +63,8 @@ adapter, inventory and completed evidence plus REF-035/032 records. The fixture
 header correction is batched into this normal merge; a transport-only diagnostic
 confirms one claim RPC is reached, without awarding database acceptance credit.
 Fresh combined-head R3 execution is still required.
+
+Combined attempt `816c69adc8d4604a85ebbe50d8c91c657302b5f4` passed real claims,
+replay/caps and rollback in run `36856005316`. Artifact review found its snapshot
+covered 198 public/economy_private tables; include private too, matching the
+retained harnesses' full game-scoped census, then require fresh qualification.
