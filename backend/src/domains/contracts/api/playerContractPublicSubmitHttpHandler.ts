@@ -6,13 +6,11 @@ import {
   jsonError,
   jsonResponse,
 } from "../../../platform/supabase/edgeResponse.ts";
-import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
 import {
   type EdgeSupabaseClient,
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import type { JsonObject } from "../../../supabase/tableTypes.ts";
 import {
   renderStoryDecisionRoleplay,
   type StoryDecisionRoleplayClient,
@@ -32,6 +30,11 @@ import {
 import { SupabaseContractRepository } from "../infrastructure/supabaseContractRepository.ts";
 import { listPlayerContractsAvailableNow } from "../services/playerContractAvailabilityService.ts";
 import { resolveActivePlayerCountryCode } from "../infrastructure/supabaseContractAvailabilityReadRepository.ts";
+import {
+  assertValidStoryDecisionEvidence,
+  isStoryDecisionContract,
+  readPlayerContractSubmissionBody,
+} from "./playerContractSubmissionAdapter.ts";
 import type { PlayerContractPublicSubmitRoute } from "./playerContractPublicSubmitRoutePaths.ts";
 
 export interface PlayerContractPublicSubmitHttpHandlerDependencies {
@@ -68,16 +71,6 @@ const FORBIDDEN_SCOPE_HEADERS = [
 ] as const;
 const LOCKED_PROGRESS_STATUSES = new Set(["completed", "expired", "failed", "dismissed"]);
 const SUBMITTABLE_PROGRESS_STATUSES = new Set(["in_progress", "submitted"]);
-const STORY_DECISION_CONTRACT_KEYS = new Set([
-  "contract.meridian.compare-financing-governance.v1",
-  "contract.meridian.belonging-long-term-status-decision.v1",
-]);
-const MAX_BODY_LENGTH = 20_000;
-const MAX_JSON_DEPTH = 8;
-const MAX_OBJECT_KEYS = 80;
-const MAX_ARRAY_LENGTH = 200;
-const MAX_STRING_LENGTH = 4_000;
-const MIN_STORY_RATIONALE_LENGTH = 20;
 
 export async function handlePlayerContractPublicSubmitRequest(
   request: Request,
@@ -94,7 +87,7 @@ export async function handlePlayerContractPublicSubmitRequest(
   try {
     const url = new URL(request.url);
     rejectClientSuppliedScope(url.searchParams, request.headers);
-    const submitBody = await readSubmitRequestBody(request);
+    const submitBody = await readPlayerContractSubmissionBody(request);
 
     const sessionToken = readPlayerSessionTokenFromRequest(request);
     if (!sessionToken) return invalidPlayerSessionResponse();
@@ -129,7 +122,7 @@ export async function handlePlayerContractPublicSubmitRequest(
       return jsonError(404, { code: "contract_not_available", message: "Contract is not available to the authenticated player.", retryable: false });
     }
 
-    if (STORY_DECISION_CONTRACT_KEYS.has(contract.contractKey)) {
+    if (isStoryDecisionContract(contract.contractKey)) {
       assertValidStoryDecisionEvidence(submitBody.evidencePayload);
     }
 
@@ -144,6 +137,7 @@ export async function handlePlayerContractPublicSubmitRequest(
       return jsonError(409, { code: "contract_progress_not_submittable", message: "Contract progress is not ready for submission.", retryable: false });
     }
 
+    // Both modes share this one commit; Story capture is its existing AFTER trigger.
     const progress = await repository.upsertPlayerContractProgress({
       gameSessionId,
       contractId: contract.id,
@@ -155,7 +149,7 @@ export async function handlePlayerContractPublicSubmitRequest(
     });
 
     let storyRoleplay: StoryDecisionRoleplayResult | null = null;
-    if (STORY_DECISION_CONTRACT_KEYS.has(contract.contractKey)) {
+    if (isStoryDecisionContract(contract.contractKey)) {
       try {
         storyRoleplay = await (dependencies.renderStoryRoleplay ?? renderStoryDecisionRoleplay)(
           serviceClient as unknown as StoryDecisionRoleplayClient,
@@ -174,57 +168,6 @@ export async function handlePlayerContractPublicSubmitRequest(
     });
   } catch (error) {
     return playerContractPublicSubmitErrorToResponse(error);
-  }
-}
-
-async function readSubmitRequestBody(request: Request): Promise<{ readonly evidencePayload: JsonObject }> {
-  const text = await request.text();
-  if (!text.trim()) return { evidencePayload: {} };
-  if (text.length > MAX_BODY_LENGTH) throw invalidRequest("Contract evidence is too large.");
-  let value: unknown;
-  try { value = JSON.parse(text); } catch { throw invalidRequest("Request body must be valid JSON."); }
-  if (!isRecord(value)) throw invalidRequest("Request body must be a JSON object.");
-  for (const key of Object.keys(value)) {
-    if (key !== "evidencePayload") throw invalidRequest("Only evidencePayload is accepted; Contract and player scope come from the route and session.");
-  }
-  const evidencePayload = value.evidencePayload ?? {};
-  if (!isRecord(evidencePayload)) throw invalidRequest("evidencePayload must be a JSON object.");
-  assertBoundedJson(evidencePayload, 0);
-  return { evidencePayload: evidencePayload as JsonObject };
-}
-
-function assertValidStoryDecisionEvidence(evidencePayload: JsonObject): void {
-  const storyDecision = evidencePayload.storyDecision;
-  if (!isRecord(storyDecision)) throw invalidRequest("Choose a Story response and explain your reasoning before submitting.");
-  const optionKey = typeof storyDecision.optionKey === "string" ? storyDecision.optionKey.trim() : "";
-  const rationale = typeof storyDecision.rationale === "string" ? storyDecision.rationale.trim() : "";
-  if (!optionKey || !/^[a-z0-9_]{2,80}$/.test(optionKey)) throw invalidRequest("Choose one of the available Story responses.");
-  if (rationale.length < MIN_STORY_RATIONALE_LENGTH) throw invalidRequest("Explain your reasoning in at least 20 characters before continuing the conversation.");
-  if (rationale.length > MAX_STRING_LENGTH) throw invalidRequest("Story rationale text is too long.");
-}
-
-function assertBoundedJson(value: unknown, depth: number): void {
-  if (depth > MAX_JSON_DEPTH) throw invalidRequest("Contract evidence is too deeply nested.");
-  if (value === null || typeof value === "boolean") return;
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw invalidRequest("Contract evidence contains an invalid number.");
-    return;
-  }
-  if (typeof value === "string") {
-    if (value.length > MAX_STRING_LENGTH) throw invalidRequest("Contract evidence text is too long.");
-    return;
-  }
-  if (Array.isArray(value)) {
-    if (value.length > MAX_ARRAY_LENGTH) throw invalidRequest("Contract evidence contains too many entries.");
-    value.forEach((item) => assertBoundedJson(item, depth + 1));
-    return;
-  }
-  if (!isRecord(value)) throw invalidRequest("Contract evidence contains an unsupported value.");
-  const entries = Object.entries(value);
-  if (entries.length > MAX_OBJECT_KEYS) throw invalidRequest("Contract evidence contains too many fields.");
-  for (const [key, nested] of entries) {
-    if (["__proto__", "constructor", "prototype"].includes(key)) throw invalidRequest("Contract evidence contains an invalid field.");
-    assertBoundedJson(nested, depth + 1);
   }
 }
 

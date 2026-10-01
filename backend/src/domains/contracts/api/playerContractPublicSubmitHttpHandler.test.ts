@@ -210,6 +210,48 @@ Deno.test("public Player Contract submission enforces accepted, available, and u
   }
 });
 
+// REF-030b characterizes parsing before extraction, including existing error precedence.
+Deno.test("REF030 bounded JSON thresholds preserve empty/null bodies and verbatim evidence", async () => {
+  const nested = (depth: number): unknown => depth ? { n: nested(depth - 1) } : {};
+  const fields = (count: number) => Object.fromEntries(Array.from({ length: count }, (_, i) => [`f${i}`, null]));
+  const cases: Array<[string, number, string?]> = [
+    ["", 200], [" ".repeat(20_001), 200], ["{}", 200], ['{"evidencePayload":null}', 200],
+    [JSON.stringify({ evidencePayload: { text: "x".repeat(4_000), list: Array(200).fill(null) } }), 200],
+    [JSON.stringify({ evidencePayload: fields(80) }), 200],
+    [JSON.stringify({ evidencePayload: nested(8) }), 200],
+    [JSON.stringify({ evidencePayload: { text: "x".repeat(4_001) } }), 400, "Contract evidence text is too long."],
+    [JSON.stringify({ evidencePayload: { list: Array(201).fill(null) } }), 400, "Contract evidence contains too many entries."],
+    [JSON.stringify({ evidencePayload: fields(81) }), 400, "Contract evidence contains too many fields."],
+    [JSON.stringify({ evidencePayload: nested(9) }), 400, "Contract evidence is too deeply nested."],
+    ['{"evidencePayload":{"number":1e400}}', 400, "Contract evidence contains an invalid number."],
+    ['{"evidencePayload":{"constructor":null}}', 400, "Contract evidence contains an invalid field."],
+    ['{"evidencePayload":{"__proto__":null}}', 400, "Contract evidence contains an invalid field."],
+    ['{"evidencePayload":{"prototype":null}}', 400, "Contract evidence contains an invalid field."],
+    [JSON.stringify({ evidencePayload: { text: "x".repeat(20_001) } }), 400, "Contract evidence is too large."],
+  ];
+  for (const [rawBody, status, message] of cases) {
+    const capture = { available: [], progress: [], upsert: [] } as { available: unknown[]; progress: unknown[]; upsert: Array<{ evidencePayload: unknown }> };
+    const response = await handlePlayerContractPublicSubmitRequest(request({ rawBody }),
+      { kind: "submit", contractKey: CONTRACT_KEY }, dependencies(repositoryFor({ existingProgress: progressRecord(), capture })));
+    assertEquals(response.status, status);
+    if (message) { assertEquals((await response.json()).error.message, message); assertEquals(capture.upsert.length, 0); }
+    else { assertEquals(capture.upsert.length, 1); assertEquals(capture.upsert[0].evidencePayload, rawBody.trim() ? JSON.parse(rawBody).evidencePayload ?? {} : {}); }
+  }
+});
+
+Deno.test("REF030 malformed transport wins before missing session or configuration", async () => {
+  let calls = 0;
+  const deps = { ...dependencies(repositoryFor({ existingProgress: null })),
+    readSupabaseEnv: () => { calls++; throw new Error("must not resolve config"); } };
+  for (const rawBody of ['{', '[]', '{"extra":1}', '{"evidencePayload":false}']) {
+    await assertError(await handlePlayerContractPublicSubmitRequest(request({ rawBody, token: "" }),
+      { kind: "submit", contractKey: CONTRACT_KEY }, deps), 400, "invalid_player_contract_submit_request");
+  }
+  await assertError(await handlePlayerContractPublicSubmitRequest(request({ rawBody: '{}', token: "" }),
+    { kind: "submit", contractKey: CONTRACT_KEY }, deps), 401, "invalid_player_session");
+  assertEquals(calls, 0);
+});
+
 function request(options: {
   readonly token?: string;
   readonly query?: string;
