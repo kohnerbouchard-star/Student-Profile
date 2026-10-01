@@ -105,7 +105,7 @@ async function tick(f: Fixture, tickIndex: number | null = 1, app = "ref039-runn
   });
   return { status: response.status, body: await response.json(), calls: client.calls, errors: client.errors, stages };
 }
-function committed(s: State) {
+function committed(before: State, s: State) {
   const assets = s["public.game_session_stock_assets"], ticks = s["public.stock_price_ticks"];
   assert.equal(ticks.length, 2); assert.ok(ticks.every(t => t.tick_index === 1));
   for (const a of assets) {
@@ -115,7 +115,10 @@ function committed(s: State) {
   assert.equal(s["private.stock_market_runtime_state"][0].current_tick_index, 1);
   const checkpoints = s["private.stock_market_simulation_checkpoints"];
   assert.equal(checkpoints.length, 1); assert.equal(checkpoints[0].stock_count, 2); assert.equal(checkpoints[0].missing_tick_state_count, 0);
-  assert.equal(s["public.ledger_entries"].length, 0); assert.equal(s["public.bank_transactions"].length, 0);
+  // Ready-game FX provisioning seeds 11 buffers before the Stock operation begins.
+  assert.equal(before["public.ledger_entries"].length, 22); assert.equal(before["public.bank_transactions"].length, 11);
+  assert.ok(before["public.bank_transactions"].every(t => t.transaction_kind === "fx_liquidity_buffer" && t.source_action === "seed_operating_buffer"));
+  for (const table of ["public.ledger_entries", "public.bank_transactions"]) assert.deepEqual(s[table], before[table]);
 }
 async function waitFor(predicate: () => Promise<boolean>) {
   const end = Date.now() + 15000;
@@ -123,7 +126,7 @@ async function waitFor(predicate: () => Promise<boolean>) {
   throw new Error("REF039 database overlap not observed");
 }
 async function race(f: Fixture) {
-  const holder = "ref039-holder", apps = ["ref039-race-a", "ref039-race-b"];
+  const before = await snapshot(f), holder = "ref039-holder", apps = ["ref039-race-a", "ref039-race-b"];
   // Hold the actual asset rows so both complete the duplicate check before persistence.
   const held = command(`begin; select id from public.game_session_stock_assets where game_session_id=${q(f.game)}
     for update; select pg_sleep(35); rollback;`, holder).spawn().output();
@@ -137,7 +140,7 @@ async function race(f: Fixture) {
     assert.deepEqual(results.map(r => r.status).sort(), [200, 500]);
     const loser = results.find(r => r.status === 500)!;
     assert.equal(loser.body.error.code, "stock_market_tick_apply_failed"); assert.match(loser.errors.join('\n'), /23505/);
-    assert.deepEqual(loser.stages, []); committed(await snapshot(f));
+    assert.deepEqual(loser.stages, []); committed(before, await snapshot(f));
     checks.competingRunner = { lockWaiters: 2, committedTicks: 1, losingStatus: 500, losingSqlState: "23505" };
   } finally {
     await sql(`select pg_cancel_backend(pid) from pg_stat_activity where application_name=${q(holder)}`);
@@ -163,7 +166,7 @@ try {
   assert.equal(applied.status, 200, JSON.stringify(applied)); assert.equal(applied.body.tickIndex, 1); assert.equal(applied.body.ticksInserted, 2);
   assert.deepEqual(applied.calls, ["is_stock_market_open_at", "get_next_stock_market_tick_index", "consume_business_market_events_v1", "apply_stock_market_runner_tick"]);
   assert.deepEqual(applied.stages, ["publish-after-commit", "publish-failure", "story-after-publish", "story-failure"]);
-  const after = await snapshot(f); committed(after); assert.deepEqual(await snapshot(other), untouched);
+  const after = await snapshot(f); committed(before, after); assert.deepEqual(await snapshot(other), untouched);
   const duplicate = await tick(f); assert.equal(duplicate.status, 409); assert.equal(duplicate.body.error.code, "stock_tick_already_exists");
   assert.deepEqual(duplicate.stages, []); assert.deepEqual(await snapshot(f), after);
   checks.authCalendarCursorReplayAndPostCommitFailures = true;
@@ -191,7 +194,7 @@ try {
   const failed = await tick(rollback); assert.equal(failed.status, 500); assert.equal(failed.body.error.code, "stock_market_tick_apply_failed");
   assert.match(failed.errors.join('\n'), /REF039_INJECTED_AFTER_ASSET_UPDATES/); assert.deepEqual(failed.stages, []);
   assert.deepEqual(await snapshot(rollback), beforeFailure); await removeInjection();
-  assert.equal((await tick(rollback)).status, 200); committed(await snapshot(rollback));
+  assert.equal((await tick(rollback)).status, 200); committed(beforeFailure, await snapshot(rollback));
   checks.inRpcRollbackAndRetry = true;
   await race(await seed()); evidence.status = "pass";
 } catch (error) { evidence.status = "fail"; throw error; }

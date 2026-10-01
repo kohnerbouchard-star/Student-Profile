@@ -670,7 +670,7 @@
       "id": "REF-040",
       "title": "Expose a minimal generic Markets calculation boundary",
       "file": "tasks/REF-040.md",
-      "status": "PLANNED",
+      "status": "BLOCKED",
       "dependsOn": [
         "REF-038"
       ],
@@ -679,7 +679,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-040/preflight.md"
     },
     {
       "id": "REF-041",

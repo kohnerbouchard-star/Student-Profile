@@ -63,3 +63,11 @@ chained transport ordering. This failed run earns no REF039 database credit.
 Integrate REF041 closeout main b85a337bd74683484aa6395483cecaecd55072c8 once,
 preserving its source and completion records; regenerate inventory. Fresh combined
 head must qualify, including the initial Sales DB port-bind infrastructure failure.
+
+Combined 8f08b5e run36874516072 reached a real tick/cursor/checkpoint, then exposed
+an incorrect empty-ledger fixture assumption. Ready-game FX legitimately seeds
+11 buffers (22 ledger rows). Compare complete ledger and transaction snapshots
+before/after success, race and retry, retaining exact bootstrap count/kind checks.
+
+The monetary-baseline correction is batched with REF040 blocked-record main
+480683bb011289576db8e9ddf05ed75daf8d17f7. Its status and all prior records remain.
