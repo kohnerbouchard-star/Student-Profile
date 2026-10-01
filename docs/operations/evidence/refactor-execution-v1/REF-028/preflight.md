@@ -1,8 +1,9 @@
 # REF-028 — Contract availability read boundary
 
-Status: IN_PROGRESS. Integration base main: `6e8590eeae8ea9e43216348cf81a3ac19da9fb8a`.
+Status: IN_PROGRESS. Integration base main: `575ba64e62896ceac9ce63abb4023385ef65eb05`.
 Original characterization base: `207eb2cd4e72e4cee7a95b147a3a0eeb37b00ed9`.
-The intervening REF-025 ownership-block record is documentation-only and preserved.
+Intervening REF-025 blocked ownership and REF-023 qualification/closeout are preserved;
+no runtime application change occurred in either integration.
 Dependency REF-016 is VERIFIED_COMPLETE (merge `c80b0b515657eb4a0fec8797314f7ece4d53933a`).
 Maps to ARCH-208/ARCH-401; does not close those wider programs.
 
@@ -105,3 +106,12 @@ There remain exactly three production country-resolver consumers, all directly
 importing the infrastructure owner; no service forwarding alias or raw query
 remains. Ten meaningful changed files with authority, plus generated inventory.
 No missing runtime gate is relabeled complete; parent owns serialized integration.
+
+## Serialized integration
+
+Pre-integration head `dd713411bee65f298536de62e9f85adad61064eb` passed all 29
+PR workflows, 60 jobs and Vercel, with four expected conditional job skips.
+Backend typecheck/smoke: run `36823736905`, job `110244694938`; all four critical
+Store/FX jobs: run `36823736883`. Local network blocks are thereby explained,
+not waived. After REF-023 closeout merge `575ba64e62896ceac9ce63abb4023385ef65eb05`,
+regenerated inventory is unchanged; the combined head requires fresh full CI.

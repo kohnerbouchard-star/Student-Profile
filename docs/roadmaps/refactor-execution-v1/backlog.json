@@ -380,16 +380,16 @@
       "id": "REF-023",
       "title": "Expose Inventory reservation contracts to Crafting without new writes",
       "file": "tasks/REF-023.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-016"
       ],
       "risk": "R3",
       "architectureMapping": "ARCH-201/ARCH-203/ARCH-402",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "cfff4525af123a93a45976d4b33aa60253435a66",
+      "mergeSha": "4d2c4d7f5dd81aa208cde0082fbc83d7243f1b76",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-023/preflight.md"
     },
     {
       "id": "REF-024",
