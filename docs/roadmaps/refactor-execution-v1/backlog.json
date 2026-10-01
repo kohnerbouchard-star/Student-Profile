@@ -395,7 +395,7 @@
       "id": "REF-024",
       "title": "Converge Marketplace reservation access on Inventory public ports",
       "file": "tasks/REF-024.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-023"
       ],
@@ -404,7 +404,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-024/preflight.md"
     },
     {
       "id": "REF-025",
