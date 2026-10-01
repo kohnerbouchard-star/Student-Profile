@@ -43,8 +43,41 @@ synthetic adapters and deferred responses, not staging or browser interaction.
 
 Pinned Node 22.23.1/npm 10.9.8. Baseline: read-ordering, connected-reads,
 session-browser-safe, inventory-read, recovery and runtime-integration pass.
-Final expanded suite, aggregate Player verify and shared guards pending.
+Final expanded Inventory suite and complete Player verify pass. Architecture,
+80 high-priority boundaries, legacy-runtime, interaction-wiring, secrets and
+root npm test pass. Root first attempt lacked the existing pinned root modules;
+linking the unchanged installed dependencies resolved that environment issue.
+Backend TypeScript passes; Edge typecheck and complete smoke are BLOCKED by
+refused esm.sh download of pinned Supabase 2.108.2. Exact-head CI must supply
+these results. No dependency or network control was changed.
 No live credentials, data queries, runtime deployment or production proof.
 
 Rollback is a normal revert of qualification tests/evidence only. Other resource
 owners are unchanged. REF-042 remains a separate #624 ownership-gated task.
+
+
+## Measured qualification and review boundary
+
+Added 146 lines to the existing Inventory suite, including explanatory comments.
+Measured adapter requests: concurrent/duplicate/fresh cache 1; invalidation with
+out-of-order stale completion 2; caller abort, logout and game switch 2 each;
+failed read followed by authoritative empty recovery 2; manifest denial 0.
+A transport deliberately ignoring abort still rejects old-session completion
+and preserves the new in-flight operation (2 reads).
+Statuses, abort propagation, cache keys, cache emptiness after denial/cancellation
+and settled in-flight bookkeeping are asserted. Existing normalization, item
+policy, currency, privacy, session/browser-safe, preview/recovery and runtime
+integration tests remain in the unchanged owning verify chain.
+
+Production source delta 0; lifecycle owners 1 before/after; new helpers/caches 0.
+Inventory source normalization functions remain separate adapters, not competing
+request lifecycle owners. Scan denominator remains 1,265 files, with 99 oversized,
+162 cross-domain deep imports, 52 persistence-outside-infrastructure and 209
+compatibility markers; generated inventory is byte-identical. No ceiling change.
+
+Draft PR #803 reserves this bounded qualification. Exact-path authority is
+`docs/operations/contracts/player-cross-cutting/pr-803.json`; verifier and tests
+remain untouched. Five meaningful files, no generated change, below 400 semantic
+lines. Publication and exact-head CI/independent review are pending. Parent owns
+normal merge and one integration after the separate REF-038 closeout. Local fixture
+checks are not hosted browser, authenticated staging or production evidence.

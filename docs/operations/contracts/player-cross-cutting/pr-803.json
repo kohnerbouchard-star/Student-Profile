@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref041-inventory-lifecycle-pr-803.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 803,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "player-terminal/tests/inventory-read-model.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-041/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-041.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/operations/contracts/player-cross-cutting/pr-803.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "player-terminal/tests/inventory-read-model.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-041/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-041.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/operations/contracts/player-cross-cutting/pr-803.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "player-inventory"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-041/preflight.md",
+  "authorizationNote": "Owner-authorized REF-041 verification-only qualification of the existing Inventory read lifecycle. No runtime, cache, normalization, capability, auth, UI, package, SQL, release or production change."
+}
