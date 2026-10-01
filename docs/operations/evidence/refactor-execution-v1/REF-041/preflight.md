@@ -95,3 +95,23 @@ permissions and jobs are unchanged. No deployment dependencies or workflow_run
 consumers exist for this workflow. Exact-head backend-typecheck is mandatory;
 its smoke result cannot be replaced by focused Store checks or local network
 limitations. This approved wiring makes six meaningful files, below the budget.
+
+
+## Exact-head qualification and serialized integration
+
+Initial complete head `d812fb2c730a82c8b15340d1b7d64b098c380dc8` passed all
+16 observed workflows. Backend Typecheck `36865981821` specifically passed
+full smoke enforcement. Player Verify `36865981732` and all six Store Cutover
+jobs in `36865981785` passed, including Chromium and connected/database gates.
+Multiplayer `36865981747` attempt 1 failed on a zero-byte 503 from
+GET /players/me/story-deliveries in the World/Marketplace browser journey;
+connected Inventory redemption had passed and 30/40 load was not run. Runtime
+was unchanged. One failed-job-only retry on the same head passed every journey
+and the required 30/40 load (attempt 2). This resolves the check, not a proven
+root cause; no assertion or retry policy was weakened and no runtime was patched.
+
+After REF-038 closeout, integrate main
+`e0f4f59b23c6bb1f398288f572308d11f5be4885` once by normal merge. Retain its
+Stock source, tests, evidence and manifest records. Inventory regeneration is
+unchanged. Fresh combined-head CI is required; prior-head success is not reused
+as combined-head evidence. Parent retains independent review and merge authority.
