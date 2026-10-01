@@ -1,6 +1,6 @@
 # REF-032 World runtime read boundary verification
 
-Status: IN_PROGRESS. Base main `eabf3d032768771ebdee652a9d6d1ce35d655734`.
+Status: BLOCKED — inherited post-merge release verification. Base main `eabf3d032768771ebdee652a9d6d1ce35d655734`.
 REF-031 is complete. REF-029 owns separate Contract work; no overlapping World
 read owner exists. Preserve blocked REF-015/025/027 and paused REF-019/020 gates.
 
@@ -82,3 +82,71 @@ Pre-integration head `557608301b15d2d48afa42c80662aa5575a808e2` passed all
 smoke artifact `11151220893` verified digest
 `453488d3ee703a08278bad95c77bcc17548989ef06caf0cbf2df423e1d8d9f12`,
 status 0 and all 13 REF-032 cases. Fresh combined-head CI remains mandatory.
+
+## Qualified source and guarded merge
+
+[PR790](https://github.com/kohnerbouchard-star/Student-Profile/pull/790) qualified
+combined head `962d5db36ee4fe4e12b34bdce1881855c7f8e307` and merged with an
+expected-head-guarded merge as `0a3d88ceff3bb1db0b4ffcd306a21b872159cf9e`.
+Both trees equal `4dad9d7f57d1f35f7f0faecd6de1c42c701e8b7f`.
+Independent review accepted the verification-only disposition and bounded tests.
+The final source diff is seven paths, six meaningful plus generated inventory,
+315 additions and five deletions; executable application behavior is unchanged.
+
+All 33 exact-head workflows passed: 66 successful jobs and 13 expected
+conditional staging/live/release/materialization skips. Vercel passed and no
+unresolved review threads remained. [Backend run 36842994048](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36842994048),
+job `110306252034`, passed full backend typecheck and aggregate smoke, resolving
+the local dependency-fetch block. Downloaded [smoke artifact 11152566109](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36842994048/artifacts/11152566109)
+verified SHA256 `5fcfba418b506060d0793d57ad5752c20ac87386ca567ed14bee2c988186b1c8`,
+status 0, all 13 REF-032 cases, World 50 and retained Contracts 95.
+[World Runtime run 36842994059](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36842994059),
+job `110306251146`, also passed.
+
+[Critical Store/FX run 36842994139](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36842994139)
+passed source, connected, Player browser and database jobs
+`110306251992/110306252154/110306252227/110306252238`. These are required
+cross-cutting regression results, not production certification. The new World
+cases use synthetic query clients through the actual application/repository;
+they do not represent hosted runtime or authenticated production evidence.
+
+
+## Post-merge blocker and preserved release boundary
+
+Main verification cannot be called complete. [Database Replay 36844808428](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36844808428)
+passed clean replay/lint (job `110312276480`) but failed production-shaped and
+staging-shaped rehearsals (`110313315104/110313315169`):
+`Expected 151 forward migrations, found 152.`
+[Staging Convergence 36844808478](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36844808478)
+passed its static contract but failed prerequisite job `110312644454` waiting
+for that replay. The populated-staging mutation, Edge deployment and browser
+jobs were skipped; no deployment or convergence success is claimed. Existing
+automatic rehearsal jobs captured schemas and used disposable local databases;
+this record does not authorize new hosted requests or mutations.
+
+The existing bundle builder fixes `PHASE15_END=20260920082200` and 151 common
+migrations. The rehearsal shell selects every version at/after the cutoff,
+without that upper bound. The extra file is
+`20260921044500_reconcile_internal_runner_nonce_service_role_authority_v1.sql`,
+introduced by [PR733](https://github.com/kohnerbouchard-star/Student-Profile/pull/733),
+commit `a303d9f067f8f37dbd2a57391cc8b31e7a4021e1`. Its historical
+[Database Replay 35562340472](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35562340472)
+failed both rehearsals; job `106217916164` records the identical count error.
+The preceding [run 35550498261](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35550498261)
+at `5b11f344bc0e725cf7028c3f7c4a2a890e9972e3` passed clean replay and both
+rehearsal jobs `106184578513/106184578563`.
+
+Compared with pre-REF-032 main `c799110e2d89d76c7d013ae49adce50c22b6c81e`,
+migration tree `e93120898574e725be58870e603a5244f4079777` and release-script
+tree `f10708ec34541b86c06825cd80842490d65f4487` are unchanged. This attributes
+an inherited selector/bundle inconsistency; it does not prove convergence is
+safe or that excluding the extra migration would certify the current runtime.
+Do not raise the expected count or silently exclude a migration to turn CI green.
+
+REF-032 remains BLOCKED despite its accepted, merged verification-only source.
+Smallest next action: the release owner reconciles rehearsal selection with the
+immutable bundle and the later nonce migration, then supplies required fresh
+main evidence under the separate release gates. No release-file or SQL edit is
+included here. The three existing docs preserve the other 49 task records and
+all incident gates. REF-033 still depends on REF-032 and pending REF-030;
+independent REF-030 qualification can continue under its existing owner.
