@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1265,
+    "sourceFiles": 1266,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -203,7 +203,7 @@
         "infrastructure",
         "realtime"
       ],
-      "sourceFiles": 9,
+      "sourceFiles": 10,
       "publicBoundaryFiles": []
     },
     {
@@ -3136,7 +3136,7 @@
     "oversizedFiles": [
       {
         "file": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
-        "lines": 1601
+        "lines": 1811
       },
       {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
@@ -3148,10 +3148,6 @@
       },
       {
         "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.test.ts",
-        "lines": 1132
-      },
-      {
-        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
         "lines": 1132
       },
       {
@@ -3177,6 +3173,10 @@
       {
         "file": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
         "lines": 998
+      },
+      {
+        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+        "lines": 960
       },
       {
         "file": "admin/v2/src/routes/world-management/WorldManagementRoute.js",

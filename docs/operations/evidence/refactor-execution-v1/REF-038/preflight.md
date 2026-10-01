@@ -77,3 +77,11 @@ limitation; no new local aggregate passing credit is claimed.
 `docs/operations/contracts/player-cross-cutting/pr-801.json` to the nine changed
 paths. Verifier/test paths are locked but unchanged. All eight meaningful files
 plus generated inventory remain within the approved cohesive scope.
+
+Pre-integration head `a2c3eb44c50614100607ab6d6738317ab796524e` passed all 31
+workflows, 66 jobs and Vercel with four expected conditional skips. Backend
+`36860753261`, Calendar `36860753046` and Stock funding/race `36860753151`
+passed. REF-037 closeout main `900ab8691959dca8cb9279fde871de711355abed`
+is merged normally; the generated inventory conflict is resolved by regeneration
+from both accepted sources, preserving all other 49 task records. Calendar 60
+and architecture re-pass. Fresh combined-head qualification remains mandatory.

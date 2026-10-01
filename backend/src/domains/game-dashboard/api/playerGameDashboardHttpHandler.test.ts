@@ -1,4 +1,10 @@
 import {
+  summarizePortfolio,
+  toCashDto,
+  toHoldingDto,
+} from "../infrastructure/dashboardFinancialProjection.ts";
+import { SupabasePlayerGameDashboardRepository } from "../infrastructure/supabasePlayerGameDashboardRepository.ts";
+import {
   handlePlayerGameDashboardRequest,
 } from "./playerGameDashboardHttpHandler.ts";
 import type {
@@ -615,6 +621,194 @@ Deno.test("player dashboard cutscene actions cannot mark another player's delive
     "game_dashboard_cutscene_delivery_not_found",
   );
   assertEquals(seededTables.notification_deliveries[0]?.seen_at, null);
+});
+
+Deno.test("dashboard financial helpers preserve currency ambiguity and invalid numeric defaults without I/O", () => {
+  const balances = ["ECO", "SLV"].map((currency_code) => ({
+    player_id: PLAYER_ID,
+    account_type: "checking",
+    currency_code,
+    balance: "1.23456789",
+  }));
+  const ambiguous = toCashDto(balances, null);
+  assertEquals([ambiguous.primaryCurrencyCode, ambiguous.totalBalance], [
+    null,
+    0,
+  ]);
+  assertEquals(toCashDto(balances, " slv ").totalBalance, 1.234568);
+  assertEquals(
+    toCashDto(balances.slice(0, 1), null).primaryCurrencyCode,
+    "ECO",
+  );
+  assertEquals(
+    toCashDto([{ ...balances[0], balance: "Infinity" }], "ECO").totalBalance,
+    0,
+  );
+  assertEquals(
+    toCashDto([{ ...balances[0], balance: NaN }], "ECO").totalBalance,
+    0,
+  );
+  const missing = toHoldingDto({
+    ...holdingRow(),
+    listing_currency_code: "SLV",
+  }, undefined);
+  assertEquals([
+    missing.currentPrice,
+    missing.marketValue,
+    missing.costBasis,
+    missing.unrealizedPnl,
+    missing.unrealizedPnlPct,
+  ], [0, 0, 500, -500, -100]);
+  const invalid = toHoldingDto({
+    ...holdingRow(),
+    listing_currency_code: "ECO",
+    quantity: "invalid",
+    average_cost: Infinity,
+    realized_pnl: "bad",
+  }, undefined);
+  assertEquals([invalid.quantity, invalid.averageCost, invalid.realizedPnl], [
+    0,
+    0,
+    0,
+  ]);
+  const unknown = summarizePortfolio(toCashDto([], null), []);
+  assertEquals([
+    unknown.currencyCode,
+    unknown.valuationStatus,
+    unknown.totalEquity,
+  ], ["UNKNOWN", "complete", 0]);
+  const portfolio = summarizePortfolio(toCashDto(balances, "ECO"), [
+    missing,
+    invalid,
+  ]);
+  assertEquals([
+    portfolio.currencyCode,
+    portfolio.cashBalance,
+    portfolio.totalEquity,
+    portfolio.positionsCount,
+    portfolio.valuationStatus,
+  ], ["ECO", 1.234568, 1.234568, 1, "partial_unconverted"]);
+  assertEquals(portfolio.byCurrency?.map((row) => row.currencyCode), [
+    "ECO",
+    "SLV",
+  ]);
+});
+
+// Frozen synthetic snapshots and complete query traces were captured before REF-037.
+// Keep these together: output parity alone would miss extra reads or weakened scope.
+Deno.test("dashboard financial extraction preserves snapshots and scoped query traces", async () => {
+  const expected: Record<string, readonly unknown[]> = {
+    "scoped": [
+      "b9044a3aa92209705bd44b733580b5e26f61f0c5dd7f48bc285af00f050d618d",
+      "4e3f72249c0570c4605d9a5347689c13be1aa5efe32c5f11d49cb2d9dcd9c5c7",
+      18,
+    ],
+    "empty": [
+      "a5768116b1241a18145c139762347e887a02af7e43412830434d193bb60a598d",
+      "db12053205f61e33d34740c5bf0c30881e2fcc7561d9d39165890ffd7c3f563f",
+      17,
+    ],
+    "mixed": [
+      "3db88ae6854cea1e78bba71fb8bbb155e3f1c0f28e81ac4f49f0f65746eb64c2",
+      "4e3f72249c0570c4605d9a5347689c13be1aa5efe32c5f11d49cb2d9dcd9c5c7",
+      18,
+    ],
+    "missing-stock": [
+      "c181afc372ddd38076c20002566459a5ad96daba62514ce8c8f9d0946b411ea3",
+      "4e3f72249c0570c4605d9a5347689c13be1aa5efe32c5f11d49cb2d9dcd9c5c7",
+      18,
+    ],
+    "large": [
+      "f762c69536659a75f61ba163a96a0cf4297766a24926fff7bb9ec7e21424d0bd",
+      "4e3f72249c0570c4605d9a5347689c13be1aa5efe32c5f11d49cb2d9dcd9c5c7",
+      18,
+    ],
+    "failure": [
+      "ddcd92d3d196f90d7184a6ffdf00451af3f727e0a94d0c174666cdc2436b154c",
+      "4e3f72249c0570c4605d9a5347689c13be1aa5efe32c5f11d49cb2d9dcd9c5c7",
+      18,
+    ],
+  };
+  for (const scenario of Object.keys(expected)) {
+    const data = tables();
+    if (scenario === "empty") {
+      for (const key of Object.keys(data)) {
+        if (key !== "game_sessions") data[key] = [];
+      }
+    }
+    if (scenario === "mixed") {
+      data.account_balances = [
+        ...data.account_balances,
+        ...["ECO", "SLV"].map((currency_code) => ({
+          game_session_id: GAME_SESSION_ID,
+          player_id: PLAYER_ID,
+          account_type: "checking",
+          currency_code,
+          balance: "1.23456789",
+        })),
+      ];
+      data.stock_positions = [
+        holdingRow({
+          quantity: "2.3333333",
+          average_cost: "bad",
+          realized_pnl: "Infinity",
+        }),
+      ];
+    }
+    if (scenario === "missing-stock") {
+      data.game_session_stock_assets = [stockAsset({ is_active: false })];
+    }
+    if (scenario === "large") {
+      data.stock_positions = Array.from(
+        { length: 1000 },
+        (_, i) => holdingRow({ quantity: i % 3, average_cost: "0.12345678" }),
+      );
+    }
+    const client = new FakeClient(
+      data,
+      scenario === "failure" ? "account_balances" : null,
+    );
+    const repository = new SupabasePlayerGameDashboardRepository(
+      client as any,
+      () => new Date("2026-06-24T00:00:00Z"),
+    );
+    let result: unknown;
+    try {
+      result = await repository.read({
+        gameSessionId: GAME_SESSION_ID,
+        playerId: PLAYER_ID,
+        playerSessionId: PLAYER_SESSION_ID,
+        playerDisplayName: "Avery",
+        playerRosterLabel: "A-1",
+      });
+    } catch (error) {
+      const failure = error as {
+        code: string;
+        message: string;
+        status: number;
+      };
+      result = {
+        code: failure.code,
+        message: failure.message,
+        status: failure.status,
+      };
+    }
+    const digest = async (value: unknown) =>
+      [
+        ...new Uint8Array(
+          await crypto.subtle.digest(
+            "SHA-256",
+            new TextEncoder().encode(JSON.stringify(value)),
+          ),
+        ),
+      ].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    assertEquals([
+      await digest(result),
+      await digest(client.trace),
+      client.trace.length,
+    ], expected[scenario]);
+    assertEquals(client.forbiddenCalls, []);
+  }
 });
 
 function dependencies(options: {
@@ -1362,9 +1556,11 @@ function deliveryRecord(
 
 class FakeClient {
   readonly forbiddenCalls: string[] = [];
+  readonly trace: unknown[] = [];
 
   constructor(
     readonly tables: Record<string, readonly Record<string, unknown>[]>,
+    readonly failTable: string | null = null,
   ) {}
 
   from(tableName: string): FakeQueryBuilder {
@@ -1372,6 +1568,7 @@ class FakeClient {
   }
 
   async rpc(functionName: string, args: Record<string, unknown> = {}) {
+    this.trace.push({ rpc: functionName, args });
     if (functionName === "is_stock_market_open_at") {
       return { data: true, error: null };
     }
@@ -1442,6 +1639,7 @@ class FakeQueryBuilder
     readonly column: string;
     readonly ascending: boolean;
   }[] = [];
+  private columns = "";
   private operation: "select" | "update" = "select";
   private updateValues: Record<string, unknown> | null = null;
   private limitCount: number | null = null;
@@ -1451,7 +1649,8 @@ class FakeQueryBuilder
     private readonly tableName: string,
   ) {}
 
-  select(): FakeQueryBuilder {
+  select(columns = ""): FakeQueryBuilder {
+    this.columns = columns;
     return this;
   }
 
@@ -1525,6 +1724,17 @@ class FakeQueryBuilder
     readonly data: unknown[] | null;
     readonly error: unknown;
   }> {
+    this.client.trace.push({
+      table: this.tableName,
+      columns: this.columns,
+      filters: this.filters,
+      inFilters: this.inFilters,
+      orderings: this.orderings,
+      limit: this.limitCount,
+    });
+    if (this.client.failTable === this.tableName) {
+      return { data: null, error: { message: "synthetic dependency failure" } };
+    }
     return { data: this.readRows(), error: null };
   }
 
