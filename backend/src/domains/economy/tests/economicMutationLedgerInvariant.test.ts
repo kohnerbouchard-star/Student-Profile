@@ -1,3 +1,5 @@
+// Keep Staff adjustment parity in the existing economic invariant command.
+import "../api/staffLedgerAdjustmentHttpHandler.test.ts";
 import { handleAttendancePlayerOperation } from "../../../../supabase/functions/admin-api/attendancePlayerOperations.ts";
 import {
   alreadyIssuedRewardResult,

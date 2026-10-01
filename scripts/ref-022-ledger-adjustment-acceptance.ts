@@ -1,8 +1,9 @@
+import { adjustLedgerForAuthorizedStaff } from "../backend/src/domains/economy/application/adjustLedgerForAuthorizedStaff.ts";
 import assert from "node:assert/strict";
 import { recordIdempotentStaffLedgerAdjustment } from "../backend/src/domains/economy/services/idempotentStaffLedgerAdjustment.ts";
 
 // Never aim this destructive fixture harness at a hosted database. Its only
-// transport substitution is psql; the existing atomic service and RPC run unchanged.
+// transport substitution is psql; the application, atomic service and RPC run unchanged.
 const database = Deno.env.get("DATABASE_URL") || "";
 const location = new URL(database);
 assert.equal(Deno.env.get("REF022_DISPOSABLE_DATABASE"), "1");
@@ -29,7 +30,7 @@ const evidence: Record<string, unknown> = {
   status: "running",
   productionTouched: false,
   transport:
-    "Unchanged atomic Staff adjustment service/RPC baseline; service_role PostgreSQL via psql",
+    "Actual Staff adjustment application and unchanged atomic service/RPC; service_role PostgreSQL via psql",
   checks,
 };
 type Row = Record<string, any>;
@@ -153,17 +154,11 @@ function adjust(
   client = service("ref022-adjust"),
   patch = {},
 ) {
-  // REF-022a freezes the existing handler's exact command before application extraction.
-  const input = { gameSessionId: f.game, playerId: f.player, staffUserId: f.staff,
+  return adjustLedgerForAuthorizedStaff({
+    gameSessionId: f.game, playerId: f.player, staffUserId: f.staff,
     idempotencyKey: key, amount, accountType: "checking", currencyCode: "ECO",
-    reason: "Synthetic correction", ...patch };
-  return recordIdempotentStaffLedgerAdjustment(client as never, {
-    ...input, routeKey: "staff.players.ledger_adjustment",
-    entryType: input.amount > 0 ? "credit" : "debit", sourceDomain: "ledger",
-    sourceAction: "staff_player_balance_adjustment", sourceId: null,
-    auditMetadata: { requestId: input.idempotencyKey, reason: input.reason,
-      source: "classroom_api_edge_staff_ledger_adjustment" },
-  });
+    reason: "Synthetic correction", ...patch,
+  }, input => recordIdempotentStaffLedgerAdjustment(client as never, input));
 }
 function assertEffects(f: Fixture, state: State, amounts: number[]) {
   const initial = initialStates.get(f.game)!, count = amounts.length;

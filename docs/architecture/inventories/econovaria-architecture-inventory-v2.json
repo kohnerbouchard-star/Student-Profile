@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1255,
+    "sourceFiles": 1257,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 53,
@@ -177,7 +177,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 18,
+      "sourceFiles": 20,
       "publicBoundaryFiles": [
         "backend/src/domains/economy/index.ts"
       ]
