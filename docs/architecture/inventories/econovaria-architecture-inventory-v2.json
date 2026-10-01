@@ -3288,7 +3288,7 @@
       },
       {
         "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
-        "lines": 696
+        "lines": 697
       },
       {
         "file": "backend/src/domains/markets/contracts/financialMarketContracts.ts",
