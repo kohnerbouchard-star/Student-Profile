@@ -587,7 +587,7 @@
       "id": "REF-035",
       "title": "Extract one Messaging thread lifecycle use case",
       "file": "tasks/REF-035.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-006",
         "REF-016"
@@ -597,7 +597,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-035/preflight.md"
     },
     {
       "id": "REF-036",
