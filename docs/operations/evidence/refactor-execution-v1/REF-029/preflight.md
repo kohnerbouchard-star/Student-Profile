@@ -17,7 +17,7 @@ Permitted files (ten maximum):
 - this record
 - `docs/roadmaps/refactor-execution-v1/tasks/REF-029.md`
 - `docs/roadmaps/refactor-execution-v1/backlog.json` (REF-029 only)
-- PR-specific `docs/operations/contracts/player-cross-cutting/pr-NNN.json`
+- PR-specific `docs/operations/contracts/player-cross-cutting/pr-785.json`
 
 Generated architecture inventory is counted separately. No package, SQL, auth,
 UI, workflow, transaction or production changes. Existing repository tests remain
@@ -52,7 +52,7 @@ Rollback: revert projection and forwarding together, with no database operation.
 
 ## Local evidence checkpoint
 
-Pinned Node 22.23.1 and Deno 2.9.3 with the existing frozen lock/cache.
+Pinned Node 22.23.1, npm 10.9.8 and Deno 2.9.3 with the existing frozen lock/cache.
 - Unchanged baseline acceptance: 67 passed; repository: 18 passed.
 - Pre-extraction characterization: 95 passed (67 existing acceptance, 18 existing
   repository cases, ten new REF-029 trace/error/filter cases).
@@ -78,3 +78,15 @@ read-only composition/forwarding, equivalent query-error construction and tests.
 Scan denominator: source/test files 1,258 -> 1,259, Contracts files 44 -> 45.
 All debt and zero-tolerance counts remain unchanged, including oversized files
 99. No unsupported score, percentage or debt-count reduction is claimed.
+
+Final committed-source `npm test` passed. Draft PR #785 published from connector
+commit `fa18ddcc651cef73e74a184558b63323366b63ae`; its tree equals locally
+validated tree `3b4ae3eb9c3b0cc8a7afbcad79281f896f6ebe1b`. PR authority
+is added in a following bounded commit, before final exact-head CI qualification.
+
+Independent static review at local `97ca76b4e05f64befb8b57895ec68a8aa5b29369`
+(the same published tree) found no actionable defect. All four selected method
+bodies/signatures, all ten remaining methods, row/select and mapper match base
+exactly. Equivalent direct error construction, unchanged client identity and
+acyclic imports were checked. Conservative non-move source/test surface is at
+most 177 lines. Review does not replace unavailable live/Edge aggregate evidence.
