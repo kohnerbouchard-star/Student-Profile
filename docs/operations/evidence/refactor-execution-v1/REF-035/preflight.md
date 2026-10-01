@@ -63,3 +63,9 @@ Local full Edge typecheck is BLOCKED by the pinned esm.sh Supabase dependency
 connection refusal; aggregate smoke is not rerun against the same unavailable
 import. Required exact-head CI must provide full typecheck/smoke; focused passing
 results above do not substitute for those gates.
+
+Integration: merge REF-030a qualification main
+`16d8e06dc0204da8bfe6ba7105d2502a771befd7` normally into this branch, preserving
+its harness/workflow/evidence and only the REF-035 backlog delta. REF-030b has a
+separate owner. Regenerated inventory is unchanged by that qualification-only
+main change; Messaging remains 18 files. Fresh combined-head CI is mandatory.
