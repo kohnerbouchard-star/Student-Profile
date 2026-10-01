@@ -1,6 +1,6 @@
 # REF-036 Progression reward authority verification
 
-Status: IN_PROGRESS. Exact base main `1bf9fc16e6d1ef1f2b962e2add58d1ea20d78623`.
+Status: VERIFIED_COMPLETE. Exact base main `1bf9fc16e6d1ef1f2b962e2add58d1ea20d78623`.
 REF-022 is VERIFIED_COMPLETE. REF-030b owns separate Contract work and does not
 edit the shared qualification workflow. Preserve REF-015/025/032 blockers,
 paused REF-019/020 and all dependent gates.
@@ -68,3 +68,56 @@ Combined attempt `816c69adc8d4604a85ebbe50d8c91c657302b5f4` passed real claims,
 replay/caps and rollback in run `36856005316`. Artifact review found its snapshot
 covered 198 public/economy_private tables; include private too, matching the
 retained harnesses' full game-scoped census, then require fresh qualification.
+
+## Qualified source and guarded merge
+
+[PR797](https://github.com/kohnerbouchard-star/Student-Profile/pull/797) qualified
+head `74bfd82e84b0e93f5505789dbd6fae22a04f097e` and merged with an expected-head-
+guarded merge as `c20c22a5385b2c0940e1a4df53b27b7bfba26812`. Both trees equal
+`fe2cb62dcc0f2164246e78dd2662b004e22b92cd`. Final scope is five paths,
+319 additions and three deletions, with no application or SQL change.
+
+All eight exact-head workflows and Vercel passed: 11 successful jobs and three
+expected conditional release/staging skips; no unresolved review threads.
+[Qualification run 36856930431](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36856930431),
+job `110351527998`, passed full backend typecheck/smoke, retained REF-018/022/
+023/024/030 acceptance, and real REF-036 event/claim acceptance.
+Downloaded [artifact 11158804665](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36856930431/artifacts/11158804665)
+independently verifies SHA256
+`34354ab4f92cd89aa34454e6d43981d63baeb41cb844baf7ff33b3eed40e1156`.
+Its exact-source JSON records all 208 game-scoped tables, replay/conflict/scope/
+eligibility, out-of-order/cap behavior, in-command rollback with same-key retry,
+and two observed lock waiters yielding one reward effect and one receipt.
+
+The exercised grant is the existing First Step skill-point reward; this does
+not claim branch-specific execution of badge or reputation reward claims.
+No monetary payment is introduced. Replay, rejected claims and injected failure
+preserve all captured game-scoped state; successful claims alter only the
+profile, reward and command audit. Lint comparison remains 142 findings/17 errors,
+with no additions or removals. This is not clean-database or production
+certification. The earlier failed/more limited fixture attempts above remain
+historical; only this complete exact-head execution supplies final R3 credit.
+
+## Merged-main verification and completion
+
+All eight automatic merged-main workflows passed: ten successful jobs and five
+expected conditional skips (four live-parity/release jobs and dependency review).
+No pending or failed checks. [Fresh main qualification 36857818905](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36857818905),
+job `110354426325`, repeated the same actual 208-table event/claim/rollback/race
+acceptance and retained regressions. Downloaded [main artifact 11159821878](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36857818905/artifacts/11159821878)
+independently verifies SHA256
+`f45bcce40f4e118789c48b15a59ac25189c08d1c335c81f854db5b16d63a63e0`;
+its REF-036 JSON binds merged main and passes every recorded check. Lint remains
+142/17 with no new diagnostics.
+
+Other passing main runs: Repository Quality `36857818952`, Supply Chain
+`36857818614`, Beta Security `36857819129`, Beta Pilot `36857819138`, timezone
+`36857818879`, Production Git Release contracts `36857818816`, CodeQL
+`36857816848`.
+
+REF-036 is VERIFIED_COMPLETE for this verification-only scope and exercised
+skill-point claim path. Current authority required no new Economy adapter;
+application debt counts and production routes/RPCs remain unchanged. Exactly
+three existing docs close out this task; other 49 records and incident gates
+are preserved. REF-037 is independently owned in parallel. The next unowned
+serial candidate is REF-038, subject to its own current-source preflight.
