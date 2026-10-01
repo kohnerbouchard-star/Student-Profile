@@ -110,14 +110,14 @@ function service(app: string) {
   };
 }
 async function submit(f: Fixture, option = "multilateral", app = "ref030-submit", text = rationale) {
-  const client = service(app);
+  const client = service(app), submittedAt = new Date().toISOString();
   let renders = 0, renderSawCommit = false;
   const payload = { storyDecision: { optionKey: option, rationale: text }, retained: null };
   const response = await handlePlayerContractPublicSubmitRequest(new Request(`https://ref030.invalid/players/me/contracts/${f.key}/submit`, {
     method: "POST", headers: { "x-player-session-token": "synthetic-token" }, body: JSON.stringify({ evidencePayload: payload }),
   }), { kind: "submit", contractKey: f.key }, {
     readSupabaseEnv: () => ({ ok: true, value: {} as never }), createServiceClient: () => client as never,
-    hashSessionToken: async () => "synthetic-hash", resolvePlayerCountryCode: async () => null,
+    hashSessionToken: async () => "synthetic-hash", resolvePlayerCountryCode: async () => null, now: () => submittedAt,
     resolvePlayerSession: async () => ({ ok: true, session: { id: crypto.randomUUID(), game_session_id: f.game, player_id: f.player,
       status: "active", expires_at: "2099-01-01T00:00:00Z", revoked_at: null },
       player: { id: f.player, display_name: "REF030", roster_label: null, status: "active" },
@@ -136,14 +136,14 @@ async function submit(f: Fixture, option = "multilateral", app = "ref030-submit"
   assert.equal(body.storyRoleplay, undefined);
   if (response.status === 200) { assert.equal(body.ok, true); assert.equal(body.progress.status, "submitted"); }
   if (response.status === 500) assert.deepEqual(body.error, { code: "contract_repository_query_failed", message: "Player Contract submission failed.", retryable: false });
-  return { status: response.status, body, payload, errors: client.errors };
+  return { status: response.status, body, payload, submittedAt, errors: client.errors };
 }
-function committed(f: Fixture, before: State, after: State, option: string) {
+function committed(f: Fixture, before: State, after: State, option: string, initial = true) {
   const decisions = after["public.player_story_decisions"], adjustments = after["public.player_story_relationship_adjustments"];
   assert.equal(decisions.length, 1); assert.equal(adjustments.length, 1);
   assert.equal(decisions[0].option_key, option.trim()); assert.equal(decisions[0].rationale, rationale.trim());
   assert.equal(decisions[0].version, 1); assert.equal(decisions[0].relationship_character_key, "character.ref030.sponsor");
-  assert.equal(decisions[0].decided_at, after["public.player_contract_progress"][0].submitted_at);
+  if (initial) assert.equal(decisions[0].decided_at, after["public.player_contract_progress"][0].submitted_at);
   assert.equal(after["public.player_story_relationships"][0].memory.preserved, true);
   assert.equal(after["public.player_story_relationships"][0].memory.lastStoryDecisionOption, option.trim());
   assert.equal(after["public.player_story_relationships"][0].memory.storyDecisions[decisions[0].decision_key], option.trim());
@@ -175,7 +175,9 @@ async function race(same: boolean) {
     const results = await Promise.all(pending), after = await snapshot(f);
     assert.deepEqual(results.map(r => r.status).sort(), same ? [200,200] : [200,500]);
     const winner = results.find(r => r.status === 200)!;
-    committed(f, before, after, winner.payload.storyDecision.optionKey);
+    committed(f, before, after, winner.payload.storyDecision.optionKey, !same);
+    // Replays refresh progress time; the first decision time remains immutable.
+    assert.ok(results.some(r => Date.parse(r.submittedAt) === Date.parse(after["public.player_story_decisions"][0].decided_at)));
     if (!same) assert.match(results.find(r => r.status === 500)!.errors.join(), /STORY_DECISION_ALREADY_COMMITTED/);
     checks[same ? "concurrentSameOption" : "concurrentConflictingOptions"] = { pass: true, observedLockWaiters: 2 };
   } finally {
