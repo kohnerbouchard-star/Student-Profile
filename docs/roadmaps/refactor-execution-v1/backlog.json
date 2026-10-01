@@ -632,7 +632,7 @@
       "risk": "R2",
       "architectureMapping": "ARCH-400/ARCH-401",
       "recheckOpenPrs": [],
-      "implementationSha": "507f883c0ea9a86e8c583b5e4010ab1908620b7a",
+      "implementationSha": "09045515476881f7c04557f411c43aa7d5c3ff8d",
       "mergeSha": "5cce070918f517e8387e6150f62853a129111232",
       "evidence": "docs/operations/evidence/refactor-execution-v1/REF-037/preflight.md"
     },
