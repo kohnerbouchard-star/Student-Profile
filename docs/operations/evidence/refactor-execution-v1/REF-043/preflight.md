@@ -56,7 +56,8 @@ changes through this record. No CSS/navigation fix or assertion weakening is
 within the approved Banking extraction. The exact failing layout/test contract
 needs a separately bounded owner and guidance before correction. After that
 baseline passes, rebase the draft, rerun all exact-head gates and review parity.
-Next independent queue item: REF-044, subject to fresh ownership/dependency audit.
+REF-044 remains gated by REF-043; REF-045 is next independently eligible
+preflight, subject to fresh ownership/dependency audit.
 
 This disposition changes only this record, REF-043 task status, and REF-043 in
 the backlog. Global beta/release ownership and all other task states are retained.
