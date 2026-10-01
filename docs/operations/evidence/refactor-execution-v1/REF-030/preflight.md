@@ -110,3 +110,15 @@ economic invariants 25/25, Player contracts-submit/story-decisions/story-deliver
 high-priority/legacy/security guards and post-extraction acceptance99 pass locally.
 Independent mechanical review found no blocking source findings. Fresh full CI and
 actual database qualification are still mandatory before extraction acceptance.
+
+REF-030b candidate `ef5e1a041dd7d877f3afbbda664c059b41274618` passed fresh
+[database run 36848626433](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36848626433),
+job `110324727042`, through the unchanged real-handler qualification harness.
+All 208-table, both-choice, retry/conflict, rationale-edit, optional-renderer,
+rollback and observed-lock race assertions passed after extraction. Baseline lint
+remains 142 findings/17 errors, unchanged. Downloaded artifact `11154054091` SHA256:
+`0b7dfdc9b835e4f20d341d8d6a2aeaa848b88be67cf73c5e1ef6d6f380d703bb`.
+Full backend checks pass in CI; local Edge/full smoke remains blocked by pinned
+esm.sh download availability. Local root/architecture/authority reruns pass.
+This candidate is statically reviewed; broader CI and latest-main integration
+remain prerequisites, so parent completion is not yet claimed.
