@@ -58,7 +58,7 @@ qualification with source SHA and retained JSON. Existing database lint findings
 must remain identical; no clean-database or production certification is claimed.
 Local Docker/PostgreSQL is unavailable. Local worker typecheck cannot resolve the
 pinned esm.sh dependency in this environment; exact CI must check the real dependency.
-Database execution is pending, with no acceptance credit assigned yet.
+Local database execution remains NOT_RUN; actual CI results follow below.
 Local candidate: all 26 contracts, complete root npm test, auth-boundary suites,
 architecture with unchanged inventory, secret scan and diff checks pass.
 
@@ -66,3 +66,18 @@ Licensing staging and Edge release mutations require explicit authorized manual
 dispatch; this publication does not enable them. Refund/chargeback and production
 fulfillment holds remain separate. Rollback is the bounded source/test revert;
 never revoke a real license, replay a real payment or send email for this task.
+
+Initial candidate `1afa89b73ba436c0d3c03891c32b0fdcb396692b` failed the
+secret scan on the literal non-secret service-role placeholder (run 36893691755,
+job 110475278052). The pre-stage local scan had omitted this untracked new file.
+The documented reviewed-test annotation identifies that exact intercepted fixture;
+scanner rules and enforcement remain unchanged. Rerun includes the tracked harness.
+
+That initial source passed real R3 run [36893691820](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36893691820),
+job `110475280896`, artifact `11178557531`, locally verified ZIP SHA-256
+`6efb1b284e99aa803481a4b583dd82d54dd0f4976fa76970ae8af6144bf3fc2e`.
+All worker cases passed: seven synthetic payment/jobs, five verifiers/outbox jobs,
+zero new entitlements or email requests; retained qualification suites also passed.
+Full 28-root backend typecheck/smoke passed; lint stayed at 142 findings/17 errors.
+Fresh exact-head checks remain mandatory after the annotation change. No SQL or
+runtime correction was needed for this baseline qualification.

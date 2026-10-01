@@ -36,7 +36,7 @@ async function rpc(name: string, args: Record<string, unknown>, app = "ref045-rp
 const scheduler = "a".repeat(64), calls: string[] = [], errors: string[] = [];
 let beforeMaterialize: (() => Promise<void>) | undefined;
 const originalFetch = globalThis.fetch, originalServe = Deno.serve;
-const environment = { SUPABASE_URL: "https://ref045.invalid", SUPABASE_SERVICE_ROLE_KEY: "ref045-local-placeholder",
+const environment = { SUPABASE_URL: "https://ref045.invalid", SUPABASE_SERVICE_ROLE_KEY: "ref045-local-placeholder", // secret-scan: allow -- non-secret intercepted fixture; network denied
   ECONOVARIA_LICENSE_CODE_DERIVATION_SECRET: "ref045-synthetic-derivation-material-only",
   ECONOVARIA_PURCHASE_CODE_HMAC_SECRET: "ref045-synthetic-verifier-material-only" };
 const previous = Object.fromEntries(Object.keys(environment).map(k => [k, Deno.env.get(k)]));
