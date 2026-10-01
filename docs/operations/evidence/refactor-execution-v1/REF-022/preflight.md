@@ -1,10 +1,10 @@
 # REF-022 Staff ledger adjustment application seam
 
-Status: IN_PROGRESS. Base main `e388c8be26d30dae8fee32a83c17a25b286c7404`.
+Status: VERIFIED_COMPLETE. Base main `e388c8be26d30dae8fee32a83c17a25b286c7404`.
 REF-021 is VERIFIED_COMPLETE. No open REF-022 owner exists; #668 owns context,
 #736 owns Player binding. REF-015 remains blocked; REF-019/020 retain their gates.
 
-## Explicit bounded children and merge order
+## Historical scope and bounded merge order
 
 The combined parity/qualification candidate exceeded the execution contract's
 400-semantic-line review threshold. Split the same task into two reviewable
@@ -44,7 +44,7 @@ The transient fixture trigger is removed; no migration changes. Its loopback-onl
 54322 guard, explicit disposable flag and service_role transport use no hosted
 credentials. Existing Attendance checks and before/after lint comparison remain.
 
-## Verification status
+## Historical local verification
 
 Combined local candidate characterization passed 23 owning-suite tests before and
 after extraction (20 new Staff cases), backend TypeScript, full root tests and two
@@ -72,7 +72,7 @@ Existing `resolve_legacy_bank_account_v1` intentionally maps it to a legacy
 identity. Denial coverage now uses the genuinely invalid empty account; accepted
 account policy and SQL remain unchanged. This partial run is not acceptance.
 
-## REF-022a qualified and merged; REF-022b in progress
+## Qualification sequence
 
 [PR776](https://github.com/kohnerbouchard-star/Student-Profile/pull/776) qualified
 head `7ea7ecb51b1768f42bfff5c1ff3e90c2f834b9c4` and merged with an expected-head
@@ -91,7 +91,7 @@ unchanged. Only fixed command construction moves to the application; the service
 RPC, SQL, package, workflow and economic policies stay unchanged. Its exact head
 must independently pass all mandatory checks and real R3 acceptance before merge.
 
-REF-022b owner draft PR: #777. Exact source scope is the eight meaningful changed
+REF-022b implementation PR: #777. Exact source scope is the eight meaningful changed
 paths listed in its authority manifest, plus separately generated inventory;
 backlog already reads IN_PROGRESS and is unchanged. All 25 owning-suite cases
 (22 Staff parity cases) passed against the unchanged merged baseline and after
@@ -100,3 +100,44 @@ The application adds no raw persistence call; selected RPC and whole-inventory
 persistence counts remain unchanged. Inventory scans 1,257 source/test files;
 persistence53/deep-imports162/transport26/compatibility209/oversized99 remain at
 the accepted limits. Full actual-application R3 execution remains CI-required.
+
+## REF-022b merged repository acceptance — 2026-10-01
+
+[PR777](https://github.com/kohnerbouchard-star/Student-Profile/pull/777) qualified
+`3bb2d9dde0393e0fd814e04b6d8f9cae08f7e7d3` and merged by expected-head-guarded
+merge as `ff6c0614ca2936d6685a8b701e384e1f2a3037f2`. Both have tree
+`d3127c95e8362c7acad4849e0e238e2d58635678`. All 30 exact-head automatic runs,
+including 29 pull-request workflows and the dynamic PR run, plus Vercel passed.
+No failures or pending checks remained. Both explicit children are now complete.
+
+- [Actual application qualification run 36817297316](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36817297316), job `110225044985`, artifact `11142141712`, downloaded and verified SHA256 `54984897989d7acca5653c9d4a2c3ba1c3484ff4d48cbc2d27adf7529cb2085f`: every real ledger case passed. The retained JSON names the actual application and exact source, 208-table snapshots, in-RPC failure/retry, and two observed waiters for each same/distinct-key race. Baseline PR776 evidence was not substituted for this execution.
+- The same artifact retains full backend typecheck of 28 Edge roots and full smoke, with all 22 Staff cases actually discovered in the 25-case owning economic suite. Retained Attendance also passed. Lint comparison remained identical at 142 findings/17 error-level; no additions or removals. This is not a clean database claim.
+- [Store/FX run 36817297311](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36817297311) passed all four mandatory source/database/browser/connected jobs: `110225045439`, `110225045515`, `110225045211`, `110225045529`.
+- [Repository Quality run 36817297350](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36817297350), [Backend Typecheck run 36817297437](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36817297437), and final [Store Cutover run 36817297373](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36817297373) passed, alongside retained security, architecture, Player/browser/multiplayer, economic and static release gates.
+
+No HTTP/SQL policy or gameplay change was made to satisfy a test. The two failed
+qualification fixtures above remain historical and were corrected to match the
+existing two-audit and nonempty account behavior. Existing live callers remain
+Staff and retained Classroom roots. The HTTP adapter no longer constructs the
+atomic command; the application owns it and the unchanged service owns its one
+RPC. No new persistence site, route, migration, public DTO or economic write was
+introduced. Inventory counts remain as recorded above.
+
+This closeout changes only this existing record, REF-022 task and REF-022 backlog
+entry. All 50 stable IDs and the other 49 task entries remain unchanged. No new
+source tests are credited to documentation. REF-015 remains blocked and
+REF-019/020 retain their authentication gates. Next exact item is REF-023 (only
+declared dependency REF-016, already complete), with ownership/transaction
+reconciliation required before changes. No REF-023 implementation is included.
+
+## Merged-main terminal verification
+
+Main `ff6c0614ca2936d6685a8b701e384e1f2a3037f2` completed 16 successful runs
+and one expected skipped Edge Function Inventory Convergence run `36818519323`,
+with zero failures or pending runs. [Actual-application R3 run 36818519205](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36818519205),
+[Backend Typecheck run 36818519240](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36818519240),
+[Repository Quality run 36818519340](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36818519340)
+and final [Store Cutover run 36818519398](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36818519398)
+passed. These are existing automatic post-merge checks on the identical qualified
+source tree. The skipped deployment gate supplies no runtime certification; no
+source suite was manually rerun for this documentation closeout.
