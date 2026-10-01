@@ -505,7 +505,7 @@
       "id": "REF-031",
       "title": "Separate country reference reads from game-scoped projections",
       "file": "tasks/REF-031.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-016"
       ],
@@ -514,7 +514,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-031/preflight.md"
     },
     {
       "id": "REF-032",
