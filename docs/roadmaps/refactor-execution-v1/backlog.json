@@ -703,7 +703,7 @@
       "id": "REF-042",
       "title": "Converge Inventory mutation invalidation in the Player Terminal",
       "file": "tasks/REF-042.md",
-      "status": "PLANNED",
+      "status": "BLOCKED",
       "dependsOn": [
         "REF-023",
         "REF-041"
@@ -715,7 +715,7 @@
       ],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-042/preflight.md"
     },
     {
       "id": "REF-043",
