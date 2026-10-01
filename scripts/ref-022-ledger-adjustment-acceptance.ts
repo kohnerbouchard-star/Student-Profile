@@ -207,7 +207,10 @@ function assertEffects(f: Fixture, state: State, amounts: number[]) {
   const audits = state["public.audit_log"].filter((r) =>
     r.action === "ledger.staff_player_balance_adjustment"
   );
-  assert.equal(audits.length, count);
+  // Balanced Banking records both the posting audit and the legacy player audit.
+  assert.equal(audits.length, 2 * count);
+  assert.equal(audits.filter(r => r.target_type === "bank_transaction").length, count);
+  assert.equal(audits.filter(r => r.target_type === "player").length, count);
   assert.ok(
     audits.every((r) =>
       r.actor_id === f.staff && r.metadata.reason === "Synthetic correction"

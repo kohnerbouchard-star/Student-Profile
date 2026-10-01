@@ -58,3 +58,9 @@ Qualification-only paths do not trigger Store/FX cross-cutting authority gates,
 so REF-022a needs no authority manifest. REF-022b will bind its source/inventory
 paths to its own PR manifest. Together the children retain the parent ten-file
 meaningful budget plus generated inventory.
+
+Initial PR776 head `59704f75eef0ae37873dcfdbe3ca61c5d095aec7`, run
+`36814753758`, failed only the harness's one-audit assumption. Current unchanged
+Banking SQL inserts both a bank_transaction audit and player audit. The harness
+now requires exactly one of each per adjustment (two total); ledger/bank/replay/
+rollback assertions remain. This failed run is historical, not acceptance.
