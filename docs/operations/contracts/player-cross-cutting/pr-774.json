@@ -9,7 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
-    "backend/package.json",
+    "backend/src/domains/economy/api/playerBankingPublicHttpHandler.test.ts",
     "backend/src/domains/economy/api/playerLedgerHistoryHttpHandler.ts",
     "backend/src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts",
     "backend/src/domains/economy/api/ledgerHistoryReadRepository.test.ts",
@@ -24,7 +24,7 @@
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
   "requiredFiles": [
-    "backend/package.json",
+    "backend/src/domains/economy/api/playerBankingPublicHttpHandler.test.ts",
     "backend/src/domains/economy/api/playerLedgerHistoryHttpHandler.ts",
     "backend/src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts",
     "backend/src/domains/economy/api/ledgerHistoryReadRepository.test.ts",
@@ -61,5 +61,5 @@
     "players"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-021/preflight.md",
-  "authorizationNote": "Owner-authorized REF-021 literal ledger-history read extraction after REF-016. Preserve auth/session/profile reads, audience projections and all economic writes. Only the existing banking suite gains one test file. No SQL, UI, release, production or auth repair work. Verifiers remain unchanged."
+  "authorizationNote": "Owner-authorized REF-021 literal ledger-history read extraction after REF-016. Preserve auth/session/profile reads, audience projections and all economic writes. Only the existing Banking test module imports its adjacent parity tests; packages and permissions remain unchanged. No SQL, UI, release, production or auth repair work. Verifiers remain unchanged."
 }

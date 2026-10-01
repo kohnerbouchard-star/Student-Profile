@@ -7,8 +7,8 @@ auth-baseline gate. No dependency is waived by proceeding with REF-021.
 
 No existing REF-021 owner was found. Active #668 retains Staff/context/bootstrap
 ownership and #736 retains Player service-client binding. Neither owns the selected
-history handlers. The single package edit adds a test to `test:player-banking-public`;
-#668's `test:staff-bootstrap`/smoke edits are not imported or changed.
+history handlers. The existing Banking test module imports the adjacent parity
+tests; package scripts, permissions and #668 bootstrap/smoke ownership are unchanged.
 
 ## Frozen seam
 
@@ -36,7 +36,7 @@ response/privacy contract as part of this extraction.
 3. `backend/src/domains/economy/contracts/ledgerHistoryReadRepository.ts`
 4. `backend/src/domains/economy/infrastructure/supabaseLedgerHistoryReadRepository.ts`
 5. `backend/src/domains/economy/api/ledgerHistoryReadRepository.test.ts`
-6. `backend/package.json` (one existing suite registration only)
+6. `backend/src/domains/economy/api/playerBankingPublicHttpHandler.test.ts` (adjacent test import only)
 7. This preflight/evidence record
 8. `docs/roadmaps/refactor-execution-v1/tasks/REF-021.md`
 9. `docs/roadmaps/refactor-execution-v1/backlog.json` (REF-021 only)
@@ -78,3 +78,10 @@ because the selected adapters intentionally retain their authorization reads.
 Its broad shim-candidate total includes the new test's scoped network-denial
 fixture; production transport budgets and all zero-tolerance categories remain
 unchanged, as verified by the existing architecture ratchets.
+
+
+Initial CI at `40153a0d009978c8d6d421a05c2f47099c4c8e93` found that the
+one-line package registration invalidated REF-003's immutable supporting-source
+hash. The package is restored byte-for-byte; the existing Banking test module
+now imports these adjacent tests instead. All assertions and suite permissions
+remain unchanged, and no historical review hash or guard is weakened.
