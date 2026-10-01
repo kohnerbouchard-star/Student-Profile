@@ -685,7 +685,7 @@
       "id": "REF-041",
       "title": "Centralize one Player read-resource lifecycle",
       "file": "tasks/REF-041.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-005"
       ],
@@ -696,7 +696,7 @@
       ],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-041/preflight.md"
     },
     {
       "id": "REF-042",
