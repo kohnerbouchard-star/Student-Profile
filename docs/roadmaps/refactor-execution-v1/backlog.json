@@ -640,7 +640,7 @@
       "id": "REF-038",
       "title": "Extract one pure Stock-engine calculation family",
       "file": "tasks/REF-038.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-005"
       ],
@@ -649,7 +649,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-038/preflight.md"
     },
     {
       "id": "REF-039",

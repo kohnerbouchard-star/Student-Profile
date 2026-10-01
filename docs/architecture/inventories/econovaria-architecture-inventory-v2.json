@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1265,
+    "sourceFiles": 1266,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -341,7 +341,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 94,
+      "sourceFiles": 95,
       "publicBoundaryFiles": []
     },
     {
@@ -3140,7 +3140,7 @@
       },
       {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
-        "lines": 1667
+        "lines": 1371
       },
       {
         "file": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
@@ -3195,6 +3195,10 @@
         "lines": 908
       },
       {
+        "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
+        "lines": 895
+      },
+      {
         "file": "backend/supabase/functions/classroom-api/index.ts",
         "lines": 888
       },
@@ -3225,10 +3229,6 @@
       {
         "file": "admin/player-identity-wiring.js",
         "lines": 845
-      },
-      {
-        "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
-        "lines": 838
       },
       {
         "file": "backend/src/domains/contracts/api/staffContractHttpHandler.test.ts",
@@ -3288,7 +3288,7 @@
       },
       {
         "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
-        "lines": 695
+        "lines": 696
       },
       {
         "file": "backend/src/domains/markets/contracts/financialMarketContracts.ts",
