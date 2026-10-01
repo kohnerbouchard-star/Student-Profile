@@ -490,16 +490,16 @@
       "id": "REF-030",
       "title": "Separate Contract submission translation from Story decision behavior",
       "file": "tasks/REF-030.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-029"
       ],
       "risk": "R3",
       "architectureMapping": "ARCH-208/ARCH-400",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null,
+      "implementationSha": "794388fb0bd2d2f4c0782a99c422da47def397c0",
+      "mergeSha": "7f8ce00cab3cdf303c37332dcbbceb96d2163582",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-030/preflight.md",
       "children": [
         {
           "id": "REF-030a",
@@ -515,11 +515,15 @@
         },
         {
           "id": "REF-030b",
-          "status": "IN_PROGRESS",
+          "status": "VERIFIED_COMPLETE",
           "scope": "Bounded mechanical submission adapter extraction",
           "dependsOn": [
             "REF-030a"
-          ]
+          ],
+          "implementationSha": "794388fb0bd2d2f4c0782a99c422da47def397c0",
+          "mergeSha": "7f8ce00cab3cdf303c37332dcbbceb96d2163582",
+          "pullRequest": 795,
+          "evidence": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36853726296"
         }
       ]
     },

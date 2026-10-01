@@ -1,6 +1,6 @@
 # REF-030 — Contract submission adapter
 
-Status: IN_PROGRESS. Base: `c799110e2d89d76c7d013ae49adce50c22b6c81e`.
+Status: VERIFIED_COMPLETE (bounded repository seam). Original base: `c799110e2d89d76c7d013ae49adce50c22b6c81e`.
 Dependency REF-029 is verified. Maps to ARCH-208/ARCH-400; risk R3.
 Open-owner recheck 2026-10-01: #736 `8070f58d4145951d8aee3e74a2b1e00d90c54385`
 and #668 `faaf908bdd5131b451c7e87e91ed4991ad8f839d` remain unchanged.
@@ -122,3 +122,48 @@ Full backend checks pass in CI; local Edge/full smoke remains blocked by pinned
 esm.sh download availability. Local root/architecture/authority reruns pass.
 This candidate is statically reviewed; broader CI and latest-main integration
 remain prerequisites, so parent completion is not yet claimed.
+
+## Integrated extraction acceptance and merge
+
+After REF-035 closeout, accepted head `794388fb0bd2d2f4c0782a99c422da47def397c0`
+passed all 30 workflows: 65 successful check runs and five documented conditional
+skips (hosted parity, unchanged-artifact authorization, inventory materialization,
+staging evidence and Supabase Preview). Vercel passed. This does not convert those
+skipped hosted gates into runtime certification. Parent review approved integration.
+[Run 36852215086](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36852215086),
+job `110336278136`, reran the complete disposable PostgreSQL qualification after
+integration. The downloaded source-bound artifact `11155224566` verified SHA256
+`e275ad36b8bb422cb9e97281287d9573783ce4606aa5bc01af95087808bc1886`.
+All existing trigger/rollback/race/effect assertions passed; lint was unchanged.
+
+PR #795 merged as `7f8ce00cab3cdf303c37332dcbbceb96d2163582`. Accepted head and
+merged main have identical complete tree `ace35c8aebe994197c520d53745caf3f07a551fd`.
+Combined local Contract acceptance99, Messaging37, root tests, exact authority and
+deterministic inventory pass. Relative to integrated REF-035 main, source files
+are 1,263 -> 1,264; Contracts remains 45 -> 46 and debt counts are unchanged.
+Both children preserve the original mutation, trigger and postcommit authority.
+
+
+## Verified merged-main closeout
+
+At `7f8ce00cab3cdf303c37332dcbbceb96d2163582`, all 17 triggered workflows are
+terminal: 16 successful and one conditional Edge convergence skip. Check runs are
+35 successful/seven conditional skips; no failed/pending job remains. Skips cover
+hosted parity/release publication, staging/production convergence and PR-only
+dependency review. No standalone main Vercel status exists; accepted PR preview
+success is not represented as a new production deployment.
+
+Merged-main [run 36853726296](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36853726296),
+job `110341152160`, again passed real application/upsert/trigger replay, rollback,
+both races, full backend checks, migration replay and unchanged lint. Downloaded
+artifact `11157820769` verified SHA256
+`fad0656e39358b12cc3c43b88e4b34826c4d0af87e886b344e86b952a43decf1`.
+Its JSON identifies the exact merged SHA and all required checks passing.
+
+Both REF-030 children and this bounded parent seam are VERIFIED_COMPLETE. No
+runtime, SQL, policy, generated inventory or authority is edited in this three-doc
+closeout. All other parent records remain unchanged, including blocked REF-032 and
+verified REF-035. No unresolved blocker remains for this seam; hosted authentication,
+production release health and pre-existing lint findings retain their separate gates.
+Next numbered task REF-033 remains gated by REF-032; independently owned REF-036
+can continue only under its own qualification scope. No successor is implemented here.
