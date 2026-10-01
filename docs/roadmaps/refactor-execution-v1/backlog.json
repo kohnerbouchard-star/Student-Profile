@@ -457,7 +457,7 @@
       "id": "REF-028",
       "title": "Separate Contract availability policy from persistence",
       "file": "tasks/REF-028.md",
-      "status": "PLANNED",
+      "status": "IN_PROGRESS",
       "dependsOn": [
         "REF-016"
       ],
@@ -466,7 +466,7 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-028/preflight.md"
     },
     {
       "id": "REF-029",

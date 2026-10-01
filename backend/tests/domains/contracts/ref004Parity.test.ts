@@ -107,3 +107,100 @@ Deno.test("REF004 Contract review records current non-idempotent changed-payload
   for (const action of ["approve", "reject"]) equal((await f.send("review", "POST", { action })).status, 200);
   equal(f.writes.length, 2); equal(f.writes.map((write: any) => write.status), ["completed", "failed"]);
 });
+
+// REF-028: lock the optional country projection before moving its persistence.
+import { resolveActivePlayerCountryCode } from "../../../src/domains/contracts/infrastructure/supabaseContractAvailabilityReadRepository.ts";
+import { isContractAvailableNow,
+  listPlayerContractsAvailableNow } from "../../../src/domains/contracts/services/playerContractAvailabilityService.ts";
+import type { ContractRepository, GameSessionContractRecord } from "../../../src/domains/contracts/contracts/contractRepositoryContracts.ts";
+import "../../../src/domains/contracts/services/playerContractAvailabilityService.test.ts";
+
+type CountryResponse = { data?: Record<string, unknown> | null; error?: unknown } | undefined;
+function countryReadFixture(assignment: CountryResponse, country: CountryResponse, throwAt = "") {
+  const trace: unknown[][] = [];
+  const client = { from(table: string) {
+    trace.push(["from", table]);
+    if (throwAt === table) throw new Error("private lookup failure");
+    const query = {
+      select(value: string) { trace.push(["select", value]); return query; },
+      eq(key: string, value: string) { trace.push(["eq", key, value]); return query; },
+      order(key: string, value: unknown) { trace.push(["order", key, value]); return query; },
+      limit(value: number) { trace.push(["limit", value]); return query; },
+      maybeSingle() { trace.push(["maybeSingle"]);
+        if (throwAt === `${table}:response`) return Promise.reject(new Error("private response failure"));
+        return Promise.resolve(table === "player_country_assignments" ? assignment : country); },
+    }; return query;
+  } };
+  return { trace, read: () => resolveActivePlayerCountryCode(client as never, G, U) };
+}
+const assignmentTrace = [["from", "player_country_assignments"], ["select", "country_profile_id,assigned_at"],
+  ["eq", "game_session_id", G], ["eq", "player_id", U], ["eq", "status", "active"],
+  ["order", "assigned_at", { ascending: false }], ["limit", 1], ["maybeSingle"]];
+const countryTrace = [["from", "country_profiles"], ["select", "country_code"], ["eq", "id", C], ["maybeSingle"]];
+Deno.test("REF028 country reads: exact scope, order, limit, count and normalization", async () => {
+  const f = countryReadFixture({ data: { country_profile_id: ` ${C} ` } }, { data: { country_code: " northreach " } });
+  equal(await f.read(), "NORTHREACH"); equal(f.trace, [...assignmentTrace, ...countryTrace]);
+});
+for (const [name, response] of Object.entries({ absent: undefined, missing: {}, null: { data: null },
+  empty: { data: {} }, blank: { data: { country_profile_id: "  " } },
+  error: { data: { country_profile_id: C }, error: { message: "private" } } })) {
+  Deno.test(`REF028 country reads: ${name} assignment returns null without second query`, async () => {
+    const f = countryReadFixture(response, { data: { country_code: "NORTHREACH" } });
+    equal(await f.read(), null); equal(f.trace, assignmentTrace);
+  });
+}
+for (const [name, response] of Object.entries({ absent: undefined, missing: {}, null: { data: null },
+  empty: { data: {} }, blank: { data: { country_code: "  " } },
+  error: { data: { country_code: "NORTHREACH" }, error: { message: "private" } } })) {
+  Deno.test(`REF028 country reads: ${name} profile returns null without retry`, async () => {
+    const f = countryReadFixture({ data: { country_profile_id: C } }, response);
+    equal(await f.read(), null); equal(f.trace, [...assignmentTrace, ...countryTrace]);
+  });
+}
+for (const table of ["player_country_assignments", "country_profiles"]) {
+  for (const suffix of ["", ":response"]) Deno.test(`REF028 country reads: ${table}${suffix} exception stays null`, async () => {
+    const f = countryReadFixture({ data: { country_profile_id: C } }, { data: { country_code: "NORTHREACH" } }, `${table}${suffix}`);
+    equal(await f.read(), null);
+    equal(f.trace.filter((entry) => entry[0] === "from").length, table === "country_profiles" ? 2 : 1);
+  });
+}
+const availabilityInput = Object.freeze({ gameSessionId: G, playerId: U, nowIso: NOW });
+const availabilityContract = { ...contractDto, id: C, targetingPayload: {}, publishedAt: NOW,
+  expiresAt: null, deadlineAt: null, createdAt: NOW } as unknown as GameSessionContractRecord;
+Deno.test("REF028 policy: publication inclusive, expiry exclusive, deadline is not expiry", () => {
+  const before = "2026-09-22T23:59:59.999Z", after = "2026-09-23T00:00:00.001Z";
+  for (const [time, published, expires] of [[before, true, false], [NOW, true, false], [after, false, true]] as const) {
+    equal(isContractAvailableNow({ ...availabilityContract, publishedAt: time }, availabilityInput), published);
+    equal(isContractAvailableNow({ ...availabilityContract, expiresAt: time }, availabilityInput), expires);
+  }
+  equal(isContractAvailableNow({ ...availabilityContract, deadlineAt: before }, availabilityInput), true);
+  for (const publishedAt of [null, "invalid"]) equal(isContractAvailableNow({ ...availabilityContract, publishedAt }, availabilityInput), false);
+  equal(isContractAvailableNow({ ...availabilityContract, expiresAt: "invalid" }, availabilityInput), false);
+  equal(isContractAvailableNow(availabilityContract, { ...availabilityInput, nowIso: "invalid" }), false);
+});
+Deno.test("REF028 policy: wrong game/status/private and absent targeting remain unavailable", () => {
+  for (const override of [{ gameSessionId: S }, { status: "paused" }, { status: "completed" },
+    { visibility: "private" }, { visibility: "targeted", targetingPayload: { playerIds: [S], countryCodes: ["NORTHREACH"] } }]) {
+    equal(isContractAvailableNow({ ...availabilityContract, ...override }, availabilityInput), false);
+  }
+  const targets: GameSessionContractRecord["targetingPayload"][] = [{ playerIds: [` ${U} `] }, { countryCodes: [" northreach "] }, { rosterLabels: [" north "] }];
+  for (const targetingPayload of targets) {
+    equal(isContractAvailableNow({ ...availabilityContract, status: "scheduled", visibility: "targeted", targetingPayload },
+      { ...availabilityInput, countryCode: "NORTHREACH", rosterLabel: "NORTH" }), true);
+  }
+});
+Deno.test("REF028 list: two scoped reads, last duplicate wins, descending time, failures propagate", async () => {
+  const calls: unknown[] = [], duplicate = { ...availabilityContract, title: "scheduled replacement" };
+  const older = { ...availabilityContract, id: P, publishedAt: "2026-09-22T00:00:00.000Z" };
+  const repository = { async listPlayerAvailableContracts(input: unknown) { calls.push(["active", input]); return [older, availabilityContract]; },
+    async listGameSessionContracts(input: unknown) { calls.push(["scheduled", input]); return [duplicate, { ...older, id: S, gameSessionId: S }]; } };
+  equal(await listPlayerContractsAvailableNow(repository as unknown as ContractRepository, availabilityInput), [duplicate, older]);
+  equal(calls, [["active", { gameSessionId: G, playerId: U }], ["scheduled", { gameSessionId: G, statuses: ["scheduled"] }]]);
+  const failure = new Error("repository failure");
+  for (const method of ["listPlayerAvailableContracts", "listGameSessionContracts"] as const) {
+    let caught: unknown;
+    try { await listPlayerContractsAvailableNow({ ...repository, [method]: () => Promise.reject(failure) } as unknown as ContractRepository, availabilityInput); }
+    catch (error) { caught = error; }
+    equal(caught, failure);
+  }
+});
