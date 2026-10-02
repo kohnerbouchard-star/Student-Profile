@@ -807,7 +807,7 @@ async function auditAuthoritativeUuidHandoffExposure(browser, fixture) {
   const runtime = await createScenarioRuntime(browser, fixture, "ready");
   const findings = [];
   const routeReads = {
-    players: ["players"], attendance: ["attendance/today"], contracts: ["contracts"], store: ["store/items"],
+    players: ["players"], attendance: ["attendance/today"], contracts: ["contracts"], store: ["store/items?include=stock,prices,purchaseStats"],
     marketplace: ["marketplace"], settings: ["settings"], logs: ["logs?page=1&pageSize=50"],
     "world-management": ["campaign", "campaign/history?limit=100", "campaign/effects?status=all&limit=100",
       "arrival-classes?limit=100", "geography", "travel?limit=100", "residency?limit=100"].map((path) => `world/${path}`),

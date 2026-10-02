@@ -161,3 +161,11 @@ Source/workflow/test delta is 156 changed lines, below cap 200; evidence is
 separate. Local probes passed 13 ready reads, 65 non-ready rejections, 39 method/
 query/game rejections, four unchanged dashboard error scenarios, and Admin 86/86.
 Full exact-head CI remains required; no browser completion is inferred.
+
+The first fixture-completion head 10ea54d625e502d405349474261f59e5c08a6f42
+timed out in the newly added response wait (run 36948300804, job 110655287805,
+artifact 11202837640). Its Store expectation omitted the existing projection
+query. Corrected the expected initial route read to
+store/items?include=stock,prices,purchaseStats, as required by readStore and its
+existing API regression. This is an audit expectation correction, not a new
+fixture or product change. The failed attempt remains retained evidence.
