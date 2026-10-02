@@ -103,7 +103,9 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/u1/sanitized"
           if test -s "$PHASE15_EVIDENCE_DIR/summary.json"; then
-            jq '{sourceCommit, environment, status, exitCode, appliedMigrationCount, certifiedMigrationCount, canonicalApplicationSchemaMatched, releaseCertificate: false}' "$PHASE15_EVIDENCE_DIR/summary.json" > "$RUNNER_TEMP/u1/sanitized/result.json"
+            schema_digest="$(sha256sum "$PHASE15_CAPTURE_DIR/schema.sql" | cut -d' ' -f1)"
+            ledger_digest="$(sha256sum "$PHASE15_CAPTURE_DIR/ledger.json" | cut -d' ' -f1)"
+            jq --arg schema "$schema_digest" --arg ledger "$ledger_digest" '{sourceCommit, environment, status, exitCode, appliedMigrationCount, certifiedMigrationCount, canonicalApplicationSchemaMatched, sourceSchemaSha256:$schema, sourceLedgerSha256:$ledger, releaseCertificate: false}' "$PHASE15_EVIDENCE_DIR/summary.json" > "$RUNNER_TEMP/u1/sanitized/result.json"
           else
             jq -n --arg sha "$GITHUB_SHA" --arg env "$PHASE15_ENVIRONMENT" '{sourceCommit:$sha, environment:$env, status:"NOT_QUALIFIED", releaseCertificate:false}' > "$RUNNER_TEMP/u1/sanitized/result.json"
           fi
