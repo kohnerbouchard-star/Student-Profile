@@ -15,7 +15,8 @@
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-827.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/backend-typecheck.yml"
   ],
   "requiredFiles": [
     "player-terminal/src/app.js",
@@ -24,7 +25,8 @@
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-827.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/backend-typecheck.yml"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -49,5 +51,5 @@
     "inventory"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-042/u3b1-evidence.md",
-  "authorizationNote": "Parent-authorized REF042b1 under merged PR826: optional inactive app coordinator injection, final publication/lifecycle fences, registered browser regressions and scoped metadata. Default composition stays uninjected until b3; REF042 remains BLOCKED. Generated inventory reports app line count/order only. Verifier/test paths are required locks, not edit authority. Coordinator/API, other participants, main.js/CSS, package/workflows, U1, capture/deployment and CampusPay are protected."
+  "authorizationNote": "Parent-authorized REF042b1 under merged PR826: optional inactive app coordinator injection, final publication/lifecycle fences, registered browser regressions and scoped metadata. Default composition stays uninjected until b3; REF042 remains BLOCKED. Generated inventory reports app line count/order only. Verifier/test paths are required locks, not edit authority. Coordinator/API, other participants, main.js/CSS, package/workflows, U1, capture/deployment and CampusPay are protected. Parent additionally authorizes exactly two Backend Typecheck PR-filter paths for app.js and the registered browser spec; job body, push filter, permissions, pins and assertions stay unchanged."
 }
