@@ -1,6 +1,6 @@
 # REF-044 — Contracts submission-detail presentation
 
-Status: IN_PROGRESS. Bounded R2 repository seam; no deployment.
+Status: VERIFIED_COMPLETE (bounded repository seam only). Bounded R2 repository seam; no deployment.
 Base: `87c576a3b0d7a7d0365ae6641cd3e53f812b06f6` after reviewed REF043 closeout.
 REF007/008/009/043 are VERIFIED_COMPLETE and their source merges are ancestors.
 No active Contracts/REF044 owner exists. Protected PR624/668/690/730/731/735/736
@@ -65,3 +65,69 @@ Inventory sourceFiles 1269 to 1270; all boundary counts unchanged. One 43-line
 presentation owner has one route caller; controller and API remain unchanged.
 Local Edge/full smoke/review-reward tests are blocked by pinned esm.sh tunnel
 refusal; they and pinned-browser acceptance require fresh exact-head CI.
+
+## Qualified merged-source closeout — 2026-10-02
+
+Parent independently approved the presentation-only extraction: [PR820](https://github.com/kohnerbouchard-star/Student-Profile/pull/820),
+head `e8a4a1a73089a778fe98633f45aa9c77abebb75c`, merge
+`059cd3cef1998e7a95ba359c2271b48602b794a9`. Eight changed paths / 379 lines
+include evidence and generated inventory. ContractsRoute delegates presentation
+to ContractSubmissionDetail; controller/API, routes/RPCs, permissions, economic
+writes and CSS are unchanged. No migration or runtime deployment is part of REF044.
+
+Independent recovery audit fetched `1a0ff1adb28f710d646c655c8ca91b24e799dd18`.
+The source merge is an ancestor; later PR822 changes only five separately owned
+U1 paths. No earlier workspace patch or unpublished closeout was assumed present.
+Open PRs #624/668/690/730/731/735/736 remain separate; no REF044 closeout draft
+or remote closeout branch existed at inspection. Editable closeout paths are
+this record, tasks/REF-044.md and only REF044's backlog object. All nine literal
+false hosted-job guards and the removed automatic production trigger are retained.
+
+Exact-head evidence, re-read through GitHub API and downloaded artifact contents:
+
+- [Contracts run 36954504416](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36954504416)
+  passed; [artifact 11205596493](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36954504416/artifacts/11205596493),
+  ZIP SHA-256 `a374a4de05aba143c8acb36d664e2b552cb9be878617b6c8247f20154dece906`.
+  All 12 responsive/lifecycle checks pass; four detail DOM hashes match the
+  recorded untouched baseline above. Six screenshots are retained in the artifact.
+- [Admin run 36954504230](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36954504230)
+  passed; [artifact 11205866483](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36954504230/artifacts/11205866483),
+  ZIP SHA-256 `107dbc31540b6fd1f24d575e4249c9fb15c02d4dc0dc8ed3a03480bb20810a26`.
+  Candidate: 25 passes, eight existing UUID exceptions, zero failures. Connected
+  mutation balance 0→18 persists at 18 after reload/replay; unauthenticated access
+  is rejected. Retained baseline report fails Market horizontal truncation before
+  any case completes (zero checks); it is historical failure evidence, not a pass.
+- Backend/typecheck/smoke [36954504157](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36954504157)
+  and review/reward database qualification [36954504271](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36954504271)
+  pass, resolving the prior local dependency-download limitation for acceptance.
+- Promotion-contract [36954504451](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36954504451)
+  initially cancelled before jobs under shared concurrency; user-triggered attempt
+  2 succeeds on the same head. No deployment dispatch recovered this static check.
+  Historical terminal snapshot: 75 checks, 69 success/six conditional skips.
+  Fresh recovery snapshot: 76 checks, 70 success/six skips (later Branch Hygiene),
+  no failure/pending; Vercel status success. All 34 listed PR workflows now succeed.
+- Merged-source `059cd3cef`: 18 successful push workflows. The earlier snapshot
+  recorded 37 successful checks/10 conditional skips; fresh recovery sees 37
+  success/18 skips, plus six skipped Vercel Git Production Verification workflows.
+  No failed/pending check. Skipped hosted verification does not certify production.
+  Parent's merged-source local qualification: Contracts 6/6, Admin 91/91 and
+  architecture pass. Recovery reruns and docs checks are recorded below.
+
+The original local dependency failures, system-browser qualification limit and
+UUID exceptions remain historical evidence. Browser fixtures and connected CI
+qualification are not live production certification. Debt remains one route
+caller into the 43-line presentation owner; source-file denominator 1269→1270,
+with unchanged architecture boundary counts. No scoped blocker remains.
+Closeout publication/merge remains parent-owned. Only REF044 changes status;
+all 50 primary IDs/dependencies and other statuses are preserved (34→35 complete
+when this ledger change merges). Next exact action: U3/REF042 child registration
+for review, without source implementation or parent-task completion credit.
+
+Recovery checks on `1a0ff1adb28f710d646c655c8ca91b24e799dd18` with this docs
+patch: Node 22.23.1, Contracts `node --test scripts/admin-v2-contracts-api.test.mjs`
+6/6; `npm run test:admin-v2` 91/91; `npm run audit:architecture` (generated
+inventory unchanged), `npm run security:secrets`, 50 unique IDs/task paths,
+acyclic unchanged dependencies, unchanged other queue objects, relative links,
+three-path scope and `git diff --check` pass. No new browser/backend/runtime
+execution is claimed for this docs-only patch; exact implementation artifacts
+and merged-source evidence above supply those prior acceptance results.
