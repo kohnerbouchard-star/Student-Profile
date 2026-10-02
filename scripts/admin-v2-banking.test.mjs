@@ -329,3 +329,138 @@ test("Banking controller fails closed when economy.adjust is absent", async () =
   assert.equal(denied.error.code, "PERMISSION_DENIED");
   controller.destroy();
 });
+
+// Characterize the presentation fallbacks independently of the stricter API transport.
+const bankingEnvelopes = [
+  (record) => record,
+  (record) => ({ value: record }),
+  (record) => ({ data: record }),
+  (record) => ({ data: { data: record } }),
+  (record) => ({ payload: record }),
+];
+const ledgerRow = { accountType: "checking", amount: "-12.50", currencyCode: "HWC" };
+
+test("Banking preserves every supported row envelope and rejects malformed containers", () => {
+  for (const wrap of bankingEnvelopes) {
+    for (const key of ["players", "roster"]) {
+      assert.equal(normalizeBankingReadModel(wrap({ [key]: [player()] })).players.length, 1);
+      assert.equal(normalizeBankingReadModel(wrap({ [key]: [] })).isEmpty, true);
+    }
+    assert.equal(normalizeBankingHistory(wrap({ ledgerEntries: [ledgerRow] })).entries[0].amount, -12.5);
+    assert.equal(normalizeBankingHistory(wrap({ ledgerEntries: [] })).isEmpty, true);
+    for (const invalid of [null, false, 12, "rows", [], { players: null, roster: {}, ledgerEntries: "rows" }]) {
+      for (const normalize of [normalizeBankingReadModel, normalizeBankingHistory]) {
+        // Only a top-level player array is an accepted collection without a record.
+        if (normalize === normalizeBankingReadModel && wrap === bankingEnvelopes[0] && Array.isArray(invalid)) continue;
+        assert.throws(() => normalize(wrap(invalid)), (error) => error.code === "INVALID_RESPONSE" && error.retryable);
+      }
+    }
+  }
+  assert.equal(normalizeBankingReadModel([player()]).players.length, 1);
+  assert.equal(normalizeBankingReadModel([]).isEmpty, true);
+});
+
+test("Banking keeps candidate precedence, per-candidate aliases, and first empty arrays", () => {
+  for (let index = 0; index < bankingEnvelopes.length - 1; index += 1) {
+    const earlier = bankingEnvelopes[index];
+    const later = bankingEnvelopes[index + 1];
+    // data and data.data share their outer record; merge that one nested pair.
+    const combine = (first, second) => index === 2
+      ? { data: { ...first.data, ...second.data } }
+      : { ...first, ...second };
+    assert.equal(normalizeBankingReadModel(combine(earlier({ roster: [] }), later({ players: [player()] }))).isEmpty, true);
+    assert.equal(normalizeBankingHistory(combine(earlier({ ledgerEntries: [] }), later({ ledgerEntries: [ledgerRow] }))).isEmpty, true);
+  }
+  assert.equal(normalizeBankingReadModel({ players: [], roster: [player()] }).isEmpty, true);
+  assert.equal(normalizeBankingReadModel({ players: null, roster: [player()] }).players.length, 1);
+  assert.equal(normalizeBankingReadModel({ value: [], data: { players: [player()] } }).players.length, 1);
+  assert.equal(normalizeBankingHistory({ value: [], data: { ledgerEntries: [ledgerRow] } }).entries.length, 1);
+  assert.throws(() => normalizeBankingHistory({ players: [], roster: [] }), (error) => error.code === "INVALID_RESPONSE");
+});
+
+test("Banking retains slice-before-filter limits and immutable sanitized projections", () => {
+  const model = normalizeBankingReadModel({ players: [null, ...Array.from({ length: 2_001 }, () => player({
+    displayName: PLAYER_ID,
+    balances: [{ accountType: "checking", balance: "0", currencyCode: "hwc" }],
+  }))] });
+  assert.equal(model.players.length, 1_999);
+  assert.equal(model.players.at(-1).rowKey, "banking-player-2000");
+  assert.equal(model.players[0].displayName, "Unnamed player");
+  assert.equal(model.players[0].resourceId, PLAYER_ID);
+  assert.equal(model.players[0].checking[0].balance, 0);
+  assert.equal(model.players[0].checking[0].currencyCode, "HWC");
+  const history = normalizeBankingHistory({ ledgerEntries: [null, ...Array.from({ length: 251 }, () => ({
+    ...ledgerRow, sourceAction: OTHER_ID, createdAt: PLAYER_ID,
+  }))] });
+  assert.equal(history.entries.length, 249);
+  assert.equal(history.entries.at(-1).rowKey, "banking-entry-250");
+  assert.equal(history.entries[0].description, "Ledger activity");
+  assert.equal(history.entries[0].createdAt, "");
+  assert.equal(JSON.stringify(history).includes(OTHER_ID), false);
+  const assertFrozen = (value) => {
+    if (!value || typeof value !== "object") return;
+    assert.equal(Object.isFrozen(value), true);
+    Object.values(value).forEach(assertFrozen);
+  };
+  assertFrozen(model);
+  assertFrozen(history);
+});
+
+function bankingControllerFixture(overrides = {}) {
+  return createBankingController({
+    selectedGameId: GAME_ID,
+    hasPermission: () => true,
+    cryptoObject: { randomUUID: () => OTHER_ID },
+    api: {
+      readBanking: async () => ({ data: { players: [player({ balances: [ledgerRow] })] } }),
+      readBankingHistory: async () => ({ data: { ledgerEntries: [] } }),
+      adjustBankingBalance: async () => ({ data: { adjusted: true } }),
+      cancelBankingRequest: () => true,
+      cancelBankingHistoryRequest: () => true,
+      ...overrides,
+    },
+  });
+}
+
+test("Banking malformed reads retain safe error state and ignore reads after route disposal", async () => {
+  const controller = bankingControllerFixture({ readBanking: async () => ({ data: { players: null } }) });
+  await controller.load();
+  assert.equal(controller.getState().status, "failed");
+  assert.equal(controller.getState().error.code, "INVALID_RESPONSE");
+  controller.destroy();
+  let finish;
+  const disposed = bankingControllerFixture({ readBanking: () => new Promise((resolve) => { finish = resolve; }) });
+  const pending = disposed.load();
+  disposed.destroy();
+  const state = disposed.getState();
+  finish({ data: { players: [player()] } });
+  await pending;
+  assert.equal(disposed.getState(), state);
+});
+
+test("Banking duplicate adjustment clicks do not retry an ambiguous failure", async () => {
+  let reject;
+  let calls = 0;
+  const controller = bankingControllerFixture({
+    readBanking: async () => ({ players: [player({ balances: [{ ...ledgerRow, balance: 10 }] })] }),
+    adjustBankingBalance: () => {
+      calls += 1;
+      return new Promise((_resolve, rejectRequest) => { reject = rejectRequest; });
+    },
+  });
+  await controller.load();
+  const current = controller.getState().data.players[0];
+  const input = { amount: 5, reason: "Correction" };
+  const pending = controller.adjustBalance(current, current.accounts[0], input);
+  const duplicate = await controller.adjustBalance(current, current.accounts[0], input);
+  assert.equal(duplicate.busy, true);
+  assert.equal(duplicate.error.code, "CONFLICT");
+  reject({ status: 503, code: "SERVICE_UNAVAILABLE", message: `private ${OTHER_ID}` });
+  const result = await pending;
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, "SERVICE_UNAVAILABLE");
+  assert.equal(JSON.stringify(result.error).includes(OTHER_ID), false);
+  assert.equal(calls, 1);
+  assert.equal(controller.getState().data.players[0].checking[0].balance, 10);
+  controller.destroy();
+});
