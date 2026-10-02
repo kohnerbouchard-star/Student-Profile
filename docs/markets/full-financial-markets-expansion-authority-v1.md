@@ -8,6 +8,10 @@
 **Production deployment authorized:** No  
 **Production data or schema modification authorized:** No
 
+The assignment, branch and Chat 1/Chat 3 references below preserve the historical
+registration proposal. The [bounded continuation](#bounded-continuation-registration--2026-10-02)
+records current accountability for EXP-MKT-011–016; it does not release the broader hold.
+
 ## Scope
 
 This branch is the proposed sole implementation authority for `EXP-MKT-001` through `EXP-MKT-016`:
@@ -89,3 +93,81 @@ No schema or runtime implementation begins until the current market audit and ta
 ## Completion boundary
 
 Chat 1 remains the sole merge authority. This PR must remain draft until controller registration, collision-free migrations, complete exact-head verification, isolated-staging acceptance, zero unresolved review threads, and explicit merge-order authorization are recorded.
+
+## Bounded continuation registration — 2026-10-02
+
+**Implementation lead:** dot's Econovaria Markets continuation, which accepts accountability.
+**Product-policy decisions and explicit release authorization:** the user.
+**Scope, independent review, merge and reviewed release execution coordination:**
+the parent coordinator of the user-authorized Econovaria continuation.
+**Allocation:** accepted by the coordinator for registration review; this documentation
+handoff awaits independent parent review and merge. **Delivery state:** all six
+milestones below remain PLANNED; no production-consumer integration is claimed.
+
+This is a newly accepted continuation allocation within FULL_FINANCIAL_MARKETS_EXPANSION,
+not recovered historical definitions. At `b7f0e1374163f665124cc2ff02e9f4313ccb6679`,
+repository and connected GitHub searches found the EXP-MKT-001–016 range but no
+individual milestone definitions. Broader EXP-MKT-001–010 obligations remain
+unreconciled and unchanged; this bounded allocation neither removes nor completes them.
+Historical Chat 3 / PR #305 does not identify the current continuation lead. PR #305
+merged on 2026-07-25 as `8e07ba06fec84adfc4154515a2b544f04387dd35`; its stale draft
+prose does not grant persistence, shared registration or activation authority.
+
+The [approved D3 decision](../roadmaps/refactor-execution-v1/BLOCKER-RESOLUTION-ADDENDUM.md#d3--approved-staged-markets-integration)
+remains D3-A retention/qualification during stabilization and D3-B integration as the
+long-term objective. This allocation implements ownership coordination under that
+existing decision; it does not ask the user to choose D3 again.
+
+### Accepted allocation and sequential delivery gates
+
+M05–M18 below refer to the existing [design-only migration graph](full-financial-markets-migration-integration-design-v1.md#3-migration-dependency-graph),
+not allocated migration versions or implemented schema. Each milestone requires its
+predecessor and the applicable product/controller gates below. The continuation lead
+owns the requirement, evidence and explicit remaining gaps for every row.
+
+| Milestone | Sequential dependency | Undelivered requirement and existing design references | Exit evidence |
+|---|---|---|---|
+| EXP-MKT-011 | Reviewed U6a qualification and bounded caller/contract scope | Calculation contract and caller boundary; M05–M06, M12, M17 | Reviewed numerical/error contract and named production-consumer plan; public seam only with actual callers, parity and cycle/closure checks. A plan alone does not deliver consumer migration. |
+| EXP-MKT-012 | EXP-MKT-011; user-approved product policy | Terms and authoritative offer; M05–M06, M10–M11; [inactive definitions](full-financial-markets-migration-integration-design-v1.md#41-global-inactive-reference-definitions) | Approved instrument/issuer/terms, versioned definitions and player-visible authoritative offer; no fabricated terms. |
+| EXP-MKT-013 | EXP-MKT-012; funding and controller integration gates | Funded purchase/allocation and holdings; M14–M16; [order execution](full-financial-markets-migration-integration-design-v1.md#62-order-execution) | Atomic game-scoped funding/allocation/holding effects; concurrency, insufficient-funds, replay/conflict and rollback proof. |
+| EXP-MKT-014 | EXP-MKT-013; payment/redemption/failure policy and affected recovery defect resolution | Scheduled payments, principal redemption where applicable, failure/default/recovery; M06, M13, M16; [scheduled processing](full-financial-markets-migration-integration-design-v1.md#63-valuation-and-scheduled-processing) | Funded authoritative lifecycle, exact payment/redemption idempotency, precision, failure and rollback evidence; no duplicated liability or unfunded payout. |
+| EXP-MKT-015 | EXP-MKT-014; approved shared API/capability coordination | Actual public consumers, receipts/history and UI freshness; M17; [read projections](full-financial-markets-migration-integration-design-v1.md#64-read-projections), [Player resources](full-financial-markets-migration-integration-design-v1.md#13-player-resource-plan) | Registered real consumers, minimal named/type-only seam where needed, privacy/auth boundaries, authoritative history and refresh/remount evidence. |
+| EXP-MKT-016 | EXP-MKT-015; complete predecessor evidence and separate explicit user release authorization | Complete lifecycle qualification and controlled release; M18; [RLS/grants](full-financial-markets-migration-integration-design-v1.md#7-rls-and-grants-design), [staging](full-financial-markets-migration-integration-design-v1.md#16-isolated-staging-plan), [acceptance](full-financial-markets-migration-integration-design-v1.md#19-acceptance-evidence-required-after-hold-release) | Full numerical/security/backend and authenticated lifecycle evidence at exact source/artifact identities, staging and rollback acceptance, then separately authorized release. A preview or source merge is insufficient. |
+
+### Decisions and controls retained before implementation
+
+- The user must decide the instrument, issuer, funding source and liability, terms,
+  currency, rate/date conventions, schedule and failure/default/recovery policy before
+  dependent implementation. A one-currency fixed-rate bond remains a candidate only.
+- The parent must confirm the bounded implementation branch/PR and predecessor main,
+  exclusive migration allocation, shared-file collision/merge rules, capability/API
+  publication responsibility and release-train ownership before schema/shared work.
+  No range is allocated and no shared registry is transferred by this document.
+- Stocks/Markets holding and settlement responsibilities must be reconciled with
+  canonical Banking/Economy atomic money writes; no second ledger or economic authority.
+- Exact-source staging, authenticated lifecycle, rollback and release evidence remain
+  mandatory before activation. Release requires separate explicit user authorization;
+  the parent coordinates reviewed execution.
+  Existing hold/approval controls are unchanged. No capture, dispatch or live action
+  is authorized by this registration.
+
+**Broader status remains AUTHORITY_REGISTRATION_PENDING_CONTROLLER.** Accepted bounded
+accountability and the six-item allocation do not register the entire expansion or
+release the original schema/shared-activation hold. They establish who must deliver
+and coordinate the outstanding work; they do not settle unresolved product policy.
+
+### Recovery issue and REF-040 closeout boundary
+
+The continuation lead owns the separate potential `recoveredAt` defect recorded by
+[U6a characterization](../operations/evidence/refactor-execution-v1/REF-040/u6a-qualification.md):
+any non-null value, including malformed or future dates, suppresses recovery flows
+without date validation/comparison while retaining recovery valuation. Characterization
+does not bless that behavior. A separately reviewed product decision and bounded
+resolution with regression evidence are mandatory before affected recovery consumers.
+
+[REF-040](../roadmaps/refactor-execution-v1/tasks/REF-040.md) stays BLOCKED in this draft;
+all task states, dependencies and completion counts are unchanged. After this accepted
+handoff is merged and qualification evidence is complete, the parent may separately
+review explicit interim closeout, naming retained calculations and still-undelivered
+production integration. Review the handoff again at expansion kickoff and before
+REF-050 certification. No milestone is satisfied merely by this registration.
