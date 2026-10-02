@@ -164,3 +164,243 @@ assert.ok(!controllerSource.includes("supabase") && !controllerSource.includes("
 assert.ok(!controllerSource.includes("balance") && !controllerSource.includes("playerUuid"), "Invalidation signals must contain no sensitive or authoritative economic data.");
 
 console.log("Realtime freshness passed: TTLs, allowlisted signals, cookie-session scope rotation, targeted resource reconciliation, authenticated refetch, interaction-safe disclosure deferral, idle-heartbeat stability, and payload privacy are valid.");
+
+// Real API/coordinator and store; transport and terminal navigation are fixtures.
+import { createResourceFreshnessCoordinator } from "../src/api/resource-freshness-coordinator.js";
+function held() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+async function until(predicate) {
+  for (let count = 0; count < 600; count++) {
+    if (predicate()) return;
+    await delay(2);
+  }
+  throw new Error("Realtime fixture did not settle");
+}
+class TrackedTarget extends EventTarget {
+  listeners = new Set();
+  addEventListener(type, listener) { this.listeners.add(listener); super.addEventListener(type, listener); }
+  removeEventListener(type, listener) { this.listeners.delete(listener); super.removeEventListener(type, listener); }
+}
+function sharedFixture() {
+  const freshness = createResourceFreshnessCoordinator(), target = new TrackedTarget(), doc = new TrackedTarget();
+  doc.visibilityState = "visible";
+  const requests = [], holds = new Map();
+  let version = 0, refreshes = 0, paused = false;
+  const config = {
+    usePreviewData: false, authenticated: true, csrfToken: CSRF_TOKEN, deviceId: DEVICE_ID,
+    publishableKey: "sb_publishable_realtime_shared_fixture", gameSessionId: "game-1",
+    requestTimeoutMs: 5000, writeCooldownMs: 0, allowedImageHosts: [], resourceFreshnessMs: { inventory: 60000 },
+    apiCall: async ({ endpointKey, method }) => {
+      requests.push({ endpointKey, method });
+      if (method === "POST") { version++; return { ok: true, outcome: "created" }; }
+      const data = { ...structuredClone(previewData[endpointKey]), marker: version };
+      const hold = holds.get(endpointKey);
+      if (hold) {
+        holds.delete(endpointKey);
+        hold.started = true;
+        await hold.promise;
+        if (hold.error) throw hold.error;
+      }
+      return data;
+    }
+  };
+  const api = new PlayerApi(config, { freshness, deferFreshnessSettlement: true });
+  const store = createStore({ status: "ready", route: "inventory", data: { ...structuredClone(previewData), inventory: { ...previewData.inventory, marker: 0 }, resourceStatus: {} } });
+  const terminal = { freshness, getState: store.getState, subscribe: store.subscribe, navigate() {}, refresh() { refreshes++; } };
+  const mount = { contains: () => true, querySelector: () => paused ? {} : null };
+  const install = (options = {}) => installPlayerInvalidationController({ terminal, config, mount, eventTarget: target, documentRef: doc, debounceMs: 5, checkIntervalMs: 60000, ...options });
+  const controller = install();
+  return {
+    freshness, api, store, terminal, config, controller, install, requests, target, doc,
+    hold(key, error) { const value = { ...held(), error }; holds.set(key, value); return value; },
+    signal(keys) { target.dispatchEvent(invalidationEvent({ resources: keys, gameSessionId: config.gameSessionId })); },
+    pause(value) { paused = value; },
+    refreshes: () => refreshes,
+    close() { controller.destroy(); api.abortSessionRequests(); }
+  };
+}
+{
+  const f = sharedFixture(), other = sharedFixture();
+  const old = f.hold("inventory");
+  f.controller.refreshNow(["inventory"]);
+  await until(() => old.started);
+  const equivalent = f.api.request("inventory", { force: true }).catch((error) => error);
+  await delay(5);
+  assert.equal(f.requests.length, 1, "Equivalent reads share one current-generation transport");
+  const otherTicket = other.freshness.capture(["inventory"]);
+  const mutation = await f.api.execute("itemEffectUse", { itemKey: "fixture", idempotencyKey: "realtime-held-write" });
+  const refreshed = await f.api.refreshResources(mutation.invalidatedResources);
+  f.store.setState((state) => ({ ...state, data: { ...state.data, ...refreshed.data } }));
+  for (const resource of mutation.invalidatedResources) f.freshness.settle(f.freshness.ticketFor(refreshed), resource);
+  assert.equal(f.store.getState().data.inventory.marker, 1);
+  f.pause(true);
+  f.signal(["inventory"]);
+  const stateAfterWrite = f.store.getState();
+  old.resolve();
+  assert.equal((await equivalent).code, "REQUEST_SUPERSEDED");
+  await delay(15);
+  assert.equal(f.store.getState().data, stateAfterWrite.data, "Old realtime completion cannot overwrite post-write values/status/capabilities");
+  assert.equal(f.freshness.isPending("inventory"), true, "Old completion cannot settle a newer invalidation");
+  assert.equal(other.freshness.isCurrent(otherTicket), true, "Independent terminal generations are isolated");
+  assert.equal(other.requests.length, 0);
+  f.pause(false);
+  f.controller.refreshNow(["inventory"]);
+  await until(() => !f.freshness.isPending("inventory"));
+  assert.equal(f.requests.filter((r) => r.endpointKey === "inventory").length, 3, "Post-write/new-generation reads exclude the old read");
+  f.close(); other.close();
+}
+{
+  const f = sharedFixture(), old = f.hold("inventory");
+  f.controller.refreshNow(["inventory"]);
+  await until(() => old.started);
+  const newer = f.hold("inventory");
+  f.signal(["inventory"]);
+  await until(() => newer.started);
+  old.resolve();
+  await delay(10);
+  assert.equal(f.terminal.getState().live.status, "updating");
+  f.signal(["contracts"]);
+  await delay(60);
+  assert.equal(f.requests.length, 2, "Old finally cannot release the newer refresh owner");
+  newer.resolve();
+  await until(() => f.terminal.getState().live.status === "connected");
+  f.close();
+}
+for (const failureFirst of [false, true]) {
+  const f = sharedFixture(), failure = f.hold("inventory", Object.assign(new Error("unavailable"), { status: 400 }));
+  const success = f.hold("dashboard");
+  f.controller.refreshNow(["inventory", "dashboard"]);
+  await until(() => failure.started && success.started);
+  (failureFirst ? failure : success).resolve();
+  await delay(10);
+  assert.equal(f.freshness.isPending("dashboard"), true, "Read completion alone cannot settle unpublished data");
+  (failureFirst ? success : failure).resolve();
+  await until(() => f.terminal.getState().live.error === "partial_refresh");
+  assert.equal(f.terminal.getState().data.inventory.marker, 0);
+  assert.equal(f.terminal.getState().data.resourceStatus.inventory.state, "unavailable");
+  assert.equal(f.freshness.isPending("inventory"), true);
+  assert.equal(f.freshness.isPending("dashboard"), false);
+  f.controller.refreshNow(["inventory"]);
+  await until(() => !f.freshness.isPending("inventory"));
+  assert.equal(f.terminal.getState().data.resourceStatus.inventory.state, "ready");
+  f.close();
+}
+{
+  const f = sharedFixture();
+  await f.api.execute("itemEffectUse", { itemKey: "fixture", idempotencyKey: "mixed-sibling-write" });
+  const oldDashboard = f.hold("dashboard");
+  f.controller.refreshNow(["dashboard", "inventory"]);
+  await until(() => oldDashboard.started && f.requests.some((r) => r.endpointKey === "inventory"));
+  await delay(10);
+  f.signal(["dashboard"]);
+  await until(() => f.store.getState().data.dashboard.marker === 1);
+  oldDashboard.resolve();
+  await delay(10);
+  assert.equal(f.store.getState().data.inventory.marker, 1, "Superseded sibling batch cannot lose unpublished Inventory");
+  assert.equal(f.freshness.isPending("inventory"), false, "Only published Inventory settles pending");
+  f.close();
+}
+for (const kind of ["session", "abort", "destroy", "stale401"]) {
+  const f = sharedFixture(), read = f.hold("inventory", kind === "stale401" ? { status: 401, code: "UNAUTHORIZED" } : null);
+  f.controller.refreshNow(["inventory", "dashboard"]);
+  await until(() => read.started);
+  if (kind === "destroy") f.controller.destroy();
+  else if (kind === "abort") f.api.abortSessionRequests();
+  else f.api.setSession({ authenticated: true, csrfToken: ROTATED_CSRF_TOKEN, gameSessionId: "game-2" });
+  const snapshot = f.store.getState();
+  read.resolve();
+  await delay(20);
+  assert.equal(f.store.getState(), snapshot, `${kind}: retired completion cannot publish errors/live/data`);
+  assert.equal(f.refreshes(), 0, "Stale 401 cannot refresh the current session");
+  if (kind === "destroy") assert.equal(f.freshness.isPending("inventory"), true, "Destroyed publisher cannot settle unpublished data");
+  f.close();
+}
+{
+  const f = sharedFixture(), old = f.hold("inventory");
+  assert.equal(f.target.listeners.size, 4);
+  assert.equal(f.doc.listeners.size, 1);
+  f.controller.refreshNow(["inventory"]);
+  await until(() => old.started);
+  f.controller.destroy();
+  assert.equal(f.target.listeners.size + f.doc.listeners.size, 0);
+  const replacement = f.install(), newer = f.hold("inventory");
+  replacement.refreshNow(["inventory"]);
+  await until(() => newer.started);
+  old.resolve();
+  await delay(10);
+  assert.equal(f.terminal.getState().live.status, "updating");
+  newer.resolve();
+  await until(() => f.terminal.getState().live.status === "connected");
+  replacement.destroy();
+  assert.equal(f.target.listeners.size + f.doc.listeners.size, 0);
+  const snapshot = f.store.getState(), count = f.requests.length;
+  f.signal(["inventory"]);
+  replacement.refreshNow(["inventory"]);
+  await delay(15);
+  assert.equal(f.requests.length, count);
+  assert.equal(f.store.getState(), snapshot);
+  f.close();
+}
+{
+  const f = sharedFixture();
+  f.signal(["inventory"]);
+  f.api.abortSessionRequests();
+  await delay(15);
+  assert.equal(f.requests.length, 0, "Retired-session debounce cannot start a read");
+  f.store.setState({ modal: {} });
+  f.controller.refreshNow(["inventory"]);
+  await delay(15);
+  assert.equal(f.requests.length, 0, "Modal/interaction deferral is retained");
+  f.store.setState({ modal: null });
+  f.controller.refreshNow(["inventory"]);
+  await until(() => f.requests.length === 1);
+  f.close();
+}
+{
+  const f = sharedFixture(), original = PlayerApi.prototype.loadResources;
+  PlayerApi.prototype.loadResources = async function (...args) {
+    const result = await original.apply(this, args);
+    f.freshness.invalidate(["inventory"]);
+    return result;
+  };
+  try {
+    const before = f.store.getState().data;
+    f.controller.refreshNow(["inventory"]);
+    await until(() => f.requests.length === 1);
+    await delay(10);
+    assert.equal(f.store.getState().data, before, "Final publication rechecks the settled result ticket");
+    assert.equal(f.freshness.isPending("inventory"), true);
+  } finally { PlayerApi.prototype.loadResources = original; f.close(); }
+}
+for (const releaseBeforePoll of [true, false]) {
+  const f = sharedFixture();
+  await f.api.execute("itemEffectUse", { itemKey: "fixture", idempotencyKey: "automatic-remount-write" });
+  const old = f.hold("inventory");
+  f.controller.refreshNow(["inventory"]);
+  await until(() => old.started);
+  f.controller.destroy();
+  const replacement = f.install({ checkIntervalMs: 500 });
+  const count = f.requests.length;
+  if (!releaseBeforePoll) await delay(550);
+  old.resolve();
+  await delay(750);
+  assert.equal(f.store.getState().data.inventory.marker, 1, "Automatic remount must recover unpublished pending Inventory");
+  assert.ok(f.requests.length > count, "Remount uses its existing cadence without manual refreshNow");
+  assert.equal(f.requests.filter((r) => r.endpointKey === "inventory").length, releaseBeforePoll ? 2 : 1, "A remounted publisher can own a coalesced current-generation read");
+  assert.equal(f.freshness.isPending("inventory"), false);
+  replacement.destroy(); f.close();
+}
+{
+  const f = sharedFixture(), before = f.store.getState();
+  f.terminal.getState = () => ({ ...f.store.getState() });
+  f.controller.refreshNow(["inventory"]);
+  await until(() => f.requests.length === 1);
+  await delay(10);
+  assert.equal(f.store.getState(), before, "An unowned snapshot cannot publish to the terminal store");
+  assert.equal(f.freshness.isPending("inventory"), true, "Failed store admission cannot settle pending");
+  f.close();
+}
+console.log("Optional realtime generations, coalescing, publication and lifecycle boundaries passed.");
