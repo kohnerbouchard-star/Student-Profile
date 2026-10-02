@@ -269,3 +269,59 @@ assert.match(
   /hire_business_workforce_candidate_v2/u,
   "Candidate-only workforce hiring must remain wired to the Phase 4B RPC.",
 );
+
+// REF025a: SQL SOURCE characterization only; these assertions do not execute Postgres.
+function loanRoutine(text, name) {
+  const start = text.indexOf(`create or replace function public.${name}(`);
+  assert.ok(start >= 0, `missing characterized routine ${name}`);
+  const body = /\bas\s+(\$[a-z_]*\$)/iu.exec(text.slice(start));
+  assert.ok(body, `missing routine body ${name}`);
+  const end = text.indexOf(body[1] + ";", start + body.index + body[0].length);
+  assert.ok(end > start, `missing routine terminator ${name}`);
+  return text.slice(start, end);
+}
+for (const name of ["normalize_loan_application_repayment_account_v1", "bind_player_loan_repayment_account_v1"]) {
+  const binding = loanRoutine(source.repaymentAccounts, name);
+  assert.match(binding, /business_row\.game_session_id = new\.game_session_id/u);
+  assert.match(binding, /business_row\.owner_player_id = new\.player_id/u);
+  assert.match(binding, /LOAN_REPAYMENT_ACCOUNT_UNAVAILABLE/u);
+  assert.match(binding, /balance_row\.player_id = new\.player_id/u);
+}
+const applyLoan = loanRoutine(source.operability, "apply_player_loan_v1");
+const reviewLoan = loanRoutine(source.core, "review_player_loan_application_v1");
+const repayLoan = loanRoutine(source.repaymentAccounts, "repay_player_loan_v1");
+const serviceLoan = loanRoutine(source.core, "service_player_loan_status_v1");
+const recoverLoan = loanRoutine(source.fixes, "restructure_player_loan_v1");
+assertBefore(applyLoan, "for update;", "select application_row.*", "Player lock precedes application receipt lookup");
+assertBefore(applyLoan, "LOAN_CURRENCY_MISMATCH", "select application_row.*", "Currency denial precedes application replay");
+assertBefore(applyLoan, "AUTHORITATIVE_BUSINESS_BORROWER_REQUIRED", "select application_row.*", "Legacy owner denial precedes application replay");
+assert.match(applyLoan, /business_row\.owner_player_id = p_player_id/u);
+assert.match(applyLoan, /application_row\.game_session_id = p_game_session_id[\s\S]*application_row\.player_id = p_player_id/u);
+assert.match(applyLoan, /v_application\.request_hash <> v_hash/u);
+assert.match(applyLoan, /'checking',\s*public\.business_account_type_v1\(v_business\.public_key\)/u);
+assert.match(applyLoan, /interval '84 days'/u);
+assertBefore(reviewLoan, "for update;", "v_application.status in ('approved','declined')", "Application lock precedes terminal-state replay");
+assert.match(reviewLoan, /owner_player_id=v_application\.player_id/u);
+assertBefore(reviewLoan, "insert into public.player_loans", "record_player_ledger_entry", "Approval obligation precedes ledger posting inside the same SQL routine");
+assertBefore(reviewLoan, "record_player_ledger_entry", "set status='approved'", "Approval follows disbursement");
+assert.doesNotMatch(reviewLoan, /request_hash|IDEMPOTENCY_KEY_CONFLICT/u);
+assertBefore(repayLoan, "for update;", "LOAN_NOT_PAYABLE", "Loan lock precedes payable-state denial");
+assertBefore(repayLoan, "LOAN_NOT_PAYABLE", "select payment_row.*", "Known legacy limitation: paid-loan retry is denied before receipt lookup");
+assert.match(repayLoan, /loan_row\.game_session_id = p_game_session_id\s+and loan_row\.player_id = p_player_id/u);
+assert.match(repayLoan, /business_row\.owner_player_id = p_player_id/u);
+assert.match(repayLoan, /v_account is distinct from v_expected_business_account/u);
+assert.match(repayLoan, /balance_row\.player_id = p_player_id[\s\S]*balance_row\.account_type = v_account[\s\S]*balance_row\.currency_code = v_loan\.currency_code\s+for update/u);
+assert.match(repayLoan, /v_payment\.request_hash <> v_hash/u);
+assertBefore(repayLoan, "INSUFFICIENT_FUNDS", "record_player_ledger_entry", "Insufficient balance fails before ledger debit");
+assertBefore(repayLoan, "record_player_ledger_entry", "insert into public.loan_payments", "Payment receipt follows ledger debit in the same routine");
+assert.match(repayLoan, /v_interest_paid := least\(v_pay, v_loan\.accrued_interest\)/u);
+assert.match(repayLoan, /v_period_paid \+ 0\.005 >= v_loan\.scheduled_payment/u);
+assert.match(serviceLoan, /game_session_id=p_game_session_id and status in \('active','delinquent','restructured'\) order by id for update/u);
+assert.match(serviceLoan, /v_loan\.principal_balance\*v_loan\.annual_rate\*v_days\/365,2/u);
+assert.match(serviceLoan, /default_after_days[\s\S]*status='defaulted'[\s\S]*delinquency_grace_days[\s\S]*status='delinquent'/u);
+assert.match(serviceLoan, /recalculate_player_credit_v1\(p_game_session_id,v_loan\.player_id\)/u);
+assertBefore(recoverLoan, "STAFF_GAME_ACCESS_DENIED", "for update;", "Staff game authority precedes recovery loan locking");
+assertBefore(recoverLoan, "metadata ->> 'idempotency_key'", "LOAN_NOT_RESTRUCTURABLE", "Existing recovery replays by audit key before state validation");
+assert.match(recoverLoan, /'active', 'delinquent', 'defaulted'/u);
+assert.doesNotMatch(recoverLoan, /request_hash|IDEMPOTENCY_KEY_CONFLICT|set principal_balance/u);
+console.log("REF025a loan binding, servicing and replay SQL source characterization passed (not database execution).");
