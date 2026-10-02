@@ -1,8 +1,9 @@
 # REF025a / U5 loan characterization
 
 Status: IMPLEMENTED_NOT_MERGED; REF025 remains BLOCKED. No runtime completion credit.
-Accepted by parent on 2026-10-02: characterization only, four exact paths,
-hard 399 semantic-line ceiling. Scope recorded before test edits.
+Accepted by parent on 2026-10-02: characterization in four exact paths,
+hard 399 semantic-line ceiling (397 total added/deleted physical lines). Scope recorded before test edits.
+Parent subsequently approved only the fifth generated inventory path below.
 Base: `b7f0e1374163f665124cc2ff02e9f4313ccb6679` (fresh main).
 Branch: `refactor/ref-025a-characterization`; parent reviews and merges.
 
@@ -12,6 +13,11 @@ Branch: `refactor/ref-025a-characterization`; parent reviews and merges.
 - `backend/supabase/functions/admin-api/businessBankingOperations.test.ts`
 - `scripts/business-banking-runtime-contract.mjs`
 - `docs/operations/evidence/refactor-execution-v1/REF-025/u5-characterization.md`
+- `docs/architecture/inventories/econovaria-architecture-inventory-v2.json`
+
+Inventory delta: two test-only entries; compatibility count 209 -> 210 and
+oversized count 99 -> 100. No ceiling or unrelated inventory change.
+The unchanged 209 compatibility ceiling fails; this is not waived.
 
 Allowed: characterize existing denial order, query/currency representation,
 borrower/account binding and servicing/replay behavior with synthetic fixtures
@@ -31,7 +37,7 @@ read/FX/Business workspace and economic simulations, then safe shared checks.
 Record exact-head CI separately. HTTP/repository mocks test real application
 code but do not execute SQL. SQL assertions characterize source, not transaction,
 concurrency, replay or rollback outcomes in a database. No DB proof claimed.
-Rollback is a normal revert of these four test/evidence files only.
+Rollback is a normal revert of these five test/evidence files only.
 
 ## CI preflight
 
@@ -46,7 +52,7 @@ The standalone Database Replay trigger gap would require adding the two test
 paths and runtime script to its PR filter, if required by the parent; this is
 reported before any workflow edit. No dispatcher or hosted guard is changed.
 Database/race qualification remains NOT_RUN locally, not inferred from mocks.
-No workflow amendment is included or authorized in this four-file child.
+No workflow amendment is included or authorized in this child.
 
 ## Results
 
@@ -68,13 +74,13 @@ uses only proxy/CA configuration with repository locks unchanged.
 - BLOCKED: full `typecheck:all` and smoke encounter the frozen esm.sh
   Supabase 2.108.2 import download failure. Backend TypeScript check passed;
   full Edge roots and later smoke suites are not certified by partial passes.
-- FAIL: `npm test` stops at architecture inventory determinism. New tests add
-  one lexical compatibility-marker entry and one over-500-line test entry.
-  Generated inventory was inspected and restored because it is outside scope;
-  preserving assertions requires separately approved generated-file reconciliation.
-  No threshold, test, or workflow is weakened to obtain green results.
+- FAIL: `npm test` initially stopped at inventory determinism; approved regeneration
+  fixes that mismatch but the unchanged architecture ratchet now rejects 210
+  compatibility-marker files against maximum 209. Both additions are test-only.
+  No threshold, assertion, test title or workflow is weakened to obtain green.
+  This remains a merge blocker, not backend or economic qualification credit.
 - NOT_RUN: local database, transaction races, injected SQL rollback, connected
-  browser/staging or production qualification. Exact-head CI tracked in draft PR.
+  browser/staging or production qualification. Exact-head CI still required.
 
 ## Characterized behavior and limits
 
@@ -110,20 +116,37 @@ inferred from purpose text. Use its stable game/business/currency account identi
 for disbursement and repayment, with actor identity recorded separately. A mandate
 change changes permission, not debt. No guarantees, collateral, implicit FX or
 personal recovery liability is inferred.
-Available affordability data include ledger game/business/currency identity,
-positive amounts, source/action and timestamps; existing business financial
-statements also distinguish operating/financing flows. Legacy affordability uses
-84-day inflows, existing exclusions and product limits, but mixes Checking and
-business accounts; only player credit profiles currently supply a score.
-Recommend business-only qualifying inflows with existing window/exclusions/limits;
-no new risk thresholds. For the smallest first slice, explicitly review using the
-originating operator's existing score only as an application eligibility gate,
-not a guarantee or transferable business score. New-business default would affect
-the business obligation, not silently damage a later operator's personal credit.
-Preserve existing accrual, delinquency/default thresholds and staff restructuring
-where applicable. Owner must approve these three concrete choices: business-only
-income basis, applicant-score eligibility, and business-only default attribution.
-If applicant-score eligibility is rejected, a separate business credit policy is
-needed before origination; do not manufacture a score or bypass product thresholds.
+Proposed business income: sum positive ledger amounts scoped by game, stable
+business identity and loan currency in the preceding 84 days, across operators;
+exclude source_domain banking/loans and source_action capitalization_in /
+ownership_cash_transfer_in / capital_contribution_in / ipo_primary_subscription. Exclude personal
+Checking/Savings; no converted currencies. Current legacy business applications
+instead filter player_id and admit both Checking and the business account.
+Income per installment = round((sum / 12) * max(payment_frequency_cycles, 1), 2).
+Ratio = 100 if income <= 0, otherwise min(100, round(payment / income, 6)); reject
+above the product's maximum_payment_to_income. Existing Working Capital seed is
+0.45, but the authoritative product row may be staff-modified; no hardcoded new cap.
+The exact inputs/formula are in 20260806093000_provision_player_banking_and_credit_v1.sql.
+The last two exclusions are proposed additions, based on existing accounting
+capital classifications; owner approval is required, not implied by this evidence.
+
+Applicant-score proposal: retain recalculate_player_credit_v1(game, actor) at
+application and compare to that offer's minimum_credit_score. Working Capital's
+seed threshold is 600 (generic table default 550); the product row is authoritative.
+This is operator eligibility, not a business credit score or personal guarantee.
+Current default attribution: service_player_loan_status_v1 marks loans by product
+thresholds and recalculates credit for each loan.player_id. The credit function
+counts every defaulted loan for that game/player, including business-linked loans,
+subtracting 120 per default before clamping the score to 300..850. It also subtracts
+35 per counted delinquent posted-payment join row; this is not a per-business model.
+Both functions originate in 20260721120000_add_business_banking_credit_runtime_v1.sql.
+Recommend no personal credit damage for new business defaults; this differs from
+legacy behavior and requires approval. Existing accrual (principal * annual_rate *
+days / 365 rounded to 2 decimals), product grace/default days and staff recovery
+remain candidates for preservation, not permission to change liability attribution.
+Owner choices: approve business-only income with named exclusions; applicant-score
+eligibility using product thresholds; business-only default attribution. No invented
+risk thresholds, guarantees or FX. If applicant-score eligibility is rejected,
+origination needs an approved business-credit policy before implementation.
 Other U5 children remain unapproved. Parent controls policy, review and merge;
 REF025 remains BLOCKED and REF027 still requires REF025 plus REF026.

@@ -14,9 +14,9 @@
     "persistenceOutsideInfrastructure": 52,
     "crossDomainDeepImports": 163,
     "browserTransportShimFiles": 26,
-    "compatibilityMarkerFiles": 209,
+    "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 99,
+    "oversizedSourceFiles": 100,
     "capabilityStrings": 136
   },
   "domains": [
@@ -2374,6 +2374,12 @@
         ]
       },
       {
+        "file": "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
         "file": "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
         "markers": [
           "legacy"
@@ -3519,6 +3525,10 @@
       {
         "file": "backend/supabase/functions/admin-api/readExtensions.ts",
         "lines": 513
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
+        "lines": 512
       },
       {
         "file": "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
