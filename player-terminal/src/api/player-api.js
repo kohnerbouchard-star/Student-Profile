@@ -133,7 +133,9 @@ export function abortPlayerApiSessionRequests(config) {
 }
 
 export class PlayerApi {
-  constructor(config) {
+  constructor(config, { freshness = null } = {}) {
+    this.freshness = freshness;
+    this.readCacheTickets = new Map();
     this.config = config;
     this.transport = config.usePreviewData
       ? new PreviewTransport({ simulateWrites: config.simulatePreviewWrites })
@@ -149,6 +151,7 @@ export class PlayerApi {
     this.retryIdempotencyKeys = new Map();
     this.sessionVersion = 0;
     this.sessionFingerprint = sessionFingerprint(config);
+    this.freshness?.setSession(this.sessionFingerprint);
     this.sessionController = new AbortController();
     this.resourceSupport = createResourceSupport({ preview: config.usePreviewData === true });
     const apis = PLAYER_APIS_BY_CONFIG.get(config) || new Set();
@@ -156,7 +159,9 @@ export class PlayerApi {
     PLAYER_APIS_BY_CONFIG.set(config, apis);
   }
 
-  abortSessionRequests() {
+  abortSessionRequests(resetFreshness = true) {
+    if (resetFreshness) this.freshness?.reset();
+    this.readCacheTickets.clear();
     this.sessionController.abort();
     this.sessionController = new AbortController();
     this.sessionVersion += 1;
@@ -168,7 +173,7 @@ export class PlayerApi {
     this.writeCompletedAt.clear();
     this.retryIdempotencyKeys.clear();
     this.resourceSupport = createResourceSupport({ preview: this.config.usePreviewData === true });
-    clearAllResourceInvalidations();
+    if (!this.freshness) clearAllResourceInvalidations();
   }
 
   setSession(session) {
@@ -182,9 +187,16 @@ export class PlayerApi {
     delete this.config.accessToken;
     const nextFingerprint = sessionFingerprint(this.config);
     if (nextFingerprint !== this.sessionFingerprint) {
-      this.abortSessionRequests();
+      this.abortSessionRequests(false);
+      this.freshness?.setSession(nextFingerprint);
       this.sessionFingerprint = nextFingerprint;
     }
+  }
+
+  syncFreshnessSession() {
+    if (!this.freshness) return;
+    if (sessionFingerprint(this.config) !== this.sessionFingerprint) this.setSession(this.config);
+    this.freshness.assertSession(this.sessionFingerprint);
   }
 
   currentReadGeneration(endpointKey) {
@@ -192,7 +204,7 @@ export class PlayerApi {
   }
 
   isCachedReadFresh(endpointKey, key, now = Date.now()) {
-    if (isResourceInvalidated(endpointKey)) return false;
+    if (this.freshness ? !this.freshness.isCurrent(this.readCacheTickets.get(key)) || this.freshness.isPending(endpointKey) : isResourceInvalidated(endpointKey)) return false;
     if (!this.readCache.has(key)) return false;
     const updatedAt = Number(this.readCacheUpdatedAt.get(key) || 0);
     const freshnessMs = resourceFreshnessMs(endpointKey, this.config.resourceFreshnessMs);
@@ -200,27 +212,35 @@ export class PlayerApi {
   }
 
   async request(endpointKey, { params = {}, payload, force = false, signal = null } = {}) {
+    this.syncFreshnessSession();
     const resolvedParams = actionPathParams(endpointKey, payload, params);
     const { endpoint, path } = resolvedPath(endpointKey, resolvedParams);
     const requestId = createRequestId();
     const mergedSignal = mergeAbortSignals(signal, this.sessionController.signal);
     const context = { endpointKey, method: endpoint.method, path, payload, params: resolvedParams, requestId, signal: mergedSignal.signal };
-    const key = stableRequestKey(context);
+    const key = stableRequestKey(context) + (this.freshness ? JSON.stringify([resolvedParams, payload]) : "");
     const sessionVersion = this.sessionVersion;
+    const ticket = this.freshness?.capture(endpoint.method === "GET" ? [endpointKey] : []);
     const readGeneration = endpoint.method === "GET" ? this.currentReadGeneration(endpointKey) : 0;
 
     if (endpoint.method === "GET" && !force && this.isCachedReadFresh(endpointKey, key)) {
       mergedSignal.cleanup();
       return this.readCache.get(key);
     }
-    if (endpoint.method === "GET" && this.inFlightReads.has(key)) {
+    if (!this.freshness && endpoint.method === "GET" && this.inFlightReads.has(key)) {
       mergedSignal.cleanup();
       return this.inFlightReads.get(key);
     }
 
-    const operation = this.transport.request(context)
+    // Config identity keeps adapters/credentials/normalization isolated; explicit
+    // abort signals retain independent transport ownership instead of coalescing.
+    const transportRead = this.freshness && endpoint.method === "GET" && !signal
+      ? this.freshness.coalesce(this.config, key, ticket, () => this.transport.request(context))
+      : this.transport.request(context);
+    const operation = transportRead
       .then((raw) => normalizeApiResponse(endpointKey, raw, { config: this.config, path, requestId, intent: payload }))
       .then((value) => {
+        this.freshness?.assertCurrent(ticket);
         if (sessionVersion !== this.sessionVersion) {
           throw new ApiRequestError("The request was cancelled.", { code: "REQUEST_ABORTED", endpointKey, path, requestId });
         }
@@ -235,11 +255,13 @@ export class PlayerApi {
         if (endpoint.method === "GET") {
           this.readCache.set(key, value);
           this.readCacheUpdatedAt.set(key, Date.now());
-          clearResourceInvalidation(endpointKey);
+          this.readCacheTickets.set(key, ticket);
+          if (this.freshness) this.freshness.settle(ticket, endpointKey);
+          else clearResourceInvalidation(endpointKey);
         }
         return value;
       })
-      .catch((error) => { throw normalizeApiError(error, context); })
+      .catch((error) => { this.freshness?.assertCurrent(ticket); throw normalizeApiError(error, context); })
       .finally(() => {
         mergedSignal.cleanup();
         if (endpoint.method === "GET" && this.inFlightReads.get(key) === operation) this.inFlightReads.delete(key);
@@ -250,56 +272,66 @@ export class PlayerApi {
   }
 
   async bootstrap({ force = false } = {}) {
-    const session = await this.request("session", { force });
-    this.resourceSupport = createResourceSupport({
-      preview: this.config.usePreviewData === true,
-      session
-    });
+    const ticket = this.freshness?.capture(["session", "dashboard", ...SHELL_OPTIONAL_RESOURCES]);
+    try {
+      const session = await this.request("session", { force });
+      this.freshness?.assertCurrent(ticket);
+      const resourceSupport = createResourceSupport({
+        preview: this.config.usePreviewData === true,
+        session
+      });
 
-    const data = { session };
-    const resourceStatus = { session: readyResourceStatus() };
+      if (!this.freshness) this.resourceSupport = resourceSupport;
+      const data = { session };
+      const resourceStatus = { session: readyResourceStatus() };
 
-    if (isResourceSupported(this.resourceSupport, "dashboard")) {
-      data.dashboard = await this.request("dashboard", { force });
-      resourceStatus.dashboard = readyResourceStatus();
-    } else {
-      data.dashboard = unsupportedReadModel("dashboard");
-      resourceStatus.dashboard = unsupportedResourceStatus();
-    }
-
-    const optional = SHELL_OPTIONAL_RESOURCES.map(async (key) => {
-      if (!isResourceSupported(this.resourceSupport, key)) {
-        return { key, supported: false, value: unsupportedReadModel(key) };
-      }
-      try {
-        return { key, supported: true, value: await this.request(key, { force }) };
-      } catch (error) {
-        return { key, supported: true, error };
-      }
-    });
-
-    for (const result of await Promise.all(optional)) {
-      if (!result.supported) {
-        data[result.key] = result.value;
-        resourceStatus[result.key] = unsupportedResourceStatus();
-      } else if (result.error) {
-        data[result.key] = unsupportedReadModel(result.key);
-        resourceStatus[result.key] = unavailableResourceStatus(result.error);
+      if (isResourceSupported(resourceSupport, "dashboard")) {
+        data.dashboard = await this.request("dashboard", { force });
+        resourceStatus.dashboard = readyResourceStatus();
       } else {
-        data[result.key] = result.value;
-        resourceStatus[result.key] = readyResourceStatus();
+        data.dashboard = unsupportedReadModel("dashboard");
+        resourceStatus.dashboard = unsupportedResourceStatus();
       }
-    }
 
-    data.capabilities = resolveCapabilities({ config: this.config, session, dashboard: data.dashboard });
-    data.resourceStatus = Object.freeze(resourceStatus);
-    return data;
+      const optional = SHELL_OPTIONAL_RESOURCES.map(async (key) => {
+        if (!isResourceSupported(resourceSupport, key)) {
+          return { key, supported: false, value: unsupportedReadModel(key) };
+        }
+        try {
+          return { key, supported: true, value: await this.request(key, { force }) };
+        } catch (error) {
+          return { key, supported: true, error };
+        }
+      });
+
+      for (const result of await Promise.all(optional)) {
+        if (!result.supported) {
+          data[result.key] = result.value;
+          resourceStatus[result.key] = unsupportedResourceStatus();
+        } else if (result.error) {
+          data[result.key] = unsupportedReadModel(result.key);
+          resourceStatus[result.key] = unavailableResourceStatus(result.error);
+        } else {
+          data[result.key] = result.value;
+          resourceStatus[result.key] = readyResourceStatus();
+        }
+      }
+
+      this.freshness?.assertCurrent(ticket);
+      if (this.freshness) this.resourceSupport = resourceSupport;
+      data.capabilities = resolveCapabilities({ config: this.config, session, dashboard: data.dashboard });
+      data.resourceStatus = Object.freeze(resourceStatus);
+      return this.freshness ? this.freshness.track(data, ticket) : data;
+    } catch (error) { this.freshness?.assertCurrent(ticket); throw error; }
   }
 
   async loadResources(keys, { force = false } = {}) {
+    this.syncFreshnessSession();
     const uniqueKeys = [...new Set(keys)];
+    const ticket = this.freshness?.capture(uniqueKeys);
     const supportedKeys = uniqueKeys.filter((key) => isResourceSupported(this.resourceSupport, key));
     const settled = await Promise.allSettled(supportedKeys.map((key) => this.request(key, { force })));
+    this.freshness?.assertCurrent(ticket);
     const data = {};
     const errors = {};
     const resourceStatus = {};
@@ -322,50 +354,56 @@ export class PlayerApi {
       }
     });
     data.resourceStatus = Object.freeze(resourceStatus);
-    return { data, errors, resourceStatus: data.resourceStatus };
+    const result = { data, errors, resourceStatus: data.resourceStatus };
+    return this.freshness ? this.freshness.track(result, ticket) : result;
   }
 
   async loadRoute(route, { force = false } = {}) {
     const plan = resourcesForRoute(route);
     const keys = [...plan.required, ...plan.optional];
-    let result = await this.loadResources(keys, { force });
-    const sessionError = Object.values(result.errors).find((error) => Number(error?.status) === 401);
-    if (sessionError) throw sessionError;
-    const missingRequired = plan.required.find((key) => result.errors[key]);
-    if (missingRequired) {
-      throw new ApiRequestError("This section could not be loaded. Other terminal sections remain available.", {
-        code: "ROUTE_DATA_UNAVAILABLE",
-        endpointKey: missingRequired,
-        cause: result.errors[missingRequired]
-      });
-    }
+    const ticket = this.freshness?.capture([...keys, ...(plan.dependent || [])]);
+    try {
+      let result = await this.loadResources(keys, { force });
+      this.freshness?.assertCurrent(ticket);
+      const sessionError = Object.values(result.errors).find((error) => Number(error?.status) === 401);
+      if (sessionError) throw sessionError;
+      const missingRequired = plan.required.find((key) => result.errors[key]);
+      if (missingRequired) {
+        throw new ApiRequestError("This section could not be loaded. Other terminal sections remain available.", {
+          code: "ROUTE_DATA_UNAVAILABLE",
+          endpointKey: missingRequired,
+          cause: result.errors[missingRequired]
+        });
+      }
 
-    const plannedDependent = Array.isArray(plan.dependent) ? plan.dependent : [];
-    const dependentKeys = dependentResourcesForRoute(route, result.data);
-    if (dependentKeys.length) {
-      result = mergeResourceResults(
-        result,
-        await this.loadResources(dependentKeys, { force })
-      );
-      const dependentSessionError = Object.values(result.errors)
-        .find((error) => Number(error?.status) === 401);
-      if (dependentSessionError) throw dependentSessionError;
-    } else if (plannedDependent.length) {
-      const skipped = Object.fromEntries(plannedDependent.map((key) => [key, null]));
-      const resourceStatus = Object.fromEntries(
-        plannedDependent.map((key) => [key, prerequisitePendingResourceStatus()])
-      );
-      result = mergeResourceResults(result, {
-        data: { ...skipped, resourceStatus },
-        errors: {},
-        resourceStatus
-      });
-    }
-    return result;
+      const plannedDependent = Array.isArray(plan.dependent) ? plan.dependent : [];
+      const dependentKeys = dependentResourcesForRoute(route, result.data);
+      if (dependentKeys.length) {
+        result = mergeResourceResults(
+          result,
+          await this.loadResources(dependentKeys, { force })
+        );
+        const dependentSessionError = Object.values(result.errors)
+          .find((error) => Number(error?.status) === 401);
+        if (dependentSessionError) throw dependentSessionError;
+      } else if (plannedDependent.length) {
+        const skipped = Object.fromEntries(plannedDependent.map((key) => [key, null]));
+        const resourceStatus = Object.fromEntries(
+          plannedDependent.map((key) => [key, prerequisitePendingResourceStatus()])
+        );
+        result = mergeResourceResults(result, {
+          data: { ...skipped, resourceStatus },
+          errors: {},
+          resourceStatus
+        });
+      }
+      return this.freshness ? this.freshness.track(result, ticket) : result;
+    } catch (error) { this.freshness?.assertCurrent(ticket); throw error; }
   }
 
   invalidateResources(keys) {
     const targets = new Set(keys);
+    this.freshness?.invalidate(targets);
     for (const endpointKey of targets) {
       this.readGenerations.set(endpointKey, this.currentReadGeneration(endpointKey) + 1);
     }
@@ -378,6 +416,7 @@ export class PlayerApi {
       if (!targets.has(endpointKey)) continue;
       this.readCache.delete(key);
       this.readCacheUpdatedAt.delete(key);
+      this.readCacheTickets.delete(key);
     }
   }
 
@@ -387,6 +426,7 @@ export class PlayerApi {
   }
 
   execute(endpointKey, payload, params = {}, { signal = null } = {}) {
+    this.syncFreshnessSession();
     const resolvedParams = actionPathParams(endpointKey, payload, params);
     const { endpoint, path } = resolvedPath(endpointKey, resolvedParams);
     if (endpoint.method === "GET") {
@@ -412,10 +452,12 @@ export class PlayerApi {
     const context = { endpointKey, method: endpoint.method, path, payload, params: resolvedParams, requestId, idempotencyKey, signal: mergedSignal.signal };
     const invalidatedResources = WRITE_INVALIDATIONS[endpointKey] || [];
     const sessionVersion = this.sessionVersion;
+    const ticket = this.freshness?.capture();
 
     const operation = this.transport.request(context)
       .then((raw) => normalizeApiResponse(endpointKey, raw, { config: this.config, path, requestId, intent: payload }))
       .then((result) => {
+        this.freshness?.assertCurrent(ticket);
         if (sessionVersion !== this.sessionVersion) {
           throw new ApiRequestError("The request was cancelled.", { code: "REQUEST_ABORTED", endpointKey, path, requestId });
         }
@@ -425,6 +467,7 @@ export class PlayerApi {
         return { result, invalidatedResources: [...invalidatedResources], requestId, idempotencyKey };
       })
       .catch((error) => {
+        this.freshness?.assertCurrent(ticket);
         const normalized = normalizeApiError(error, context);
         if (sessionVersion === this.sessionVersion && idempotencyKey) {
           if (shouldReuseIdempotencyKey(normalized)) this.retryIdempotencyKeys.set(writeKey, idempotencyKey);
