@@ -721,15 +721,15 @@
       "id": "REF-043",
       "title": "Converge Admin V2 Banking response and error adaptation",
       "file": "tasks/REF-043.md",
-      "status": "BLOCKED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-005"
       ],
       "risk": "R2",
       "architectureMapping": "ARCH-500/ARCH-501",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
+      "implementationSha": "779677a3287fa6b912813f2a335b5e28a97c6d1e",
+      "mergeSha": "4620fb60dc2d13b5063a9917b2ec9e13e5a26f7f",
       "evidence": "docs/operations/evidence/refactor-execution-v1/REF-043/preflight.md"
     },
     {
