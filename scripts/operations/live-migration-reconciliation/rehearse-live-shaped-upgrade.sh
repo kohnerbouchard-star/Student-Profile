@@ -5,7 +5,6 @@ set -euo pipefail
 required=(
   PHASE15_ENVIRONMENT
   PHASE15_EXPECTED_PROJECT_REF
-  PHASE15_REMOTE_DATABASE_URL
   PHASE15_WORK_DIR
   PHASE15_EVIDENCE_DIR
   PHASE15_CANONICAL_SCHEMA
@@ -75,10 +74,16 @@ mapfile -t migrations < <(jq -r '.migrations[.preludeMigrationCount:][].filename
 cp "$repo_root/backend/supabase/config.toml" "$supabase_root/supabase/config.toml"
 sed -i "s/^project_id = .*/project_id = \"$project_id\"/" "$supabase_root/supabase/config.toml"
 
-export PHASE15_REMOTE_DATABASE_URL
-node "$repo_root/scripts/release-integrity/cli.mjs" validate-db-url \
-  --url-env PHASE15_REMOTE_DATABASE_URL \
-  --expected-project-ref "$PHASE15_EXPECTED_PROJECT_REF"
+if test -n "${PHASE15_CAPTURE_DIR:-}"; then
+  test -z "${PHASE15_REMOTE_DATABASE_URL:-}"
+  (cd "$PHASE15_CAPTURE_DIR" && sha256sum --check --status SHA256SUMS)
+else
+  test -n "${PHASE15_REMOTE_DATABASE_URL:-}"
+  export PHASE15_REMOTE_DATABASE_URL
+  node "$repo_root/scripts/release-integrity/cli.mjs" validate-db-url \
+    --url-env PHASE15_REMOTE_DATABASE_URL \
+    --expected-project-ref "$PHASE15_EXPECTED_PROJECT_REF"
+fi
 
 capture_local_snapshot() {
   if test "$schema_restored" != true; then
@@ -218,6 +223,12 @@ for attempt in 1 2 3; do
   sleep $((attempt * 10))
 done
 test "$startup_status" -eq 0
+if test -n "${PHASE15_CAPTURE_DIR:-}"; then
+  # Restored definitions may contain hosted endpoints: prevent disposable egress.
+  for network in $(docker inspect "$container" --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}} {{end}}'); do
+    docker network disconnect "$network" "$container"
+  done
+fi
 
 test -s "$ca_path"
 test "$(sha256sum "$ca_path" | awk '{print $1}')" = "$ca_sha256"
@@ -227,15 +238,19 @@ docker exec "$container" chmod 0444 "$ca_container_path"
 test "$(docker exec "$container" psql -U supabase_admin -d postgres -X -qAt -v ON_ERROR_STOP=1 \
   -c "select rolsuper from pg_roles where rolname = 'supabase_admin'")" = "t"
 
-echo "Capturing $PHASE15_ENVIRONMENT schema without application rows."
-docker exec \
-  -e DATABASE_URL="$PHASE15_REMOTE_DATABASE_URL" \
-  -e PGSSLMODE=verify-full \
-  -e PGSSLROOTCERT="$ca_container_path" \
-  -e 'PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=120000 -c lock_timeout=5000' \
-  "$container" \
-  sh -ceu 'test -s "$PGSSLROOTCERT"; pg_dump "$DATABASE_URL" --schema-only --schema=public --schema=private --schema=economy_private --no-publications --no-subscriptions' \
-  > "$dump_path"
+if test -n "${PHASE15_CAPTURE_DIR:-}"; then
+  cp "$PHASE15_CAPTURE_DIR/schema.sql" "$dump_path"
+else
+  echo "Capturing $PHASE15_ENVIRONMENT schema without application rows."
+  docker exec \
+    -e DATABASE_URL="$PHASE15_REMOTE_DATABASE_URL" \
+    -e PGSSLMODE=verify-full \
+    -e PGSSLROOTCERT="$ca_container_path" \
+    -e 'PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=120000 -c lock_timeout=5000' \
+    "$container" \
+    sh -ceu 'test -s "$PGSSLROOTCERT"; pg_dump "$DATABASE_URL" --schema-only --schema=public --schema=private --schema=economy_private --no-publications --no-subscriptions' \
+    > "$dump_path"
+fi
 
 test -s "$dump_path"
 if grep -Eq '^(COPY|INSERT INTO) ' "$dump_path"; then
@@ -268,17 +283,20 @@ docker exec -i "$container" psql -U postgres -d postgres -X -qAt -v ON_ERROR_STO
   < "$repo_root/scripts/operations/live-migration-reconciliation/export-runtime-catalog-v2.sql" \
   > "$PHASE15_EVIDENCE_DIR/pre-catalog.json"
 
-versions="$(jq -r '.bundle.migrations[].version, .suffix.migrations[].version' "$plan_path" | paste -sd, -)"
-[[ "$versions" =~ ^[0-9]{14}(,[0-9]{14})*$ ]]
-docker exec \
-  -e DATABASE_URL="$PHASE15_REMOTE_DATABASE_URL" \
-  -e PGSSLMODE=verify-full \
-  -e PGSSLROOTCERT="$ca_container_path" \
-  -e 'PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=120000 -c lock_timeout=5000' \
-  -e PHASE15_VERSIONS="$versions" \
-  -i "$container" \
-  sh -ceu 'psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -v phase15_versions="$PHASE15_VERSIONS"' <<'SQL' \
-  > "$PHASE15_EVIDENCE_DIR/complete-remote-ledger.json"
+if test -n "${PHASE15_CAPTURE_DIR:-}"; then
+  cp "$PHASE15_CAPTURE_DIR/ledger.json" "$PHASE15_EVIDENCE_DIR/complete-remote-ledger.json"
+else
+  versions="$(jq -r '.bundle.migrations[].version, .suffix.migrations[].version' "$plan_path" | paste -sd, -)"
+  [[ "$versions" =~ ^[0-9]{14}(,[0-9]{14})*$ ]]
+  docker exec \
+    -e DATABASE_URL="$PHASE15_REMOTE_DATABASE_URL" \
+    -e PGSSLMODE=verify-full \
+    -e PGSSLROOTCERT="$ca_container_path" \
+    -e 'PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=120000 -c lock_timeout=5000' \
+    -e PHASE15_VERSIONS="$versions" \
+    -i "$container" \
+    sh -ceu 'psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -v phase15_versions="$PHASE15_VERSIONS"' <<'SQL' \
+    > "$PHASE15_EVIDENCE_DIR/complete-remote-ledger.json"
 select coalesce(
   jsonb_agg(
     jsonb_build_object(
@@ -294,6 +312,7 @@ from supabase_migrations.schema_migrations
 where version = any (string_to_array(:'phase15_versions', ','))
    or version > '20260920082200';
 SQL
+fi
 
 # Reject unknown, non-prefix or digest-mismatched rows before any local migration.
 if ! node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs" \
