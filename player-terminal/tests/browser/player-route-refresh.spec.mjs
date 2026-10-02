@@ -193,3 +193,100 @@ test("shared transactional modal uses the refreshed, contained presentation", as
   expect(geometry.width).toBeLessThanOrEqual(geometry.viewportWidth - 16);
   expect(geometry.maxHeight).toBeLessThanOrEqual(geometry.viewportHeight - 8);
 });
+
+test("optional terminal freshness fences final publishers and retired lifecycle effects", async ({ page }) => {
+  await openRoute(page, "dashboard");
+  const evidence = await page.evaluate(async () => {
+    globalThis.Econovaria.playerTerminal.destroy();
+    const { createPlayerTerminal } = await import("/src/app.js");
+    const { PlayerApi } = await import("/src/api/player-api.js");
+    const { createResourceFreshnessCoordinator } = await import("/src/api/resource-freshness-coordinator.js");
+    const originals = Object.fromEntries(["bootstrap", "loadRoute", "refreshResources", "execute"].map((key) => [key, PlayerApi.prototype[key]]));
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+    const assert = (value, message) => { if (!value) throw new Error(message); };
+    const wait = async (check) => { for (let i = 0; i < 100 && !check(); i++) await new Promise((r) => setTimeout(r, 10)); assert(check(), "fixture did not settle"); };
+    const records = [], listeners = new Map();
+    const add = globalThis.addEventListener, remove = globalThis.removeEventListener;
+    globalThis.addEventListener = function (type, fn, options) { listeners.set(fn, type); return add.call(this, type, fn, options); };
+    globalThis.removeEventListener = function (type, fn, options) { listeners.delete(fn); return remove.call(this, type, fn, options); };
+    async function fixture() {
+      const mount = document.createElement("div"); document.body.append(mount);
+      const freshness = createResourceFreshnessCoordinator();
+      let invalidSessions = 0;
+      const config = { usePreviewData: true, simulatePreviewWrites: true, sessionReadyEvent: "fixture:session", onSessionInvalid: () => invalidSessions++ };
+      const terminal = createPlayerTerminal({ mount, config, freshness });
+      await wait(() => terminal.getState().status === "ready" && !terminal.getState().routeLoading.dashboard);
+      return { mount, freshness, terminal, config, invalidSessions: () => invalidSessions, dispose() { terminal.destroy(); mount.remove(); } };
+    }
+    function button(f, action) {
+      const node = document.createElement("button"); node.dataset.playerAction = action; node.textContent = "Original"; f.mount.append(node); return node;
+    }
+    for (const publisher of ["bootstrap", "loadRoute", "refreshResources", "execute"]) {
+      for (const failure of [false, true]) {
+        const f = await fixture(), before = f.terminal.getState().data;
+        const readMethod = publisher === "execute" ? "refreshResources" : publisher;
+        let reached = false;
+        PlayerApi.prototype[readMethod] = async function () {
+          reached = true;
+          const ticket = f.freshness.capture(["dashboard"]);
+          const data = { ...before, dashboard: { ...before.dashboard, staleMarker: true }, resourceStatus: { dashboard: { state: "unavailable", code: "STALE" } }, capabilities: { routes: {}, actions: {} } };
+          const result = publisher === "bootstrap" ? data : { data, errors: failure ? { dashboard: { status: 401 } } : {} };
+          f.freshness.track(result, ticket);
+          // API has settled; invalidate before its consumer's await continuation.
+          f.freshness.invalidate(["dashboard"]);
+          if (failure) throw Object.assign(new Error("retired 401"), { status: 401 });
+          return result;
+        };
+        if (publisher === "execute") PlayerApi.prototype.execute = async () => ({ result: {}, invalidatedResources: ["dashboard"] });
+        let control;
+        if (publisher === "bootstrap") await f.terminal.refresh();
+        else if (publisher === "refreshResources") await f.terminal.refreshResources(["dashboard"]).catch((error) => assert(error.code === "REQUEST_SUPERSEDED", "wrong superseded error"));
+        else { control = button(f, publisher === "execute" ? "notifications-read" : "refresh-data"); control.click(); await wait(() => reached); await tick(); }
+        assert(reached, `${publisher} was not exercised`);
+        assert(f.terminal.getState().data === before, `${publisher} published stale values/status/capabilities`);
+        assert(!f.terminal.getState().error && !f.terminal.getState().routeErrors.dashboard, `${publisher} published stale error`);
+        assert(f.invalidSessions() === 0 && !f.mount.querySelector(".player-terminal-toast"), `${publisher} emitted retired side effects`);
+        if (control) assert(!control.disabled && !control.hasAttribute("aria-busy"), "processing control leaked");
+        assert(f.freshness.isPending("dashboard"), "old publication cleared new invalidation");
+        Object.assign(PlayerApi.prototype, originals); f.dispose(); records.push(`${publisher}:${failure ? "401" : "value"}`);
+      }
+    }
+    for (const publisher of ["bootstrap", "loadRoute", "refreshResources", "execute"]) {
+      for (const retirement of ["session", "logout", "destroy", "remount"]) {
+        const f = await fixture(), before = f.terminal.getState().data;
+        let release, reached = false;
+        const ticket = f.freshness.capture(["dashboard"]);
+        const result = publisher === "bootstrap" ? before : publisher === "execute" ? { result: {}, invalidatedResources: ["dashboard"] } : { data: before, errors: {} };
+        f.freshness.track(result, ticket);
+        PlayerApi.prototype[publisher] = () => { reached = true; return new Promise((resolve) => { release = () => resolve(result); }); };
+        let operation, control;
+        if (publisher === "bootstrap") operation = f.terminal.refresh();
+        else if (publisher === "refreshResources") operation = f.terminal.refreshResources(["dashboard"]).catch((error) => assert(error.code === "REQUEST_ABORTED", "retired read error"));
+        else { control = button(f, publisher === "execute" ? "notifications-read" : "refresh-data"); control.click(); }
+        await wait(() => reached); Object.assign(PlayerApi.prototype, originals);
+        f.terminal.showToast("old toast");
+        if (retirement === "session") await f.terminal.connectSession({ authenticated: true, csrfToken: "D".repeat(43), gameSessionId: "new-game" });
+        else if (retirement === "logout") button(f, "logout").click();
+        else f.terminal.destroy();
+        const replacement = retirement === "remount" ? createPlayerTerminal({ mount: f.mount, config: f.config, freshness: createResourceFreshnessCoordinator() }) : null;
+        release(); await operation; await tick(); await tick();
+        if (control) assert(!control.disabled && !control.hasAttribute("aria-busy"), "retirement lost control restoration");
+        assert(!f.mount.querySelector(".player-terminal-toast"), "retired publisher emitted a toast");
+        assert(f.invalidSessions() === 0, "retired publisher invalidated session");
+        if (retirement === "logout") assert(f.terminal.getState().data === before, "logout publisher wrote data");
+        if (retirement === "destroy") assert(f.mount.innerHTML === "", "destroyed publisher repopulated mount");
+        replacement?.destroy(); f.dispose(); records.push(`${publisher}:${retirement}`);
+      }
+    }
+    const first = await fixture(), second = await fixture(), secondData = second.terminal.getState().data;
+    const secondTicket = second.freshness.capture(["dashboard"]);
+    first.terminal.destroy();
+    assert(second.freshness.isCurrent(secondTicket) && second.terminal.getState().data === secondData, "terminal retirement crossed ownership");
+    first.dispose(); second.dispose();
+    assert(listeners.size === 0, `terminal listeners retained: ${[...listeners.values()]}`);
+    globalThis.addEventListener = add; globalThis.removeEventListener = remove;
+    Object.assign(PlayerApi.prototype, originals);
+    return records;
+  });
+  expect(evidence).toHaveLength(24);
+});

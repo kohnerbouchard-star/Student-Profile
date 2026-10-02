@@ -1,3 +1,4 @@
+import { resourcesForRoute, SHELL_OPTIONAL_RESOURCES } from "./api/resource-plan.js";
 import { PlayerApi } from "./api/player-api.js";
 import { PLAYER_ENDPOINTS, resolveEndpoint } from "./api/endpoints.js";
 import { ApiConnectionPendingError, normalizeApiError } from "./api/errors.js";
@@ -39,10 +40,10 @@ function initialMarkup(label = "INITIALIZING PLAYER TERMINAL") {
   return `<div class="player-terminal-overview player-terminal-loading-shell" role="status" aria-live="polite"><div class="player-terminal-loading-brand"><span>E</span><div><strong>ECONOVARIA</strong><small>${escapeHtml(label)}</small></div></div>${renderSkeletonPage()}</div>`;
 }
 
-export function createPlayerTerminal({ mount, config }) {
+export function createPlayerTerminal({ mount, config, freshness = null }) {
   if (!(mount instanceof HTMLElement)) throw new TypeError("A valid player terminal mount element is required.");
 
-  const api = new PlayerApi(config);
+  const api = new PlayerApi(config, { freshness });
   const store = createStore({
     status: "loading",
     route: readRoute(),
@@ -77,6 +78,38 @@ export function createPlayerTerminal({ mount, config }) {
   let restoreFocusSelector = "";
   const routeRequestVersions = new Map();
   let terminalLoadVersion = 0;
+  let destroyed = false;
+  const deferredEffects = new Set(), pendingControls = new Set(), frames = new Set();
+  const capture = (keys = []) => freshness?.capture(keys);
+  const current = (ticket) => !freshness || (!destroyed && freshness.isCurrent(ticket));
+  const admitted = (value) => !freshness || current(freshness.ticketFor(value));
+  const obsolete = (error) => freshness && ["REQUEST_ABORTED", "REQUEST_SUPERSEDED"].includes(error?.code);
+  function deferEffect(callback, delay) {
+    const ticket = capture();
+    const id = setTimeout(() => { deferredEffects.delete(id); if (current(ticket)) callback(); }, delay);
+    if (freshness) deferredEffects.add(id);
+  }
+  function queueFrame(callback) {
+    const ticket = capture();
+    const id = requestAnimationFrame(() => { frames.delete(id); if (current(ticket)) callback(); });
+    if (freshness) frames.add(id);
+  }
+  function focusCurrent(root) {
+    if (!freshness) return focusFirstInteractive(root);
+    queueFrame(() => root?.querySelector("button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])")?.focus());
+  }
+  function retireEffects() {
+    if (!freshness) return;
+    freshness.reset();
+    for (const id of deferredEffects) clearTimeout(id);
+    deferredEffects.clear();
+    for (const id of frames) cancelAnimationFrame(id);
+    frames.clear();
+    for (const restore of pendingControls) restore();
+    pendingControls.clear();
+    mount.querySelector(".player-terminal-toast")?.remove();
+  }
+
 
   function selectorForElement(element) {
     if (!(element instanceof HTMLElement)) return "";
@@ -114,19 +147,19 @@ export function createPlayerTerminal({ mount, config }) {
   }
 
   function focusAfterRender(state) {
-    requestAnimationFrame(() => {
+    queueFrame(() => {
       if (state.status === "error") {
-        focusFirstInteractive(mount);
+        focusCurrent(mount);
         return;
       }
       if (state.modal) {
         const modal = mount.querySelector(".player-terminal-modal");
         modal?.setAttribute("tabindex", "-1");
-        focusFirstInteractive(modal);
+        focusCurrent(modal);
         return;
       }
       if (state.ui.mobileMenuOpen) {
-        focusFirstInteractive(mount.querySelector(".player-terminal-mobile-sheet > section"));
+        focusCurrent(mount.querySelector(".player-terminal-mobile-sheet > section"));
         return;
       }
       if (state.ui.notificationsOpen) {
@@ -198,6 +231,7 @@ export function createPlayerTerminal({ mount, config }) {
   }
 
   function showToast(message, tone = "cyan") {
+    if (freshness && destroyed) return;
     mount.querySelector(".player-terminal-toast")?.remove();
     const toast = document.createElement("div");
     toast.className = `player-terminal-toast is-${tone}`;
@@ -205,14 +239,15 @@ export function createPlayerTerminal({ mount, config }) {
     toast.setAttribute("aria-live", tone === "red" ? "assertive" : "polite");
     toast.textContent = message;
     mount.append(toast);
-    setTimeout(() => toast.classList.add("is-visible"), 10);
-    setTimeout(() => {
+    deferEffect(() => toast.classList.add("is-visible"), 10);
+    deferEffect(() => {
       toast.classList.remove("is-visible");
-      setTimeout(() => toast.remove(), 250);
+      deferEffect(() => toast.remove(), 250);
     }, 2600);
   }
 
   function handleInvalidSession(error) {
+    retireEffects();
     terminalLoadVersion += 1;
     const detail = {
       reason: "invalid_player_session",
@@ -220,16 +255,22 @@ export function createPlayerTerminal({ mount, config }) {
       code: String(error?.code || "SESSION_INVALID"),
       requestId: String(error?.requestId || "")
     };
+    const ticket = capture();
     if (typeof config.onSessionInvalid === "function") config.onSessionInvalid(detail);
     dispatchHostEvent(config.sessionInvalidEvent, detail);
+    if (!current(ticket)) return;
     store.setState({ status: "waiting", error: null, modal: null, routeLoading: {}, routeErrors: {} });
   }
 
   async function loadRouteData(route, { force = false } = {}) {
-    const current = store.getState();
+    if (freshness && destroyed) return;
+    const snapshot = store.getState();
     const loadVersion = terminalLoadVersion;
-    if (current.status !== "ready") return;
-    if (!isRouteEnabled(current.data.capabilities, route)) {
+    const plan = resourcesForRoute(route);
+    const ticket = capture([...plan.required, ...plan.optional, ...(plan.dependent || [])]);
+    const lifecycle = capture();
+    if (snapshot.status !== "ready") return;
+    if (!isRouteEnabled(snapshot.data.capabilities, route)) {
       if (route !== "dashboard") navigate("dashboard");
       showToast("That section is not enabled for the current game.", "amber");
       return;
@@ -245,9 +286,10 @@ export function createPlayerTerminal({ mount, config }) {
 
     try {
       const result = await api.loadRoute(route, { force });
-      if (routeRequestVersions.get(route) !== version || terminalLoadVersion !== loadVersion) return;
+      if (routeRequestVersions.get(route) !== version || terminalLoadVersion !== loadVersion || !current(ticket)) return;
+      if (!admitted(result)) return;
       store.setState((state) => {
-        const data = { ...state.data, ...result.data };
+        const data = { ...state.data, ...result.data, ...(freshness ? { resourceStatus: { ...state.data?.resourceStatus, ...result.data.resourceStatus } } : {}) };
         if (result.data.session || result.data.dashboard) {
           data.capabilities = resolveCapabilities({ config, session: data.session, dashboard: data.dashboard });
         }
@@ -259,7 +301,8 @@ export function createPlayerTerminal({ mount, config }) {
         };
       });
     } catch (error) {
-      if (routeRequestVersions.get(route) !== version || terminalLoadVersion !== loadVersion) return;
+      if (obsolete(error)) return;
+      if (routeRequestVersions.get(route) !== version || terminalLoadVersion !== loadVersion || !current(ticket)) return;
       if (Number(error?.status) === 401) {
         handleInvalidSession(error);
         return;
@@ -269,10 +312,16 @@ export function createPlayerTerminal({ mount, config }) {
         routeLoading: { ...state.routeLoading, [route]: false },
         routeErrors: { ...state.routeErrors, [route]: error }
       }));
+    } finally {
+      if (freshness && current(lifecycle) && terminalLoadVersion === loadVersion && routeRequestVersions.get(route) === version) {
+        store.setState((state) => ({ ...state, routeLoading: { ...state.routeLoading, [route]: false } }));
+      }
     }
   }
 
   async function loadData() {
+    if (freshness && destroyed) return;
+    retireEffects();
     const loadVersion = ++terminalLoadVersion;
     if (!config.usePreviewData) {
       const existingSession = await resolveExistingPlayerSession(config);
@@ -289,9 +338,11 @@ export function createPlayerTerminal({ mount, config }) {
     }
 
     store.setState({ status: "loading", error: null, modal: null, routeLoading: {}, routeErrors: {} });
+    const ticket = capture(["session", "dashboard", ...SHELL_OPTIONAL_RESOURCES]);
     try {
       const shellData = await api.bootstrap({ force: true });
       if (terminalLoadVersion !== loadVersion) return;
+      if (!admitted(shellData)) return;
       const data = { ...createEmptyReadModels(), ...shellData };
       const requestedRoute = store.getState().route;
       const route = isRouteEnabled(data.capabilities, requestedRoute) ? requestedRoute : "dashboard";
@@ -299,7 +350,7 @@ export function createPlayerTerminal({ mount, config }) {
       store.setState((state) => ({ ...state, status: "ready", route, data, error: null }));
       await loadRouteData(route);
     } catch (error) {
-      if (terminalLoadVersion !== loadVersion) return;
+      if (terminalLoadVersion !== loadVersion || !current(ticket) || obsolete(error)) return;
       if (!config.usePreviewData && Number(error?.status) === 401) {
         handleInvalidSession(error);
         return;
@@ -309,6 +360,7 @@ export function createPlayerTerminal({ mount, config }) {
   }
 
   async function connectSession(session) {
+    if (freshness && destroyed) return;
     if (!applyPlayerSessionHandoff(config, session)) {
       throw new TypeError("connectSession requires a player session token.");
     }
@@ -317,10 +369,17 @@ export function createPlayerTerminal({ mount, config }) {
   }
 
   async function refreshResources(resourceKeys) {
+    if (freshness && destroyed) return;
     const keys = [...new Set((Array.isArray(resourceKeys) ? resourceKeys : []).filter((key) => typeof key === "string" && key))];
     if (!keys.length) return { data: {}, errors: {}, resourceStatus: {} };
     api.setSession(config);
-    const result = await api.refreshResources(keys);
+    const ticket = capture(keys);
+    let result;
+    try {
+      result = await api.refreshResources(keys);
+      if (freshness) freshness.assertCurrent(freshness.ticketFor(result));
+      if (!current(ticket)) return;
+    } catch (error) { freshness?.assertCurrent(ticket); throw error; }
     const invalidSession = Object.values(result.errors || {}).find((error) => Number(error?.status) === 401);
     if (invalidSession) {
       handleInvalidSession(invalidSession);
@@ -357,6 +416,7 @@ export function createPlayerTerminal({ mount, config }) {
   }
 
   async function executeEndpoint(endpointKey, payload = {}, params = {}, button = null) {
+    if (freshness && destroyed) return null;
     const endpoint = PLAYER_ENDPOINTS[endpointKey];
     if (!endpoint) throw new Error(`Unknown endpoint ${endpointKey}`);
     const capabilities = store.getState().data?.capabilities;
@@ -373,7 +433,11 @@ export function createPlayerTerminal({ mount, config }) {
       return null;
     }
     const path = resolveEndpoint(endpoint, params);
-    const restoreButton = setButtonProcessing(button, "Processing");
+    const resetButton = setButtonProcessing(button, "Processing");
+    const restoreButton = (label) => { resetButton(label); if (label === undefined) pendingControls.delete(restoreButton); };
+    const lifecycle = capture();
+    let refreshTicket = lifecycle;
+    if (freshness) pendingControls.add(restoreButton);
 
     const event = new CustomEvent("econovaria:player-api-request", {
       bubbles: true,
@@ -384,17 +448,20 @@ export function createPlayerTerminal({ mount, config }) {
 
     try {
       const operation = await api.execute(endpointKey, normalizedPayload, params);
+      if (!current(lifecycle)) return null;
       restoreButton("Completed");
+      refreshTicket = capture(operation.invalidatedResources);
       const refresh = operation.invalidatedResources.length
         ? await api.refreshResources(operation.invalidatedResources)
         : { data: {}, errors: {} };
+      if (!current(refreshTicket) || (operation.invalidatedResources.length && !admitted(refresh))) return null;
       const invalidSession = Object.values(refresh.errors).find((error) => Number(error?.status) === 401);
       if (invalidSession) {
         handleInvalidSession(invalidSession);
         return null;
       }
       store.setState((state) => {
-        const data = { ...state.data, ...refresh.data };
+        const data = { ...state.data, ...refresh.data, ...(freshness ? { resourceStatus: { ...state.data?.resourceStatus, ...refresh.data.resourceStatus } } : {}) };
         if (refresh.data.session || refresh.data.dashboard) {
           data.capabilities = resolveCapabilities({ config, session: data.session, dashboard: data.dashboard });
         }
@@ -405,13 +472,14 @@ export function createPlayerTerminal({ mount, config }) {
         refreshIncomplete ? "Action completed. Some information will refresh when the service is available." : "Action completed and current information refreshed.",
         refreshIncomplete ? "amber" : "green"
       );
-      setTimeout(() => restoreButton(), 1200);
+      deferEffect(() => restoreButton(), 1200);
       return operation.result;
     } catch (error) {
+      if (!current(refreshTicket) || obsolete(error)) { restoreButton(); return null; }
       if (error instanceof ApiConnectionPendingError) {
         restoreButton("Awaiting backend");
         openConnectionModal(error, button);
-        setTimeout(() => restoreButton(), 1200);
+        deferEffect(() => restoreButton(), 1200);
         return null;
       }
       if (Number(error?.status) === 401) {
@@ -425,6 +493,8 @@ export function createPlayerTerminal({ mount, config }) {
         : "";
       showToast(`${error?.message || "The request failed."}${retryDetail}`, "red");
       return null;
+    } finally {
+      if (freshness && !current(refreshTicket)) restoreButton();
     }
   }
 
@@ -704,6 +774,7 @@ export function createPlayerTerminal({ mount, config }) {
       }
       if (action === "retry-route") await loadRouteData(store.getState().route, { force: true });
       if (action === "logout") {
+        if (freshness) { terminalLoadVersion++; retireEffects(); }
         const detail = {
           reason: "player_requested",
           terminal: "player",
@@ -977,7 +1048,7 @@ export function createPlayerTerminal({ mount, config }) {
     pendingFocusSelector = "#player-main-content";
     store.setState((state) => ({ ...state, route, modal: null, ui: { ...state.ui, notificationsOpen: false, mobileMenuOpen: false } }));
     if (current.status === "ready") void loadRouteData(route);
-    requestAnimationFrame(() => globalThis.scrollTo?.({ top: 0, left: 0, behavior: "auto" }));
+    queueFrame(() => globalThis.scrollTo?.({ top: 0, left: 0, behavior: "auto" }));
   }
 
   function handleOffline() { showToast("Connection lost. Read-only content remains available.", "red"); }
@@ -993,7 +1064,8 @@ export function createPlayerTerminal({ mount, config }) {
   globalThis.addEventListener("offline", handleOffline);
   globalThis.addEventListener("online", handleOnline);
   const handleSessionReady = (event) => {
-    connectSession(event?.detail).catch((error) => store.setState({ status: "error", error: normalizeApiError(error) }));
+    const operation = connectSession(event?.detail), ticket = capture();
+    operation.catch((error) => { if (current(ticket) && !obsolete(error)) store.setState({ status: "error", error: normalizeApiError(error) }); });
   };
   globalThis.addEventListener(config.sessionReadyEvent, handleSessionReady);
   const unsubscribe = store.subscribe(render);
@@ -1002,6 +1074,7 @@ export function createPlayerTerminal({ mount, config }) {
   clockTimer = globalThis.setInterval(updateClock, 1000);
 
   return {
+    freshness,
     refresh: loadData,
     refreshResources,
     connectSession,
@@ -1028,6 +1101,8 @@ export function createPlayerTerminal({ mount, config }) {
       return true;
     },
     destroy() {
+      retireEffects();
+      destroyed = true;
       terminalLoadVersion += 1;
       clearInterval(clockTimer);
       mount.removeEventListener("click", handleClick);

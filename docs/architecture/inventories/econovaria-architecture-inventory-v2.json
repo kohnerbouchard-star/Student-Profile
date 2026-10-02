@@ -3157,6 +3157,10 @@
         "lines": 1132
       },
       {
+        "file": "player-terminal/src/app.js",
+        "lines": 1123
+      },
+      {
         "file": "player-terminal/src/api/read-model.js",
         "lines": 1114
       },
@@ -3167,10 +3171,6 @@
       {
         "file": "backend/supabase/functions/web-session-api/index.ts",
         "lines": 1054
-      },
-      {
-        "file": "player-terminal/src/app.js",
-        "lines": 1048
       },
       {
         "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.ts",
