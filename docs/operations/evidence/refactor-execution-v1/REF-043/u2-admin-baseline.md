@@ -1,18 +1,19 @@
 # U2 — Admin navigation baseline repair
 
-Status: IN_PROGRESS; REF-043 remains BLOCKED and REF-044 remains gated.
+Status: BLOCKED on the existing World browser contract; REF-043 remains BLOCKED
+and REF-044 remains gated.
 Repository qualification only. Parent retains merge authority.
 
 ## Scope and ownership
 
 Approved plan #816: 187fca2af9bd3b257c393064cb86fcfd7eac8267.
 Execution base: merged main 56957a9265fb2890ac45417663582726103cd91e.
-Branch: fix/ref-043-u2-admin-navigation-wrap. PR/head and exact-head CI evidence
-will be recorded after publication; no prospective pass is claimed.
+Branch: fix/ref-043-u2-admin-navigation-wrap; draft PR #817.
+First tested head: 1788bcbcab52b37cd2da50acf98e0409ef79f50e.
 
 Parent explicitly accepted these four paths after preflight:
 
-- admin/v2/styles/components.css: only .admin-navigation__label wrapping.
+- admin/v2/styles/components.css: label wrapping and prevent badge compression.
 - .github/workflows/admin-browser-e2e.yml: existing #810 browser qualification step.
 - docs/operations/evidence/refactor-execution-v1/REF-043/u2-admin-baseline.md.
 - docs/operations/evidence/refactor-execution-v1/REF-043/u2-ownership.json.
@@ -43,7 +44,7 @@ retaining min-inline-size:0. This is a hypothesis until exact-head CI measures i
 Rail width, colors, labels, badges, icons, accessible names, collapsed hiding,
 scroll ownership, keyboard/focus behavior and every assertion are preserved.
 Existing links have minimum height, allowing wrapped rows to grow naturally.
-Only one CSS selector changes; no caller/event/listener or request fan-out change.
+Two CSS selectors change; no caller/event/listener or request fan-out change.
 
 ## Qualification
 
@@ -76,3 +77,26 @@ Keep the repair PR draft. Afterwards reconcile existing #810 instead of
 recreating its Banking extraction; REF-043 still requires its own acceptance,
 normal merge and merged-main closeout before REF-044 can advance.
 Rollback is a normal bounded source revert, preserving later accepted changes.
+
+## First exact-head CI outcome
+
+[Admin run 36945872525](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36945872525),
+job 110647758282, tested 1788bcbcab52b37cd2da50acf98e0409ef79f50e.
+[Artifact 11201699512](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36945872525/artifacts/11201699512),
+ZIP digest fc6446b2a3413b83ec03351b699bcc86d000ca0627cfef0c4d3092d8589842e4.
+Pinned Chromium installed. Untouched main reproduced the exact Market failure.
+Candidate passed ready navigation/layout at 1440x900, 1280x720, 1024x768,
+768x1024, 390x844 and 320x568, plus the 1024x540 short-rail case: seven complete
+cases. Then verifyWorldPlannedBoundary timed out at browser-smoke.mjs:566,
+waiting for world-management[data-mode="planned"]. Navigation registry marks
+World Management migration:"v2" and app.js mounts its real controller. This
+pre-existing test/source mismatch was masked by the earlier navigation failure.
+No assertion was altered; the complete suite is FAILED, and connected journeys
+were skipped, not passed. World test-contract reconciliation is outside the
+four-path lock and requires parent acceptance before any test-source edit.
+
+Inspected 1440x900 and 320x568 screenshots. The desktop Monitor badge compressed
+beside its wrapped label. Added flex-shrink:0 to its existing selector to retain
+the badge's intrinsic width; this follow-up requires fresh exact-head evidence.
+Candidate local root npm test, Admin 86/86, Banking 38/38, economic writes 2/2,
+architecture/high-priority/legacy/interaction audits, secrets and syntax pass.

@@ -229,6 +229,7 @@
 }
 
 .admin-navigation__badge {
+  flex-shrink: 0;
   min-inline-size: 1.35rem;
   margin-inline-start: auto;
   padding: 0.08rem 0.35rem;
