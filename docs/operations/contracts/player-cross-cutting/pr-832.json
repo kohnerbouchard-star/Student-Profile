@@ -16,7 +16,8 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     ".github/workflows/backend-typecheck.yml",
-    ".github/workflows/business-player-store-fx-final-v2.yml"
+    ".github/workflows/business-player-store-fx-final-v2.yml",
+    "player-terminal/src/api/player-api.js"
   ],
   "requiredFiles": [
     "player-terminal/src/realtime/player-invalidation-controller.js",
@@ -26,7 +27,8 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     ".github/workflows/backend-typecheck.yml",
-    ".github/workflows/business-player-store-fx-final-v2.yml"
+    ".github/workflows/business-player-store-fx-final-v2.yml",
+    "player-terminal/src/api/player-api.js"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -51,5 +53,5 @@
     "inventory"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-042/u3b2b-evidence.md",
-  "authorizationNote": "Parent-authorized REF042b2b under merged PR828 and verified PR829: optional inactive realtime coordinator participation, generation/publication/lifecycle fences, existing Node regressions and scoped metadata. Default stays uninjected until b3; REF042 remains BLOCKED. Verifier/test paths are required locks, not edit authority. Exactly two Backend Typecheck PR-filter additions; job body, push filter, permissions, pins and assertions unchanged. App/coordinator/API/Inventory, main.js/CSS, package scripts, U1, capture/deployment and CampusPay protected. Parent additionally authorizes the same two b2b PR-filter paths in business-player-store-fx-final-v2.yml, preserving all job bodies, permissions, pins and other triggers."
+  "authorizationNote": "Parent-authorized REF042b2b under merged PR828 and verified PR829: optional inactive realtime coordinator participation, generation/publication/lifecycle fences, existing Node regressions and scoped metadata. Default stays uninjected until b3; REF042 remains BLOCKED. Verifier/test paths are required locks, not edit authority. Exactly two Backend Typecheck PR-filter additions; job body, push filter, permissions, pins and assertions unchanged. App/coordinator/API/Inventory, main.js/CSS, package scripts, U1, capture/deployment and CampusPay protected. Parent additionally authorizes the same two b2b PR-filter paths in business-player-store-fx-final-v2.yml, preserving all job bodies, permissions, pins and other triggers. Parent approves a seventh path, player-api.js, only for optional deferFreshnessSettlement (default false): realtime opts in and settles successful resources after current per-resource ticket admission and owning-store publication. No write/coordinator change. B3 must opt all app publishers into deferred settlement before activation and qualify combined acceptance."
 }

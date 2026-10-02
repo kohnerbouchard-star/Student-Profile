@@ -72,7 +72,7 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
   if (!terminal || typeof terminal.getState !== "function" || typeof terminal.navigate !== "function") throw new TypeError("Realtime invalidation requires an active player terminal.");
 
   const freshness = terminal.freshness;
-  const api = new PlayerApi(config, { freshness });
+  const api = new PlayerApi(config, { freshness, deferFreshnessSettlement: true });
   const eventName = String(config?.resourceInvalidationEvent || DEFAULT_PLAYER_INVALIDATION_EVENT);
   const pending = new Set();
   const observedAt = new Map();
@@ -166,6 +166,7 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
       api.setSession(config);
       const reading = freshness ? api.loadResources(targets, { force: true }) : api.refreshResources(targets);
       operation.ticket = freshness?.capture(targets);
+      operation.resourceTickets = new Map(targets.map((resource) => [resource, freshness?.capture([resource])]));
       const result = await reading;
       if (!current(operation.ticket) || (freshness && !current(freshness.ticketFor(result)))) return;
       const invalidSession = Object.values(result.errors || {}).find((error) => Number(error?.status) === 401);
@@ -178,14 +179,15 @@ export function installPlayerInvalidationController({ terminal, config, mount = 
         return;
       }
       const data = mergeResourceData(snapshot.data, result.data || {}, config);
-      updateStoreFromSnapshot(snapshot, (state) => ({ ...state, data }));
-      if (!current(operation.ticket)) return;
+      const published = updateStoreFromSnapshot(snapshot, (state) => ({ ...state, data }));
+      if (!current(operation.ticket) || (freshness && !published)) return;
       const firstError = Object.values(result.errors || {})[0];
       const receivedData = Object.keys(result.data || {}).some((key) => key !== "resourceStatus");
       if (firstError && !receivedData) throw firstError;
       const now = Date.now();
       for (const resource of targets) {
         if (freshness && result.errors?.[resource]) continue;
+        freshness?.settle(operation.resourceTickets.get(resource), resource);
         pending.delete(resource);
         observedAt.set(resource, now);
       }
