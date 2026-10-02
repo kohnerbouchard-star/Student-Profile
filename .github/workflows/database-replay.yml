@@ -56,6 +56,14 @@ jobs:
     timeout-minutes: 35
 
     steps:
+      - name: Report U1 qualification hold
+        shell: bash
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'HOLD'
+          U1 qualification hold is active. Static/disposable checks do not certify a release.
+          - live-shaped-rehearsal: NOT_RUN — owner-approved U1 hold.
+          Restoration requires separate owner approval; no automatic expiry or bypass.
+          HOLD
       - name: Check out exact workflow head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -185,7 +193,10 @@ jobs:
 
   live-shaped-rehearsal:
     name: Rehearse ${{ matrix.environment }}-shaped forward migration convergence
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # U1 qualification hold; separate owner approval is required for restoration.
+    if: >-
+      false &&
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: replay
     runs-on: ubuntu-24.04
     timeout-minutes: 90
