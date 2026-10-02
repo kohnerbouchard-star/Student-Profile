@@ -47,3 +47,21 @@ Run existing Contracts API and lifecycle browser suites, Admin V2/browser, local
 mutation UI, affected backend review/reward and shared root/architecture/security
 checks. Record environment-blocked commands honestly and require exact-head CI.
 No completion credit until parent-reviewed merge and merged-main qualification.
+
+## Candidate evidence and main reconciliation
+
+Reconciled main `378f99849f63d044ab75029e751188a88b4ac122` by normal merge;
+all five U1 hold paths are byte-identical. Source extraction is ed6762464fd11566592033e30a796c0d282b4f45.
+Twelve browser checks pass against untouched 87c576a3 assets and the candidate,
+including two-game controller remount/late-detail disposal with zero mutations.
+All four detail DOM hashes match: empty 5753060a6a74ef8fe4f98efe0f6d3d9e32562db25b4c1225d9acd541551d5ede;
+mixed cafad55fdbf44828d784b37ed7f1b3c1ea1a91995611366faa1e3f9c59c4a902 (both viewports).
+Four screenshots are byte-identical; two desktop differences are confined to a
+7x9-pixel background region outside the drawer. No extracted-view pixel change.
+Supplemental lifecycle and full Admin browser pass (25 passes/eight retained exceptions).
+Local Contracts 6/6, Admin 91/91, mutation UI 54/54, authority 16/16, root,
+architecture/high-priority/legacy/interaction/secrets and diff checks pass.
+Inventory sourceFiles 1269 to 1270; all boundary counts unchanged. One 43-line
+presentation owner has one route caller; controller and API remain unchanged.
+Local Edge/full smoke/review-reward tests are blocked by pinned esm.sh tunnel
+refusal; they and pinned-browser acceptance require fresh exact-head CI.
