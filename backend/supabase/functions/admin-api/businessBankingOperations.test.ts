@@ -480,18 +480,30 @@ Deno.test("Loan recovery aliases keep server scope and one authoritative RPC", a
     const suffix = `${prefix}/loans/${LOAN_KEY}/restructure`;
     const result = await handleBusinessBankingAdminOperation(mock, {
       request: request("POST", `/games/${GAME_ID}${suffix}`, {
-        scheduledPayment: 12.345, nextDueAt: "2026-11-01T00:00:00.000Z",
-        reason: "Reviewed recovery plan", idempotencyKey: "recovery-fixture-01",
-        gameId: "spoof", staffUserId: "spoof",
+        scheduledPayment: 12.345,
+        nextDueAt: "2026-11-01T00:00:00.000Z",
+        reason: "Reviewed recovery plan",
+        idempotencyKey: "recovery-fixture-01",
+        gameId: "spoof",
+        staffUserId: "spoof",
       }),
-      gameId: GAME_ID, staffUserId: STAFF_ID, suffix,
+      gameId: GAME_ID,
+      staffUserId: STAFF_ID,
+      suffix,
     });
     assertEquals(result.status, 200);
-    assertEquals(mock.calls, [{ functionName: "restructure_player_loan_v1", args: {
-      p_game_session_id: GAME_ID, p_staff_user_id: STAFF_ID, p_loan_key: LOAN_KEY,
-      p_scheduled_payment: 12.35, p_next_due_at: "2026-11-01T00:00:00.000Z",
-      p_reason: "Reviewed recovery plan", p_idempotency_key: "recovery-fixture-01",
-    } }]);
+    assertEquals(mock.calls, [{
+      functionName: "restructure_player_loan_v1",
+      args: {
+        p_game_session_id: GAME_ID,
+        p_staff_user_id: STAFF_ID,
+        p_loan_key: LOAN_KEY,
+        p_scheduled_payment: 12.35,
+        p_next_due_at: "2026-11-01T00:00:00.000Z",
+        p_reason: "Reviewed recovery plan",
+        p_idempotency_key: "recovery-fixture-01",
+      },
+    }]);
   }
 });
 
@@ -500,12 +512,20 @@ Deno.test("Loan review validates decision before replay key without sending an R
     const mock = service();
     const suffix = `/loan-applications/${APP_KEY}/review`;
     const result = await handleBusinessBankingAdminOperation(mock, {
-      request: request("POST", suffix, { decision, reason: "Reviewed", idempotencyKey: "x" }),
-      gameId: GAME_ID, staffUserId: STAFF_ID, suffix,
+      request: request("POST", suffix, {
+        decision,
+        reason: "Reviewed",
+        idempotencyKey: "x",
+      }),
+      gameId: GAME_ID,
+      staffUserId: STAFF_ID,
+      suffix,
     });
     assertEquals(result.status, 400);
     assertEquals(mock.calls, []);
-    assertEquals((result.body as { code: string }).code,
-      decision === "invalid" ? "invalid_enum_field" : "invalid_idempotency_key");
+    assertEquals(
+      (result.body as { code: string }).code,
+      decision === "invalid" ? "invalid_enum_field" : "invalid_idempotency_key",
+    );
   }
 });
