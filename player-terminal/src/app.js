@@ -78,7 +78,7 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
   let restoreFocusSelector = "";
   const routeRequestVersions = new Map();
   let terminalLoadVersion = 0;
-  let destroyed = false;
+  let destroyed = false, publishedSession = null;
   const deferredEffects = new Set(), pendingControls = new Set(), frames = new Set();
   const controlOwners = new WeakMap();
   const capture = (keys = []) => freshness?.capture(keys);
@@ -336,7 +336,7 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
       applyPlayerSessionHandoff(config, existingSession);
       const previousSession = capture();
       api.setSession(existingSession);
-      if (!current(previousSession)) retireEffects(false);
+      if (!current(previousSession)) { retireEffects(false); store.setState({ status: "loading", data: null }); }
     }
 
     store.setState({ status: "loading", error: null, modal: null, routeLoading: {}, routeErrors: {} });
@@ -346,6 +346,7 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
       const shellData = await api.bootstrap({ force: true });
       if (terminalLoadVersion !== loadVersion) return;
       if (!admitted(shellData)) return;
+      publishedSession = capture();
       const data = { ...createEmptyReadModels(), ...shellData };
       const requestedRoute = store.getState().route;
       const route = isRouteEnabled(data.capabilities, requestedRoute) ? requestedRoute : "dashboard";
@@ -354,17 +355,14 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
       await loadRouteData(route);
     } catch (error) {
       if (terminalLoadVersion !== loadVersion || !current(lifecycle)) return;
-      if (!current(ticket) || obsolete(error)) {
-        if (store.getState().data) store.setState({ status: "ready", error: null });
-        return;
-      }
+      if (!current(ticket) || obsolete(error)) return;
       if (!config.usePreviewData && Number(error?.status) === 401) {
         handleInvalidSession(error);
         return;
       }
       store.setState({ status: "error", error: normalizeApiError(error) });
     } finally {
-      if (freshness && current(lifecycle) && terminalLoadVersion === loadVersion && store.getState().status === "loading" && store.getState().data) {
+      if (freshness && current(lifecycle) && current(publishedSession) && terminalLoadVersion === loadVersion && store.getState().status === "loading" && store.getState().data) {
         store.setState({ status: "ready" });
       }
     }
@@ -377,7 +375,7 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
     }
     const previousSession = capture();
     api.setSession(config);
-    if (!current(previousSession)) retireEffects(false);
+    if (!current(previousSession)) { retireEffects(false); store.setState({ status: "loading", data: null }); }
     return loadData();
   }
 

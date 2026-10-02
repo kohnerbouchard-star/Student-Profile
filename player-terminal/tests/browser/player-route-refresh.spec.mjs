@@ -194,9 +194,9 @@ test("shared transactional modal uses the refreshed, contained presentation", as
   expect(geometry.maxHeight).toBeLessThanOrEqual(geometry.viewportHeight - 8);
 });
 
-test("optional terminal freshness fences final publishers and retired lifecycle effects", async ({ page }) => {
+for (const group of ["session isolation", "publisher lifecycle"]) test(`optional terminal freshness fences ${group}`, async ({ page }) => {
   await openRoute(page, "dashboard");
-  const evidence = await page.evaluate(async () => {
+  const evidence = await page.evaluate(async (group) => {
     globalThis.Econovaria.playerTerminal.destroy();
     const { createPlayerTerminal } = await import("/src/app.js");
     const { PlayerApi } = await import("/src/api/player-api.js");
@@ -223,110 +223,150 @@ test("optional terminal freshness fences final publishers and retired lifecycle 
     }
     const { PreviewTransport } = await import("/src/api/preview-transport.js");
     const transportRequest = PreviewTransport.prototype.request;
-    const reload = await fixture();
-    let releaseWrite, posts = 0, committed = false;
-    PreviewTransport.prototype.request = async function (request) {
-      if (request.method === "POST") { posts++; await new Promise((resolve) => { releaseWrite = resolve; }); committed = true; }
-      const response = await transportRequest.call(this, request);
-      return request.endpointKey === "dashboard" ? { ...response, netWorth: committed ? 900002 : 900001 } : response;
-    };
-    button(reload, "notifications-read").click(); await wait(() => posts === 1);
-    await reload.terminal.refresh();
-    assert(reload.terminal.getState().data.dashboard.netWorth === 900001, "replacement read did not precede commit");
-    releaseWrite(); await wait(() => reload.terminal.getState().data.dashboard.netWorth === 900002);
-    assert(posts === 1 && !reload.freshness.isPending("dashboard"), "same-session reload lost or duplicated write invalidation");
-    PreviewTransport.prototype.request = transportRequest; reload.dispose();
-    const overlap = await fixture(), sameControl = button(overlap, "notifications-read");
-    let secondWrite, overlapPosts = 0;
-    PreviewTransport.prototype.request = async function (request) {
-      if (request.method === "POST" && ++overlapPosts === 2) await new Promise((resolve) => { secondWrite = resolve; });
-      return transportRequest.call(this, request);
-    };
-    sameControl.click(); await wait(() => overlap.mount.querySelector(".player-terminal-toast"));
-    await new Promise((r) => setTimeout(r, 300));
-    overlap.mount.append(sameControl); sameControl.click(); await wait(() => secondWrite);
-    await new Promise((r) => setTimeout(r, 1250));
-    assert(sameControl.disabled && sameControl.getAttribute("aria-busy") === "true", "old delayed restore released newer operation");
-    secondWrite(); await wait(() => !sameControl.disabled);
-    assert(overlapPosts === 2, "overlap changed write count");
-    PreviewTransport.prototype.request = transportRequest; overlap.dispose();
-    const real = await fixture();
-    const refreshed = await real.terminal.refreshResources(["dashboard"]);
-    assert(refreshed && real.terminal.getState().data.dashboard === refreshed.data.dashboard, "real API targeted refresh did not publish");
-    const previousDashboard = real.terminal.getState().data.dashboard;
-    button(real, "notifications-read").click();
-    await wait(() => real.mount.querySelector(".player-terminal-toast"));
-    assert(real.terminal.getState().data.dashboard !== previousDashboard, "real API post-write refresh did not publish");
-    assert(!real.freshness.isPending("dashboard"), "real successful read left pending invalidation");
-    real.dispose();
-    for (const publisher of ["bootstrap", "loadRoute", "refreshResources", "execute"]) {
-      for (const failure of [false, true]) {
-        const f = await fixture(), before = f.terminal.getState().data;
-        const readMethod = publisher === "execute" ? "refreshResources" : publisher;
-        let reached = false;
-        PlayerApi.prototype[readMethod] = async function () {
-          reached = true;
-          const ticket = f.freshness.capture(["dashboard"]);
-          const data = { ...before, dashboard: { ...before.dashboard, staleMarker: true }, resourceStatus: { dashboard: { state: "unavailable", code: "STALE" } }, capabilities: { routes: {}, actions: {} } };
-          const result = publisher === "bootstrap" ? data : { data, errors: failure ? { dashboard: { status: 401 } } : {} };
-          f.freshness.track(result, ticket);
-          // Invalidate after invocation returns, before consumer publication.
-          await Promise.resolve();
-          f.freshness.invalidate(["dashboard"]);
-          if (failure) throw Object.assign(new Error("retired 401"), { status: 401 });
-          return result;
+    if (group === "session isolation") {
+      for (const admission of ["request", "publication"]) for (const order of ["bootstrap", "partial"]) {
+        let phase = "Session A", releaseOld, releasePartial, dashboardReads = 0;
+        PreviewTransport.prototype.request = async function (request) {
+          const response = await transportRequest.call(this, request);
+          if (request.endpointKey === "session") return { ...response, displayName: phase };
+          if (request.endpointKey !== "dashboard") return response;
+          if (phase === "Session B") {
+            const index = ++dashboardReads;
+            if (index === 1 && admission === "request") await new Promise((resolve) => { releaseOld = resolve; });
+            if (index === 2) await new Promise((resolve) => { releasePartial = resolve; });
+          }
+          return { ...response, netWorth: phase === "Session A" ? 700001 : 700002 };
         };
-        if (publisher === "execute") PlayerApi.prototype.execute = async () => ({ result: {}, invalidatedResources: ["dashboard"] });
-        let control;
-        if (publisher === "bootstrap") await f.terminal.refresh();
-        else if (publisher === "refreshResources") await f.terminal.refreshResources(["dashboard"]).catch((error) => assert(error.code === "REQUEST_SUPERSEDED", "wrong superseded error"));
-        else { control = button(f, publisher === "execute" ? "notifications-read" : "refresh-data"); control.click(); await wait(() => reached); await tick(); }
-        assert(reached, `${publisher} was not exercised`);
-        assert(f.terminal.getState().status === "ready", `${publisher} left replacement state loading`);
-        assert(f.terminal.getState().data === before, `${publisher} published stale values/status/capabilities`);
-        assert(!f.terminal.getState().error && !f.terminal.getState().routeErrors.dashboard, `${publisher} published stale error`);
-        assert(f.invalidSessions() === 0 && !f.mount.querySelector(".player-terminal-toast"), `${publisher} emitted retired side effects`);
-        if (control) assert(!control.disabled && !control.hasAttribute("aria-busy"), "processing control leaked");
-        assert(f.freshness.isPending("dashboard"), "old publication cleared new invalidation");
-        Object.assign(PlayerApi.prototype, originals); f.dispose(); records.push(`${publisher}:${failure ? "401" : "value"}`);
+        const scoped = await fixture(), oldCapabilities = scoped.terminal.getState().data.capabilities;
+        let staleReady = false;
+        const unsubscribe = scoped.terminal.subscribe((state) => {
+          if (state.status === "ready" && (state.data?.session?.displayName === "Session A" || state.data?.capabilities === oldCapabilities)) staleReady = true;
+        });
+        if (admission === "publication") PlayerApi.prototype.bootstrap = async function (...args) {
+          const result = await originals.bootstrap.apply(this, args);
+          await new Promise((resolve) => { releaseOld = resolve; }); return result;
+        };
+        phase = "Session B";
+        const connection = scoped.terminal.connectSession({ authenticated: true, csrfToken: "B".repeat(43), gameSessionId: "session-b" });
+        await wait(() => releaseOld);
+        const partial = scoped.terminal.refreshResources(["dashboard"]); await wait(() => releasePartial);
+        if (order === "bootstrap") { releaseOld(); await connection; } else { releasePartial(); await partial; }
+        assert(scoped.terminal.getState().status !== "ready", "partial session was promoted to ready");
+        if (order === "bootstrap") { releasePartial(); await partial; } else { releaseOld(); await connection; }
+        assert(!staleReady && !scoped.mount.textContent.includes("Session A"), "session A values/capabilities resurfaced");
+        assert(scoped.terminal.getState().status !== "ready", "superseded bootstrap admitted partial state");
+        PlayerApi.prototype.bootstrap = originals.bootstrap;
+        await scoped.terminal.refresh();
+        assert(scoped.terminal.getState().data.session.displayName === "Session B" && scoped.terminal.getState().data.dashboard.netWorth === 700002, "complete B snapshot missing");
+        unsubscribe(); scoped.dispose(); PreviewTransport.prototype.request = transportRequest;
+        records.push(`${admission}:${order}`);
       }
-    }
-    for (const publisher of ["bootstrap", "loadRoute", "refreshResources", "execute"]) {
-      for (const retirement of ["session", "logout", "destroy", "remount"]) {
-        const f = await fixture(), before = f.terminal.getState().data;
-        let release, reached = false;
-        const ticket = f.freshness.capture(["dashboard"]);
-        const result = publisher === "bootstrap" ? before : publisher === "execute" ? { result: {}, invalidatedResources: ["dashboard"] } : { data: before, errors: {} };
-        f.freshness.track(result, ticket);
-        PlayerApi.prototype[publisher] = () => { reached = true; return new Promise((resolve) => { release = () => resolve(result); }); };
-        let operation, control;
-        if (publisher === "bootstrap") operation = f.terminal.refresh();
-        else if (publisher === "refreshResources") operation = f.terminal.refreshResources(["dashboard"]).catch((error) => assert(error.code === "REQUEST_ABORTED", "retired read error"));
-        else { control = button(f, publisher === "execute" ? "notifications-read" : "refresh-data"); control.click(); }
-        await wait(() => reached); Object.assign(PlayerApi.prototype, originals);
-        f.terminal.showToast("old toast");
-        if (retirement === "session") await f.terminal.connectSession({ authenticated: true, csrfToken: "D".repeat(43), gameSessionId: "new-game" });
-        else if (retirement === "logout") button(f, "logout").click();
-        else f.terminal.destroy();
-        const replacement = retirement === "remount" ? createPlayerTerminal({ mount: f.mount, config: f.config, freshness: createResourceFreshnessCoordinator() }) : null;
-        release(); await operation; await tick(); await tick();
-        if (control) assert(!control.disabled && !control.hasAttribute("aria-busy"), "retirement lost control restoration");
-        assert(!f.mount.querySelector(".player-terminal-toast"), "retired publisher emitted a toast");
-        assert(f.invalidSessions() === 0, "retired publisher invalidated session");
-        if (retirement === "logout") assert(f.terminal.getState().data === before, "logout publisher wrote data");
-        if (retirement === "destroy") assert(f.mount.innerHTML === "", "destroyed publisher repopulated mount");
-        replacement?.destroy(); f.dispose(); records.push(`${publisher}:${retirement}`);
+    } else {
+      const reload = await fixture();
+      let releaseWrite, posts = 0, committed = false;
+      PreviewTransport.prototype.request = async function (request) {
+        if (request.method === "POST") { posts++; await new Promise((resolve) => { releaseWrite = resolve; }); committed = true; }
+        const response = await transportRequest.call(this, request);
+        return request.endpointKey === "dashboard" ? { ...response, netWorth: committed ? 900002 : 900001 } : response;
+      };
+      button(reload, "notifications-read").click(); await wait(() => posts === 1);
+      await reload.terminal.refresh();
+      assert(reload.terminal.getState().data.dashboard.netWorth === 900001, "replacement read did not precede commit");
+      releaseWrite(); await wait(() => reload.terminal.getState().data.dashboard.netWorth === 900002);
+      assert(posts === 1 && !reload.freshness.isPending("dashboard"), "same-session reload lost or duplicated write invalidation");
+      PreviewTransport.prototype.request = transportRequest; reload.dispose();
+      const overlap = await fixture(), sameControl = button(overlap, "notifications-read");
+      let secondWrite, overlapPosts = 0;
+      PreviewTransport.prototype.request = async function (request) {
+        if (request.method === "POST" && ++overlapPosts === 2) await new Promise((resolve) => { secondWrite = resolve; });
+        return transportRequest.call(this, request);
+      };
+      sameControl.click(); await wait(() => overlap.mount.querySelector(".player-terminal-toast"));
+      await new Promise((r) => setTimeout(r, 300));
+      overlap.mount.append(sameControl); sameControl.click(); await wait(() => secondWrite);
+      await new Promise((r) => setTimeout(r, 1250));
+      assert(sameControl.disabled && sameControl.getAttribute("aria-busy") === "true", "old delayed restore released newer operation");
+      secondWrite(); await wait(() => !sameControl.disabled);
+      assert(overlapPosts === 2, "overlap changed write count");
+      PreviewTransport.prototype.request = transportRequest; overlap.dispose();
+      const real = await fixture();
+      const refreshed = await real.terminal.refreshResources(["dashboard"]);
+      assert(refreshed && real.terminal.getState().data.dashboard === refreshed.data.dashboard, "real API targeted refresh did not publish");
+      const previousDashboard = real.terminal.getState().data.dashboard;
+      button(real, "notifications-read").click();
+      await wait(() => real.mount.querySelector(".player-terminal-toast"));
+      assert(real.terminal.getState().data.dashboard !== previousDashboard, "real API post-write refresh did not publish");
+      assert(!real.freshness.isPending("dashboard"), "real successful read left pending invalidation");
+      real.dispose();
+      for (const publisher of ["bootstrap", "loadRoute", "refreshResources", "execute"]) {
+        for (const failure of [false, true]) {
+          const f = await fixture(), before = f.terminal.getState().data;
+          const readMethod = publisher === "execute" ? "refreshResources" : publisher;
+          let reached = false;
+          PlayerApi.prototype[readMethod] = async function () {
+            reached = true;
+            const ticket = f.freshness.capture(["dashboard"]);
+            const data = { ...before, dashboard: { ...before.dashboard, staleMarker: true }, resourceStatus: { dashboard: { state: "unavailable", code: "STALE" } }, capabilities: { routes: {}, actions: {} } };
+            const result = publisher === "bootstrap" ? data : { data, errors: failure ? { dashboard: { status: 401 } } : {} };
+            f.freshness.track(result, ticket);
+            // Invalidate after invocation returns, before consumer publication.
+            await Promise.resolve();
+            f.freshness.invalidate(["dashboard"]);
+            if (failure) throw Object.assign(new Error("retired 401"), { status: 401 });
+            return result;
+          };
+          if (publisher === "execute") PlayerApi.prototype.execute = async () => ({ result: {}, invalidatedResources: ["dashboard"] });
+          let control;
+          if (publisher === "bootstrap") await f.terminal.refresh();
+          else if (publisher === "refreshResources") await f.terminal.refreshResources(["dashboard"]).catch((error) => assert(error.code === "REQUEST_SUPERSEDED", "wrong superseded error"));
+          else { control = button(f, publisher === "execute" ? "notifications-read" : "refresh-data"); control.click(); await wait(() => reached); await tick(); }
+          assert(reached, `${publisher} was not exercised`);
+          assert(f.terminal.getState().status === "ready", `${publisher} left replacement state loading`);
+          assert(f.terminal.getState().data === before, `${publisher} published stale values/status/capabilities`);
+          assert(!f.terminal.getState().error && !f.terminal.getState().routeErrors.dashboard, `${publisher} published stale error`);
+          assert(f.invalidSessions() === 0 && !f.mount.querySelector(".player-terminal-toast"), `${publisher} emitted retired side effects`);
+          if (control) assert(!control.disabled && !control.hasAttribute("aria-busy"), "processing control leaked");
+          assert(f.freshness.isPending("dashboard"), "old publication cleared new invalidation");
+          Object.assign(PlayerApi.prototype, originals); f.dispose(); records.push(`${publisher}:${failure ? "401" : "value"}`);
+        }
       }
+      for (const publisher of ["bootstrap", "loadRoute", "refreshResources", "execute"]) {
+        for (const retirement of ["session", "logout", "destroy", "remount"]) {
+          const f = await fixture(), before = f.terminal.getState().data;
+          let release, reached = false;
+          const ticket = f.freshness.capture(["dashboard"]);
+          const result = publisher === "bootstrap" ? before : publisher === "execute" ? { result: {}, invalidatedResources: ["dashboard"] } : { data: before, errors: {} };
+          f.freshness.track(result, ticket);
+          PlayerApi.prototype[publisher] = () => { reached = true; return new Promise((resolve) => { release = () => resolve(result); }); };
+          let operation, control;
+          if (publisher === "bootstrap") operation = f.terminal.refresh();
+          else if (publisher === "refreshResources") operation = f.terminal.refreshResources(["dashboard"]).catch((error) => assert(error.code === "REQUEST_ABORTED", "retired read error"));
+          else { control = button(f, publisher === "execute" ? "notifications-read" : "refresh-data"); control.click(); }
+          await wait(() => reached); Object.assign(PlayerApi.prototype, originals);
+          f.terminal.showToast("old toast");
+          if (retirement === "session") await f.terminal.connectSession({ authenticated: true, csrfToken: "D".repeat(43), gameSessionId: "new-game" });
+          else if (retirement === "logout") button(f, "logout").click();
+          else f.terminal.destroy();
+          const replacement = retirement === "remount" ? createPlayerTerminal({ mount: f.mount, config: f.config, freshness: createResourceFreshnessCoordinator() }) : null;
+          release(); await operation; await tick(); await tick();
+          if (control) assert(!control.disabled && !control.hasAttribute("aria-busy"), "retirement lost control restoration");
+          assert(!f.mount.querySelector(".player-terminal-toast"), "retired publisher emitted a toast");
+          assert(f.invalidSessions() === 0, "retired publisher invalidated session");
+          if (retirement === "logout") assert(f.terminal.getState().data === before, "logout publisher wrote data");
+          if (retirement === "destroy") assert(f.mount.innerHTML === "", "destroyed publisher repopulated mount");
+          replacement?.destroy(); f.dispose(); records.push(`${publisher}:${retirement}`);
+        }
+      }
+      const first = await fixture(), second = await fixture(), secondData = second.terminal.getState().data;
+      const secondTicket = second.freshness.capture(["dashboard"]);
+      first.terminal.destroy();
+      assert(second.freshness.isCurrent(secondTicket) && second.terminal.getState().data === secondData, "terminal retirement crossed ownership");
+      first.dispose(); second.dispose();
     }
-    const first = await fixture(), second = await fixture(), secondData = second.terminal.getState().data;
-    const secondTicket = second.freshness.capture(["dashboard"]);
-    first.terminal.destroy();
-    assert(second.freshness.isCurrent(secondTicket) && second.terminal.getState().data === secondData, "terminal retirement crossed ownership");
-    first.dispose(); second.dispose();
     assert(listeners.size === 0, `terminal listeners retained: ${[...listeners.values()]}`);
     globalThis.addEventListener = add; globalThis.removeEventListener = remove;
     Object.assign(PlayerApi.prototype, originals);
     return records;
-  });
-  expect(evidence).toHaveLength(24);
+  }, group);
+  expect(evidence).toHaveLength(group === "session isolation" ? 4 : 24);
 });
