@@ -87,3 +87,13 @@ Rollback uses a normal bounded source revert while preserving later accepted sec
 ## Source records for this plan
 
 The snapshot and diagnostic claims above come from the existing records at the observed main, not new runtime tests: [REF-015](../../operations/evidence/refactor-execution-v1/REF-015/final-disposition.md), [REF-025](../../operations/evidence/refactor-execution-v1/REF-025/preflight.md), [REF-032](../../operations/evidence/refactor-execution-v1/REF-032/preflight.md), [REF-040](../../operations/evidence/refactor-execution-v1/REF-040/preflight.md), [REF-042](../../operations/evidence/refactor-execution-v1/REF-042/preflight.md), [REF-043](../../operations/evidence/refactor-execution-v1/REF-043/preflight.md), [REF-019](tasks/REF-019.md), and [REF-020](tasks/REF-020.md). Revalidate source and live ownership before relying on any historical status.
+
+## U3 bounded registration checkpoint — 2026-10-02
+
+D1-A is registered as dependent REF-042a then REF-042b in the
+[exact-path child scope](../../operations/evidence/refactor-execution-v1/REF-042/u3-child-registration.md).
+Parent accepted the per-terminal session/resource-generation design and narrow
+#624 reference/timer-workaround handoff; this registration awaits parent review
+before source implementation. Each child stays below 400 semantic lines with
+its stated file budget. Both must qualify before REF-042 can close; all 50 primary
+IDs, original dependencies/statuses and other ownership boundaries remain intact.
