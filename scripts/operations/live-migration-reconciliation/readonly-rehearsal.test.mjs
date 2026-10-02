@@ -11,7 +11,9 @@ const workflow = readFileSync('.github/workflows/phase15-readonly-rehearsal.yml'
 test('manual qualification cannot restore held jobs or publish release certificates', () => {
   assert.match(workflow, /workflow_dispatch:/);
   assert.doesNotMatch(workflow, /(?:push|pull_request|schedule|workflow_run|workflow_call):/);
-  assert.match(workflow, /github.run_number == 1 && github.run_attempt == 1/);
+  assert.match(workflow, /github.run_attempt == 1/);
+  assert.match(workflow, /event=workflow_dispatch&per_page=2/);
+  assert.match(workflow, /\.total_count == 1 and \.workflow_runs\[0\].id == \$id/);
   assert.match(workflow, /contents: read\n  actions: read/);
   assert.match(workflow, /secrets.SUPABASE_DB_URL/);
   assert.doesNotMatch(workflow, /secrets.(?:SUPABASE_ACCESS_TOKEN|SUPABASE_DB_PASSWORD)/);

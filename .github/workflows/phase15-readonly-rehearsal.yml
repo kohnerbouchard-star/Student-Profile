@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   rehearse:
-    if: github.ref == 'refs/heads/main' && github.run_number == 1 && github.run_attempt == 1
+    if: github.ref == 'refs/heads/main' && github.run_attempt == 1
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
@@ -33,12 +33,14 @@ jobs:
       PHASE15_ENVIRONMENT: ${{ matrix.environment }}
       PHASE15_EXPECTED_PROJECT_REF: ${{ matrix.project }}
       IMAGE: ghcr.io/supabase/postgres@sha256:e884cde9f5594ddb30ebec888bd236d128eaf9c9b48cc864d8fa3d27a6c6c6bc
-      PHASE15_WORK_DIR: ${{ runner.temp }}/u1/work
-      PHASE15_EVIDENCE_DIR: ${{ runner.temp }}/u1/private-evidence
-      PHASE15_CAPTURE_DIR: ${{ runner.temp }}/u1/raw
-      PHASE15_CANONICAL_SCHEMA: ${{ runner.temp }}/u1/canonical/schema-1.json
-      PHASE15_CANONICAL_CATALOG: ${{ runner.temp }}/u1/canonical/catalog-1.json
     steps:
+      - name: Prepare private paths without credentials
+        run: |
+          echo "PHASE15_WORK_DIR=$RUNNER_TEMP/u1/work" >> "$GITHUB_ENV"
+          echo "PHASE15_EVIDENCE_DIR=$RUNNER_TEMP/u1/private-evidence" >> "$GITHUB_ENV"
+          echo "PHASE15_CAPTURE_DIR=$RUNNER_TEMP/u1/raw" >> "$GITHUB_ENV"
+          echo "PHASE15_CANONICAL_SCHEMA=$RUNNER_TEMP/u1/canonical/schema-1.json" >> "$GITHUB_ENV"
+          echo "PHASE15_CANONICAL_CATALOG=$RUNNER_TEMP/u1/canonical/catalog-1.json" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
@@ -55,6 +57,8 @@ jobs:
           REPLAY_RUN: ${{ inputs.replay_run }}
         run: |
           set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/phase15-readonly-rehearsal.yml/runs?event=workflow_dispatch&per_page=2" > "$RUNNER_TEMP/manual-runs.json"
+          jq -e --argjson id "$GITHUB_RUN_ID" '.total_count == 1 and .workflow_runs[0].id == $id' "$RUNNER_TEMP/manual-runs.json"
           [[ "$REPLAY_RUN" =~ ^[0-9]+$ ]]
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$APPROVED_SHA" = "$GITHUB_SHA"
