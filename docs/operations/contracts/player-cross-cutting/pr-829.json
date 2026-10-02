@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref042b2a-inventory-participant-pr-829.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 829,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "player-terminal/src/features/inventory/inventory-action-flow.js",
+    "player-terminal/tests/inventory-redemption-connected-lifecycle.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-042/u3b2a-evidence.md",
+    "docs/operations/contracts/player-cross-cutting/pr-829.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/backend-typecheck.yml"
+  ],
+  "requiredFiles": [
+    "player-terminal/src/features/inventory/inventory-action-flow.js",
+    "player-terminal/tests/inventory-redemption-connected-lifecycle.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-042/u3b2a-evidence.md",
+    "docs/operations/contracts/player-cross-cutting/pr-829.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/backend-typecheck.yml"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "players",
+    "inventory"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-042/u3b2a-evidence.md",
+  "authorizationNote": "Parent-authorized REF042b2a under merged PR828: optional inactive Inventory coordinator participation, targeted refresh and lifecycle fences, existing Node regressions and scoped metadata. Default stays uninjected until b3; REF042 remains BLOCKED. Verifier/test paths are required locks, not edit authority. Exactly two Backend Typecheck PR-filter additions; job body, push filter, permissions, pins and assertions unchanged. App/coordinator/API/realtime, main.js/CSS, package scripts, U1, capture/deployment and CampusPay protected."
+}
