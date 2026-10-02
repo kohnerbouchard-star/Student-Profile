@@ -80,6 +80,7 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
   let terminalLoadVersion = 0;
   let destroyed = false;
   const deferredEffects = new Set(), pendingControls = new Set(), frames = new Set();
+  const controlOwners = new WeakMap();
   const capture = (keys = []) => freshness?.capture(keys);
   const current = (ticket) => !freshness || (!destroyed && freshness.isCurrent(ticket));
   const admitted = (value) => !freshness || current(freshness.ticketFor(value));
@@ -98,9 +99,9 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
     if (!freshness) return focusFirstInteractive(root);
     queueFrame(() => root?.querySelector("button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])")?.focus());
   }
-  function retireEffects() {
+  function retireEffects(reset = true) {
     if (!freshness) return;
-    freshness.reset();
+    if (reset) freshness.reset();
     for (const id of deferredEffects) clearTimeout(id);
     deferredEffects.clear();
     for (const id of frames) cancelAnimationFrame(id);
@@ -321,7 +322,6 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
 
   async function loadData() {
     if (freshness && destroyed) return;
-    retireEffects();
     const loadVersion = ++terminalLoadVersion;
     if (!config.usePreviewData) {
       const existingSession = await resolveExistingPlayerSession(config);
@@ -334,10 +334,13 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
         return;
       }
       applyPlayerSessionHandoff(config, existingSession);
+      const previousSession = capture();
       api.setSession(existingSession);
+      if (!current(previousSession)) retireEffects(false);
     }
 
     store.setState({ status: "loading", error: null, modal: null, routeLoading: {}, routeErrors: {} });
+    const lifecycle = capture();
     const ticket = capture(["session", "dashboard", ...SHELL_OPTIONAL_RESOURCES]);
     try {
       const shellData = await api.bootstrap({ force: true });
@@ -350,12 +353,20 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
       store.setState((state) => ({ ...state, status: "ready", route, data, error: null }));
       await loadRouteData(route);
     } catch (error) {
-      if (terminalLoadVersion !== loadVersion || !current(ticket) || obsolete(error)) return;
+      if (terminalLoadVersion !== loadVersion || !current(lifecycle)) return;
+      if (!current(ticket) || obsolete(error)) {
+        if (store.getState().data) store.setState({ status: "ready", error: null });
+        return;
+      }
       if (!config.usePreviewData && Number(error?.status) === 401) {
         handleInvalidSession(error);
         return;
       }
       store.setState({ status: "error", error: normalizeApiError(error) });
+    } finally {
+      if (freshness && current(lifecycle) && terminalLoadVersion === loadVersion && store.getState().status === "loading" && store.getState().data) {
+        store.setState({ status: "ready" });
+      }
     }
   }
 
@@ -364,7 +375,9 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
     if (!applyPlayerSessionHandoff(config, session)) {
       throw new TypeError("connectSession requires a player session token.");
     }
+    const previousSession = capture();
     api.setSession(config);
+    if (!current(previousSession)) retireEffects(false);
     return loadData();
   }
 
@@ -373,10 +386,12 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
     const keys = [...new Set((Array.isArray(resourceKeys) ? resourceKeys : []).filter((key) => typeof key === "string" && key))];
     if (!keys.length) return { data: {}, errors: {}, resourceStatus: {} };
     api.setSession(config);
-    const ticket = capture(keys);
+    let ticket = capture();
     let result;
     try {
-      result = await api.refreshResources(keys);
+      const pending = api.refreshResources(keys);
+      ticket = capture(keys);
+      result = await pending;
       if (freshness) freshness.assertCurrent(freshness.ticketFor(result));
       if (!current(ticket)) return;
     } catch (error) { freshness?.assertCurrent(ticket); throw error; }
@@ -433,8 +448,17 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
       return null;
     }
     const path = resolveEndpoint(endpoint, params);
+    if (freshness && button) controlOwners.get(button)?.();
     const resetButton = setButtonProcessing(button, "Processing");
-    const restoreButton = (label) => { resetButton(label); if (label === undefined) pendingControls.delete(restoreButton); };
+    const restoreButton = (label) => {
+      if (freshness && button && controlOwners.get(button) !== restoreButton) return;
+      resetButton(label);
+      if (label === undefined) {
+        pendingControls.delete(restoreButton);
+        if (freshness && button) controlOwners.delete(button);
+      }
+    };
+    if (freshness && button) controlOwners.set(button, restoreButton);
     const lifecycle = capture();
     let refreshTicket = lifecycle;
     if (freshness) pendingControls.add(restoreButton);
@@ -450,10 +474,11 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
       const operation = await api.execute(endpointKey, normalizedPayload, params);
       if (!current(lifecycle)) return null;
       restoreButton("Completed");
-      refreshTicket = capture(operation.invalidatedResources);
-      const refresh = operation.invalidatedResources.length
-        ? await api.refreshResources(operation.invalidatedResources)
+      const pending = operation.invalidatedResources.length
+        ? api.refreshResources(operation.invalidatedResources)
         : { data: {}, errors: {} };
+      refreshTicket = capture(operation.invalidatedResources);
+      const refresh = operation.invalidatedResources.length ? await pending : pending;
       if (!current(refreshTicket) || (operation.invalidatedResources.length && !admitted(refresh))) return null;
       const invalidSession = Object.values(refresh.errors).find((error) => Number(error?.status) === 401);
       if (invalidSession) {

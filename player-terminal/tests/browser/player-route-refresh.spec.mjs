@@ -213,7 +213,7 @@ test("optional terminal freshness fences final publishers and retired lifecycle 
       const mount = document.createElement("div"); document.body.append(mount);
       const freshness = createResourceFreshnessCoordinator();
       let invalidSessions = 0;
-      const config = { usePreviewData: true, simulatePreviewWrites: true, sessionReadyEvent: "fixture:session", onSessionInvalid: () => invalidSessions++ };
+      const config = { usePreviewData: true, simulatePreviewWrites: true, writeCooldownMs: 250, sessionReadyEvent: "fixture:session", onSessionInvalid: () => invalidSessions++ };
       const terminal = createPlayerTerminal({ mount, config, freshness });
       await wait(() => terminal.getState().status === "ready" && !terminal.getState().routeLoading.dashboard);
       return { mount, freshness, terminal, config, invalidSessions: () => invalidSessions, dispose() { terminal.destroy(); mount.remove(); } };
@@ -221,6 +221,44 @@ test("optional terminal freshness fences final publishers and retired lifecycle 
     function button(f, action) {
       const node = document.createElement("button"); node.dataset.playerAction = action; node.textContent = "Original"; f.mount.append(node); return node;
     }
+    const { PreviewTransport } = await import("/src/api/preview-transport.js");
+    const transportRequest = PreviewTransport.prototype.request;
+    const reload = await fixture();
+    let releaseWrite, posts = 0, committed = false;
+    PreviewTransport.prototype.request = async function (request) {
+      if (request.method === "POST") { posts++; await new Promise((resolve) => { releaseWrite = resolve; }); committed = true; }
+      const response = await transportRequest.call(this, request);
+      return request.endpointKey === "dashboard" ? { ...response, netWorth: committed ? 900002 : 900001 } : response;
+    };
+    button(reload, "notifications-read").click(); await wait(() => posts === 1);
+    await reload.terminal.refresh();
+    assert(reload.terminal.getState().data.dashboard.netWorth === 900001, "replacement read did not precede commit");
+    releaseWrite(); await wait(() => reload.terminal.getState().data.dashboard.netWorth === 900002);
+    assert(posts === 1 && !reload.freshness.isPending("dashboard"), "same-session reload lost or duplicated write invalidation");
+    PreviewTransport.prototype.request = transportRequest; reload.dispose();
+    const overlap = await fixture(), sameControl = button(overlap, "notifications-read");
+    let secondWrite, overlapPosts = 0;
+    PreviewTransport.prototype.request = async function (request) {
+      if (request.method === "POST" && ++overlapPosts === 2) await new Promise((resolve) => { secondWrite = resolve; });
+      return transportRequest.call(this, request);
+    };
+    sameControl.click(); await wait(() => overlap.mount.querySelector(".player-terminal-toast"));
+    await new Promise((r) => setTimeout(r, 300));
+    overlap.mount.append(sameControl); sameControl.click(); await wait(() => secondWrite);
+    await new Promise((r) => setTimeout(r, 1250));
+    assert(sameControl.disabled && sameControl.getAttribute("aria-busy") === "true", "old delayed restore released newer operation");
+    secondWrite(); await wait(() => !sameControl.disabled);
+    assert(overlapPosts === 2, "overlap changed write count");
+    PreviewTransport.prototype.request = transportRequest; overlap.dispose();
+    const real = await fixture();
+    const refreshed = await real.terminal.refreshResources(["dashboard"]);
+    assert(refreshed && real.terminal.getState().data.dashboard === refreshed.data.dashboard, "real API targeted refresh did not publish");
+    const previousDashboard = real.terminal.getState().data.dashboard;
+    button(real, "notifications-read").click();
+    await wait(() => real.mount.querySelector(".player-terminal-toast"));
+    assert(real.terminal.getState().data.dashboard !== previousDashboard, "real API post-write refresh did not publish");
+    assert(!real.freshness.isPending("dashboard"), "real successful read left pending invalidation");
+    real.dispose();
     for (const publisher of ["bootstrap", "loadRoute", "refreshResources", "execute"]) {
       for (const failure of [false, true]) {
         const f = await fixture(), before = f.terminal.getState().data;
@@ -232,7 +270,8 @@ test("optional terminal freshness fences final publishers and retired lifecycle 
           const data = { ...before, dashboard: { ...before.dashboard, staleMarker: true }, resourceStatus: { dashboard: { state: "unavailable", code: "STALE" } }, capabilities: { routes: {}, actions: {} } };
           const result = publisher === "bootstrap" ? data : { data, errors: failure ? { dashboard: { status: 401 } } : {} };
           f.freshness.track(result, ticket);
-          // API has settled; invalidate before its consumer's await continuation.
+          // Invalidate after invocation returns, before consumer publication.
+          await Promise.resolve();
           f.freshness.invalidate(["dashboard"]);
           if (failure) throw Object.assign(new Error("retired 401"), { status: 401 });
           return result;
@@ -243,6 +282,7 @@ test("optional terminal freshness fences final publishers and retired lifecycle 
         else if (publisher === "refreshResources") await f.terminal.refreshResources(["dashboard"]).catch((error) => assert(error.code === "REQUEST_SUPERSEDED", "wrong superseded error"));
         else { control = button(f, publisher === "execute" ? "notifications-read" : "refresh-data"); control.click(); await wait(() => reached); await tick(); }
         assert(reached, `${publisher} was not exercised`);
+        assert(f.terminal.getState().status === "ready", `${publisher} left replacement state loading`);
         assert(f.terminal.getState().data === before, `${publisher} published stale values/status/capabilities`);
         assert(!f.terminal.getState().error && !f.terminal.getState().routeErrors.dashboard, `${publisher} published stale error`);
         assert(f.invalidSessions() === 0 && !f.mount.querySelector(".player-terminal-toast"), `${publisher} emitted retired side effects`);

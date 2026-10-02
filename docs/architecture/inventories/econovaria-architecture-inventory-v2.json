@@ -3153,12 +3153,12 @@
         "lines": 1194
       },
       {
-        "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.test.ts",
-        "lines": 1132
+        "file": "player-terminal/src/app.js",
+        "lines": 1148
       },
       {
-        "file": "player-terminal/src/app.js",
-        "lines": 1123
+        "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.test.ts",
+        "lines": 1132
       },
       {
         "file": "player-terminal/src/api/read-model.js",
