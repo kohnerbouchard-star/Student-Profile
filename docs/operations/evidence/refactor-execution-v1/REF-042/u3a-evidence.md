@@ -58,3 +58,7 @@ Supplemental system Chromium route-refresh diagnostic: three passed/three existi
 conditional skips (16 seconds); video disabled only in the temporary diagnostic
 config. No pinned-browser credit. Backend smoke also stops at pinned dependency
 resolution. Secret scan and whitespace checks pass; no baseline assertion weakened.
+
+Draft [PR825](https://github.com/kohnerbouchard-star/Student-Profile/pull/825), source
+`9fc51d79b6c4dff4a8f923f99ffec2fd4d4c5bc2`; PR-bound authority added separately.
+Six changed paths including generated inventory. No existing assertions removed.
