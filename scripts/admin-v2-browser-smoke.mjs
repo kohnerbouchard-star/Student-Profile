@@ -806,14 +806,37 @@ async function verifyPlannedBoundaryContract(browser, fixture, destination) {
 async function auditAuthoritativeUuidHandoffExposure(browser, fixture) {
   const runtime = await createScenarioRuntime(browser, fixture, "ready");
   const findings = [];
+  const routeReads = {
+    players: ["players"], attendance: ["attendance/today"], contracts: ["contracts"], store: ["store/items"],
+    marketplace: ["marketplace"], settings: ["settings"], logs: ["logs?page=1&pageSize=50"],
+    "world-management": ["campaign", "campaign/history?limit=100", "campaign/effects?status=all&limit=100",
+      "arrival-classes?limit=100", "geography", "travel?limit=100", "residency?limit=100"].map((path) => `world/${path}`),
+  };
   try {
     await waitForState(runtime.page, "ready");
     await waitForSessionGateRelease(runtime.page);
     for (const destination of DEFERRED_UUID_ROUTE_ASSERTIONS) {
+      const before = fixture.requestsFor(runtime.runId).length;
+      const paths = routeReads[destination.id].map((path) => `/games/${ADMIN_V2_FIXTURE_GAME_ID}/${path}`);
+      const responses = Promise.all(paths.map((path) => runtime.page.waitForResponse(
+        `${fixture.origin}/functions/v1/web-session-api/proxy${path}`,
+      )));
       await runtime.page.locator(`.admin-navigation__link[data-route="${destination.id}"]`).click();
       const boundaryMode = destination.migrated ? "source" : destination.migration;
       await runtime.page.locator(`.admin-route-boundary[data-route="${destination.id}"][data-mode="${boundaryMode}"]`)
         .waitFor({ state: "visible" });
+      for (const response of await responses) assert.equal(response.status(), 200, `Audit read failed: ${response.url()}`);
+      const state = ["store", "world-management", "settings"].includes(destination.id) ? "ready" : "empty";
+      await runtime.page.locator(`.admin-route-boundary[data-route="${destination.id}"] [data-admin-v2-state="${state}"]`).waitFor({ state: "visible" });
+      const reads = fixture.requestsFor(runtime.runId).slice(before);
+      assert.deepEqual(reads.map((request) => request.pathname + request.search).sort(), paths.sort());
+      for (const request of reads) {
+        assert.equal(request.method, "GET", "UUID route audit attempted a mutation");
+        assert.equal(request.gameId, ADMIN_V2_FIXTURE_GAME_ID);
+        assert.equal(request.deviceId, DEVICE_ID);
+        assert.equal(request.apikey, "sb_publishable_admin_v2_browser_fixture");
+        assert.equal(request.authorization, "");
+      }
       const browserUrl = runtime.page.url();
       const handoffHref = destination.migration === "legacy"
         ? await runtime.page.getByRole("link", { name: "Open existing Admin", exact: true }).getAttribute("href")

@@ -135,3 +135,29 @@ path/game probes passed; Admin 86/86 and both script syntax checks passed.
 New fixture/browser delta is below 160 meaningful changed lines; total source/
 workflow/test delta is below 200. Ownership JSON and this evidence are reported
 separately. Full exact-head browser and subsequent connected CI remain required.
+
+## Approved fixture-completeness amendment
+
+At 71e6c26ff8a12d35ec4991afb53272fb30348927, run 36947538088/job 110652936409
+passed eight browser cases including the new World contract, then failed the
+unchanged authoritative UUID audit on six fixture 404s. Artifact 11202995994
+(digest 464b688567674cd9a7c4eb7aa2dd6b025c7ed4e3a76ff12f7c4f2516ba162bb9)
+retains that failure. All 18 other workflows passed, including Admin Shell Smoke
+and full Backend Typecheck/smoke; connected journeys were skipped, not passed.
+
+Independent review and parent approval permit all six missing initial reads as
+one bounded fixture amendment in the same two-script lock: Players, Attendance
+today, Contracts, Marketplace, Settings, and Logs page=1/pageSize=50. These plus
+existing Store and World cover all eight UUID-audit destinations. Minimal empty
+contract-valid snapshots are used; Settings and World resolve READY, the empty
+routes resolve EMPTY. No detail/action/mutation fixture is added.
+
+World and all new handlers are explicitly restricted to scenario=ready so they
+cannot bypass existing simulated failures or Marketplace permission denial.
+The audit waits for each route's exact successful BFF responses and resolved
+state before continuing, checks exact GET/query/game/device/key/no-bearer
+boundaries, and preserves every UUID-debt finding and final runtime/error check.
+Source/workflow/test delta is 156 changed lines, below cap 200; evidence is
+separate. Local probes passed 13 ready reads, 65 non-ready rejections, 39 method/
+query/game rejections, four unchanged dashboard error scenarios, and Admin 86/86.
+Full exact-head CI remains required; no browser completion is inferred.
