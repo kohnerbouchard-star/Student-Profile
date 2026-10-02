@@ -736,7 +736,7 @@
       "id": "REF-044",
       "title": "Split Admin V2 Contracts rendering from controller state",
       "file": "tasks/REF-044.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-007",
         "REF-008",
@@ -746,8 +746,8 @@
       "risk": "R2",
       "architectureMapping": "ARCH-500/ARCH-501",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
+      "implementationSha": "e8a4a1a73089a778fe98633f45aa9c77abebb75c",
+      "mergeSha": "059cd3cef1998e7a95ba359c2271b48602b794a9",
       "evidence": "docs/operations/evidence/refactor-execution-v1/REF-044/preflight.md"
     },
     {
