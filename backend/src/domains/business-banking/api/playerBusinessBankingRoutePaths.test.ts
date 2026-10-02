@@ -147,7 +147,7 @@ Deno.test("Loans preserves injected scope denial and never constructs its reposi
   assertEquals((await response.json()).error.code, "invalid_player_session_scope");
 });
 
-Deno.test("Loans retains five scoped reads and legacy mixed-currency numeric projection", async () => {
+Deno.test("Loans retains five scoped reads and the borrower/account projection contract", async () => {
   for (const businessCount of [0, 1, 2]) {
     const calls: unknown[][] = [];
     const businessKey = key("biz", "a");

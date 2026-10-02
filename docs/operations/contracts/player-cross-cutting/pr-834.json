@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref025a-characterization-pr-834.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 834,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts",
+    "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
+    "scripts/business-banking-runtime-contract.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-025/u5-characterization.md",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-834.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-834.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "criticalJobChecks": [
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/u5-characterization.md",
+  "authorizationNote": "Parent-approved REF025a characterization only in six changed paths; verifier/test entries are locks, not edit permission. No runtime, SQL, workflow or financial-policy changes. Preserve REF042/REF040, #668/#736 and all nine U1 guards. No live access, secret values, capture, dispatch, deployment or release-hold restoration. REF025 remains BLOCKED; parent controls review and merge."
+}

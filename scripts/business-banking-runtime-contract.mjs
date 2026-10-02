@@ -280,16 +280,33 @@ function loanRoutine(text, name) {
   assert.ok(end > start, `missing routine terminator ${name}`);
   return text.slice(start, end);
 }
+// Reconstruct only the three declared Aug26 source rewrites; no SQL execution.
+const bankIdentity = await readFile("backend/supabase/migrations/20260826100000_business_bank_identity_runtime_v1.sql", "utf8");
+assert.match(bankIdentity, /v_match_count <> v_expected_count/u);
+assert.match(bankIdentity, /v_definition := replace\(v_definition, v_old_predicate, v_new_predicate\)/u);
+assert.match(bankIdentity, /execute v_definition;/u);
+function effectiveLoanRoutine(name) {
+  const historical = loanRoutine(source.repaymentAccounts, name);
+  const tuple = new RegExp(`'${name}'::text,\\s*'((?:''|[^'])*)'::text,\\s*'((?:''|[^'])*)'::text,\\s*1::integer`, "u").exec(bankIdentity);
+  assert.ok(tuple, `missing exact one-occurrence identity rewrite ${name}`);
+  const [, before, after] = tuple.map((part) => part.replaceAll("''", "'"));
+  assert.equal(historical.split(before).length - 1, 1, "historical Aug12 rewrite input occurs once");
+  const effective = historical.replace(before, after);
+  assert.ok(!effective.includes(before), "obsolete balance predicate removed");
+  return effective;
+}
 for (const name of ["normalize_loan_application_repayment_account_v1", "bind_player_loan_repayment_account_v1"]) {
-  const binding = loanRoutine(source.repaymentAccounts, name);
+  const binding = effectiveLoanRoutine(name);
   assert.match(binding, /business_row\.game_session_id = new\.game_session_id/u);
   assert.match(binding, /business_row\.owner_player_id = new\.player_id/u);
   assert.match(binding, /LOAN_REPAYMENT_ACCOUNT_UNAVAILABLE/u);
-  assert.match(binding, /balance_row\.player_id = new\.player_id/u);
+  const businessId = name.startsWith('normalize_') ? 'v_business.id' : 'new.business_id';
+  assert.ok(binding.includes(`v_product.borrower_type = 'business' and balance_row.business_id = ${businessId}`));
+  assert.match(binding, /v_product\.borrower_type <> 'business' and balance_row\.player_id is not distinct from new\.player_id/u);
 }
 const applyLoan = loanRoutine(source.operability, "apply_player_loan_v1");
 const reviewLoan = loanRoutine(source.core, "review_player_loan_application_v1");
-const repayLoan = loanRoutine(source.repaymentAccounts, "repay_player_loan_v1");
+const repayLoan = effectiveLoanRoutine("repay_player_loan_v1");
 const serviceLoan = loanRoutine(source.core, "service_player_loan_status_v1");
 const recoverLoan = loanRoutine(source.fixes, "restructure_player_loan_v1");
 assertBefore(applyLoan, "for update;", "select application_row.*", "Player lock precedes application receipt lookup");
@@ -310,7 +327,9 @@ assertBefore(repayLoan, "LOAN_NOT_PAYABLE", "select payment_row.*", "Known legac
 assert.match(repayLoan, /loan_row\.game_session_id = p_game_session_id\s+and loan_row\.player_id = p_player_id/u);
 assert.match(repayLoan, /business_row\.owner_player_id = p_player_id/u);
 assert.match(repayLoan, /v_account is distinct from v_expected_business_account/u);
-assert.match(repayLoan, /balance_row\.player_id = p_player_id[\s\S]*balance_row\.account_type = v_account[\s\S]*balance_row\.currency_code = v_loan\.currency_code\s+for update/u);
+assert.match(repayLoan, /v_loan\.business_id is not null and balance_row\.business_id = v_loan\.business_id/u);
+assert.match(repayLoan, /v_loan\.business_id is null and balance_row\.player_id is not distinct from p_player_id/u);
+assert.match(repayLoan, /balance_row\.game_session_id = p_game_session_id[\s\S]*balance_row\.account_type = v_account[\s\S]*balance_row\.currency_code = v_loan\.currency_code\s+for update/u);
 assert.match(repayLoan, /v_payment\.request_hash <> v_hash/u);
 assertBefore(repayLoan, "INSUFFICIENT_FUNDS", "record_player_ledger_entry", "Insufficient balance fails before ledger debit");
 assertBefore(repayLoan, "record_player_ledger_entry", "insert into public.loan_payments", "Payment receipt follows ledger debit in the same routine");

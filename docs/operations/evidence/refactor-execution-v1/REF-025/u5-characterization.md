@@ -1,152 +1,85 @@
 # REF025a / U5 loan characterization
 
-Status: IMPLEMENTED_NOT_MERGED; REF025 remains BLOCKED. No runtime completion credit.
-Accepted by parent on 2026-10-02: characterization in four exact paths,
-hard 399 semantic-line ceiling (397 total added/deleted physical lines). Scope recorded before test edits.
-Parent subsequently approved only the fifth generated inventory path below.
-Base: `b7f0e1374163f665124cc2ff02e9f4313ccb6679` (fresh main).
-Branch: `refactor/ref-025a-characterization`; parent reviews and merges.
-
-## Exact scope
-
+Status: IMPLEMENTED_NOT_MERGED; REF025 BLOCKED; REF027 depends on025+026. Base: `b7f0e1374163f665124cc2ff02e9f4313ccb6679`; parent reviews/merges.
+Draft PR834: `refactor/ref-025a-characterization`; hard 399-line ceiling.
+Parent approved four characterization paths, generated inventory and PR834 authority:
 - `backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts`
 - `backend/supabase/functions/admin-api/businessBankingOperations.test.ts`
 - `scripts/business-banking-runtime-contract.mjs`
 - `docs/operations/evidence/refactor-execution-v1/REF-025/u5-characterization.md`
 - `docs/architecture/inventories/econovaria-architecture-inventory-v2.json`
+- `docs/operations/contracts/player-cross-cutting/pr-834.json`
 
-Inventory delta: two test-only entries; compatibility count 209 -> 210 and
-oversized count 99 -> 100. No ceiling or unrelated inventory change.
-The unchanged 209 compatibility ceiling fails; this is not waived.
+No runtime, SQL, policy or workflow changes; verifier/test entries are locks only.
+Protect #668 context/global ledger/backend manifest, #736 Player auth/runtime,
+REF042 Player API/app/Inventory/realtime, REF040 Markets, #624 UI and nine U1 guards.
+No live access, credentials/settings, captures, dispatch, deployment or restoration.
+Treasury's accepted public-contract/single-RPC extraction remains intact.
+Rollback: revert the six scoped files. No production ports or queries moved.
 
-Allowed: characterize existing denial order, query/currency representation,
-borrower/account binding and servicing/replay behavior with synthetic fixtures
-and explicit SQL source assertions. Known defects are recorded, not repaired.
-No production source, migration, manifest, workflow, policy or other evidence edit.
-Treasury's accepted public contract/single-RPC extraction stays intact.
-Protect #668 context/global ledger/backend manifest, #736 Player runtime auth,
-REF042 Player API/app/Inventory/realtime, REF040 Markets, #624 UI, and all nine
-U1 hosted guards. No live access, captures, dispatches, deployment or restoration.
-REF027 still depends on REF025 and REF026; no status/dependency edits here.
+## Characterization and corrected source lineage
 
-## Validation plan and evidence levels
+HTTP envelope/body/method denial precedes configuration, then scope/repository. Application rounds money, forwards server scope once and returns private/no-store.
+Admin recovery aliases use server scope/one RPC; review decision denial precedes key
+validation. Synthetic clients do not authenticate real sessions or execute SQL.
+Loans reads use economic-context RPC plus five queries for zero/one/two businesses.
+Products filter currency; loans filter game/player; business keys filter game/owner. Two currencies project 30.8 without currency fields: a representation limitation.
+Defaults, ordering, limits and schedules stay characterized; no live mixed-loan claim.
 
-Use pinned Node 22.23.1 / Deno 2.9.3 and frozen locks; strip inherited secrets.
-Run both owning Deno test files, the runtime source contract, existing Banking
-read/FX/Business workspace and economic simulations, then safe shared checks.
-Record exact-head CI separately. HTTP/repository mocks test real application
-code but do not execute SQL. SQL assertions characterize source, not transaction,
-concurrency, replay or rollback outcomes in a database. No DB proof claimed.
-Rollback is a normal revert of these five test/evidence files only.
+Correction to initial preflight: Aug12 repayment definitions are historical inputs. `20260826100000_business_bank_identity_runtime_v1.sql` rewrites both account triggers
+and repay_player_loan_v1. Business balance lookups use business_id (resolved business,
+new.business_id and v_loan.business_id respectively); personal lookups use player_id.
+The script reconstructs the three exact one-occurrence source replacements, asserts
+replacement execution/count guards and tests their resulting predicates. No SQL runs.
+Game/account/currency locks remain; borrower and business-owner authorization remain
+player-scoped. Stable business money identity already exists, not proposed new work.
+Later migration definitions/rewrite targets were inspected at the recorded base:
+Aug31 Treasury/procurement/store rewrites target other routines; convergence's generic
+purge rewrite targets DELETE triggers, while these triggers are INSERT/UPDATE only.
+September source rewrites target store/formation, not these three loan routines.
 
-## CI preflight
+Application remains Aug6; review/servicing July21 core; recovery July21 signature fix. Source checks cover lock/denial order, interest-first payment and installment advance.
+Known limits: payable-state denial precedes payment replay; approval replays terminal
+application state; recovery uses audit key without payload hash. No stronger claim.
+Callers remain Player/retained Classroom, Loans UI, Admin review/recovery/supervision
+and autonomous servicing. No retirement, debt transfer or personal guarantee inferred.
 
-Business Banking Runtime matches both test paths and the runtime script, runs
-both Deno files, economic simulations and source contracts. Backend Typecheck
-matches backend/** and runs typecheck:all plus full smoke, including Banking/FX
-and economic-ledger invariants. Database Replay does not match these four paths.
-The Admin test path also matches Banking FX Clearing's backend/supabase/**
-filter: exact-head certification, disposable local DB reset/acceptance/lint.
-Business Economy V2 matches the domain test/runtime script. None is a live probe.
-The standalone Database Replay trigger gap would require adding the two test
-paths and runtime script to its PR filter, if required by the parent; this is
-reported before any workflow edit. No dispatcher or hosted guard is changed.
-Database/race qualification remains NOT_RUN locally, not inferred from mocks.
-No workflow amendment is included or authorized in this child.
+## Validation and exact-head limits
 
-## Results
+Pinned Node22.23.1/npm10.9.8/Deno2.9.3; frozen locks; inherited secrets stripped. Baseline owning Deno12/12; candidate19/19 (five Player, two Admin additions).
+PASS: corrected source contract; Banking38/38; FX16/16; ledger25/25; Treasury9/9;
+economic simulations8/8; Player banking-read/FX/business-workspace; guards80;
+legacy audits; secret scan; Phase15 hosted-guard contract4/4; diff whitespace.
+Parent-approved test-title correction removes only a lexical false positive: compatibility209 unchanged; generated oversized test inventory99->100, ceiling unchanged.
+Corrected root run passes architecture, then fails missing local @supabase/supabase-js. Local full Edge/smoke also blocked by frozen esm.sh import HTTP403. No local DB run.
 
-Pinned tools: Node 22.23.1, npm 10.9.8, Deno 2.9.3. Source tests use
-synthetic fixtures and an empty inherited environment. Dependency acquisition
-uses only proxy/CA configuration with repository locks unchanged.
+Published head `28509d6e85116c040724436f0beb798a7bd7f3fc`: all42 workflows terminal,
+20 success/19 failure/3 skipped. This is not a green qualification or the corrected head.
+Backend Typecheck36979851585 passes full backend/Edge typecheck and full smoke.
+Business Banking Runtime36979851499, AdminV2Loans36979851461, AdminAPI36979851672 pass.
+BankingFX36979851606: disposable database reset/acceptance/lint and Chromium pass;
+source fails missing PR834-bound authority. Treasury36979851639 database replay,
+isolation/rollback/concurrency and browser pass; source has same authority failure.
+Other source jobs fail the old lexical marker or authority; neither is waived. Multiplayer36979851608 fails messages HTTP503; cause/baseline not established.
+StoreFX36979851628 connected startup fails occupied Docker port54322. Vercel fails build-rate limit; no retry/settings change. Preview remains missing.
+Corrected source/label/authority batch requires fresh exact-head CI and independent review.
+Database CI evidence is suite-specific, not proof of every loan transaction/race.
 
-- Baseline owning Deno files: 12/12 passed before edits. Candidate: 19/19 passed
-  (five new Player handler/repository cases, two new Admin cases).
-- PASS: `node scripts/business-banking-runtime-contract.mjs`, including explicit
-  SQL source assertions for application, review, payment, servicing and recovery.
-- PASS: backend `test:player-banking-public` 38/38,
-  `test:player-banking-fx` 16/16, `test:economic-ledger-invariants` 25/25.
-- PASS: `node --experimental-strip-types --test
-  scripts/business-banking-economic-simulation.test.mjs` 8/8; Player
-  `banking-read`, `banking-fx`, `business-workspace`; high-priority guards 80;
-  both legacy-runtime audits; secret scan; `git diff --check`.
-- PASS: existing Phase15 production-workflow contract 4/4 (all nine guards kept).
-- BLOCKED: full `typecheck:all` and smoke encounter the frozen esm.sh
-  Supabase 2.108.2 import download failure. Backend TypeScript check passed;
-  full Edge roots and later smoke suites are not certified by partial passes.
-- FAIL: `npm test` initially stopped at inventory determinism; approved regeneration
-  fixes that mismatch but the unchanged architecture ratchet now rejects 210
-  compatibility-marker files against maximum 209. Both additions are test-only.
-  No threshold, assertion, test title or workflow is weakened to obtain green.
-  This remains a merge blocker, not backend or economic qualification credit.
-- NOT_RUN: local database, transaction races, injected SQL rollback, connected
-  browser/staging or production qualification. Exact-head CI still required.
+## Owner decisions, not implementation approval
 
-## Characterized behavior and limits
-
-HTTP envelope/body/method denial precedes configuration; configuration precedes
-scope and repository construction. The injected denial tests do not authenticate
-real sessions. Application rounds to two decimals, forwards server scope and
-account intent once, and returns the existing private/no-store pending envelope.
-Admin recovery aliases use the supplied server scope and one RPC; invalid review
-decision wins over invalid replay key. Outer Admin authentication remains separate.
-
-The real Loans repository, exercised with a recording synthetic client, uses
-one economic-context RPC plus five queries for zero/one/two returned businesses.
-Only products filter currency; borrower loans filter game/player, business keys
-filter game/owner. Credit defaults, payment count, ordering, limits and schedules
-remain characterized. Two synthetic currencies total 30.8 without currency fields:
-this preserves a known representation limitation, not evidence of live mixed loans.
-
-SQL source checks preserve legacy borrower/account guard predicates, same-currency
-balance locks, interest-first payment and installment advancement. They also freeze
-known limitations: payable-state denial before repayment receipt lookup; approval
-replay by terminal application state; recovery replay by audit key without payload
-hash. No runtime reproduction, policy correction or stronger replay claim is made.
-Production debt/query counts: unchanged; zero production files or ports moved.
-Remaining callers: Player/retained Classroom loan dispatch, Player Loans UI,
-Admin loan review/recovery/supervision, autonomous loan servicing. No retirement.
-
-## First-slice recommendation for owner review (not approval)
-
-Preserve every legacy obligation, bound account, term, schedule and repayment right.
-New obligations identify business liability independently of the initiating player;
-canonical Business control authorizes actions on that business, never ownership
-inferred from purpose text. Use its stable game/business/currency account identity
-for disbursement and repayment, with actor identity recorded separately. A mandate
-change changes permission, not debt. No guarantees, collateral, implicit FX or
-personal recovery liability is inferred.
-Proposed business income: sum positive ledger amounts scoped by game, stable
-business identity and loan currency in the preceding 84 days, across operators;
-exclude source_domain banking/loans and source_action capitalization_in /
-ownership_cash_transfer_in / capital_contribution_in / ipo_primary_subscription. Exclude personal
-Checking/Savings; no converted currencies. Current legacy business applications
-instead filter player_id and admit both Checking and the business account.
-Income per installment = round((sum / 12) * max(payment_frequency_cycles, 1), 2).
-Ratio = 100 if income <= 0, otherwise min(100, round(payment / income, 6)); reject
-above the product's maximum_payment_to_income. Existing Working Capital seed is
-0.45, but the authoritative product row may be staff-modified; no hardcoded new cap.
-The exact inputs/formula are in 20260806093000_provision_player_banking_and_credit_v1.sql.
-The last two exclusions are proposed additions, based on existing accounting
-capital classifications; owner approval is required, not implied by this evidence.
-
-Applicant-score proposal: retain recalculate_player_credit_v1(game, actor) at
-application and compare to that offer's minimum_credit_score. Working Capital's
-seed threshold is 600 (generic table default 550); the product row is authoritative.
-This is operator eligibility, not a business credit score or personal guarantee.
-Current default attribution: service_player_loan_status_v1 marks loans by product
-thresholds and recalculates credit for each loan.player_id. The credit function
-counts every defaulted loan for that game/player, including business-linked loans,
-subtracting 120 per default before clamping the score to 300..850. It also subtracts
-35 per counted delinquent posted-payment join row; this is not a per-business model.
-Both functions originate in 20260721120000_add_business_banking_credit_runtime_v1.sql.
-Recommend no personal credit damage for new business defaults; this differs from
-legacy behavior and requires approval. Existing accrual (principal * annual_rate *
-days / 365 rounded to 2 decimals), product grace/default days and staff recovery
-remain candidates for preservation, not permission to change liability attribution.
-Owner choices: approve business-only income with named exclusions; applicant-score
-eligibility using product thresholds; business-only default attribution. No invented
-risk thresholds, guarantees or FX. If applicant-score eligibility is rejected,
-origination needs an approved business-credit policy before implementation.
-Other U5 children remain unapproved. Parent controls policy, review and merge;
-REF025 remains BLOCKED and REF027 still requires REF025 plus REF026.
+Preserve existing obligations, accounts, terms, schedules and repayment rights. New business liability vs operator permission follows approved D2-B, using existing
+stable game/business/currency identity. Mandate change alone must not transfer debt.
+Proposed income: positive game/business/currency ledger inflows across operators over
+84 days; exclude banking/loans and capitalization_in/ownership_cash_transfer_in;
+capital_contribution_in/ipo_primary_subscription are additional proposed exclusions.
+Exclude personal Checking/Savings and FX conversion. Current Aug6 affordability uses
+player_id and admits Checking/business account. Keep income/12*frequency rounded2,
+ratio100 if income<=0 otherwise min(100,round(payment/income,6)); product limit controls.
+Working Capital seed0.45 is not a new hardcoded cap. Owner must approve changed inputs. Applicant-score proposal retains actor credit vs actual product minimum (seed600;
+table default550), as eligibility only, not guarantee/business score. Needs approval.
+Current July21 servicing recalculates loan.player_id credit, including business defaults:
+-120/default, -35/delinquent posted-payment join row, score clamped300..850.
+Business-only default attribution would change policy and needs approval. Preserve
+accrual principal*annual_rate*days/365 rounded2 and product grace/default terms pending
+review. Recovery/guarantor/debt-transfer/FX policy is not invented; other U5 children
+remain unapproved. Parent controls policy, scope, merge and REF025 unblock.
