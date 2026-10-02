@@ -1,12 +1,16 @@
 # U3 / REF-042 — dependent child registration
 
-Status: PLANNED; registration submitted for parent review, no source implementation.
-Observed main: `1a0ff1adb28f710d646c655c8ca91b24e799dd18` (2026-10-02).
-Parent REF-042 remains BLOCKED with its original acceptance and dependency edges.
-REF-023/041 remain verified. REF044 closeout is separately proposed in draft
-[PR823](https://github.com/kohnerbouchard-star/Student-Profile/pull/823).
-Neither child alone closes REF-042; both require exact-head CI, parent-reviewed
-merges, merged-main verification and accepted combined evidence before closeout.
+Status: REF-042b split registration proposed for parent review; no b source edits.
+Observed main: `5d32be72e7e88644f3248104320725ed6aadc672` (2026-10-02),
+REF-042a implementation [PR825](https://github.com/kohnerbouchard-star/Student-Profile/pull/825).
+Original registration PR824 and REF044 closeout PR823 are merged and preserved.
+Parent REF-042 remains BLOCKED with its original acceptance and dependency edges;
+REF-023/041 remain verified. REF-042a supplies inactive foundation, not the fix.
+The owner approved b1 → b2 → b3 before implementation because complete publisher,
+participant and regression coverage cannot safely fit the original single-child
+budget. All primary IDs, dependency edges and acceptance criteria are unchanged.
+Each child requires exact-head CI, independent parent review, parent-owned merge
+and applicable merged-main verification. No child alone closes REF-042.
 
 ## Decision and narrow ownership handoff
 
@@ -59,33 +63,105 @@ one exact-PR `docs/operations/contracts/player-cross-cutting/pr-<number>.json`
 (number fixed after draft allocation). Generated architecture inventory, if the
 existing audit requires regeneration, is separately declared and reviewed.
 
-## REF-042b / U3b — complete composition and publication fencing
+## REF-042b / U3b — dependent implementation scopes
 
-Depends on accepted/merged REF-042a and fresh main/ownership reconciliation.
-Runtime/test editable paths (six), all under `player-terminal/`:
+The original six-path b scope is superseded only by the three dependent scopes
+below. D1-A, resource-list ownership and combined acceptance are unchanged.
+No b1 edits until this registration is parent-reviewed and PR825 merged-main
+checks are terminal green. Reconcile fresh main and active ownership per child.
+Default composition remains uninjected through b1 and b2; optional injection is
+an explicit dependency for tests, not a runtime feature flag or new singleton.
+Preserve legacy default behavior until b3 activates the complete composition.
+Do not edit child a coordinator/API paths without a concrete reviewed need.
 
-- `src/app.js`.
-- `src/features/inventory/inventory-action-flow.js`.
-- `src/realtime/player-invalidation-controller.js`.
-- `tests/inventory-redemption-connected-lifecycle.mjs`.
-- `tests/realtime-freshness.mjs`.
-- `tests/browser/player-route-refresh.spec.mjs`.
+### REF-042b1 — terminal publisher and lifecycle preparation
 
-Allowed scope: terminal coordinator composition; Inventory targeted invalidation
-and refresh; complete terminal/action/realtime final publication and lifecycle
-fences. Account for bootstrap, loadData, loadRouteData, refreshResources,
-executeEndpoint, realtime and action publishers. Fence values, resourceStatus,
-errors, capabilities, stale 401 handling, toasts and timers. Session switch,
-logout, destroy and remount must retire old work; stale reads cannot clear a
-newer pending invalidation. Preserve control restoration and listeners.
+Depends on accepted registration and verified merged REF-042a. Editable paths:
 
-Budget: six source/test files, at most nine meaningful paths including metadata,
-and strictly fewer than 400 semantic changed lines. Metadata is limited to this
-registration, proposed `REF-042/u3b-evidence.md` in this evidence directory and
-one newly allocated exact-PR cross-cutting authority path as above. Generated
-architecture inventory is separately declared if required. Do not expand into
-child a paths without parent review. Neither budget permits splitting a behavior
-across unregistered follow-up work to evade full acceptance.
+- `player-terminal/src/app.js`.
+- `player-terminal/tests/browser/player-route-refresh.spec.mjs`.
+
+Allowed symbols: optional coordinator dependency on `createPlayerTerminal` and
+its returned participant seam; `loadData`/bootstrap, `loadRouteData`,
+`refreshResources`, `executeEndpoint`, session handoff/invalid-session/logout,
+`destroy`, and their publication, error, toast/timer/control cleanup guards.
+Check resource tickets again at final publication, including resourceStatus,
+capabilities and stale 401 handling. Retire work across session and lifecycle
+changes. Preserve render/focus/modal/disclosure behavior and existing callers.
+Extend only the named browser spec with injected-coordinator publisher and
+lifecycle regressions, including final settlement/publication gaps. No other
+browser path, runner or package-script expansion is authorized.
+
+Budget: two runtime/test files, at most five meaningful paths with metadata,
+strictly fewer than 400 semantic changed lines. Default remains uninjected.
+Rollback: revert this optional app/test preparation, preserving REF-042a and
+accepted docs; after dependents land, revert dependents in reverse order first.
+
+### REF-042b2 — Inventory and realtime participant preparation
+
+Depends on parent-merged and verified b1. Editable paths:
+
+- `player-terminal/src/features/inventory/inventory-action-flow.js`.
+- `player-terminal/src/realtime/player-invalidation-controller.js`.
+- `player-terminal/tests/inventory-redemption-connected-lifecycle.mjs`.
+- `player-terminal/tests/realtime-freshness.mjs`.
+
+Allowed symbols: `installInventoryActionFlow`, use/redemption handlers and
+cleanup; `installPlayerInvalidationController`, invalidation/refresh/scheduling,
+publication/pending settlement and disposal. Consume the optional terminal-owned
+coordinator; preserve legacy behavior when absent. Use operation invalidations
+from WRITE_INVALIDATIONS, never a duplicated resource list. Applied/replayed
+receipts precede targeted GET; rejected actions do not invalidate. Fence all
+values/status/errors/401/toasts/finally/timers and obsolete pending clears.
+Prove injected participant isolation, exact one-POST/three-GET use and one-POST/
+two-GET redemption, late realtime completion, equivalent-read coalescing, failed
+refresh/replay/rejection/abort/double-click/mixed batches and lifecycle cleanup
+in the two existing Node suites. Default remains uninjected through this child.
+
+Budget: four runtime/test files, at most seven meaningful paths with metadata,
+strictly fewer than 400 semantic changed lines. Rollback: revert participant
+preparation/tests; if b3 has landed, retire its activation first. Do not revert
+server transactions, later independent fixes or child a.
+
+### REF-042b3 — default composition and combined acceptance
+
+Depends on parent-merged and verified b2. Editable paths:
+
+- `player-terminal/src/app.js`.
+- `player-terminal/tests/browser/player-route-refresh.spec.mjs`.
+
+Allowed symbols: `createPlayerTerminal` default coordinator creation and sharing
+through the b1 participant seam; only minimal integration corrections in the b1
+publisher/lifecycle symbols above. Instantiate exactly one coordinator for each
+terminal and share it with that terminal's API/action/realtime participants.
+Activate only after both participant paths and full publisher fences exist.
+Extend the same browser spec for the complete warm-cache/action/realtime race,
+session/logout/destroy/remount and two-independent-terminal matrix. Verify final
+values/resourceStatus/errors/capabilities, stale 401, toasts/timers/control
+restoration, exact request budgets and retained listener counts. Preserve focus,
+selection, drafts, modal and disclosure state. Run all combined acceptance below;
+b1/b2 evidence is supporting history, not a substitute for exact b3 qualification.
+
+Budget: two runtime/test files, at most five meaningful paths with metadata,
+strictly fewer than 400 semantic changed lines. Rollback: revert b3 default
+activation and its tests first, leaving the optional b1/b2 foundation inactive.
+No runtime rollout, deployment or REF-042 completion is implied by source merge.
+
+### Exact metadata and review boundaries
+
+For child `b1`, `b2` or `b3`, only these metadata paths are editable:
+
+- This `docs/operations/evidence/refactor-execution-v1/REF-042/u3-child-registration.md`.
+- Corresponding `docs/operations/evidence/refactor-execution-v1/REF-042/u3b1-evidence.md`,
+  `u3b2-evidence.md` or `u3b3-evidence.md` (one per child, not all three).
+- One `docs/operations/contracts/player-cross-cutting/pr-<number>.json`, fixed to
+  that child's actual draft PR number before implementation authority validation.
+
+The path and semantic budgets include comments and metadata. Generated architecture
+inventory is separately declared and reviewed only if the existing audit requires
+it. No source/test path outside the listed child scope is authorized. Stop before
+editing if a child cannot fit or needs a new path; present a further registration
+for parent review. Do not omit acceptance or conceal behavior in mechanical edits.
 
 ## Required evidence and stop gates
 
@@ -96,7 +172,7 @@ Register permanent regressions in the existing owning suites, not a new runner.
 
 Child a proves session/terminal isolation, generation/cache and aggregated-result
 admission, equivalent-read coalescing, mutation ordering and stale errors/401.
-Child b additionally proves isolated one-POST/three-GET item use and one-POST/
+The combined b1/b2/b3 result additionally proves isolated one-POST/three-GET item use and one-POST/
 two-GET redemption; held old realtime read released after authoritative refresh
 cannot regress state or clear newer invalidation. Cover replay, rejected write,
 failed refresh, abort, double click, mixed-resource batch, stale 401, session
@@ -115,7 +191,7 @@ All other source, `main.js`, CSS, global authority, auth/transport ownership,
 economic/RPC/schema, workflows/release controls, U1 helpers/tests/REF032 evidence
 and CampusPay are protected. No capture/dispatch/deploy/hold restoration/security
 changes. Stop for scope/budget drift, ownership collision or a required broader
-API/policy change. Split and register smaller children before editing if either
+API/policy change. Split and register smaller children before editing if any
 budget cannot hold. Parent reviews this registration before any implementation;
 parent owns all merges. Rollback is bounded source reversion preserving later
 accepted fixes and the untouched server-authoritative transaction semantics.
