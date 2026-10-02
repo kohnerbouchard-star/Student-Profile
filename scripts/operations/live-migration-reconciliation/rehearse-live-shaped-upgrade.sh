@@ -41,6 +41,10 @@ applied_path="$PHASE15_EVIDENCE_DIR/applied-migrations.txt"
 certified_path="$PHASE15_EVIDENCE_DIR/certified-migrations.txt"
 remote_ledger_path="$PHASE15_EVIDENCE_DIR/remote-ledger.json"
 manifest_path="$PHASE15_WORK_DIR/forward-manifest.json"
+plan_path="$PHASE15_EVIDENCE_DIR/rehearsal-plan.json"
+partition_path="$PHASE15_EVIDENCE_DIR/ledger-partition.json"
+suffix_applied_path="$PHASE15_EVIDENCE_DIR/applied-post-bundle-migrations.txt"
+suffix_certified_count=0
 failure_path="$PHASE15_EVIDENCE_DIR/failure.json"
 status="FAILED"
 failed_migration=""
@@ -56,7 +60,17 @@ pending_migrations=()
 mkdir -p "$supabase_root/supabase/migrations" "$PHASE15_EVIDENCE_DIR"
 : > "$applied_path"
 : > "$certified_path"
-rm -f "$failure_path"
+: > "$suffix_applied_path"
+rm -f "$failure_path" "$partition_path"
+
+# Resolve and pin the complete rehearsal input before starting services or reading a host.
+node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs" \
+  --environment "$PHASE15_ENVIRONMENT" --mode rollback --format manifest > "$manifest_path"
+node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs" \
+  "$manifest_path" > "$plan_path"
+mapfile -t selected_migrations < <(jq -r '.migrations[].filename' "$manifest_path")
+mapfile -t prelude_migrations < <(jq -r '.migrations[:.preludeMigrationCount][].filename' "$manifest_path")
+mapfile -t migrations < <(jq -r '.migrations[.preludeMigrationCount:][].filename' "$manifest_path")
 
 cp "$repo_root/backend/supabase/config.toml" "$supabase_root/supabase/config.toml"
 sed -i "s/^project_id = .*/project_id = \"$project_id\"/" "$supabase_root/supabase/config.toml"
@@ -102,15 +116,23 @@ write_summary() {
   PHASE15_REMOTE_LEDGER_VERIFIED="$(test -s "$PHASE15_EVIDENCE_DIR/remote-ledger-verification.json" && echo true || echo false)" \
   PHASE15_CERTIFIED_COUNT="$certified_count" \
   PHASE15_SOURCE_COMMIT="$(git rev-parse HEAD)" \
+  PHASE15_PLAN_PATH="$plan_path" \
+  PHASE15_PARTITION_PATH="$partition_path" \
+  PHASE15_SUFFIX_APPLIED_PATH="$suffix_applied_path" \
+  PHASE15_SUFFIX_CERTIFIED_COUNT="$suffix_certified_count" \
   PHASE15_APPLIED_PATH="$applied_path" \
   PHASE15_SCHEMA_COMPARE_EXIT="$schema_compare_exit" \
   PHASE15_CATALOG_COMPARE_EXIT="$catalog_compare_exit" \
   node --input-type=module - <<'NODE' > "$PHASE15_EVIDENCE_DIR/summary.json"
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const applied = readFileSync(process.env.PHASE15_APPLIED_PATH, "utf8")
   .split("\n")
   .filter(Boolean);
+const plan = JSON.parse(readFileSync(process.env.PHASE15_PLAN_PATH, "utf8"));
+const partition = existsSync(process.env.PHASE15_PARTITION_PATH) && readFileSync(process.env.PHASE15_PARTITION_PATH, "utf8").trim();
+const suffixLedger = partition ? JSON.parse(partition) : null;
+const suffixApplied = readFileSync(process.env.PHASE15_SUFFIX_APPLIED_PATH, "utf8").split("\n").filter(Boolean);
 const optionalExit = (value) => /^\d+$/.test(value ?? "") ? Number(value) : null;
 const schemaComparisonExit = optionalExit(process.env.PHASE15_SCHEMA_COMPARE_EXIT);
 const catalogComparisonExit = optionalExit(process.env.PHASE15_CATALOG_COMPARE_EXIT);
@@ -129,6 +151,14 @@ process.stdout.write(`${JSON.stringify({
   appliedMigrationCount: applied.length,
   firstAppliedMigration: applied[0] ?? null,
   lastAppliedMigration: applied.at(-1) ?? null,
+  postBundleSuffix: {
+    ...plan.suffix,
+    remoteLedgerPresentCount: suffixLedger?.suffixRows.length ?? null,
+    remoteLedgerVerified: suffixLedger?.suffixLedgerVerified ?? false,
+    appliedMigrations: suffixApplied,
+    appliedMigrationCount: suffixApplied.length,
+    certifiedMigrationCount: Number(process.env.PHASE15_SUFFIX_CERTIFIED_COUNT),
+  },
   failedMigration: process.env.PHASE15_FAILED_MIGRATION || null,
   status: process.env.PHASE15_STATUS,
   exitCode: Number(process.env.PHASE15_EXIT_CODE),
@@ -238,53 +268,7 @@ docker exec -i "$container" psql -U postgres -d postgres -X -qAt -v ON_ERROR_STO
   < "$repo_root/scripts/operations/live-migration-reconciliation/export-runtime-catalog-v2.sql" \
   > "$PHASE15_EVIDENCE_DIR/pre-catalog.json"
 
-if test "$PHASE15_ENVIRONMENT" = production; then
-  # Production never received these canonical migrations. Staging did. Run their
-  # immutable repository bytes first so the disposable upgrade follows the exact
-  # production ledger delta instead of hiding it inside a new repair migration.
-  prelude_migrations=(
-    20260812081410_add_license_expiration_and_purge_confirmation_foundation_v1.sql
-    20260812081833_restrict_game_purge_to_dedicated_permission_v1.sql
-    20260812082207_harden_game_purge_grace_and_arm_binding_v1.sql
-    20260812082436_add_game_purge_dispatch_state_machine_v1.sql
-    20260812082727_add_resumable_game_purge_database_cursor_v1.sql
-    20260812082927_add_atomic_game_purge_finalizer_v1.sql
-    20260812082948_patch_game_purge_failure_recovery_v1.sql
-    20260812103000_seed_meridian_customs_security_intrusion_v1.sql
-    20260812111000_seed_meridian_security_center_attack_v1.sql
-    20260812114000_seed_meridian_emergency_response_v1.sql
-    20260813090000_add_durable_license_issuance_queue_v1.sql
-    20260813091500_harden_license_email_idempotency_window_v1.sql
-    20260813093000_add_license_issuance_scheduler_safety_switch_v1.sql
-    20260813100000_harden_license_fulfillment_snapshots_v1.sql
-    20260813103000_add_license_email_outbox_schema_v1.sql
-    20260813103100_add_atomic_license_materialization_outbox_v2.sql
-    20260813103200_add_durable_license_email_worker_queue_v1.sql
-    20260813103300_add_license_delivery_operations_v1.sql
-  )
-fi
-
-mapfile -t migrations < <(
-  find "$repo_root/backend/supabase/migrations" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' \
-    | LC_ALL=C sort \
-    | awk -v cutoff="$cutoff" 'substr($0,1,14) >= cutoff'
-)
-if test "${#migrations[@]}" -ne 151; then
-  echo "Expected 151 forward migrations, found ${#migrations[@]}." >&2
-  exit 1
-fi
-
-selected_migrations=("${prelude_migrations[@]}" "${migrations[@]}")
-node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs" \
-  --environment "$PHASE15_ENVIRONMENT" --mode rollback --format manifest > "$manifest_path"
-test "$(jq -r '.migrationCount' "$manifest_path")" -eq "${#selected_migrations[@]}"
-mapfile -t manifest_migrations < <(jq -r '.migrations[].filename' "$manifest_path")
-test "${#manifest_migrations[@]}" -eq "${#selected_migrations[@]}"
-for index in "${!selected_migrations[@]}"; do
-  test "${selected_migrations[$index]}" = "${manifest_migrations[$index]}"
-done
-
-versions="$(jq -r '.migrations[].version' "$manifest_path" | paste -sd, -)"
+versions="$(jq -r '.bundle.migrations[].version, .suffix.migrations[].version' "$plan_path" | paste -sd, -)"
 [[ "$versions" =~ ^[0-9]{14}(,[0-9]{14})*$ ]]
 docker exec \
   -e DATABASE_URL="$PHASE15_REMOTE_DATABASE_URL" \
@@ -294,7 +278,7 @@ docker exec \
   -e PHASE15_VERSIONS="$versions" \
   -i "$container" \
   sh -ceu 'psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -v phase15_versions="$PHASE15_VERSIONS"' <<'SQL' \
-  > "$remote_ledger_path"
+  > "$PHASE15_EVIDENCE_DIR/complete-remote-ledger.json"
 select coalesce(
   jsonb_agg(
     jsonb_build_object(
@@ -307,8 +291,18 @@ select coalesce(
   '[]'::jsonb
 )::text
 from supabase_migrations.schema_migrations
-where version = any (string_to_array(:'phase15_versions', ','));
+where version = any (string_to_array(:'phase15_versions', ','))
+   or version > '20260920082200';
 SQL
+
+# Reject unknown, non-prefix or digest-mismatched rows before any local migration.
+if ! node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs" \
+  "$manifest_path" "$PHASE15_EVIDENCE_DIR/complete-remote-ledger.json" > "$partition_path"; then
+  printf '%s\n' '{"schemaVersion":1,"errorClass":"UNVERIFIED_REHEARSAL_LEDGER"}' > "$failure_path"
+  exit 1
+fi
+jq '.bundleRows' "$partition_path" > "$remote_ledger_path"
+mapfile -t pending_suffix < <(jq -r '.pendingSuffix[]' "$partition_path")
 
 remote_present_count="$(jq 'length' "$remote_ledger_path")"
 if test "$remote_present_count" -eq 0; then
@@ -344,8 +338,9 @@ NODE
   test "${#pending_migrations[@]}" -eq "$(("${#selected_migrations[@]}" - remote_present_count))"
 fi
 
-if test "$execution_mode" != "already-current"; then
-  for migration in "${pending_migrations[@]}"; do
+all_pending=("${pending_migrations[@]}" "${pending_suffix[@]}")
+if test "${#all_pending[@]}" -gt 0; then
+  for migration in "${all_pending[@]}"; do
     test -s "$repo_root/backend/supabase/migrations/$migration"
     failed_migration="$migration"
     echo "Applying $migration"
@@ -361,7 +356,11 @@ process.stdout.write(`${JSON.stringify({
 NODE
       exit 1
     fi
-    printf '%s\n' "$migration" >> "$applied_path"
+    if [[ "${migration:0:14}" > "20260920082200" ]]; then
+      printf '%s\n' "$migration" >> "$suffix_applied_path"
+    else
+      printf '%s\n' "$migration" >> "$applied_path"
+    fi
   done
 else
   echo "The exact $PHASE15_ENVIRONMENT migration ledger is already current; certifying its restored schema without reapplying migrations."
@@ -369,6 +368,7 @@ fi
 
 printf '%s\n' "${selected_migrations[@]}" > "$certified_path"
 certified_count="${#selected_migrations[@]}"
+suffix_certified_count="$(jq -r '.suffix.migrationCount' "$plan_path")"
 
 failed_migration=""
 capture_local_snapshot
