@@ -1,8 +1,12 @@
 # U3 / REF-042 — dependent child registration
 
-Status: REF-042b split registration proposed for parent review; no b source edits.
-Observed main: `5d32be72e7e88644f3248104320725ed6aadc672` (2026-10-02),
-REF-042a implementation [PR825](https://github.com/kohnerbouchard-star/Student-Profile/pull/825).
+Status: REF-042b2 refinement proposed for parent review; no participant source edits.
+Observed main: `44799a8e63f5d539628645f305894a665943e741` (2026-10-02),
+REF-042b1 implementation [PR827](https://github.com/kohnerbouchard-star/Student-Profile/pull/827).
+B1 merged-main verification passed all 16 runs; 40 checks: 35 success/five skips.
+Its [evidence](u3b1-evidence.md), dependencies and historical failures are retained.
+The A/B cases prove fail-closed isolation followed by explicit full refresh,
+not automatic recovery after a superseded initial bootstrap.
 Original registration PR824 and REF044 closeout PR823 are merged and preserved.
 Parent REF-042 remains BLOCKED with its original acceptance and dependency edges;
 REF-023/041 remain verified. REF-042a supplies inactive foundation, not the fix.
@@ -97,35 +101,97 @@ strictly fewer than 400 semantic changed lines. Default remains uninjected.
 Rollback: revert this optional app/test preparation, preserving REF-042a and
 accepted docs; after dependents land, revert dependents in reverse order first.
 
-### REF-042b2 — Inventory and realtime participant preparation
+### REF-042b2 — approved participant refinement
 
-Depends on parent-merged and verified b1. Editable paths:
+The owner approved b2a → b2b as a bounded refinement of b2 before source edits.
+Registration requires parent review first. Both retain D1-A and the full combined
+acceptance below; default composition remains uninjected until b3. Neither child
+alone completes participant acceptance or REF-042. Do not omit tests to fit.
+
+### REF-042b2a — Inventory action participant
+
+Depends on accepted refinement and parent-merged/verified b1. Editable paths:
 
 - `player-terminal/src/features/inventory/inventory-action-flow.js`.
-- `player-terminal/src/realtime/player-invalidation-controller.js`.
 - `player-terminal/tests/inventory-redemption-connected-lifecycle.mjs`.
-- `player-terminal/tests/realtime-freshness.mjs`.
+- `.github/workflows/backend-typecheck.yml`, limited as specified below.
 
-Allowed symbols: `installInventoryActionFlow`, use/redemption handlers and
-cleanup; `installPlayerInvalidationController`, invalidation/refresh/scheduling,
-publication/pending settlement and disposal. Consume the optional terminal-owned
+Allowed symbols: `installInventoryActionFlow`, use/redemption handlers, shared
+local action orchestration and cleanup. Consume the optional terminal-owned
 coordinator; preserve legacy behavior when absent. Use operation invalidations
-from WRITE_INVALIDATIONS, never a duplicated resource list. Applied/replayed
-receipts precede targeted GET; rejected actions do not invalidate. Fence all
-values/status/errors/401/toasts/finally/timers and obsolete pending clears.
-Prove injected participant isolation, exact one-POST/three-GET use and one-POST/
-two-GET redemption, late realtime completion, equivalent-read coalescing, failed
-refresh/replay/rejection/abort/double-click/mixed batches and lifecycle cleanup
-in the two existing Node suites. Default remains uninjected through this child.
+from WRITE_INVALIDATIONS, never a copied list. Applied/replayed receipts precede
+targeted GET; rejected actions do not invalidate. Fence final values/status/error/
+401/toast/control effects across session changes, logout, destroy and remount.
+Retain mutation serialization/idempotency and restore controls without allowing
+an old operation to release a newer one. No optimistic inventory/economic writes.
 
-Budget: four runtime/test files, at most seven meaningful paths with metadata,
-strictly fewer than 400 semantic changed lines. Rollback: revert participant
-preparation/tests; if b3 has landed, retire its activation first. Do not revert
-server transactions, later independent fixes or child a.
+Extend the named Node suite with real API/coordinator/terminal-action fixtures:
+exact one-POST/three-GET use and one-POST/two-GET redemption, warm cache, replay,
+rejection, abort, failed refresh, double click, session retirement and independent
+terminals. These tests must exercise the real invalidation/publication ordering.
+Realtime race and pending-generation integration follow in b2b, not disappear.
+
+Budget: two runtime/test files, at most six meaningful paths including the workflow
+and scoped metadata; strictly fewer than 400 semantic changed lines. Rollback
+reverts optional Inventory preparation/tests, after retiring dependent activation
+and realtime changes if present; preserve b1/a, server transactions and later fixes.
+
+### REF-042b2b — realtime participant and combined participant acceptance
+
+Depends on parent-merged/verified b1 and b2a. Editable paths:
+
+- `player-terminal/src/realtime/player-invalidation-controller.js`.
+- `player-terminal/tests/realtime-freshness.mjs`.
+- `.github/workflows/backend-typecheck.yml`, limited as specified below.
+
+Allowed symbols: `installPlayerInvalidationController`, invalidation, refresh,
+scheduling, final publication, pending settlement and disposal. Consume the same
+optional terminal coordinator; preserve legacy behavior when absent. Fence values,
+resourceStatus/errors/capabilities/401, stale pending clears, finally blocks,
+timers and listeners. Session/logout/destroy/remount must retire old work without
+allowing an obsolete completion to release newer in-flight ownership. Preserve
+interaction/disclosure deferral and cadence; no polling expansion or global cache
+redesign. No main.js, CSS, focus/modal behavior or child-a API edits are authorized.
+
+Extend the named Node suite with real shared API/coordinator participant fixtures:
+held old realtime read completing after a mutation refresh; newer pending
+invalidation surviving stale completion; equivalent same-generation coalescing;
+pre-write reads excluded from post-write results; mixed batches, failed refresh,
+stale 401, session/lifecycle retirement, listener counts and two-terminal isolation.
+Rerun b2a's exact write/GET budgets and all combined participant acceptance.
+Default composition still remains uninjected until b3's separate activation gate.
+
+Budget: two runtime/test files, at most six meaningful paths including the workflow
+and scoped metadata; strictly fewer than 400 semantic changed lines. Rollback
+reverts realtime preparation/tests after retiring b3 activation, preserving b2a,
+b1/a, server transactions and later independent fixes.
+
+### Participant validation scope and estimated review size
+
+Each child may add only its own two exact runtime/test paths listed above to
+`.github/workflows/backend-typecheck.yml` under `pull_request.paths`. Recheck live
+ownership before editing. Preserve the entire job body, push filter, permissions,
+action pins and assertions; no other workflow change is authorized. Include this
+workflow path in that child's exact-PR authority and evidence. Required checks
+and actual full backend diagnostics must qualify the child's exact final head.
+
+Estimates count semantic additions/deletions, including comments and metadata:
+
+| Child | Runtime | Fixtures/regressions | Scoped metadata | PR-filter entries | Total |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| b2a | 70 | 180 | 80 | 2 | 332 |
+| b2b | 90 | 200 | 80 | 2 | 372 |
+
+These are planning estimates, not permission to exceed the strict cap or compress
+behavior artificially. They reserve review margin and retain all required cases;
+no further split is planned absent a concrete new finding. Report any new API/path
+need or budget overrun before widening. Existing owning suites/runners remain;
+package-script expansion still needs review. Generated inventory, if required by
+the existing audit, remains separately declared and reviewed.
 
 ### REF-042b3 — default composition and combined acceptance
 
-Depends on parent-merged and verified b2. Editable paths:
+Depends on parent-merged and verified b2a and b2b (and their retained b1 dependency). Editable paths:
 
 - `player-terminal/src/app.js`.
 - `player-terminal/tests/browser/player-route-refresh.spec.mjs`.
@@ -149,11 +215,11 @@ No runtime rollout, deployment or REF-042 completion is implied by source merge.
 
 ### Exact metadata and review boundaries
 
-For child `b1`, `b2` or `b3`, only these metadata paths are editable:
+For child `b1`, `b2a`, `b2b` or `b3`, only these metadata paths are editable:
 
 - This `docs/operations/evidence/refactor-execution-v1/REF-042/u3-child-registration.md`.
 - Corresponding `docs/operations/evidence/refactor-execution-v1/REF-042/u3b1-evidence.md`,
-  `u3b2-evidence.md` or `u3b3-evidence.md` (one per child, not all three).
+  `u3b2a-evidence.md`, `u3b2b-evidence.md` or `u3b3-evidence.md` (one per child).
 - One `docs/operations/contracts/player-cross-cutting/pr-<number>.json`, fixed to
   that child's actual draft PR number before implementation authority validation.
 
