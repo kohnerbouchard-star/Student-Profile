@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 99,
+    "oversizedSourceFiles": 100,
     "capabilityStrings": 136
   },
   "domains": [
@@ -3498,6 +3498,10 @@
       },
       {
         "file": "backend/src/domains/notifications/infrastructure/supabasePlayerStoryDeliveryRepository.ts",
+        "lines": 532
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
         "lines": 532
       },
       {
