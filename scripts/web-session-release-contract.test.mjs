@@ -14,6 +14,17 @@ const RETIRED_TRUSTED_IP_REPAIR_WORKFLOW = ".github/workflows/production-web-ses
 const DATABASE_WORKFLOW = ".github/workflows/production-web-session-database-reconcile.yml";
 const AUTHORIZATION = "docs/operations/evidence/production-web-session-recovery-v1.json";
 const DATABASE_AUTHORIZATION = "docs/operations/evidence/production-web-session-database-reconciliation-v1.json";
+const CANONICAL_PRODUCTION_ORIGIN = "https://www.econovaria.com";
+const PRODUCTION_ORIGIN_WORKFLOWS = [
+  CANDIDATE_WORKFLOW,
+  DEPLOY_WORKFLOW,
+  ".github/workflows/production-web-session-final-verify.yml",
+  ".github/workflows/production-web-session-post-deploy-verify.yml",
+  ".github/workflows/production-web-session-release.yml",
+  ".github/workflows/production-web-session-route-observer.yml",
+  SECRET_WORKFLOW,
+  ".github/workflows/production-web-session-vercel-proxy-verify.yml",
+];
 const RELATIVE_IMPORT = /(?:from\s+|import\s*)["'](\.{1,2}\/[^"']+)["']/gu;
 
 function read(relativePath) {
@@ -120,8 +131,21 @@ test("production secret provisioning is main-bound, missing-only and uses the ve
 
 test("production web origins are exact and the obsolete Cloudflare repair workflow is retired", () => {
   const expected =
-    "https://econovaria.vercel.app,https://econovaria-econovaria.vercel.app,https://econovaria-git-main-econovaria.vercel.app";
+    "https://econovaria.com,https://www.econovaria.com,https://econovaria.vercel.app,https://econovaria-econovaria.vercel.app,https://econovaria-git-main-econovaria.vercel.app";
   const workflow = read(SECRET_WORKFLOW);
+  for (const workflowPath of PRODUCTION_ORIGIN_WORKFLOWS) {
+    const productionWorkflow = read(workflowPath);
+    assert.equal(
+      productionWorkflow.includes(`PRODUCTION_ORIGIN: ${CANONICAL_PRODUCTION_ORIGIN}`),
+      true,
+      `${workflowPath} must use the canonical production origin`,
+    );
+    assert.equal(
+      productionWorkflow.includes("PRODUCTION_ORIGIN: https://econovaria.vercel.app"),
+      false,
+      `${workflowPath} must not target the retired Vercel alias`,
+    );
+  }
   assert.equal(
     workflow.includes(`PRODUCTION_ALLOWED_ORIGINS: ${expected}`),
     true,
@@ -191,6 +215,7 @@ test("authorization manifest denies staging and limits production scope", () => 
   assert.equal(manifest.stagingFunctionName, manifest.functionName);
   assert.equal(manifest.verifyJwt, false);
   assert.equal(manifest.customAuthenticationRequired, true);
+  assert.equal(manifest.productionOrigin, CANONICAL_PRODUCTION_ORIGIN);
   assert.equal(manifest.databaseChangesAllowed, true);
   assert.deepEqual(manifest.allowedDatabaseChanges, [
     "canonical web-session request-rate-limit contracts",

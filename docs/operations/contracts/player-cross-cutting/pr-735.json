@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.production-web-session-canonical-origin-pr-735.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 735,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/production-web-session-deploy.yml",
+    ".github/workflows/production-web-session-final-verify.yml",
+    ".github/workflows/production-web-session-hotfix.yml",
+    ".github/workflows/production-web-session-post-deploy-verify.yml",
+    ".github/workflows/production-web-session-release.yml",
+    ".github/workflows/production-web-session-route-observer.yml",
+    ".github/workflows/production-web-session-secrets.yml",
+    ".github/workflows/production-web-session-vercel-proxy-verify.yml",
+    "docs/operations/contracts/player-cross-cutting/pr-735.json",
+    "docs/operations/evidence/production-web-session-recovery-v1.json",
+    "docs/operations/release-requests/production-web-session-release-v1.json",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/production-web-session-release-orchestrator.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/web-session-release-contract.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-735.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience"
+  ],
+  "authorizationNote": "Bounded production-authentication recovery control-plane repair. Canonical production is https://www.econovaria.com, while the retired https://econovaria.vercel.app alias returns DEPLOYMENT_NOT_FOUND. This PR changes only repository-owned production-origin constants, the exact CORS allowlist, the active release request and recovery authorization, and their regression tests. Historical completed-deployment evidence is retained unchanged. Pull-request validation performs no deployment or production mutation. Merging the approved release-request path remains a separately protected release trigger and must be coordinated only after the Admin and Player authentication source repairs are merged and exact-head checks pass. Exact-main identity, immutable source packaging, staging deployment, protected production approval, project binding, database preconditions, deployed-source equality, and fail-closed response validation remain mandatory."
+}

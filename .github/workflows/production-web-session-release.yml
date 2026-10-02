@@ -15,6 +15,7 @@ on:
       - "backend/src/platform/supabase/**"
       - "backend/src/security/**"
       - "scripts/web-session-release-contract.test.mjs"
+      - "scripts/production-web-session-release-orchestrator.test.mjs"
       - "scripts/verify-edge-function-multipart-source.mjs"
       - "scripts/verify-edge-function-multipart-source.test.mjs"
       - "package.json"
@@ -42,7 +43,7 @@ env:
   EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
   EXPECTED_PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
   FUNCTION_NAME: web-session-api
-  PRODUCTION_ORIGIN: https://econovaria.vercel.app
+  PRODUCTION_ORIGIN: https://www.econovaria.com
   TRUSTED_CLIENT_IP_HEADER: x-real-ip
   SUPABASE_CLI_VERSION: 2.109.1
 

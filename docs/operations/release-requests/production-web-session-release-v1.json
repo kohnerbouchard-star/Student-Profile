@@ -8,7 +8,7 @@
   "stagingFunctionName": "web-session-api",
   "stagingProjectRef": "eecvbssdvarfcykcfrny",
   "productionProjectRef": "cgiukdjwicykrmtkhudh",
-  "productionOrigin": "https://econovaria.vercel.app",
+  "productionOrigin": "https://www.econovaria.com",
   "trustedClientIpHeader": "x-real-ip",
   "verifyJwt": false,
   "customAuthenticationRequired": true,
