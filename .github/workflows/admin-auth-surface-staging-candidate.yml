@@ -51,7 +51,7 @@ jobs:
           [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
 
       - name: Check out exact current main source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.source_commit }}
           fetch-depth: 0
@@ -67,7 +67,7 @@ jobs:
           test -f "$FUNCTION_MANIFEST"
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "22.23.1"
           cache: npm
@@ -82,7 +82,7 @@ jobs:
             scripts/password-recovery-frontend-contract.test.mjs
 
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.109.1
 
@@ -193,7 +193,7 @@ jobs:
           SOURCE_COMMIT: ${{ inputs.source_commit }}
 
       - name: Upload staging auth evidence
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: admin-auth-staging-${{ inputs.source_commit }}
           if-no-files-found: error
