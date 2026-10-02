@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, mkdtemp, cp, writeFile, rm, readdir } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { buildRehearsalPlan, partitionRehearsalLedger, NONCE_SUFFIX } from "./build-phase15-rehearsal-plan.mjs";
 import test from "node:test";
 
 import {
@@ -15,6 +20,138 @@ import {
   normalizeSupabaseHostedPair,
 } from "./compare-schema-snapshots.mjs";
 import { verifyLedger, verifyLedgerPrefix } from "./verify-phase15-ledger.mjs";
+
+function immutableManifest(environment) {
+  const text = execFileSync(process.execPath, [
+    "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs",
+    "--environment", environment, "--mode", "rollback", "--format", "manifest",
+  ], { encoding: "utf8" });
+  const digest = createHash("sha256").update(text).digest("hex");
+  assert.equal(digest, environment === "staging"
+    ? "75c84a56327ef8ca59090887a3f9bfcd187c8e7d8760935f365453a2d0f0591a"
+    : "35b59274a80760d5b09d0aea3b89f2b3de0de2db30417d5e509b261f4cb4602f");
+  return JSON.parse(text);
+}
+
+for (const environment of ["staging", "production"]) {
+  test(`${environment} rehearsal preserves immutable bytes and accounts for suffix across ledger states`, async () => {
+    const bundle = immutableManifest(environment);
+    const before = JSON.stringify(bundle);
+    const plan = await buildRehearsalPlan(bundle);
+    assert.equal(JSON.stringify(bundle), before);
+    assert.equal(plan.bundle.migrationCount, environment === "staging" ? 151 : 169);
+    assert.deepEqual(plan.suffix.migrations, [NONCE_SUFFIX]);
+    const rows = [...bundle.migrations, ...plan.suffix.migrations].map((row) => ({
+      version: row.version, name: row.name, sha256: row.sourceSha256, statementCount: 1,
+    }));
+    for (const count of [0, 1, bundle.migrationCount - 1, bundle.migrationCount, rows.length]) {
+      const result = partitionRehearsalLedger(plan, rows.slice(0, count));
+      assert.equal(result.bundleRows.length, Math.min(count, bundle.migrationCount));
+      assert.equal(result.suffixRows.length, count === rows.length ? 1 : 0);
+      assert.equal(result.suffixLedgerVerified, count === rows.length);
+      assert.deepEqual(result.pendingSuffix, count === rows.length ? [] : [NONCE_SUFFIX.filename]);
+    }
+    for (const invalid of [
+      [rows.at(-1)], rows.slice(1), [rows[1], rows[0]], [...rows, rows.at(-1)],
+      [...rows.slice(0, -1), { ...rows.at(-1), version: "20990101000000" }],
+      ...["sha256", "name", "statementCount"].map((field) => [
+        ...rows.slice(0, -1), { ...rows.at(-1), [field]: field === "statementCount" ? 2 : "tampered" },
+      ]),
+    ]) assert.throws(() => partitionRehearsalLedger(plan, invalid));
+    const altered = structuredClone(bundle);
+    altered.migrations.reverse();
+    await assert.rejects(buildRehearsalPlan(altered), /identity\/order\/digest mismatch/u);
+  });
+}
+
+test("rehearsal rejects changed, missing or unapproved suffix before host access", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "phase15-rehearsal-"));
+  try {
+    await cp("backend/supabase/migrations", directory, { recursive: true });
+    const bundle = immutableManifest("staging");
+    const suffixPath = path.join(directory, NONCE_SUFFIX.filename);
+    const source = await readFile(suffixPath);
+    const selectedByOldShell = (await readdir(directory)).filter((name) => name.endsWith(".sql") && name.slice(0, 14) >= "20260819062000");
+    assert.equal(selectedByOldShell.length, 152, "retain the original 151-versus-152 reproduction");
+    await buildRehearsalPlan(bundle, directory);
+    await writeFile(suffixPath, Buffer.concat([source, Buffer.from("\n")]));
+    await assert.rejects(buildRehearsalPlan(bundle, directory), /raw digest mismatch/u);
+    await rm(suffixPath);
+    await assert.rejects(buildRehearsalPlan(bundle, directory), /missing post-bundle/u);
+    await writeFile(suffixPath, source);
+    await writeFile(path.join(directory, "20990101000000_unapproved.sql"), "select 1;");
+    await assert.rejects(buildRehearsalPlan(bundle, directory), /Unapproved/u);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("shell binds separate suffix evidence without changing immutable certificate accounting", async () => {
+  const source = await readFile("scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh", "utf8");
+  assert.ok(source.indexOf('"$manifest_path" > "$plan_path"') < source.indexOf("supabase start"));
+  assert.ok(source.indexOf("UNVERIFIED_REHEARSAL_LEDGER") < source.indexOf('echo "Applying $migration"'));
+  assert.match(source, /\.bundle\.migrations\[\]\.version, \.suffix\.migrations\[\]\.version/u);
+  assert.match(source, /or version > '20260920082200'/u);
+  assert.match(source, /all_pending=\("\$\{pending_migrations\[@\]\}" "\$\{pending_suffix\[@\]\}"\)/u);
+  assert.match(source, /postBundleSuffix:/u);
+  assert.match(source, /certified_count="\$\{#selected_migrations\[@\]\}"/u);
+  assert.match(source, /commonForwardMigrationCount: Number\(process.env.PHASE15_COMMON_FORWARD_COUNT\)/u);
+  assert.match(source, /canonicalApplicationSchemaMatched: schemaComparisonExit === 0/u);
+  assert.doesNotMatch(source, /Expected 151 forward migrations/u);
+});
+
+test("actual shell application loop separates bundle/suffix logs and fails on suffix error", async () => {
+  const source = await readFile("scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh", "utf8");
+  const loop = source.slice(source.indexOf('all_pending=('), source.indexOf('\nfailed_migration=""\ncapture_local_snapshot'));
+  const fixture = await mkdtemp(path.join(tmpdir(), "phase15-shell-"));
+  try {
+    for (const environment of ["staging", "production"]) {
+      const plan = await buildRehearsalPlan(immutableManifest(environment));
+      for (const [bundlePending, suffixPending, failSuffix] of [[true, true, false], [false, true, false], [false, false, false], [false, true, true]]) {
+        await writeFile(path.join(fixture, "plan.json"), JSON.stringify(plan));
+        const script = `set -euo pipefail
+repo_root="$PWD"
+container="unused-stub-target"
+plan_path="$FIXTURE/plan.json"
+applied_path="$FIXTURE/applied"
+suffix_applied_path="$FIXTURE/suffix-applied"
+certified_path="$FIXTURE/certified"
+failure_path="$FIXTURE/failure.json"
+: > "$applied_path"
+: > "$suffix_applied_path"
+rm -f "$failure_path"
+mapfile -t selected_migrations < <(jq -r '.bundle.migrations[].filename' "$plan_path")
+pending_migrations=()
+pending_suffix=()
+if test "$BUNDLE_PENDING" = true; then pending_migrations=("\${selected_migrations[@]}"); fi
+if test "$SUFFIX_PENDING" = true; then mapfile -t pending_suffix < <(jq -r '.suffix.migrations[].filename' "$plan_path"); fi
+docker() {
+  cat > /dev/null
+  if test "$FAIL_SUFFIX" = true && [[ "$failed_migration" == 20260921044500_* ]]; then return 1; fi
+}
+${loop}
+test "$certified_count" -eq "\${#selected_migrations[@]}"
+test "$suffix_certified_count" -eq 1
+`;
+        const execute = () => execFileSync("bash", ["-c", script], { encoding: "utf8", env: {
+          ...process.env, FIXTURE: fixture, PHASE15_ENVIRONMENT: environment,
+          BUNDLE_PENDING: String(bundlePending), SUFFIX_PENDING: String(suffixPending), FAIL_SUFFIX: String(failSuffix),
+        } });
+        if (failSuffix) {
+          assert.throws(execute);
+          const failure = JSON.parse(await readFile(path.join(fixture, "failure.json"), "utf8"));
+          assert.equal(failure.failedMigration, NONCE_SUFFIX.filename);
+          assert.equal(failure.errorClass, "MIGRATION_APPLICATION_FAILED");
+        } else execute();
+        const lines = async (name) => (await readFile(path.join(fixture, name), "utf8")).split("\n").filter(Boolean);
+        assert.equal((await lines("applied")).length, bundlePending ? plan.bundle.migrationCount : 0);
+        assert.deepEqual(await lines("suffix-applied"), suffixPending && !failSuffix ? [NONCE_SUFFIX.filename] : []);
+      }
+    }
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
 
 test("outer transaction normalization preserves comments and procedural BEGIN blocks", () => {
   const source = `-- retained\nbegin;\ncreate function public.sample() returns void language plpgsql as $$\nbegin\n  null;\nend;\n$$;\ncommit;`;
