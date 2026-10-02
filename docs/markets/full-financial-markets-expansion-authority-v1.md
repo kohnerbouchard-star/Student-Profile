@@ -97,7 +97,8 @@ Chat 1 remains the sole merge authority. This PR must remain draft until control
 ## Bounded continuation registration — 2026-10-02
 
 **Implementation lead:** dot's Econovaria Markets continuation, which accepts accountability.
-**Product-policy decisions:** the user. **Scope, independent review, merge and release control:**
+**Product-policy decisions and explicit release authorization:** the user.
+**Scope, independent review, merge and reviewed release execution coordination:**
 the parent coordinator of the user-authorized Econovaria continuation.
 **Allocation:** accepted by the coordinator for registration review; this documentation
 handoff awaits independent parent review and merge. **Delivery state:** all six
@@ -131,7 +132,7 @@ owns the requirement, evidence and explicit remaining gaps for every row.
 | EXP-MKT-013 | EXP-MKT-012; funding and controller integration gates | Funded purchase/allocation and holdings; M14–M16; [order execution](full-financial-markets-migration-integration-design-v1.md#62-order-execution) | Atomic game-scoped funding/allocation/holding effects; concurrency, insufficient-funds, replay/conflict and rollback proof. |
 | EXP-MKT-014 | EXP-MKT-013; payment/redemption/failure policy and affected recovery defect resolution | Scheduled payments, principal redemption where applicable, failure/default/recovery; M06, M13, M16; [scheduled processing](full-financial-markets-migration-integration-design-v1.md#63-valuation-and-scheduled-processing) | Funded authoritative lifecycle, exact payment/redemption idempotency, precision, failure and rollback evidence; no duplicated liability or unfunded payout. |
 | EXP-MKT-015 | EXP-MKT-014; approved shared API/capability coordination | Actual public consumers, receipts/history and UI freshness; M17; [read projections](full-financial-markets-migration-integration-design-v1.md#64-read-projections), [Player resources](full-financial-markets-migration-integration-design-v1.md#13-player-resource-plan) | Registered real consumers, minimal named/type-only seam where needed, privacy/auth boundaries, authoritative history and refresh/remount evidence. |
-| EXP-MKT-016 | EXP-MKT-015; complete predecessor evidence and separate release authorization | Complete lifecycle qualification and controlled release; M18; [RLS/grants](full-financial-markets-migration-integration-design-v1.md#7-rls-and-grants-design), [staging](full-financial-markets-migration-integration-design-v1.md#16-isolated-staging-plan), [acceptance](full-financial-markets-migration-integration-design-v1.md#19-acceptance-evidence-required-after-hold-release) | Full numerical/security/backend and authenticated lifecycle evidence at exact source/artifact identities, staging and rollback acceptance, then separately authorized release. A preview or source merge is insufficient. |
+| EXP-MKT-016 | EXP-MKT-015; complete predecessor evidence and separate explicit user release authorization | Complete lifecycle qualification and controlled release; M18; [RLS/grants](full-financial-markets-migration-integration-design-v1.md#7-rls-and-grants-design), [staging](full-financial-markets-migration-integration-design-v1.md#16-isolated-staging-plan), [acceptance](full-financial-markets-migration-integration-design-v1.md#19-acceptance-evidence-required-after-hold-release) | Full numerical/security/backend and authenticated lifecycle evidence at exact source/artifact identities, staging and rollback acceptance, then separately authorized release. A preview or source merge is insufficient. |
 
 ### Decisions and controls retained before implementation
 
@@ -145,7 +146,8 @@ owns the requirement, evidence and explicit remaining gaps for every row.
 - Stocks/Markets holding and settlement responsibilities must be reconciled with
   canonical Banking/Economy atomic money writes; no second ledger or economic authority.
 - Exact-source staging, authenticated lifecycle, rollback and release evidence remain
-  mandatory before activation; the parent retains separate release authorization.
+  mandatory before activation. Release requires separate explicit user authorization;
+  the parent coordinates reviewed execution.
   Existing hold/approval controls are unchanged. No capture, dispatch or live action
   is authorized by this registration.
 
