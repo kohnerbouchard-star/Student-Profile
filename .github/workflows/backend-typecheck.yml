@@ -10,6 +10,9 @@ on:
       - "auth/**"
       - "frontend/src/**"
       - "player-terminal/tests/inventory-read-model.mjs"
+      - "player-terminal/src/api/resource-freshness-coordinator.js"
+      - "player-terminal/src/api/player-api.js"
+      - "player-terminal/tests/read-invalidation-ordering.mjs"
       - ".github/workflows/backend-typecheck.yml"
   push:
     branches:

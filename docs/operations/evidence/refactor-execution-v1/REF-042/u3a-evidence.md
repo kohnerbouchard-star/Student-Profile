@@ -10,7 +10,7 @@ Scope: `player-terminal/src/api/resource-freshness-coordinator.js`,
 this evidence and one allocated exact-PR authority. Generated architecture inventory
 is separately declared (sourceFiles 1270→1271; all boundary measures unchanged).
 No app/action/realtime composition, resource-list, CSS, main.js, backend, package,
-workflow, U1, REF044, global ledger or CampusPay changes. Existing #624 handoff
+workflow-body, U1, REF044, global ledger or CampusPay changes. Existing #624 handoff
 remains only the accepted freshness workaround; no donor source was imported.
 
 Before edits, both existing characterize.mjs commands passed on unchanged base
@@ -61,4 +61,9 @@ resolution. Secret scan and whitespace checks pass; no baseline assertion weaken
 
 Draft [PR825](https://github.com/kohnerbouchard-star/Student-Profile/pull/825), source
 `9fc51d79b6c4dff4a8f923f99ffec2fd4d4c5bc2`; PR-bound authority added separately.
-Six changed paths including generated inventory. No existing assertions removed.
+Seven changed paths including generated inventory. No existing assertions removed.
+
+Parent authorized the additional backend-typecheck.yml PR-filter scope to close
+mandatory full backend qualification: three exact candidate paths only; existing
+push filter/jobs/permissions/assertions unchanged. Live #620 owns only two artifact
+version hunks there; those stay untouched. Updated head requires review/full CI.
