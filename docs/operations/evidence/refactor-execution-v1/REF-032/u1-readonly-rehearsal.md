@@ -38,3 +38,7 @@ Docker env-file route with SCRAM-authenticated disposable PostgreSQL, percent-en
 password/database fields, and an ephemeral 0600 PGPASSFILE. Passwords stay off argv
 and out of the env-file; target/TLS/newline failures and ignored URI overrides are
 covered. Container fixture client is PostgreSQL 17.11, not the full hosted image.
+The converter additionally requires canonical ASCII DNS labels before revalidating
+Supabase project binding; encoded socket/multihost/separator/whitespace hosts fail
+before credential output. Fixture PGHOSTADDR maps the valid DNS identity only to
+local loopback for native and Docker transport tests; the workflow never sets it.

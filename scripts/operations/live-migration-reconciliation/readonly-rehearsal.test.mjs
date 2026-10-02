@@ -36,13 +36,14 @@ test('shared snapshot survives concurrent DDL/ledger changes and fails on export
   const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, PGHOST: temp,
     PGPORT: '5432', PGDATABASE: 'postgres', PGUSER: process.env.USER,
     PGPASSWORD: 'disposable:pass\\word%42',
+    PHASE15_EXPECTED_PROJECT_REF: 'eecvbssdvarfcykcfrny',
     PHASE15_VERSIONS: '20260921044500' };
   const run = (name, args, extra = {}) => execFileSync(path.join(bin, name), args, { env, ...extra });
   const sql = (query) => run('psql', ['-XqAt', '-v', 'ON_ERROR_STOP=1', '-c', query], { encoding: 'utf8' });
   try {
     writeFileSync(`${temp}/password`, env.PGPASSWORD, { mode: 0o600 });
     run('initdb', ['-D', `${temp}/db`, '-A', 'scram-sha-256', '--pwfile', `${temp}/password`, '--no-locale']);
-    run('pg_ctl', ['-D', `${temp}/db`, '-l', `${temp}/server.log`, '-o', `-k ${temp} -p 5432 -h ''`, '-w', 'start']);
+    run('pg_ctl', ['-D', `${temp}/db`, '-l', `${temp}/server.log`, '-o', `-k ${temp} -p 5432 -h 127.0.0.1`, '-w', 'start']);
     sql("create schema private; create schema economy_private; create schema supabase_migrations; create table public.before_snapshot(id int); create table supabase_migrations.schema_migrations(version text,name text,statements text[]); insert into supabase_migrations.schema_migrations values ('20260921044500','before',array['select 1;']);");
     const uriFailure = spawnSync(path.join(bin, 'psql'), ['-XqAt', '-c', 'select 1'], {
       env: { ...env, PGDATABASE: `postgresql://${env.PGUSER}:disposable-only@localhost:5432/postgres` }, encoding: 'utf8',
@@ -51,7 +52,12 @@ test('shared snapshot survives concurrent DDL/ledger changes and fails on export
     assert.match(uriFailure.stderr, /database .*postgresql:.* does not exist/);
     mkdirSync(`${temp}/u1`);
     const converter = workflow.match(/node --input-type=module - <<'NODE'[^\n]*\n([\s\S]*?)          NODE/)[1];
-    const uri = `postgresql://${encodeURIComponent(env.PGUSER)}:${encodeURIComponent(env.PGPASSWORD)}@${encodeURIComponent(temp)}:5432/%70ostgres?host=invalid&options=unsafe`;
+    const uri = `postgresql://${encodeURIComponent(env.PGUSER)}:${encodeURIComponent(env.PGPASSWORD)}@db.eecvbssdvarfcykcfrny.supabase.co:5432/%70ostgres?host=invalid&options=unsafe`;
+    const pooler = execFileSync(process.execPath, ['--input-type=module', '-'], {
+      input: converter, env: { ...env, RUNNER_TEMP: temp, PHASE15_REMOTE_DATABASE_URL:
+        'postgresql://postgres.eecvbssdvarfcykcfrny:encoded%3Apassword@aws-0-region.pooler.supabase.com:5432/postgres' }, encoding: 'utf8',
+    });
+    assert.match(pooler, /PGHOST=aws-0-region.pooler.supabase.com/);
     const converted = execFileSync(process.execPath, ['--input-type=module', '-'], {
       input: converter, env: { ...env, RUNNER_TEMP: temp, PHASE15_REMOTE_DATABASE_URL: uri }, encoding: 'utf8',
     });
@@ -61,7 +67,9 @@ test('shared snapshot survives concurrent DDL/ledger changes and fails on export
       return [line.slice(0, split), line.slice(split + 1)];
     })) };
     delete captureEnv.PGPASSWORD;
-    assert.equal(captureEnv.PGHOST, temp);
+    assert.equal(captureEnv.PGHOST, 'db.eecvbssdvarfcykcfrny.supabase.co');
+    // Test-only routing keeps this valid DNS identity on our local SCRAM server.
+    captureEnv.PGHOSTADDR = '127.0.0.1';
     assert.equal(captureEnv.PGDATABASE, 'postgres');
     assert.equal(converted.includes(env.PGPASSWORD), false);
     assert.equal(statSync(captureEnv.PGPASSFILE).mode & 0o777, 0o600);
@@ -70,10 +78,20 @@ test('shared snapshot survives concurrent DDL/ledger changes and fails on export
       'postgresql://user:fixture@db.eecvbssdvarfcykcfrny.supabase.co/postgres?sslmode=disable']) {
       assert.throws(() => validateDatabaseUrlProjectRef({ ...binding, databaseUrl }));
     }
-    const invalid = spawnSync(process.execPath, ['--input-type=module', '-'], {
-      input: converter, env: { ...env, RUNNER_TEMP: temp, PHASE15_REMOTE_DATABASE_URL: uri.replace('%70ostgres', '%0Apostgres') }, encoding: 'utf8',
-    });
-    assert.notEqual(invalid.status, 0);
+    for (const host of ['%2Ftmp%2Ffake.pooler.supabase.com', 'db.eecvbssdvarfcykcfrny.supabase.co,evil',
+      'fake%5Cname.pooler.supabase.com', 'fake%20name.pooler.supabase.com',
+      'fake%0Aname.pooler.supabase.com', 'fake name.pooler.supabase.com', 'wrong.invalid']) {
+      rmSync(`${temp}/u1/connection.pgpass`);
+      const invalid = spawnSync(process.execPath, ['--input-type=module', '-'], {
+        input: converter, env: { ...env, RUNNER_TEMP: temp,
+          PHASE15_REMOTE_DATABASE_URL: `postgresql://postgres.eecvbssdvarfcykcfrny:fixture@${host}/postgres` }, encoding: 'utf8',
+      });
+      assert.notEqual(invalid.status, 0);
+      assert.equal(existsSync(`${temp}/u1/connection.pgpass`), false);
+      execFileSync(process.execPath, ['--input-type=module', '-'], {
+        input: converter, env: { ...env, RUNNER_TEMP: temp, PHASE15_REMOTE_DATABASE_URL: uri },
+      });
+    }
     mkdirSync(`${temp}/shim`);
     const wrapper = (query) => writeFileSync(`${temp}/shim/pg_dump`, `#!/bin/bash\nset -eu\nPGOPTIONS= PGAPPNAME=fixture-writer '${bin}/psql' -XqAt -v ON_ERROR_STOP=1 -c "${query}" >/dev/null\nexec '${bin}/pg_dump' "$@"\n`, { mode: 0o700 });
     const capture = (dir) => spawnSync('bash', [helper, `${temp}/${dir}`], {
@@ -90,9 +108,9 @@ test('shared snapshot survives concurrent DDL/ledger changes and fails on export
     assert.equal(sql("select count(*) from pg_stat_activity where application_name='ref032-readonly-capture'").trim(), '0');
     if (process.env.REF032_CAPTURE_IMAGE) {
       writeFileSync(`${temp}/connection.env`, converted, { mode: 0o600 });
-      execFileSync('docker', ['run', '--rm', '--network=none', '--entrypoint', '/bin/bash',
+      execFileSync('docker', ['run', '--rm', '--network=host', '--entrypoint', '/bin/bash',
         '--env-file', `${temp}/connection.env`, '-e', `PHASE15_VERSIONS=${env.PHASE15_VERSIONS}`,
-        '-e', 'PATH=/bin', '-v', `${temp}:${temp}`, '-v', `${process.cwd()}:/repo:ro`,
+        '-e', 'PATH=/bin', '-e', 'PGHOSTADDR=127.0.0.1', '-v', `${temp}:${temp}`, '-v', `${process.cwd()}:/repo:ro`,
         process.env.REF032_CAPTURE_IMAGE, `/repo/${root}/capture-rehearsal-snapshot.sh`, `${temp}/container`]);
       execFileSync('docker', ['run', '--rm', '--entrypoint', '/bin/chown', '-v', `${temp}:${temp}`,
         process.env.REF032_CAPTURE_IMAGE, '-R', `${process.getuid()}:${process.getgid()}`, `${temp}/container`]);

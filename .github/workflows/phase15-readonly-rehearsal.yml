@@ -85,9 +85,15 @@ jobs:
           node scripts/release-integrity/cli.mjs validate-db-url --url-env PHASE15_REMOTE_DATABASE_URL --expected-project-ref "$PHASE15_EXPECTED_PROJECT_REF"
           node --input-type=module - <<'NODE' > "$RUNNER_TEMP/u1/connection.env"
           import { writeFileSync } from 'node:fs';
+          import { validateDatabaseUrlProjectRef } from './scripts/release-integrity/database-binding.mjs';
+          if (/[\u0000-\u0020\u007f\\]/.test(process.env.PHASE15_REMOTE_DATABASE_URL)) throw new Error('Invalid connection authority');
           const url = new URL(process.env.PHASE15_REMOTE_DATABASE_URL);
+          const host = url.hostname.toLowerCase();
+          const dnsLabel = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+          if (host.length > 253 || !host.split('.').every(label => dnsLabel.test(label))) throw new Error('DNS hostname required');
+          validateDatabaseUrlProjectRef({ databaseUrl: url.href, expectedProjectRef: process.env.PHASE15_EXPECTED_PROJECT_REF });
           if (url.port && url.port !== '5432') throw new Error('Direct/session port required');
-          const fields = [decodeURIComponent(url.hostname), url.port || '5432', decodeURIComponent(url.pathname.slice(1)) || 'postgres', decodeURIComponent(url.username), decodeURIComponent(url.password)];
+          const fields = [host, url.port || '5432', decodeURIComponent(url.pathname.slice(1)) || 'postgres', decodeURIComponent(url.username), decodeURIComponent(url.password)];
           if (fields.some(value => /[\r\n\0]/.test(value))) throw new Error('Invalid connection field');
           const passwordFile = `${process.env.RUNNER_TEMP}/u1/connection.pgpass`;
           const escaped = fields.map(value => value.replace(/\\/g, '\\\\').replace(/:/g, '\\:'));
