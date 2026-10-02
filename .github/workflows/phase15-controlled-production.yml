@@ -15,10 +15,14 @@ on:
       - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts"
       - "backend/src/domains/world/services/playerWorldRuntimeService.ts"
       - "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
-  workflow_run:
-    workflows: ["Phase 15 Controlled Staging Convergence"]
-    types: [completed]
+  # U1 hold: no automatic staging-completion subscription.
+  push:
     branches: [main]
+    paths:
+      - ".github/workflows/database-replay.yml"
+      - ".github/workflows/phase15-controlled-staging.yml"
+      - ".github/workflows/phase15-controlled-production.yml"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
 
 permissions:
   contents: read
@@ -43,6 +47,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
+      - name: Report U1 qualification hold
+        shell: bash
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'HOLD'
+          U1 qualification hold is active. Static/disposable checks do not certify a release.
+          - certify-staging: NOT_RUN — owner-approved U1 hold.
+          - converge-production-database: NOT_RUN — owner-approved U1 hold.
+          - converge-production-runtime: NOT_RUN — owner-approved U1 hold.
+          - publish-production-release: NOT_RUN — owner-approved U1 hold.
+          Restoration requires separate owner approval; no automatic expiry or bypass.
+          HOLD
       - name: Check out exact candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -70,11 +85,10 @@ jobs:
 
   certify-staging:
     name: Certify exact populated staging authority
+    # U1 qualification hold; separate owner approval is required for restoration.
     if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main'
+      false &&
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     needs: static-contract
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -439,11 +453,10 @@ jobs:
 
   converge-production-database:
     name: Recovery-gate and converge populated production database
+    # U1 qualification hold; separate owner approval is required for restoration.
     if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main'
+      false &&
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     needs: certify-staging
     runs-on: ubuntu-24.04
     timeout-minutes: 150
@@ -1138,11 +1151,10 @@ jobs:
 
   converge-production-runtime:
     name: Deploy and attest exact production Edge runtime
+    # U1 qualification hold; separate owner approval is required for restoration.
     if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main'
+      false &&
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     needs: [certify-staging, converge-production-database]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -1275,11 +1287,10 @@ jobs:
 
   publish-production-release:
     name: Fast-forward and verify the canonical production release
+    # U1 qualification hold; separate owner approval is required for restoration.
     if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main'
+      false &&
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     needs: [certify-staging, converge-production-runtime]
     runs-on: ubuntu-24.04
     timeout-minutes: 35

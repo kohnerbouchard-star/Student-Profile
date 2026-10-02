@@ -63,6 +63,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
+      - name: Report U1 qualification hold
+        shell: bash
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'HOLD'
+          U1 qualification hold is active. Static/disposable checks do not certify a release.
+          - certify-source: NOT_RUN — owner-approved U1 hold.
+          - converge-staging-database: NOT_RUN — owner-approved U1 hold.
+          - converge-staging-runtime: NOT_RUN — owner-approved U1 hold.
+          - exercise-staging: NOT_RUN — owner-approved U1 hold.
+          Restoration requires separate owner approval; no automatic expiry or bypass.
+          HOLD
       - name: Check out exact candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -91,7 +102,10 @@ jobs:
 
   certify-source:
     name: Require exact-main replay and both live-shaped certificates
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # U1 qualification hold; separate owner approval is required for restoration.
+    if: >-
+      false &&
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: static-contract
     runs-on: ubuntu-24.04
     timeout-minutes: 110
@@ -229,7 +243,10 @@ jobs:
 
   converge-staging-database:
     name: Rehearse and converge populated staging database
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # U1 qualification hold; separate owner approval is required for restoration.
+    if: >-
+      false &&
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: certify-source
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -342,7 +359,10 @@ jobs:
 
   converge-staging-runtime:
     name: Deploy and attest current staging Edge runtime
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # U1 qualification hold; separate owner approval is required for restoration.
+    if: >-
+      false &&
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: converge-staging-database
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -453,7 +473,10 @@ jobs:
 
   exercise-staging:
     name: Exercise real staging browser lifecycle and isolation
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # U1 qualification hold; separate owner approval is required for restoration.
+    if: >-
+      false &&
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: converge-staging-runtime
     runs-on: ubuntu-24.04
     timeout-minutes: 45
