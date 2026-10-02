@@ -13,6 +13,8 @@ on:
       - "player-terminal/src/api/resource-freshness-coordinator.js"
       - "player-terminal/src/api/player-api.js"
       - "player-terminal/tests/read-invalidation-ordering.mjs"
+      - "player-terminal/src/app.js"
+      - "player-terminal/tests/browser/player-route-refresh.spec.mjs"
       - ".github/workflows/backend-typecheck.yml"
   push:
     branches:
