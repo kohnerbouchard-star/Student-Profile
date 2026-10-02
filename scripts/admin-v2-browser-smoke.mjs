@@ -557,17 +557,60 @@ async function verifyDialogFocusLifecycle(page) {
   assert.equal(await opener.evaluate((element) => document.activeElement === element), true, "Dialog did not restore opener focus");
 }
 
-async function verifyWorldPlannedBoundary(page) {
+async function verifyWorldMigratedBoundary(page, fixture, runId) {
+  const initialUrl = new URL(page.url());
+  const worldPath = `/games/${ADMIN_V2_FIXTURE_GAME_ID}/world/`;
+  const resources = ["campaign", "campaign/history?limit=100", "campaign/effects?status=all&limit=100",
+    "arrival-classes?limit=100", "geography", "travel?limit=100", "residency?limit=100"];
+  const browserReads = [];
+  const recordWorldRequest = (request) => {
+    if (new URL(request.url()).pathname.includes("/world/")) browserReads.push(request);
+  };
+  page.on("request", recordWorldRequest);
+  const responses = Promise.all(resources.map((resource) => page.waitForResponse(
+    `${fixture.origin}/functions/v1/web-session-api/proxy${worldPath}${resource}`,
+  )));
   await page.locator('.admin-navigation__link[data-route="world-management"]').click();
   await page.locator('.admin-navigation__link[data-route="world-management"][aria-current="page"]')
     .waitFor({ state: "attached" });
-  const boundary = page.locator('.admin-route-boundary[data-route="world-management"][data-mode="planned"]');
-  await boundary
-    .waitFor({ state: "visible" });
+  for (const response of await responses) assert.equal(response.status(), 200, `World read failed: ${response.url()}`);
+  page.off("request", recordWorldRequest);
+  assert.deepEqual(browserReads.map((request) => request.url()).sort(), resources.map((resource) =>
+    `${fixture.origin}/functions/v1/web-session-api/proxy${worldPath}${resource}`).sort(), "World bypassed the same-origin BFF");
+  for (const request of browserReads) assert.equal(request.method(), "GET", "World attempted a browser mutation");
+  const world = page.locator('.admin-world-route[data-admin-v2-state="ready"]');
+  await world.waitFor({ state: "visible" });
   assert.match(page.url(), /\/admin\/v2\.html\?/i, "World Management bypassed the explicit v2 boundary");
-  assert.match(await boundary.innerText(), /World Management is planned for Admin v2/i);
-  assert.match(await boundary.innerText(), /No unrelated legacy page will be opened/i);
-  assert.equal(await boundary.getByRole("link").count(), 0, "World Management exposed a legacy destination");
+  const currentUrl = new URL(page.url());
+  assert.equal(currentUrl.origin, initialUrl.origin);
+  assert.equal(currentUrl.pathname, initialUrl.pathname);
+  assert.equal(currentUrl.search, initialUrl.search, "World navigation changed the selected game");
+  assert.equal(currentUrl.hash, "#world-management");
+  await page.getByRole("heading", { name: "World Management", exact: true }).waitFor({ state: "visible" });
+  assert.equal(await page.locator('.admin-route-boundary[data-route="world-management"][data-mode="planned"], .admin-route-boundary[data-route="world-management"][data-mode="legacy"]').count(), 0);
+  assert.equal(await page.getByRole("link", { name: "Open existing Admin", exact: true }).count(), 0);
+  assert.equal(await world.locator('.admin-world-route__partial-error').count(), 0, "World hid failed panels behind ready state");
+  const facts = await world.locator('#world-configuration .admin-world-route__facts > div').allTextContents();
+  assert.ok(facts.some((text) => /Pack\s*admin-world-browser-fixture/.test(text)), "World omitted fixture pack");
+  assert.ok(facts.some((text) => /World revision\s*19$/.test(text.trim())), "World omitted fixture revision");
+  const sections = [["Configuration", "world-configuration"], ["Campaign", "world-campaign"],
+    ["Effects", "world-effects"], ["Geography", "world-geography"], ["Travel & residency", "world-travel"]];
+  const links = world.getByRole("navigation", { name: "World Management sections" }).getByRole("link");
+  assert.deepEqual(await links.evaluateAll((nodes) => nodes.map((node) => [node.textContent.trim(), node.getAttribute("href")])),
+    sections.map(([label, id]) => [label, `#${id}`]));
+  for (const [, id] of sections) assert.equal(await world.locator(`[id="${id}"]`).count(), 1);
+  assert.equal(await world.getByRole("link").count(), sections.length, "World exposed a non-section destination");
+  const reads = fixture.requestsFor(runId).filter((request) => request.pathname.includes("/world/"));
+  assert.deepEqual(reads.map((request) => request.pathname + request.search).sort(),
+    resources.map((resource) => worldPath + resource).sort(), "World did not make exactly seven scoped reads");
+  for (const request of reads) {
+    assert.equal(request.method, "GET", "World navigation attempted a mutation");
+    assert.equal(request.gameId, ADMIN_V2_FIXTURE_GAME_ID);
+    assert.equal(request.apikey, "sb_publishable_admin_v2_browser_fixture");
+    assert.equal(request.deviceId, DEVICE_ID);
+    assert.equal(request.authorization, "");
+  }
+  await assertNoRawBackendDetails(page, "World migrated boundary");
   const group = page.locator('.admin-navigation__link[data-route="world-management"]')
     .locator("xpath=ancestor::section[contains(@class, 'admin-navigation__group')]");
   assert.equal(
@@ -937,7 +980,7 @@ try {
       await assertMeaningfulOverview(runtime.page, "direct reload 1280x720");
       await verifyNavigationKeyboardAndCollapsedLabels(runtime.page);
       await verifyDialogFocusLifecycle(runtime.page);
-      await verifyWorldPlannedBoundary(runtime.page);
+      await verifyWorldMigratedBoundary(runtime.page, fixture, runtime.runId);
       await assertNoDocumentHorizontalOverflow(runtime.page, "keyboard and dialog lifecycle");
       await assertNoRuntimeErrors(runtime, "keyboard and dialog lifecycle");
       checks.push({ scenario: "direct-reload-keyboard-dialog-legacy-boundary", viewport: "1280x720", status: "passed" });

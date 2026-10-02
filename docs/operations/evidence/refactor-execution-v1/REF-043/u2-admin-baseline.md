@@ -1,7 +1,7 @@
 # U2 — Admin navigation baseline repair
 
-Status: BLOCKED on the existing World browser contract; REF-043 remains BLOCKED
-and REF-044 remains gated.
+Status: IN_PROGRESS on the approved World browser-contract amendment;
+REF-043 remains BLOCKED and REF-044 remains gated pending full qualification.
 Repository qualification only. Parent retains merge authority.
 
 ## Scope and ownership
@@ -100,3 +100,38 @@ beside its wrapped label. Added flex-shrink:0 to its existing selector to retain
 the badge's intrinsic width; this follow-up requires fresh exact-head evidence.
 Candidate local root npm test, Admin 86/86, Banking 38/38, economic writes 2/2,
 architecture/high-priority/legacy/interaction audits, secrets and syntax pass.
+
+## Approved World test-contract amendment
+
+After independent read-only review, the parent expanded the path lock only to
+scripts/admin-v2-browser-fixture-server.mjs and scripts/admin-v2-browser-smoke.mjs.
+All protected owner heads were rechecked unchanged; neither added path collides.
+Merged #513, e59c39c04523f81c79aab976e2404fbadc4b48b0, accepted World as V2;
+promotion 7cca54e4033ef13768611c39a5850fb9998077ce and current unit contracts
+confirm that disposition. The old browser verifier and fixture were not updated
+by that merge. Current-head artifact 11202062265 from run 36946144938 confirms
+seven layout passes followed by the planned-selector timeout and seven fixture
+404s; it is failed evidence, not full browser acceptance.
+
+The fixture now serves seven exact World GET/query shapes using responseEnvelope.
+A minimal runtime supplies Pack admin-world-browser-fixture and revision 19;
+other panels contain contract-valid empty data. Unknown query/method/game/path
+requests retain rejection. The replacement verifies seven successful responses,
+exact same-origin BFF URLs, GET-only behavior, selected-game/publishable-key/device
+headers and no bearer authorization, plus READY without partial-panel errors.
+It verifies the fixture Pack/revision, active World navigation, unchanged V2
+document/game, World grouping, no planned/legacy boundary or legacy handoff,
+and all five local anchor labels, hrefs and unique targets. Existing layout,
+keyboard/focus, privacy, runtime-error, planned/legacy-route loops and debt
+accounting remain intact. There are no product-route or mutation changes.
+
+The section-anchor hashes may route to Overview under the existing hash router.
+This is source-supported only, not runtime verified. This amendment checks their
+structure, does not click them, does not fix routing and makes no click-success
+claim. That separate behavior must not be disguised as part of this test repair.
+
+Local validation: seven exact read responses and five negative method/query/
+path/game probes passed; Admin 86/86 and both script syntax checks passed.
+New fixture/browser delta is below 160 meaningful changed lines; total source/
+workflow/test delta is below 200. Ownership JSON and this evidence are reported
+separately. Full exact-head browser and subsequent connected CI remain required.

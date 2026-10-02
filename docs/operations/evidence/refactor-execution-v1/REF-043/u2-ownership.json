@@ -204,7 +204,10 @@
     "admin/v2/styles/components.css",
     ".github/workflows/admin-browser-e2e.yml",
     "docs/operations/evidence/refactor-execution-v1/REF-043/u2-admin-baseline.md",
-    "docs/operations/evidence/refactor-execution-v1/REF-043/u2-ownership.json"
+    "docs/operations/evidence/refactor-execution-v1/REF-043/u2-ownership.json",
+    "scripts/admin-v2-browser-fixture-server.mjs",
+    "scripts/admin-v2-browser-smoke.mjs"
   ],
-  "approval": "Parent explicitly accepted the four-path U2 scope and handed off only PR810 Admin browser qualification wiring. Banking source remains with PR810; parent retains merge authority."
+  "approval": "Parent explicitly accepted the four-path U2 scope and handed off only PR810 Admin browser qualification wiring. Banking source remains with PR810; parent retains merge authority.",
+  "worldTestAmendment": "Parent explicitly accepted the independently reviewed two-path World fixture/test reconciliation in PR817. Seven exact GETs, BFF/session/game/header and no-mutation guarantees, migrated ready surface, Pack/revision and structural section anchors. No product route or PR810 change. New source/test limit 160 lines; total source/workflow/test target 200. Protected PR heads were rechecked unchanged before editing; neither added path collides."
 }
