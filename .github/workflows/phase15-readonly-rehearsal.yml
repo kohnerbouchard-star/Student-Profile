@@ -84,18 +84,24 @@ jobs:
           openssl x509 -in scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt -noout -checkend 2592000
           node scripts/release-integrity/cli.mjs validate-db-url --url-env PHASE15_REMOTE_DATABASE_URL --expected-project-ref "$PHASE15_EXPECTED_PROJECT_REF"
           node --input-type=module - <<'NODE' > "$RUNNER_TEMP/u1/connection.env"
+          import { writeFileSync } from 'node:fs';
           const url = new URL(process.env.PHASE15_REMOTE_DATABASE_URL);
           if (url.port && url.port !== '5432') throw new Error('Direct/session port required');
-          url.search = '';
-          console.log(`PGDATABASE=${url.href}`);
+          const fields = [decodeURIComponent(url.hostname), url.port || '5432', decodeURIComponent(url.pathname.slice(1)) || 'postgres', decodeURIComponent(url.username), decodeURIComponent(url.password)];
+          if (fields.some(value => /[\r\n\0]/.test(value))) throw new Error('Invalid connection field');
+          const passwordFile = `${process.env.RUNNER_TEMP}/u1/connection.pgpass`;
+          const escaped = fields.map(value => value.replace(/\\/g, '\\\\').replace(/:/g, '\\:'));
+          writeFileSync(passwordFile, `${escaped.join(':')}\n`, { mode: 0o600 });
+          ['PGHOST', 'PGPORT', 'PGDATABASE', 'PGUSER'].forEach((key, i) => console.log(`${key}=${fields[i]}`));
+          console.log(`PGPASSFILE=${passwordFile}`);
           NODE
           export PHASE15_VERSIONS="$(jq -r '.bundle.migrations[].version, .suffix.migrations[].version' "$RUNNER_TEMP/u1/plan.json" | paste -sd, -)"
           docker run --pull=never --rm --entrypoint bash --env-file "$RUNNER_TEMP/u1/connection.env" \
             -e PHASE15_VERSIONS -e PGSSLMODE=verify-full \
             -e PGSSLROOTCERT=/repo/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt \
-            -v "$PWD:/repo:ro" -v "$RUNNER_TEMP/u1:/capture" "$IMAGE" \
-            /repo/scripts/operations/live-migration-reconciliation/capture-rehearsal-snapshot.sh /capture/raw
-          rm -f "$RUNNER_TEMP/u1/connection.env"
+            -v "$PWD:/repo:ro" -v "$RUNNER_TEMP/u1:$RUNNER_TEMP/u1" "$IMAGE" \
+            /repo/scripts/operations/live-migration-reconciliation/capture-rehearsal-snapshot.sh "$PHASE15_CAPTURE_DIR"
+          rm -f "$RUNNER_TEMP/u1/connection.env" "$RUNNER_TEMP/u1/connection.pgpass"
           sudo chown -R "$(id -u):$(id -g)" "$PHASE15_CAPTURE_DIR"
       - name: Restore and rehearse locally without hosted credentials
         run: |

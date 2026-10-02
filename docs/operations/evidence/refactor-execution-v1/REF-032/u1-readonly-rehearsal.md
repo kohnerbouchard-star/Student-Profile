@@ -31,3 +31,10 @@ amd64 digest `e884cde9f5594ddb30ebec888bd236d128eaf9c9b48cc864d8fa3d27a6c6c6bc`.
 Focused contract tests also pass; exact-head outcomes are recorded in the PR.
 Hosted capture and true live-shaped results remain NOT_RUN until reviewed execution.
 REF-032 remains BLOCKED. Revert this source only; never restore held jobs as rollback.
+
+Independent review found URI-in-PGDATABASE was treated as a literal database name.
+Regression reproduces that failure, then executes the actual workflow converter and
+Docker env-file route with SCRAM-authenticated disposable PostgreSQL, percent-encoded
+password/database fields, and an ephemeral 0600 PGPASSFILE. Passwords stay off argv
+and out of the env-file; target/TLS/newline failures and ignored URI overrides are
+covered. Container fixture client is PostgreSQL 17.11, not the full hosted image.
