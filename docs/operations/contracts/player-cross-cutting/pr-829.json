@@ -15,7 +15,8 @@
     "docs/operations/contracts/player-cross-cutting/pr-829.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
-    ".github/workflows/backend-typecheck.yml"
+    ".github/workflows/backend-typecheck.yml",
+    ".github/workflows/business-player-store-fx-final-v2.yml"
   ],
   "requiredFiles": [
     "player-terminal/src/features/inventory/inventory-action-flow.js",
@@ -24,7 +25,8 @@
     "docs/operations/contracts/player-cross-cutting/pr-829.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
-    ".github/workflows/backend-typecheck.yml"
+    ".github/workflows/backend-typecheck.yml",
+    ".github/workflows/business-player-store-fx-final-v2.yml"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -49,5 +51,5 @@
     "inventory"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-042/u3b2a-evidence.md",
-  "authorizationNote": "Parent-authorized REF042b2a under merged PR828: optional inactive Inventory coordinator participation, targeted refresh and lifecycle fences, existing Node regressions and scoped metadata. Default stays uninjected until b3; REF042 remains BLOCKED. Verifier/test paths are required locks, not edit authority. Exactly two Backend Typecheck PR-filter additions; job body, push filter, permissions, pins and assertions unchanged. App/coordinator/API/realtime, main.js/CSS, package scripts, U1, capture/deployment and CampusPay protected."
+  "authorizationNote": "Parent-authorized REF042b2a under merged PR828: optional inactive Inventory coordinator participation, targeted refresh and lifecycle fences, existing Node regressions and scoped metadata. Default stays uninjected until b3; REF042 remains BLOCKED. Verifier/test paths are required locks, not edit authority. Exactly two Backend Typecheck PR-filter additions; job body, push filter, permissions, pins and assertions unchanged. App/coordinator/API/realtime, main.js/CSS, package scripts, U1, capture/deployment and CampusPay protected. Parent additionally authorizes exactly the same two b2a PR-filter entries in business-player-store-fx-final-v2.yml; all job bodies, permissions, pins and other triggers remain unchanged."
 }

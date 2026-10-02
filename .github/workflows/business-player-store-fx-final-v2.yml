@@ -24,6 +24,8 @@ on:
       - player-terminal/src/api/response-store-validator.js
       - player-terminal/src/components/modal.js
       - player-terminal/src/data/preview-data.js
+      - player-terminal/src/features/inventory/inventory-action-flow.js
+      - player-terminal/tests/inventory-redemption-connected-lifecycle.mjs
       - player-terminal/src/features/store/**
       - player-terminal/src/pages/store-page.js
       - player-terminal/tests/browser/player-store-business-offer-acceptance.spec.mjs
