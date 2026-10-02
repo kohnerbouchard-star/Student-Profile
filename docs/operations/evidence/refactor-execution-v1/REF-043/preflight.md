@@ -1,106 +1,118 @@
-# REF-043 — Banking response row selection
+# REF-043 — Banking response extraction qualification
 
-Status: IN_PROGRESS; bounded repository refactor, no deployment.
-Base: `eed2b365f2314f7b788bd658b419cf05bc42200a`. R2; REF-005 verified complete.
-Maps to ARCH-500/501. Current main fetched before editing. Live open-PR audit
-found #624 owns Player Banking pagination/CSS, not Admin Banking; #668 owns
-Staff context/backend and global ledger, not this adapter. Protected auth,
-release, Phase 15, World and dependency owners remain untouched. REF-039b
-owns Stocks separately; parent serializes generated inventory and backlog.
+Status: BLOCKED. Repository qualification only; no deployment or runtime claim.
 
-## Exact scope
+## Bounded source and parity evidence
 
-Meaningful files (eight maximum, including parent closeout/authority):
-- `admin/v2/src/routes/banking/BankingResponse.js`: one internal row reader
-- `admin/v2/src/routes/banking/BankingController.js`: two reader callers only
-- `scripts/admin-v2-banking.test.mjs`: characterization in existing imported suite
-- this record
-- `docs/roadmaps/refactor-execution-v1/tasks/REF-043.md`
-- `docs/roadmaps/refactor-execution-v1/backlog.json`: REF-043 only
-- exact-PR cross-cutting verification authority
-- `.github/workflows/admin-browser-e2e.yml`: exact existing fixture-suite step only
+Base application: `eed2b365f2314f7b788bd658b419cf05bc42200a`.
+Draft implementation [PR #810](https://github.com/kohnerbouchard-star/Student-Profile/pull/810)
+remains unmerged at `17f5499b1b296fab69f7841df86cc1d48ecbf85b`, tree
+`6a5f72654ec554ebdbdab3ea7e3ff711be39e6ab`. No source from that PR is
+accepted by this documentation-only disposition. Dependency REF-005 is complete.
 
-Generated architecture inventory is separately listed. No API client, BFF,
-auth, backend, account projection, renderer, mutation/retry, package,
-SQL or deployment change. Stop on baseline failure, API defect, ownership
-collision, privacy change, or semantic diff exceeding 400 lines.
+The draft extracts duplicated playerRows/historyRows envelope traversal from
+BankingController into one 14-line BankingResponse reader with two callers.
+Candidate order, players-before-roster within each record, first valid array
+including empty, bare-array players only, INVALID_RESPONSE, 2,000/250 limits,
+Checking/Savings, currencies, numbers, UUID redaction and freezing are preserved.
+No API, transport, auth, BFF, backend, renderer, mutation or retry change.
+Protected #624 Player Banking/CSS and #668 Staff context do not own these paths.
 
-## Characterized contract
+Fourteen Banking tests pass on unchanged source and after extraction; the
+existing Admin suite imports them. Candidate Admin tests 91/91, public Banking
+38/38 and Admin economic writes 2/2 pass. Architecture, high-priority boundaries,
+legacy runtime, interaction wiring, secrets, root npm test, backend TypeScript,
+authority tests and diff checks pass locally. Local Edge/full smoke imports and
+pinned browser downloads were blocked by the execution environment, not counted
+as passes. Diagnostic-head CI finishes with 31 successful workflows and one
+failed Admin Browser E2E workflow. This is not overall acceptance.
 
-One duplicated envelope traversal becomes one Banking-owned reader. Candidate
-order stays result, value, data, data.data, payload; only records qualify.
-Players alone accept a bare array. Within each candidate players precedes
-roster, so an earlier roster wins over later players. History accepts only
-ledgerEntries. First valid array wins even when empty; no match stays null,
-and the unchanged normalizers raise INVALID_RESPONSE. Slice-before-filter
-limits remain 2,000 players and 250 history rows. Numeric conversion, currency
-identity, Checking/Savings, safe text/UUID redaction, internal request identity,
-and frozen outputs stay in the controller. No new response contract is added.
+## Exact baseline blocker
 
-Read callers are the two exported normalizers and their controller lifecycle.
-Existing BankingApi keeps GET players/history-audit and POST ledger-adjustments,
-economy.adjust, selected game, existing aborts, mutation deduplication,
-idempotency headers and authoritative refresh. Transport diagnostics continue
-through shared error-envelope normalization unchanged. The API's stricter
-data envelope validation is deliberately not replaced by presentation fallback.
+The previously unregistered `npm run test:admin-v2:browser` was wired to an
+existing exact-head CI workflow in the draft. Pinned Chromium installed there.
+Initial run 36882836455 failed Overview navigation before any Banking journey.
+A bounded diagnostic then ran the unchanged harness against detached exact-base
+assets, followed by the candidate with its failure still enforced.
 
-## Validation plan
+[Run 36885470152](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36885470152),
+job `110447558791`, proves both fail with the same assertion:
+`ready 1440x900 route market truncates horizontally` at
+`scripts/admin-v2-browser-smoke.mjs:255` (caller line 898).
+The log confirms base checkout `eed2b365`, baseline exit 1, and candidate exit 1.
+Navigation registry, renderer, CSS and browser harness are unchanged by the draft.
 
-Add tests first, run against unchanged controller, then extract and repeat.
-Run focused Banking, Admin unit/browser, Player Banking public and Admin
-economic writes; shared architecture/high-priority/legacy/interaction/secrets,
-root tests, backend typecheck/smoke and diff checks. Use pinned Node 22.23.1,
-npm 10.9.8 and Deno 2.9.3 with existing dependencies. Fixtures are synthetic;
-local browser evidence is not staging or live runtime certification.
-Rollback is a normal revert of these source/caller/tests, preserving other work.
+[Sanitized artifact 11174828911](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36885470152/artifacts/11174828911)
+was downloaded and inspected: baseline and candidate JSON both have status
+`failed`, the identical assertion, and zero completed cases. Zero summary counts
+are not success: the first viewport failed before a completed case was recorded.
+Separate staticRoot fields identify the detached baseline and candidate assets.
 
-## Local candidate evidence
+## Stop, ownership and next action
 
-PR #810. Baseline application SHA is the base above; characterization was run
-before changing the controller. Candidate source identity is the atomic PR
-head/tree containing this record (commit cannot self-reference its own SHA).
-All results below use that source; later edits are documentation/authority only.
+REF-043 cannot be VERIFIED_COMPLETE or merged while the required baseline is
+red. Keep #810 draft, including its evidence; do not import its runtime or CI
+changes through this record. No CSS/navigation fix or assertion weakening is
+within the approved Banking extraction. The exact failing layout/test contract
+needs a separately bounded owner and guidance before correction. After that
+baseline passes, rebase the draft, rerun all exact-head gates and review parity.
+REF-044 remains gated by REF-043; REF-045 is next independently eligible
+preflight, subject to fresh ownership/dependency audit.
 
-- `node --test scripts/admin-v2-banking.test.mjs`: 14/14 before and after
-- `npm run test:admin-v2`: 91/91 candidate (89 before final lifecycle additions)
-- `npm run test:admin-economic-writes`: 2/2 before and after
-- `npm --prefix backend run test:player-banking-public`: 38/38 before and after
-- `npm run audit:architecture`: pass; deterministic inventory sourceFiles
-  1266 to 1267, all boundary/debt counts unchanged
-- high-priority boundaries (80), legacy runtime, interaction wiring, secrets,
-  complete `npm test`, and `git diff --check`: pass
-- backend TypeScript: pass; `typecheck:all` fails during Edge imports because
-  pinned esm.sh Supabase 2.108.2 connection is refused
-- Admin browser: BLOCKED before assertions, pinned Chromium v1234 missing;
-  official pinned installer repeatedly received invalid/truncated ZIPs
-- complete backend smoke: BLOCKED at game-sessions by the same refused pinned
-  esm.sh import; no skipped or weakened test was counted as a pass
+This disposition changes only this record, REF-043 task status, and REF-043 in
+the backlog. Global beta/release ownership and all other task states are retained.
 
-Measured seam: two duplicated candidate traversals become one, with exactly
-two controller call sites. BankingController drops 19 lines; the new reader
-is 14 lines. No removed defensive policy, new normalization rule or transport
-reuse claim. Existing shared error envelopes already own error adaptation.
-The focused suite remains imported by admin-v2-unit without a package change.
-No migration, route, RPC, external service or live data changed. No staging,
-production, dedicated Banking browser or connected-runtime evidence is claimed.
-Exact-PR authority is `docs/operations/contracts/player-cross-cutting/pr-810.json`.
-CI and normal merge evidence are still required before VERIFIED_COMPLETE.
+## U2 merged baseline and PR810 reconciliation — 2026-10-02
 
-## Required browser gate follow-through
+The preceding disposition is historical. Parent reviewed U2 head
+`15b9e355e81e68085cee879c4666e01c699c8f98` and merged PR817 as
+`6a85259838f86e6137e7fc81b4f2c80e6475f940`, the fetched reconciliation base.
+Run 36948739458 passed 25 Admin V2 checks, retained eight existing UUID-debt
+exceptions, and passed connected Create Game/Admin and secure ledger replay.
+Artifact 11203272313 was downloaded and its SHA256 verified as
+`6940a7b0d21a7a50ac8d363e3554bcfcaf7a3de205f431e13f19e4579818e958`.
+All 19 PR817 workflows passed; Admin Shell required one unchanged-job retry
+after a recorded modal-focus timeout. These are U2 results, not PR810 acceptance.
 
-Both official pinned Chromium and headless-shell installers failed with invalid
-ZIP downloads. The bounded scope therefore adds the eighth meaningful file:
-one Admin V2 fixture-suite step in the existing Admin Browser E2E workflow,
-after pinned browser installation. That workflow already checks out the exact
-PR head; checkout semantics, permissions, production triggers, dependency
-versions, database/connected gates and retry budgets remain unchanged. Evidence
-uses its existing sanitized artifact directory. No new workflow or package
-script is introduced, and an untriggered or skipped step is never a pass.
+Parent authorized reconciling existing draft PR810 in place, preserving its
+original reader/caller/test intent and U2 qualification. Original owner head
+`17f5499b1b296fab69f7841df86cc1d48ecbf85b` is retained as a merge parent.
+Main has no intervening Banking source/test changes. Its unchanged controller
+passes the original 14 characterization tests; its Admin suite passes 86/86.
 
-CI head `5acc1a6` failed the newly executed fixture suite at initial ready
-Overview navigation: `route market truncates horizontally` (1440x900), before
-Banking. Run 36882836455 / job 110438661078. No navigation, renderer, CSS or
-harness file differs from base. A temporary exact-base asset run now precedes
-the enforced candidate run, with separate evidence and reported baseline exit;
-it cannot suppress candidate failure. Stop for baseline layout/test debt rather
-than change CSS or weaken assertions inside Banking extraction.
+Exactly five merge conflicts were predicted and resolved: retain current main
+browser workflow and BLOCKED backlog; retain main task/evidence history and
+append this resumption; regenerate the architecture inventory. Workflow bytes
+remain identical to merged U2, including the fixed untouched 56957a92 baseline,
+required original Market-failure assertion, enforced candidate suite, artifact
+sanitization and connected gates. No obsolete PR810 workflow is restored.
+
+Editable paths remain the original nine-path PR810 scope: BankingController,
+BankingResponse, existing Banking test, generated architecture inventory,
+pr-810 authority JSON, this preflight, REF-043 task, backlog and Admin Browser
+E2E workflow. Backlog and workflow resolve identically to main. No authority
+allowlist expansion or verifier change. Protected PR624/668/690/730/731/735/736
+heads were rechecked and remain unchanged; no runtime path overlaps this seam.
+
+The original Banking controller, 14-line reader and characterization test are
+byte-identical to original PR810. Two duplicated traversals become one with two
+callers. Current inventory sourceFiles rises 1268 to 1269; all boundary counts
+remain unchanged. No API, transport, mutation, renderer, layout, migration,
+release, settings, credential or CampusPay change. Rollback is a normal bounded
+source revert preserving U2 and subsequent accepted work.
+
+Fresh candidate local checks: Banking 14/14, Admin 91/91, public Banking 38/38
+and economic writes 2/2 pass. Full Edge typecheck and backend smoke remain
+environment-blocked by pinned esm.sh imports; browser remains blocked by the
+missing pinned Chromium download. These require exact-head CI, not a waiver.
+Root npm test, architecture/high-priority/legacy/interaction/secrets checks,
+authority 16/16 and the exact seven-path authority check pass after inventory
+commit. Diff checks pass; generated browser-failure evidence is kept outside
+the source tree. Merged-main Backend and Admin Shell push checks pass in runs
+36949533156 and 36949533195; code scanning was still running at this snapshot.
+No dedicated Banking browser or production-runtime acceptance is inferred.
+
+REF-043 remains BLOCKED until fresh PR810 qualification, parent-reviewed merge
+and merged-main verification. REF-044 remains gated. Final exact-head CI and
+artifact identities belong in the existing PR810 qualification record; no
+replacement PR, U1 release-hold action or production deployment is authorized.

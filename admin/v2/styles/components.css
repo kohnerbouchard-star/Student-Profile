@@ -224,12 +224,12 @@
 
 .admin-navigation__label {
   min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .admin-navigation__badge {
+  flex-shrink: 0;
   min-inline-size: 1.35rem;
   margin-inline-start: auto;
   padding: 0.08rem 0.35rem;

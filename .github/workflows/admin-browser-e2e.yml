@@ -123,21 +123,29 @@ jobs:
           done
           exit 1
 
-      # Run the existing fixture suite on the exact head already checked out above.
+      # U2 handoff from #810: retain the unchanged suite and separate baseline evidence.
       - name: Verify Admin V2 browser states
         env:
           ADMIN_V2_EVIDENCE_DIR: /tmp/econovaria-browser/admin-v2
         shell: bash
         run: |
-          git cat-file -e eed2b365f2314f7b788bd658b419cf05bc42200a^{commit}
+          set -euo pipefail
           BASELINE="$RUNNER_TEMP/ref043-browser-baseline"
-          git worktree add --detach "$BASELINE" eed2b365f2314f7b788bd658b419cf05bc42200a
+          git worktree add --detach "$BASELINE" 56957a9265fb2890ac45417663582726103cd91e
+          trap 'git worktree remove "$BASELINE"' EXIT
           set +e
           ADMIN_V2_STATIC_ROOT="$BASELINE" ADMIN_V2_EVIDENCE_DIR=/tmp/econovaria-browser/admin-v2-baseline npm run test:admin-v2:browser
           BASELINE_EXIT=$?
           set -e
           printf 'Baseline browser exit: %s\n' "$BASELINE_EXIT"
-          git worktree remove "$BASELINE"
+          test "$BASELINE_EXIT" -ne 0
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          const baseline = JSON.parse(readFileSync("/tmp/econovaria-browser/admin-v2-baseline/admin-v2-overview-regression-results.json", "utf8"));
+          assert.equal(baseline.status, "failed");
+          assert.match(baseline.failure, /^AssertionError \[ERR_ASSERTION\]: ready 1440x900 route market truncates horizontally\n/);
+          NODE
           npm run test:admin-v2:browser
 
       - name: Build exact authorized Crafting pack

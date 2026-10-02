@@ -23,3 +23,33 @@ Preserve #668 context; #624 Player CSS; #690 Living World/DELIGHT; #730/#731 Pha
 The current closeout changes five documentation/data files only: REF-001 baseline JSON and Markdown, this intake, REF-001's task record and the backlog manifest. No application source, historical migration, SQL routine, workflow, release request, environment variable, secret, scheduler or cloud resource is changed. Root AGENTS and all security, atomicity, isolation, privacy, validation and release controls are preserved.
 
 The original publication had 50 PLANNED packages. Current individual status is in the manifest; no other task gains completion credit from REF-001. Next is REF-002, read-only route/import mapping, after REF-001's merge/verification checkpoint. Do not start it in the same run that closes REF-001. Every later code task still requires its own dependencies, bounded scope, characterization and applicable exact-source validation.
+
+## Supplemental intake — REF-UNBLOCK-001 (2026-10-02)
+
+**Status:** PLANNED. **Observed main:** `26820b10f8ad8e74ca3606b6ad48f34c1a8bf02d`.
+
+The owner requested a small roadmap add-on to resolve the remaining blockers and asked to review architectural options before decisions are made. [REF-UNBLOCK-001 — Blocker-resolution addendum](BLOCKER-RESOLUTION-ADDENDUM.md) records that request as one supplemental work item with eight bounded packages, acceptance evidence, owner coordination and four pending decisions. It does not add a 51st primary REF task.
+
+This request authorizes publication of the plan/options, not adoption of its recommendations, implementation, a merge of existing runtime/release PRs, cloud changes or production promotion. No architecture or lending/Markets/retirement policy is selected here. The existing modular-monolith baseline remains unchanged. Each package requires fresh ownership and scope acceptance; the decision-dependent packages also require the recorded owner selection.
+
+The historical REF-001 material above is preserved. The 50-task manifest, all original dependencies/statuses, global beta/context ledger and release authorities are unchanged. No downstream task is unblocked by adding this entry. Recommended first repair scopes are the release-rehearsal prerequisite for REF-032 and the Admin browser baseline for REF-043; original acceptance remains mandatory.
+
+## Owner selection update — REF-UNBLOCK-001 (2026-10-02)
+
+**Decision status:** D1-A APPROVED; D2-B APPROVED; D4-A APPROVED; D3 PENDING. **Work status:** PLANNED; this commit records choices, not runtime implementation.
+
+Kohner Bouchard explicitly instructed “Do these” for the small shared freshness coordinator, explicit personal/business borrowing, and one-responsibility-at-a-time compatibility retirement. This supersedes the supplemental intake's earlier options-only/no-implementation authorization for those three choices and authorizes their bounded implementation under the existing owner, exact-path, validation, compatibility and release controls. Do not request the same architectural choices again or substitute D1-B/C, D2-A/C or D4-B without a new owner decision.
+
+The current decision record and implementation boundaries are in [REF-UNBLOCK-001](BLOCKER-RESOLUTION-ADDENDUM.md#current-owner-decisions--2026-10-02). D3 remains unselected: the owner asked which choice produces the best long-term result. The documented recommendation is integration (B) as the destination, with retention (A) only as an explicit interim disposition. No feature activation, REF-040 outcome amendment, deferral, deletion or integration-completion claim is authorized by that question.
+
+The original 50 parent IDs, backlog statuses/dependencies and acceptance criteria remain unchanged. Existing release/context/Player ownership is preserved; no unrelated PR merge, hosted/database/credential/settings change, or deployment is newly authorized here. D3's pending decision is not a blanket pause on approved U3/U5/U7 work. Source implementation and required evidence must be recorded separately before any affected REF task closes.
+
+## Final Markets selection — REF-UNBLOCK-001 (2026-10-02)
+
+**Current decision status:** D1-A APPROVED; D2-B APPROVED; D4-A APPROVED; D3-B APPROVED as the long-term objective with D3-A APPROVED during stabilization. **Work status:** PLANNED; decisions recorded, runtime implementation not claimed. This entry supersedes the earlier pending-D3 and options-only statements above.
+
+Kohner Bouchard explicitly selected retaining and testing the isolated calculations during stabilization, followed by one complete player-facing instrument lifecycle under the existing financial-market expansion roadmap. The owner prohibited activating the entire expansion or removing the code merely to close the refactor. Do not request the same D3 selection again or substitute permanent unowned retention, wholesale activation or D3-C deletion.
+
+The [approved staged execution](BLOCKER-RESOLUTION-ADDENDUM.md#d3--approved-staged-markets-integration) defines U6a stabilization qualification and explicit interim REF-040 outcome reconciliation, followed by U6b integration under FULL_FINANCIAL_MARKETS_EXPANSION / its existing EXP-MKT milestones. Every undelivered consumer requirement must remain linked to an accountable expansion owner, prerequisites and lifecycle acceptance; actual integration is not certified by retention. Specific instrument/issuer/funding/default policies remain to be defined and reviewed, not silently selected by this approval.
+
+The original 50 primary IDs, current backlog statuses and dependency edges are unchanged by this revision. REF-040 stays BLOCKED until its approved interim scope reconciliation and fresh required evidence are accepted and merged; the strategic approval alone is not completion. Existing domain/economic, ownership, collision, migration and release controls remain. No source, tests, workflows, migrations, cloud settings, secrets, runtime activation, unrelated PR merge or deployment is performed here. All earlier intake text is retained as history.

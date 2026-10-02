@@ -655,15 +655,15 @@
       "id": "REF-039",
       "title": "Separate Stock-runner triggering from tick execution",
       "file": "tasks/REF-039.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-038"
       ],
       "risk": "R3",
       "architectureMapping": "ARCH-206/ARCH-600",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
+      "implementationSha": "e5622d3309924cd7f72f25050a5c92e3ed0f58a6",
+      "mergeSha": "500c17a45634801ebe988204fbe138d76567920f",
       "evidence": "docs/operations/evidence/refactor-execution-v1/REF-039/execution.md"
     },
     {
@@ -721,7 +721,7 @@
       "id": "REF-043",
       "title": "Converge Admin V2 Banking response and error adaptation",
       "file": "tasks/REF-043.md",
-      "status": "IN_PROGRESS",
+      "status": "BLOCKED",
       "dependsOn": [
         "REF-005"
       ],
@@ -754,16 +754,16 @@
       "id": "REF-045",
       "title": "Isolate licensing issuance from worker transport",
       "file": "tasks/REF-045.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-005"
       ],
       "risk": "R3",
       "architectureMapping": "ARCH-302/ARCH-600",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "c167172119d8e0403d390762f541ebbbb2cbcb07",
+      "mergeSha": "da3ed11551b19884791913cb8bd0236e09326bdf",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-045/execution.md"
     },
     {
       "id": "REF-046",
