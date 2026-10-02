@@ -827,7 +827,12 @@ async function auditAuthoritativeUuidHandoffExposure(browser, fixture) {
         .waitFor({ state: "visible" });
       for (const response of await responses) assert.equal(response.status(), 200, `Audit read failed: ${response.url()}`);
       const state = ["store", "world-management", "settings"].includes(destination.id) ? "ready" : "empty";
-      await runtime.page.locator(`.admin-route-boundary[data-route="${destination.id}"] [data-admin-v2-state="${state}"]`).waitFor({ state: "visible" });
+      if (destination.id === "settings") {
+        await waitForState(runtime.page, "ready");
+        await runtime.page.locator('.admin-route-boundary[data-route="settings"] form[aria-label="Game settings"]').waitFor({ state: "visible" });
+      } else {
+        await runtime.page.locator(`.admin-route-boundary[data-route="${destination.id}"] [data-admin-v2-state="${state}"]`).waitFor({ state: "visible" });
+      }
       const reads = fixture.requestsFor(runtime.runId).slice(before);
       assert.deepEqual(reads.map((request) => request.pathname + request.search).sort(), paths.sort());
       for (const request of reads) {

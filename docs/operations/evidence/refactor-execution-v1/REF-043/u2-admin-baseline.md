@@ -169,3 +169,11 @@ query. Corrected the expected initial route read to
 store/items?include=stock,prices,purchaseStats, as required by readStore and its
 existing API regression. This is an audit expectation correction, not a new
 fixture or product change. The failed attempt remains retained evidence.
+
+Independent review identified that Settings publishes state on the shared shell
+and renders form[aria-label="Game settings"], without a route-local state
+attribute. Run 36948514985/job 110655970789 at ceb8923539ac705d507aa559f635205b7f8758ab
+confirmed the incorrect test selector timeout; artifact 11203405428 preserves
+the failure. The approved test-only correction waits for shared READY and the
+scoped Settings form, retaining all exact response/header checks. No production
+Settings code changes. Total source/workflow/test delta is now 161 lines.
