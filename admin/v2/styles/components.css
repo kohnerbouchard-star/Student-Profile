@@ -224,9 +224,8 @@
 
 .admin-navigation__label {
   min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .admin-navigation__badge {
