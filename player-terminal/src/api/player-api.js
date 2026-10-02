@@ -312,7 +312,7 @@ export class PlayerApi {
       }
 
       this.freshness?.assertCurrent(ticket);
-      this.resourceSupport = resourceSupport;
+      if (this.freshness) this.resourceSupport = resourceSupport;
       data.capabilities = resolveCapabilities({ config: this.config, session, dashboard: data.dashboard });
       data.resourceStatus = Object.freeze(resourceStatus);
       return this.freshness ? this.freshness.track(data, ticket) : data;
