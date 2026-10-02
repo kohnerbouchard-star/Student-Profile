@@ -19,6 +19,9 @@ export function createResourceFreshnessCoordinator() {
     isCurrent: current,
     assertCurrent,
     reset,
+    assertSession(value) {
+      if (session !== value) throw new ApiRequestError("The session was retired.", { code: "REQUEST_ABORTED" });
+    },
     setSession(value) { if (session !== value) { reset(); session = value; } },
     invalidate(keys) { for (const key of new Set(keys)) { generations.set(key, generation(key) + 1); pending.add(key); } },
     isPending: (key) => pending.has(key),

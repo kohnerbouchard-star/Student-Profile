@@ -193,6 +193,12 @@ export class PlayerApi {
     }
   }
 
+  syncFreshnessSession() {
+    if (!this.freshness) return;
+    if (sessionFingerprint(this.config) !== this.sessionFingerprint) this.setSession(this.config);
+    this.freshness.assertSession(this.sessionFingerprint);
+  }
+
   currentReadGeneration(endpointKey) {
     return Number(this.readGenerations.get(endpointKey) || 0);
   }
@@ -206,7 +212,7 @@ export class PlayerApi {
   }
 
   async request(endpointKey, { params = {}, payload, force = false, signal = null } = {}) {
-    if (this.freshness && sessionFingerprint(this.config) !== this.sessionFingerprint) this.setSession(this.config);
+    this.syncFreshnessSession();
     const resolvedParams = actionPathParams(endpointKey, payload, params);
     const { endpoint, path } = resolvedPath(endpointKey, resolvedParams);
     const requestId = createRequestId();
@@ -320,6 +326,7 @@ export class PlayerApi {
   }
 
   async loadResources(keys, { force = false } = {}) {
+    this.syncFreshnessSession();
     const uniqueKeys = [...new Set(keys)];
     const ticket = this.freshness?.capture(uniqueKeys);
     const supportedKeys = uniqueKeys.filter((key) => isResourceSupported(this.resourceSupport, key));
@@ -419,7 +426,7 @@ export class PlayerApi {
   }
 
   execute(endpointKey, payload, params = {}, { signal = null } = {}) {
-    if (this.freshness && sessionFingerprint(this.config) !== this.sessionFingerprint) this.setSession(this.config);
+    this.syncFreshnessSession();
     const resolvedParams = actionPathParams(endpointKey, payload, params);
     const { endpoint, path } = resolvedPath(endpointKey, resolvedParams);
     if (endpoint.method === "GET") {

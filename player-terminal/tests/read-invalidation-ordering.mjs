@@ -204,4 +204,13 @@ for (const reset of [false, true]) {
   f.second.invalidateResources(["inventory"]);
   assert.equal(f.freshness.isCurrent(ticket), false, "Final terminal publisher must check returned tickets again.");
 }
+{
+  const f = fixture(), retired = new PlayerApi({ ...f.config }, { freshness: f.freshness });
+  f.first.resourceSupport = Object.freeze({ inventory: false });
+  f.second.setSession({ gameSessionId: "next-game" });
+  const batch = await f.first.loadResources(["inventory"]);
+  assert.equal(batch.resourceStatus.inventory.state, "ready", "A sibling session change retires cached support before batch planning.");
+  await assert.rejects(retired.request("inventory"), aborted);
+  await assert.rejects(retired.loadResources(["inventory"]), aborted);
+}
 console.log("Injected freshness passed: shared reads, mutation/replay/rejection, batch/error tickets, session/terminal isolation and cancellation.");
