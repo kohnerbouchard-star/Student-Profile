@@ -1,6 +1,7 @@
 # REF-043 — Banking response extraction qualification
 
-Status: BLOCKED. Repository qualification only; no deployment or runtime claim.
+Status: VERIFIED_COMPLETE (bounded repository seam only). Historical blockers
+below are retained; final qualification is recorded in the closeout section.
 
 ## Bounded source and parity evidence
 
@@ -116,3 +117,56 @@ REF-043 remains BLOCKED until fresh PR810 qualification, parent-reviewed merge
 and merged-main verification. REF-044 remains gated. Final exact-head CI and
 artifact identities belong in the existing PR810 qualification record; no
 replacement PR, U1 release-hold action or production deployment is authorized.
+
+## Qualified merged-source closeout — 2026-10-02
+
+Parent independently reviewed and merged existing PR810 at implementation head
+`779677a3287fa6b912813f2a335b5e28a97c6d1e` as
+`4620fb60dc2d13b5063a9917b2ec9e13e5a26f7f`. Both resolve to the exact tree
+`ba6194ffcfd73a54970b93fdd617e4c9f3634a60`; the merged tree has no additional
+source changes. Original head 17f5499 remains in history. U2 baseline repair
+PR817 remains separately credited, not folded into the Banking extraction.
+
+All 33 implementation-head workflows passed without retries: 68 successful
+checks, six intended conditional skips, zero failed or pending checks, and
+successful Vercel status. Backend full typecheck/smoke, Admin Shell, Player
+Terminal and required Business/Store database/browser/connected gates passed.
+The four critical authority jobs passed in [run 36949934116](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36949934116).
+
+[Exact-head Admin run 36949934180](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36949934180),
+job 110660397653, passed 25 browser checks, retained eight existing UUID-debt
+exceptions, and reported zero failures. Its untouched 56957a92 baseline still
+reproduces the original Market truncation. Connected Create Game/Admin and
+ledger mutation, reload, replay and unauthenticated rejection passed; committed,
+persisted and replay balances were all 35. No page errors were recorded.
+[Sanitized artifact 11203448217](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36949934180/artifacts/11203448217)
+was downloaded and verified against SHA256
+`23d151ef680931e542b955fe6da721e3dd267923c5aaa93c5403ead6b0fc790f`.
+These are exact implementation-head results, not mislabeled main runs.
+
+Merged-main qualification is terminal: all 18 workflows passed; 37 checks
+succeeded and six were intended conditional skips, with no failures or pending
+checks. Main evidence includes [Backend 36951082417](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36951082417),
+[Admin Shell 36951082545](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36951082545),
+[Repository Quality 36951082525](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36951082525),
+[Store cutover 36951082710](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36951082710),
+[Atomic Settlement 36951082529](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36951082529)
+and [code scanning 36951082772](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/36951082772).
+All six main Store cutover jobs passed, including full Chromium, connected
+two-game journeys, replay/lint and settlement race/isolation gates. Local
+merged-main Banking 14/14, Admin 91/91 and architecture checks also passed.
+
+Main skips are production Admin switching, release publication, live-parity
+enforcement/capture and dependency review. They are not live-runtime evidence.
+Local browser/Edge download limitations remain accurately recorded above;
+required hosted CI supplies their qualification. No deployment, migration,
+cloud/credential change, dedicated Banking-browser or production acceptance is
+claimed. Existing UUID debt and unverified World anchor behavior remain open
+outside this bounded extraction; no assertion or financial policy was weakened.
+
+Only this evidence, REF043's task and REF043's backlog entry change in closeout.
+Other task states, dependencies, global ledger and protected owners are retained.
+This records completion of the merged, qualified Banking seam, not the wider
+program. The proposed ledger update requires parent review/merge. Next exact
+task is REF044 after that closeout checkpoint and its own bounded preflight;
+its source is untouched and remains PLANNED here.
