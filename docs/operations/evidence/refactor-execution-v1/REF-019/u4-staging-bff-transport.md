@@ -13,7 +13,7 @@ Editable paths:
 - `scripts/runtime-config-contract.test.mjs`: transport regression matrix.
 - `scripts/vercel-deployment-contract.test.mjs`: generated config execution.
 - This evidence document.
-- `docs/operations/contracts/player-cross-cutting/pr-<actualnumber>.json` once allocated.
+- `docs/operations/contracts/player-cross-cutting/pr-840.json`.
 
 One conceptual change, fewer than 400 semantic changed lines. Parent owns review
 and merge. Open owners rechecked: #736 at `8070f58d4145951d8aee3e74a2b1e00d90c54385`
@@ -41,3 +41,28 @@ Synthetic tests do not certify deployed auth, OIDC or staging login. No live aut
 test is authorized. Next: parent review of exact-head checks, then separately
 approved staged runtime evidence before any REF-019/020 pause release.
 Rollback: revert this bounded source change, preserving all security repairs.
+
+
+## Fixture discovery (read-only, 2026-10-04)
+
+The exact staging Golden Five game is active/ready; GOLD-ALPHA is active.
+Metadata-only aggregate lookup confirms exactly one active pbkdf2-sha256-v2
+credential. No hashes, salts, codes, tokens or other players were retrieved.
+The current gate consumes STAGING_SUPABASE_PUBLISHABLE_KEY and
+GOLDEN_ALPHA_ACCESS_CODE, not SUPABASE_DB_URL (the separate DB rehearsal does).
+The access code remains unknown; creating a new player or resetting a code and
+running any live auth test requires separate exact approval. The old Phase 15
+multi-fixture provisioner writes sha256-v1 and must not be used for this task.
+
+Draft PR: #840. No runtime certification or pause release claimed.
+
+## Local verification
+
+Node 22.23.1 / npm 10.9.8, lockfile installs; source implementation a6ad0408.
+61 focused deployment/runtime/environment-neutral/Trusted Types/authority tests
+passed. Full npm test passed, including architecture inventory (zero generated
+diff). Auth boundaries, web-session release, high-priority/legacy guards and
+secret scan passed. Authority accepts exactly six changed paths under eight
+locks (verifier/test unchanged). Initial attempts with environment Node 24 and
+missing dependencies/tools were setup failures, superseded by pinned installs.
+Backend full checks and exact-head CI remain pending; no live auth was run.
