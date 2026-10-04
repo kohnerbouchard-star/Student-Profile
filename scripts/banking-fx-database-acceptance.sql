@@ -322,10 +322,6 @@ begin
               source||jsonb_build_object('id',gen_random_uuid(),'player_id',actor,'initiating_operator_player_id',actor)),'BUSINESS_NOT_FOUND');
           end if;
         end loop;
-        -- Owner-field change to the already-mandated initiator; NOT an operating-mandate replacement.
-        update public.business_entities set owner_player_id=manager where id=business;
-        update public.loan_applications set purpose=purpose where id=app;
-        update public.player_loans set principal_balance=principal_balance where id=debt;
         if (select count(*) from public.ledger_entries where game_session_id=g)<>before_count then
           raise exception 'REF025 binding created economic effects';
         end if;
@@ -335,6 +331,51 @@ begin
     raise exception using errcode='Z0252',message='rollback characterization probe';
   exception when sqlstate 'Z0252' then null;
   end;
+  -- Replace canonical owner-fallback authority with a different explicit mandate; no guard bypass.
+  if exists(select 1 from pg_attribute where attrelid='public.loan_applications'::regclass
+    and attname='liability_kind' and not attisdropped) then
+    declare successor uuid:=gen_random_uuid(); proposal uuid; new_app uuid:=gen_random_uuid();
+      new_debt uuid:=gen_random_uuid(); old_app jsonb; old_debt jsonb; captured jsonb;
+    begin
+      alter table public.loan_applications drop constraint loan_applications_business_liability_disabled_v1;
+      alter table public.player_loans drop constraint player_loans_business_liability_disabled_v1;
+      if (select business_id from public.resolve_player_business_v2(g,actor)) is distinct from business then
+        raise exception 'REF025 predecessor authority missing'; end if;
+      select to_jsonb(a)||jsonb_build_object('id',new_app,'public_key',split_part(a.public_key,'_',1)||'_'||replace(new_app::text,'-',''),
+        'idempotency_key','ref025-replacement','liability_kind','business_v1','initiating_operator_player_id',actor,
+        'borrower_business_id',business,'obligation_currency_code','QREFLOAN') into old_app
+        from public.loan_applications a where id=application;
+      insert into public.loan_applications select (jsonb_populate_record(null::public.loan_applications,old_app)).*;
+      select to_jsonb(l)||jsonb_build_object('id',new_debt,'public_key',split_part(public_key,'_',1)||'_'||replace(new_debt::text,'-',''),
+        'application_id',new_app,'liability_kind','business_v1','initiating_operator_player_id',actor,
+        'borrower_business_id',business) into old_debt from public.player_loans l where id=loan;
+      insert into public.player_loans select (jsonb_populate_record(null::public.player_loans,old_debt)).*;
+      select jsonb_build_array(to_jsonb(a)-'updated_at',to_jsonb(l)-'updated_at') into captured
+        from public.loan_applications a,public.player_loans l where a.id=new_app and l.id=new_debt;
+      insert into public.players(id,game_session_id,display_name,status) values(successor,g,'REF025 successor','active');
+      insert into public.business_governance_proposals(game_session_id,business_id,proposer_player_id,proposal_type,
+        approval_threshold_basis_points,snapshot_total_voting_units,idempotency_key,expires_at)
+        values(g,business,actor,'capital_raise',5001,1,'ref025-replacement-mandate',now()+interval '1 day') returning id into proposal;
+      insert into public.business_management_mandates(game_session_id,business_id,player_id,source_proposal_id)
+        values(g,business,successor,proposal);
+      perform pg_temp.ref025_binding_reject(format('select * from public.resolve_player_business_v2(%L,%L)',g,actor),'BUSINESS_NOT_FOUND');
+      if (select business_id from public.resolve_player_business_v2(g,successor)) is distinct from business then
+        raise exception 'REF025 successor authority missing'; end if;
+      perform pg_temp.ref025_binding_reject(format('insert into public.loan_applications select (jsonb_populate_record(null::public.loan_applications,%L)).*',
+        old_app||jsonb_build_object('id',gen_random_uuid())),'BUSINESS_NOT_FOUND');
+      update public.loan_applications set repayment_source=repayment_source where id=new_app;
+      update public.player_loans set repayment_account_type=repayment_account_type where id=new_debt;
+      if captured is distinct from (select jsonb_build_array(to_jsonb(a)-'updated_at',to_jsonb(l)-'updated_at')
+        from public.loan_applications a,public.player_loans l where a.id=new_app and l.id=new_debt) then
+        raise exception 'REF025 replacement changed captured obligation'; end if;
+      select * into payment from public.repay_player_loan_v1(g,actor,(select public_key from public.player_loans where id=loan),1,'ref025-after-replacement');
+      if payment.replayed or payment.principal_balance<>89 then raise exception 'REF025 replacement broke legacy repayment'; end if;
+      select * into payment from public.repay_player_loan_v1(g,actor,(select public_key from public.player_loans where id=loan),1,'ref025-after-replacement');
+      if not payment.replayed or payment.principal_balance<>89 then raise exception 'REF025 replacement broke legacy replay'; end if;
+      raise exception using errcode='Z0253',message='rollback real authority replacement';
+    exception when sqlstate 'Z0253' then null;
+    end;
+  end if;
   foreach tab in array array['loan_applications','player_loans'] loop
     -- Isolate c1 shape/FK constraints from the independently tested c2 identity guard.
     execute format('alter table public.%I disable trigger a_business_loan_identity',tab);

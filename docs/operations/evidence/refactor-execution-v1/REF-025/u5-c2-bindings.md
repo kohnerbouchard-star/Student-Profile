@@ -36,10 +36,12 @@ forward migration. Never rewrite migration history, debt or posted ledger effect
 
 Draft PR855; migration raw SHA256 7bf22dd6bd3d10881b52a2cab44f127d836064bf15e66b291c724ac54a094ea7.
 
-Review limits: the owner-field fixture changes owner_player_id to the already-mandated
-initiating manager; it does NOT replace/revoke an operating mandate. Captured-actor
-mutation rejection is proved; actual mandate-replacement lifecycle is NOT_RUN.
-Account/party lookup is not locked; business/product/application shared locks do not
-prove command-level authority/account races. Real mandate replacement and race
-qualification remain required before activation. The registered actor-replacement
-case needs a real fixture or explicit parent deferral; it is not silently passed.
+User-approved replacement fixture now changes real canonical authority from the
+owner fallback to a different explicit mandate holder, without changing ownership
+or bypassing mandate/loan guards. It checks old-operator resolver/new-application
+denial, successor resolution, unchanged captured obligation/account/currency after
+binding-trigger revalidation, and retained legacy repayment; everything rolls back.
+This is not explicit-to-explicit mandate revocation (existing mandates are immutable),
+a new governance command, or command-race proof. Account/party lookup is not locked;
+authority/account races remain required before activation. Final-head DB evidence pending.
+Original57e94860 Marketplace failure/artifact11316997282 remains retained despite5263e55c passing.
