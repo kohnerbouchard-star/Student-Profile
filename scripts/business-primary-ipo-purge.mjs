@@ -63,7 +63,14 @@ export function verifyPrimaryIpoPurge(game, other, additionalTables = []) {
   expectSqlError(`begin; update private.game_data_purge_requests set db_delete_cursor=207 where id=${q(ids.request)};
     set local role service_role; select public.finalize_game_data_purge_v1(${q(ids.request)}); commit;`, /GAME_PURGE_DATABASE_ROWS_REMAIN/);
   for (const call of [`public.execute_game_data_purge_db_batch_v2(${q(ids.request)},20)`, `public.finalize_game_data_purge_v1(${q(ids.request)})`]) {
-    expectSqlError(`begin; alter table public.loan_applications add constraint ref025_unexpected_edge
+    expectSqlError(`begin; set local role service_role;
+      do $claim$ declare claimed record; begin
+        select * into strict claimed from public.claim_confirmed_game_data_purge_v1();
+        if claimed.request_id <> ${q(ids.request)}::uuid or claimed.stage <> 'db' then
+          raise exception 'REF025_EXPECTED_DATABASE_CLAIM';
+        end if;
+      end $claim$; reset role;
+      alter table public.loan_applications add constraint ref025_unexpected_edge
       foreign key(game_session_id,player_id) references public.players(game_session_id,id);
       update private.game_data_purge_requests set db_delete_cursor=207 where id=${q(ids.request)};
       set local role service_role; select ${call}; commit;`, /GAME_PURGE_FK_GRAPH_DRIFT/);
