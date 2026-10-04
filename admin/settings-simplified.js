@@ -24,12 +24,12 @@
     if (element && element.textContent !== value) element.textContent = value;
   }
 
-  function ensureStylesheet() {
-    if (document.getElementById(STYLE_ID)) return;
+  function ensureStylesheet(id = STYLE_ID, href = "./css/settings-simplified.css") {
+    if (document.getElementById(id)) return;
     const link = document.createElement("link");
-    link.id = STYLE_ID;
+    link.id = id;
     link.rel = "stylesheet";
-    link.href = "./css/settings-simplified.css";
+    link.href = href;
     document.head.append(link);
   }
 
@@ -628,6 +628,9 @@
   scheduleStructure();
 
   window.EconovariaSimplifiedSettings = {
+    ensureFinalPolishStylesheet: () => ensureStylesheet(
+      "econovaria-settings-final-polish-style", "./css/settings-final-polish.css",
+    ),
     reconcile: reconcileStructure,
     refresh: renderPresentation,
     acknowledgeSaved,
