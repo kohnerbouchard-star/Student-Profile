@@ -561,7 +561,7 @@
       "id": "REF-033",
       "title": "Extract pure Story-effect preparation from persistence",
       "file": "tasks/REF-033.md",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-030",
         "REF-032"
@@ -569,8 +569,8 @@
       "risk": "R3",
       "architectureMapping": "ARCH-209/ARCH-300",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
+      "implementationSha": "cc63314ac8882882a1ccbaa167b4e78ebb7b6891",
+      "mergeSha": "2fbcc0ab996243bec5406e8ddcbb584b6b2a6953",
       "evidence": "docs/operations/evidence/refactor-execution-v1/REF-033/preflight.md"
     },
     {
