@@ -1,6 +1,6 @@
 # U4 staging browser BFF transport repair
 
-Status: IN_PROGRESS. Base: `486b5e2d0f2fc042be444840fff2d4f11c4ac72c`.
+Status: IMPLEMENTED_NOT_MERGED. Base: `486b5e2d0f2fc042be444840fff2d4f11c4ac72c`.
 Parent approved this exact six-path scope on 2026-10-04 after the user's narrow
 staging routing/test-preparation approval. REF-019/020 remain paused; this is
 prerequisite repair, not their persistence extraction or auth-baseline acceptance.
@@ -65,4 +65,7 @@ diff). Auth boundaries, web-session release, high-priority/legacy guards and
 secret scan passed. Authority accepts exactly six changed paths under eight
 locks (verifier/test unchanged). Initial attempts with environment Node 24 and
 missing dependencies/tools were setup failures, superseded by pinned installs.
-Backend full checks and exact-head CI remain pending; no live auth was run.
+Backend tsc passed. With pinned Deno 2.9.3, full typecheck:all and smoke both
+stop at the unchanged frozen esm.sh Supabase import (unsuccessful tunnel).
+These full local gates are BLOCKED, not passed; CI remains required.
+Exact-head CI is pending; no live auth was run.
