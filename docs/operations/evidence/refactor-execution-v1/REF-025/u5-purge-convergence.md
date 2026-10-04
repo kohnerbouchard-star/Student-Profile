@@ -25,3 +25,9 @@ registry207/delete-order206 unchanged. New SQL must validate exact prior definit
 replace only fingerprints/counts, preserve all purge conditions and grants, and fail
 closed on unexpected graph or body changes. Replay twice, drift rejection, populated
 loan/IPO purge, final zero-row proof and other-game isolation are required.
+
+Forward SQL SHA256: `b8d24a799eba7ef55f93132888daf8bdbb75d12e78bc17c272dceb39e2a3c456`.
+Old function-body hashes were reconstructed on disposable PostgreSQL17.6 from the
+unchanged final historical definitions; full-chain CI must verify those preconditions.
+Source lifecycle8/8 and Store convergence pass. Historical SQL/certificates unchanged.
+Disposable populated purge and wrong-graph tests added; runtime qualification pending.
