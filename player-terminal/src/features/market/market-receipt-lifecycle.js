@@ -12,17 +12,19 @@ export function createMarketReceiptLifecycle({ mount, terminal, onRetire }) {
     receipt?.remove();
     receipt = null;
     focused = null;
+    route = null;
   }
   function rememberFocus(event) {
     if (receipt?.contains(event.target)) focused = event.target;
   }
   const unsubscribe = terminal.subscribe?.((state) => {
-    if (destroyed || !receipt) return;
+    if (destroyed || route === null) return;
     if (state.status !== "ready" || state.route !== route) {
+      clear();
       onRetire();
       return;
     }
-    if (receipt.isConnected) return;
+    if (!receipt || receipt.isConnected) return;
     mount.append(receipt);
     const root = mount.querySelector(".player-terminal-app-root");
     if (root) {
@@ -40,8 +42,9 @@ export function createMarketReceiptLifecycle({ mount, terminal, onRetire }) {
       route = terminal.getState().route;
     },
     begin() {
+      route = terminal.getState().route;
       const started = generation;
-      const startedRoute = terminal.getState().route;
+      const startedRoute = route;
       const ticket = terminal.freshness?.capture();
       return () => !destroyed && started === generation && terminal.getState().route === startedRoute &&
         (!terminal.getState().status || terminal.getState().status === "ready") &&

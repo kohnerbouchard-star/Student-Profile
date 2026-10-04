@@ -76,6 +76,19 @@ test('destroy during accepted settlement refresh cannot resurrect a receipt',asy
   expect(await page.evaluate(()=>probe.count())).toBe(1);
   expect(await page.evaluate(()=>probe.subscriptions())).toBe(1);
 });
+test('away and back during settlement refresh permanently retires the pending receipt',async({page})=>{
+  await mount(page,true);
+  await page.waitForFunction(()=>probe.events.includes('post-settlement-refresh'));
+  await page.evaluate(()=>probe.terminal.navigate('portfolio'));
+  await page.waitForFunction(()=>probe.terminal.getState().route==='portfolio');
+  await page.evaluate(()=>probe.terminal.navigate('market'));
+  await page.waitForFunction(()=>probe.terminal.getState().route==='market');
+  await page.evaluate(async()=>{probe.releasePost();probe.release();await probe.pending;});
+  await expect(page.locator('[data-player-market-order-dialog]')).toHaveCount(0);
+  expect(await page.evaluate(()=>probe.count())).toBe(1);
+  await page.evaluate(()=>probe.terminal.requestRender());
+  await expect(page.locator('[data-player-market-order-dialog]')).toHaveCount(0);
+});
 test('keyboard dismissal does not resurrect a receipt',async({page})=>{
   await mount(page);
   await page.keyboard.press('Escape');
