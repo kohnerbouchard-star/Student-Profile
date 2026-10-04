@@ -2,6 +2,23 @@ import { createQualityHarness, BASE_URL } from "./admin-quality-smoke-fixture.mj
 
 const harness = await createQualityHarness("settings-disclosure");
 const { page, errors, capture, finish } = harness;
+const styleMeasurements = [];
+async function measureStyles(target, label) {
+  const cdp = await target.context().newCDPSession(target);
+  const listeners = [];
+  for (const expression of ["window", "document"]) {
+    const { result } = await cdp.send("Runtime.evaluate", { expression });
+    listeners.push((await cdp.send("DOMDebugger.getEventListeners", { objectId: result.objectId })).listeners.length);
+  }
+  await cdp.detach();
+  const styles = await target.evaluate(() => ({
+    order: [...document.querySelectorAll('link[rel="stylesheet"]')].map((link) => link.getAttribute("href")),
+    count: document.querySelectorAll("#econovaria-settings-final-polish-style").length,
+    requests: performance.getEntriesByType("resource").filter((entry) => /\/settings-save-error-bridge\.js(?:\?|$)|\/settings-final-polish\.css(?:\?|$)/.test(entry.name)).map((entry) => new URL(entry.name).pathname),
+  }));
+  if (styles.count !== 1) throw new Error(`${label}: final-polish stylesheet is not unique.`);
+  styleMeasurements.push({ label, listeners, ...styles });
+}
 page.setDefaultTimeout(10_000);
 page.setDefaultNavigationTimeout(30_000);
 let phase = "initial page load";
@@ -22,6 +39,22 @@ try {
     return root?.getAttribute("data-settings-ux-ready") === "true" &&
       root?.getAttribute("data-settings-ux-baseline-ready") === "true";
   }, null, { timeout: 10_000 });
+  await measureStyles(page, "canonical-settings");
+  const standalone = await harness.context.newPage();
+  await standalone.route("**/ref015-style-fixture.html", (route) => route.fulfill({
+    contentType: "text/html", body: '<!doctype html><link rel="stylesheet" href="./css/settings-simplified.css"><script src="./settings-save-error-bridge.js"></script><script>window.styleWasSynchronous = !!document.getElementById("econovaria-settings-final-polish-style");</script><script src="./settings-save-error-bridge.js?repeat"></script>',
+  }));
+  await standalone.goto(`${BASE_URL.replace(/\/$/, "")}/ref015-style-fixture.html`, { waitUntil: "load" });
+  if (!await standalone.evaluate(() => window.styleWasSynchronous && !window.EconovariaSimplifiedSettings)) {
+    throw new Error("Standalone classic-script stylesheet insertion was not synchronous.");
+  }
+  await measureStyles(standalone, "standalone-repeat");
+  const fallback = styleMeasurements.at(-1);
+  if (fallback.listeners.some(Boolean) || fallback.requests.filter((path) => path.endsWith(".css")).length !== 1 ||
+      fallback.order.join(",") !== "./css/settings-simplified.css,./css/settings-final-polish.css") {
+    throw new Error("Standalone stylesheet order/request/listener contract changed.");
+  }
+  await standalone.close();
 
   await page.locator("[data-settings-custom-toggle]").click();
   await page.waitForFunction(() =>
@@ -307,10 +340,11 @@ try {
     throw new Error("REF-014 old-page response acknowledged the replacement page.");
   }
   enterPhase("final diagnostics");
+  await measureStyles(page, "after-save-remount");
   await capture("settings-disclosure-persistence");
   if (errors.length) throw new Error(errors[0]);
   console.log("Shared Settings preserves native events, focus, save state, disclosure, and domain boundaries.");
-  await finish({ afterOption, duringNumericEdit, ref014Writes, errors });
+  await finish({ afterOption, duringNumericEdit, ref014Writes, styleMeasurements, errors });
   clearTimeout(deadline);
 } catch (error) {
   console.error(`Settings browser failure during ${phase}:`, error.stack || error.message || String(error));
