@@ -3,7 +3,6 @@ import type { PlayerStoryContext } from "../contracts/playerStoryContext.ts";
 import type { StoryEffect } from "../contracts/storyEffectContracts.ts";
 import type {
   StoryCashAdjustmentWriteInput,
-  StoryContractCreateWriteInput,
   StoryCurrencyVolatilityWriteInput,
   StoryEffectBatchExecutionInput,
   StoryEffectBatchExecutionResult,
@@ -18,6 +17,8 @@ import type {
   StoryWorldRouteStateWriteInput,
   StoryWriteResult,
 } from "../contracts/storyEffectExecutionContracts.ts";
+
+import { prepareStoryContractEffect } from "./prepareStoryEffects.ts";
 
 const OFFICIAL_CURRENCY_CODES = new Set([
   "ECO",
@@ -503,57 +504,13 @@ async function executeContractUnlockEffect(
     return [];
   }
 
-  const contractInput = buildContractCreateInput(input, effect);
+  const contractInput = prepareStoryContractEffect(input, effect);
   const contractResult = await input.dependencies.contracts
     .createGameSessionContract(contractInput);
 
   return collectWriteIds(contractResult);
 }
 
-function buildContractCreateInput(
-  input: StoryEffectExecutionInput,
-  effect: Extract<StoryEffect, { type: "contract_unlock" }>,
-): StoryContractCreateWriteInput {
-  const payload = effect.payload;
-  const title = readOptionalTextPayload(payload, "title") ?? effect.label ??
-    effect.contractKey;
-  const description = readOptionalTextPayload(payload, "description") ??
-    effect.reason ?? "";
-  const instructions = readOptionalTextPayload(payload, "instructions") ??
-    effect.reason ?? effect.label ?? effect.contractKey;
-
-  return {
-    gameSessionId: input.gameSessionId,
-    contractKey: effect.contractKey,
-    sourceType: "story_event",
-    sourceId: input.storylineEventId,
-    createdByStaffId: null,
-    title,
-    description,
-    instructions,
-    category: readOptionalTextPayload(payload, "category") ?? "story",
-    status: "active",
-    visibility: "public",
-    targetingPayload: readOptionalObjectPayload(payload, "targetingPayload"),
-    requirementsPayload: readOptionalObjectPayload(
-      payload,
-      "requirementsPayload",
-    ),
-    rewardPayload: readOptionalObjectPayload(payload, "rewardPayload"),
-    completionMode: "manual_review",
-    publishedAt: input.now,
-    deadlineAt: readOptionalTextPayload(payload, "deadlineAt"),
-    expiresAt: readOptionalTextPayload(payload, "expiresAt"),
-    metadata: {
-      ...readOptionalObjectPayload(payload, "metadata"),
-      storyEffect: {
-        type: effect.type,
-        label: effect.label,
-        reason: effect.reason,
-      },
-    },
-  };
-}
 
 async function executeFlagEffect(
   input: StoryEffectExecutionInput,
@@ -643,41 +600,6 @@ function readRequiredTextPayload(
   return value.trim();
 }
 
-function readOptionalTextPayload(
-  payload: JsonObject,
-  key: string,
-): string | null {
-  const value = payload[key];
-
-  if (value === undefined || value === null) {
-    return null;
-  }
-
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(
-      `contract_unlock payload ${key} must be a non-empty string.`,
-    );
-  }
-
-  return value.trim();
-}
-
-function readOptionalObjectPayload(
-  payload: JsonObject,
-  key: string,
-): JsonObject {
-  const value = payload[key];
-
-  if (value === undefined || value === null) {
-    return {};
-  }
-
-  if (!isJsonObject(value)) {
-    throw new Error(`contract_unlock payload ${key} must be a JSON object.`);
-  }
-
-  return value;
-}
 
 function readStringArrayPayload(
   payload: JsonObject,

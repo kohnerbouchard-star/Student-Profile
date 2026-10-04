@@ -10,18 +10,19 @@ No competing REF-033 branch/PR was found. Owner: ARCH-209/ARCH-300.
 
 One family: move `buildContractCreateInput` and its two exclusive payload
 readers to `prepareStoryContractEffect` in the proposed pure preparation owner.
-Eight editable paths, below the ticket's ten-file and 400-semantic-line limits:
+Nine editable paths, below the ticket's ten-file and 400-semantic-line limits:
 
 - `backend/src/domains/storylines/services/storyEffectEngine.ts`
 - `backend/src/domains/storylines/services/prepareStoryEffects.ts`
-- `backend/src/domains/storylines/services/storyEffectEngine.test.ts`
+- `backend/src/domains/storylines/services/prepareStoryEffects.test.ts`
+- `.github/workflows/story-replay-safety.yml` (one test registration only)
 - `docs/operations/evidence/refactor-execution-v1/REF-033/preflight.md`
 - `docs/roadmaps/refactor-execution-v1/tasks/REF-033.md`
 - `docs/roadmaps/refactor-execution-v1/backlog.json` (REF-033 entry only)
-- `docs/operations/contracts/player-cross-cutting/pr-NUMBER.json` (actual draft ID)
+- `docs/operations/contracts/player-cross-cutting/pr-844.json`
 - `docs/architecture/inventories/econovaria-architecture-inventory-v2.json` (generated)
 
-Protect every other source, migration, SQL/RPC, package, workflow, release hold,
+Protect every other source, migration, SQL/RPC, package, workflow setting, release hold,
 credential, deployment setting, Player/Admin UI and the global beta ledger.
 No hosted database or capture action. Parent retains review/merge authority.
 
@@ -46,7 +47,7 @@ their current owners and tests. Failures preserve existing failed receipts.
 ## Validation plan and baseline
 
 Base focused Deno engine/writer/replay/lease suite: 18 passed, zero failed.
-Extend the registered engine test for frozen inputs, complete descriptor parity,
+Register the pure preparation test in Story Replay Safety for frozen inputs, complete descriptor parity,
 validation-before-write, unavailable dependency precedence and writer failure.
 Run Story/decision, World runtime, Contract lifecycle, economic invariants,
 Player story-decisions/story-delivery and shared VALIDATION commands.
@@ -56,3 +57,22 @@ checks are not database acceptance. Retain exact head, command and CI evidence;
 missing qualification blocks completion. No task is complete before merged proof.
 
 Rollback: revert this extraction and its exact call site; preserve later fixes.
+
+Draft: [#844](https://github.com/kohnerbouchard-star/Student-Profile/pull/844).
+Local candidate: focused 21/21; baseline/extracted differential 32/32; World
+50+11, Contract lifecycle 1, Contract acceptance 99, economic invariants 25 pass.
+Player story-decisions, story-delivery and full verify pass. These are synthetic
+source/fixture checks; exact-head CI/database qualification remains pending.
+
+Scope refinement: the engine test is 487 lines; keep it unchanged rather than
+exceed the existing 500-line ratchet. Only the owning test command gains a path.
+
+Shared architecture/boundary/legacy/secret audits and root `npm test` pass.
+Local full Edge typecheck/smoke are BLOCKED by the esm.sh proxy tunnel; the
+existing Backend Typecheck PR workflow runs both on the candidate source.
+Expanded Story sweep: 148 pass, two fail; untouched base reproduces both
+(context cash expected 1250/actual 0; demo loop expected HTTP 200/actual 500).
+These failures are retained, not fixed or counted as passes by this extraction.
+Engine shrinks 856 to 778 lines; inventory 1271 to 1273 source/test files,
+29 domains and 100 oversized files unchanged. Sole production caller remains
+`executeContractUnlockEffect`; external model and persistence owners are unchanged.
