@@ -63,11 +63,12 @@ const paths = {
   runbook: new URL("docs/operations/econovaria-storage-lifecycle.md", ROOT),
 };
 
+const HISTORICAL_FK_SHA = "fe88cafd56ca4c21ab3c1d34385e21f4c3d8be201eae44ee7f5539a34a98f329";
 const EXPECTED = Object.freeze({
   registrySha: "7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3",
   registryCount: 207,
-  fkSha: "fe88cafd56ca4c21ab3c1d34385e21f4c3d8be201eae44ee7f5539a34a98f329",
-  fkCount: 456,
+  fkSha: "0c932d6e620cec801b527e81f3e4d3e91bd8d70fd4fb45d6e1a72166ff0c7a82",
+  fkCount: 460,
   orderSha: "19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897",
   orderCount: 206,
   finalizeCursor: 207,
@@ -131,7 +132,7 @@ test("purge worker and SQL share the current deterministic Story-aware contract"
   const phase11Contract = await text(paths.phase11Contract);
   const runbook = await text(paths.runbook);
 
-  for (const source of [purger, internal, phase11Contract, runbook]) {
+  for (const source of [purger, phase11Contract, runbook]) {
     assertContains(source, EXPECTED.registrySha, "purge contract");
     assertContains(source, EXPECTED.fkSha, "purge contract");
     assertContains(source, EXPECTED.orderSha, "purge contract");
@@ -142,7 +143,10 @@ test("purge worker and SQL share the current deterministic Story-aware contract"
   assert.match(purger, new RegExp(`EXPECTED_DELETE_ORDER_TABLES = ${EXPECTED.orderCount}`));
   assert.match(purger, new RegExp(`DB_FINALIZE_CURSOR = ${EXPECTED.finalizeCursor}`));
   assertContains(internal, `v_registry_count <> ${EXPECTED.registryCount}`, "purge SQL");
-  assertContains(internal, `v_edge_count <> ${EXPECTED.fkCount}`, "purge SQL");
+  assertContains(internal, "v_edge_count <> 456", "immutable historical purge SQL");
+  assertContains(internal, HISTORICAL_FK_SHA, "immutable historical fingerprint");
+  const forward = await text(new URL("backend/supabase/migrations/20261004202506_reconcile_loan_liability_purge_graph_v1.sql", ROOT));
+  for (const marker of [EXPECTED.fkSha, "v_fk_count <> 460", "REF025_UNEXPECTED_PURGE_GRAPH", "REF025_UNEXPECTED_PURGE_DEFINITION"]) assertContains(forward, marker, "guarded forward convergence");
   assertContains(internal, `v_order_count <> ${EXPECTED.orderCount}`, "purge SQL");
   assertContains(internal, `db_delete_cursor < ${EXPECTED.finalizeCursor}`, "purge SQL");
   assertContains(reasserted, "'environmentName', v_control.environment_name", "purge preflight");
@@ -259,6 +263,6 @@ test("final live-shaped parity correction is additive and reasserts the canonica
   assertNotContains(migration, "drop column", "schema parity migration");
   assertNotContains(migration, "drop function", "schema parity migration");
   assertNotContains(migration, "cron.schedule", "schema parity migration");
-  assertContains(rehearsal, 'if test "${#migrations[@]}" -ne 151', "live-shaped rehearsal");
-  assertContains(rehearsal, "Expected 151 forward migrations", "live-shaped rehearsal");
+  assertContains(rehearsal, 'certified_count="${#selected_migrations[@]}"', "immutable bundle selection");
+  assertContains(rehearsal, "build-phase15-rehearsal-plan.mjs", "exact bundle and suffix verification");
 });

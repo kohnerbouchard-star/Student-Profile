@@ -344,3 +344,13 @@ assertBefore(recoverLoan, "metadata ->> 'idempotency_key'", "LOAN_NOT_RESTRUCTUR
 assert.match(recoverLoan, /'active', 'delinquent', 'defaulted'/u);
 assert.doesNotMatch(recoverLoan, /request_hash|IDEMPOTENCY_KEY_CONFLICT|set principal_balance/u);
 console.log("REF025a loan binding, servicing and replay SQL source characterization passed (not database execution).");
+
+const liability = await readFile("backend/supabase/migrations/20261004145731_add_loan_liability_contract_v1.sql", "utf8");
+for (const table of ["loan_applications", "player_loans"]) {
+  assert.ok(liability.includes(`${table}_business_liability_disabled_v1`));
+  assert.ok(liability.includes(`${table}_operator_scope_fk_v1`));
+  assert.ok(liability.includes(`${table}_borrower_scope_fk_v1`));
+}
+assert.equal((liability.match(/check \(liability_kind = 'legacy_v1'\)/g) || []).length, 2);
+assert.doesNotMatch(liability, /create (?:or replace )?function|drop constraint|grant |disable row level/i);
+console.log("REF025c1 inert liability schema source contract passed (not database proof).");

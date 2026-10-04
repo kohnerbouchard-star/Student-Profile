@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { buildRehearsalPlan, partitionRehearsalLedger, NONCE_SUFFIX } from "./build-phase15-rehearsal-plan.mjs";
+import { buildRehearsalPlan, partitionRehearsalLedger, NONCE_SUFFIX, APPROVED_SUFFIXES } from "./build-phase15-rehearsal-plan.mjs";
 import test from "node:test";
 
 import {
@@ -40,16 +40,16 @@ for (const environment of ["staging", "production"]) {
     const plan = await buildRehearsalPlan(bundle);
     assert.equal(JSON.stringify(bundle), before);
     assert.equal(plan.bundle.migrationCount, environment === "staging" ? 151 : 169);
-    assert.deepEqual(plan.suffix.migrations, [NONCE_SUFFIX]);
+    assert.deepEqual(plan.suffix.migrations, APPROVED_SUFFIXES);
     const rows = [...bundle.migrations, ...plan.suffix.migrations].map((row) => ({
       version: row.version, name: row.name, sha256: row.sourceSha256, statementCount: 1,
     }));
-    for (const count of [0, 1, bundle.migrationCount - 1, bundle.migrationCount, rows.length]) {
+    for (const count of [0, 1, bundle.migrationCount - 1, ...Array.from({ length: APPROVED_SUFFIXES.length + 1 }, (_, i) => bundle.migrationCount + i)]) {
       const result = partitionRehearsalLedger(plan, rows.slice(0, count));
       assert.equal(result.bundleRows.length, Math.min(count, bundle.migrationCount));
-      assert.equal(result.suffixRows.length, count === rows.length ? 1 : 0);
+      assert.equal(result.suffixRows.length, Math.max(0, count - bundle.migrationCount));
       assert.equal(result.suffixLedgerVerified, count === rows.length);
-      assert.deepEqual(result.pendingSuffix, count === rows.length ? [] : [NONCE_SUFFIX.filename]);
+      assert.deepEqual(result.pendingSuffix, APPROVED_SUFFIXES.slice(Math.max(0, count - bundle.migrationCount)).map(row => row.filename));
     }
     for (const invalid of [
       [rows.at(-1)], rows.slice(1), [rows[1], rows[0]], [...rows, rows.at(-1)],
@@ -71,9 +71,17 @@ test("rehearsal rejects changed, missing or unapproved suffix before host access
     const bundle = immutableManifest("staging");
     const suffixPath = path.join(directory, NONCE_SUFFIX.filename);
     const source = await readFile(suffixPath);
-    const selectedByOldShell = (await readdir(directory)).filter((name) => name.endsWith(".sql") && name.slice(0, 14) >= "20260819062000");
+    const selectedByOldShell = (await readdir(directory)).filter((name) => name.endsWith(".sql") && name.slice(0, 14) >= "20260819062000" && name.slice(0, 14) <= NONCE_SUFFIX.version);
     assert.equal(selectedByOldShell.length, 152, "retain the original 151-versus-152 reproduction");
     await buildRehearsalPlan(bundle, directory);
+    for (const registered of APPROVED_SUFFIXES.slice(1)) {
+      const candidate = path.join(directory, registered.filename), original = await readFile(candidate);
+      await writeFile(candidate, Buffer.concat([original, Buffer.from("\n")]));
+      await assert.rejects(buildRehearsalPlan(bundle, directory), /raw digest mismatch/u);
+      await rm(candidate);
+      await assert.rejects(buildRehearsalPlan(bundle, directory), /missing post-bundle/u);
+      await writeFile(candidate, original);
+    }
     await writeFile(suffixPath, Buffer.concat([source, Buffer.from("\n")]));
     await assert.rejects(buildRehearsalPlan(bundle, directory), /raw digest mismatch/u);
     await rm(suffixPath);
@@ -131,7 +139,7 @@ docker() {
 }
 ${loop}
 test "$certified_count" -eq "\${#selected_migrations[@]}"
-test "$suffix_certified_count" -eq 1
+test "$suffix_certified_count" -eq ${APPROVED_SUFFIXES.length}
 `;
         const execute = () => execFileSync("bash", ["-c", script], { encoding: "utf8", env: {
           ...process.env, FIXTURE: fixture, PHASE15_ENVIRONMENT: environment,
@@ -145,7 +153,7 @@ test "$suffix_certified_count" -eq 1
         } else execute();
         const lines = async (name) => (await readFile(path.join(fixture, name), "utf8")).split("\n").filter(Boolean);
         assert.equal((await lines("applied")).length, bundlePending ? plan.bundle.migrationCount : 0);
-        assert.deepEqual(await lines("suffix-applied"), suffixPending && !failSuffix ? [NONCE_SUFFIX.filename] : []);
+        assert.deepEqual(await lines("suffix-applied"), suffixPending && !failSuffix ? APPROVED_SUFFIXES.map(row => row.filename) : []);
       }
     }
   } finally {

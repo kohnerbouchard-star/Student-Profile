@@ -210,6 +210,8 @@ At minimum detect/ratchet:
 
 **Gate to leave Phase 0:** current violations are inventoried with owners; ratchets are green on current `main`; no later PR is allowed to increase the baselines.
 
+**Owner-approved exception (2026-10-04, REF025c1):** only compatibilityMarkerFiles may move209→210 for the explicit persisted `legacy_v1` liability discriminator in `backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts`. Approval: Sentinel_99a22a14280c819198a0d9b9d95c87ea. See [bounded exception](../operations/evidence/refactor-execution-v1/REF-025/u5-compatibility-exception.md). All other ceilings and the no-increase rule remain; this grants no scanner exclusion, lexical workaround or future exception.
+
 ---
 
 # PHASE 1 — Make game and actor context structural
