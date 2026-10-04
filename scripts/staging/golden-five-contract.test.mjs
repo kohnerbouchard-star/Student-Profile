@@ -29,6 +29,14 @@ test("Golden Five scripts parse under the repository Node runtime", () => {
   }
 });
 
+test("Golden Five auth gate preserves device identity and private evidence contracts", () => {
+  const result = spawnSync(process.execPath, ["scripts/staging/player-auth-gate.mjs", "--self-test"], {
+    encoding: "utf8", timeout: 10_000,
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Player auth gate mocked contracts passed/u);
+});
+
 test("Golden Five package commands remain registered", async () => {
   const packageJson = JSON.parse(await readFile("package.json", "utf8"));
   for (const name of [

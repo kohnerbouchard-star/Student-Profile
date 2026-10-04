@@ -5,8 +5,9 @@ Parent approved narrow #736 test-harness handoff on 2026-10-04; REF-019/020
 remain paused. This does not extract auth persistence or certify live auth.
 
 Exact editable scope: scripts/staging/player-auth-gate.mjs (including its existing
-selfTest), this evidence record and the mandatory PR-specific authority manifest.
-No separate owning test file exists. Under 200 changed lines. #736 remains open
+selfTest), scripts/staging/golden-five-contract.test.mjs (existing staging CI
+contract suite), this evidence record and the PR-specific authority manifest.
+The contract suite invokes the embedded selfTest without live requests. Under 200 changed lines. #736 remains open
 at 8070f58d4145951d8aee3e74a2b1e00d90c54385; key/runtime ownership stays there.
 No backend, guard, error semantics, Player UI, workflow, SQL, credential, setting,
 deployment, production, origin/OIDC/security policy or global roadmap change.
@@ -31,6 +32,6 @@ metadata; no credential reset. Historical failure remains preserved.
 Local validation: pinned Node22.23.1/npm10.9.8; embedded gate regressions,
 actual-handler synthetic prefix400/401, full npm test, secret scan and authority
 contracts passed. Generated inventory unchanged. Full local backend typecheck
-remains blocked by the frozen esm.sh import tunnel; exact-head CI is required.
+and smoke remain blocked by the frozen esm.sh import tunnel; CI must qualify applicable gates.
 
-Draft PR #848; authority accepts the three exact editable paths under five locks.
+Draft PR #848; authority accepts the four exact editable paths under six locks.
