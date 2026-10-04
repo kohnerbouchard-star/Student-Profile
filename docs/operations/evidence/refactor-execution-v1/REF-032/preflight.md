@@ -1,6 +1,6 @@
 # REF-032 World runtime read boundary verification
 
-Status: BLOCKED — inherited post-merge release verification. Base main `eabf3d032768771ebdee652a9d6d1ce35d655734`.
+Status: VERIFIED_COMPLETE — scoped merged-source qualification; parent closeout proposal. Historical base main `eabf3d032768771ebdee652a9d6d1ce35d655734`.
 REF-031 is complete. REF-029 owns separate Contract work; no overlapping World
 read owner exists. Preserve blocked REF-015/025/027 and paused REF-019/020 gates.
 
@@ -150,3 +150,104 @@ main evidence under the separate release gates. No release-file or SQL edit is
 included here. The three existing docs preserve the other 49 task records and
 all incident gates. REF-033 still depends on REF-032 and pending REF-030;
 independent REF-030 qualification can continue under its existing owner.
+
+## Scoped source closeout — 2026-10-04
+
+Audited main: `9ff69a1c28ebc52c639f8bf347f4ace2f5f05b04`. This section supersedes
+the historical REF-032 blocker above, preserving its failed runs and attribution.
+Exactly three documentation/data paths change: this evidence, task REF-032 and
+only its backlog entry. All other 49 task records, IDs, dependency edges, source,
+workflows, migrations, inventory counts and release constraints are unchanged.
+Parent owns independent acceptance review and merge; this draft is not deployed
+runtime or global beta/ARCH certification. REF-031 remains the completed dependency.
+
+### Original acceptance and fresh merged-main checks
+
+World domain source/tests remain byte-identical to qualified PR790 head
+`962d5db36ee4fe4e12b34bdce1881855c7f8e307`, merged as
+`0a3d88ceff3bb1db0b4ffcd306a21b872159cf9e`. The application owner is still
+`createPlayerWorldRuntimeService.readContext`; one repository read and pure
+projection preserve 7–10-query fan-out, game/Player predicates, optional-null and
+error behavior, ordering, privacy and revision freshness. No read calls the clock,
+ID generators, writes or RPCs. Travel/arrival/residency commands stay separate.
+Existing callers and debt measures are unchanged; no wrapper or debt deletion is
+claimed. The original inventory denominator was 1261 source/test files at PR790;
+this documentation closeout adds none and changes no inventory or ceiling.
+
+Fresh commands at audited main, pinned Node 22.23.1 / npm 10.9.8 / Deno 2.9.3:
+- Backend `test:world-runtime`: 50 + 11 PASS, including all 13 REF032 read cases.
+  Cases cover two games/shared definitions, scope denial before reads, paused-game
+  denial, paused campaign, 7/10-query branches, every dependency failure, private
+  projection, optional journey/history ordering and fresh revision reads.
+- `test:player-world`: 23 PASS; `test:player-security`: 59 PASS;
+  `test:player-capabilities`: 11 PASS.
+- Player `world-runtime`, `world-news-route` and full `verify`: PASS.
+- Root `npm test`, including architecture/high-priority/legacy audits: PASS;
+  secret scan and whitespace: PASS; no generated inventory diff.
+
+Exact-main Beta Security run `37174328364`, job `111353680100`, passes its
+fail-closed full `typecheck:all` plus additional security-root checks. Downloaded
+artifact `11292308601` contains actual tsc, all 28 Edge roots and seven additional
+checks without error lines; ZIP SHA256
+`27608d07ce58c3614068d3371c3036c4c68b8fd4b6215c9011f4c5fa893346e0`
+matches GitHub. This supplies actual fresh-main typecheck despite local esm.sh
+proxy failures. Main Repository Quality `37174328388` also passed.
+
+Aggregate backend smoke is supporting qualified-source evidence, not fresh-main
+execution: #838 run `37172002052`, job `111346683703`, at
+`8dd2974a0b5017d7a36d228d8191b84113085696`. Backend, api, admin, auth, frontend/src,
+backend workflow and package/lock files are byte-identical to audited main.
+Downloaded smoke artifact `11292105766` has stored status 0, all 27 Deno suite
+summaries totaling 1357 PASS / 0 FAIL, all 13 REF032 cases and all command roots
+through admin-local-mutations; no error lines. ZIP SHA256
+`bcc9e6af95d883238737fd5040561f065981b9a1bbedc09fafd5345bd9e11edf`
+matches GitHub. Local aggregate smoke remains dependency-fetch BLOCKED / exit 1;
+it is not relabeled passed. Execution-contract section 5 requires exact source
+attribution and forbids calling another SHA exact-head; it contains no blanket
+inheritance exception. VALIDATION distinguishes source-refactor checks from
+this documentation-only closeout. The parent accepts this explicitly attributed
+combination without inventing another runtime/capture or optional rerun gate.
+
+### U1 prerequisite resolved without release restoration
+
+The immutable bundle remains 151 staging / 169 production (18 prelude + 151 common),
+with the later nonce migration explicitly accounted outside the bundle. Existing
+plan/digest/negative tests preserve identities and fail closed on unapproved suffix
+changes. Rehearsal scripts, builder, plan and migrations are unchanged between
+production capture source below and audited main. Source-only qualification
+retains 28 reconciliation passes, the existing unexecuted local PostgreSQL test,
+15 release-integrity passes and all nine positive/negative hold contracts.
+
+| Evidence | Staging | Production (historical, no recapture) |
+| --- | --- | --- |
+| Run / job | 37173999995 / 111352700110 | 36961759600 / 110696781402 |
+| Source | 0384fe285a12b2e429e1cb28ac46dfea9519a346 | 1a0ff1adb28f710d646c655c8ca91b24e799dd18 |
+| Sanitized artifact | 11292413019 | 11208776447 |
+| Status / exit | PASS / 0 | PASS / 0 |
+| Certified / applied migrations | 151 / 0 | 169 / 0 |
+| Canonical application schema matched | true | true |
+| Capture, disposable rehearsal, raw cleanup | success | success |
+| releaseCertificate | false | false |
+
+Downloaded archives contain only `result.json`; SHA256 values match GitHub:
+staging `979446b346c7152f25e7a3cce887d2258c8a173a202aadfcb53b973fb27f9df4`,
+production `cc1eb97272788eb2a333de7b5dd068c4ff3f0a5e3d90db43df4ca188ee572c34`.
+Staging followed reviewed #839 merge and successful exact-main push replay
+`37173648612` at `0384fe28`, attempt 1; main stayed frozen through confirmed cleanup.
+The original staging failure before capture (missing SUPABASE_DB_URL) and its
+skipped rehearsal remain historical failure, not a passing result. No blind retry
+or production recapture occurred. Replay's 17 error-level lint findings are exactly
+the prior main baseline; a successful workflow is not a zero-error lint claim.
+
+These prove schema-shaped disposable rehearsal, not populated data compatibility,
+authenticated hosted reads, deployed behavior, live convergence or a release.
+Those separate release/runtime gates remain, as do #730/#731 ownership, all nine
+U1 holds and `releaseCertificate:false`. No further capture, live SQL, deployment,
+credential/security change or hold restoration is authorized by this closeout.
+
+The original source acceptance is met with the provenance and limitations above.
+Only REF-032's scoped ledger disposition is proposed as VERIFIED_COMPLETE. Parent
+review/merge and applicable docs CI are required; this proposal itself does not
+start REF-033/034/046. Next: parent closes REF-032, then assigns REF-033 after
+confirming REF-030 and the other original gates. Rollback reverts this three-path
+closeout only, preserving source qualification, historical evidence and holds.
