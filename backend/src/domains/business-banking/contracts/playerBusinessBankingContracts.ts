@@ -36,7 +36,9 @@ export interface LoansSnapshotDto {
   readonly nextPayment: { readonly amount: number; readonly due: string };
   readonly onTimeRate: number;
   readonly paymentsMade: number;
+  // Optional for injected repositories; production emits null when the row has no currency.
   readonly offers: readonly {
+    readonly currencyCode?: string | null;
     readonly id: string;
     readonly name: string;
     readonly purpose: string;
@@ -52,6 +54,7 @@ export interface LoansSnapshotDto {
     readonly icon: string;
   }[];
   readonly activeLoans: readonly {
+    readonly currencyCode?: string | null;
     readonly id: string;
     readonly name: string;
     readonly status: string;
@@ -64,6 +67,7 @@ export interface LoansSnapshotDto {
     readonly businessId: string | null;
   }[];
   readonly schedule: readonly {
+    readonly currencyCode?: string | null;
     readonly cycle: string;
     readonly due: string;
     readonly amount: number;

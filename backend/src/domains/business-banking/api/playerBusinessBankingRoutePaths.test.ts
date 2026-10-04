@@ -148,7 +148,9 @@ Deno.test("Loans preserves injected scope denial and never constructs its reposi
 });
 
 Deno.test("Loans retains five scoped reads and the borrower/account projection contract", async () => {
-  for (const businessCount of [0, 1, 2]) {
+  for (const [businessCount, missingCurrency] of [0, 1, 2].flatMap((count) =>
+    [false, true].map((missing) => [count, missing] as const)
+  )) {
     const calls: unknown[][] = [];
     const businessKey = key("biz", "a");
     const fixtures: Record<string, Record<string, unknown>[]> = {
@@ -161,6 +163,11 @@ Deno.test("Loans retains five scoped reads and the borrower/account projection c
       loan_payments: [{ status: "posted" }, { status: "reversed" }],
       business_entities: Array.from({ length: businessCount }, (_, i) => ({ id: `business${i}`, public_key: businessKey, status: "active" })),
     };
+    if (missingCurrency) {
+      for (const row of [...fixtures.loan_products, ...fixtures.player_loans]) {
+        row.currency_code = [null, undefined, "   "][businessCount];
+      }
+    }
     const client = {
       rpc(name: string, args: unknown) {
         calls.push(["rpc", name, args]);
@@ -191,12 +198,39 @@ Deno.test("Loans retains five scoped reads and the borrower/account projection c
     assertEquals(result.activeLoans[0].businessId, businessCount ? businessKey : null);
     assertEquals(result.nextPayment, { amount: 3, due: "2026-10-05T00:00:00.000Z" });
     assertEquals(result.schedule.map((item) => item.amount), [3, 3, 4]);
-    assertEquals("currencyCode" in result.activeLoans[0], false);
+    const currency = (code: string) => missingCurrency ? null : code;
+    assertEquals(result.offers.map((row) => row.currencyCode), businessCount ? [currency("NRC")] : []);
+    assertEquals(result.activeLoans.map((row) => row.currencyCode), [currency("NRC"), currency("LUM")]);
+    assertEquals(result.schedule.map((row) => row.currencyCode), [currency("NRC"), currency("NRC"), currency("LUM")]);
+    // Strip only additive metadata, then compare the entire retained response.
+    const stripCurrency = ({ currencyCode: _currency, ...row }: { currencyCode?: string | null }) => row;
+    assertEquals({ ...result, offers: result.offers.map(stripCurrency),
+      activeLoans: result.activeLoans.map(stripCurrency), schedule: result.schedule.map(stripCurrency) }, {
+      configured: true, creditScore: 600, availableCredit: businessCount ? 100.1 : 0,
+      outstanding: 30.8, nextPayment: { amount: 3, due: "2026-10-05T00:00:00.000Z" },
+      onTimeRate: 100, paymentsMade: 1,
+      offers: businessCount ? [{ id: key("lop", "b"), name: "Credit facility", purpose: "Business finance",
+        description: "", limit: 100.1, minimumAmount: 0, apr: 0, fee: 0, termCycles: 2,
+        risk: "Moderate", borrowerType: "business", disclosure: "", icon: "business" }] : [],
+      activeLoans: [
+        { id: key("lon", "c"), name: "Credit facility", status: "Active", balance: 10.3,
+          originalAmount: 20, nextPayment: 3, nextDue: "2026-10-05T00:00:00.000Z",
+          repaidPercent: 49.5, accruedInterest: 0.2, businessId: businessCount ? businessKey : null },
+        { id: key("lon", "d"), name: "Credit facility", status: "Delinquent", balance: 20.5,
+          originalAmount: 30, nextPayment: 4, nextDue: "2026-10-06T00:00:00.000Z",
+          repaidPercent: 32.7, accruedInterest: 0.3, businessId: null },
+      ],
+      schedule: [
+        { cycle: "Payment 1", due: "2026-10-05T00:00:00.000Z", amount: 3, status: "Scheduled" },
+        { cycle: "Payment 2", due: "2026-10-12T00:00:00.000Z", amount: 3, status: "Scheduled" },
+        { cycle: "Payment 1", due: "2026-10-06T00:00:00.000Z", amount: 4, status: "Late" },
+      ],
+    });
   }
 });
 
 Deno.test("Loans unavailable context fails before table reads, database errors remain errors", async () => {
-  for (const error of [null, { message: "LOAN_PRODUCT_NOT_FOUND" }]) {
+  for (const error of [null, { message: "LOAN_PRODUCT_NOT_FOUND" }, { message: "PLAYER_NOT_FOUND" }]) {
     const client = {
       rpc: () => Promise.resolve({ data: null, error }),
       from: () => { throw new Error("tables must not be read"); },
@@ -204,7 +238,7 @@ Deno.test("Loans unavailable context fails before table reads, database errors r
     let failure: unknown;
     try { await new SupabasePlayerBusinessBankingRepository(client).readLoans({ gameSessionId: "game", playerId: "player" }); }
     catch (caught) { failure = caught; }
-    assertEquals((failure as { code: string }).code, error ? "loan_product_not_found" : "player_economic_context_missing");
+    assertEquals((failure as { code: string }).code, error ? error.message.toLowerCase() : "player_economic_context_missing");
   }
 });
 
@@ -235,4 +269,23 @@ Deno.test("Loan application passes account intent and server identity to one ato
   }]]);
   assertEquals(response.headers.get("cache-control"), "private, no-store, max-age=0");
   assertEquals(await response.json(), { ok: true, result: { application_key: key("lna", "c"), status: "pending_review" }, refreshRequired: true });
+});
+
+Deno.test("Loans table read failure cannot become an empty currency projection", async () => {
+  const client = {
+    rpc: () => Promise.resolve({ data: { country_code: "NRC", currency_code: "NRC" }, error: null }),
+    from(table: string) {
+      const query = {
+        select() { return query; }, eq() { return query; }, order() { return query; }, limit() { return query; },
+        then(resolve: (value: unknown) => unknown) {
+          return Promise.resolve({ data: [], error: table === "player_loans" ? { message: "database unavailable" } : null }).then(resolve);
+        },
+      };
+      return query;
+    },
+  } as unknown as EdgeSupabaseClient;
+  let failure: unknown;
+  try { await new SupabasePlayerBusinessBankingRepository(client).readLoans({ gameSessionId: "game", playerId: "player" }); }
+  catch (caught) { failure = caught; }
+  assertEquals((failure as { code: string }).code, "database");
 });

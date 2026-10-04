@@ -91,6 +91,7 @@ export class SupabasePlayerBusinessBankingRepository
       onTimeRate: round(number(profile.on_time_payment_rate, 1) * 100, 1),
       paymentsMade: paymentRows.filter((row) => text(row.status) === "posted").length,
       offers: eligibleProducts.map((row) => ({
+        currencyCode: text(row.currency_code) || null,
         id: text(row.public_key),
         name: text(row.name, "Credit facility"),
         purpose: text(row.borrower_type) === "business" ? "Business finance" : "Player finance",
@@ -110,6 +111,7 @@ export class SupabasePlayerBusinessBankingRepository
         const balance = number(row.principal_balance) + number(row.accrued_interest);
         const product = productById.get(text(row.loan_product_id)) ?? {};
         return {
+          currencyCode: text(row.currency_code) || null,
           id: text(row.public_key),
           name: text(product.name, "Credit facility"),
           status: title(text(row.status)),
@@ -137,6 +139,7 @@ export class SupabasePlayerBusinessBankingRepository
         const nextDue = Date.parse(text(row.next_due_at));
         if (!Number.isFinite(nextDue)) return [];
         return Array.from({ length: paymentCount }, (_, index) => ({
+          currencyCode: text(row.currency_code) || null,
           cycle: `Payment ${index + 1}`,
           due: new Date(nextDue + index * frequencyCycles * 7 * 86_400_000).toISOString(),
           amount: number(row.scheduled_payment),
