@@ -13,6 +13,7 @@
     "admin/logout-account-trigger-bridge.js",
     "scripts/admin-logout-account-trigger-source-smoke.mjs",
     "scripts/admin-logout-confirmation-browser-smoke.mjs",
+    "scripts/admin-loading-scanner-smoke.mjs",
     "docs/operations/evidence/refactor-execution-v1/REF-015/u7-logout-trigger-migration.md",
     "docs/operations/contracts/player-cross-cutting/pr-850.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
@@ -50,5 +51,5 @@
     "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-015/u7-logout-trigger-migration.md",
-  "authorizationNote": "Parent approved at most seven paths, 350 total changed lines and100 runtime lines. Six paths change; generated inventory needed no update. Verifier/tests remain unchanged locks. Preserve event registration order, synchronous older/missing-owner fallback, all URLs/globals, authentication/session behavior, source/browser negative checks, eight retained candidates and all retirement/release holds. No deletion, runtime/security/retention/settings change, deployment or merge. Parent retains independent review and merge."
+  "authorizationNote": "Parent approved at most seven paths, 350 total changed lines and100 runtime lines. Seven paths change after parent approved the test-only scanner readiness correction; generated inventory needed no update. Preserve the existing15-second readiness budget and all zero-loader assertions; cover delayed removal and a stuck gate. Verifier/tests remain unchanged locks. Preserve event registration order, synchronous older/missing-owner fallback, all URLs/globals, authentication/session behavior, source/browser negative checks, eight retained candidates and all retirement/release holds. No deletion, runtime/security/retention/settings change, deployment or merge. Parent retains independent review and merge."
 }
