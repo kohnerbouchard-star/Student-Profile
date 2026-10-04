@@ -1,4 +1,3 @@
-import { deepStrictEqual as assertEquals } from "node:assert";
 import { prepareStoryContractEffect } from "./prepareStoryEffects.ts";
 import { executeStoryEffect } from "./storyEffectEngine.ts";
 import { parseStoryEffect } from "../contracts/storyEffectContracts.ts";
@@ -80,4 +79,10 @@ function assertSkippedReason(result: Awaited<ReturnType<typeof executeStoryEffec
 function assertFailedMessage(result: Awaited<ReturnType<typeof executeStoryEffect>>, message: string) {
   if (result.status !== "failed") throw new Error("expected failed receipt");
   assertEquals(result.errorMessage, message);
+}
+
+function assertEquals(actual: unknown, expected: unknown): void {
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(`Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`);
+  }
 }
