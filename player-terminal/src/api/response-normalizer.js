@@ -381,7 +381,7 @@ function normalizeLoanCurrencies(projection) {
       !Number.isSafeInteger(projection.unknownCurrencyRows) || projection.unknownCurrencyRows < 0 ||
       !Array.isArray(projection.groups) || projection.groups.length > MAX_ARRAY_LENGTH) return null;
   const money = (value) => value === null ? !projection.complete :
-    typeof value === "string" && value.length <= MAX_STRING_LENGTH && /^(0|[1-9][0-9]*)\.[0-9]{2}$/u.test(value);
+    typeof value === "string" && value === value.trim() && value.length <= MAX_STRING_LENGTH && /^(0|[1-9][0-9]*)\.[0-9]{2}$/u.test(value);
   const date = (value) => typeof value === "string" && value.length <= 100 && Number.isFinite(Date.parse(value));
   const codes = new Set();
   const groups = [];

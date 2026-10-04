@@ -23,7 +23,7 @@ function repaymentAccountOptions(selected, businessKey) {
 
 function loanMoney(value, code) {
   if (typeof code !== "string" || !code.trim()) return "Currency unavailable";
-  if (typeof value === "string" && /^(0|[1-9][0-9]*)(?:\.[0-9]{1,2})?$/u.test(value)) {
+  if (typeof value === "string" && value === value.trim() && /^(0|[1-9][0-9]*)(?:\.[0-9]{1,2})?$/u.test(value)) {
     const [whole, fraction = ""] = value.split(".");
     return `${code} ${whole.replace(/\B(?=(?:[0-9]{3})+(?![0-9]))/gu, ",")}.${fraction.padEnd(2, "0")}`;
   }

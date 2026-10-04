@@ -322,7 +322,7 @@ assert.match(exactMarkup, /None scheduled/);
 for (const invalid of [undefined, null, { ...projection, version: 2 }, { ...projection, complete: "true" },
   { ...projection, unknownCurrencyRows: 1 }, { ...projection, groups: [...projection.groups, projection.groups[0]] },
   { ...projection, groups: Array(1001).fill(projection.groups[0]) },
-  ...[12.34, "1.234", "-1.00", "9".repeat(5001) + ".00", null].map((outstanding) =>
+  ...[12.34, "1.234", "-1.00", "1.00\n", "9".repeat(5001) + ".00", null].map((outstanding) =>
     ({ ...projection, groups: [{ ...projection.groups[0], outstanding }] })),
   { ...projection, groups: [{ ...projection.groups[0], schedule: Array(1001).fill({ due, amount: "1.00" }) }] },
 ]) {
