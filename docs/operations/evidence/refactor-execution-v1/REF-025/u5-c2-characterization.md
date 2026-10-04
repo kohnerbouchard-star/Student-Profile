@@ -36,7 +36,11 @@ Store settlement fixture. Existing Store suites retain positive settlement proof
 Existing c1 postgres/service-role INSERT/UPDATE gate assertions remain unchanged.
 No copied production routine, ledger trigger bypass, live access or runtime edit.
 
-Source runner and whitespace PASS; disposable exact-head qualification pending.
+Source runner/whitespace PASS. Draft PR854 initial head39fc8899 database job
+111538201960 PASS (full replay/reset and rollback acceptance). Source job111538202180
+FAIL: absent PR854 authority falls back to the incompatible historical PR661 manifest.
+No fourth path added. Proposed amendment: pr-854.json only; total4paths/240lines.
+Qualification BLOCKED pending that exact amendment and final-head verification.
 Preserve inherited142 lint findings/17errors; no clean-lint claim.
 REF025 BLOCKED; REF027 depends025+026. Both creation gates and nine U1 holds stay.
 Parent controls independent review/merge; no live SQL/capture/deployment/settings.

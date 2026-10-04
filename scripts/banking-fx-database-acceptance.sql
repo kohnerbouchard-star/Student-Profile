@@ -240,7 +240,8 @@ begin
     update public.loan_applications set status='approved' where id=application;
     select * into reviewed from public.review_player_loan_application_v1(g,staff,key,'decline','Changed decision','ref025-review-first');
     select * into again from public.review_player_loan_application_v1(g,staff,key,'invalid','Changed payload','ref025-review-other');
-    if not reviewed.replayed or reviewed.status <> 'approved' or to_jsonb(reviewed) <> to_jsonb(again) then
+    if reviewed.replayed is distinct from true or reviewed.status is distinct from 'approved'
+      or to_jsonb(reviewed) is distinct from to_jsonb(again) then
       raise exception 'REF025 legacy terminal replay changed';
     end if;
     insert into public.players(id,game_session_id,display_name,status) values(manager,g,'REF025 operator','active');
