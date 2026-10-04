@@ -21,3 +21,9 @@ exact post-bundle identities/hashes separately. Existing generic suffix applicat
 may need no shell change; do not rewrite historical release semantics unnecessarily.
 Validate every partial suffix prefix, missing/changed/reordered/unknown identities,
 rollback and separate evidence. No hosted rehearsal/capture authorized.
+
+Implementation changes only planner/tests plus this evidence. Generic rehearsal shell
+already applies exact pending suffixes. Historical live-convergence applies only its
+immutable Phase15 bundle, so its historical audit stays456; no #731 shell/test edits.
+All15 forward-bundle tests pass, including every suffix prefix and raw-hash tampering.
+Nonce identity retained; c1 and purge suffix identities are independently hash-bound.
