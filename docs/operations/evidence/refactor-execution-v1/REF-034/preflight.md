@@ -1,7 +1,7 @@
 # REF-034 — Story notification write boundary
 
 Status: IN_PROGRESS; source qualification only, no merge/runtime/completion credit.
-Base: `f8ce47a3f57a429b75c7205d07018736bb8d70cb`. REF-032/033 are verified; package remains 39/50 complete. Parent accepted this narrow handoff on 2026-10-04. REF-034 permits twelve meaningful files; this tranche uses ten total paths and at most 400 semantic diff lines. Task/backlog updates are reserved for separate closeout.
+Base: `f8ce47a3f57a429b75c7205d07018736bb8d70cb`. REF-032/033 are verified; package remains 39/50 complete. Parent accepted this narrow handoff on 2026-10-04. REF-034 permits twelve meaningful files; this tranche uses eleven total paths and at most 400 semantic diff lines. Task/backlog updates are reserved for separate closeout.
 
 ## Ownership and exact scope
 
@@ -18,6 +18,8 @@ No open REF-034 PR/branch was found at preflight. PR #668 retains global ledger/
 9. `docs/architecture/inventories/econovaria-architecture-inventory-v2.json`: generated inventory only, no ceiling changes.
 10. `docs/operations/contracts/player-cross-cutting/pr-849.json`: PR-bound authority; verifier/tests unchanged.
 
+11. `docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json`: parent-approved refresh of three supporting package blob hashes only; all review evidence/dispositions retained.
+
 ## Preserved authority and behavior
 
 The public factory returns the same `SupabaseStoryNotificationRepository` with the same client. Both production constructors now call it; it is not an unused barrel. The two port imports in Story contracts are type-only. Read/acknowledgement APIs remain outside the write contract. The legacy class stays reachable for dashboard reads and existing tests; no retirement is claimed.
@@ -32,8 +34,10 @@ Protected: notification repository/service/runner implementations; read/ack/priv
 
 Run Notifications, focused Story repository/service/runner and Stock HTTP tests, World runtime, Player notifications-inbox/story-delivery, full backend typecheck/smoke, root tests, architecture/high-priority/legacy audits, secrets and diff checks. Preserve exact-head CI attribution; synthetic fixtures do not prove live delivery or database concurrency.
 
-Initial focused Notifications run exposed two new test expectations using the raw database error code; the unchanged repository normalizes it to `story_notification_repository_query_failed`. Corrected the expectations only; all 35 Notifications tests then passed. The final registered suite has 34 tests after removing a redundant fixture case; a tuple-spread typing error was also corrected before qualification. Final qualification and debt measures are recorded below before review.
+Initial focused Notifications run exposed two new test expectations using the raw database error code; the unchanged repository normalizes it to `story_notification_repository_query_failed`. Corrected the expectations only; all 35 Notifications tests then passed. The final registered suite has 34 tests after removing a redundant fixture case; a tuple-spread typing error was also corrected before qualification. Final qualification and debt measures follow below.
 
 Source candidate `6b05aa67b2ca73ec45ea19759f62bd2093f398cc`: Notifications 34; focused Story repository/service/runner and Stock HTTP 69; World 50 + Admin 11; Player inbox/Story flows pass. Frozen-base `f8ce47a3` differential: three first-attempt/failure scenarios each followed by retry, replay and another game, with identical receipts, normalized errors, partial states, complete query traces and final rows. Driver and sanitized logs are retained in PR #849; this is synthetic parity, not database concurrency proof.
 
 Inventory: 29 domains, 28 Edge roots and 100 oversized files unchanged; source/test files 1274→1276. Selected consumer infrastructure imports 2→0, with one same-writer bridge retained in Notifications. Scanner deep-import count 163→168 includes public/type/test imports; infrastructure count remains 9, compatibility markers 209. Existing ceilings unchanged. No runtime import cycle: Story references the port only via erased type imports.
+
+Parent approved the eleventh path after required root tests detected stale supporting package hashes. The three values change from `629a4cb8f18cb6ac3bc14f23bd7520c6d880bf1f` to `8f8fe07cb0e446a121fcbc519cb692447c2e1b68`; all other REF-003 data is identical. Main `0ebc3d7dc3c03ec31f945dd546e3c726fb534bb1` merged normally; inventory regeneration is deterministic. Local TypeScript passes; full Edge typecheck/smoke encountered the existing esm.sh proxy tunnel failure. Exact-head CI logs/artifacts and final root results are retained in PR #849.

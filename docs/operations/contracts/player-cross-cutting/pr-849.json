@@ -20,7 +20,8 @@
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-849.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json"
   ],
   "requiredFiles": [
     "backend/src/domains/notifications/public/storyNotifications.ts",
@@ -34,7 +35,8 @@
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-849.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json"
   ],
   "requiredChecks": [
     "player-terminal-verify",
