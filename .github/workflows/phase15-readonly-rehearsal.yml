@@ -19,19 +19,10 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.run_attempt == 1
     runs-on: ubuntu-24.04
     timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        include:
-          - environment: staging
-            project: eecvbssdvarfcykcfrny
-          - environment: production
-            project: cgiukdjwicykrmtkhudh
-    environment: ${{ matrix.environment }}
+    environment: staging
     env:
-      PHASE15_ENVIRONMENT: ${{ matrix.environment }}
-      PHASE15_EXPECTED_PROJECT_REF: ${{ matrix.project }}
+      PHASE15_ENVIRONMENT: staging
+      PHASE15_EXPECTED_PROJECT_REF: eecvbssdvarfcykcfrny
       IMAGE: ghcr.io/supabase/postgres@sha256:e884cde9f5594ddb30ebec888bd236d128eaf9c9b48cc864d8fa3d27a6c6c6bc
     steps:
       - name: Prepare private paths without credentials
@@ -58,7 +49,34 @@ jobs:
         run: |
           set -euo pipefail
           gh api "repos/$GITHUB_REPOSITORY/actions/workflows/phase15-readonly-rehearsal.yml/runs?event=workflow_dispatch&per_page=2" > "$RUNNER_TEMP/manual-runs.json"
-          jq -e --argjson id "$GITHUB_RUN_ID" '.total_count == 1 and .workflow_runs[0].id == $id' "$RUNNER_TEMP/manual-runs.json"
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          jq -e --argjson id "$GITHUB_RUN_ID" '
+            .total_count == 2 and (.workflow_runs | length) == 2 and
+            .workflow_runs[0].id == $id and $id != 36961759600 and
+            .workflow_runs[0].run_attempt == 1 and
+            (.workflow_runs[1] | .id == 36961759600 and .run_attempt == 1 and
+              .event == "workflow_dispatch" and .head_branch == "main" and
+              .path == ".github/workflows/phase15-readonly-rehearsal.yml" and
+              .status == "completed" and .conclusion == "failure")
+          ' "$RUNNER_TEMP/manual-runs.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/36961759600/jobs?filter=all&per_page=100" > "$RUNNER_TEMP/prior-jobs.json"
+          jq -e '
+            def step($name; $outcome):
+              [.steps[] | select(.name == $name)] |
+              length == 1 and .[0].status == "completed" and .[0].conclusion == $outcome;
+            def job($id; $name; $outcome; $capture; $restore):
+              [.jobs[] | select(.id == $id and .name == $name)] |
+              length == 1 and (.[0] | .run_id == 36961759600 and
+                .status == "completed" and .conclusion == $outcome and
+                step("Bind approved source and canonical evidence before accessing secrets"; "success") and
+                step("Capture once with existing environment access"; $capture) and
+                step("Restore and rehearse locally without hosted credentials"; $restore) and
+                step("Retain only bounded qualification results"; "success") and
+                step("Remove restricted captures and diagnostics"; "success"));
+            .total_count == 2 and (.jobs | length) == 2 and
+            job(110696781286; "rehearse (staging, eecvbssdvarfcykcfrny)"; "failure"; "failure"; "skipped") and
+            job(110696781402; "rehearse (production, cgiukdjwicykrmtkhudh)"; "success"; "success"; "success")
+          ' "$RUNNER_TEMP/prior-jobs.json"
           [[ "$REPLAY_RUN" =~ ^[0-9]+$ ]]
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$APPROVED_SHA" = "$GITHUB_SHA"
@@ -128,7 +146,7 @@ jobs:
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: ref032-diagnostic-only-${{ matrix.environment }}-${{ github.sha }}
+          name: ref032-diagnostic-only-staging-${{ github.sha }}
           path: ${{ runner.temp }}/u1/sanitized/result.json
           retention-days: 7
           if-no-files-found: error

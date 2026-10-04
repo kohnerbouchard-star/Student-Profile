@@ -42,3 +42,54 @@ The converter additionally requires canonical ASCII DNS labels before revalidati
 Supabase project binding; encoded socket/multihost/separator/whitespace hosts fail
 before credential output. Fixture PGHOSTADDR maps the valid DNS identity only to
 local loopback for native and Docker transport tests; the workflow never sets it.
+
+## Approved staging-only amendment (2026-10-04)
+
+Status: IMPLEMENTED_NOT_MERGED; REF-032 / REF-UNBLOCK-001 remains BLOCKED.
+Initial audited base: `8178ee7c13b5c02761bb0f9bbf34cea03a3467ca`.
+Reconciled base: `486b5e2d0f2fc042be444840fff2d4f11c4ac72c` (#837).
+Owner Sentinel_322434987b60819189c6b2fb5ca464a6 approved the narrow
+staging-only additional-run amendment with “yes” at 02:53:39 UTC on October 4.
+Parent reports the owner is adding staging environment `SUPABASE_DB_URL`;
+this amendment neither reads nor changes that secret or any security setting.
+
+This supersedes the historical two-environment / first-dispatch-only scope above.
+Only three paths change: this evidence, the manual workflow, and its existing test.
+Parent retains source review and merge authority. No migration, route, RPC, bundle
+identity or release-hold file changes. Shared roadmap edits remain parent-owned to
+respect the explicit three-path limit; no task is marked VERIFIED_COMPLETE.
+
+Prior dispatch `36961759600`: staging job `110696781286` failed in the capture
+step before capture due to missing SUPABASE_DB_URL (parent-supplied diagnosis);
+its restore/rehearsal was skipped. Production job `110696781402` passed capture
+and disposable rehearsal. Both source-binding steps and both cleanups passed.
+Connected GitHub job metadata independently confirmed these step outcomes on
+October 4; raw logs, captures and secrets were not accessed. Production success
+is historical evidence, not a release certificate or current-main qualification.
+
+The production matrix is removed entirely. The sole admitted additional dispatch
+must be first attempt, with exactly two history entries: itself and the exact
+completed, failed first-attempt prior run. Before accessing credentials, its exact
+two prior job IDs/names and binding/capture/restore/sanitization/cleanup outcomes
+must match. Missing, changed, duplicated or extra evidence fails closed, as do
+later dispatches and reruns. Current-main/source-SHA/passed push replay binding,
+project/TLS checks, consistent read-only snapshot, private ephemeral raw files,
+sanitized-only artifacts, credential-free local restore and cleanup remain intact.
+
+New staging capture/rehearsal: NOT_RUN. No database connection, dispatch, live SQL,
+production recapture or deployment occurred in this amendment. Next exact action:
+parent review and merge, then verify the exact new-main push Database Replay
+succeeds before considering the single authorized staging dispatch. Any failed or
+uncertain capture returns to parent inspection; never retry blindly. Nine release
+holds remain unchanged. Rollback reverts only this amendment and retains all holds.
+
+Amendment validation: pinned Node 22.23.1/npm 10.9.8; root `npm test` PASS;
+all reconciliation tests 28 PASS / one existing disposable-PostgreSQL test skipped
+(no database connections authorized here). Exact jq predicates are executed against
+valid and independently mutated/missing/extra run, job and step evidence. Existing
+nine-hold positive/negative tests pass, and all three held workflow files are
+byte-identical to base. Secret scan, YAML parse, every workflow shell block's
+`bash -n`, and `git diff --check` pass. Backend TypeScript passes; full Edge
+checking is blocked by the esm.sh dependency fetch (`unsuccessful tunnel`) with
+pinned Deno 2.9.3. Backend smoke also stops on that same dependency fetch.
+Exact-head hosted checks are recorded in the PR handoff, not assumed successful. No database replay was run locally.

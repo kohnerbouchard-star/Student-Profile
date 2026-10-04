@@ -14,7 +14,9 @@ test('manual qualification cannot restore held jobs or publish release certifica
   assert.doesNotMatch(workflow, /(?:push|pull_request|schedule|workflow_run|workflow_call):/);
   assert.match(workflow, /github.run_attempt == 1/);
   assert.match(workflow, /event=workflow_dispatch&per_page=2/);
-  assert.match(workflow, /\.total_count == 1 and \.workflow_runs\[0\].id == \$id/);
+  assert.match(workflow, /test "\$GITHUB_RUN_ATTEMPT" = 1/);
+  assert.doesNotMatch(workflow, /matrix|environment: production/);
+  assert.match(workflow, /environment: staging/);
   assert.match(workflow, /contents: read\n  actions: read/);
   assert.match(workflow, /secrets.SUPABASE_DB_URL/);
   assert.doesNotMatch(workflow, /secrets.(?:SUPABASE_ACCESS_TOKEN|SUPABASE_DB_PASSWORD)/);
@@ -22,10 +24,79 @@ test('manual qualification cannot restore held jobs or publish release certifica
   assert.match(workflow, /path: \$\{\{ runner.temp \}\}\/u1\/sanitized\/result.json/);
   assert.match(workflow, /eecvbssdvarfcykcfrny/);
   assert.match(workflow, /cgiukdjwicykrmtkhudh/);
+  for (const marker of [
+    'test "$(git rev-parse HEAD)" = "$GITHUB_SHA"',
+    'test "$APPROVED_SHA" = "$GITHUB_SHA"',
+    'test "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)" = "$GITHUB_SHA"',
+    '.head_sha == $sha and .event == "push" and .head_branch == "main" and .conclusion == "success"',
+    '.path == ".github/workflows/database-replay.yml"',
+    '--name "phase15-clean-replay-$GITHUB_SHA"',
+    'PHASE15_EXPECTED_PROJECT_REF: eecvbssdvarfcykcfrny',
+    '-e PGSSLMODE=verify-full', 'openssl x509', 'sha256sum scripts/operations/',
+    'if: always()\n        run: sudo rm -rf "$RUNNER_TEMP/u1"',
+  ]) assert.ok(workflow.includes(marker), `missing safeguard: ${marker}`);
   const capture = readFileSync(helper, 'utf8');
   assert.match(capture, /BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY/);
   assert.match(capture, /pg_dump --snapshot="\$snapshot"/);
   assert.match(capture, /idle_in_transaction_session_timeout=180000/);
+});
+
+test('additional dispatch gate executes fail-closed history and prior-outcome predicates', () => {
+  const filters = [...workflow.matchAll(/jq -e(?: --argjson id "\$GITHUB_RUN_ID")? '([\s\S]*?)' "\$RUNNER_TEMP\/(manual-runs|prior-jobs)\.json"/g)];
+  assert.equal(filters.length, 2);
+  const evaluate = (index, value) => spawnSync('jq', ['-e', '--argjson', 'id', '40000000000', filters[index][1]], {
+    input: JSON.stringify(value), encoding: 'utf8',
+  }).status;
+  const history = { total_count: 2, workflow_runs: [
+    { id: 40000000000, run_attempt: 1 },
+    { id: 36961759600, run_attempt: 1, event: 'workflow_dispatch', head_branch: 'main',
+      path: '.github/workflows/phase15-readonly-rehearsal.yml', status: 'completed', conclusion: 'failure' },
+  ] };
+  const steps = [
+    'Bind approved source and canonical evidence before accessing secrets',
+    'Capture once with existing environment access',
+    'Restore and rehearse locally without hosted credentials',
+    'Retain only bounded qualification results',
+    'Remove restricted captures and diagnostics',
+  ];
+  const jobs = { total_count: 2, jobs: [
+    { id: 110696781286, name: 'rehearse (staging, eecvbssdvarfcykcfrny)', conclusion: 'failure' },
+    { id: 110696781402, name: 'rehearse (production, cgiukdjwicykrmtkhudh)', conclusion: 'success' },
+  ].map((job, index) => ({ ...job, run_id: 36961759600, status: 'completed',
+    steps: steps.map((name, i) => ({ name, status: 'completed',
+      conclusion: index === 0 && i === 1 ? 'failure' : index === 0 && i === 2 ? 'skipped' : 'success' })),
+  })) };
+  for (const [index, fixture] of [history, jobs].entries()) {
+    assert.equal(evaluate(index, fixture), 0);
+    // Every required scalar is independently mandatory and exact (no missing-field defaults).
+    const mutate = (value, path = []) => {
+      for (const [key, child] of Object.entries(value)) {
+        if (child !== null && typeof child === 'object') mutate(child, [...path, key]);
+        else for (const replacement of [null, 'unexpected', 3]) {
+          const copy = structuredClone(fixture);
+          let target = copy;
+          for (const part of path) target = target[part];
+          target[key] = replacement;
+          assert.notEqual(evaluate(index, copy), 0, `${index}:${[...path, key].join('.')}`);
+        }
+      }
+    };
+    mutate(fixture);
+    assert.notEqual(evaluate(index, {}), 0);
+    for (const count of [0, 1, 3, 100]) assert.notEqual(evaluate(index, { ...fixture, total_count: count }), 0);
+    const key = index === 0 ? 'workflow_runs' : 'jobs';
+    for (const entries of [[], fixture[key].slice(0, 1), [...fixture[key], fixture[key][0]]]) {
+      assert.notEqual(evaluate(index, { ...fixture, [key]: entries }), 0);
+    }
+  }
+  const rerun = structuredClone(history);
+  rerun.workflow_runs[0].run_attempt = 2;
+  assert.notEqual(evaluate(0, rerun), 0);
+  rerun.workflow_runs.reverse();
+  assert.notEqual(evaluate(0, rerun), 0);
+  const duplicate = structuredClone(jobs);
+  duplicate.jobs[0].steps.push(duplicate.jobs[0].steps[0]);
+  assert.notEqual(evaluate(1, duplicate), 0);
 });
 
 test('shared snapshot survives concurrent DDL/ledger changes and fails on exporter loss', {
