@@ -193,8 +193,7 @@ begin
     values(business,g,actor,'REF025 borrower','US','USD','disregarded'),
       (other_business,other_game,other_actor,'REF025 other borrower','US','USD','disregarded');
   select public.business_account_type_v1(public_key) into account from public.business_entities where id=business;
-  insert into public.account_balances(game_session_id,player_id,business_id,account_type,currency_code,balance)
-    values(g,actor,business,account,'USD',0);
+  perform public.ensure_business_bank_account_v2(g,business);
   insert into public.loan_products(game_session_id,name,borrower_type,currency_code,minimum_amount,
     maximum_amount,annual_rate,term_cycles,disclosure_text)
     values(g,'REF025 product','business','USD',1,1000,0.05,12,'Disposable compatibility fixture only.') returning id into product;
@@ -204,8 +203,8 @@ begin
   insert into public.player_loans(game_session_id,player_id,business_id,loan_product_id,application_id,
     currency_code,original_principal,principal_balance,annual_rate,scheduled_payment,next_due_at)
     values(g,actor,business,product,application,'USD',100,100,0.05,10,now()+interval '7 days') returning id into loan;
-  perform public.record_player_ledger_entry(g,actor,account,100,'USD','credit','banking',
-    'ref025_fixture',null,'system',null,'{}'::jsonb);
+  perform public.record_player_ledger_entry(g,actor,account,100,'USD','credit','admin',
+    'business_banking_correction',null,'system',null,'{}'::jsonb);
   select public_key into loan_key from public.player_loans where id=loan;
   select * into payment from public.repay_player_loan_v1(g,actor,loan_key,10,'ref025-repayment');
   if payment.replayed or payment.principal_balance <> 90 then raise exception 'REF025 legacy repayment failed'; end if;

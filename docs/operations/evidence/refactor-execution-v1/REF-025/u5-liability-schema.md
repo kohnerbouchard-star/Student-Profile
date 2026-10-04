@@ -34,4 +34,7 @@ Banking/FX/loan/backend/Player/connected checks remain required before review/me
 No live SQL, credentials/settings, deployment or hold restoration occurred.
 Rollback uses a reviewed forward schema correction; never erase obligations or ledger.
 Fresh ownership: #668/#849 backend manifest, #668/#736/#849 inventory, #624 UI; protected
-Player/context/auth/Markets paths unchanged. No inventory change currently needed.
+Player/context/auth/Markets paths unchanged. Root checks regenerate inventory: the explicit
+legacy_v1 internal discriminant adds one compatibility-marker file (209->210). The baseline
+ceiling stays209. Qualification is BLOCKED pending parent scope/owner disposition; no
+baseline edit or lexical workaround is authorized. Generated inventory is not yet committed.
