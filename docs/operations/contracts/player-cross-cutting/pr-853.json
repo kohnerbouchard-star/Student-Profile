@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "authorityId": "econovaria.ref025b3-loans-consumer-pr-846.v1",
+  "authorityId": "econovaria.ref025c1-liability-schema-pr-853.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 853,
   "baseRef": "main",
@@ -15,6 +15,7 @@
     "scripts/banking-fx-database-acceptance.sql",
     "docs/operations/evidence/refactor-execution-v1/REF-025/u5-liability-schema.md",
     "docs/operations/contracts/player-cross-cutting/pr-853.json",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
@@ -46,5 +47,5 @@
     "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/u5-liability-schema.md",
-  "authorizationNote": "Parent-approved REF025c1 inert schema/internal contract and existing registered tests: at most seven files/350 semantic lines. Two creation gates remain installed; no business lending, repayment, servicing, read or UI activation. Legacy obligations/rights, grants/RLS and canonical Business authority preserved. No historical migration, live SQL, credentials/settings, deployment or U1 hold restoration. Parent independently reviews/merges; REF025 BLOCKED and REF027 depends025+026. Protected #668/#736/#624 and REF042/REF040 paths unchanged; no inventory change."
+  "authorizationNote": "Parent-approved REF025c1 inert schema/internal contract and existing registered tests: at most seven files/350 semantic lines. Two creation gates remain installed; no business lending, repayment, servicing, read or UI activation. Legacy obligations/rights, grants/RLS and canonical Business authority preserved. No historical migration, live SQL, credentials/settings, deployment or U1 hold restoration. Parent independently reviews/merges; REF025 BLOCKED and REF027 depends025+026. Protected #668/#736/#624 and REF042/REF040 paths unchanged; Only the generated liability-marker inventory delta is in scope; inventory commit/ownership disposition remains pending. Locked verifier/test entries do not authorize edits; the ratchet baseline remains outside approved scope."
 }
