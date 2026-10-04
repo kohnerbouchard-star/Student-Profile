@@ -15,6 +15,21 @@ const format = (value: Amount): string | null => {
   return `${digits.slice(0, -2)}.${digits.slice(-2)}`;
 };
 
+// Normalize whole seconds with Date; preserve PostgreSQL's microseconds outside Date.
+const instant = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const match =
+    /^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/u
+      .exec(value);
+  if (!match) return null;
+  const time = Date.parse(`${match[1]}${match[3]}`);
+  if (!Number.isFinite(time)) return null;
+  return new Date(time).toISOString().replace(
+    "000Z",
+    `${(match[2] ?? "").padEnd(6, "0")}Z`,
+  );
+};
+
 // The loan columns are numeric(14,2); accept their text casts, never rounded JS numbers.
 export function projectLoanCurrencies(
   offers: readonly Row[],
@@ -83,15 +98,12 @@ export function projectLoanCurrencies(
       ),
     );
     const payment = amount(row.scheduled_payment_exact);
-    const time = typeof row.next_due_at === "string"
-      ? Date.parse(row.next_due_at)
-      : NaN;
-    if (!Number.isFinite(time)) {
+    const due = instant(row.next_due_at);
+    if (due === null) {
       complete = false;
       target.invalidDue = true;
       continue;
     }
-    const due = new Date(time).toISOString();
     if (target.due === null || due < target.due) {
       target.due = due;
       target.next = payment;
@@ -124,7 +136,10 @@ export function projectLoanCurrencies(
         ? null
         : row.invalidDue
         ? { amount: null, due: null }
-        : { amount: format(row.next), due: row.due },
+        : {
+          amount: format(row.next),
+          due: row.due?.replace(/000Z$/u, "Z") ?? null,
+        },
       schedule: [...row.schedule].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
         .map(([due, value]) => ({ due, amount: format(value) })),
     })),

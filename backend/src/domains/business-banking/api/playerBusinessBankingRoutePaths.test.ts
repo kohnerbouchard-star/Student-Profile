@@ -330,6 +330,19 @@ Deno.test("Loan currency totals use exact text beyond safe integers and combine 
     { currencyCode: "NRC", due, exactAmount: "2.00" }, { currencyCode: "NRC", due, exactAmount: "3.00" }]);
   assertEquals(ordered.groups[0].nextPayment, { amount: "5.00", due });
   assertEquals(ordered.groups[0].schedule, [{ due, amount: "5.00" }, { due: later, amount: "9.00" }]);
+  const micro = [
+    { ...loans[0], next_due_at: "2026-10-05T00:00:00.000001Z", scheduled_payment_exact: "2.00" },
+    { ...loans[0], next_due_at: "2026-10-05T00:00:00.000999Z", scheduled_payment_exact: "3.00" },
+  ];
+  assertEquals(projectLoanCurrencies([], [...micro, loans[0]], []).groups[0].nextPayment, { amount: "0.01", due });
+  assertEquals(projectLoanCurrencies([], [{ ...micro[0], next_due_at: "2026-10-05T05:30:00.000001+05:30" }], []).groups[0].nextPayment,
+    { amount: "2.00", due: "2026-10-05T00:00:00.000001Z" });
+  for (const rows of [micro, [...micro].reverse()]) {
+    assertEquals(projectLoanCurrencies([], rows, []).groups[0].nextPayment,
+      { amount: "2.00", due: "2026-10-05T00:00:00.000001Z" });
+    assertEquals(projectLoanCurrencies([], [...rows, { ...micro[1], next_due_at: "2026-10-04T19:00:00.000001-05:00" }], []).groups[0].nextPayment,
+      { amount: "5.00", due: "2026-10-05T00:00:00.000001Z" });
+  }
 });
 
 Deno.test("Loan exact projection distinguishes empty and zero from unavailable input without numeric coercion", () => {

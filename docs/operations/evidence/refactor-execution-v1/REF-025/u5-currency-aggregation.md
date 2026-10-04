@@ -1,17 +1,18 @@
 # REF-025b2 — Exact per-currency Loans projection
 Base: `0384fe285a12b2e429e1cb28ac46dfea9519a346`; parent-approved seven-path scope,
-maximum350 changed lines. REF025 remains BLOCKED; 025b3 actual consumer is required.
+maximum370 changed lines (approved precision correction). REF025 remains BLOCKED; 025b3 actual consumer is required.
 Paths: existing Business-banking contracts, Supabase repository and route tests;
 new domain/loanCurrencyProjection.ts; this evidence; PR-bound authority manifest;
 generated docs/architecture/inventories/econovaria-architecture-inventory-v2.json.
-Main freeze is preserved; feature-branch review only, parent controls merge.
+Main freeze ended after parent staging cleanup; parent controls merge.
 ## Contract and transport
 Optional currencyProjection version1 retains every pre-existing response field.
 Only product/loan selects add text-cast aliases; one context RPC/five queries and
 all predicates, eligibility, order/limits, schedules, permissions and rights stay.
 Eligible offer maxima and active/delinquent/restructured principal+interest sum
 within each currency. Next payment sums all active obligations at the earliest
-instant per currency; equal dates combine. Schedule installments sum per due date.
+instant per currency; microsecond precision and offset equivalence are preserved.
+Equal instants combine. Schedule installments sum per existing generated due date.
 Groups/dates sort deterministically. No FX, cross-currency total or economic write.
 Strict nonnegative numeric(14,2) strings become BigInt minor amounts; output uses
 two fractional digits (loan column scale, not a new currency-registry precision).
@@ -31,7 +32,7 @@ Frozen Edge esm.sh imports remain locally blocked; this proof does not certify a
 hosted deployment. Prior mock-only evidence is not substituted for this REST proof.
 ## Qualification and limits
 Predecessor708cbbdb:13 successful runs/two expected skips; accepted patch identical.
-Main freeze/independent owner rehearsal remain.
+Precision regression covers distinct microseconds, reversed order and offset ties.
 Owning tests assert full old payload parity, exact query trace, mixed/missing
 currency, zero/unavailable, precision rejection, >safe-integer totals, equal-date
 sums, ordering and preserved denial/errors. Validation commands/results and exact
