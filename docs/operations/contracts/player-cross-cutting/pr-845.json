@@ -15,6 +15,7 @@
     "scripts/admin-settings-disclosure-smoke.mjs",
     "docs/operations/evidence/refactor-execution-v1/REF-015/u7-settings-style-preparation.md",
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
     "docs/operations/contracts/player-cross-cutting/pr-845.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
@@ -51,5 +52,5 @@
     "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-015/u7-settings-style-preparation.md",
-  "authorizationNote": "Parent approved seven exact changed paths and at most250 changed lines. Additional budget is only generated inventory and PR845 authority metadata; no source expansion or ceiling changes. Verifier/test entries are unchanged locks, not edit permission. Preserve synchronous standalone fallback, canonical delegation, bootstrap/CSS/URL order, existing tests, all eight candidates, nine U1 guards, REF019/020 pauses and release holds. REF015 remains BLOCKED. No deletion, hosted/security/retention changes, deployment or merge. Parent retains independent review and merge."
+  "authorizationNote": "Parent approved eight exact changed paths and at most250 changed lines. Additional budget is only generated inventory, PR845 authority metadata and the four-field REF003 current bridge evidence refresh; no source expansion or ceiling changes. Verifier/test entries are unchanged locks, not edit permission. Preserve synchronous standalone fallback, canonical delegation, bootstrap/CSS/URL order, existing tests, all eight candidates, nine U1 guards, REF019/020 pauses and release holds. REF015 remains BLOCKED. No deletion, hosted/security/retention changes, deployment or merge. Parent retains independent review and merge."
 }
