@@ -1,8 +1,12 @@
 (function initEconovariaSettingsSaveErrorBridge() {
   "use strict";
 
-  // Retained bootstrap path owns only the final-polish stylesheet. Save errors
-  // are published by the source save controller and read by Settings itself.
+  // Preserve this synchronous entrypoint for standalone and older clients.
+  const settings = window.EconovariaSimplifiedSettings;
+  if (typeof settings?.ensureFinalPolishStylesheet === "function") {
+    settings.ensureFinalPolishStylesheet();
+    return;
+  }
   const STYLE_ID = "econovaria-settings-final-polish-style";
   if (document.getElementById(STYLE_ID)) return;
   const link = document.createElement("link");

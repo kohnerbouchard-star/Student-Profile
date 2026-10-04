@@ -1,3 +1,4 @@
+import { createMarketReceiptLifecycle } from "./market-receipt-lifecycle.js";
 import { assertBusinessShareQuantity, businessShareListing } from "./business-share-view.js";
 import { PlayerApi } from "../../api/player-api.js";
 import { ApiConnectionPendingError } from "../../api/errors.js";
@@ -265,6 +266,7 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
   let opener = null;
   let pending = false;
   let destroyed = false;
+  const receipts = createMarketReceiptLifecycle({ mount, terminal, onRetire: () => closeModal({ restoreFocus: false }) });
 
   function restoreApplication() {
     const root = mount.querySelector(".player-terminal-app-root");
@@ -272,9 +274,13 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
   }
 
   function closeModal({ restoreFocus = true } = {}) {
+    receipts.clear();
     orderModalElement(mount)?.remove();
     restoreApplication();
-    if (restoreFocus) opener?.focus?.({ preventScroll: true });
+    const fallback = transaction?.side === "sell" ? "sell-review" : "buy-quote";
+    const focusTarget = opener?.isConnected ? opener
+      : mount.querySelector(`form[data-player-market-order-form="${fallback}"] button[type="submit"]`);
+    if (restoreFocus) focusTarget?.focus?.({ preventScroll: true });
     opener = null;
     transaction = null;
   }
@@ -287,6 +293,7 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     const modal = template.content.firstElementChild;
     if (!modal) return;
     mount.append(modal);
+    if (transaction.stage === "receipt") receipts.retain(modal);
     const root = mount.querySelector(".player-terminal-app-root");
     if (root) { root.inert = true; root.setAttribute("aria-hidden", "true"); }
     focusFirstInteractive(modal);
@@ -412,12 +419,14 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     }
     const restore = setButtonProcessing(button, transaction.stage === "buy-quote" ? "Settling purchase" : "Settling sale");
     pending = true;
+    const active = receipts.begin();
     try {
       api.setSession(config);
       const payload = transaction.stage === "buy-quote"
         ? normalizeWritePayload("marketOrder", { action: "settle_buy_quote", quoteKey: transaction.quote.quoteKey })
         : transaction.payload;
       const operation = await api.execute("marketOrder", payload);
+      if (!active()) return;
       const settlement = operation.result?.settlement;
       if (!settlement) throw new Error("The Stock settlement response was invalid.");
       const completed = { ...transaction, stage: "receipt", settlement, error: "", refreshWarning: "" };
@@ -425,9 +434,11 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
       restoreApplication();
       try { await refreshTradeResources(); }
       catch { completed.refreshWarning = "The trade completed, but balances, holdings, and market data could not be refreshed. Refresh before another trade."; }
+      if (!active()) return;
       transaction = completed;
       renderTransaction();
     } catch (error) {
+      if (!active()) return;
       if (dispatchInvalidSession(error, config)) return;
       const staleReview = ["stale_stock_tick", "stale_stock_price"].includes(String(error?.code || ""));
       transaction = { ...transaction, error: staleReview ? `${safeMessage(error)} Close this review and submit again.` : safeMessage(error, "The Stock settlement could not be completed.") };
@@ -482,5 +493,5 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
   mount.addEventListener("change", handleInput, true);
   mount.addEventListener("click", handleClick, true);
   mount.addEventListener("keydown", handleKeyDown, true);
-  return { destroy() { destroyed = true; closeModal({ restoreFocus: false }); mount.removeEventListener("submit", handleSubmit, true); mount.removeEventListener("input", handleInput, true); mount.removeEventListener("change", handleInput, true); mount.removeEventListener("click", handleClick, true); mount.removeEventListener("keydown", handleKeyDown, true); } };
+  return { destroy() { destroyed = true; receipts.destroy(); closeModal({ restoreFocus: false }); mount.removeEventListener("submit", handleSubmit, true); mount.removeEventListener("input", handleInput, true); mount.removeEventListener("change", handleInput, true); mount.removeEventListener("click", handleClick, true); mount.removeEventListener("keydown", handleKeyDown, true); } };
 }

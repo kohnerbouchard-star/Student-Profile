@@ -19,7 +19,7 @@ const json = (body = {}, status = 200) => new Response(JSON.stringify(body), { s
 
 function fixture() {
   const listeners = new Map(), storage = new Map(), timers = new Map();
-  const calls = [], events = [], errors = [];
+  const calls = [], events = [], errors = [], links = [];
   let sequence = 0, mounted = null, focused = null;
   const state = { game: "game-one", selected: "game-one", dirty: true, reply: () => json(), read: null };
   class Element {
@@ -70,7 +70,8 @@ function fixture() {
     addEventListener(type, fn, capture = false) { const set = listeners.get(type) || new Map(); set.set(fn, capture); listeners.set(type, set); },
     removeEventListener(type, fn) { listeners.get(type)?.delete(fn); },
     dispatchEvent(event) { events.push(event); for (const fn of [...(listeners.get(event.type)?.keys() || [])]) { fn(event); if (event.stopped) break; } return true; },
-    getElementById: () => null, createElement: () => new Element(), head: { append() {} },
+    getElementById: (id) => links.find((link) => link.id === id), createElement: () => new Element(),
+    head: { append(link) { links.push(link); } },
   };
   function mount() {
     if (mounted) mounted.connected = false;
@@ -109,7 +110,7 @@ function fixture() {
   function navigate(name) { const nav = new Element("nav"); nav.setAttribute("data-admin-section", name); click(nav); }
   function presenter() { vm.runInContext(presenterSource, context); window.EconovariaSimplifiedSettings.refresh(); }
   install();
-  return { state, calls, events, errors, window, document, storage, timers, context, mount, install, click, navigate, presenter,
+  return { state, calls, events, errors, links, window, document, storage, timers, context, mount, install, click, navigate, presenter,
     get page() { return mounted; }, get focused() { return focused; }, writes: () => calls.filter((c) => c.init.method === "PATCH"),
     saved: () => events.filter((e) => e.type === "econovaria:attendance-reward-saved"), listenerCount: () => [...listeners.values()].reduce((sum, set) => sum + set.size, 0) };
 }
@@ -119,6 +120,49 @@ test("REF-014 stylesheet bridge installs no listeners, observer or transport", (
   vm.runInContext(bridgeSource, h.context);
   assert.equal(h.listenerCount(), before); assert.equal(h.window.fetch, fetch);
   assert.doesNotMatch(bridgeSource, /MutationObserver|requestAnimationFrame|addEventListener|window\.fetch\s*=/);
+});
+
+for (const mode of ["owner", "absent", "older", "existing-id", "mixed"]) {
+  test(`REF-015 synchronous stylesheet identity, order and idempotency: ${mode}`, () => {
+    const h = fixture(), id = "econovaria-settings-final-polish-style";
+    const run = () => vm.runInContext(bridgeSource, h.context);
+    if (mode === "owner" || mode === "mixed") h.presenter();
+    if (mode === "absent") delete h.window.EconovariaSimplifiedSettings;
+    const original = { id }; // Even a non-link occupying the ID must short-circuit.
+    if (mode === "existing-id") h.links.push(original);
+    h.links.unshift({ id: "earlier-style" });
+    const before = h.listenerCount(), fetch = h.window.fetch, timers = h.timers.size;
+    let delegates = 0;
+    const owner = h.window.EconovariaSimplifiedSettings;
+    if (owner?.ensureFinalPolishStylesheet) {
+      const ensure = owner.ensureFinalPolishStylesheet;
+      owner.ensureFinalPolishStylesheet = () => { delegates++; ensure(); };
+    }
+    let lookups = 0; const lookup = h.document.getElementById;
+    h.document.getElementById = (key) => { lookups++; return lookup(key); };
+    run(); // Assert before yielding: no Promise/import/timer may defer insertion.
+    assert.equal(lookups, 1); // Delegation must not also execute inline insertion.
+    assert.equal(h.links.filter((link) => link.id === id).length, 1);
+    const link = h.document.getElementById(id);
+    if (mode === "existing-id") assert.equal(link, original);
+    else { assert.equal(link.rel, "stylesheet"); assert.equal(link.href, "./css/settings-final-polish.css"); }
+    assert.equal(h.links[0].id, "earlier-style");
+    if (mode === "mixed") delete h.window.EconovariaSimplifiedSettings;
+    run();
+    assert.equal(h.links.filter((item) => item.id === id).length, 1);
+    assert.equal(delegates, mode === "owner" ? 2 : mode === "mixed" ? 1 : 0);
+    assert.equal(h.listenerCount(), before); assert.equal(h.window.fetch, fetch);
+    assert.equal(h.calls.length, 0); assert.equal(h.timers.size, timers);
+  });
+}
+
+test("REF-015 presenter retains its default stylesheet and does not eagerly load final polish", () => {
+  const h = fixture(); h.presenter(); h.document.querySelector = () => null;
+  h.window.EconovariaSimplifiedSettings.reconcile();
+  h.window.EconovariaSimplifiedSettings.reconcile();
+  assert.deepEqual(h.links.map(({ id, href, rel }) => ({ id, href, rel })), [
+    { id: "econovaria-settings-simplified-style", href: "./css/settings-simplified.css", rel: "stylesheet" },
+  ]);
 });
 
 test("REF-014 direct save preserves payload, identity headers and one-request double-click behavior", async () => {
