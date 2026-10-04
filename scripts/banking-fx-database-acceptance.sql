@@ -227,6 +227,44 @@ begin
   select * into payment from public.repay_player_loan_v1(g,actor,loan_key,10,'ref025-repayment');
   if not payment.replayed or payment.principal_balance <> 90 then raise exception 'REF025 legacy replay failed'; end if;
   end loop;
+  -- c2-0: real legacy review/authority behaviour; undo this probe before c1 checks.
+  declare manager uuid:=gen_random_uuid(); proposal uuid; key text; reviewed record; again record;
+  begin
+    select public_key into key from public.loan_applications where id=application;
+    begin
+      perform * from public.review_player_loan_application_v1(g,staff,key,'approve','Characterize','ref025-review-first');
+      raise exception 'REF025 expected inherited review ambiguity';
+    exception when ambiguous_column then
+      if sqlerrm <> 'column reference "status" is ambiguous' then raise; end if;
+    end;
+    update public.loan_applications set status='approved' where id=application;
+    select * into reviewed from public.review_player_loan_application_v1(g,staff,key,'decline','Changed decision','ref025-review-first');
+    select * into again from public.review_player_loan_application_v1(g,staff,key,'invalid','Changed payload','ref025-review-other');
+    if reviewed.replayed is distinct from true or reviewed.status is distinct from 'approved'
+      or to_jsonb(reviewed) is distinct from to_jsonb(again) then
+      raise exception 'REF025 legacy terminal replay changed';
+    end if;
+    insert into public.players(id,game_session_id,display_name,status) values(manager,g,'REF025 operator','active');
+    insert into public.business_governance_proposals(game_session_id,business_id,proposer_player_id,proposal_type,
+      approval_threshold_basis_points,snapshot_total_voting_units,idempotency_key,expires_at)
+      values(g,business,actor,'capital_raise',5001,1,'ref025-mandate-fixture',now()+interval '1 day') returning id into proposal;
+    insert into public.business_management_mandates(game_session_id,business_id,player_id,source_proposal_id)
+      values(g,business,manager,proposal);
+    if (select business_id from public.resolve_player_business_v2(g,manager)) is distinct from business then
+      raise exception 'REF025 canonical mandate not recognized';
+    end if;
+    begin
+      insert into public.loan_applications(game_session_id,player_id,business_id,loan_product_id,amount,purpose,
+        repayment_source,credit_score,projected_payment,affordability_ratio,idempotency_key,request_hash)
+        select g,manager,business,loan_product_id,10,'Mandate probe',account,650,1,0.1,'ref025-mandate',repeat('d',64)
+        from public.loan_applications where id=application;
+      raise exception 'REF025 retained binding accepted non-owner';
+    exception when raise_exception then
+      if sqlerrm <> 'AUTHORITATIVE_BUSINESS_BORROWER_REQUIRED' then raise; end if;
+    end;
+    raise exception using errcode='Z0252',message='rollback characterization probe';
+  exception when sqlstate 'Z0252' then null;
+  end;
   foreach tab in array array['loan_applications','player_loans'] loop
     row_id := case when tab='loan_applications' then application else loan end;
     execute format('select to_jsonb(t) from public.%I t where id=$1',tab) into original using row_id;
@@ -280,5 +318,76 @@ do $$ begin
     or exists(select 1 from public.game_sessions where name like 'REF025 %')
     or exists(select 1 from public.currencies where code='QREFLOAN') then
     raise exception 'REF025 acceptance rollback failed';
+  end if;
+end $$;
+
+-- c2-0 query-unit characterization: execute the deployed predicate/formula,
+-- substituting only its ledger relation with temporary boundary rows, not a new policy.
+begin;
+create temp table ref025_income_rows(game_session_id uuid,player_id uuid,currency_code text,
+  amount numeric,created_at timestamptz,source_domain text,source_action text,account_type text);
+do $compile$ declare definition text; fragment text; first integer; last integer; begin
+  definition:=pg_get_functiondef('public.apply_player_loan_v1(uuid,uuid,text,text,numeric,text,text,text)'::regprocedure);
+  first:=strpos(definition,'  select coalesce(sum(entry_row.amount), 0)');
+  last:=strpos(definition,'  if v_ratio > v_product.maximum_payment_to_income');
+  if first=0 or last<=first then raise exception 'REF025 deployed affordability boundaries changed'; end if;
+  fragment:=replace(substr(definition,first,last-first),'public.ledger_entries','pg_temp.ref025_income_rows');
+  execute $ddl$create function pg_temp.ref025_income(p_game_session_id uuid,p_player_id uuid) returns numeric[]
+    language plpgsql as $body$ declare v_product record; v_context record; v_business record;
+      v_qualifying_inflows numeric; v_income_per_payment numeric; v_payment numeric:=10; v_ratio numeric;
+    begin
+      select 'business'::text borrower_type,2 payment_frequency_cycles into v_product;
+      select 'QREFLOAN'::text currency_code into v_context;
+      select ('biz_'||repeat('a',32))::text public_key into v_business;
+    $ddl$||fragment||'return array[v_qualifying_inflows,v_income_per_payment,v_ratio]; end $body$;';
+end $compile$;
+do $income$ declare g uuid:=gen_random_uuid(); p uuid:=gen_random_uuid(); row record; result numeric[]; begin
+  for row in select * from (values
+    (240,'checking','admin','business_banking_correction',interval '0 days',0),
+    (120,'business:biz_'||repeat('a',32),'store','business_offer_purchase_credit',interval '0 days',0),
+    (60,'checking','admin','business_banking_correction',interval '84 days',0),
+    (30,'checking','business','capital_contribution_in',interval '0 days',0),
+    (50,'checking','business','ipo_primary_subscription',interval '0 days',0),
+    (70,'checking','banking_fx','exchange_credit',interval '0 days',0),
+    (999,'savings','admin','business_banking_correction',interval '0 days',0),
+    (999,'checking','banking','account_transfer_in',interval '0 days',0),
+    (999,'checking','loans','loan_disbursement',interval '0 days',0),
+    (999,'checking','business','capitalization_in',interval '0 days',0),
+    (999,'checking','business','ownership_cash_transfer_in',interval '0 days',0),
+    (999,'checking','admin','business_banking_correction',interval '84 days 1 second',0),
+    (999,'checking','admin','business_banking_correction',interval '0 days',1),
+    (999,'checking','admin','business_banking_correction',interval '0 days',2),
+    (999,'checking','admin','business_banking_correction',interval '0 days',3),
+    (-999,'checking','admin','business_banking_correction',interval '0 days',0)
+  ) as fixtures(amount,account,domain,action,age,mismatch) loop
+    insert into ref025_income_rows values(case when row.mismatch=1 then gen_random_uuid() else g end,
+      case when row.mismatch=2 then gen_random_uuid() else p end,case when row.mismatch=3 then 'OTHER' else 'QREFLOAN' end,
+      row.amount,now()-row.age,row.domain,row.action,row.account);
+  end loop;
+  result:=pg_temp.ref025_income(g,p);
+  if result is distinct from array[570,95,0.105263]::numeric[] then raise exception 'REF025 legacy income changed: %',result; end if;
+  truncate ref025_income_rows;
+  if pg_temp.ref025_income(g,p) is distinct from array[0,0,100]::numeric[] then raise exception 'REF025 empty income changed'; end if;
+end $income$;
+-- Invoke the actual receipt validator on temporary rows: both unsupported
+-- provenance forms must be rejected. Successful settlement remains existing Store CI's responsibility.
+create temp table ref025_receipt_probe as select * from public.store_offer_purchase_receipts with no data;
+create trigger ref025_receipt_probe before insert on ref025_receipt_probe
+  for each row execute function economy_private.validate_store_offer_purchase_receipt_v2();
+do $receipts$ declare funding uuid; expected text; begin
+  foreach funding in array array[null::uuid,gen_random_uuid()] loop
+    expected:=case when funding is null then 'STORE_OFFER_PURCHASE_RECEIPT_BUYER_DEBIT_INVALID'
+      else 'STORE_OFFER_PURCHASE_RECEIPT_FUNDING_INVALID' end;
+    begin
+      insert into ref025_receipt_probe(game_session_id,funding_receipt_id) values(gen_random_uuid(),funding);
+      raise exception 'REF025 receipt accepted without provenance';
+    exception when raise_exception then if sqlerrm <> expected then raise; end if;
+    end;
+  end loop;
+end $receipts$;
+rollback;
+do $$ begin
+  if to_regclass('pg_temp.ref025_income_rows') is not null or to_regclass('pg_temp.ref025_receipt_probe') is not null then
+    raise exception 'REF025 characterization fixtures survived rollback';
   end if;
 end $$;
