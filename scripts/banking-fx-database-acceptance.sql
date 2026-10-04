@@ -176,6 +176,15 @@ begin
   raise exception 'REF025 accepted invalid write: %', expected;
 end $$;
 
+create function pg_temp.ref025_binding_reject(statement text, expected text) returns void
+language plpgsql as $$ begin
+  begin execute statement;
+  exception when others then
+    if sqlerrm=expected then return; end if; raise;
+  end;
+  raise exception 'REF025 binding accepted invalid write: %',expected;
+end $$;
+
 do $ref025$
 declare
   staff uuid := gen_random_uuid(); g uuid := gen_random_uuid(); other_game uuid := gen_random_uuid();
@@ -262,10 +271,73 @@ begin
     exception when raise_exception then
       if sqlerrm <> 'AUTHORITATIVE_BUSINESS_BORROWER_REQUIRED' then raise; end if;
     end;
+    -- c2-1: real bindings with gates removed only inside this rolled-back subtransaction.
+    if exists(select 1 from pg_attribute where attrelid='public.loan_applications'::regclass
+      and attname='liability_kind' and not attisdropped) then
+      declare app uuid; debt uuid; source jsonb; candidate jsonb; field text; value jsonb; before_count bigint;
+      begin
+        alter table public.loan_applications drop constraint loan_applications_business_liability_disabled_v1;
+        alter table public.player_loans drop constraint player_loans_business_liability_disabled_v1;
+        select count(*) into before_count from public.ledger_entries where game_session_id=g;
+        insert into public.loan_applications(game_session_id,player_id,business_id,loan_product_id,amount,purpose,
+          repayment_source,credit_score,projected_payment,affordability_ratio,idempotency_key,request_hash,
+          liability_kind,initiating_operator_player_id,borrower_business_id,obligation_currency_code)
+          select g,manager,business,loan_product_id,10,'Inert binding probe',account,650,1,0.1,'ref025-new',repeat('e',64),
+            'business_v1',manager,business,'QREFLOAN' from public.loan_applications where id=application returning id into app;
+        insert into public.player_loans(game_session_id,player_id,business_id,loan_product_id,application_id,
+          currency_code,original_principal,principal_balance,annual_rate,scheduled_payment,next_due_at,
+          repayment_account_type,liability_kind,initiating_operator_player_id,borrower_business_id)
+          select g,manager,business,loan_product_id,app,'QREFLOAN',10,10,0.05,1,now()+interval '7 days',
+            account,'business_v1',manager,business from public.loan_applications where id=app returning id into debt;
+        for tab in select unnest(array['loan_applications','player_loans']) loop
+          row_id:=case when tab='loan_applications' then app else debt end;
+          execute format('select to_jsonb(t) from public.%I t where id=$1',tab) into source using row_id;
+          -- Every captured identity/account field rejects mutation, including actor replacement.
+          foreach field in array array['liability_kind','game_session_id','player_id','business_id',
+            'initiating_operator_player_id','borrower_business_id','loan_product_id']||
+            case when tab='loan_applications' then array['obligation_currency_code','repayment_source']
+              else array['currency_code','repayment_account_type','application_id'] end loop
+            value:=case when field='liability_kind' then '"legacy_v1"'::jsonb
+              when field like '%currency%' then '"USD"'::jsonb
+              when field like 'repayment_%' then '"checking"'::jsonb else to_jsonb(gen_random_uuid()) end;
+            perform pg_temp.ref025_binding_reject(format('update public.%I set %I=%L where id=%L',
+              tab,field,value#>>'{}',row_id),'BUSINESS_LOAN_IDENTITY_IMMUTABLE');
+          end loop;
+          -- INSERT mismatches execute the binding branch, not only the UPDATE guard.
+          for field,value in select * from (values ('game_session_id',to_jsonb(other_game)),
+            ('business_id',to_jsonb(other_business)),('borrower_business_id',to_jsonb(other_business)),
+            ('initiating_operator_player_id',to_jsonb(actor)),
+            (case when tab='loan_applications' then 'obligation_currency_code' else 'currency_code' end,'"USD"'::jsonb),
+            (case when tab='loan_applications' then 'repayment_source' else 'repayment_account_type' end,'"checking"'::jsonb)) v(f,x) loop
+            candidate:=source||jsonb_build_object('id',gen_random_uuid(),field,value);
+            perform pg_temp.ref025_binding_reject(format('insert into public.%I select (jsonb_populate_record(null::public.%I,%L)).*',tab,tab,candidate),
+              case when field in ('business_id','borrower_business_id','initiating_operator_player_id') then 'BUSINESS_LOAN_IDENTITY_INVALID'
+                when field like 'repayment_%' then 'LOAN_REPAYMENT_ACCOUNT_UNAVAILABLE' else 'BUSINESS_LOAN_SCOPE_OR_CURRENCY_INVALID' end);
+          end loop;
+          if tab='player_loans' then
+            perform pg_temp.ref025_binding_reject(format('insert into public.player_loans select (jsonb_populate_record(null::public.player_loans,%L)).*',
+              source||jsonb_build_object('id',gen_random_uuid(),'application_id',application)),'BUSINESS_LOAN_APPLICATION_BINDING_INVALID');
+          else
+            perform pg_temp.ref025_binding_reject(format('insert into public.loan_applications select (jsonb_populate_record(null::public.loan_applications,%L)).*',
+              source||jsonb_build_object('id',gen_random_uuid(),'player_id',actor,'initiating_operator_player_id',actor)),'BUSINESS_NOT_FOUND');
+          end if;
+        end loop;
+        -- Controller replacement cannot rewrite the captured initiator or attach its personal account.
+        update public.business_entities set owner_player_id=manager where id=business;
+        update public.loan_applications set purpose=purpose where id=app;
+        update public.player_loans set principal_balance=principal_balance where id=debt;
+        if (select count(*) from public.ledger_entries where game_session_id=g)<>before_count then
+          raise exception 'REF025 binding created economic effects';
+        end if;
+        raise notice 'REF025c2-1 mandate/owner, insert scope/account/currency, immutable identity and legacy application denial passed';
+      end;
+    end if;
     raise exception using errcode='Z0252',message='rollback characterization probe';
   exception when sqlstate 'Z0252' then null;
   end;
   foreach tab in array array['loan_applications','player_loans'] loop
+    -- Isolate c1 shape/FK constraints from the independently tested c2 identity guard.
+    execute format('alter table public.%I disable trigger a_business_loan_identity',tab);
     row_id := case when tab='loan_applications' then application else loan end;
     execute format('select to_jsonb(t) from public.%I t where id=$1',tab) into original using row_id;
     if original->>'liability_kind' <> 'legacy_v1' or original->>'initiating_operator_player_id' is not null
@@ -304,6 +376,7 @@ begin
     perform pg_temp.ref025_reject(format('update public.%I set borrower_business_id=%L where id=%L',tab,other_business,row_id),tab||'_borrower_scope_fk_v1');
     execute format('update public.%I set initiating_operator_player_id=$1, borrower_business_id=$2 where id=$3',tab)
       using actor,business,row_id;
+    execute format('alter table public.%I enable trigger a_business_loan_identity',tab);
     raise notice 'REF025 %: legacy defaults; postgres/service gates INSERT+UPDATE; shape; cross-game FKs passed',tab;
   end loop;
 end;

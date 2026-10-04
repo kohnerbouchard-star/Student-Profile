@@ -21,7 +21,8 @@ export const NONCE_SUFFIX = Object.freeze({
 // Independently approved suffixes; immutable Phase15 manifests/certificates stay unchanged.
 export const APPROVED_SUFFIXES = Object.freeze([NONCE_SUFFIX,
   Object.freeze({"order": 2,"filename": "20261004145731_add_loan_liability_contract_v1.sql","version": "20261004145731","name": "add_loan_liability_contract_v1","sourceSha256": "68db868ce5dcaeb2cc166be3e8a2f007e56564906fa8cf9bf0793ba716fd28ea","rawSha256": "9aaafa96b25d981d1bfece7ed1f64c185a0f8c0c35ca774fa09a23adfcacd5e0","statementCount": 1}),
-  Object.freeze({"order": 3,"filename": "20261004202506_reconcile_loan_liability_purge_graph_v1.sql","version": "20261004202506","name": "reconcile_loan_liability_purge_graph_v1","sourceSha256": "87385e44df78a4649f35ed3e39630c83a30fe3ec0b895e4f4d5508e7005ce9b8","rawSha256": "b8d24a799eba7ef55f93132888daf8bdbb75d12e78bc17c272dceb39e2a3c456","statementCount": 1})
+  Object.freeze({"order": 3,"filename": "20261004202506_reconcile_loan_liability_purge_graph_v1.sql","version": "20261004202506","name": "reconcile_loan_liability_purge_graph_v1","sourceSha256": "87385e44df78a4649f35ed3e39630c83a30fe3ec0b895e4f4d5508e7005ce9b8","rawSha256": "b8d24a799eba7ef55f93132888daf8bdbb75d12e78bc17c272dceb39e2a3c456","statementCount": 1}),
+  Object.freeze({"order":4,"filename":"20261004221307_prepare_business_loan_bindings_v1.sql","version":"20261004221307","name":"prepare_business_loan_bindings_v1","sourceSha256":"cd36eee2482087b584e8fbe4edb3235178ab1d255364937d1edbfd2c0df1917c","rawSha256":"7bf22dd6bd3d10881b52a2cab44f127d836064bf15e66b291c724ac54a094ea7","statementCount":1})
 ]);
 
 export async function buildRehearsalPlan(bundle, migrationsDirectory = directory) {

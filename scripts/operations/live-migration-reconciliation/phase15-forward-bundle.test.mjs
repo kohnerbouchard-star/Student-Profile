@@ -441,3 +441,10 @@ test("application restore normalization preserves exact application schema autho
   const different = normalizeSupabaseApplicationRestorePair(canonical, changedOwner);
   assert.notDeepEqual(different.left, different.right);
 });
+
+test("REF025c2-1 is an independently registered fourth suffix without rewriting prior identities", () => {
+  assert.equal(APPROVED_SUFFIXES.length, 4);
+  assert.equal(APPROVED_SUFFIXES[3].filename, "20261004221307_prepare_business_loan_bindings_v1.sql");
+  assert.equal(APPROVED_SUFFIXES[3].order, 4);
+  assert.equal(APPROVED_SUFFIXES[3].statementCount, 1);
+});
