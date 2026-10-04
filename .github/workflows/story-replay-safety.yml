@@ -89,6 +89,7 @@ jobs:
             src/domains/storylines/services/storylineRunnerGameScope.test.ts \
             src/domains/storylines/services/storylineRunnerReplayIdentity.test.ts \
             src/domains/storylines/services/storyConditionEngine.test.ts \
+            src/domains/storylines/services/prepareStoryEffects.test.ts \
             src/domains/storylines/services/storyCompletedContractCondition.test.ts \
             src/domains/storylines/services/storyMeridianCompetingModelsMigrationContract.test.ts \
             src/domains/storylines/services/storyMeridianOutbreakOfWarMigrationContract.test.ts \
