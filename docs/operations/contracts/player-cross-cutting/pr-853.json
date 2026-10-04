@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref025b3-loans-consumer-pr-846.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 853,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts",
+    "backend/supabase/migrations/20261004145731_add_loan_liability_contract_v1.sql",
+    "scripts/business-banking-runtime-contract.mjs",
+    "scripts/banking-fx-database-acceptance.sql",
+    "docs/operations/evidence/refactor-execution-v1/REF-025/u5-liability-schema.md",
+    "docs/operations/contracts/player-cross-cutting/pr-853.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-853.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "criticalJobChecks": [
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/u5-liability-schema.md",
+  "authorizationNote": "Parent-approved REF025c1 inert schema/internal contract and existing registered tests: at most seven files/350 semantic lines. Two creation gates remain installed; no business lending, repayment, servicing, read or UI activation. Legacy obligations/rights, grants/RLS and canonical Business authority preserved. No historical migration, live SQL, credentials/settings, deployment or U1 hold restoration. Parent independently reviews/merges; REF025 BLOCKED and REF027 depends025+026. Protected #668/#736/#624 and REF042/REF040 paths unchanged; no inventory change."
+}
