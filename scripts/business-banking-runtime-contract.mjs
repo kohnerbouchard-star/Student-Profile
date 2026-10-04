@@ -388,3 +388,10 @@ for (const token of ["BUSINESS_LOAN_IDENTITY_IMMUTABLE", "BUSINESS_LOAN_BINDING_
 }
 assert.doesNotMatch(loanBindings, /drop constraint|create table|foreign key|grant |record_player_ledger_entry/iu);
 console.log("REF025c2-1 gated binding SOURCE contract passed (not database execution).");
+
+const salesAssessment = await readFile(new URL("../backend/supabase/migrations/20261004235046_add_private_business_loan_sales_assessment_v1.sql", import.meta.url), "utf8");
+assert.match(salesAssessment, /stable security invoker/u);
+assert.match(salesAssessment, /sum\(r.gross_revenue\)/u);
+assert.match(salesAssessment, /business_sales_authority_committed_at <= p_as_of/u);
+assert.doesNotMatch(salesAssessment, /create table|add column|foreign key|grant |drop constraint|insert into|update public/iu);
+console.log("REF025c2-2a private sales assessment SOURCE contract passed (not database execution).");

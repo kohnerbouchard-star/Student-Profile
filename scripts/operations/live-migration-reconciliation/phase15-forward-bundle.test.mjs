@@ -443,8 +443,14 @@ test("application restore normalization preserves exact application schema autho
 });
 
 test("REF025c2-1 is an independently registered fourth suffix without rewriting prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 4);
+  assert.equal(APPROVED_SUFFIXES.length, 5);
   assert.equal(APPROVED_SUFFIXES[3].filename, "20261004221307_prepare_business_loan_bindings_v1.sql");
   assert.equal(APPROVED_SUFFIXES[3].order, 4);
   assert.equal(APPROVED_SUFFIXES[3].statementCount, 1);
+});
+
+test("REF025c2-2a registers only the private assessment fifth suffix", () => {
+  assert.equal(APPROVED_SUFFIXES[4].filename, "20261004235046_add_private_business_loan_sales_assessment_v1.sql");
+  assert.equal(APPROVED_SUFFIXES[4].order, 5);
+  assert.equal(APPROVED_SUFFIXES[4].statementCount, 1);
 });

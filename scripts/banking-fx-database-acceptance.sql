@@ -505,3 +505,139 @@ do $$ begin
     raise exception 'REF025 characterization fixtures survived rollback';
   end if;
 end $$;
+
+-- c2-2a: real retained/funded Store settlement, then assessment, all rolled back.
+begin;
+do $sales$
+declare
+  staff uuid := gen_random_uuid(); g uuid := gen_random_uuid(); country uuid := gen_random_uuid();
+  owner_id uuid := gen_random_uuid(); buyer uuid := gen_random_uuid(); b uuid := gen_random_uuid();
+  item uuid := gen_random_uuid(); store_item uuid := gen_random_uuid(); offer uuid := gen_random_uuid();
+  listing uuid; product uuid; quote jsonb; result jsonb; assessed record; account_key text;
+  offer_key text; business_key text; receipt public.store_offer_purchase_receipts%rowtype;
+  first_time timestamptz; last_time timestamptz; before_effects bigint; after_effects bigint;
+  role_name text; action text; definition text;
+begin
+  insert into public.staff_users(id,supabase_auth_user_id,email,display_name)
+    values(staff,gen_random_uuid(),staff||'@example.test','REF025 sales disposable');
+  insert into public.game_sessions(id,owner_staff_user_id,name,lifecycle_state,provisioning_status)
+    values(g,staff,'REF025 sales','draft','pending');
+  insert into public.country_profiles(id,country_code,country_name,capital_name,currency_code,status)
+    values(country,'TST','Test Republic','Test City','ECO','disabled');
+  insert into public.players(id,game_session_id,display_name,status,country_id)
+    values(owner_id,g,'Sales owner','active',country),(buyer,g,'Sales buyer','active',country);
+  insert into public.player_country_assignments(game_session_id,player_id,country_profile_id,status,assignment_reason)
+    values(g,owner_id,country,'active','ref025'),(g,buyer,country,'active','ref025');
+  insert into public.business_entities(id,game_session_id,owner_player_id,legal_name,entity_type,
+    country_code,currency_code,status,tax_classification,formation_state,ownership_model_version)
+    values(b,g,owner_id,'REF025 sales borrower','llc','TST','ECO','active','disregarded','operational',2)
+    returning public_key into business_key;
+  insert into public.game_items(id,game_session_id,canonical_key,source_kind,name,item_class,subtype,
+    stackable,serialized,transferable,status)
+    values(item,g,'ref025.widget','business_product','Sales Widget','finished_good','widget',true,false,true,'active');
+  insert into public.store_items(id,game_session_id,item_key,name,category,price,currency_code,
+    stock_quantity,status,visibility,game_item_id)
+    values(store_item,g,'ref025_widget','Sales Widget','goods',120,'ECO',0,'active','visible',item);
+  insert into public.store_seller_offers(id,game_session_id,store_item_id,game_item_id,seller_party_id,
+    seller_kind,unit_price,currency_code,status,replenishment_policy,creation_idempotency_key,creation_request_hash,version)
+    select offer,g,store_item,item,id,'business',120,'ECO','draft','none','ref025-sales-offer',repeat('a',64),1
+    from public.economic_parties where game_session_id=g and business_id=b returning public_key into offer_key;
+  listing := economy_private.ensure_business_store_listing_account_v2(g,b,offer);
+  update public.store_seller_offers set inventory_account_id=listing,status='active',version=2 where id=offer;
+  insert into public.inventory_holdings(game_session_id,inventory_account_id,game_item_id,quantity_owned,
+    quantity_reserved,average_unit_cost,cost_currency_code,version) values(g,listing,item,10,0,2.5,'ECO',1);
+  perform public.record_player_ledger_entry(g,buyer,'checking',1000,'ECO','credit','setup',
+    'initial_balance_seed',buyer,'system',null,jsonb_build_object('bankTransactionIdempotencyKey','ref025-buyer-seed'));
+  insert into public.game_settings(game_session_id,stock_market_window) values(g,'{"timezone":"UTC"}')
+    on conflict(game_session_id) do update set stock_market_window=excluded.stock_market_window;
+  insert into public.country_economic_snapshots(game_session_id,country_profile_id,snapshot_sequence,
+    effective_at,snapshot_label,difficulty_policy_profile_id,difficulty_preset,created_at)
+    select g,c.id,0,statement_timestamp()-interval '2 minutes','REF025 sales',d.id,d.preset_key,
+      statement_timestamp()-interval '3 minutes' from public.country_profiles c
+    cross join public.difficulty_policy_profiles d where c.status='active' and d.preset_key='standard';
+  perform public.initialize_fx_authority_for_game_v1(g,clock_timestamp()-interval '1 minute',true);
+  update public.game_sessions set lifecycle_state='active',status='active' where id=g;
+  insert into public.country_economic_snapshots(game_session_id,country_profile_id,snapshot_sequence,
+    effective_at,snapshot_label,difficulty_policy_profile_id,difficulty_preset,created_at)
+    select g,country,0,statement_timestamp()-interval '2 minutes','REF025 sales TST',id,preset_key,
+      statement_timestamp()-interval '3 minutes' from public.difficulty_policy_profiles where preset_key='standard';
+  quote := public.create_business_store_offer_quote_v2(g,buyer,offer_key,1,2,'ref025-retained-quote');
+  result := public.settle_business_store_offer_v2(g,buyer,offer_key,quote->>'quoteKey',1,2,'ref025-retained-sale');
+  select * into strict receipt from public.store_offer_purchase_receipts where public_key=result->>'receiptKey';
+  if receipt.funding_receipt_id is not null or receipt.gross_revenue<>120
+    or receipt.business_credit_ledger_entry_id is null then raise exception 'REF025 retained sale missing'; end if;
+  first_time := receipt.business_sales_authority_committed_at;
+  select a.public_key into strict account_key from public.bank_accounts a join public.economic_parties p
+    on p.id=a.party_id and p.game_session_id=a.game_session_id
+    where a.game_session_id=g and p.player_id=buyer and a.account_kind='checking' and a.currency_code='ECO';
+  quote := public.create_business_store_offer_funding_quote_v1(g,buyer,offer_key,1,3,
+    jsonb_build_array(jsonb_build_object('sourceAccountKey',account_key,'targetAmount',120)),'ref025-funded-quote');
+  result := public.settle_business_store_offer_funding_v1(g,buyer,offer_key,quote->>'quoteKey',1,3,'ref025-funded-sale');
+  select * into strict receipt from public.store_offer_purchase_receipts where public_key=result->>'receiptKey';
+  if receipt.funding_receipt_id is null or receipt.gross_revenue<>120
+    or receipt.business_sales_authority_version<>1 then raise exception 'REF025 funded sale missing'; end if;
+  last_time := receipt.business_sales_authority_committed_at;
+  insert into public.loan_products(game_session_id,name,borrower_type,currency_code,minimum_amount,
+    maximum_amount,annual_rate,term_cycles,payment_frequency_cycles,maximum_payment_to_income,minimum_credit_score,disclosure_text)
+    values(g,'REF025 sales product','business','ECO',1,1000,0,12,2,0.45,600,'Disposable sales-only assessment fixture.') returning id into product;
+  -- Every non-sale credit remains excluded even though the business has more cash.
+  foreach action in array array['capital_contribution_in','ipo_primary_subscription','loan_disbursement',
+    'account_transfer_in','exchange_credit','business_banking_correction'] loop
+    perform public.record_business_ledger_entry_v2(g,b,1000,'ECO','credit','admin',action,null,'system',null,
+      jsonb_build_object('bankTransactionIdempotencyKey','ref025-excluded-'||action));
+  end loop;
+  select count(*) into before_effects from public.audit_log where game_session_id=g;
+  select * into assessed from economy_private.assess_business_loan_application_v1(g,b,product,60,last_time);
+  if assessed.qualifying_income<>240 or assessed.income_per_payment<>40 or assessed.projected_payment<>10
+    or assessed.affordability_ratio<>0.25 or not assessed.affordable or assessed.minimum_credit_score<>600
+    or assessed.maximum_payment_to_income<>0.45 then raise exception 'REF025 sales assessment mismatch: %',assessed; end if;
+  select * into assessed from economy_private.assess_business_loan_application_v1(g,b,product,60,first_time);
+  if assessed.qualifying_income<>120 then raise exception 'REF025 upper window boundary changed'; end if;
+  select * into assessed from economy_private.assess_business_loan_application_v1(g,b,product,60,last_time+interval '84 days');
+  if assessed.qualifying_income<>120 then raise exception 'REF025 inclusive lower boundary changed'; end if;
+  select * into assessed from economy_private.assess_business_loan_application_v1(g,b,product,60,last_time+interval '84 days 1 microsecond');
+  if assessed.qualifying_income<>0 or assessed.affordable or assessed.affordability_ratio<>100 then
+    raise exception 'REF025 no sales must mean no capacity'; end if;
+  select count(*) into after_effects from public.audit_log where game_session_id=g;
+  if before_effects<>after_effects or exists(select 1 from public.loan_applications where game_session_id=g)
+    or exists(select 1 from public.credit_profiles where game_session_id=g) then raise exception 'REF025 assessment wrote state'; end if;
+  foreach role_name in array array['anon','authenticated','service_role'] loop
+    if has_function_privilege(role_name,'economy_private.assess_business_loan_application_v1(uuid,uuid,uuid,numeric,timestamptz)','EXECUTE')
+      then raise exception 'REF025 assessment exposed'; end if;
+  end loop;
+  begin
+    perform * from economy_private.assess_business_loan_application_v1(g,b,product,1001,last_time);
+    raise exception 'REF025 amount limit bypassed';
+  exception when raise_exception then if sqlerrm<>'LOAN_AMOUNT_OUT_OF_RANGE' then raise; end if; end;
+  begin
+    perform * from economy_private.assess_business_loan_application_v1(gen_random_uuid(),b,product,60,last_time);
+    raise exception 'REF025 game isolation bypassed';
+  exception when raise_exception then if sqlerrm<>'BUSINESS_LOAN_ASSESSMENT_PRODUCT_INVALID' then raise; end if; end;
+  update public.loan_products set maximum_payment_to_income=0.20 where id=product;
+  select * into assessed from economy_private.assess_business_loan_application_v1(g,b,product,60,last_time);
+  if assessed.affordable then raise exception 'REF025 product affordability limit bypassed'; end if;
+  -- Predicate-unit coverage uses copies of real receipts; no canonical row/guard is changed.
+  create temp table ref025_assessment_receipts as select * from public.store_offer_purchase_receipts where game_session_id=g;
+  definition := pg_get_functiondef('economy_private.assess_business_loan_application_v1(uuid,uuid,uuid,numeric,timestamptz)'::regprocedure);
+  definition := replace(replace(definition,'economy_private.assess_business_loan_application_v1',
+    'pg_temp.ref025_assess'),'public.store_offer_purchase_receipts','pg_temp.ref025_assessment_receipts');
+  execute definition;
+  update ref025_assessment_receipts set currency_code='NRC';
+  execute 'select * from pg_temp.ref025_assess($1,$2,$3,60,$4)' into assessed using g,b,product,last_time;
+  if assessed.qualifying_income<>0 then raise exception 'REF025 currency isolation failed'; end if;
+  update ref025_assessment_receipts set currency_code='ECO',business_id=gen_random_uuid();
+  execute 'select * from pg_temp.ref025_assess($1,$2,$3,60,$4)' into assessed using g,b,product,last_time;
+  if assessed.qualifying_income<>0 then raise exception 'REF025 borrower isolation failed'; end if;
+  update ref025_assessment_receipts set business_id=b,game_session_id=gen_random_uuid();
+  execute 'select * from pg_temp.ref025_assess($1,$2,$3,60,$4)' into assessed using g,b,product,last_time;
+  if assessed.qualifying_income<>0 then raise exception 'REF025 receipt game isolation failed'; end if;
+  update ref025_assessment_receipts set game_session_id=g,business_sales_authority_version=0;
+  execute 'select * from pg_temp.ref025_assess($1,$2,$3,60,$4)' into assessed using g,b,product,last_time;
+  if assessed.qualifying_income<>0 then raise exception 'REF025 pre-authority sales counted'; end if;
+end $sales$;
+rollback;
+do $$ begin
+  if exists(select 1 from public.game_sessions where name='REF025 sales') or
+    (select count(*) from pg_constraint where conname in ('loan_applications_business_liability_disabled_v1',
+      'player_loans_business_liability_disabled_v1') and convalidated)<>2 then raise exception 'REF025 sales fixture rollback/gates failed'; end if;
+end $$;

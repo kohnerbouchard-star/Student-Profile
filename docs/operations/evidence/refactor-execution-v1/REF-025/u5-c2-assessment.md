@@ -8,7 +8,7 @@ Seven paths /390 semantic changed lines, including tests/evidence/authority:
 - docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-assessment.md
 - scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs
 - scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
-- docs/operations/contracts/player-cross-cutting/pr-<assigned-number>.json
+- docs/operations/contracts/player-cross-cutting/pr-856.json
 
 Pinned CLI2.109.1 generated identity20261004235046 before implementation;
 empty SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
