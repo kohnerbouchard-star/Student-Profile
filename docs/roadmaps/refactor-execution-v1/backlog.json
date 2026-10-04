@@ -546,7 +546,7 @@
       "id": "REF-032",
       "title": "Give World runtime reads an explicit scoped application boundary",
       "file": "tasks/REF-032.md",
-      "status": "BLOCKED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-031"
       ],
