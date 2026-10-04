@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.staging-player-auth-device-pr-848.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 848,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "scripts/staging/player-auth-gate.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-019/u4-auth-gate-device-header.md",
+    "docs/operations/contracts/player-cross-cutting/pr-848.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-848.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-019/u4-auth-gate-device-header.md",
+  "authorizationNote": "Parent approved the narrow #736 test-harness handoff: one UUIDv4 per gate run on all existing requests, embedded stability/uniqueness/privacy tests, minimal U4 evidence and this mandatory authority. Verifier/test are unchanged locks. Preserve all auth/backend/guard/error semantics, routes, assertions, timeouts, retries, cleanup, credentials, settings, workflow and production boundaries. Under 200 changed lines. No live retry without qualified main and fresh v2 metadata; parent owns review/merge and REF-019/020 pauses remain."
+}

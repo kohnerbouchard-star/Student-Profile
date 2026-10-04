@@ -32,3 +32,5 @@ Local validation: pinned Node22.23.1/npm10.9.8; embedded gate regressions,
 actual-handler synthetic prefix400/401, full npm test, secret scan and authority
 contracts passed. Generated inventory unchanged. Full local backend typecheck
 remains blocked by the frozen esm.sh import tunnel; exact-head CI is required.
+
+Draft PR #848; authority accepts the three exact editable paths under five locks.
