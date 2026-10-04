@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1274,
+    "sourceFiles": 1276,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
-    "crossDomainDeepImports": 163,
+    "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
@@ -296,10 +296,11 @@
         "contracts",
         "domain",
         "infrastructure",
+        "public",
         "services",
         "tests"
       ],
-      "sourceFiles": 19,
+      "sourceFiles": 21,
       "publicBoundaryFiles": []
     },
     {
@@ -1138,6 +1139,24 @@
         "target": "../../players/api/playerApiRouteSegments.ts"
       },
       {
+        "consumer": "backend/src/domains/notifications/public/storyNotifications.test.ts",
+        "ownerDomain": "notifications",
+        "importedDomain": "storylines",
+        "target": "../../storylines/services/storyNotificationService.ts"
+      },
+      {
+        "consumer": "backend/src/domains/notifications/public/storyNotifications.ts",
+        "ownerDomain": "notifications",
+        "importedDomain": "storylines",
+        "target": "../../storylines/contracts/storyNotificationContracts.ts"
+      },
+      {
+        "consumer": "backend/src/domains/notifications/public/storyNotifications.ts",
+        "ownerDomain": "notifications",
+        "importedDomain": "storylines",
+        "target": "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts"
+      },
+      {
         "consumer": "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts",
         "ownerDomain": "players",
         "importedDomain": "crafting",
@@ -1452,8 +1471,8 @@
       {
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
         "ownerDomain": "stocks",
-        "importedDomain": "storylines",
-        "target": "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts"
+        "importedDomain": "notifications",
+        "target": "../../notifications/public/storyNotifications.ts"
       },
       {
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
@@ -1522,10 +1541,22 @@
         "target": "../../contracts/contracts/contractRepositoryContracts.ts"
       },
       {
+        "consumer": "backend/src/domains/storylines/contracts/storyNotificationContracts.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "notifications",
+        "target": "../../notifications/public/storyNotifications.ts"
+      },
+      {
         "consumer": "backend/src/domains/storylines/contracts/storylineContracts.ts",
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
         "target": "../../stocks/contracts/stockMarketNewsContracts.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/contracts/storylineRunnerContracts.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "notifications",
+        "target": "../../notifications/public/storyNotifications.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts",

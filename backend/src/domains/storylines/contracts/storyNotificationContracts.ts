@@ -1,3 +1,4 @@
+import type { StoryNotificationPublisher } from "../../notifications/public/storyNotifications.ts";
 import type { JsonObject } from "../../../supabase/tableTypes.ts";
 import type { StoryRevealPayload } from "./storyEffectContracts.ts";
 
@@ -135,7 +136,7 @@ export interface CreateStoryCutsceneNotificationForPlayersInput {
   readonly reveal: StoryRevealPayload;
   readonly priority: StoryNotificationPriority;
   readonly now: string;
-  readonly repository: StoryNotificationRepository;
+  readonly repository: StoryNotificationPublisher;
 }
 
 export interface CreateStoryCutsceneNotificationForPlayersResult {
