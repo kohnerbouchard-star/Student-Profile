@@ -215,6 +215,16 @@ async function reloadRoute(page, route, selector) {
   await openRoute(page, route, selector);
 }
 
+async function reloadLoansSnapshot(page, pathSuffix = "/banking/loans") {
+  // Ignore in-flight reads from the old document; consume the new body immediately.
+  const payload = page.waitForEvent("framenavigated", { predicate: (frame) => frame === page.mainFrame() })
+    .then(() => page.waitForResponse((response) => response.request().method() === "GET" &&
+      new URL(response.url()).pathname.endsWith(pathSuffix)))
+    .then((response) => response.json());
+  await reloadRoute(page, "loans", ".player-terminal-loans-page");
+  return await payload;
+}
+
 async function openDisclosureForm(form) {
   const disclosure = form.locator("xpath=..");
   const summary = disclosure.locator("summary");
@@ -448,7 +458,15 @@ async function proveLoans(page, fixtureData) {
   evidence.loans.applicationPersisted = true;
 
   approveLatestApplication();
-  await reloadRoute(page, "loans", ".player-terminal-loans-page");
+  const loanPayload = await reloadLoansSnapshot(page);
+  const projection = (loanPayload.data || loanPayload).currencyProjection;
+  if (!projection?.complete || !projection.groups.length) throw new Error("Connected Loans currency projection unavailable.");
+  const summary = await page.locator(".player-terminal-loan-metrics").innerText();
+  for (const group of projection.groups) {
+    const [whole, fraction] = group.outstanding.split(".");
+    const expected = `${group.currencyCode} ${whole.replace(/\B(?=(?:[0-9]{3})+(?![0-9]))/gu, ",")}.${fraction}`;
+    if (!summary.includes(expected)) throw new Error("Connected Loans did not render authoritative exact totals.");
+  }
   const repayForm = page.locator(`form[data-endpoint="loanRepay"][data-loan-id="${LOAN_KEY}"]`);
   await openDisclosureForm(repayForm);
   const amountField = repayForm.locator('[name="amount"]');
@@ -491,6 +509,74 @@ async function proveLoans(page, fixtureData) {
   evidence.loans.unauthenticatedRejected = true;
 }
 
+async function proveCurrencyDisplay(context) {
+  const page = await context.newPage();
+  await page.goto(`${BASE_URL}/player-terminal/?preview=1#loans`, { waitUntil: "networkidle" });
+  const probe = "/__loan-read-probe__/banking/loans";
+  let reads = 0;
+  await page.route(`**${probe}`, (route) => route.fulfill({ json: { document: ++reads === 1 ? "old" : "current" } }));
+  await page.addInitScript((path) => addEventListener("DOMContentLoaded", () => { void fetch(path); }), probe);
+  const reload = page.reload.bind(page);
+  // Force an old-document response after capture starts but before navigation.
+  page.reload = async (options) => {
+    await page.evaluate((path) => fetch(path).then((response) => response.json()), probe);
+    return reload(options);
+  };
+  try {
+    if ((await reloadLoansSnapshot(page, probe)).document !== "current") throw new Error("Loans read retained the old document.");
+  } finally { page.reload = reload; }
+  await page.evaluate(() => {
+    const shell = document.querySelector(".player-terminal-app-root").cloneNode(true);
+    globalThis.Econovaria.playerTerminal.destroy();
+    document.querySelector("#playerTerminal").append(shell);
+  });
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const state of ["exact", "old", "incomplete", "empty"]) {
+      await page.evaluate(async (state) => {
+        const [{ renderLoansPage }, { normalizeApiResponse }, { previewData }] = await Promise.all([
+          import("./src/pages/loans-page.js"), import("./src/api/response-normalizer.js"), import("./src/data/preview-data.js"),
+        ]);
+        const data = structuredClone(previewData);
+        const due = "2026-10-05T00:00:00.000001Z";
+        data.loans.offers = data.loans.offers.map((row) => ({ ...row, currencyCode: "LUM" }));
+        data.loans.activeLoans = data.loans.activeLoans.map((row) => ({ ...row, currencyCode: "NRC", balance: "999999999999.99" }));
+        data.loans.schedule = data.loans.schedule.map((row) => ({ ...row, currencyCode: "LUM", amount: "0.01" }));
+        data.loans.currencyProjection = state === "old" ? undefined : { version: 1, complete: state !== "incomplete",
+          unknownCurrencyRows: state === "incomplete" ? 1 : 0, groups: state === "empty" ? [] : [
+            { currencyCode: "NRC", availableCredit: "99999999999999.99", outstanding: "0.00", nextPayment: { amount: "2.00", due }, schedule: [] },
+            { currencyCode: "LUM", availableCredit: "0.00", outstanding: "3.00", nextPayment: null, schedule: [] },
+          ] };
+        if (state === "empty") Object.assign(data.loans, { offers: [], activeLoans: [], schedule: [] });
+        data.loans = normalizeApiResponse("loans", data.loans);
+        document.querySelector("#player-main-content").innerHTML = renderLoansPage(data, {});
+      }, state);
+      const content = page.locator(".player-terminal-loans-page");
+      const text = await content.innerText();
+      const expected = state === "exact" ? ["NRC 99,999,999,999,999.99", "LUM 3.00", "LUM 0.01"] :
+        [state === "old" ? "Currency totals unavailable" : state === "incomplete" ? "Currency totals incomplete" : "No currency obligations or offers"];
+      if (expected.some((value) => !text.includes(value))) throw new Error(`Loans ${state}/${width} currency display failed.`);
+      if (state !== "empty") {
+        const summary = content.locator(".player-terminal-active-loans details summary").first();
+        await summary.focus();
+        await page.keyboard.press("Enter");
+        if (!await content.locator('[data-endpoint="loanRepay"] input').first().isVisible()) throw new Error("Repayment disclosure lost keyboard access.");
+        if (!await summary.evaluate((node) => node === document.activeElement)) throw new Error("Disclosure lost focus.");
+        if (!await content.locator('[data-endpoint="loanApply"]').count()) throw new Error("Application control disappeared.");
+      }
+      if (await content.evaluate((node) => node.scrollWidth > node.clientWidth + 1)) throw new Error(`Loans overflow at ${width}.`);
+    }
+  }
+  await page.close();
+}
+
+if (process.argv.includes("--loans-display-only")) {
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined });
+  try { await proveCurrencyDisplay(await browser.newContext()); } finally { await browser.close(); }
+  console.log("Loans currency display: desktop/mobile exact, legacy, incomplete, empty and keyboard PASS");
+  process.exit(0);
+}
+
 let browser;
 let context;
 let failure;
@@ -502,6 +588,7 @@ try {
   const page = globalThis.__bankingPage;
   await proveSavings(page, fixtureData);
   await proveLoans(page, fixtureData);
+  await proveCurrencyDisplay(context);
 
   if (evidence.consoleErrors.length || evidence.pageErrors.length) {
     throw new Error(`Banking/Loans browser errors: ${JSON.stringify({ consoleErrors: evidence.consoleErrors, pageErrors: evidence.pageErrors })}`);

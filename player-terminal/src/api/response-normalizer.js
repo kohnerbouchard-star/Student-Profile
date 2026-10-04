@@ -376,6 +376,32 @@ function validateEndpointShape(endpointKey, value, context) {
     }
   }
 }
+function normalizeLoanCurrencies(projection) {
+  if (!projection || projection.version !== 1 || typeof projection.complete !== "boolean" ||
+      !Number.isSafeInteger(projection.unknownCurrencyRows) || projection.unknownCurrencyRows < 0 ||
+      !Array.isArray(projection.groups) || projection.groups.length > MAX_ARRAY_LENGTH) return null;
+  const money = (value) => value === null ? !projection.complete :
+    typeof value === "string" && value === value.trim() && value.length <= MAX_STRING_LENGTH && /^(0|[1-9][0-9]*)\.[0-9]{2}$/u.test(value);
+  const date = (value) => typeof value === "string" && value.length <= 100 && Number.isFinite(Date.parse(value));
+  const codes = new Set();
+  const groups = [];
+  for (const group of projection.groups) {
+    if (!group || typeof group.currencyCode !== "string" || !group.currencyCode.trim() ||
+        group.currencyCode !== group.currencyCode.trim() || group.currencyCode.length > 100 || codes.has(group.currencyCode) ||
+        !money(group.availableCredit) || !money(group.outstanding) ||
+        !Array.isArray(group.schedule) || group.schedule.length > MAX_ARRAY_LENGTH) return null;
+    const payment = group.nextPayment;
+    if (payment !== null && (!payment || !money(payment.amount) ||
+        !(date(payment.due) || (!projection.complete && payment.due === null)))) return null;
+    if (group.schedule.some((row) => !row || !date(row.due) || !money(row.amount))) return null;
+    codes.add(group.currencyCode);
+    groups.push({ currencyCode: group.currencyCode, availableCredit: group.availableCredit, outstanding: group.outstanding,
+      nextPayment: payment === null ? null : { amount: payment.amount, due: payment.due },
+      schedule: group.schedule.map(({ due, amount }) => ({ due, amount })) });
+  }
+  if (projection.complete && projection.unknownCurrencyRows !== 0) return null;
+  return { version: 1, complete: projection.complete, unknownCurrencyRows: projection.unknownCurrencyRows, groups };
+}
 export function normalizeApiResponse(endpointKey, raw, context = {}) {
   let value = sanitizeValue(unwrap(endpointKey, raw), context.config || {});
   if (endpointKey === "businessIpos" || ["businessIpoPropose", "businessIpoVote", "businessIpoSubscribe"].includes(endpointKey)) return normalizeBusinessIpoResponse(endpointKey, value, context.intent);
@@ -394,6 +420,7 @@ export function normalizeApiResponse(endpointKey, raw, context = {}) {
   if (!ARRAY_READS.has(endpointKey)) {
     value = applySafeDefaults(endpointKey, value);
     validateEndpointShape(endpointKey, value, context);
+    if (endpointKey === "loans") value.currencyProjection = normalizeLoanCurrencies(unwrap(endpointKey, raw)?.currencyProjection);
   }
   return value;
 }
