@@ -133,8 +133,9 @@ export function abortPlayerApiSessionRequests(config) {
 }
 
 export class PlayerApi {
-  constructor(config, { freshness = null } = {}) {
+  constructor(config, { freshness = null, deferFreshnessSettlement = false } = {}) {
     this.freshness = freshness;
+    this.deferFreshnessSettlement = deferFreshnessSettlement;
     this.readCacheTickets = new Map();
     this.config = config;
     this.transport = config.usePreviewData
@@ -256,8 +257,8 @@ export class PlayerApi {
           this.readCache.set(key, value);
           this.readCacheUpdatedAt.set(key, Date.now());
           this.readCacheTickets.set(key, ticket);
-          if (this.freshness) this.freshness.settle(ticket, endpointKey);
-          else clearResourceInvalidation(endpointKey);
+          if (this.freshness && !this.deferFreshnessSettlement) this.freshness.settle(ticket, endpointKey);
+          else if (!this.freshness) clearResourceInvalidation(endpointKey);
         }
         return value;
       })
