@@ -376,4 +376,15 @@ assert.ok(cashClasses.includes("when l.source_domain='banking_fx' then 'exchange
 assert.ok(cashClasses.includes("when l.source_action in ('capital_contribution_in','capitalization_in','ipo_primary_subscription') then 'capital'"));
 assert.ok(cashClasses.includes("when l.source_action='loan_disbursement' then 'financing'"));
 assert.match(cashClasses, /'account_transfer_in','account_transfer_out'\)[\s\S]*?then 'operating'/u);
-console.log("REF025c2-0 receipt provenance and cash classification SOURCE characterization passed; income policy remains pending.");
+console.log("REF025c2-0 receipt provenance and cash classification SOURCE characterization passed; approved income policy awaits separate c2-2 implementation.");
+
+// c2-1 SOURCE only: legacy bodies are spliced, gates and economic RPCs stay intact.
+const loanBindings = await readFile(new URL("../backend/supabase/migrations/20261004221307_prepare_business_loan_bindings_v1.sql", import.meta.url), "utf8");
+for (const token of ["BUSINESS_LOAN_IDENTITY_IMMUTABLE", "BUSINESS_LOAN_BINDING_SOURCE_DRIFT",
+  "public.resolve_player_business_v2", "ep.business_id=b.id", "a.obligation_currency_code=new.currency_code",
+  "a.initiating_operator_player_id=new.initiating_operator_player_id", "for share of b,p",
+  "conname=tg_table_name||'_business_liability_disabled_v1'", "to_jsonb(new)->>'liability_kind'"]) {
+  assert.ok(loanBindings.includes(token), `c2-1 missing binding invariant: ${token}`);
+}
+assert.doesNotMatch(loanBindings, /drop constraint|create table|foreign key|grant |record_player_ledger_entry/iu);
+console.log("REF025c2-1 gated binding SOURCE contract passed (not database execution).");

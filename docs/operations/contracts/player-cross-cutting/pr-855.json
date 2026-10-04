@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref025c2-1-bindings-pr-855.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 855,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/supabase/migrations/20261004221307_prepare_business_loan_bindings_v1.sql",
+    "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-bindings.md",
+    "scripts/banking-fx-database-acceptance.sql",
+    "scripts/business-banking-runtime-contract.mjs",
+    "scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+    "docs/operations/contracts/player-cross-cutting/pr-855.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-855.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium",
+    "Database Replay",
+    "business-primary-ipo-database",
+    "business-financial-market-database"
+  ],
+  "criticalJobChecks": [
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-bindings.md",
+  "authorizationNote": "User approved c2-1 binding preparation: seven paths/350 semantic lines. Locked verifier/test dependencies grant no edit permission. No new table/FK/grant expansion or origination/review/servicing/UI activation. Both creation gates and nine U1 holds remain. Income policy approved; c2-2 implementation separately scoped. Parent independent review and guarded merge; no hosted SQL/release/deployment/credentials."
+}
