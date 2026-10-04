@@ -38,3 +38,12 @@ Player/context/auth/Markets paths unchanged. Root checks regenerate inventory: t
 legacy_v1 internal discriminant adds one compatibility-marker file (209->210). The baseline
 ceiling stays209. Qualification is BLOCKED pending parent scope/owner disposition; no
 baseline edit or lexical workaround is authorized. Generated inventory is not yet committed.
+
+## Registered additional evidence tranche
+User-approved Business-banking/test scope: three paths /250 semantic changed lines:
+- `scripts/banking-fx-database-acceptance.sql`
+- `scripts/banking-fx-database-acceptance.mjs`
+- `docs/operations/evidence/refactor-execution-v1/REF-025/u5-liability-schema.md`
+Prove valid business shape with shape enabled; actor/business equality and currency
+normalization independently; populated pre-migration personal/business legacy rows;
+injected migration failure/no partial schema and retry. Disposable only; no c2 policy.
