@@ -72,20 +72,48 @@ async function sessionGateContract(name, width, height) {
   return result;
 }
 
+async function waitForMountedAdmin(targetPage) {
+  // Mount visibility precedes the session gate's asynchronous release.
+  await Promise.all([
+    targetPage.locator("#adminPreview:not([hidden])").waitFor({ state: "visible", timeout: 15000 }),
+    targetPage.locator('[data-admin-section="Overview"]').first().waitFor({ state: "visible", timeout: 15000 }),
+    targetPage.locator("#adminSessionGate").waitFor({ state: "detached", timeout: 15000 }),
+  ]);
+}
+
+async function readinessContract() {
+  const context = await browser.newContext();
+  const fixture = await context.newPage();
+  const html = '<div id="adminSessionGate"><div class="admin-session-skeleton">Loading</div></div><div id="adminPreview"><button data-admin-section="Overview">Overview</button></div>';
+  try {
+    await fixture.setContent(html);
+    await fixture.evaluate(() => {
+      window.setTimeout(() => document.getElementById("adminSessionGate").remove(), 120);
+    });
+    await waitForMountedAdmin(fixture);
+    if (await fixture.locator("#adminSessionGate").count()) fail("Readiness returned before delayed gate removal.");
+    await fixture.setContent(html);
+    let rejected = false;
+    try {
+      await waitForMountedAdmin(fixture);
+    } catch (error) {
+      if (error.name !== "TimeoutError" || !error.message.includes("#adminSessionGate")) throw error;
+      rejected = true;
+    }
+    if (!rejected || await fixture.locator("#adminSessionGate").count() !== 1) fail("Readiness accepted a stuck gate.");
+    return { delayedRemovalAccepted: true, stuckGateRejected: true, timeoutMs: 15000 };
+  } finally {
+    await context.close();
+  }
+}
+
 async function mountedAdminContract(name, width, height) {
   await page.setViewportSize({ width, height });
   await page.goto(adminUrlForGame(), {
     waitUntil: "domcontentloaded",
     timeout: 30000,
   });
-  await page.locator("#adminPreview:not([hidden])").waitFor({
-    state: "visible",
-    timeout: 15000,
-  });
-  await page.locator('[data-admin-section="Overview"]').first().waitFor({
-    state: "visible",
-    timeout: 15000,
-  });
+  await waitForMountedAdmin(page);
 
   const result = {
     shapeRuntimePresent: await page.evaluate(
@@ -188,6 +216,7 @@ async function scannerLifecycleSnapshot() {
 }
 
 try {
+  const readiness = await readinessContract();
   const viewports = [];
   for (const [name, width, height] of VIEWPORTS) {
     const sessionGate = await sessionGateContract(name, width, height);
@@ -207,7 +236,7 @@ try {
   const scanner = await scannerLifecycleSnapshot();
 
   if (errors.length) fail(errors[0]);
-  await finish({ passed: true, viewports, scanner });
+  await finish({ passed: true, readiness, viewports, scanner });
   console.log(
     "Single CSS-owned Admin startup loader and scanner lifecycle checks passed.",
   );
