@@ -69,3 +69,24 @@ Backend tsc passed. With pinned Deno 2.9.3, full typecheck:all and smoke both
 stop at the unchanged frozen esm.sh Supabase import (unsuccessful tunnel).
 These full local gates are BLOCKED, not passed; CI remains required.
 Exact-head CI is pending; no live auth was run.
+
+## Approved failure diagnostic amendment
+
+Parent additionally approved scripts/business-banking-player-commerce-browser-acceptance.core.mjs
+for disposable synthetic fixture failure diagnostics only (seven changed paths).
+Original head 64f2fe8a: 29 checks passed, five skipped, one failed. Connected
+Player/load run 37173390698, job 111350871442 failed recipient balance 0 -> 0;
+transfer HTTP/RPC returned 200, but original artifacts cannot prove recipient DB
+balance. Later journeys were skipped. Backend full typecheck/smoke passed in CI
+(28 Edge roots, 27 Deno suites, 1357 tests); Store and Admin workflows passed.
+Preserve original failed artifact 11292471874; no retry or live auth certification.
+New evidence records card absence separately from numeric zero, readiness, scalar
+transfer result, ledger balance and scoped disposable DB aggregates after failure.
+Numeric/boolean allowlists omit identifiers, headers, cookies and raw bodies.
+Assertions, retries and original failure remain unchanged; no causal fix claimed.
+Embedded --diagnostic-self-test checks redaction and failure semantics. Under 400
+changed lines; parent owns review/merge and REF-019/020 pauses remain in force.
+Validation: 41 focused runtime/deployment/authority tests plus trusted-IP entrypoint
+contract passed. Embedded diagnostic and auth-gate mocked contracts passed.
+Chromium setContent reproduced absent-card 0 then published-card 40 with no network;
+this establishes the measurement mechanism, not the failed run's actual cause.

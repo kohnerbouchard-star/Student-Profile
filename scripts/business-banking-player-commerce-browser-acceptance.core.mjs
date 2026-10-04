@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import { mkdir, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
 const BASE_URL = process.env.ECONOVARIA_BROWSER_BASE_URL || "http://127.0.0.1:4173";
@@ -16,6 +19,92 @@ const PLAYERS = Object.freeze([
   { label: "Alpha", displayName: "Browser Player Alpha", playerIdentifier: "BROWSER-PLAYER-ALPHA", accessCode: "BROWSER-ALPHA-ACCESS-001" },
   { label: "Beta", displayName: "Browser Player Beta", playerIdentifier: "BROWSER-PLAYER-BETA", accessCode: "BROWSER-BETA-ACCESS-002" },
 ]);
+
+// Failure-only diagnostics for the disposable local fixture; never serialize input objects.
+const numericDiagnosticKeys = ["balance", "amount", "senderBalance", "httpStatus", "scopeCount", "postedTransfers", "senderLedgerCount", "recipientLedgerCount", "recipientBalance"];
+const booleanDiagnosticKeys = ["cardPresent", "loading", "ready", "posted", "replayed", "currencyMatches", "unavailable"];
+function safeDiagnostic(input = {}) {
+  return Object.fromEntries([
+    ...numericDiagnosticKeys.filter((key) => typeof input[key] === "number" && Number.isFinite(input[key])).map((key) => [key, input[key]]),
+    ...booleanDiagnosticKeys.filter((key) => typeof input[key] === "boolean").map((key) => [key, input[key]]),
+  ]);
+}
+async function diagnosticAttempt(read) {
+  try { return await read(); } catch { return { unavailable: true }; }
+}
+const balanceObservations = [];
+let transferDiagnostic = {};
+function observeBalance(session, cardPresent, balance) {
+  balanceObservations.push({ slot: PLAYERS.findIndex((player) => player.playerIdentifier === session.playerIdentifier), ...safeDiagnostic({ cardPresent, balance }) });
+  if (balanceObservations.length > 16) balanceObservations.shift();
+  return balance;
+}
+function disposableDiagnosticScope(admin) {
+  const base = new URL(BASE_URL), database = new URL(process.env.DATABASE_URL || "invalid:");
+  const local = (url) => ["127.0.0.1", "localhost"].includes(url.hostname);
+  return local(base) && local(database) && database.port === "54322" && database.pathname === "/postgres" &&
+    GAME_NAME === "Player Multiplayer E2E" && admin?.players?.length === 2 &&
+    [admin.gameId, ...admin.players.map((player) => player.internalId)].every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) &&
+    CURRENCY_PATTERN.test(admin.players[0].currencyCode);
+}
+async function failureDiagnostics(admin, sessions) {
+  if (!disposableDiagnosticScope(admin)) return { unavailable: true };
+  const currency = admin.players[0].currencyCode;
+  const pages = await Promise.all(sessions.map((session) => diagnosticAttempt(async () => {
+    const snapshot = await session.page.evaluate((code) => {
+      const state = globalThis.Econovaria?.playerTerminal?.getState?.();
+      const card = document.querySelector(`[data-player-banking-balance="checking:${code}"], [data-player-banking-balance="cash:${code}"]`);
+      const text = card?.querySelector("h3")?.textContent?.replace(/,/g, "");
+      const match = text?.match(/-?\d+(?:\.\d+)?/);
+      return { cardPresent: Boolean(card), balance: match ? Number(match[0]) : undefined,
+        loading: state?.routeLoading?.banking === true, ready: state?.data?.resourceStatus?.banking?.state === "ready" };
+    }, currency);
+    const ledger = await diagnosticAttempt(() => session.page.evaluate(async ({ code, publishableKey }) => {
+      const response = await fetch("/functions/v1/player-web-session-api/proxy/players/me/ledger?limit=50", {
+        credentials: "include", headers: { apikey: publishableKey }, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(5000),
+      });
+      const body = await response.json();
+      const balances = body?.currentBalances || [];
+      const row = Array.isArray(balances) ? balances.find((item) => item.currencyCode === code && ["checking", "cash"].includes(item.accountType)) : null;
+      return { httpStatus: response.status, balance: typeof row?.balance === "number" ? row.balance : undefined };
+    }, { code: currency, publishableKey: admin.publishableKey }));
+    return { ...safeDiagnostic(snapshot), ledger: safeDiagnostic(ledger) };
+  })));
+  const database = await diagnosticAttempt(async () => {
+    const [sender, recipient] = admin.players.map((player) => player.internalId);
+    const sql = `begin read only; set local statement_timeout='5s';
+      with scope as (select p.id from public.players p join public.game_sessions g on g.id=p.game_session_id
+        where g.id='${admin.gameId}' and g.name='Player Multiplayer E2E' and
+        ((p.id='${sender}' and p.player_identifier='BROWSER-PLAYER-ALPHA') or
+         (p.id='${recipient}' and p.player_identifier='BROWSER-PLAYER-BETA'))),
+      transfers as (select * from public.banking_transfer_requests where game_session_id='${admin.gameId}'
+        and sender_player_id='${sender}' and recipient_player_id='${recipient}' and currency_code='${currency}'
+        and amount=40 and status='posted' and (select count(*) from scope)=2)
+      select json_build_object('scopeCount',(select count(*) from scope),
+        'postedTransfers',(select count(*) from transfers),
+        'senderLedgerCount',(select count(*) from transfers t join public.ledger_entries l on l.id=t.sender_ledger_entry_id),
+        'recipientLedgerCount',(select count(*) from transfers t join public.ledger_entries l on l.id=t.recipient_ledger_entry_id),
+        'senderBalance',(select sum(balance) from public.account_balances where player_id='${sender}' and game_session_id='${admin.gameId}' and currency_code='${currency}' and account_type in ('checking','cash') and (select count(*) from scope)=2),
+        'recipientBalance',(select sum(balance) from public.account_balances where player_id='${recipient}' and game_session_id='${admin.gameId}' and currency_code='${currency}' and account_type in ('checking','cash') and (select count(*) from scope)=2)); rollback;`;
+    const { stdout } = await promisify(execFile)("psql", [process.env.DATABASE_URL, "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-c", sql], { timeout: 10000, maxBuffer: 4096 });
+    return safeDiagnostic(JSON.parse(stdout.trim()));
+  });
+  return { observations: balanceObservations, transfer: transferDiagnostic, pages, database };
+}
+if (process.argv.includes("--diagnostic-self-test")) {
+  const secret = "DO-NOT-EMIT-token-cookie-plaintext";
+  assert.deepEqual(safeDiagnostic({ balance: 0, cardPresent: false, token: secret, amount: secret, ready: secret }), { balance: 0, cardPresent: false });
+  assert.deepEqual(safeDiagnostic({ balance: NaN, amount: null, senderBalance: "40", cookie: secret }), {});
+  assert.deepEqual(await diagnosticAttempt(() => { throw new Error(secret); }), { unavailable: true });
+  const original = new Error("original assertion failure");
+  let caught;
+  try { try { throw original; } catch (error) { await diagnosticAttempt(() => { throw new Error(secret); }); throw error; } } catch (error) { caught = error; }
+  assert.equal(caught, original);
+  for (const [present, balance] of [[false, 0], [true, 0], [true, 40]]) assert.equal(observeBalance(PLAYERS[1], present, balance), balance);
+  assert.deepEqual(balanceObservations.map(({ cardPresent, balance }) => [cardPresent, balance]), [[false, 0], [true, 0], [true, 40]]);
+  console.log("Diagnostic allowlist, absent/zero/40 distinction, and original failure semantics passed.");
+  process.exit(0);
+}
 
 await mkdir(OUTPUT_DIR, { recursive: true });
 
@@ -264,9 +353,9 @@ function parseCurrencyAmount(text) {
 async function balanceForCurrency(session, currencyCode) {
   await openRoute(session, "banking", ".player-terminal-banking-page");
   const card = session.page.locator(`[data-player-banking-balance="checking:${currencyCode}"], [data-player-banking-balance="cash:${currencyCode}"]`).first();
-  if (!(await card.count())) return 0;
+  if (!(await card.count())) return observeBalance(session, false, 0);
   await card.waitFor({ state: "visible", timeout: 30_000 });
-  return parseCurrencyAmount(await card.locator("h3").innerText());
+  return observeBalance(session, true, parseCurrencyAmount(await card.locator("h3").innerText()));
 }
 
 async function sendTransfer(sender, recipient, currencyCode) {
@@ -290,6 +379,9 @@ async function sendTransfer(sender, recipient, currencyCode) {
   if (resultCurrency && resultCurrency !== currencyCode) {
     throw new Error(`Player transfer settled in ${resultCurrency} instead of ${currencyCode}.`);
   }
+  transferDiagnostic = safeDiagnostic({ amount: payload?.result?.amount, senderBalance: payload?.result?.sender_balance,
+    posted: payload?.result?.status === "posted", replayed: payload?.result?.replayed,
+    currencyMatches: payload?.result?.currency_code === currencyCode });
   evidence.transfer.sent = true;
   const requestRecord = response.request();
   const headers = await requestRecord.allHeaders();
@@ -372,11 +464,13 @@ async function purchaseStoreItem(session, currencyCode) {
   return { url: purchaseResponse.url(), body: unauthorizedBody };
 }
 
+let diagnosticAdmin;
 let browser;
 const sessions = [];
 let failure;
 try {
   const admin = await adminContext();
+  diagnosticAdmin = admin;
   const currencyCode = admin.players[0].currencyCode;
   evidence.fixtureCredit.currencyCode = currencyCode;
 
@@ -457,6 +551,7 @@ try {
 } catch (error) {
   failure = error;
   evidence.failure = redact(error?.stack || error);
+  evidence.diagnostics = await diagnosticAttempt(() => failureDiagnostics(diagnosticAdmin, sessions));
 } finally {
   evidence.finalizedAt = new Date().toISOString();
   await writeFile(
