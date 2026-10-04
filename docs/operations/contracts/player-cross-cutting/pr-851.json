@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.market-receipt-lifecycle-pr-851.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 851,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "player-terminal/src/features/market/market-order-flow.js",
+    "player-terminal/tests/browser/market-receipt-lifecycle.spec.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-025/market-receipt-lifecycle.md",
+    "docs/operations/contracts/player-cross-cutting/pr-851.json",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-851.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "criticalJobChecks": [
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/market-receipt-lifecycle.md",
+  "authorizationNote": "Parent-authorized separate roadmap blocker repair and narrow #624 UI/realtime owner handoff: Market flow receipt lifecycle plus real terminal-render tests only. Maximum five changed paths/350 semantic lines; runtime <=100. Inventory generation only if required; preserve #668/#736 protected hunks and REF042 freshness/session boundaries. No app/API/realtime/backend/CSS edits, economic authority changes, assertion/deadline weakening, live requests, credentials, dispatch, deployment or U1 guard restoration. PR846 frozen. Preserve receipt until explicit dismissal or legitimate navigation/destruction, focus/accessibility and single mutation; unsubscribe on destruction. Parent independent review and merge required. REF025 BLOCKED; REF027 depends on025+026."
+}
