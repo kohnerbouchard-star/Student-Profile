@@ -28,6 +28,22 @@ export type PlayerBusinessBankingRoute =
   | DelegatedPlayerBusinessRoute
   | PlayerBankingRoute;
 
+// Internal persistence identity, never a browser DTO or operating permission.
+// business_v1 is reserved: database creation gates remain installed through c4.
+export type LoanLiabilityIdentity = {
+  readonly liability_kind: "legacy_v1";
+  readonly initiating_operator_player_id: null;
+  readonly borrower_business_id: null;
+} | {
+  readonly liability_kind: "business_v1";
+  readonly initiating_operator_player_id: string;
+  readonly borrower_business_id: string;
+};
+export type LoanApplicationLiabilityIdentity = LoanLiabilityIdentity & (
+  | { readonly liability_kind: "legacy_v1"; readonly obligation_currency_code: null }
+  | { readonly liability_kind: "business_v1"; readonly obligation_currency_code: string }
+);
+
 export interface LoanCurrencyProjectionDto {
   readonly version: 1;
   readonly complete: boolean;
