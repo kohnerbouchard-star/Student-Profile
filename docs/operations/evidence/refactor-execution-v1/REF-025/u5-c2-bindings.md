@@ -8,7 +8,7 @@ Seven paths /350 semantic changed lines, including tests/evidence/authority:
 - docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-bindings.md
 - scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs
 - scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
-- docs/operations/contracts/player-cross-cutting/pr-<assigned-number>.json
+- docs/operations/contracts/player-cross-cutting/pr-855.json
 
 Pinned CLI2.109.1 generated the unique20261004221307 identity before implementation;
 initial empty SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
@@ -33,3 +33,5 @@ rolled-back subtransaction. No gate-removal function or activation exists.
 Local source and forward-bundle16/16 PASS; exact-head disposable replay/lint pending.
 Rollback: revert unmerged source; any applied schema correction requires an approved
 forward migration. Never rewrite migration history, debt or posted ledger effects.
+
+Draft PR855; migration raw SHA256 7bf22dd6bd3d10881b52a2cab44f127d836064bf15e66b291c724ac54a094ea7.
