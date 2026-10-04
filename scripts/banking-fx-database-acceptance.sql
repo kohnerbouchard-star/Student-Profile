@@ -207,11 +207,26 @@ begin
     values(g,actor,business,product,application,'QREFLOAN',100,100,0.05,10,now()+interval '7 days') returning id into loan;
   perform public.record_player_ledger_entry(g,actor,account,100,'QREFLOAN','credit','admin',
     'business_banking_correction',null,'system',null,'{}'::jsonb);
-  select public_key into loan_key from public.player_loans where id=loan;
+  -- A personal legacy obligation must survive the same upgrade and keep its account.
+  perform private.ensure_bank_account_projection_v1(g,private.ensure_player_bank_account_v1(g,actor,'checking','QREFLOAN'));
+  insert into public.loan_products(game_session_id,name,borrower_type,currency_code,minimum_amount,
+    maximum_amount,annual_rate,term_cycles,disclosure_text)
+    values(g,'REF025 personal','player','QREFLOAN',1,1000,0.05,12,'Disposable personal legacy fixture.') returning id into product;
+  insert into public.loan_applications(game_session_id,player_id,loan_product_id,amount,purpose,
+    repayment_source,credit_score,projected_payment,affordability_ratio,idempotency_key,request_hash)
+    values(g,actor,product,100,'Personal fixture','checking',650,10,0.1,'ref025-personal',repeat('c',64)) returning id into application;
+  insert into public.player_loans(game_session_id,player_id,loan_product_id,application_id,currency_code,
+    original_principal,principal_balance,annual_rate,scheduled_payment,next_due_at)
+    values(g,actor,product,application,'QREFLOAN',100,100,0.05,10,now()+interval '7 days');
+  select application_id into application from public.player_loans where id=loan;
+  perform public.record_player_ledger_entry(g,actor,'checking',100,'QREFLOAN','credit','admin',
+    'business_banking_correction',null,'system',null,'{}'::jsonb);
+  for loan_key in select public_key from public.player_loans where game_session_id=g loop
   select * into payment from public.repay_player_loan_v1(g,actor,loan_key,10,'ref025-repayment');
   if payment.replayed or payment.principal_balance <> 90 then raise exception 'REF025 legacy repayment failed'; end if;
   select * into payment from public.repay_player_loan_v1(g,actor,loan_key,10,'ref025-repayment');
   if not payment.replayed or payment.principal_balance <> 90 then raise exception 'REF025 legacy replay failed'; end if;
+  end loop;
   foreach tab in array array['loan_applications','player_loans'] loop
     row_id := case when tab='loan_applications' then application else loan end;
     execute format('select to_jsonb(t) from public.%I t where id=$1',tab) into original using row_id;
@@ -235,6 +250,13 @@ begin
     execute format('alter table public.%I drop constraint %I',tab,gate);
     perform pg_temp.ref025_reject(format('update public.%I set liability_kind=%L where id=%L',tab,'business_v1',row_id),shape);
     perform pg_temp.ref025_reject(format('update public.%I set initiating_operator_player_id=%L where id=%L',tab,actor,row_id),shape);
+    execute format('update public.%I set liability_kind=%L, initiating_operator_player_id=%L,
+      borrower_business_id=%L%s where id=%L',tab,'business_v1',actor,business,
+      case when tab='loan_applications' then ', obligation_currency_code=''QREFLOAN''' else '' end,row_id);
+    execute format('select to_jsonb(t) from public.%I t where id=$1',tab) into patch using row_id;
+    if patch->>'liability_kind' <> 'business_v1' then raise exception 'REF025 valid business shape missing'; end if;
+    perform pg_temp.ref025_reject(format('update public.%I set initiating_operator_player_id=%L where id=%L',tab,other_actor,row_id),shape);
+    perform pg_temp.ref025_reject(format('update public.%I set borrower_business_id=%L where id=%L',tab,other_business,row_id),shape);
     if tab='loan_applications' then
       perform pg_temp.ref025_reject(format('update public.%I set obligation_currency_code=%L where id=%L',tab,'qrefloan',row_id),shape);
     end if;

@@ -47,3 +47,13 @@ User-approved Business-banking/test scope: three paths /250 semantic changed lin
 Prove valid business shape with shape enabled; actor/business equality and currency
 normalization independently; populated pre-migration personal/business legacy rows;
 injected migration failure/no partial schema and retry. Disposable only; no c2 policy.
+
+Additional source-ready evidence: personal and business loans are populated after
+transactionally reconstructing only the pre-c1 table shape on the full-chain database.
+Real c1 SQL runs with an injected subtransaction failure, comparing columns/constraints/
+indexes and all loan/payment/ledger/balance rows before retry; success preserves data
+and both repayment paths. Outer rollback restores head schema and removes fixtures.
+This is not a separate full-base replay; complete-chain startup/reset is a distinct CI
+gate. Valid business shape/equality/currency checks now retain the shape constraint.
+Qualification pending; prior scope/policy blockers above are historical, resolved only
+by the explicit coordinated approval and its separate bounded scopes.
