@@ -703,7 +703,7 @@
       "id": "REF-042",
       "title": "Converge Inventory mutation invalidation in the Player Terminal",
       "file": "tasks/REF-042.md",
-      "status": "BLOCKED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-023",
         "REF-041"
@@ -713,8 +713,8 @@
       "recheckOpenPrs": [
         624
       ],
-      "implementationSha": null,
-      "mergeSha": null,
+      "implementationSha": "48531a7af1fa6668cafd63bde3350f2cfa292677",
+      "mergeSha": "486b5e2d0f2fc042be444840fff2d4f11c4ac72c",
       "evidence": "docs/operations/evidence/refactor-execution-v1/REF-042/preflight.md"
     },
     {
