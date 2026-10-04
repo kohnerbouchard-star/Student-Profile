@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref015-logout-trigger-pr-850.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 850,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "admin/logout-confirmation.js",
+    "admin/logout-account-trigger-bridge.js",
+    "scripts/admin-logout-account-trigger-source-smoke.mjs",
+    "scripts/admin-logout-confirmation-browser-smoke.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-015/u7-logout-trigger-migration.md",
+    "docs/operations/contracts/player-cross-cutting/pr-850.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-850.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium",
+    "Admin Shell Smoke",
+    "Admin Browser E2E",
+    "Runtime Interaction Wiring",
+    "Admin Game Session Controls"
+  ],
+  "criticalJobChecks": [
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-015/u7-logout-trigger-migration.md",
+  "authorizationNote": "Parent approved at most seven paths, 350 total changed lines and100 runtime lines. Six paths change; generated inventory needed no update. Verifier/tests remain unchanged locks. Preserve event registration order, synchronous older/missing-owner fallback, all URLs/globals, authentication/session behavior, source/browser negative checks, eight retained candidates and all retirement/release holds. No deletion, runtime/security/retention/settings change, deployment or merge. Parent retains independent review and merge."
+}
