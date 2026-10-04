@@ -322,7 +322,7 @@ begin
               source||jsonb_build_object('id',gen_random_uuid(),'player_id',actor,'initiating_operator_player_id',actor)),'BUSINESS_NOT_FOUND');
           end if;
         end loop;
-        -- Controller replacement cannot rewrite the captured initiator or attach its personal account.
+        -- Owner-field change to the already-mandated initiator; NOT an operating-mandate replacement.
         update public.business_entities set owner_player_id=manager where id=business;
         update public.loan_applications set purpose=purpose where id=app;
         update public.player_loans set principal_balance=principal_balance where id=debt;
