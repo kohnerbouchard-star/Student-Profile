@@ -354,3 +354,26 @@ for (const table of ["loan_applications", "player_loans"]) {
 assert.equal((liability.match(/check \(liability_kind = 'legacy_v1'\)/g) || []).length, 2);
 assert.doesNotMatch(liability, /create (?:or replace )?function|drop constraint|grant |disable row level/i);
 console.log("REF025c1 inert liability schema source contract passed (not database proof).");
+
+// c2-0 records existing provenance/classification, not an approved income policy.
+const receiptSource = await readFile("backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql", "utf8");
+const receiptStart = receiptSource.indexOf("create or replace function economy_private.validate_store_offer_purchase_receipt_v2()");
+assert.ok(receiptStart >= 0);
+const receiptValidator = receiptSource.slice(receiptStart, receiptSource.indexOf("\ncreate or replace function ", receiptStart + 1));
+const receiptBranches = receiptValidator.split("\n  else\n");
+assert.equal(receiptBranches.length, 2);
+for (const marker of ["funding_row.game_session_id = new.game_session_id", "funding_row.target_account_id = new.target_bank_account_id",
+  "funding_row.target_currency_code = new.currency_code", "funding_row.target_amount = new.total_price",
+  "funding_row.source_action = 'business_offer_purchase_funding'", "party_row.business_id = new.business_id",
+  "entry_row.bank_transaction_id = new.bank_transaction_id", "entry_row.line_metadata ->> 'lineRole' = 'purchase_funding_recipient_credit'"])
+  assert.ok(receiptBranches[0].includes(marker), marker);
+for (const marker of ["entry_row.id = new.business_credit_ledger_entry_id", "entry_row.business_id = new.business_id",
+  "entry_row.game_session_id = new.game_session_id", "entry_row.currency_code = new.currency_code",
+  "entry_row.amount = new.business_credit", "entry_row.source_action = 'business_offer_purchase_credit'", "entry_row.source_id = new.id"])
+  assert.ok(receiptBranches[1].includes(marker), marker);
+const cashClasses = await readFile("backend/supabase/migrations/20260918032648_business_financial_statements_v1.sql", "utf8");
+assert.ok(cashClasses.includes("when l.source_domain='banking_fx' then 'exchange'"));
+assert.ok(cashClasses.includes("when l.source_action in ('capital_contribution_in','capitalization_in','ipo_primary_subscription') then 'capital'"));
+assert.ok(cashClasses.includes("when l.source_action='loan_disbursement' then 'financing'"));
+assert.match(cashClasses, /'account_transfer_in','account_transfer_out'\)[\s\S]*?then 'operating'/u);
+console.log("REF025c2-0 receipt provenance and cash classification SOURCE characterization passed; income policy remains pending.");
