@@ -6,10 +6,11 @@ Parent remains BLOCKED. REF-027 still depends on 025 + 026. This is not a releas
 
 ## Scope and behavior
 
-Accepted #835 registration; exactly four paths, maximum 250 semantic diff lines:
+Accepted #835 registration; four source/evidence paths plus the approved PR authority manifest (five total), maximum 250 semantic diff lines:
 - `backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts`
 - `backend/src/domains/business-banking/infrastructure/supabasePlayerBusinessBankingRepository.ts`
 - `backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts`
+- `docs/operations/contracts/player-cross-cutting/pr-838.json` (parent-approved amendment).
 - This evidence file, `docs/operations/evidence/refactor-execution-v1/REF-025/u5-currency-read.md`.
 
 Only LoansSnapshotDto and readLoans output gain optional nullable currencyCode:
@@ -56,7 +57,19 @@ Player banking-read/banking-fx/business-workspace/business-workspace-boundary;
 focused repository typecheck, SQL source contract, root npm test, architecture/high-priority/
 legacy guards, secret scan and whitespace. Inventory regeneration has zero diff:
 1,271 source files, 52 persistence exceptions, 163 deep imports, 209 marker files,
-100 oversized files; all unchanged. No inventory/scope amendment or ceiling change.
+100 oversized files; all unchanged. No inventory or ceiling change. The sole scope amendment is the PR838 manifest;
+its verifier/test allowlist entries are mandatory locks, not edit permissions.
 Full backend typecheck/smoke local dependency availability and exact-head CI results
 are reported in the draft PR; main results above are prerequisite evidence only.
 Parent controls review/merge. No new independent audit or financial-policy work.
+
+PR #838 initial head `91c77561bb24f93db10538381f2aca701fb568fd` passed source review.
+Treasury source job111345006873 failed because the absent PR838 manifest selected
+an unrelated fallback authority; its database and Chromium jobs passed. The parent
+approved this fifth path before editing. Validator, required checks and locks stay
+unchanged. New-head qualification belongs in PR metadata, not prior-head claims.
+Local full backend typecheck/smoke encounter the baseline esm.sh download tunnel
+failure. Initial-head CI passed; final-head complete diagnostics remain required.
+Release Promote run37171439396 cancelled before any jobs; its PR contract group is
+shared, cancel-in-progress is false, and the cause is unproven. Live promotion is
+workflow_dispatch-only; no retry, dispatch, authorization or setting change made.
