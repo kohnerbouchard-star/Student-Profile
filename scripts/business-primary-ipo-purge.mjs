@@ -15,7 +15,12 @@ export function verifyPrimaryIpoPurge(game, other, additionalTables = []) {
   // Populate retained legacy obligations so the new FK graph is exercised by deletion.
   runSql(`do $fixture$ declare b public.business_entities%rowtype; product uuid; application uuid;
     begin
-      select * into strict b from public.business_entities where game_session_id=${q(game.id)} order by id limit 1;
+      -- The Market acceptance deliberately closes its issuer before this helper.
+      -- Give purge its own legacy borrower; do not reopen or mutate that issuer.
+      insert into public.business_entities(game_session_id,owner_player_id,legal_name,country_code,currency_code,tax_classification)
+        select game_session_id,${q(game.ownerId)},'Purge legacy borrower',country_code,currency_code,'disregarded'
+        from public.business_entities where game_session_id=${q(game.id)} and id=${q(game.businessId)}
+        returning * into strict b;
       perform public.ensure_business_bank_account_v2(b.game_session_id,b.id);
       insert into public.loan_products(game_session_id,name,borrower_type,currency_code,minimum_amount,
         maximum_amount,annual_rate,term_cycles,disclosure_text)
