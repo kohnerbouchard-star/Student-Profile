@@ -50,6 +50,15 @@
     const supabaseUrl = text(config.supabaseUrl).replace(/\/+$/, "");
     const apiProxyUrl = text(config.apiProxyUrl).replace(/\/+$/, "");
     const supabasePublishableKey = text(config.supabasePublishableKey);
+    const apiTransport = text(config.apiTransport);
+    if (apiTransport && apiTransport !== "same-origin-bff") {
+      throw new Error("ECONOVARIA_RUNTIME_CONFIG_INVALID_API_TRANSPORT");
+    }
+    if (apiTransport && apiProxyUrl) {
+      throw new Error("ECONOVARIA_RUNTIME_CONFIG_CONFLICTING_API_TRANSPORT");
+    }
+    const useSameOriginBff =
+      apiTransport === "same-origin-bff" || environment === "production";
 
     if (!allowedEnvironments.has(environment)) {
       throw new Error("ECONOVARIA_RUNTIME_CONFIG_INVALID_ENVIRONMENT");
@@ -131,25 +140,25 @@
       }
     }
 
-    const playerWebSessionApiUrl = environment === "production"
+    const playerWebSessionApiUrl = useSameOriginBff
       ? "/api/player-session"
       : `${apiBaseUrl}/functions/v1/player-web-session-api`;
-    const playerApiUrl = environment === "production"
+    const playerApiUrl = useSameOriginBff
       ? "/api/player"
       : `${apiBaseUrl}/functions/v1/player-web-session-api/proxy`;
     const staffApiUrl = `${apiBaseUrl}/functions/v1/staff-api`;
     const bootstrapApiUrl = `${apiBaseUrl}/functions/v1/bootstrap-api`;
     const adminApiUrl = `${apiBaseUrl}/functions/v1/admin-api`;
-    const webSessionApiUrl = environment === "production"
+    const webSessionApiUrl = useSameOriginBff
       ? "/api/admin-session"
       : `${apiBaseUrl}/functions/v1/web-session-api`;
-    const adminLogoutApiUrl = environment === "production"
+    const adminLogoutApiUrl = useSameOriginBff
       ? "/api/admin-logout"
       : `${apiBaseUrl}/functions/v1/web-session-api/logout`;
-    const adminBffApiUrl = environment === "production"
+    const adminBffApiUrl = useSameOriginBff
       ? "/api/admin"
       : `${apiBaseUrl}/functions/v1/web-session-api/proxy`;
-    const passwordResetApiUrl = environment === "production"
+    const passwordResetApiUrl = useSameOriginBff
       ? "/api/password-reset"
       : `${apiBaseUrl}/functions/v1/password-reset-api`;
 
@@ -158,6 +167,7 @@
       projectRef,
       supabaseUrl,
       apiProxyUrl,
+      apiTransport,
       supabasePublishableKey,
       playerApiUrl,
       playerWebSessionApiUrl,
