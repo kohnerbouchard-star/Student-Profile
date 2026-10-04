@@ -129,11 +129,15 @@ if (process.argv.includes("--diagnostic-self-test")) {
   assert.equal(readyCurrencyBalance("LUM"), false); // Stale rendered amount must not pass.
   card.querySelector = () => ({ textContent: "LUM 0" });
   assert.deepEqual(readyCurrencyBalance("LUM"), { cardPresent: true, balance: 0 });
+  state.data.banking.stale = true; assert.equal(readyCurrencyBalance("LUM"), false);
+  state.data.banking.stale = false; assert.deepEqual(readyCurrencyBalance("LUM"), { cardPresent: true, balance: 0 });
   state.data.banking.balances[0].balance = 10000.125;
   card.querySelector = () => ({ textContent: "LUM 10,000.13" });
   assert.deepEqual(readyCurrencyBalance("LUM"), { cardPresent: true, balance: 10000.13 });
   card = null; state.data.banking.balances[0].currencyCode = "NRC";
   assert.deepEqual(readyCurrencyBalance("LUM"), { cardPresent: false, balance: 0 });
+  state.data.banking.stale = true; assert.equal(readyCurrencyBalance("LUM"), false);
+  state.data.banking.stale = false;
   state.data.resourceStatus.banking.state = "unavailable";
   assert.equal(readyCurrencyBalance("LUM"), false);
   delete globalThis.Econovaria; delete globalThis.document; delete globalThis.getComputedStyle;
@@ -383,7 +387,7 @@ function readyCurrencyBalance(currencyCode) {
   const state = globalThis.Econovaria?.playerTerminal?.getState?.();
   const bank = state?.data?.banking;
   if (state?.routeLoading?.banking !== false || state?.routeErrors?.banking ||
-      state?.data?.resourceStatus?.banking?.state !== "ready" || !Array.isArray(bank?.balances)) return false;
+      state?.data?.resourceStatus?.banking?.state !== "ready" || bank?.stale || !Array.isArray(bank?.balances)) return false;
   const rows = bank.balances.length ? bank.balances : [{ ...bank.checking, accountType: "checking",
     currencyCode: bank.checking?.currencyCode || state.data.session?.currencyCode }];
   if (rows.some((row) => typeof row.currencyCode !== "string" || !row.currencyCode.trim())) return false;
