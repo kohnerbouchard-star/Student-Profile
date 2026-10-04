@@ -670,16 +670,16 @@
       "id": "REF-040",
       "title": "Expose a minimal generic Markets calculation boundary",
       "file": "tasks/REF-040.md",
-      "status": "BLOCKED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-038"
       ],
       "risk": "R2",
       "architectureMapping": "ARCH-206/ARCH-402",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-040/u6a-interim-outcome.md"
+      "implementationSha": "1b1ae02b932499d06f0459e04319b716da543f60",
+      "mergeSha": "b7f0e1374163f665124cc2ff02e9f4313ccb6679",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-040/u6a-closeout.md"
     },
     {
       "id": "REF-041",
