@@ -97,3 +97,142 @@ Deno.test("IPO routes remain exclusively owned by the canonical Business dispatc
     assertEquals(readPlayerBusinessBankingRoutePath(`/players/me/business/${path}`), null);
   }
 });
+
+// REF025a: application/repository characterization with synthetic clients, no SQL execution.
+import { handlePlayerBusinessBankingRequest } from "./playerBusinessBankingHttpHandler.ts";
+import { SupabasePlayerBusinessBankingRepository } from "../infrastructure/supabasePlayerBusinessBankingRepository.ts";
+import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
+import { EdgeActivationError } from "../../../platform/supabase/edgeResponse.ts";
+
+Deno.test("Loans rejects envelope, body and method before configuration or scope", async () => {
+  for (const [method, suffix, headers, body] of [
+    ["GET", "?playerId=spoof", {}, undefined],
+    ["GET", "", { "x-player-id": "spoof" }, undefined],
+    ["POST", "", {}, "{"],
+    ["POST", "", {}, "{}"],
+  ] as const) {
+    const response = await handlePlayerBusinessBankingRequest(
+      new Request(`https://example.test/players/me/banking/loans${suffix}`, { method, headers, body }),
+      { kind: "loansRead" },
+      {
+        readEnvironment: () => { throw new Error("configuration must not be read"); },
+        createServiceClient: () => { throw new Error("client must not be created"); },
+      },
+    );
+    assertEquals(response.status, method === "POST" && body === "{}" ? 405 : 400);
+  }
+  const calls: string[] = [];
+  const response = await handlePlayerBusinessBankingRequest(
+    new Request("https://example.test/players/me/banking/loans"), { kind: "loansRead" },
+    {
+      readEnvironment: () => { calls.push("environment"); return { ok: false, error: "missing" }; },
+      createServiceClient: () => { throw new Error("client must not be created"); },
+    },
+  );
+  assertEquals(response.status, 500);
+  assertEquals(calls, ["environment"]);
+});
+
+Deno.test("Loans preserves injected scope denial and never constructs its repository", async () => {
+  const response = await handlePlayerBusinessBankingRequest(
+    new Request("https://example.test/players/me/banking/loans"), { kind: "loansRead" },
+    {
+      readEnvironment: () => ({ ok: true, value: { supabaseUrl: "https://example.test", supabaseAnonKey: "fixture", supabaseServiceRoleKey: "fixture" } }),
+      createServiceClient: () => ({} as EdgeSupabaseClient),
+      resolveScope: () => { throw new EdgeActivationError("invalid_player_session_scope", "Denied", 403); },
+      createRepository: () => { throw new Error("repository must not be created"); },
+    },
+  );
+  assertEquals(response.status, 403);
+  assertEquals((await response.json()).error.code, "invalid_player_session_scope");
+});
+
+Deno.test("Loans retains five scoped reads and the borrower/account projection contract", async () => {
+  for (const businessCount of [0, 1, 2]) {
+    const calls: unknown[][] = [];
+    const businessKey = key("biz", "a");
+    const fixtures: Record<string, Record<string, unknown>[]> = {
+      loan_products: [{ id: "product", public_key: key("lop", "b"), currency_code: "NRC", borrower_type: "business", status: "active", minimum_credit_score: 550, maximum_amount: "100.10", term_cycles: 2 }],
+      player_loans: [
+        { public_key: key("lon", "c"), currency_code: "NRC", loan_product_id: "product", business_id: "business0", status: "active", principal_balance: "10.10", accrued_interest: "0.20", original_principal: "20", scheduled_payment: "3", next_due_at: "2026-10-05T00:00:00.000Z" },
+        { public_key: key("lon", "d"), currency_code: "LUM", loan_product_id: "foreign-product", status: "delinquent", principal_balance: "20.20", accrued_interest: "0.30", original_principal: "30", scheduled_payment: "4", next_due_at: "2026-10-06T00:00:00.000Z" },
+      ],
+      credit_profiles: [],
+      loan_payments: [{ status: "posted" }, { status: "reversed" }],
+      business_entities: Array.from({ length: businessCount }, (_, i) => ({ id: `business${i}`, public_key: businessKey, status: "active" })),
+    };
+    const client = {
+      rpc(name: string, args: unknown) {
+        calls.push(["rpc", name, args]);
+        return Promise.resolve({ data: [{ country_code: "NRC", currency_code: "NRC" }], error: null });
+      },
+      from(table: string) {
+        const query = {
+          select(value: string) { calls.push([table, "select", value]); return query; },
+          eq(column: string, value: unknown) { calls.push([table, "eq", column, value]); return query; },
+          order(column: string, options: unknown) { calls.push([table, "order", column, options]); return query; },
+          limit(value: number) { calls.push([table, "limit", value]); return query; },
+          then(resolve: (value: unknown) => unknown) { return Promise.resolve({ data: fixtures[table], error: null }).then(resolve); },
+        };
+        return query;
+      },
+    } as unknown as EdgeSupabaseClient;
+    const result = await new SupabasePlayerBusinessBankingRepository(client).readLoans({ gameSessionId: "game-fixture", playerId: "player-fixture" });
+    assertEquals(calls, [
+      ["rpc", "resolve_player_economic_context_v1", { p_game_session_id: "game-fixture", p_player_id: "player-fixture" }],
+      ["loan_products", "select", "*"], ["loan_products", "eq", "game_session_id", "game-fixture"], ["loan_products", "eq", "currency_code", "NRC"], ["loan_products", "order", "minimum_amount", { ascending: true }],
+      ["player_loans", "select", "*"], ["player_loans", "eq", "game_session_id", "game-fixture"], ["player_loans", "eq", "player_id", "player-fixture"], ["player_loans", "order", "created_at", { ascending: false }],
+      ["credit_profiles", "select", "*"], ["credit_profiles", "eq", "game_session_id", "game-fixture"], ["credit_profiles", "eq", "player_id", "player-fixture"], ["credit_profiles", "limit", 1],
+      ["loan_payments", "select", "*"], ["loan_payments", "eq", "game_session_id", "game-fixture"], ["loan_payments", "eq", "player_id", "player-fixture"], ["loan_payments", "order", "created_at", { ascending: false }], ["loan_payments", "limit", 500],
+      ["business_entities", "select", "id,public_key,status"], ["business_entities", "eq", "game_session_id", "game-fixture"], ["business_entities", "eq", "owner_player_id", "player-fixture"],
+    ]);
+    assertEquals([result.outstanding, result.creditScore, result.paymentsMade], [30.8, 600, 1]);
+    assertEquals(result.availableCredit, businessCount ? 100.1 : 0);
+    assertEquals(result.activeLoans[0].businessId, businessCount ? businessKey : null);
+    assertEquals(result.nextPayment, { amount: 3, due: "2026-10-05T00:00:00.000Z" });
+    assertEquals(result.schedule.map((item) => item.amount), [3, 3, 4]);
+    assertEquals("currencyCode" in result.activeLoans[0], false);
+  }
+});
+
+Deno.test("Loans unavailable context fails before table reads, database errors remain errors", async () => {
+  for (const error of [null, { message: "LOAN_PRODUCT_NOT_FOUND" }]) {
+    const client = {
+      rpc: () => Promise.resolve({ data: null, error }),
+      from: () => { throw new Error("tables must not be read"); },
+    } as unknown as EdgeSupabaseClient;
+    let failure: unknown;
+    try { await new SupabasePlayerBusinessBankingRepository(client).readLoans({ gameSessionId: "game", playerId: "player" }); }
+    catch (caught) { failure = caught; }
+    assertEquals((failure as { code: string }).code, error ? "loan_product_not_found" : "player_economic_context_missing");
+  }
+});
+
+Deno.test("Loan application passes account intent and server identity to one atomic command", async () => {
+  const calls: unknown[] = [];
+  const response = await handlePlayerBusinessBankingRequest(
+    new Request("https://example.test/players/me/banking/loans/applications/fixture", {
+      method: "POST", body: JSON.stringify({ businessKey: key("biz", "a"), amount: 12.345,
+        purpose: "Equipment", repaymentSource: `business:${key("biz", "a")}`, idempotencyKey: "apply-fixture-01" }),
+    }),
+    { kind: "loanApply", offerKey: key("lop", "b") },
+    {
+      readEnvironment: () => ({ ok: true, value: { supabaseUrl: "https://example.test", supabaseAnonKey: "fixture", supabaseServiceRoleKey: "fixture" } }),
+      createServiceClient: () => ({} as EdgeSupabaseClient),
+      resolveScope: () => Promise.resolve({ gameId: "server-game", playerUuid: "server-player" }),
+      createRepository: () => ({
+        readLoans: () => { throw new Error("must not read loans during application"); },
+        readEconomicContext: () => Promise.resolve({ countryCode: "NRC", currencyCode: "NRC" }),
+        execute: (command, args) => { calls.push([command, args]); return Promise.resolve({ application_key: key("lna", "c"), status: "pending_review" }); },
+      }),
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(calls, [["apply_player_loan_v1", {
+    p_game_session_id: "server-game", p_player_id: "server-player", p_offer_key: key("lop", "b"),
+    p_business_key: key("biz", "a"), p_amount: 12.35, p_purpose: "Equipment",
+    p_repayment_source: `business:${key("biz", "a")}`, p_idempotency_key: "apply-fixture-01",
+  }]]);
+  assertEquals(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  assertEquals(await response.json(), { ok: true, result: { application_key: key("lna", "c"), status: "pending_review" }, refreshRequired: true });
+});
