@@ -28,7 +28,21 @@ export type PlayerBusinessBankingRoute =
   | DelegatedPlayerBusinessRoute
   | PlayerBankingRoute;
 
+export interface LoanCurrencyProjectionDto {
+  readonly version: 1;
+  readonly complete: boolean;
+  readonly unknownCurrencyRows: number;
+  readonly groups: readonly {
+    readonly currencyCode: string;
+    readonly availableCredit: string | null;
+    readonly outstanding: string | null;
+    readonly nextPayment: { readonly amount: string | null; readonly due: string | null } | null;
+    readonly schedule: readonly { readonly due: string; readonly amount: string | null }[];
+  }[];
+}
+
 export interface LoansSnapshotDto {
+  readonly currencyProjection?: LoanCurrencyProjectionDto;
   readonly configured: boolean;
   readonly creditScore: number;
   readonly availableCredit: number;

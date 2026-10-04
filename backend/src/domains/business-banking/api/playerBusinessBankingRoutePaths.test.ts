@@ -163,6 +163,12 @@ Deno.test("Loans retains five scoped reads and the borrower/account projection c
       loan_payments: [{ status: "posted" }, { status: "reversed" }],
       business_entities: Array.from({ length: businessCount }, (_, i) => ({ id: `business${i}`, public_key: businessKey, status: "active" })),
     };
+    for (const row of fixtures.loan_products) row.maximum_amount_exact = row.maximum_amount;
+    for (const row of fixtures.player_loans) {
+      row.principal_balance_exact = row.principal_balance;
+      row.accrued_interest_exact = row.accrued_interest;
+      row.scheduled_payment_exact = `${row.scheduled_payment}.00`;
+    }
     if (missingCurrency) {
       for (const row of [...fixtures.loan_products, ...fixtures.player_loans]) {
         row.currency_code = [null, undefined, "   "][businessCount];
@@ -187,8 +193,8 @@ Deno.test("Loans retains five scoped reads and the borrower/account projection c
     const result = await new SupabasePlayerBusinessBankingRepository(client).readLoans({ gameSessionId: "game-fixture", playerId: "player-fixture" });
     assertEquals(calls, [
       ["rpc", "resolve_player_economic_context_v1", { p_game_session_id: "game-fixture", p_player_id: "player-fixture" }],
-      ["loan_products", "select", "*"], ["loan_products", "eq", "game_session_id", "game-fixture"], ["loan_products", "eq", "currency_code", "NRC"], ["loan_products", "order", "minimum_amount", { ascending: true }],
-      ["player_loans", "select", "*"], ["player_loans", "eq", "game_session_id", "game-fixture"], ["player_loans", "eq", "player_id", "player-fixture"], ["player_loans", "order", "created_at", { ascending: false }],
+      ["loan_products", "select", "*,maximum_amount_exact:maximum_amount::text"], ["loan_products", "eq", "game_session_id", "game-fixture"], ["loan_products", "eq", "currency_code", "NRC"], ["loan_products", "order", "minimum_amount", { ascending: true }],
+      ["player_loans", "select", "*,principal_balance_exact:principal_balance::text,accrued_interest_exact:accrued_interest::text,scheduled_payment_exact:scheduled_payment::text"], ["player_loans", "eq", "game_session_id", "game-fixture"], ["player_loans", "eq", "player_id", "player-fixture"], ["player_loans", "order", "created_at", { ascending: false }],
       ["credit_profiles", "select", "*"], ["credit_profiles", "eq", "game_session_id", "game-fixture"], ["credit_profiles", "eq", "player_id", "player-fixture"], ["credit_profiles", "limit", 1],
       ["loan_payments", "select", "*"], ["loan_payments", "eq", "game_session_id", "game-fixture"], ["loan_payments", "eq", "player_id", "player-fixture"], ["loan_payments", "order", "created_at", { ascending: false }], ["loan_payments", "limit", 500],
       ["business_entities", "select", "id,public_key,status"], ["business_entities", "eq", "game_session_id", "game-fixture"], ["business_entities", "eq", "owner_player_id", "player-fixture"],
@@ -204,7 +210,19 @@ Deno.test("Loans retains five scoped reads and the borrower/account projection c
     assertEquals(result.schedule.map((row) => row.currencyCode), [currency("NRC"), currency("NRC"), currency("LUM")]);
     // Strip only additive metadata, then compare the entire retained response.
     const stripCurrency = ({ currencyCode: _currency, ...row }: { currencyCode?: string | null }) => row;
-    assertEquals({ ...result, offers: result.offers.map(stripCurrency),
+    const { currencyProjection, ...retained } = result;
+    assertEquals(currencyProjection, missingCurrency
+      ? { version: 1, complete: false, unknownCurrencyRows: businessCount ? 3 : 2, groups: [] }
+      : { version: 1, complete: true, unknownCurrencyRows: 0, groups: [
+        { currencyCode: "LUM", availableCredit: "0.00", outstanding: "20.50",
+          nextPayment: { amount: "4.00", due: "2026-10-06T00:00:00.000Z" },
+          schedule: [{ due: "2026-10-06T00:00:00.000Z", amount: "4.00" }] },
+        { currencyCode: "NRC", availableCredit: businessCount ? "100.10" : "0.00", outstanding: "10.30",
+          nextPayment: { amount: "3.00", due: "2026-10-05T00:00:00.000Z" },
+          schedule: [{ due: "2026-10-05T00:00:00.000Z", amount: "3.00" },
+            { due: "2026-10-12T00:00:00.000Z", amount: "3.00" }] },
+      ] });
+    assertEquals({ ...retained, offers: result.offers.map(stripCurrency),
       activeLoans: result.activeLoans.map(stripCurrency), schedule: result.schedule.map(stripCurrency) }, {
       configured: true, creditScore: 600, availableCredit: businessCount ? 100.1 : 0,
       outstanding: 30.8, nextPayment: { amount: 3, due: "2026-10-05T00:00:00.000Z" },
@@ -288,4 +306,50 @@ Deno.test("Loans table read failure cannot become an empty currency projection",
   try { await new SupabasePlayerBusinessBankingRepository(client).readLoans({ gameSessionId: "game", playerId: "player" }); }
   catch (caught) { failure = caught; }
   assertEquals((failure as { code: string }).code, "database");
+});
+
+import { projectLoanCurrencies } from "../domain/loanCurrencyProjection.ts";
+
+Deno.test("Loan currency totals use exact text beyond safe integers and combine only matching due dates", () => {
+  const due = "2026-10-05T00:00:00.000Z";
+  const loans = Array.from({ length: 100 }, () => ({ currency_code: "NRC",
+    principal_balance_exact: "999999999999.99", accrued_interest_exact: "0.00",
+    scheduled_payment_exact: "0.01", next_due_at: due }));
+  const schedule = loans.map(() => ({ currencyCode: "NRC", due, exactAmount: "0.01" }));
+  const result = projectLoanCurrencies([], loans, schedule);
+  assertEquals(result.complete, true);
+  assertEquals(result.groups[0], { currencyCode: "NRC", availableCredit: "0.00",
+    outstanding: "99999999999999.00", nextPayment: { amount: "1.00", due },
+    schedule: [{ due, amount: "1.00" }] });
+  const later = "2026-10-06T00:00:00.000Z";
+  const ordered = projectLoanCurrencies([], [
+    { ...loans[0], next_due_at: later, scheduled_payment_exact: "9.00" },
+    { ...loans[0], scheduled_payment_exact: "2.00" },
+    { ...loans[0], scheduled_payment_exact: "3.00" },
+  ], [{ currencyCode: "NRC", due: later, exactAmount: "9.00" },
+    { currencyCode: "NRC", due, exactAmount: "2.00" }, { currencyCode: "NRC", due, exactAmount: "3.00" }]);
+  assertEquals(ordered.groups[0].nextPayment, { amount: "5.00", due });
+  assertEquals(ordered.groups[0].schedule, [{ due, amount: "5.00" }, { due: later, amount: "9.00" }]);
+});
+
+Deno.test("Loan exact projection distinguishes empty and zero from unavailable input without numeric coercion", () => {
+  assertEquals(projectLoanCurrencies([], [], []), { version: 1, complete: true, unknownCurrencyRows: 0, groups: [] });
+  const zero = projectLoanCurrencies([{ currency_code: "NRC", maximum_amount_exact: "0.00" }], [], []);
+  assertEquals(zero.groups[0], { currencyCode: "NRC", availableCredit: "0.00", outstanding: "0.00", nextPayment: null, schedule: [] });
+  for (const invalid of [null, undefined, 0.01, "0", "0.001", "0.000000000000000001", "-1.00"]) {
+    const due = "2026-10-05T00:00:00.000Z";
+    const loan = { currency_code: "NRC", principal_balance_exact: invalid, accrued_interest_exact: "0.00",
+      scheduled_payment_exact: invalid, next_due_at: due, principal_balance: 42, scheduled_payment: 7 };
+    for (const amounts of [[invalid, "1.00"], ["1.00", invalid]]) {
+      const result = projectLoanCurrencies([{ currency_code: "NRC", maximum_amount_exact: invalid }], [loan],
+        amounts.map((exactAmount) => ({ currencyCode: "NRC", due, exactAmount })));
+      assertEquals(result.complete, false);
+      assertEquals(result.groups[0], { currencyCode: "NRC", availableCredit: null, outstanding: null,
+        nextPayment: { amount: null, due }, schedule: [{ due, amount: null }] });
+    }
+  }
+  const badDate = projectLoanCurrencies([], [{ currency_code: "NRC", principal_balance_exact: "0.00",
+    accrued_interest_exact: "0.00", scheduled_payment_exact: "1.00", next_due_at: "invalid" }], []);
+  assertEquals(badDate.complete, false);
+  assertEquals(badDate.groups[0].nextPayment, { amount: null, due: null });
 });
