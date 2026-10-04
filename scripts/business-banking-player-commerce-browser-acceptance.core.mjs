@@ -29,8 +29,10 @@ function safeDiagnostic(input = {}) {
     ...booleanDiagnosticKeys.filter((key) => typeof input[key] === "boolean").map((key) => [key, input[key]]),
   ]);
 }
-async function diagnosticAttempt(read) {
-  try { return await read(); } catch { return { unavailable: true }; }
+async function diagnosticAttempt(read, timeoutMs = 15000) {
+  let timer;
+  try { return await Promise.race([Promise.resolve().then(read), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("diagnostic unavailable")), timeoutMs); })]); }
+  catch { return { unavailable: true }; } finally { clearTimeout(timer); }
 }
 const balanceObservations = [];
 let transferDiagnostic = {};
@@ -42,7 +44,7 @@ function observeBalance(session, cardPresent, balance) {
 function disposableDiagnosticScope(admin) {
   const base = new URL(BASE_URL), database = new URL(process.env.DATABASE_URL || "invalid:");
   const local = (url) => ["127.0.0.1", "localhost"].includes(url.hostname);
-  return local(base) && local(database) && database.port === "54322" && database.pathname === "/postgres" &&
+  return local(base) && local(database) && !database.search && !database.hash && ["postgres:", "postgresql:"].includes(database.protocol) && database.port === "54322" && database.pathname === "/postgres" &&
     GAME_NAME === "Player Multiplayer E2E" && admin?.players?.length === 2 &&
     [admin.gameId, ...admin.players.map((player) => player.internalId)].every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) &&
     CURRENCY_PATTERN.test(admin.players[0].currencyCode);
@@ -86,7 +88,7 @@ async function failureDiagnostics(admin, sessions) {
         'recipientLedgerCount',(select count(*) from transfers t join public.ledger_entries l on l.id=t.recipient_ledger_entry_id),
         'senderBalance',(select sum(balance) from public.account_balances where player_id='${sender}' and game_session_id='${admin.gameId}' and currency_code='${currency}' and account_type in ('checking','cash') and (select count(*) from scope)=2),
         'recipientBalance',(select sum(balance) from public.account_balances where player_id='${recipient}' and game_session_id='${admin.gameId}' and currency_code='${currency}' and account_type in ('checking','cash') and (select count(*) from scope)=2)); rollback;`;
-    const { stdout } = await promisify(execFile)("psql", [process.env.DATABASE_URL, "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-c", sql], { timeout: 10000, maxBuffer: 4096 });
+    const { stdout } = await promisify(execFile)("psql", [process.env.DATABASE_URL, "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-c", sql], { timeout: 10000, maxBuffer: 4096, env: { PATH: "/usr/bin:/bin", PGCONNECT_TIMEOUT: "5" } });
     return safeDiagnostic(JSON.parse(stdout.trim()));
   });
   return { observations: balanceObservations, transfer: transferDiagnostic, pages, database };
@@ -96,10 +98,15 @@ if (process.argv.includes("--diagnostic-self-test")) {
   assert.deepEqual(safeDiagnostic({ balance: 0, cardPresent: false, token: secret, amount: secret, ready: secret }), { balance: 0, cardPresent: false });
   assert.deepEqual(safeDiagnostic({ balance: NaN, amount: null, senderBalance: "40", cookie: secret }), {});
   assert.deepEqual(await diagnosticAttempt(() => { throw new Error(secret); }), { unavailable: true });
+  assert.deepEqual(await diagnosticAttempt(() => new Promise(() => {}), 1), { unavailable: true });
+  const savedDatabaseUrl = process.env.DATABASE_URL;
+  const diagnosticFixture = { gameId: "11111111-1111-4111-8111-111111111111", players: [1, 2].map(() => ({ internalId: "22222222-2222-4222-8222-222222222222", currencyCode: "DRV" })) };
+  for (const suffix of ["?hostaddr=203.0.113.10", "?host=remote.example", "?port=5432", "?dbname=other", "#override"]) { process.env.DATABASE_URL = `postgresql://127.0.0.1:54322/postgres${suffix}`; assert.equal(disposableDiagnosticScope(diagnosticFixture), false); }
+  if (savedDatabaseUrl === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = savedDatabaseUrl;
   const original = new Error("original assertion failure");
-  let caught;
-  try { try { throw original; } catch (error) { await diagnosticAttempt(() => { throw new Error(secret); }); throw error; } } catch (error) { caught = error; }
-  assert.equal(caught, original);
+  let caught, finalized = false;
+  try { try { throw original; } catch (error) { await diagnosticAttempt(() => new Promise(() => {}), 1); throw error; } finally { finalized = true; } } catch (error) { caught = error; }
+  assert.equal(caught, original); assert.equal(finalized, true);
   for (const [present, balance] of [[false, 0], [true, 0], [true, 40]]) assert.equal(observeBalance(PLAYERS[1], present, balance), balance);
   assert.deepEqual(balanceObservations.map(({ cardPresent, balance }) => [cardPresent, balance]), [[false, 0], [true, 0], [true, 40]]);
   console.log("Diagnostic allowlist, absent/zero/40 distinction, and original failure semantics passed.");

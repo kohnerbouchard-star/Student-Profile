@@ -90,3 +90,12 @@ Validation: 41 focused runtime/deployment/authority tests plus trusted-IP entryp
 contract passed. Embedded diagnostic and auth-gate mocked contracts passed.
 Chromium setContent reproduced absent-card 0 then published-card 40 with no network;
 this establishes the measurement mechanism, not the failed run's actual cause.
+
+Parent approved eighth path scripts/business-banking-player-market-browser-acceptance.core.mjs
+for enum-only receipt/readiness and scalar reported settlement diagnostics. Head
+c09495bd:29 checks passed/5 skipped/1 failed; commerce passed, market sell HTTP200
+then exact FILLED timeout. Artifact11293630412 preserved; no causal fix claimed.
+New snapshots preserve assertions/order IDs/timeouts; no persistence certification.
+Independent source review found unbounded browser evaluation in commerce diagnostics;
+an outer deadline and never-settling-promise self-test preserve failure finalization.
+Strict DB guards reject URI overrides; psql receives only fixed PATH/connect-timeout, excluding inherited PG overrides.

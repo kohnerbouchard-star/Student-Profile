@@ -10,6 +10,7 @@
   "secretValuesAllowed": false,
   "allowedPaths": [
     "scripts/business-banking-player-commerce-browser-acceptance.core.mjs",
+    "scripts/business-banking-player-market-browser-acceptance.core.mjs",
     "scripts/build-vercel-runtime-config.mjs",
     "frontend/src/core/runtime-config.js",
     "scripts/runtime-config-contract.test.mjs",
@@ -33,5 +34,5 @@
     "Repository Quality"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-019/u4-staging-bff-transport.md",
-  "authorizationNote": "Parent approved four routing/build/test paths plus this PR-specific manifest and the U4 evidence document, then the commerce acceptance core for failure-only disposable-fixture diagnostics. Existing assertions, timeout and retry policy remain unchanged. Verifier/test are mandatory unchanged locks, not edit authority. Vercel explicitly selects existing same-origin BFF transport independently of backend environment. Preserve staging binding and production/non-Vercel behavior; no server auth, cookie, CSRF, OIDC, Player app/API/realtime, workflow, database, credential, deployment, live setting or release change. Preserve #735/#736/#668 ownership. Under 400 semantic changed lines. Parent owns review/merge; REF-019/020 pauses remain."
+  "authorizationNote": "Parent approved four routing/build/test paths plus this PR-specific manifest and the U4 evidence document, then the commerce and market acceptance cores for failure-only disposable-fixture diagnostics. Existing assertions, timeout and retry policy remain unchanged. Verifier/test are mandatory unchanged locks, not edit authority. Vercel explicitly selects existing same-origin BFF transport independently of backend environment. Preserve staging binding and production/non-Vercel behavior; no server auth, cookie, CSRF, OIDC, Player app/API/realtime, workflow, database, credential, deployment, live setting or release change. Preserve #735/#736/#668 ownership. Under 400 semantic changed lines. Parent owns review/merge; REF-019/020 pauses remain."
 }
