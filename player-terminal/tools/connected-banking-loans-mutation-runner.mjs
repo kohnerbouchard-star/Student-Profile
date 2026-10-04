@@ -215,6 +215,16 @@ async function reloadRoute(page, route, selector) {
   await openRoute(page, route, selector);
 }
 
+async function reloadLoansSnapshot(page, pathSuffix = "/banking/loans") {
+  // Ignore in-flight reads from the old document; consume the new body immediately.
+  const payload = page.waitForEvent("framenavigated", { predicate: (frame) => frame === page.mainFrame() })
+    .then(() => page.waitForResponse((response) => response.request().method() === "GET" &&
+      new URL(response.url()).pathname.endsWith(pathSuffix)))
+    .then((response) => response.json());
+  await reloadRoute(page, "loans", ".player-terminal-loans-page");
+  return await payload;
+}
+
 async function openDisclosureForm(form) {
   const disclosure = form.locator("xpath=..");
   const summary = disclosure.locator("summary");
@@ -448,10 +458,7 @@ async function proveLoans(page, fixtureData) {
   evidence.loans.applicationPersisted = true;
 
   approveLatestApplication();
-  const loanRead = page.waitForResponse((response) => response.request().method() === "GET" &&
-    new URL(response.url()).pathname.endsWith("/banking/loans"));
-  await reloadRoute(page, "loans", ".player-terminal-loans-page");
-  const loanPayload = await (await loanRead).json();
+  const loanPayload = await reloadLoansSnapshot(page);
   const projection = (loanPayload.data || loanPayload).currencyProjection;
   if (!projection?.complete || !projection.groups.length) throw new Error("Connected Loans currency projection unavailable.");
   const summary = await page.locator(".player-terminal-loan-metrics").innerText();
@@ -505,6 +512,19 @@ async function proveLoans(page, fixtureData) {
 async function proveCurrencyDisplay(context) {
   const page = await context.newPage();
   await page.goto(`${BASE_URL}/player-terminal/?preview=1#loans`, { waitUntil: "networkidle" });
+  const probe = "/__loan-read-probe__/banking/loans";
+  let reads = 0;
+  await page.route(`**${probe}`, (route) => route.fulfill({ json: { document: ++reads === 1 ? "old" : "current" } }));
+  await page.addInitScript((path) => addEventListener("DOMContentLoaded", () => { void fetch(path); }), probe);
+  const reload = page.reload.bind(page);
+  // Force an old-document response after capture starts but before navigation.
+  page.reload = async (options) => {
+    await page.evaluate((path) => fetch(path).then((response) => response.json()), probe);
+    return reload(options);
+  };
+  try {
+    if ((await reloadLoansSnapshot(page, probe)).document !== "current") throw new Error("Loans read retained the old document.");
+  } finally { page.reload = reload; }
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     for (const state of ["exact", "old", "incomplete", "empty"]) {

@@ -27,6 +27,8 @@ Existing surface suite adds exact/zero/mixed/unknown/old/malformed/truncation ca
 Existing Loans runner adds desktop/mobile synthetic rendering, keyboard/focus and
 no-overflow cases, plus a connected authoritative-projection-to-page assertion.
 Its original application/repayment persistence, replay and anonymous rejection stay.
+Response capture waits for the new main-frame navigation and consumes its body
+immediately; a forced old-document response reproduces failure before this fix.
 Local surface tests, full Player verify, root npm test and synthetic browser pass.
 Browser fixtures use installed Chromium; pinned full browser/connected acceptance
 and backend checks require exact-head CI, recorded in PR metadata.
