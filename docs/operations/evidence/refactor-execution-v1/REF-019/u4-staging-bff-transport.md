@@ -1,0 +1,101 @@
+# U4 staging browser BFF transport repair
+
+Status: IMPLEMENTED_NOT_MERGED. Base: `486b5e2d0f2fc042be444840fff2d4f11c4ac72c`.
+Parent approved this exact six-path scope on 2026-10-04 after the user's narrow
+staging routing/test-preparation approval. REF-019/020 remain paused; this is
+prerequisite repair, not their persistence extraction or auth-baseline acceptance.
+
+## Scope and ownership
+
+Editable paths:
+- `scripts/build-vercel-runtime-config.mjs`: deploymentConfiguration transport.
+- `frontend/src/core/runtime-config.js`: validated transport and six BFF URLs.
+- `scripts/runtime-config-contract.test.mjs`: transport regression matrix.
+- `scripts/vercel-deployment-contract.test.mjs`: generated config execution.
+- This evidence document.
+- `docs/operations/contracts/player-cross-cutting/pr-840.json`.
+
+One conceptual change, fewer than 400 semantic changed lines. Parent owns review
+and merge. Open owners rechecked: #736 at `8070f58d4145951d8aee3e74a2b1e00d90c54385`
+(Player credentials), #735 at `8867919947f48ef014365dcddda13a0efcf12d76`
+(production origins/releases), #668 at `faaf908bdd5131b451c7e87e91ed4991ad8f839d`
+(context/global ledger). No donor hunks or owner files are imported. Player app,
+API, realtime, backend, authority verifier/tests, workflows and global ledgers
+are protected. No database, credentials, live settings, deployment, release-hold,
+origin-list, OIDC, cookie, CSRF, MFA, authorization or policy changes.
+
+## Characterization and correction
+
+Before: only environment=production selected the six existing same-origin BFF
+routes. Vercel staging generated an empty apiProxyUrl and called Edge directly.
+After: Vercel build emits apiTransport=same-origin-bff independently of backend
+environment. Missing transport retains existing production and non-Vercel
+behavior; unknown transports and BFF/proxy conflicts fail closed. Staging remains
+bound to eecvbssdvarfcykcfrny. No handler, route, auth sequence or retry changes.
+
+Baseline focused tests: 17 passed, zero failed on the base SHA.
+Required verification: focused runtime/deployment and environment-neutral tests;
+auth boundaries/web-session release; npm test; backend typecheck:all/smoke;
+architecture/high-priority/legacy guards, secret scan and git diff --check.
+Synthetic tests do not certify deployed auth, OIDC or staging login. No live auth
+test is authorized. Next: parent review of exact-head checks, then separately
+approved staged runtime evidence before any REF-019/020 pause release.
+Rollback: revert this bounded source change, preserving all security repairs.
+
+
+## Fixture discovery (read-only, 2026-10-04)
+
+The exact staging Golden Five game is active/ready; GOLD-ALPHA is active.
+Metadata-only aggregate lookup confirms exactly one active pbkdf2-sha256-v2
+credential. No hashes, salts, codes, tokens or other players were retrieved.
+The current gate consumes STAGING_SUPABASE_PUBLISHABLE_KEY and
+GOLDEN_ALPHA_ACCESS_CODE, not SUPABASE_DB_URL (the separate DB rehearsal does).
+The access code remains unknown; creating a new player or resetting a code and
+running any live auth test requires separate exact approval. The old Phase 15
+multi-fixture provisioner writes sha256-v1 and must not be used for this task.
+
+Draft PR: #840. No runtime certification or pause release claimed.
+
+## Local verification
+
+Node 22.23.1 / npm 10.9.8, lockfile installs; source implementation a6ad0408.
+61 focused deployment/runtime/environment-neutral/Trusted Types/authority tests
+passed. Full npm test passed, including architecture inventory (zero generated
+diff). Auth boundaries, web-session release, high-priority/legacy guards and
+secret scan passed. Authority accepts exactly six changed paths under eight
+locks (verifier/test unchanged). Initial attempts with environment Node 24 and
+missing dependencies/tools were setup failures, superseded by pinned installs.
+Backend tsc passed. With pinned Deno 2.9.3, full typecheck:all and smoke both
+stop at the unchanged frozen esm.sh Supabase import (unsuccessful tunnel).
+These full local gates are BLOCKED, not passed; CI remains required.
+Exact-head CI is pending; no live auth was run.
+
+## Approved failure diagnostic amendment
+
+Parent additionally approved scripts/business-banking-player-commerce-browser-acceptance.core.mjs
+for disposable synthetic fixture failure diagnostics only (seven changed paths).
+Original head 64f2fe8a: 29 checks passed, five skipped, one failed. Connected
+Player/load run 37173390698, job 111350871442 failed recipient balance 0 -> 0;
+transfer HTTP/RPC returned 200, but original artifacts cannot prove recipient DB
+balance. Later journeys were skipped. Backend full typecheck/smoke passed in CI
+(28 Edge roots, 27 Deno suites, 1357 tests); Store and Admin workflows passed.
+Preserve original failed artifact 11292471874; no retry or live auth certification.
+New evidence records card absence separately from numeric zero, readiness, scalar
+transfer result, ledger balance and scoped disposable DB aggregates after failure.
+Numeric/boolean allowlists omit identifiers, headers, cookies and raw bodies.
+Assertions, retries and original failure remain unchanged; no causal fix claimed.
+Embedded --diagnostic-self-test checks redaction and failure semantics. Under 400
+changed lines; parent owns review/merge and REF-019/020 pauses remain in force.
+Validation: 41 focused runtime/deployment/authority tests plus trusted-IP entrypoint
+contract passed. Embedded diagnostic and auth-gate mocked contracts passed.
+Chromium setContent reproduced absent-card 0 then published-card 40 with no network;
+this establishes the measurement mechanism, not the failed run's actual cause.
+
+Parent approved eighth path scripts/business-banking-player-market-browser-acceptance.core.mjs
+for enum-only receipt/readiness and scalar reported settlement diagnostics. Head
+c09495bd:29 checks passed/5 skipped/1 failed; commerce passed, market sell HTTP200
+then exact FILLED timeout. Artifact11293630412 preserved; no causal fix claimed.
+New snapshots preserve assertions/order IDs/timeouts; no persistence certification.
+Independent source review found unbounded browser evaluation in commerce diagnostics;
+an outer deadline and never-settling-promise self-test preserve failure finalization.
+Strict DB guards reject URI overrides; psql receives only fixed PATH/connect-timeout, excluding inherited PG overrides.

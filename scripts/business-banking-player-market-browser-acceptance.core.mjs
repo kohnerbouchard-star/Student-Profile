@@ -16,6 +16,41 @@ const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{
 const ACCOUNT_KEY = /^bac_[0-9a-f]{32}$/u;
 const QUOTE_KEY = /^sbq_[0-9a-f]{32}$/u;
 
+// Diagnostic result is reported settlement data, not independent persistence verification.
+let marketSettlementDiagnostic = {};
+function recordMarketSettlement(payload) {
+  const row = payload?.settlement || {};
+  marketSettlementDiagnostic = { sell: payload?.action === "settle_sell", accepted: true, replayed: row.alreadyCompleted === true,
+    ...Object.fromEntries(["quantity", "executionPrice", "grossValue", "holdingQuantityAfter"].filter((key) => typeof row[key] === "number" && Number.isFinite(row[key])).map((key) => [key, row[key]])) };
+}
+function marketReadinessSnapshot() {
+  const dialog = document.querySelector("[data-player-market-order-dialog]");
+  const label = dialog?.querySelector(".player-terminal-status-pill")?.textContent?.trim();
+  const receipt = ["FILLED", "FILLED · REFRESH PENDING", "REPLAYED RECEIPT"].includes(label) ? label : dialog ? "OTHER" : "ABSENT";
+  const state = globalThis.Econovaria?.playerTerminal?.getState?.();
+  return { dialogPresent: Boolean(dialog), receipt, loading: state?.routeLoading?.market === true,
+    resources: Object.fromEntries(["dashboard", "market", "portfolio", "banking", "bankingFx"].map((key) => {
+      const status = state?.data?.resourceStatus?.[key]?.state;
+      return [key, ["ready", "loading", "error", "stale", "unavailable"].includes(status) ? status : "unknown"];
+    })) };
+}
+async function marketFailureDiagnostic(page) {
+  let timer;
+  try {
+    const base = new URL(BASE_URL), db = new URL(DATABASE_URL);
+    if (![base, db].every((url) => ["127.0.0.1", "localhost"].includes(url.hostname)) || db.search || db.hash || !["postgres:", "postgresql:"].includes(db.protocol) || db.port !== "54322" || db.pathname !== "/postgres" || GAME_NAME !== "Player Multiplayer E2E") return { unavailable: true };
+    const readiness = await Promise.race([page.evaluate(marketReadinessSnapshot), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("snapshot unavailable")), 3000); })]);
+    return { lastAcceptedSettlement: marketSettlementDiagnostic, readiness };
+  } catch { return { unavailable: true }; } finally { clearTimeout(timer); }
+}
+if (process.argv.includes("--diagnostic-self-test")) {
+  const { default: assert } = await import("node:assert/strict");
+  recordMarketSettlement({ action: "settle_sell", settlement: { quantity: 1, holdingQuantityAfter: 0, executionPrice: NaN, token: "DO-NOT-EMIT", settlementTransactionKey: "DO-NOT-EMIT" } });
+  assert.deepEqual(marketSettlementDiagnostic, { sell: true, accepted: true, replayed: false, quantity: 1, holdingQuantityAfter: 0 });
+  assert.deepEqual(await marketFailureDiagnostic({ evaluate() { throw new Error("DO-NOT-EMIT"); } }), { unavailable: true });
+  console.log("Market diagnostic allowlist and best-effort failure contracts passed."); process.exit(0);
+}
+
 await mkdir(OUTPUT_DIR, { recursive: true });
 
 const evidence = {
@@ -532,6 +567,7 @@ async function executeBuy(page, ticker) {
   if (settlementResponse.status() !== 200 || payload?.ok !== true || payload?.action !== "settle_buy_quote" || payload?.settlement?.ticker !== ticker) {
     throw new Error(`Buy settlement returned ${settlementResponse.status()}: ${redact(JSON.stringify(payload))}`);
   }
+  recordMarketSettlement(payload);
   await page.locator("[data-player-market-order-dialog]").getByText("FILLED", { exact: false }).waitFor({ state: "visible", timeout: 30_000 });
   const original = await capture(settlementResponse);
   const body = JSON.parse(original.body);
@@ -585,6 +621,7 @@ async function executeSell(page, ticker, destinationAccountKey) {
   if (response.status() !== 200 || payload?.ok !== true || payload?.action !== "settle_sell" || payload?.settlement?.ticker !== ticker) {
     throw new Error(`Sell settlement returned ${response.status()}: ${redact(JSON.stringify(payload))}`);
   }
+  recordMarketSettlement(payload);
   await page.locator("[data-player-market-order-dialog]").getByText("FILLED", { exact: false }).waitFor({ state: "visible", timeout: 30_000 });
   const original = await capture(response);
   const body = JSON.parse(original.body);
@@ -611,6 +648,7 @@ async function assertReplaySafe(page, order, accountKey, expectedHolding, expect
   }
 }
 
+let diagnosticPage;
 let browser;
 let context;
 let originalCalendarDefinition = "";
@@ -623,6 +661,7 @@ try {
   const player = await login(browser, fixture.gameCode);
   context = player.context;
   const { page } = player;
+  diagnosticPage = page;
 
   const asset = await chooseTradableAsset(page);
   evidence.ticker = asset.symbol;
@@ -705,6 +744,7 @@ try {
 } catch (error) {
   failure = error;
   evidence.failure = redact(error?.stack || error);
+  evidence.diagnostics = await marketFailureDiagnostic(diagnosticPage);
 } finally {
   try {
     restoreCalendarFixture(originalCalendarDefinition);
