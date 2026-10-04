@@ -16,7 +16,7 @@ No open REF-034 PR/branch was found at preflight. PR #668 retains global ledger/
 7. `backend/package.json`: one focused test registration.
 8. `docs/operations/evidence/refactor-execution-v1/REF-034/preflight.md`: this scope and qualification record.
 9. `docs/architecture/inventories/econovaria-architecture-inventory-v2.json`: generated inventory only, no ceiling changes.
-10. PR-bound manifest under `docs/operations/contracts/player-cross-cutting/`: exact number recorded when assigned; verifier/tests unchanged.
+10. `docs/operations/contracts/player-cross-cutting/pr-849.json`: PR-bound authority; verifier/tests unchanged.
 
 ## Preserved authority and behavior
 
@@ -32,4 +32,8 @@ Protected: notification repository/service/runner implementations; read/ack/priv
 
 Run Notifications, focused Story repository/service/runner and Stock HTTP tests, World runtime, Player notifications-inbox/story-delivery, full backend typecheck/smoke, root tests, architecture/high-priority/legacy audits, secrets and diff checks. Preserve exact-head CI attribution; synthetic fixtures do not prove live delivery or database concurrency.
 
-Initial focused Notifications run exposed two new test expectations using the raw database error code; the unchanged repository normalizes it to `story_notification_repository_query_failed`. Corrected the expectations only; all 35 Notifications tests then passed. Final qualification and debt measures are recorded below before review.
+Initial focused Notifications run exposed two new test expectations using the raw database error code; the unchanged repository normalizes it to `story_notification_repository_query_failed`. Corrected the expectations only; all 35 Notifications tests then passed. The final registered suite has 34 tests after removing a redundant fixture case; a tuple-spread typing error was also corrected before qualification. Final qualification and debt measures are recorded below before review.
+
+Source candidate `6b05aa67b2ca73ec45ea19759f62bd2093f398cc`: Notifications 34; focused Story repository/service/runner and Stock HTTP 69; World 50 + Admin 11; Player inbox/Story flows pass. Frozen-base `f8ce47a3` differential: three first-attempt/failure scenarios each followed by retry, replay and another game, with identical receipts, normalized errors, partial states, complete query traces and final rows. Driver and sanitized logs are retained in PR #849; this is synthetic parity, not database concurrency proof.
+
+Inventory: 29 domains, 28 Edge roots and 100 oversized files unchanged; source/test files 1274→1276. Selected consumer infrastructure imports 2→0, with one same-writer bridge retained in Notifications. Scanner deep-import count 163→168 includes public/type/test imports; infrastructure count remains 9, compatibility markers 209. Existing ceilings unchanged. No runtime import cycle: Story references the port only via erased type imports.
