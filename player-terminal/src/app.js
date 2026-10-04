@@ -1,5 +1,6 @@
 import { resourcesForRoute, SHELL_OPTIONAL_RESOURCES } from "./api/resource-plan.js";
 import { PlayerApi } from "./api/player-api.js";
+import { createResourceFreshnessCoordinator } from "./api/resource-freshness-coordinator.js";
 import { PLAYER_ENDPOINTS, resolveEndpoint } from "./api/endpoints.js";
 import { ApiConnectionPendingError, normalizeApiError } from "./api/errors.js";
 import { isEndpointEnabled, isRouteEnabled, resolveCapabilities } from "./api/capabilities.js";
@@ -40,10 +41,10 @@ function initialMarkup(label = "INITIALIZING PLAYER TERMINAL") {
   return `<div class="player-terminal-overview player-terminal-loading-shell" role="status" aria-live="polite"><div class="player-terminal-loading-brand"><span>E</span><div><strong>ECONOVARIA</strong><small>${escapeHtml(label)}</small></div></div>${renderSkeletonPage()}</div>`;
 }
 
-export function createPlayerTerminal({ mount, config, freshness = null }) {
+export function createPlayerTerminal({ mount, config, freshness = createResourceFreshnessCoordinator() }) {
   if (!(mount instanceof HTMLElement)) throw new TypeError("A valid player terminal mount element is required.");
 
-  const api = new PlayerApi(config, { freshness });
+  const api = new PlayerApi(config, { freshness, deferFreshnessSettlement: true });
   const store = createStore({
     status: "loading",
     route: readRoute(),
@@ -84,6 +85,16 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
   const capture = (keys = []) => freshness?.capture(keys);
   const current = (ticket) => !freshness || (!destroyed && freshness.isCurrent(ticket));
   const admitted = (value) => !freshness || current(freshness.ticketFor(value));
+  // A transport/cache admission cannot settle a snapshot its publisher discards.
+  function settlePublished(result, data = result.data, errors = result.errors || {}) {
+    if (!freshness) return true;
+    const ticket = freshness.ticketFor(result);
+    if (!current(ticket)) return false;
+    for (const [key] of ticket.resources) {
+      if (!errors[key] && data?.resourceStatus?.[key]?.state === "ready") freshness.settle(ticket, key);
+    }
+    return true;
+  }
   const obsolete = (error) => freshness && ["REQUEST_ABORTED", "REQUEST_SUPERSEDED"].includes(error?.code);
   function deferEffect(callback, delay) {
     const ticket = capture();
@@ -263,7 +274,7 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
     store.setState({ status: "waiting", error: null, modal: null, routeLoading: {}, routeErrors: {} });
   }
 
-  async function loadRouteData(route, { force = false } = {}) {
+  async function loadRouteData(route, { force = false, retrySuperseded = true } = {}) {
     if (freshness && destroyed) return;
     const snapshot = store.getState();
     const loadVersion = terminalLoadVersion;
@@ -301,7 +312,13 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
           routeErrors: { ...state.routeErrors, [route]: null }
         };
       });
+      settlePublished(result);
     } catch (error) {
+      // The later hash listener can invalidate this route in the same dispatch.
+      if (error?.code === "REQUEST_SUPERSEDED" && retrySuperseded && current(lifecycle)
+        && terminalLoadVersion === loadVersion && routeRequestVersions.get(route) === version && store.getState().route === route) {
+        return loadRouteData(route, { force, retrySuperseded: false });
+      }
       if (obsolete(error)) return;
       if (routeRequestVersions.get(route) !== version || terminalLoadVersion !== loadVersion || !current(ticket)) return;
       if (Number(error?.status) === 401) {
@@ -320,7 +337,7 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
     }
   }
 
-  async function loadData() {
+  async function loadData({ retrySuperseded = true } = {}) {
     if (freshness && destroyed) return;
     const loadVersion = ++terminalLoadVersion;
     if (!config.usePreviewData) {
@@ -345,16 +362,22 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
     try {
       const shellData = await api.bootstrap({ force: true });
       if (terminalLoadVersion !== loadVersion) return;
-      if (!admitted(shellData)) return;
+      if (!admitted(shellData)) throw Object.assign(new Error("Bootstrap superseded."), { code: "REQUEST_SUPERSEDED" });
       publishedSession = capture();
       const data = { ...createEmptyReadModels(), ...shellData };
       const requestedRoute = store.getState().route;
       const route = isRouteEnabled(data.capabilities, requestedRoute) ? requestedRoute : "dashboard";
       if (route !== requestedRoute) navigate(route);
       store.setState((state) => ({ ...state, status: "ready", route, data, error: null }));
+      if (!settlePublished(shellData, shellData)) return;
       await loadRouteData(route);
     } catch (error) {
       if (terminalLoadVersion !== loadVersion || !current(lifecycle)) return;
+      if (error?.code === "REQUEST_SUPERSEDED" && !current(publishedSession)) {
+        if (retrySuperseded) return loadData({ retrySuperseded: false });
+        store.setState({ status: "error", error: normalizeApiError(error) });
+        return;
+      }
       if (!current(ticket) || obsolete(error)) return;
       if (!config.usePreviewData && Number(error?.status) === 401) {
         handleInvalidSession(error);
@@ -413,6 +436,7 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
       }
       return { ...state, data };
     });
+    if (!settlePublished(result)) return;
     return result;
   }
 
@@ -490,6 +514,7 @@ export function createPlayerTerminal({ mount, config, freshness = null }) {
         }
         return { ...state, data };
       });
+      if (operation.invalidatedResources.length && !settlePublished(refresh)) return null;
       const refreshIncomplete = Object.keys(refresh.errors).length > 0;
       showToast(
         refreshIncomplete ? "Action completed. Some information will refresh when the service is available." : "Action completed and current information refreshed.",
