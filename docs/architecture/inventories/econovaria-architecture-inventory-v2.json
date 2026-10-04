@@ -3154,7 +3154,7 @@
       },
       {
         "file": "player-terminal/src/app.js",
-        "lines": 1146
+        "lines": 1171
       },
       {
         "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.test.ts",
