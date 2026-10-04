@@ -19,4 +19,19 @@ Proposed repair retains an accepted receipt through terminal renders, while
 explicit dismissal, navigation, session exit, and flow destruction retire it.
 Tests cover late/repeated refresh, focus/accessibility, dismissal, destroy/recreate,
 and no duplicate mutation. Parent owns independent review and merge. REF025 stays
-BLOCKED; REF027 retains its 025+026 dependency. Validation pending.
+BLOCKED; REF027 retains its 025+026 dependency.
+
+The Market-only helper retains the accepted DOM node and focused control after
+same-route terminal renders. Close/Escape, navigation, session exit and destruction
+retire it; generation/session checks prevent delayed settlement completion from
+restoring a retired receipt. Subscriptions and focus listeners are removed on
+destruction. No mutation, transport, freshness or persistence authority changes.
+
+Local validation: 20 desktop/mobile browser cases passed, full Player verify and
+root npm test passed, 16 authority tests and exact six-path validation passed.
+The new survival regression fails against the unchanged base flow: its receipt
+control disappears after late refresh. Architecture ratchet passes unchanged;
+flow 497 lines, helper 57; oversized count remains 100. Generated inventory only
+increments sourceFiles 1274->1275. No #668/#736 protected hunks changed.
+Current main 693934e6 adds only unrelated PR850 paths; no integration rebase.
+Exact-head CI and independent review are required before parent-controlled merge.
