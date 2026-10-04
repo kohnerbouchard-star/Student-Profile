@@ -1,7 +1,7 @@
 # REF-025b3 — Actual Loans currency consumer
 Base: d2aa78c8ddd25d086db08dadc66e7af47ec598bd (accepted PR842).
 Merged-base qualification:17 successful runs/five expected skips, all terminal.
-Parent approved <=350 changed lines/seven paths and the narrow Player handoff.
+Parent approved <=360 changed lines/seven paths and the narrow Player handoff.
 Editable: player-terminal/src/pages/loans-page.js, src/api/response-normalizer.js,
 tests/business-banking-surface.mjs, tools/connected-banking-loans-mutation-runner.mjs
 (all under player-terminal); this evidence; PR-bound Player authority manifest;
@@ -40,3 +40,8 @@ The existing30-second deadline and credit/transfer/replay assertions are unchang
 No live database, settings, credentials, dispatch, deployment or U1 guard change.
 Rollback reverts this consumer only; no balances, liabilities or server writes move.
 REF025 remains BLOCKED; 025c and original acceptance remain. REF027 needs025+026.
+
+Parent approved five-line synthetic-page isolation after the capture probe: retain
+the shell, retire its controller, preserve all assertions. Deterministic late refresh
+overwrites the old fixture; isolated exact/legacy/incomplete/empty fixtures pass at
+1440/390 with keyboard/overflow checks. Real connected mutation checks run first.

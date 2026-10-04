@@ -525,6 +525,11 @@ async function proveCurrencyDisplay(context) {
   try {
     if ((await reloadLoansSnapshot(page, probe)).document !== "current") throw new Error("Loans read retained the old document.");
   } finally { page.reload = reload; }
+  await page.evaluate(() => {
+    const shell = document.querySelector(".player-terminal-app-root").cloneNode(true);
+    globalThis.Econovaria.playerTerminal.destroy();
+    document.querySelector("#playerTerminal").append(shell);
+  });
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     for (const state of ["exact", "old", "incomplete", "empty"]) {
