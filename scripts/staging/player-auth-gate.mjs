@@ -36,13 +36,14 @@ export async function runGate(config, fetchImpl = fetch) {
     // This certifies requests to the existing deployment, not deployment of testSource.
     deployedEdgeSource: "not_attested_by_this_check", productionCertified: false,
     requestLimit: LIMIT, requests: [], decision: "FAIL", cleanup: "not_needed" };
+  const deviceId = randomUUID();
   let cookie = "", csrf = "", logoutAttempted = false;
   async function request(label, method, route, body, session = "", token = "") {
     check(ALLOWED.has(`${method} ${route}`), "Request outside auth/read allowlist");
     check(evidence.requests.length < LIMIT, "Request budget exhausted");
     const entry = { check: label, method, route, status: null, passed: false };
     evidence.requests.push(entry);
-    const headers = { apikey: config.key, origin: BASE, "content-type": "application/json" };
+    const headers = { apikey: config.key, origin: BASE, "content-type": "application/json", "x-econovaria-device-id": deviceId };
     if (session) headers.cookie = `${COOKIE}=${session}`;
     if (token) headers["x-econovaria-csrf-token"] = token;
     // No client retry or redirect. Existing server-side read recovery is unchanged.
@@ -122,11 +123,16 @@ async function selfTest() {
     [200, { ...fixture, ok: true, session: { status: "active" } }],
     [200, { ok: true }], [200, { ok: true }], [401, { error: { code: "player_session_invalid" } }],
   ];
+  const devices = new Set();
   async function scenario(failAt = -1) {
-    let count = 0;
-    return runGate(config, async (url, options) => {
+    let count = 0, expectedDeviceId;
+    const result = await runGate(config, async (url, options) => {
       assert.equal(new URL(url).origin, BASE);
       assert.equal(options.redirect, "error");
+      const suppliedDeviceId = options.headers["x-econovaria-device-id"];
+      assert.match(suppliedDeviceId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+      expectedDeviceId ??= suppliedDeviceId;
+      assert.equal(suppliedDeviceId, expectedDeviceId);
       assert(ALLOWED.has(`${options.method} ${new URL(url).pathname.slice(PREFIX.length)}`));
       const index = count++;
       const [status, body] = new URL(url).pathname.endsWith("/logout") ? responses[8] : responses[index];
@@ -135,6 +141,12 @@ async function selfTest() {
         headers: index === 4 ? { "set-cookie": `${COOKIE}=private-cookie; HttpOnly` } : {},
       });
     });
+    assert.equal(devices.has(expectedDeviceId), false);
+    devices.add(expectedDeviceId);
+    for (const privateValue of [expectedDeviceId, config.key, config.code, "private-cookie", "private-csrf"]) {
+      assert(!JSON.stringify(result).includes(privateValue));
+    }
+    return result;
   }
   const pass = await scenario();
   assert.equal(pass.decision, "PASS"); assert.equal(pass.requests.length, LIMIT);
