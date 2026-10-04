@@ -30,7 +30,7 @@ Its original application/repayment persistence, replay and anonymous rejection s
 Local surface tests, full Player verify, root npm test and synthetic browser pass.
 Browser fixtures use installed Chromium; pinned full browser/connected acceptance
 and backend checks require exact-head CI, recorded in PR metadata.
-Local backend typecheck hit the baseline esm.sh tunnel failure; full smoke passed.
+Local backend typecheck/smoke hit the baseline esm.sh tunnel failure; neither passed.
 No live database, settings, credentials, dispatch, deployment or U1 guard change.
 Rollback reverts this consumer only; no balances, liabilities or server writes move.
 REF025 remains BLOCKED; 025c and original acceptance remain. REF027 needs025+026.
