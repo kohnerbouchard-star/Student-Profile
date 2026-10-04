@@ -5,7 +5,7 @@ handoff permits only the Market flow and a real-render browser regression.
 Preserve #668/#736 inventory authority and REF042 freshness/session boundaries.
 No app/API/realtime/backend/CSS changes, economic writes, live requests, credential
 changes, deployment, release-hold restoration, or assertion/deadline weakening.
-At most five paths and 350 semantic changed lines; runtime at most 100 lines.
+Parent approved the focused Market-owned helper as a sixth path. At most six paths and 350 semantic changed lines; runtime at most 100 lines.
 
 Temporary real-module reproduction on base f590dadd and PR846 c9303240:
 synthetic accepted sell -> exact FILLED visible -> pending notifications refresh
