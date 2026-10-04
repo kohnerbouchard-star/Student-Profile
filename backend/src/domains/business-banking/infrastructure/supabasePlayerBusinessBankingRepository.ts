@@ -6,6 +6,8 @@ import {
   type PlayerEconomicContext,
 } from "../contracts/playerBusinessBankingContracts.ts";
 
+import { projectLoanCurrencies, type LoanCurrencyScheduleInput } from "../domain/loanCurrencyProjection.ts";
+
 type Row = Record<string, unknown>;
 
 export class SupabasePlayerBusinessBankingRepository
@@ -44,11 +46,11 @@ export class SupabasePlayerBusinessBankingRepository
     const localCurrency = context.currencyCode;
 
     const [products, loans, profileRows, paymentRows, businesses] = await Promise.all([
-      rows(this.client.from("loan_products").select("*")
+      rows(this.client.from("loan_products").select("*,maximum_amount_exact:maximum_amount::text")
         .eq("game_session_id", input.gameSessionId)
         .eq("currency_code", localCurrency)
         .order("minimum_amount", { ascending: true })),
-      rows(this.client.from("player_loans").select("*")
+      rows(this.client.from("player_loans").select("*,principal_balance_exact:principal_balance::text,accrued_interest_exact:accrued_interest::text,scheduled_payment_exact:scheduled_payment::text")
         .eq("game_session_id", input.gameSessionId).eq("player_id", input.playerId)
         .order("created_at", { ascending: false })),
       rows(this.client.from("credit_profiles").select("*")
@@ -80,7 +82,8 @@ export class SupabasePlayerBusinessBankingRepository
       );
     });
 
-    return {
+    const exactSchedule: LoanCurrencyScheduleInput[] = [];
+    const snapshot: LoansSnapshotDto = {
       configured: true,
       creditScore,
       availableCredit: eligibleProducts.reduce((sum, row) => sum + number(row.maximum_amount), 0),
@@ -138,15 +141,20 @@ export class SupabasePlayerBusinessBankingRepository
         );
         const nextDue = Date.parse(text(row.next_due_at));
         if (!Number.isFinite(nextDue)) return [];
-        return Array.from({ length: paymentCount }, (_, index) => ({
-          currencyCode: text(row.currency_code) || null,
-          cycle: `Payment ${index + 1}`,
-          due: new Date(nextDue + index * frequencyCycles * 7 * 86_400_000).toISOString(),
-          amount: number(row.scheduled_payment),
-          status: index === 0 && text(row.status) === "delinquent" ? "Late" : "Scheduled",
-        }));
+        return Array.from({ length: paymentCount }, (_, index) => {
+          const due = new Date(nextDue + index * frequencyCycles * 7 * 86_400_000).toISOString();
+          exactSchedule.push({ currencyCode: text(row.currency_code) || null, due, exactAmount: row.scheduled_payment_exact });
+          return {
+            currencyCode: text(row.currency_code) || null,
+            cycle: `Payment ${index + 1}`,
+            due,
+            amount: number(row.scheduled_payment),
+            status: index === 0 && text(row.status) === "delinquent" ? "Late" : "Scheduled",
+          };
+        });
       }),
     };
+    return { ...snapshot, currencyProjection: projectLoanCurrencies(eligibleProducts, active, exactSchedule) };
   }
 
   async execute(

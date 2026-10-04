@@ -1,7 +1,8 @@
 # REF-033 — Pure Story Contract preparation
 
 Status: IN_PROGRESS; no merge, runtime or release completion credit.
-Base: `725235c931db65b984ed557b1ecae3d175f788fe` (REF-032 closeout #843).
+Initial base: `725235c931db65b984ed557b1ecae3d175f788fe` (REF-032 closeout #843).
+Integrated main: `d2aa78c8ddd25d086db08dadc66e7af47ec598bd` (#842); regenerated inventory preserves both owners.
 Dependencies REF-030/REF-032 are VERIFIED_COMPLETE. All 50 IDs/dependencies
 remain stable; 38 completed, two blocked and ten planned at preflight.
 No competing REF-033 branch/PR was found. Owner: ARCH-209/ARCH-300.
@@ -73,6 +74,6 @@ existing Backend Typecheck PR workflow runs both on the candidate source.
 Expanded Story sweep: 148 pass, two fail; untouched base reproduces both
 (context cash expected 1250/actual 0; demo loop expected HTTP 200/actual 500).
 These failures are retained, not fixed or counted as passes by this extraction.
-Engine shrinks 856 to 778 lines; inventory 1271 to 1273 source/test files,
+Engine shrinks 856 to 778 lines; REF-033 adds two source/test files,
 29 domains and 100 oversized files unchanged. Sole production caller remains
 `executeContractUnlockEffect`; external model and persistence owners are unchanged.
