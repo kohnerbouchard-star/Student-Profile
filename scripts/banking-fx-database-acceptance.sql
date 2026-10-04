@@ -183,6 +183,8 @@ declare
   other_business uuid := gen_random_uuid(); product uuid; application uuid; loan uuid; account text; loan_key text; payment record;
   tab text; role_name text; gate text; shape text; row_id uuid; patch jsonb; original jsonb; statement text;
 begin
+  insert into public.currencies(code,country_code,name,symbol,status,currency_kind)
+    values('QREFLOAN','ZZ','REF025 synthetic fixture','QRF','active','national');
   insert into public.staff_users(id,supabase_auth_user_id,email,display_name)
     values(staff,gen_random_uuid(),staff||'@example.test','REF025 disposable');
   insert into public.game_sessions(id,owner_staff_user_id,name,status)
@@ -190,20 +192,20 @@ begin
   insert into public.players(id,game_session_id,display_name,status)
     values(actor,g,'REF025 actor','active'),(other_actor,other_game,'REF025 other','active');
   insert into public.business_entities(id,game_session_id,owner_player_id,legal_name,country_code,currency_code,tax_classification)
-    values(business,g,actor,'REF025 borrower','US','USD','disregarded'),
-      (other_business,other_game,other_actor,'REF025 other borrower','US','USD','disregarded');
+    values(business,g,actor,'REF025 borrower','US','QREFLOAN','disregarded'),
+      (other_business,other_game,other_actor,'REF025 other borrower','US','QREFLOAN','disregarded');
   select public.business_account_type_v1(public_key) into account from public.business_entities where id=business;
   perform public.ensure_business_bank_account_v2(g,business);
   insert into public.loan_products(game_session_id,name,borrower_type,currency_code,minimum_amount,
     maximum_amount,annual_rate,term_cycles,disclosure_text)
-    values(g,'REF025 product','business','USD',1,1000,0.05,12,'Disposable compatibility fixture only.') returning id into product;
+    values(g,'REF025 product','business','QREFLOAN',1,1000,0.05,12,'Disposable compatibility fixture only.') returning id into product;
   insert into public.loan_applications(game_session_id,player_id,business_id,loan_product_id,amount,
     purpose,repayment_source,credit_score,projected_payment,affordability_ratio,idempotency_key,request_hash)
     values(g,actor,business,product,100,'Fixture',account,650,10,0.1,'ref025-legacy',repeat('a',64)) returning id into application;
   insert into public.player_loans(game_session_id,player_id,business_id,loan_product_id,application_id,
     currency_code,original_principal,principal_balance,annual_rate,scheduled_payment,next_due_at)
-    values(g,actor,business,product,application,'USD',100,100,0.05,10,now()+interval '7 days') returning id into loan;
-  perform public.record_player_ledger_entry(g,actor,account,100,'USD','credit','admin',
+    values(g,actor,business,product,application,'QREFLOAN',100,100,0.05,10,now()+interval '7 days') returning id into loan;
+  perform public.record_player_ledger_entry(g,actor,account,100,'QREFLOAN','credit','admin',
     'business_banking_correction',null,'system',null,'{}'::jsonb);
   select public_key into loan_key from public.player_loans where id=loan;
   select * into payment from public.repay_player_loan_v1(g,actor,loan_key,10,'ref025-repayment');
@@ -219,12 +221,12 @@ begin
     end if;
     gate := tab||'_business_liability_disabled_v1'; shape := tab||'_liability_shape_v1';
     patch := jsonb_build_object('liability_kind','business_v1','initiating_operator_player_id',actor,'borrower_business_id',business);
-    if tab='loan_applications' then patch := patch||'{"obligation_currency_code":"USD"}'::jsonb; end if;
+    if tab='loan_applications' then patch := patch||'{"obligation_currency_code":"QREFLOAN"}'::jsonb; end if;
     foreach role_name in array array['postgres','service_role'] loop
       execute format('set local role %I',role_name);
       perform pg_temp.ref025_reject(format('update public.%I set liability_kind=%L, initiating_operator_player_id=%L,
         borrower_business_id=%L%s where id=%L',tab,'business_v1',actor,business,
-        case when tab='loan_applications' then ', obligation_currency_code=''USD''' else '' end,row_id),gate);
+        case when tab='loan_applications' then ', obligation_currency_code=''QREFLOAN''' else '' end,row_id),gate);
       perform pg_temp.ref025_reject(format('insert into public.%I select (jsonb_populate_record(null::public.%I,%L)).*',
         tab,tab,original||patch||jsonb_build_object('id',gen_random_uuid())),gate);
       reset role;
@@ -234,7 +236,7 @@ begin
     perform pg_temp.ref025_reject(format('update public.%I set liability_kind=%L where id=%L',tab,'business_v1',row_id),shape);
     perform pg_temp.ref025_reject(format('update public.%I set initiating_operator_player_id=%L where id=%L',tab,actor,row_id),shape);
     if tab='loan_applications' then
-      perform pg_temp.ref025_reject(format('update public.%I set obligation_currency_code=%L where id=%L',tab,'usd',row_id),shape);
+      perform pg_temp.ref025_reject(format('update public.%I set obligation_currency_code=%L where id=%L',tab,'qrefloan',row_id),shape);
     end if;
     -- Isolate the actual composite FKs from the actor-equality/legacy-null shape check.
     execute format('alter table public.%I drop constraint %I',tab,shape);
@@ -253,7 +255,8 @@ do $$ begin
   if (select count(*) from pg_constraint where conname in (
     'loan_applications_business_liability_disabled_v1','player_loans_business_liability_disabled_v1',
     'loan_applications_liability_shape_v1','player_loans_liability_shape_v1') and convalidated) <> 4
-    or exists(select 1 from public.game_sessions where name like 'REF025 %') then
+    or exists(select 1 from public.game_sessions where name like 'REF025 %')
+    or exists(select 1 from public.currencies where code='QREFLOAN') then
     raise exception 'REF025 acceptance rollback failed';
   end if;
 end $$;
