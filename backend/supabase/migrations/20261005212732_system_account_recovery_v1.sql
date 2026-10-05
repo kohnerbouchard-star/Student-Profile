@@ -32,6 +32,13 @@ create table recovery_private.outbox (
   kind text not null check(kind in ('started','completed')), delivered_at timestamptz,
   primary key(attempt_id,kind)
 );
+create table recovery_private.delivery (
+  attempt_id uuid primary key references recovery_private.attempts(id),
+  request_expires timestamptz not null, sealed text,
+  grant_digest text check(grant_digest ~ '^[a-f0-9]{64}$'), delivered_at timestamptz,
+  check((sealed is null)=(grant_digest is null))
+);
+alter table recovery_private.delivery enable row level security;
 alter table recovery_private.attempts enable row level security;
 alter table recovery_private.audit enable row level security;
 alter table recovery_private.outbox enable row level security;
@@ -227,6 +234,73 @@ begin
   update recovery_private.attempts set phase='completed',restricted=false,grant_digest=null where id=p_id;
   insert into recovery_private.audit(attempt_id,phase) values(p_id,'completed');
   insert into recovery_private.outbox(attempt_id,kind) values(p_id,'completed');
+end $$;
+
+-- Ciphertext only. Reservation is irreversible: ambiguous issuance needs review.
+create function public.system_recovery_delivery_v1(
+  p_id uuid,p_user uuid,p_source text,p_evidence text,p_request_expires timestamptz,
+  p_action text,p_record jsonb default null
+) returns jsonb language plpgsql security definer set search_path='' as $$
+declare r recovery_private.attempts; d recovery_private.delivery;
+begin
+  select * into strict r from recovery_private.attempts where id=p_id for update;
+  if (r.auth_user_id,r.source_commit,r.evidence_ref) is distinct from (p_user,p_source,p_evidence)
+    or not r.restricted or r.phase not in ('removed','ready') or p_request_expires is null
+    or p_request_expires<=clock_timestamp() or p_request_expires>clock_timestamp()+interval '15 minutes'
+  then raise exception 'delivery identity unavailable'; end if;
+  select * into d from recovery_private.delivery where attempt_id=p_id;
+  if found and d.request_expires is distinct from p_request_expires then raise exception 'delivery expiry mismatch'; end if;
+  if p_action='read' then
+    if d.sealed is null then return null; end if;
+    return jsonb_build_object('version',1,'grantDigest',d.grant_digest,'expiresAt',extract(epoch from d.request_expires)*1000,
+      'sealed',d.sealed,'delivered',d.delivered_at is not null);
+  elsif p_action='reserve' then
+    if d.attempt_id is not null then return 'false'::jsonb; end if;
+    if r.phase<>'removed' then raise exception 'delivery not reservable'; end if;
+    insert into recovery_private.delivery(attempt_id,request_expires) values(p_id,p_request_expires);
+    insert into recovery_private.audit(attempt_id,phase) values(p_id,'delivery_reserved');
+    return 'true'::jsonb;
+  elsif p_action='save' then
+    if r.phase<>'removed' or d.attempt_id is null or p_record is null
+      or (p_record->>'version')::integer is distinct from 1
+      or (p_record->>'expiresAt')::numeric is distinct from extract(epoch from p_request_expires)*1000
+      or coalesce(p_record->>'grantDigest','') !~ '^[a-f0-9]{64}$'
+      or length(coalesce(p_record->>'sealed','')) not between 80 and 2048
+      or coalesce(p_record->>'sealed','') !~ '^[A-Za-z0-9_-]+$'
+    then raise exception 'delivery record unavailable'; end if;
+    if d.sealed is not null then
+      if (d.sealed,d.grant_digest) is distinct from (p_record->>'sealed',p_record->>'grantDigest') then raise exception 'delivery replacement denied'; end if;
+      return 'true'::jsonb;
+    end if;
+    update recovery_private.delivery set sealed=p_record->>'sealed',grant_digest=p_record->>'grantDigest' where attempt_id=p_id;
+    insert into recovery_private.audit(attempt_id,phase) values(p_id,'delivery_persisted');
+    return 'true'::jsonb;
+  elsif p_action in ('ready','ack') then
+    if r.phase<>'ready' or d.sealed is null or r.grant_digest is distinct from d.grant_digest
+      or (p_record->>'grantDigest') is distinct from d.grant_digest or r.expires_at is distinct from d.request_expires
+    then return 'false'::jsonb; end if;
+    if p_action='ack' then
+      update recovery_private.delivery set delivered_at=coalesce(delivered_at,clock_timestamp()) where attempt_id=p_id;
+      insert into recovery_private.audit(attempt_id,phase) values(p_id,'delivery_acknowledged') on conflict do nothing;
+    end if;
+    return 'true'::jsonb;
+  end if;
+  raise exception 'delivery action unavailable';
+end $$;
+
+create function public.system_recovery_notice_v1(p_id uuid,p_user uuid,p_source text,p_kind text,p_ack boolean default false)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare r recovery_private.attempts; n recovery_private.outbox;
+begin
+  select * into strict r from recovery_private.attempts where id=p_id for update;
+  if (r.auth_user_id,r.source_commit) is distinct from (p_user,p_source) or p_kind is null
+    or p_kind not in ('started','completed') then raise exception 'notice identity mismatch'; end if;
+  select * into strict n from recovery_private.outbox where attempt_id=p_id and kind=p_kind;
+  if p_ack is true then
+    update recovery_private.outbox set delivered_at=coalesce(delivered_at,clock_timestamp()) where attempt_id=p_id and kind=p_kind;
+    insert into recovery_private.audit(attempt_id,phase) values(p_id,p_kind||'_notice_acknowledged') on conflict do nothing;
+  end if;
+  return jsonb_build_object('kind',p_kind,'delivered',n.delivered_at is not null or p_ack is true);
 end $$;
 
 do $$ declare f record; begin

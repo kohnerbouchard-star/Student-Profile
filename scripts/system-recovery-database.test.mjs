@@ -41,6 +41,7 @@ test('recovery transactions: grants, identity, revoked sessions, exact factors a
       other_session uuid:='00000000-0000-4000-8000-000000000006';
       rogue uuid:='00000000-0000-4000-8000-000000000007';
       src text:=repeat('a',40); g text:=repeat('b',64); signature regprocedure;
+      delivery_expiry timestamptz:=date_trunc('milliseconds',clock_timestamp())+interval '10 minutes';
     begin
       for signature in select oid::regprocedure from pg_proc where proname like 'system_recovery_%_v1' loop
         if has_function_privilege('anon',signature,'EXECUTE') or has_function_privilege('authenticated',signature,'EXECUTE')
@@ -50,6 +51,8 @@ test('recovery transactions: grants, identity, revoked sessions, exact factors a
       insert into auth.sessions(id,user_id) values(s,u);
       if not public.system_recovery_access_v1(u,s) then raise exception 'normal session denied'; end if;
       perform public.system_recovery_begin_v1(r,u,'eecvbssdvarfcykcfrny',src,'external-operator','review/two-channels');
+      perform public.expect_denied(format('select public.system_recovery_notice_v1(%L,%L,%L,%L)',r,u,src,'completed'));
+      perform public.system_recovery_notice_v1(r,u,src,'started',true);
       perform public.system_recovery_begin_v1(r,u,'eecvbssdvarfcykcfrny',src,'external-operator','review/two-channels');
       perform public.expect_denied(format('select public.system_recovery_begin_v1(%L,%L,%L,%L,%L,%L)',r,u,'cgiukdjwicykrmtkhudh',src,'external-operator','review/two-channels'));
       if public.system_recovery_access_v1(u,s) then raise exception 'restriction bypass'; end if;
@@ -58,7 +61,23 @@ test('recovery transactions: grants, identity, revoked sessions, exact factors a
       perform public.expect_denied(format('select public.system_recovery_advance_v1(%L,%L,%L,NULL,%L)',r,u,src,'removed'));
       perform public.system_recovery_advance_v1(r,u,src,'restricted','revoked');
       perform public.system_recovery_advance_v1(r,u,src,'revoked','removed');
-      perform public.system_recovery_advance_v1(r,u,src,'removed','ready',g,clock_timestamp()+interval '10 minutes');
+      if public.system_recovery_delivery_v1(r,u,src,'review/two-channels',delivery_expiry,'reserve')<>'true'::jsonb
+        then raise exception 'delivery reservation denied'; end if;
+      if public.system_recovery_delivery_v1(r,u,src,'review/two-channels',delivery_expiry,'reserve')<>'false'::jsonb
+        then raise exception 'delivery reservation replay'; end if;
+      perform public.expect_denied(format('select public.system_recovery_delivery_v1(%L,%L,%L,%L,%L,%L)',r,u,repeat('c',40),'review/two-channels',delivery_expiry,'read'));
+      perform public.expect_denied(format('select public.system_recovery_delivery_v1(%L,%L,%L,%L,%L,%L)',r,u,src,'review/two-channels',delivery_expiry+interval '1 second','read'));
+      perform public.system_recovery_delivery_v1(r,u,src,'review/two-channels',delivery_expiry,'save',
+        jsonb_build_object('version',1,'expiresAt',extract(epoch from delivery_expiry)*1000,'grantDigest',g,'sealed',repeat('a',100)));
+      perform public.expect_denied(format('select public.system_recovery_delivery_v1(%L,%L,%L,%L,%L,%L,%L::jsonb)',r,u,src,'review/two-channels',delivery_expiry,'save',
+        jsonb_build_object('version',1,'expiresAt',extract(epoch from delivery_expiry)*1000,'grantDigest',g,'sealed',repeat('b',100))));
+      if public.system_recovery_delivery_v1(r,u,src,'review/two-channels',delivery_expiry,'ack',jsonb_build_object('grantDigest',g))<>'false'::jsonb
+        then raise exception 'delivery acknowledged before ready'; end if;
+      perform public.system_recovery_advance_v1(r,u,src,'removed','ready',g,delivery_expiry);
+      perform public.system_recovery_delivery_v1(r,u,src,'review/two-channels',delivery_expiry,'ack',jsonb_build_object('grantDigest',g));
+      perform public.system_recovery_delivery_v1(r,u,src,'review/two-channels',delivery_expiry,'ack',jsonb_build_object('grantDigest',g));
+      if (public.system_recovery_delivery_v1(r,u,src,'review/two-channels',delivery_expiry,'read')->>'delivered') is distinct from 'true'
+        then raise exception 'delivery acknowledgement missing'; end if;
       insert into auth.sessions(id,user_id) values(s,u),(other_session,u);
       perform public.system_recovery_claim_v1(u,s,g);
       perform public.system_recovery_claim_v1(u,s,g);
@@ -95,6 +114,7 @@ test('recovery transactions: grants, identity, revoked sessions, exact factors a
       perform public.system_recovery_password_transition_v1(r,u,src);
       update auth.users set raw_app_meta_data='{"security_version":2}';
       perform public.system_recovery_complete_v1(r,u,src);
+      perform public.system_recovery_notice_v1(r,u,src,'completed',true);
       perform public.system_recovery_complete_v1(r,u,src);
       if exists(select 1 from recovery_private.attempts where restricted or grant_digest is not null)
       then raise exception 'completion state invalid'; end if;

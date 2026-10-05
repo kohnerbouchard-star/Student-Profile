@@ -163,7 +163,7 @@ test("local Supabase starts every declared split Edge security boundary", async 
   );
   assert.match(functionSources["staff-mfa-api"], /requiredAssuranceLevel/);
   assert.match(functionSources["staff-mfa-api"], /mfa\.challengeAndVerify/);
-  assert.match(functionSources["password-reset-api"], /resolveStaffForRequest/);
+  assertPasswordResetSessionBoundary(functionSources["password-reset-api"]);
   assert.match(functionSources["password-reset-api"], /validateStaffPassword/);
   assert.match(functionSources["web-session-api"], /WEB_ADMIN_SESSION_COOKIE/);
   assert.match(
@@ -387,4 +387,21 @@ test("Admin auth deployment surfaces remain manifest-bound and staging-promoted"
     productionWorkflow,
     /Production auth source differs from staging/,
   );
+});
+
+function assertPasswordResetSessionBoundary(passwordReset) {
+  assert.match(passwordReset, /import\s*\{[^}]*resolveStaffSessionForRequest[^}]*\}\s*from\s*["'][^"']*platform\/supabase\/edgeStaffSession\.ts["']/s);
+  assert.match(passwordReset, /await resolveStaffSessionForRequest\(request, env\.value, \{createAuthClient,createServiceClient\}/);
+  assert.match(passwordReset, /if \(resolved\.ok === false\)\s*\{\s*return json\(request, resolved\.status/s);
+  assert.ok(passwordReset.indexOf("if (resolved.ok === false)") < passwordReset.indexOf("const sessionsRevoked ="), "Session rejection must precede provider mutations");
+}
+
+test("password reset session contract rejects removed resolver or ignored rejection", async () => {
+  const source = await readFile(new URL("password-reset-api/index.ts", FUNCTION_ROOT), "utf8");
+  assertPasswordResetSessionBoundary(source);
+  for (const changed of [
+    source.replace("await resolveStaffSessionForRequest", "await untrustedResolver"),
+    source.replace("if (resolved.ok === false)", "if (false)"),
+    source.replace("platform/supabase/edgeStaffSession.ts", "platform/supabase/untrusted.ts"),
+  ]) assert.throws(() => assertPasswordResetSessionBoundary(changed));
 });

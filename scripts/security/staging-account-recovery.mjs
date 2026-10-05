@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { randomBytes, createCipheriv, createDecipheriv, createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
@@ -90,6 +91,129 @@ export async function runApprovedRecovery(value, adapters, now = Date.now()) {
   // Delivery may be retried; it must use the same persisted single-use link.
   await adapters.delivery.send(request);
   return Object.freeze({requestId:request.requestId,phase:'ready',restricted:true});
+}
+
+// Only injected disposable integrations are used here. The CLI never constructs
+// this adapter or obtains a key, provider token, recipient, or delivery credential.
+export function createRecoveryDelivery({ key, store, provider, clock = Date.now }) {
+  if (!(key instanceof Uint8Array) || key.length !== 32) throw Error('Delivery encryption key unavailable');
+  const binding = request => Buffer.from(JSON.stringify(['recovery-delivery-v1', ...FIELDS.map(field => request[field])]));
+  const checkedRecord = (request, record) => {
+    if (!record || record.version !== 1 || record.expiresAt !== Date.parse(request.expiresAt) ||
+        record.expiresAt <= clock() || !/^[a-f0-9]{64}$/.test(record.grantDigest) ||
+        typeof record.sealed !== 'string') throw Error('Recovery delivery unavailable');
+    return record;
+  };
+  return {
+    async prepare(value) {
+      const request = validateRecoveryRequest(value, clock());
+      const existing = await store.readDelivery(request);
+      if (existing) return { grantDigest: checkedRecord(request, existing).grantDigest, expiresAt: existing.expiresAt };
+      // One-shot reservation precedes the provider call: even a lost token-issue
+      // response must never cause another issuance or a replacement link.
+      if (await store.reserveDelivery(request) !== true) throw Error('Recovery delivery requires reconciliation');
+      const grant = randomBytes(32).toString('base64url');
+      let token;
+      try { token = await provider.issueRecoveryToken(request); }
+      catch { throw Error('Recovery token issuance requires reconciliation'); }
+      if (!token || token.authUserId !== request.authUserId || token.projectRef !== request.projectRef ||
+          typeof token.tokenHash !== 'string' || !/^[A-Za-z0-9_-]{16,256}$/.test(token.tokenHash)) {
+        throw Error('Recovery token identity mismatch');
+      }
+      const nonce = randomBytes(12);
+      const cipher = createCipheriv('aes-256-gcm', key, nonce);
+      cipher.setAAD(binding(request));
+      const encrypted = Buffer.concat([cipher.update(JSON.stringify({ grant, tokenHash: token.tokenHash }), 'utf8'), cipher.final()]);
+      const record = { version: 1, grantDigest: createHash('sha256').update(grant).digest('hex'),
+        expiresAt: Date.parse(request.expiresAt),
+        sealed: Buffer.concat([nonce, cipher.getAuthTag(), encrypted]).toString('base64url') };
+      if (await store.saveDelivery(request, record) !== true) throw Error('Recovery delivery persistence unavailable');
+      return { grantDigest: record.grantDigest, expiresAt: record.expiresAt };
+    },
+    async send(value) {
+      const request = validateRecoveryRequest(value, clock());
+      const record = checkedRecord(request, await store.readDelivery(request));
+      if (await store.deliveryReady(request, record.grantDigest) !== true) throw Error('Recovery delivery is not ready');
+      if (record.delivered === true) return;
+      const sealed = Buffer.from(record.sealed, 'base64url');
+      if (sealed.length < 29) throw Error('Recovery delivery unavailable');
+      let payload;
+      try {
+        const decipher = createDecipheriv('aes-256-gcm', key, sealed.subarray(0,12));
+        decipher.setAAD(binding(request)); decipher.setAuthTag(sealed.subarray(12,28));
+        payload = JSON.parse(Buffer.concat([decipher.update(sealed.subarray(28)), decipher.final()]).toString('utf8'));
+      } catch { throw Error('Recovery delivery authentication failed'); }
+      if (!/^[A-Za-z0-9_-]{43}$/.test(payload.grant) || !/^[A-Za-z0-9_-]{16,256}$/.test(payload.tokenHash) ||
+          createHash('sha256').update(payload.grant).digest('hex') !== record.grantDigest) throw Error('Recovery delivery unavailable');
+      // Recipient resolution belongs to the trusted provider by approved user ID.
+      // It MUST support durable idempotency; a timeout does not acknowledge mail.
+      let delivered;
+      try { delivered = await provider.sendRecovery(request, payload, { idempotencyKey: `recovery:${request.requestId}` }); }
+      catch { throw Error('Recovery delivery outcome unknown'); }
+      if (delivered?.acknowledged !== true) throw Error('Recovery delivery outcome unknown');
+      if (await store.acknowledgeDelivery(request, record.grantDigest) !== true) throw Error('Recovery delivery acknowledgement unavailable');
+    },
+  };
+}
+
+// Callable only with an explicitly supplied service RPC adapter; no connection,
+// credentials or executable command is provided here.
+export function createRecoveryDeliveryStore(rpc) {
+  const call = async (request, action, record = null) => {
+    const result = await rpc('system_recovery_delivery_v1', {
+      p_id: request.requestId, p_user: request.authUserId, p_source: request.sourceCommit,
+      p_evidence: request.identityEvidenceRef, p_request_expires: request.expiresAt,
+      p_action: action, p_record: record,
+    });
+    if (result.error || (['save','ack'].includes(action) && result.data !== true)) throw Error('Recovery delivery persistence unavailable');
+    return result.data;
+  };
+  return {
+    readDelivery: request => call(request, 'read'),
+    reserveDelivery: request => call(request, 'reserve'),
+    saveDelivery: (request, record) => call(request, 'save', record),
+    deliveryReady: (request, digest) => call(request, 'ready', { grantDigest: digest }),
+    acknowledgeDelivery: (request, digest) => call(request, 'ack', { grantDigest: digest }),
+  };
+}
+
+// Read-only reconciliation can describe an interrupted attempt, but cannot prove
+// that old service-role effects have stopped. No timeout authorizes a restart.
+export async function assessRecoveryReconciliation(value, adapters, now = Date.now()) {
+  const expiry = Date.parse(value?.expiresAt);
+  if (!Number.isFinite(expiry)) throw Error('Invalid recovery identity');
+  const request = validateRecoveryRequest(value, Math.min(now, expiry - 1));
+  const approval = await adapters.verifyOperatorApproval(request);
+  if (!approval || approval.verified !== true || approval.principalKind !== 'system' ||
+      approval.identityChecksVerified !== true || typeof approval.subject !== 'string' || !approval.subject ||
+      !Number.isFinite(approval.authenticatedAt) || approval.authenticatedAt > now || now-approval.authenticatedAt > 300_000 ||
+      FIELDS.some(field => approval.request?.[field] !== request[field])) throw Error('External operator approval required');
+  const state = await adapters.store.read(request);
+  if (!state || state.restricted !== true || !['restricted','revoked','removed','ready','enrolling','completing','cancelled'].includes(state.phase)) {
+    throw Error('Restricted recovery attempt unavailable');
+  }
+  return Object.freeze({ requestId: request.requestId, phase: state.phase, restricted: true,
+    expired: expiry <= now, restartAllowed: false, providerActionsAllowed: false,
+    requiredEvidence: Object.freeze(['independent identity review', 'verified quiescence of all previous executors and provider operations',
+      'exact provider and account-security state reconciliation', 'separately approved new attempt']) });
+}
+
+// A separately bound worker may deliver non-secret lifecycle notices. Provider
+// support for this idempotency key is required; unknown outcomes stay pending.
+export async function deliverRecoveryNotice(value, kind, { rpc, provider }, now = Date.now()) {
+  const expiry = Date.parse(value?.expiresAt);
+  if (!Number.isFinite(expiry) || !['started','completed'].includes(kind)) throw Error('Invalid recovery notice');
+  const request = validateRecoveryRequest(value, Math.min(now, expiry - 1));
+  const args = { p_id: request.requestId, p_user: request.authUserId, p_source: request.sourceCommit, p_kind: kind };
+  const pending = await rpc('system_recovery_notice_v1', args);
+  if (pending.error || pending.data?.kind !== kind) throw Error('Recovery notice unavailable');
+  if (pending.data.delivered === true) return;
+  let receipt;
+  try { receipt = await provider.sendNotice(request, { kind }, { idempotencyKey: `recovery-notice:${request.requestId}:${kind}` }); }
+  catch { throw Error('Recovery notice outcome unknown'); }
+  if (receipt?.acknowledged !== true) throw Error('Recovery notice outcome unknown');
+  const ack = await rpc('system_recovery_notice_v1', { ...args, p_ack: true });
+  if (ack.error || ack.data?.delivered !== true) throw Error('Recovery notice acknowledgement unavailable');
 }
 
 export async function main(args) {
