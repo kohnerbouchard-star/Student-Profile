@@ -56,11 +56,15 @@ test('recovery transactions: grants, identity, revoked sessions, exact factors a
       perform public.system_recovery_begin_v1(r,u,'eecvbssdvarfcykcfrny',src,'external-operator','review/two-channels');
       perform public.expect_denied(format('select public.system_recovery_begin_v1(%L,%L,%L,%L,%L,%L)',r,u,'cgiukdjwicykrmtkhudh',src,'external-operator','review/two-channels'));
       if public.system_recovery_access_v1(u,s) then raise exception 'restriction bypass'; end if;
-      perform public.expect_denied(format('select public.system_recovery_advance_v1(%L,%L,%L,%L,%L)',r,u,src,'restricted','revoked'));
+      perform public.system_recovery_advance_v1(r,u,src,'restricted','revoking');
+      perform public.expect_denied(format('select public.system_recovery_advance_v1(%L,%L,%L,%L,%L)',r,u,src,'restricted','revoking'));
+      perform public.expect_denied(format('select public.system_recovery_advance_v1(%L,%L,%L,%L,%L)',r,u,src,'revoking','revoked'));
       delete from auth.sessions;
       perform public.expect_denied(format('select public.system_recovery_advance_v1(%L,%L,%L,NULL,%L)',r,u,src,'removed'));
-      perform public.system_recovery_advance_v1(r,u,src,'restricted','revoked');
-      perform public.system_recovery_advance_v1(r,u,src,'revoked','removed');
+      perform public.system_recovery_advance_v1(r,u,src,'revoking','revoked');
+      perform public.system_recovery_advance_v1(r,u,src,'revoked','removing');
+      perform public.expect_denied(format('select public.system_recovery_advance_v1(%L,%L,%L,%L,%L)',r,u,src,'revoked','removing'));
+      perform public.system_recovery_advance_v1(r,u,src,'removing','removed');
       if public.system_recovery_delivery_v1(r,u,src,'review/two-channels',delivery_expiry,'reserve')<>'true'::jsonb
         then raise exception 'delivery reservation denied'; end if;
       if public.system_recovery_delivery_v1(r,u,src,'review/two-channels',delivery_expiry,'reserve')<>'false'::jsonb
@@ -123,5 +127,68 @@ test('recovery transactions: grants, identity, revoked sessions, exact factors a
     select 'recovery-contract-passed';
   `);
   assert.match(result,/recovery-contract-passed/);
+  const restart=sql(`
+    do $$ declare
+      u uuid:='00000000-0000-4000-8000-000000000008';
+      old_id uuid:='00000000-0000-4000-8000-000000000009';
+      new_id uuid:='00000000-0000-4000-8000-000000000010';
+      sid uuid:='00000000-0000-4000-8000-000000000011';
+      src text:=repeat('a',40); grant_hash text:=repeat('d',64);
+      expired timestamptz:=clock_timestamp()-interval '1 minute';
+      fresh timestamptz:=clock_timestamp()+interval '10 minutes';
+      q text; unsafe_phase text;
+    begin
+      insert into auth.users(id) values(u);
+      insert into public.staff_users values(u,'active',true,1);
+      insert into auth.sessions(id,user_id) values(sid,u);
+      perform public.system_recovery_begin_v1(old_id,u,'eecvbssdvarfcykcfrny',src,'operator:old','review/old-attempt');
+      update recovery_private.attempts set expires_at=expired,grant_digest=grant_hash where id=old_id;
+      q:=format('select public.system_recovery_restart_v1(%L,%L,%L,%L,%L,%L,%L,%L,%L,%L)',
+        old_id,src,'review/old-attempt',expired,new_id,u,src,'operator:new','review/new-attempt',fresh);
+      foreach unsafe_phase in array array['restricted','revoking','revoked','removing','removed','completing','cancelled'] loop
+        update recovery_private.attempts set phase=unsafe_phase where id=old_id;
+        perform public.expect_denied(q);
+      end loop;
+      update recovery_private.attempts set phase='enrolling',primary_reserved=true where id=old_id;
+      perform public.expect_denied(q);
+      update recovery_private.attempts set primary_reserved=false,backup_reserved=true where id=old_id;
+      perform public.expect_denied(q);
+      update recovery_private.attempts set backup_reserved=false,prepared_security_version=1 where id=old_id;
+      perform public.expect_denied(q);
+      update recovery_private.attempts set prepared_security_version=null,phase='ready',expires_at=fresh where id=old_id;
+      perform public.expect_denied(q);
+      update recovery_private.attempts set expires_at=expired where id=old_id;
+      perform public.expect_denied(format('select public.system_recovery_restart_v1(%L,%L,%L,%L,%L,%L,%L,%L,%L,%L)',
+        old_id,src,'review/old-attempt',expired,new_id,u,'invalid-source','operator:new','review/new-attempt',fresh));
+      if not exists(select 1 from recovery_private.attempts where id=old_id and restricted and phase='ready')
+        then raise exception 'failed restart removed restriction'; end if;
+      execute q;
+      execute q;
+      if (select count(*) from recovery_private.attempts where auth_user_id=u and restricted)<>1
+        or not exists(select 1 from recovery_private.attempts where id=new_id and restart_of=old_id and restricted and phase='restricted')
+        or not exists(select 1 from recovery_private.attempts where id=old_id and not restricted and phase='superseded' and grant_digest is null)
+      then raise exception 'restart did not atomically preserve restriction'; end if;
+      if public.system_recovery_access_v1(u,sid) or public.system_recovery_access_v1(u,sid,grant_hash)
+        then raise exception 'superseded grant or session gained access'; end if;
+      perform public.expect_denied(format('select public.system_recovery_claim_v1(%L,%L,%L)',u,sid,grant_hash));
+      perform public.expect_denied(format('select public.system_recovery_advance_v1(%L,%L,%L,%L,%L)',old_id,u,src,'restricted','revoking'));
+      if not exists(select 1 from recovery_private.audit where attempt_id=old_id and phase='superseded')
+        or (select count(*) from recovery_private.outbox where attempt_id=new_id and kind='started')<>1
+        then raise exception 'restart evidence missing or duplicated'; end if;
+      update recovery_private.attempts set phase='removed' where id=new_id;
+      perform public.expect_denied(format('select public.system_recovery_delivery_v1(%L,%L,%L,%L,%L,%L)',
+        new_id,u,src,'review/new-attempt',fresh+interval '1 second','reserve'));
+      if exists(select 1 from recovery_private.delivery where attempt_id=new_id)
+        then raise exception 'changed expiry acquired token issuance'; end if;
+      perform public.expect_denied(format('select public.system_recovery_advance_v1(%L,%L,%L,%L,%L,%L,%L)',
+        new_id,u,src,'removed','ready',repeat('e',64),fresh+interval '1 second'));
+      if public.system_recovery_delivery_v1(new_id,u,src,'review/new-attempt',fresh,'reserve')<>'true'::jsonb
+        then raise exception 'approved restart delivery denied'; end if;
+
+    end $$;
+    select 'restart-contract-passed';
+  `);
+  assert.match(restart,/restart-contract-passed/);
+
   } finally { execFileSync('docker',['rm','-f',container],{stdio:'pipe'}); }
 });

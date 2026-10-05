@@ -50,7 +50,7 @@ function adapters(overrides={}) {
 test('system operator workflow orders restriction, revocation, exact deletion, grant and delivery',async()=>{
   const fake=adapters();const result=await runApprovedRecovery(request,fake,now);
   assert.equal(result.restricted,true);
-  assert.deepEqual(fake.events,['restrict','revoke','revoked','delete','removed','ready','send']);
+  assert.deepEqual(fake.events,['restrict','revoking','revoke','revoked','removing','delete','removed','ready','send']);
 });
 test('application roles, stale authentication and mismatched approval cannot start recovery',async()=>{
   for(const change of [{principalKind:'game_admin'},{principalKind:'security_operator'},{verified:false},
@@ -60,17 +60,17 @@ test('application roles, stale authentication and mismatched approval cannot sta
 });
 test('provider revocation failure and unexpected factors leave restriction in place without delivery',async()=>{
   const failed=adapters();failed.provider.revokeSessions=async()=>{throw Error('provider unavailable');};
-  await assert.rejects(runApprovedRecovery(request,failed,now));assert.deepEqual(failed.events,['restrict']);
+  await assert.rejects(runApprovedRecovery(request,failed,now));assert.deepEqual(failed.events,['restrict','revoking']);
   const changed=adapters();changed.provider.listFactorMetadata=async()=>[{id:request.authUserId,status:'verified'}];
-  await assert.rejects(runApprovedRecovery(request,changed,now));assert.deepEqual(changed.events,['restrict','revoke','revoked']);
+  await assert.rejects(runApprovedRecovery(request,changed,now));assert.deepEqual(changed.events,['restrict','revoking','revoke','revoked','removing']);
 });
-test('retry after lost factor-deletion response does not delete a different factor',async()=>{
+test('lost factor-deletion response requires reconciliation and cannot repeat provider effects',async()=>{
   const fake=adapters();const remove=fake.provider.deleteFactor;let first=true;
   fake.provider.deleteFactor=async(...args)=>{await remove(...args);if(first){first=false;throw Error('lost response');}};
   await assert.rejects(runApprovedRecovery(request,fake,now));
-  await runApprovedRecovery(request,fake,now);
+  await assert.rejects(runApprovedRecovery(request,fake,now), /not ready/);
   assert.equal(fake.events.filter(e=>e==='delete').length,1);
-  assert.equal(fake.events.at(-1),'send');
+  assert.equal(fake.events.includes('send'),false);
 });
 
 import { createRecoveryDelivery, createRecoveryDeliveryStore, assessRecoveryReconciliation } from './security/staging-account-recovery.mjs';
@@ -165,4 +165,33 @@ test('delivery requires explicit durable success, rejecting false, null and trut
       if(operation==='deliveryReady')assert.equal(f.counts().sends,0);
     }
   }
+});
+
+test('a stale operator worker cannot revoke after another worker acquired and advanced',async()=>{
+  const f=adapters();let reads=0,release;
+  const pause=new Promise(resolve=>{release=resolve;});const read=f.store.read;
+  f.store.read=async(...args)=>{const state=await read(...args);if(++reads===1)await pause;return state;};
+  const stale=runApprovedRecovery(request,f,now);
+  while(reads===0)await new Promise(resolve=>setImmediate(resolve));
+  await runApprovedRecovery(request,f,now);
+  release();await assert.rejects(stale);
+  assert.equal(f.events.filter(event=>event==='revoke').length,1);
+  assert.equal(f.events.filter(event=>event==='delete').length,1);
+});
+
+import { restartExpiredRecovery } from './security/staging-account-recovery.mjs';
+test('bounded restart requires fresh external approval of both exact attempts and performs only the atomic RPC',async()=>{
+  const later=now+900_000;
+  const next={...request,requestId:'c0cc63d0-b8ea-4ac7-bb05-c5216a1aa126',expiresAt:new Date(later+600_000).toISOString()};
+  const calls=[];const approval={verified:true,principalKind:'system',identityChecksVerified:true,subject:'operator:restart',authenticatedAt:later,previous:request,request:next};
+  const adapters={verifyRestartApproval:async()=>approval,rpc:async(name,args)=>{calls.push({name,args});return {data:next.requestId,error:null};}};
+  const result=await restartExpiredRecovery(request,next,adapters,later);
+  assert.deepEqual(result,{requestId:next.requestId,phase:'restricted',restricted:true});
+  assert.equal(calls.length,1);assert.equal(calls[0].name,'system_recovery_restart_v1');
+  assert.equal(calls[0].args.p_old_id,request.requestId);assert.equal(calls[0].args.p_new_id,next.requestId);
+  for(const change of [{principalKind:'security_operator'},{authenticatedAt:later-300_001},{previous:{...request,sourceCommit:'b'.repeat(40)}},{request:{...next,authUserId:request.requestId}}]){
+    await assert.rejects(restartExpiredRecovery(request,next,{...adapters,verifyRestartApproval:async()=>({...approval,...change})},later),/approval/);
+  }
+  assert.equal(calls.length,1);
+  await assert.rejects(restartExpiredRecovery(request,next,{...adapters,rpc:async()=>({data:null,error:{message:'unresolved effect'}})},later),/restart unavailable/);
 });

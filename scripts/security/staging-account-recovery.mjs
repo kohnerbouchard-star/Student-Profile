@@ -53,7 +53,7 @@ export async function runApprovedRecovery(value, adapters, now = Date.now()) {
       approval.identityChecksVerified !== true || typeof approval.subject !== 'string' || !approval.subject ||
       !Number.isFinite(approval.authenticatedAt) || approval.authenticatedAt > now || now-approval.authenticatedAt > 300_000 ||
       FIELDS.some(key => approval.request?.[key] !== request[key]) ||
-      !Array.isArray(approval.factorIds) || approval.factorIds.length === 0 ||
+      !Array.isArray(approval.factorIds) || approval.factorIds.length > 20 ||
       approval.factorIds.some(id => typeof id !== 'string' || !UUID.test(id)) ||
       new Set(approval.factorIds).size !== approval.factorIds.length) throw Error('External operator approval required');
   await adapters.store.begin(request, approval);
@@ -64,10 +64,12 @@ export async function runApprovedRecovery(value, adapters, now = Date.now()) {
     if (state.phase !== next) throw Error('Recovery transition was not confirmed');
   };
   if (state.phase === 'restricted') {
+    await advance('restricted', 'revoking');
     await adapters.provider.revokeSessions(request.authUserId);
-    await advance('restricted', 'revoked');
+    await advance('revoking', 'revoked');
   }
   if (state.phase === 'revoked') {
+    await advance('revoked', 'removing');
     const factors = await adapters.provider.listFactorMetadata(request.authUserId);
     if (!Array.isArray(factors) || factors.some(factor => factor.status === 'verified' && !approval.factorIds.includes(factor.id))) {
       throw Error('Provider factor state differs from the approved request');
@@ -75,7 +77,7 @@ export async function runApprovedRecovery(value, adapters, now = Date.now()) {
     for (const id of approval.factorIds) {
       if (factors.some(factor => factor.id === id)) await adapters.provider.deleteFactor(request.authUserId, id);
     }
-    await advance('revoked', 'removed');
+    await advance('removing', 'removed');
   }
   if (state.phase === 'removed') {
     // prepare must persist encrypted delivery material idempotently by request ID;
@@ -189,13 +191,39 @@ export async function assessRecoveryReconciliation(value, adapters, now = Date.n
       !Number.isFinite(approval.authenticatedAt) || approval.authenticatedAt > now || now-approval.authenticatedAt > 300_000 ||
       FIELDS.some(field => approval.request?.[field] !== request[field])) throw Error('External operator approval required');
   const state = await adapters.store.read(request);
-  if (!state || state.restricted !== true || !['restricted','revoked','removed','ready','enrolling','completing','cancelled'].includes(state.phase)) {
+  if (!state || state.restricted !== true || !['restricted','revoking','revoked','removing','removed','ready','enrolling','completing','cancelled'].includes(state.phase)) {
     throw Error('Restricted recovery attempt unavailable');
   }
   return Object.freeze({ requestId: request.requestId, phase: state.phase, restricted: true,
     expired: expiry <= now, restartAllowed: false, providerActionsAllowed: false,
     requiredEvidence: Object.freeze(['independent identity review', 'verified quiescence of all previous executors and provider operations',
       'exact provider and account-security state reconciliation', 'separately approved new attempt']) });
+}
+
+// Bounded restart never takes over an in-flight operation. The database permits
+// only expired, unreserved ready/enrolling attempts after operator effects ended.
+export async function restartExpiredRecovery(previous, value, adapters, now = Date.now()) {
+  const oldExpiry = Date.parse(previous?.expiresAt);
+  if (!Number.isFinite(oldExpiry) || oldExpiry > now) throw Error('Previous attempt is not expired');
+  const oldRequest = validateRecoveryRequest(previous, oldExpiry - 1);
+  const request = validateRecoveryRequest(value, now);
+  if (request.requestId === oldRequest.requestId || request.authUserId !== oldRequest.authUserId ||
+      request.projectRef !== oldRequest.projectRef) throw Error('Restart identity mismatch');
+  const approval = await adapters.verifyRestartApproval(oldRequest, request);
+  if (!approval || approval.verified !== true || approval.principalKind !== 'system' ||
+      approval.identityChecksVerified !== true || typeof approval.subject !== 'string' || !approval.subject ||
+      !Number.isFinite(approval.authenticatedAt) || approval.authenticatedAt > now || now-approval.authenticatedAt > 300_000 ||
+      FIELDS.some(field => approval.previous?.[field] !== oldRequest[field] || approval.request?.[field] !== request[field])) {
+    throw Error('Fresh external operator restart approval required');
+  }
+  const result = await adapters.rpc('system_recovery_restart_v1', {
+    p_old_id: oldRequest.requestId, p_old_source: oldRequest.sourceCommit,
+    p_old_evidence: oldRequest.identityEvidenceRef, p_old_expires: oldRequest.expiresAt,
+    p_new_id: request.requestId, p_user: request.authUserId, p_new_source: request.sourceCommit,
+    p_operator: approval.subject, p_evidence: request.identityEvidenceRef, p_expires: request.expiresAt,
+  });
+  if (result.error || result.data !== request.requestId) throw Error('Recovery restart unavailable; restriction preserved');
+  return Object.freeze({ requestId: request.requestId, phase: 'restricted', restricted: true });
 }
 
 // A separately bound worker may deliver non-secret lifecycle notices. Provider

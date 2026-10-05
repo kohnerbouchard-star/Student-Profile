@@ -10,16 +10,17 @@ create table recovery_private.attempts (
   operator_subject text not null check(length(operator_subject) between 1 and 200),
   evidence_ref text not null check(length(evidence_ref) between 8 and 160),
   phase text not null default 'restricted' check(phase in
-    ('restricted','revoked','removed','ready','enrolling','completing','completed','cancelled')),
+    ('restricted','revoking','revoked','removing','removed','ready','enrolling','completing','completed','cancelled','superseded')),
   restricted boolean not null default true,
   created_at timestamptz not null default clock_timestamp(),
   removed_at timestamptz, expires_at timestamptz,
   grant_digest text unique check(grant_digest ~ '^[a-f0-9]{64}$'),
   session_id uuid, claimed_at timestamptz, primary_factor uuid, backup_factor uuid,
   primary_reserved boolean not null default false, backup_reserved boolean not null default false,
+  restart_of uuid unique references recovery_private.attempts(id), request_expires_at timestamptz,
   initial_security_version bigint not null, prepared_security_version bigint, password_transition jsonb,
   check(primary_factor is null or backup_factor is null or primary_factor<>backup_factor),
-  check(restricted or phase='completed')
+  check(restricted or phase in ('completed','superseded'))
 );
 create unique index one_restricted_recovery_per_user on recovery_private.attempts(auth_user_id) where restricted;
 create table recovery_private.audit (
@@ -75,18 +76,21 @@ begin
   select * into strict r from recovery_private.attempts where id=p_id for update;
   if (r.auth_user_id,r.source_commit) is distinct from (p_user,p_source) then raise exception 'recovery identity mismatch'; end if;
   if r.phase=p_next then
+    if p_next in ('revoking','removing') then raise exception 'operator effect already acquired'; end if;
     if p_next='ready' and (r.grant_digest,r.expires_at) is distinct from (p_digest,p_expires)
     then raise exception 'grant replay mismatch'; end if;
     return;
   end if;
   if p_expected is null or p_next is null or r.phase is distinct from p_expected or not (
-    (p_expected,p_next) in (('restricted','revoked'),('revoked','removed'),('removed','ready'))
+    (p_expected,p_next) in (('restricted','revoking'),('revoking','revoked'),('revoked','removing'),('removing','removed'),('removed','ready'))
     or (p_next='cancelled' and p_expected<>'completed')
   ) then raise exception 'invalid recovery transition'; end if;
   if p_next in ('revoked','removed') and exists(select 1 from auth.sessions where user_id=p_user)
   then raise exception 'old sessions remain'; end if;
   if p_next='removed' and exists(select 1 from auth.mfa_factors where user_id=p_user and status='verified')
   then raise exception 'verified factors remain'; end if;
+  if p_next='ready' and r.request_expires_at is not null and p_expires is distinct from r.request_expires_at
+  then raise exception 'approved restart expiry mismatch'; end if;
   if p_next='ready' and (p_digest is null or p_digest !~ '^[a-f0-9]{64}$' or p_expires is null
     or p_expires<=clock_timestamp() or p_expires>clock_timestamp()+interval '15 minutes')
   then raise exception 'invalid grant'; end if;
@@ -236,6 +240,42 @@ begin
   insert into recovery_private.outbox(attempt_id,kind) values(p_id,'completed');
 end $$;
 
+-- No lease takeover: only attempts with no admitted user credential effect can
+-- restart. Supersession and the new restriction commit atomically.
+create function public.system_recovery_restart_v1(
+  p_old_id uuid,p_old_source text,p_old_evidence text,p_old_expires timestamptz,
+  p_new_id uuid,p_user uuid,p_new_source text,p_operator text,p_evidence text,p_expires timestamptz
+) returns uuid language plpgsql security definer set search_path='' as $$
+declare r recovery_private.attempts; n recovery_private.attempts; v_version bigint;
+begin
+  select security_version into strict v_version from public.staff_users
+    where supabase_auth_user_id=p_user and status='active' and mfa_required=true for update;
+  select * into strict r from recovery_private.attempts where id=p_old_id for update;
+  if (r.auth_user_id,r.source_commit,r.evidence_ref,r.expires_at) is distinct from
+      (p_user,p_old_source,p_old_evidence,p_old_expires) or p_new_id is null or p_new_id=p_old_id
+    or p_expires is null or p_expires<=clock_timestamp() or p_expires>clock_timestamp()+interval '15 minutes'
+  then raise exception 'restart identity unavailable'; end if;
+  if r.phase='superseded' then
+    select * into strict n from recovery_private.attempts where restart_of=p_old_id;
+    if not n.restricted or n.phase<>'restricted' then raise exception 'restarted attempt already progressed'; end if;
+    if (n.id,n.auth_user_id,n.source_commit,n.operator_subject,n.evidence_ref,n.request_expires_at) is distinct from
+      (p_new_id,p_user,p_new_source,p_operator,p_evidence,p_expires) then raise exception 'restart replay mismatch'; end if;
+    return n.id;
+  end if;
+  if not r.restricted or r.phase not in ('ready','enrolling') or r.expires_at is null or r.expires_at>clock_timestamp()
+    or r.primary_reserved or r.backup_reserved or r.primary_factor is not null or r.backup_factor is not null
+    or r.prepared_security_version is not null or r.password_transition is not null
+  then raise exception 'restart requires unresolved effect reconciliation'; end if;
+  update recovery_private.attempts set phase='superseded',restricted=false,grant_digest=null,session_id=null where id=p_old_id;
+  insert into recovery_private.attempts(id,auth_user_id,project_ref,source_commit,operator_subject,evidence_ref,
+    initial_security_version,restart_of,request_expires_at)
+    values(p_new_id,p_user,r.project_ref,p_new_source,p_operator,p_evidence,v_version,p_old_id,p_expires);
+  update recovery_private.delivery set sealed=null,grant_digest=null where attempt_id=p_old_id;
+  insert into recovery_private.audit(attempt_id,phase) values(p_old_id,'superseded'),(p_new_id,'restricted');
+  insert into recovery_private.outbox(attempt_id,kind) values(p_new_id,'started');
+  return p_new_id;
+end $$;
+
 -- Ciphertext only. Reservation is irreversible: ambiguous issuance needs review.
 create function public.system_recovery_delivery_v1(
   p_id uuid,p_user uuid,p_source text,p_evidence text,p_request_expires timestamptz,
@@ -246,6 +286,7 @@ begin
   select * into strict r from recovery_private.attempts where id=p_id for update;
   if (r.auth_user_id,r.source_commit,r.evidence_ref) is distinct from (p_user,p_source,p_evidence)
     or not r.restricted or r.phase not in ('removed','ready') or p_request_expires is null
+    or (r.request_expires_at is not null and p_request_expires is distinct from r.request_expires_at)
     or p_request_expires<=clock_timestamp() or p_request_expires>clock_timestamp()+interval '15 minutes'
   then raise exception 'delivery identity unavailable'; end if;
   select * into d from recovery_private.delivery where attempt_id=p_id;
