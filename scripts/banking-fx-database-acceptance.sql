@@ -744,7 +744,7 @@ begin
         'select * from public.apply_player_loan_v1(%L,%L,%L,%L,60,%L,%L,%L)',
         g,owner_id,product_key,business_key,'Sales request','business:'||business_key,'ref025-submission'),'IDEMPOTENCY_KEY_CONFLICT');
       insert into public.business_governance_proposals(game_session_id,business_id,proposer_player_id,
-        proposal_type,threshold_bps,total_voting_units_snapshot,idempotency_key,expires_at)
+        proposal_type,approval_threshold_basis_points,snapshot_total_voting_units,idempotency_key,expires_at)
         values(g,b,owner_id,'capital_raise',5001,1,'ref025-submission-mandate',now()+interval '1 day') returning id into proposal;
       insert into public.business_management_mandates(game_session_id,business_id,player_id,source_proposal_id)
         values(g,b,buyer,proposal);

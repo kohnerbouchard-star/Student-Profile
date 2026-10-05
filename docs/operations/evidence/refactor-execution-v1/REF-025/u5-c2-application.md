@@ -40,3 +40,5 @@ Registered migration raw SHA256 e9ab53f6d86cfe0712c5366ee8f174b7331a23ddcb210056
 Head33e648ee Banking-FX job111572768452 failed in the disposable acceptance assertion:
 unqualified audit action conflicted with the outer fixture variable. Qualify audit columns;
 assertion semantics and migration remain unchanged. Corrected-head qualification required.
+Review also identified two incorrect governance fixture column names; use existing
+approval_threshold_basis_points/snapshot_total_voting_units, with no schema change.
