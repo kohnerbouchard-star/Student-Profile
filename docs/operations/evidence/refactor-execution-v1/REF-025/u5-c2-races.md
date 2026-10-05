@@ -44,3 +44,6 @@ Full database reset remains mandatory, followed by independent gate/migration an
 No workflow/shared helper/package/migration/Player/Markets/auth edits, hosted access, dispatch or deployment. Nine U1 holds unchanged.
 REF025 remains BLOCKED; REF027 depends025+026. No new liability/default/FX semantics or activation credit.
 Validation: pending implementation, pinned tests, disposable Banking CI and parent review. Revert only this bounded test change.
+Implementation now uses two real-sale games, exact business-row blockers, cross-operator replay/conflict and scoped audit-failure injection.
+Independent game commits while the first game's transaction remains open; rollback leaves the other game's rows unchanged.
+Pinned Node22.23.1:11 focused+16 authority tests PASS; boundary ratchet80 PASS. Disposable exact-head CI and parent review remain pending.
