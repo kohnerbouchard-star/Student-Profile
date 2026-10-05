@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    "scripts/banking-fx-database-acceptance.mjs",
     "scripts/ref025-disposable-database.mjs",
     "scripts/ref025-disposable-database.test.mjs",
     "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-race-isolation.md",
@@ -28,10 +29,10 @@
     "player-api-read-resilience",
     "Backend Typecheck",
     "Repository Quality",
-    "Database Replay"
+    "Database Replay", "Verify Banking FX database acceptance"
   ],
   "criticalJobChecks": [
-    "Database Replay"
+    "Database Replay", "Verify Banking FX database acceptance"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-race-isolation.md",
   "authorizationNote": "Approved four-path/300-line disposable isolation only. Locked verifier/tests grant no edit authority. No races, gate changes, hosted access, workflow/package changes or activation. Fail closed on source contention/ownership mismatch; parent review/merge."

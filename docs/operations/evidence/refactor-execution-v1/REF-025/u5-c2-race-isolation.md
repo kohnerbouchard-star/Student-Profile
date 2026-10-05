@@ -23,3 +23,6 @@ Docker reported no containers or volumes afterward. No source/child database, se
 Scope/authority validation and whitespace PASS. Helper/tests are not implemented; executable cloning/parity/cleanup
 qualification is NOT_RUN. Need an adequately provisioned disposable execution environment; no shared Docker pruning,
 alternate database image, source-session termination or provisioning-method substitution was attempted.
+Approved CI amendment (preceding feasibility entry is historical): fifth path scripts/banking-fx-database-acceptance.mjs; runner10/registration8 extra lines; total318.
+Select existing banking-fx-clearing-v1/database-acceptance only, after URL validation/before fixtures. No other caller/workflow changes.
+Real qualification must preserve both child/source gates and fail on contention/unknown identity. Prior local storage blocker remains.
