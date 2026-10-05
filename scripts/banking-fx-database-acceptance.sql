@@ -673,6 +673,7 @@ begin
   declare
     submitted record; replay record; original jsonb; candidate jsonb; proposal uuid;
     product_key text; audit_before bigint; profile_before jsonb; legacy record;
+    foreign_game uuid:=gen_random_uuid(); foreign_player uuid:=gen_random_uuid();
   begin
     execute $ddl$create function pg_temp.ref025_submission_reject(statement text,expected text) returns void
       language plpgsql as $body$ declare violated text; begin
@@ -692,6 +693,13 @@ begin
       raise exception 'REF025 gated failure retained profile/application'; end if;
     begin
       alter table public.loan_applications drop constraint loan_applications_business_liability_disabled_v1;
+      insert into public.game_sessions(id,owner_staff_user_id,name,status,lifecycle_state)
+        values(foreign_game,staff,'REF025 foreign submission','active','active');
+      insert into public.players(id,game_session_id,display_name,status,country_id)
+        values(foreign_player,foreign_game,'Foreign operator','active',country);
+      perform pg_temp.ref025_submission_reject(format(
+        'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,60,%L,%L)',
+        foreign_game,foreign_player,business_key,product_key,'Sales request','ref025-submission'),'BUSINESS_NOT_FOUND');
       update public.loan_products set minimum_credit_score=850 where id=product;
       perform pg_temp.ref025_submission_reject(format(
         'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,60,%L,%L)',
