@@ -8,7 +8,7 @@ Seven paths /390 semantic changed lines, including tests/evidence/authority:
 - docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-application.md
 - scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs
 - scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
-- docs/operations/contracts/player-cross-cutting/pr-<assigned-number>.json
+- docs/operations/contracts/player-cross-cutting/pr-858.json
 
 Pinned CLI2.109.1 generated20261005004013 before implementation; initial empty SHA256
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.
@@ -34,3 +34,5 @@ application gate inside an injected-rollback subtransaction; no persistent gate 
 No review/disbursement/repayment/default/UI activation. REF025 BLOCKED; REF027 depends025+026.
 No hosted SQL/deployment/credential actions. Validation and exact forward hashes pending.
 Rollback: revert unmerged source; applied changes require an approved forward correction.
+
+Registered migration raw SHA256 e9ab53f6d86cfe0712c5366ee8f174b7331a23ddcb210056d0bd4bd3f6b77ab2.

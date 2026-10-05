@@ -669,6 +669,132 @@ begin
   update ref025_assessment_receipts set game_session_id=g,business_sales_authority_version=0;
   execute 'select * from pg_temp.ref025_assess($1,$2,$3,60,$4)' into assessed using g,b,product,last_time;
   if assessed.qualifying_income<>0 then raise exception 'REF025 pre-authority sales counted'; end if;
+  -- c2-2b serial command qualification reuses the real settled-sales fixture.
+  declare
+    submitted record; replay record; original jsonb; candidate jsonb; proposal uuid;
+    product_key text; audit_before bigint; profile_before jsonb; legacy record;
+  begin
+    execute $ddl$create function pg_temp.ref025_submission_reject(statement text,expected text) returns void
+      language plpgsql as $body$ declare violated text; begin
+        begin execute statement; exception when others then
+          get stacked diagnostics violated=constraint_name;
+          if expected in (sqlerrm,sqlstate,violated) then return; end if; raise;
+        end; raise exception 'REF025 expected rejection missing: %',expected;
+      end $body$;$ddl$;
+    select public_key into product_key from public.loan_products where id=product;
+    update public.loan_products set maximum_payment_to_income=0.45 where id=product;
+    perform pg_temp.ref025_submission_reject(format(
+      'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,60,%L,%L)',
+      g,owner_id,business_key,product_key,'Sales request','ref025-submission'),
+      'loan_applications_business_liability_disabled_v1');
+    if exists(select 1 from public.credit_profiles where game_session_id=g)
+      or exists(select 1 from public.loan_applications where game_session_id=g) then
+      raise exception 'REF025 gated failure retained profile/application'; end if;
+    begin
+      alter table public.loan_applications drop constraint loan_applications_business_liability_disabled_v1;
+      update public.loan_products set minimum_credit_score=850 where id=product;
+      perform pg_temp.ref025_submission_reject(format(
+        'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,60,%L,%L)',
+        g,owner_id,business_key,product_key,'Sales request','ref025-submission'),'LOAN_CREDIT_SCORE_TOO_LOW');
+      update public.loan_products set minimum_credit_score=600,maximum_payment_to_income=0.05 where id=product;
+      perform pg_temp.ref025_submission_reject(format(
+        'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,60,%L,%L)',
+        g,owner_id,business_key,product_key,'Sales request','ref025-submission'),'LOAN_UNAFFORDABLE');
+      update public.loan_products set maximum_payment_to_income=0.45 where id=product;
+      update public.bank_accounts set status='closed' where game_session_id=g and public_key=eco_key;
+      perform pg_temp.ref025_submission_reject(format(
+        'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,60,%L,%L)',
+        g,owner_id,business_key,product_key,'Sales request','ref025-submission'),'LOAN_REPAYMENT_ACCOUNT_UNAVAILABLE');
+      update public.bank_accounts set status='active' where game_session_id=g and public_key=eco_key;
+      perform pg_temp.ref025_submission_reject(format(
+        'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,60,%L,%L)',
+        gen_random_uuid(),owner_id,business_key,product_key,'Sales request','ref025-submission'),'BUSINESS_LOAN_GAME_UNAVAILABLE');
+      select * into submitted from economy_private.submit_business_loan_application_v1(
+        g,owner_id,business_key,product_key,60,'Sales request','ref025-submission');
+      select to_jsonb(a) into original from public.loan_applications a where a.public_key=submitted.application_key;
+      if not exists(select 1 from public.audit_log where game_session_id=g and target_id=(original->>'id')::uuid
+        and action='business.loan.application.submit' and (metadata#>>'{assessment,qualifying_income}')::numeric=240) then
+        raise exception 'REF025 application assessment audit missing'; end if;
+      select to_jsonb(p) into profile_before from public.credit_profiles p where p.game_session_id=g and p.player_id=owner_id;
+      select count(*) into audit_before from public.audit_log where game_session_id=g;
+      select * into replay from economy_private.submit_business_loan_application_v1(
+        g,owner_id,business_key,product_key,60,'Sales request','ref025-submission');
+      if submitted.replayed or not replay.replayed or replay.application_key<>submitted.application_key
+        or submitted.obligation_currency_code<>'ECO' or submitted.projected_payment<>10.07
+        or (select to_jsonb(p) from public.credit_profiles p where p.game_session_id=g and p.player_id=owner_id)
+          is distinct from profile_before or (select count(*) from public.audit_log where game_session_id=g)<>audit_before then
+        raise exception 'REF025 serial replay rewrote assessment/effects'; end if;
+      perform pg_temp.ref025_submission_reject(format(
+        'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,61,%L,%L)',
+        g,owner_id,business_key,product_key,'Sales request','ref025-submission'),'IDEMPOTENCY_KEY_CONFLICT');
+      select * into legacy from public.apply_player_loan_v1(g,owner_id,product_key,business_key,60,
+        'Legacy request','business:'||business_key,'ref025-legacy-reserved');
+      perform pg_temp.ref025_submission_reject(format(
+        'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,60,%L,%L)',
+        g,owner_id,business_key,product_key,'Sales request','ref025-legacy-reserved'),'IDEMPOTENCY_KEY_CONFLICT');
+      perform pg_temp.ref025_submission_reject(format(
+        'select * from public.apply_player_loan_v1(%L,%L,%L,%L,60,%L,%L,%L)',
+        g,owner_id,product_key,business_key,'Sales request','business:'||business_key,'ref025-submission'),'IDEMPOTENCY_KEY_CONFLICT');
+      insert into public.business_governance_proposals(game_session_id,business_id,proposer_player_id,
+        proposal_type,threshold_bps,total_voting_units_snapshot,idempotency_key,expires_at)
+        values(g,b,owner_id,'capital_raise',5001,1,'ref025-submission-mandate',now()+interval '1 day') returning id into proposal;
+      insert into public.business_management_mandates(game_session_id,business_id,player_id,source_proposal_id)
+        values(g,b,buyer,proposal);
+      perform pg_temp.ref025_submission_reject(format(
+        'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,60,%L,%L)',
+        g,owner_id,business_key,product_key,'Sales request','ref025-submission'),'BUSINESS_NOT_FOUND');
+      update public.loan_products set status='paused',minimum_credit_score=850 where id=product;
+      select * into replay from economy_private.submit_business_loan_application_v1(
+        g,buyer,business_key,product_key,60,'Sales request','ref025-submission');
+      if not replay.replayed or replay.application_key<>submitted.application_key or
+        (select to_jsonb(a) from public.loan_applications a where a.public_key=submitted.application_key) is distinct from original
+        or exists(select 1 from public.credit_profiles where game_session_id=g and player_id=buyer) then
+        raise exception 'REF025 successor replay changed original initiator/assessment'; end if;
+      perform pg_temp.ref025_submission_reject(format(
+        'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,60,%L,%L)',
+        g,buyer,business_key,product_key,'Changed purpose','ref025-submission'),'IDEMPOTENCY_KEY_CONFLICT');
+      begin
+        insert into public.business_entities(game_session_id,owner_player_id,legal_name,country_code,currency_code,tax_classification)
+          values(g,buyer,'REF025 ambiguous operator','TST','ECO','disregarded');
+        perform pg_temp.ref025_submission_reject(format(
+          'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,60,%L,%L)',
+          g,buyer,business_key,product_key,'Sales request','ref025-submission'),'BUSINESS_OWNERSHIP_AMBIGUOUS');
+        raise exception using errcode='Z0257',message='Rollback ambiguous operator fixture';
+      exception when sqlstate 'Z0257' then null; end;
+      candidate:=original||jsonb_build_object('id',gen_random_uuid(),'public_key','lna_'||replace(gen_random_uuid()::text,'-',''),
+        'player_id',buyer,'initiating_operator_player_id',buyer);
+      perform pg_temp.ref025_submission_reject(format(
+        'insert into public.loan_applications select (jsonb_populate_record(null::public.loan_applications,%L)).*',candidate),
+        'loan_applications_business_request_unique_v1');
+      update public.loan_products set status='active',minimum_credit_score=600 where id=product;
+      select count(*) into audit_before from public.audit_log where game_session_id=g;
+      execute $ddl$create function pg_temp.ref025_submission_fail() returns trigger language plpgsql as $body$
+        begin if new.action='business.loan.application.submit' then raise exception using errcode='Z0255',message='Injected audit failure';
+        end if; return new; end $body$;$ddl$;
+      create trigger ref025_submission_fail after insert on public.audit_log
+        for each row execute function pg_temp.ref025_submission_fail();
+      perform pg_temp.ref025_submission_reject(format(
+        'select * from economy_private.submit_business_loan_application_v1(%L,%L,%L,%L,60,%L,%L)',
+        g,buyer,business_key,product_key,'Rollback request','ref025-submit-rollback'),'Z0255');
+      if exists(select 1 from public.loan_applications where game_session_id=g and idempotency_key='ref025-submit-rollback')
+        or exists(select 1 from public.credit_profiles where game_session_id=g and player_id=buyer)
+        or (select count(*) from public.audit_log where game_session_id=g)<>audit_before then
+        raise exception 'REF025 failed submission retained application/profile/audit'; end if;
+      drop trigger ref025_submission_fail on public.audit_log;
+      select * into replay from economy_private.submit_business_loan_application_v1(
+        g,buyer,business_key,product_key,60,'Rollback request','ref025-submit-rollback');
+      if replay.replayed then raise exception 'REF025 failed request reserved its key'; end if;
+      raise exception using errcode='Z0254',message='Rollback positive submission fixture';
+    exception when sqlstate 'Z0254' then null; end;
+    if exists(select 1 from public.loan_applications where game_session_id=g) or
+      exists(select 1 from public.credit_profiles where game_session_id=g) or
+      not exists(select 1 from pg_constraint where conname='loan_applications_business_liability_disabled_v1' and convalidated) then
+      raise exception 'REF025 submission fixture/gate restoration failed'; end if;
+    foreach role_name in array array['anon','authenticated','service_role'] loop
+      if has_function_privilege(role_name,'economy_private.submit_business_loan_application_v1(uuid,uuid,text,text,numeric,text,text)','EXECUTE')
+        then raise exception 'REF025 private submission exposed'; end if;
+    end loop;
+  end;
 end $sales$;
 rollback;
 do $$ begin
@@ -676,3 +802,12 @@ do $$ begin
     (select count(*) from pg_constraint where conname in ('loan_applications_business_liability_disabled_v1',
       'player_loans_business_liability_disabled_v1') and convalidated)<>2 then raise exception 'REF025 sales fixture rollback/gates failed'; end if;
 end $$;
+
+begin isolation level repeatable read;
+do $$ begin
+  begin perform * from economy_private.submit_business_loan_application_v1(null,null,null,null,null,null,null);
+  exception when invalid_parameter_value then
+    if sqlerrm='BUSINESS_LOAN_READ_COMMITTED_REQUIRED' then return; end if; raise;
+  end; raise exception 'REF025 stale transaction snapshot accepted';
+end $$;
+rollback;
