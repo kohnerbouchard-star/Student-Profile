@@ -5,7 +5,7 @@ Four exact paths /300 semantic changed lines including tests/evidence/authority:
 - scripts/ref025-disposable-database.mjs
 - scripts/ref025-disposable-database.test.mjs
 - docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-race-isolation.md
-- docs/operations/contracts/player-cross-cutting/pr-<assigned-number>.json
+- docs/operations/contracts/player-cross-cutting/pr-859.json
 
 Verify local container/server/source identity, exact migration chain and both validated gates.
 Native clone only; unowned source sessions block without termination or provisioning fallback.

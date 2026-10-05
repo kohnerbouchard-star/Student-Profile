@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref025c2-2c-isolation-pr-859.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 859,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "scripts/ref025-disposable-database.mjs",
+    "scripts/ref025-disposable-database.test.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-race-isolation.md",
+    "docs/operations/contracts/player-cross-cutting/pr-859.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-859.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Database Replay"
+  ],
+  "criticalJobChecks": [
+    "Database Replay"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-race-isolation.md",
+  "authorizationNote": "Approved four-path/300-line disposable isolation only. Locked verifier/tests grant no edit authority. No races, gate changes, hosted access, workflow/package changes or activation. Fail closed on source contention/ownership mismatch; parent review/merge."
+}
