@@ -1,6 +1,6 @@
 # REF-015 — Bounded review finished; removal BLOCKED
 
-2026-10-05 proposal: [representative-use and reversible-disable amendment](reversible-retirement-amendment.md) refreshes all eight paths after PR845/850 and records the user's shorter reversible approach. It awaits parent review before any path is disabled; the historical findings below remain evidence, not current migrated-responsibility identities. REF015 remains BLOCKED.
+2026-10-05 proposal: [representative-use and reversible-disable amendment](reversible-retirement-amendment.md) refreshes all eight paths after PR845/850 and records the user's shorter reversible approach. It awaits parent review before any path is disabled; the historical findings below remain evidence, not current migrated-responsibility identities. REF015 remains BLOCKED; retained required URLs or unresolved consumers do not unlock REF047/048. Full amended completion criteria require a separate reviewed decision.
 
 Date: 2026-09-30. Source main: `368db59335d9f417c818881d19e3d4d9cd56fb67`.
 Owner: PR #765 / `refactor/ref-015-admin-shim-retirement`.
