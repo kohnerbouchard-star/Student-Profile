@@ -24,3 +24,7 @@ CI must prove exact blocker PID/start, client/backend exit, full reset and indep
 Child1 fixture-absence checks assert zero nonlegacy applications/loans; future fixtures need their own registered checks.
 No GUC copying, clone, marker-based ownership or atomic DROP claims. Existing background sessions are not terminated.
 Next: exact-head Child1 qualification and parent review, then separately registered Child2; runtime evidence NOT_RUN until CI.
+
+Independent review blocked d17d7e8: empty execFile output parsed as zero; no post-await cleanup deadline check.
+Pinned Node22.23.1 reproduced resolved empty stdout after41ms with timeout5ms/blocked loop40ms; new strict parser checks deadline first.
+Earlier green lifecycle/reset evidence is retained but cannot qualify the corrected head; fresh CI/review required.

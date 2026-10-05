@@ -33,6 +33,14 @@ export function intendedBlocker(row, waiter, blocker) {
   assert.deepEqual(row.blockers, [blocker.pid], 'REF025_UNEXPECTED_BLOCKER');
   assert.equal(row.wait, 'Lock', 'REF025_NOT_BLOCKED');
 }
+export function checkedBackendCount(stdout, remaining) {
+  remaining(); // execFile's timer alone cannot enforce elapsed time after event-loop stalls.
+  const match = /^(0|[1-9][0-9]*)(?:\r?\n)?$/u.exec(stdout);
+  assert(match && match[0] === stdout, 'REF025_BACKEND_COUNT_ROW');
+  const count = Number(match[1]);
+  assert(Number.isSafeInteger(count), 'REF025_BACKEND_COUNT_RANGE');
+  return count;
+}
 export async function closeClient(session, remaining) {
   session.closed = true;
   if (session.child.exitCode !== null || session.child.signalCode !== null) return;
@@ -127,7 +135,7 @@ export async function lifecycle(mode = '--phase') {
       let count;
       do {
         const result = await promisify(execFile)('docker', [...binding.args, `select count(*) from pg_stat_activity where ${owned};`], { timeout: cleanup() });
-        count = Number(result.stdout.trim());
+        count = checkedBackendCount(result.stdout, cleanup);
         if (count) await new Promise(resolve => setTimeout(resolve, Math.min(20, cleanup())));
       } while (count && cleanup());
       assert.equal(count, 0, 'REF025_BACKEND_REMAINS');

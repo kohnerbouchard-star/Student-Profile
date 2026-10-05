@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { EventEmitter } from 'node:events';
-import { spawn } from 'node:child_process';
+import { promisify } from 'node:util';
+import { spawn, execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { deadline, exchange, closeClient, intendedBlocker } from './ref025-business-loan-concurrency.mjs';
+import { deadline, exchange, closeClient, intendedBlocker, checkedBackendCount } from './ref025-business-loan-concurrency.mjs';
 
 // Exercise the same asynchronous process/marker boundary without requiring a database.
 function processSession() {
@@ -68,4 +69,25 @@ test('a client that does not exit is a cleanup failure', async () => {
   const session = { child, close() {} };
   await assert.rejects(closeClient(session, deadline(10)), /CLIENT_EXIT_TIMEOUT/);
   assert.equal(session.closed, true);
+});
+
+test('backend absence needs exactly one nonnegative safe integer row', () => {
+  for (const value of ['0', '0\n', '12\r\n']) assert.equal(checkedBackendCount(value, deadline(1000)), Number(value));
+  for (const value of ['', ' ', '\n', '0\n1\n', '0\n\n', '-1', 'NaN', 'Infinity', '1.5', '1e2', '9007199254740992', '0junk']) {
+    assert.throws(() => checkedBackendCount(value, deadline(1000)), /BACKEND_COUNT/);
+  }
+});
+test('a late successful count cannot prove backend absence', async () => {
+  const remaining = deadline(5);
+  const result = await new Promise(resolve => setTimeout(() => resolve({ stdout: '0\n' }), 35));
+  assert.throws(() => checkedBackendCount(result.stdout, remaining), /DEADLINE/);
+});
+test('actual execFile timeout plus blocked loop cannot bypass cleanup deadline', async () => {
+  const remaining = deadline(5);
+  const result = promisify(execFile)('/bin/echo', ['0'], { timeout: remaining() });
+  result.catch(() => {});
+  const until = performance.now() + 40;
+  while (performance.now() < until) {}
+  await assert.rejects(async () => checkedBackendCount((await result).stdout, remaining),
+    error => /REF025_DEADLINE/.test(error.message) || error.killed === true);
 });
