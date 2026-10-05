@@ -78,7 +78,10 @@
   async function showMfa() {
     form.reset();
     form.hidden = true;
-    const data = await recoveryMfa("mfa-status");
+    const data = await recoveryMfa("mfa-status").catch(() => {
+      endRecovery("Recovery verification could not be loaded. Contact your administrator or request a fresh recovery email.");
+      return null;
+    });
     if (!data) return endRecovery(message.textContent);
     if (!data.factors?.length) return endRecovery("No verified authenticator is available. Contact your administrator for verified account recovery.");
     mfaForm.elements.factorHandle.replaceChildren();

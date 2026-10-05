@@ -57,7 +57,8 @@ test("disposable browser recovery: MFA, isolation, expiry, missing/lost factors 
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH } : {}) });
     const page = await browser.newPage();
     const origin = `http://127.0.0.1:${server.address().port}`;
-    await page.route("**/*", route => route.request().url().startsWith(origin) ? route.continue() : route.abort());
+    await page.route("**/*", route => route.request().url().startsWith(origin) &&
+      !(mode === "offline" && route.request().url().includes("operation=mfa-status")) ? route.continue() : route.abort());
     const start = async (ref = project) => {
       calls = [];
       await page.goto("about:blank");
@@ -84,7 +85,7 @@ test("disposable browser recovery: MFA, isolation, expiry, missing/lost factors 
     await page.getByRole("button", { name: "Update Password" }).click();
     await page.getByText(/Password updated and existing administrator sessions revoked/).waitFor();
     assert.equal(calls.at(-1).options.headers.Authorization, `Bearer ${high}`);
-    for (const scenario of ["missing", "expired", "lost"]) {
+    for (const scenario of ["missing", "expired", "lost", "offline"]) {
       mode = scenario;
       await start();
       if (scenario === "lost") {
