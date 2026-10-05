@@ -47,24 +47,38 @@ revoke all on all tables in schema recovery_private from public, anon, authentic
 revoke all on all sequences in schema recovery_private from public, anon, authenticated, service_role;
 
 create function public.system_recovery_begin_v1(
-  p_id uuid,p_user uuid,p_project text,p_source text,p_operator text,p_evidence text
+  p_id uuid,p_user uuid,p_project text,p_source text,p_operator text,p_evidence text,p_expires timestamptz
 ) returns void language plpgsql security definer set search_path='' as $$
 declare v_version bigint; r recovery_private.attempts;
 begin
+  if p_expires is null or p_expires<=clock_timestamp() or p_expires>clock_timestamp()+interval '15 minutes'
+  then raise exception 'invalid approved request expiry'; end if;
   select security_version into v_version from public.staff_users
     where supabase_auth_user_id=p_user and status='active' and mfa_required=true for update;
   if not found then raise exception 'recovery target unavailable'; end if;
   select * into r from recovery_private.attempts where id=p_id;
   if found then
-    if (r.auth_user_id,r.project_ref,r.source_commit,r.operator_subject,r.evidence_ref)
-      is distinct from (p_user,p_project,p_source,p_operator,p_evidence)
+    if (r.auth_user_id,r.project_ref,r.source_commit,r.operator_subject,r.evidence_ref,r.request_expires_at)
+      is distinct from (p_user,p_project,p_source,p_operator,p_evidence,p_expires)
     then raise exception 'recovery identity mismatch'; end if;
     return;
   end if;
-  insert into recovery_private.attempts(id,auth_user_id,project_ref,source_commit,operator_subject,evidence_ref,initial_security_version)
-    values(p_id,p_user,p_project,p_source,p_operator,p_evidence,v_version);
+  insert into recovery_private.attempts(id,auth_user_id,project_ref,source_commit,operator_subject,evidence_ref,initial_security_version,request_expires_at)
+    values(p_id,p_user,p_project,p_source,p_operator,p_evidence,v_version,p_expires);
   insert into recovery_private.audit(attempt_id,phase) values(p_id,'restricted');
   insert into recovery_private.outbox(attempt_id,kind) values(p_id,'started');
+end $$;
+
+create function public.system_recovery_operator_state_v1(p_id uuid,p_user uuid,p_source text,p_evidence text)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare r recovery_private.attempts;
+begin
+  select * into strict r from recovery_private.attempts where id=p_id;
+  if (r.auth_user_id,r.source_commit,r.evidence_ref) is distinct from (p_user,p_source,p_evidence)
+    then raise exception 'operator state identity mismatch'; end if;
+  return jsonb_build_object('phase',r.phase,'restricted',r.restricted,
+    'primaryReserved',r.primary_reserved,'backupReserved',r.backup_reserved,
+    'completionAcquired',r.prepared_security_version is not null);
 end $$;
 
 create function public.system_recovery_advance_v1(

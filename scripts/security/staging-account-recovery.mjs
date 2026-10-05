@@ -95,6 +95,25 @@ export async function runApprovedRecovery(value, adapters, now = Date.now()) {
   return Object.freeze({requestId:request.requestId,phase:'ready',restricted:true});
 }
 
+// Concrete service-RPC persistence composition. The caller must supply its
+// reviewed credential binding; this module never discovers or creates one.
+export function createRecoveryOperatorStore(rpc) {
+  const call = async (name, args) => {
+    const result = await rpc(name, args);
+    if (result.error) throw Error('Recovery operator persistence unavailable');
+    return result.data;
+  };
+  const identity = request => ({ p_id: request.requestId, p_user: request.authUserId, p_source: request.sourceCommit });
+  return {
+    begin: (request, approval) => call('system_recovery_begin_v1', { ...identity(request),
+      p_project: request.projectRef, p_operator: approval.subject, p_evidence: request.identityEvidenceRef, p_expires: request.expiresAt }),
+    read: request => call('system_recovery_operator_state_v1', { ...identity(request), p_evidence: request.identityEvidenceRef }),
+    advance: (request, expected, next, evidence = {}) => call('system_recovery_advance_v1', { ...identity(request),
+      p_expected: expected, p_next: next, p_digest: evidence.grantDigest ?? null,
+      p_expires: evidence.expiresAt == null ? null : new Date(evidence.expiresAt).toISOString() }),
+  };
+}
+
 // Only injected disposable integrations are used here. The CLI never constructs
 // this adapter or obtains a key, provider token, recipient, or delivery credential.
 export function createRecoveryDelivery({ key, store, provider, clock = Date.now }) {

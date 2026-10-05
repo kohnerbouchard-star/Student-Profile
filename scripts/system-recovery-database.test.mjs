@@ -50,12 +50,18 @@ test('recovery transactions: grants, identity, revoked sessions, exact factors a
       if has_schema_privilege('authenticated','recovery_private','USAGE') then raise exception 'private data exposed'; end if;
       insert into auth.sessions(id,user_id) values(s,u);
       if not public.system_recovery_access_v1(u,s) then raise exception 'normal session denied'; end if;
-      perform public.system_recovery_begin_v1(r,u,'eecvbssdvarfcykcfrny',src,'external-operator','review/two-channels');
+      perform public.system_recovery_begin_v1(r,u,'eecvbssdvarfcykcfrny',src,'external-operator','review/two-channels',delivery_expiry);
+      perform public.expect_denied(format('select public.system_recovery_begin_v1(%L,%L,%L,%L,%L,%L,%L)',r,u,'eecvbssdvarfcykcfrny',src,'external-operator','review/two-channels',delivery_expiry+interval '1 second'));
+
       perform public.expect_denied(format('select public.system_recovery_notice_v1(%L,%L,%L,%L)',r,u,src,'completed'));
       perform public.system_recovery_notice_v1(r,u,src,'started',true);
-      perform public.system_recovery_begin_v1(r,u,'eecvbssdvarfcykcfrny',src,'external-operator','review/two-channels');
-      perform public.expect_denied(format('select public.system_recovery_begin_v1(%L,%L,%L,%L,%L,%L)',r,u,'cgiukdjwicykrmtkhudh',src,'external-operator','review/two-channels'));
+      perform public.system_recovery_begin_v1(r,u,'eecvbssdvarfcykcfrny',src,'external-operator','review/two-channels',delivery_expiry);
+      perform public.expect_denied(format('select public.system_recovery_begin_v1(%L,%L,%L,%L,%L,%L,%L)',r,u,'cgiukdjwicykrmtkhudh',src,'external-operator','review/two-channels',delivery_expiry));
       if public.system_recovery_access_v1(u,s) then raise exception 'restriction bypass'; end if;
+      if (public.system_recovery_operator_state_v1(r,u,src,'review/two-channels')->>'phase') is distinct from 'restricted'
+        then raise exception 'operator state unavailable'; end if;
+      perform public.expect_denied(format('select public.system_recovery_operator_state_v1(%L,%L,%L,%L)',r,u,repeat('c',40),'review/two-channels'));
+
       perform public.system_recovery_advance_v1(r,u,src,'restricted','revoking');
       perform public.expect_denied(format('select public.system_recovery_advance_v1(%L,%L,%L,%L,%L)',r,u,src,'restricted','revoking'));
       perform public.expect_denied(format('select public.system_recovery_advance_v1(%L,%L,%L,%L,%L)',r,u,src,'revoking','revoked'));
@@ -141,7 +147,7 @@ test('recovery transactions: grants, identity, revoked sessions, exact factors a
       insert into auth.users(id) values(u);
       insert into public.staff_users values(u,'active',true,1);
       insert into auth.sessions(id,user_id) values(sid,u);
-      perform public.system_recovery_begin_v1(old_id,u,'eecvbssdvarfcykcfrny',src,'operator:old','review/old-attempt');
+      perform public.system_recovery_begin_v1(old_id,u,'eecvbssdvarfcykcfrny',src,'operator:old','review/old-attempt',fresh);
       update recovery_private.attempts set expires_at=expired,grant_digest=grant_hash where id=old_id;
       q:=format('select public.system_recovery_restart_v1(%L,%L,%L,%L,%L,%L,%L,%L,%L,%L)',
         old_id,src,'review/old-attempt',expired,new_id,u,src,'operator:new','review/new-attempt',fresh);

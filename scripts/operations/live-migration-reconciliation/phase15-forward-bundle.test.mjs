@@ -471,8 +471,8 @@ test("system recovery is the sole seventh suffix and preserves all six prior ide
     "filename": "20261005212732_system_account_recovery_v1.sql",
     "version": "20261005212732",
     "name": "system_account_recovery_v1",
-    "sourceSha256": "5a8435700e4c0df098f27914ddb4990e0242d5d3521e40912e4c1b024a0bba8f",
-    "rawSha256": "57bfeb6665bf544d635d4e6d845786027ee3c8a7a07025c390acfb4b472cb958",
+    "sourceSha256": "eea1adcd5992a8bc6b40fe1d7f4ca196cd07fb38b0af4d1cf4698a17bda6b9fe",
+    "rawSha256": "05bde9fe9bb9e6a0f3024e8f0ab2b189cc75e513e1bcc70fd933600f5a0e0d93",
     "statementCount": 1
 });
 });

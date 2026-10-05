@@ -195,3 +195,17 @@ test('bounded restart requires fresh external approval of both exact attempts an
   assert.equal(calls.length,1);
   await assert.rejects(restartExpiredRecovery(request,next,{...adapters,rpc:async()=>({data:null,error:{message:'unresolved effect'}})},later),/restart unavailable/);
 });
+
+import { createRecoveryOperatorStore } from './security/staging-account-recovery.mjs';
+test('operator store binds every RPC to the approved attempt and expiry without exposing private state',async()=>{
+  const calls=[];
+  const store=createRecoveryOperatorStore(async(name,args)=>{calls.push({name,args});return {data:name==='system_recovery_operator_state_v1'?{phase:'restricted',restricted:true}:null,error:null};});
+  await store.begin(request,{subject:'operator:test'});
+  assert.equal(calls[0].name,'system_recovery_begin_v1');assert.equal(calls[0].args.p_expires,request.expiresAt);
+  assert.equal(calls[0].args.p_operator,'operator:test');assert.equal(calls[0].args.p_project,request.projectRef);
+  assert.deepEqual(await store.read(request),{phase:'restricted',restricted:true});
+  await store.advance(request,'removed','ready',{grantDigest:'c'.repeat(64),expiresAt:Date.parse(request.expiresAt)});
+  assert.equal(Date.parse(calls[2].args.p_expires),Date.parse(request.expiresAt));assert.equal(calls[2].args.p_expected,'removed');
+  for(const call of calls){assert.equal(call.args.p_id,request.requestId);assert.equal(call.args.p_user,request.authUserId);assert.equal(call.args.p_source,request.sourceCommit);}
+  await assert.rejects(createRecoveryOperatorStore(async()=>({error:{message:'private-detail'}})).read(request),/^Error: Recovery operator persistence unavailable$/);
+});
