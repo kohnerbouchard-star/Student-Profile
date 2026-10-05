@@ -516,7 +516,7 @@ declare
   listing uuid; product uuid; quote jsonb; result jsonb; assessed record; account_key text;
   offer_key text; business_key text; receipt public.store_offer_purchase_receipts%rowtype;
   first_time timestamptz; last_time timestamptz; before_effects bigint; after_effects bigint;
-  role_name text; action text; definition text;
+  role_name text; action text; definition text; credit record; eco_key text; nrc_key text;
 begin
   insert into public.staff_users(id,supabase_auth_user_id,email,display_name)
     values(staff,gen_random_uuid(),staff||'@example.test','REF025 sales disposable');
@@ -530,7 +530,7 @@ begin
     values(g,owner_id,country,'active','ref025'),(g,buyer,country,'active','ref025');
   insert into public.business_entities(id,game_session_id,owner_player_id,legal_name,entity_type,
     country_code,currency_code,status,tax_classification,formation_state,ownership_model_version)
-    values(b,g,owner_id,'REF025 sales borrower','llc','TST','ECO','active','disregarded','operational',2)
+    values(b,g,owner_id,'REF025 sales borrower','llc','TST','ECO','active','disregarded','operational',1)
     returning public_key into business_key;
   insert into public.game_items(id,game_session_id,canonical_key,source_kind,name,item_class,subtype,
     stackable,serialized,transferable,status)
@@ -582,11 +582,27 @@ begin
     maximum_amount,annual_rate,term_cycles,payment_frequency_cycles,maximum_payment_to_income,minimum_credit_score,disclosure_text)
     values(g,'REF025 sales product','business','ECO',1,1000,0,12,2,0.45,600,'Disposable sales-only assessment fixture.') returning id into product;
   -- Every non-sale credit remains excluded even though the business has more cash.
-  foreach action in array array['capital_contribution_in','ipo_primary_subscription','loan_disbursement',
-    'account_transfer_in','exchange_credit','business_banking_correction'] loop
-    perform public.record_business_ledger_entry_v2(g,b,1000,'ECO','credit','admin',action,null,'system',null,
+  foreach action in array array['capital_contribution_in','ipo_primary_subscription'] loop
+    perform public.record_business_ledger_entry_v2(g,b,1000,'ECO','credit','business',action,null,'system',null,
       jsonb_build_object('bankTransactionIdempotencyKey','ref025-excluded-'||action));
   end loop;
+  for credit in select * from (values ('loans','loan_disbursement'),('banking','account_transfer_in'),
+    ('admin','business_banking_correction')) as credits(domain,action) loop
+    perform public.record_player_ledger_entry(g,owner_id,'business:'||business_key,1000,'ECO','credit',
+      credit.domain,credit.action,null,'system',null,
+      jsonb_build_object('bankTransactionIdempotencyKey','ref025-excluded-'||credit.action));
+  end loop;
+  perform public.ensure_business_banking_account_v1(g,owner_id,'NRC','ref025-fx-account');
+  select a.public_key into eco_key from public.bank_accounts a join public.economic_parties p on p.id=a.party_id
+    where a.game_session_id=g and p.business_id=b and a.account_kind='checking' and a.currency_code='ECO';
+  select a.public_key into nrc_key from public.bank_accounts a join public.economic_parties p on p.id=a.party_id
+    where a.game_session_id=g and p.business_id=b and a.account_kind='checking' and a.currency_code='NRC';
+  quote := public.create_business_fx_quote_v1(g,owner_id,eco_key,'NRC',20,'instant','ref025-fx-out-quote',nrc_key);
+  result := public.execute_business_instant_fx_v1(g,owner_id,quote#>>'{quote,quote_key}','ref025-fx-out-order');
+  if result#>>'{order,status}'<>'settled' then raise exception 'REF025 outbound FX fixture failed'; end if;
+  quote := public.create_business_fx_quote_v1(g,owner_id,nrc_key,'ECO',1,'instant','ref025-fx-in-quote',eco_key);
+  result := public.execute_business_instant_fx_v1(g,owner_id,quote#>>'{quote,quote_key}','ref025-fx-in-order');
+  if result#>>'{order,status}'<>'settled' then raise exception 'REF025 inbound FX fixture failed'; end if;
   select count(*) into before_effects from public.audit_log where game_session_id=g;
   select * into assessed from economy_private.assess_business_loan_application_v1(g,b,product,60,last_time);
   if assessed.obligation_currency_code<>'ECO' or assessed.assessed_at<>last_time
