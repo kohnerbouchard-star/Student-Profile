@@ -395,3 +395,10 @@ assert.match(salesAssessment, /sum\(r.gross_revenue\)/u);
 assert.match(salesAssessment, /business_sales_authority_committed_at <= p_as_of/u);
 assert.doesNotMatch(salesAssessment, /create table|add column|foreign key|grant |drop constraint|insert into|update public/iu);
 console.log("REF025c2-2a private sales assessment SOURCE contract passed (not database execution).");
+
+const businessSubmission = await readFile(new URL("../backend/supabase/migrations/20261005004013_add_gated_business_loan_submission_v1.sql", import.meta.url), "utf8");
+assert.match(businessSubmission, /volatile security invoker/u);
+assert.match(businessSubmission, /BUSINESS_LOAN_READ_COMMITTED_REQUIRED/u);
+assert.match(businessSubmission, /loan_applications_business_request_unique_v1/u);
+assert.doesNotMatch(businessSubmission, /drop constraint|create table|add column|foreign key|grant |create or replace/iu);
+console.log("REF025c2-2b gated submission SOURCE contract passed (not database/race proof).");
