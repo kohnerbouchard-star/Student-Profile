@@ -62,5 +62,5 @@
     "stocks"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-034/preflight.md",
-  "authorizationNote": "Parent-approved REF-034 ten-path public writer handoff; both stock consumers retain the same repository/client, awaited notification and delivery writes, errors, deduplication and Story finalization. Package change is focused test registration only. Task/backlog, SQL, verifier/tests, release holds, deployment and secrets remain unchanged."
+  "authorizationNote": "Parent-approved REF-034 eleven-path public writer handoff; both stock consumers retain the same repository/client, awaited notification and delivery writes, errors, deduplication and Story finalization. Package change is focused test registration only. Task/backlog, SQL, verifier/tests, release holds, deployment and secrets remain unchanged."
 }

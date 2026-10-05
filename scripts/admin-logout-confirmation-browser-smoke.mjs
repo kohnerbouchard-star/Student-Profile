@@ -152,7 +152,17 @@ try {
     timeout: 15_000,
   });
 
+  const cdp = await page.context().newCDPSession(page);
+  const listenerCounts = {};
+  for (const expression of ["window", "document"]) {
+    const { result } = await cdp.send("Runtime.evaluate", { expression });
+    const { listeners } = await cdp.send("DOMDebugger.getEventListeners", { objectId: result.objectId });
+    listenerCounts[expression] = listeners.map(({ type, useCapture }) => `${type}:${useCapture}`).sort();
+  }
+  await cdp.detach();
+  const logoutRequests = () => requests.filter((value) => value.startsWith("POST ") && value.includes("/web-session-api/logout"));
   const realControl = await clickRealAccountLogout();
+  assert(logoutRequests().length === 0, "Opening confirmation sent logout.");
   const modal = page.locator("[data-econovaria-admin-logout-confirmation]");
   await modal.waitFor({ state: "visible", timeout: 5_000 });
   const legacyVisible = await page.locator(
@@ -242,6 +252,7 @@ try {
     "Cancel incorrectly cleared the Admin session.",
   );
 
+  assert(logoutRequests().length === 0, "Cancellation sent logout.");
   await clickRealAccountLogout();
   await modal.waitFor({ state: "visible", timeout: 5_000 });
   await Promise.all([
@@ -271,6 +282,7 @@ try {
     ),
     `Server-mediated Admin logout was not attempted: ${JSON.stringify(requests)}`,
   );
+  assert(logoutRequests().length === 1, "Confirmation did not issue exactly one logout POST.");
   assert(logoutResponseFulfilled, "The mocked Admin logout response did not complete.");
 
   const expectedNavigationAbort = /POST .*\/functions\/v1\/web-session-api\/logout net::ERR_ABORTED/i;
@@ -280,6 +292,8 @@ try {
   assert(remainingErrors.length === 0, remainingErrors.join("\n"));
   Object.assign(report, {
     realControl,
+    listenerCounts,
+    logoutRequestCount: logoutRequests().length,
     state,
     storage,
     serverMediatedLogoutObserved: true,

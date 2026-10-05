@@ -155,8 +155,8 @@ The contract on current `main`, including `story_cash_adjustments` and `story_ev
 ```text
 registry tables:       207
 registry SHA-256:       7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3
-foreign-key edges:     456
-FK graph SHA-256:       fe88cafd56ca4c21ab3c1d34385e21f4c3d8be201eae44ee7f5539a34a98f329
+foreign-key edges:     460
+FK graph SHA-256:       0c932d6e620cec801b527e81f3e4d3e91bd8d70fd4fb45d6e1a72166ff0c7a82
 direct delete tables:  206
 delete-order SHA-256:   19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897
 finalize cursor:        207

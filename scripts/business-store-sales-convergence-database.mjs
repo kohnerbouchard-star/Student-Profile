@@ -22,8 +22,8 @@ const purgeFingerprint = Object.freeze({
     "7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3",
   registryTableCount: 207,
   fkGraphSha256:
-    "fe88cafd56ca4c21ab3c1d34385e21f4c3d8be201eae44ee7f5539a34a98f329",
-  fkGraphEdgeCount: 456,
+    "0c932d6e620cec801b527e81f3e4d3e91bd8d70fd4fb45d6e1a72166ff0c7a82",
+  fkGraphEdgeCount: 460,
   deleteOrderSha256:
     "19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897",
   deleteOrderTableCount: 206,

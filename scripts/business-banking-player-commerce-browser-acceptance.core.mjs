@@ -109,6 +109,38 @@ if (process.argv.includes("--diagnostic-self-test")) {
   assert.equal(caught, original); assert.equal(finalized, true);
   for (const [present, balance] of [[false, 0], [true, 0], [true, 40]]) assert.equal(observeBalance(PLAYERS[1], present, balance), balance);
   assert.deepEqual(balanceObservations.map(({ cardPresent, balance }) => [cardPresent, balance]), [[false, 0], [true, 0], [true, 40]]);
+  const state = { routeLoading: { banking: true }, data: { resourceStatus: { banking: { state: "ready" } },
+    banking: { balances: [{ accountType: "checking", currencyCode: "LUM", balance: 10000 }] } } };
+  let card = null;
+  globalThis.Econovaria = { playerTerminal: { getState: () => state } };
+  globalThis.document = { querySelector: () => card };
+  globalThis.getComputedStyle = () => ({ visibility: "visible" });
+  const oldAbsentRead = () => card ? Number(card.querySelector().textContent.replace("LUM ", "")) : 0;
+  assert.equal(oldAbsentRead(), 0); assert.notEqual(oldAbsentRead(), 10000);
+  assert.equal(readyCurrencyBalance("LUM"), false);
+  state.routeLoading.banking = false;
+  assert.equal(readyCurrencyBalance("LUM"), false); // Known funded account still lacks its card.
+  card = { querySelector: () => ({ textContent: "LUM 10,000" }), getClientRects: () => [1] };
+  assert.deepEqual(readyCurrencyBalance("LUM"), { cardPresent: true, balance: 10000 });
+  globalThis.getComputedStyle = () => ({ visibility: "hidden" });
+  assert.equal(readyCurrencyBalance("LUM"), false);
+  globalThis.getComputedStyle = () => ({ visibility: "visible" });
+  state.data.banking.balances[0].balance = 0;
+  assert.equal(readyCurrencyBalance("LUM"), false); // Stale rendered amount must not pass.
+  card.querySelector = () => ({ textContent: "LUM 0" });
+  assert.deepEqual(readyCurrencyBalance("LUM"), { cardPresent: true, balance: 0 });
+  state.data.banking.stale = true; assert.equal(readyCurrencyBalance("LUM"), false);
+  state.data.banking.stale = false; assert.deepEqual(readyCurrencyBalance("LUM"), { cardPresent: true, balance: 0 });
+  state.data.banking.balances[0].balance = 10000.125;
+  card.querySelector = () => ({ textContent: "LUM 10,000.13" });
+  assert.deepEqual(readyCurrencyBalance("LUM"), { cardPresent: true, balance: 10000.13 });
+  card = null; state.data.banking.balances[0].currencyCode = "NRC";
+  assert.deepEqual(readyCurrencyBalance("LUM"), { cardPresent: false, balance: 0 });
+  state.data.banking.stale = true; assert.equal(readyCurrencyBalance("LUM"), false);
+  state.data.banking.stale = false;
+  state.data.resourceStatus.banking.state = "unavailable";
+  assert.equal(readyCurrencyBalance("LUM"), false);
+  delete globalThis.Econovaria; delete globalThis.document; delete globalThis.getComputedStyle;
   console.log("Diagnostic allowlist, absent/zero/40 distinction, and original failure semantics passed.");
   process.exit(0);
 }
@@ -351,18 +383,33 @@ async function openRoute(session, route, selector) {
   await session.page.locator(selector).waitFor({ state: "visible", timeout: 30_000 });
 }
 
-function parseCurrencyAmount(text) {
-  const match = String(text).replace(/,/g, "").match(/(-?[0-9]+(?:\.[0-9]{1,2})?)/);
-  if (!match) throw new Error(`Could not parse currency amount from ${redact(text)}.`);
-  return Number(match[1]);
+function readyCurrencyBalance(currencyCode) {
+  const state = globalThis.Econovaria?.playerTerminal?.getState?.();
+  const bank = state?.data?.banking;
+  if (state?.routeLoading?.banking !== false || state?.routeErrors?.banking ||
+      state?.data?.resourceStatus?.banking?.state !== "ready" || bank?.stale || !Array.isArray(bank?.balances)) return false;
+  const rows = bank.balances.length ? bank.balances : [{ ...bank.checking, accountType: "checking",
+    currencyCode: bank.checking?.currencyCode || state.data.session?.currencyCode }];
+  if (rows.some((row) => typeof row.currencyCode !== "string" || !row.currencyCode.trim())) return false;
+  const row = rows.find((item) => item.currencyCode.trim().toUpperCase() === currencyCode &&
+    ["checking", "cash"].includes(String(item.accountKind || item.accountType || "checking").trim().toLowerCase()));
+  const card = document.querySelector(`[data-player-banking-balance="checking:${currencyCode}"], [data-player-banking-balance="cash:${currencyCode}"]`);
+  if (!row) return card ? false : { cardPresent: false, balance: 0 };
+  const amount = row.postedAmount ?? row.balance;
+  const text = card?.querySelector("h3")?.textContent?.replace(currencyCode, "").trim();
+  const expected = Number(amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  if (!card?.getClientRects().length || getComputedStyle(card).visibility !== "visible" || amount === null || amount === undefined || amount === "" ||
+      !Number.isFinite(Number(amount)) || text !== expected) return false;
+  return { cardPresent: true, balance: Number(text.replace(/,/g, "")) };
 }
 
 async function balanceForCurrency(session, currencyCode) {
   await openRoute(session, "banking", ".player-terminal-banking-page");
-  const card = session.page.locator(`[data-player-banking-balance="checking:${currencyCode}"], [data-player-banking-balance="cash:${currencyCode}"]`).first();
-  if (!(await card.count())) return observeBalance(session, false, 0);
-  await card.waitFor({ state: "visible", timeout: 30_000 });
-  return observeBalance(session, true, parseCurrencyAmount(await card.locator("h3").innerText()));
+  const snapshot = await session.page.waitForFunction(readyCurrencyBalance, currencyCode, { timeout: 30_000 })
+    .catch((error) => { throw new Error("Banking currency balance did not become authoritative within 30 seconds.", { cause: error }); });
+  const { cardPresent, balance } = await snapshot.jsonValue();
+  await snapshot.dispose();
+  return observeBalance(session, cardPresent, balance);
 }
 
 async function sendTransfer(sender, recipient, currencyCode) {

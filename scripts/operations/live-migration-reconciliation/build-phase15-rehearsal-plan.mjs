@@ -18,6 +18,15 @@ export const NONCE_SUFFIX = Object.freeze({
   statementCount: 1,
 });
 
+// Independently approved suffixes; immutable Phase15 manifests/certificates stay unchanged.
+export const APPROVED_SUFFIXES = Object.freeze([NONCE_SUFFIX,
+  Object.freeze({"order": 2,"filename": "20261004145731_add_loan_liability_contract_v1.sql","version": "20261004145731","name": "add_loan_liability_contract_v1","sourceSha256": "68db868ce5dcaeb2cc166be3e8a2f007e56564906fa8cf9bf0793ba716fd28ea","rawSha256": "9aaafa96b25d981d1bfece7ed1f64c185a0f8c0c35ca774fa09a23adfcacd5e0","statementCount": 1}),
+  Object.freeze({"order": 3,"filename": "20261004202506_reconcile_loan_liability_purge_graph_v1.sql","version": "20261004202506","name": "reconcile_loan_liability_purge_graph_v1","sourceSha256": "87385e44df78a4649f35ed3e39630c83a30fe3ec0b895e4f4d5508e7005ce9b8","rawSha256": "b8d24a799eba7ef55f93132888daf8bdbb75d12e78bc17c272dceb39e2a3c456","statementCount": 1}),
+  Object.freeze({"order":4,"filename":"20261004221307_prepare_business_loan_bindings_v1.sql","version":"20261004221307","name":"prepare_business_loan_bindings_v1","sourceSha256":"cd36eee2482087b584e8fbe4edb3235178ab1d255364937d1edbfd2c0df1917c","rawSha256":"7bf22dd6bd3d10881b52a2cab44f127d836064bf15e66b291c724ac54a094ea7","statementCount":1}),
+  Object.freeze({"order":5,"filename":"20261004235046_add_private_business_loan_sales_assessment_v1.sql","version":"20261004235046","name":"add_private_business_loan_sales_assessment_v1","sourceSha256":"1a48a858950985ae579c09a310ced25ae8741f63d84530d70d00f8917c925e69","rawSha256":"26a09c87287ff685493d8a5aec4f9e5478cd6ff49c9cb925104939bb5cc4021d","statementCount":1}),
+  Object.freeze({"order":6,"filename":"20261005004013_add_gated_business_loan_submission_v1.sql","version":"20261005004013","name":"add_gated_business_loan_submission_v1","sourceSha256":"d77267442bf98917b2531c394285128d909e3dd76bd3b04f32f4b6980a061956","rawSha256":"e9ab53f6d86cfe0712c5366ee8f174b7331a23ddcb210056d0bd4bd3f6b77ab2","statementCount":1})
+]);
+
 export async function buildRehearsalPlan(bundle, migrationsDirectory = directory) {
   const expected = await loadPhase15Migrations(bundle.environment, migrationsDirectory);
   assert.equal(bundle.schemaVersion, 1);
@@ -29,12 +38,15 @@ export async function buildRehearsalPlan(bundle, migrationsDirectory = directory
     order, filename, version, name, sourceSha256, statementCount: 1, outerTransactionStripped,
   })), "Immutable bundle identity/order/digest mismatch.");
   const later = (await readdir(migrationsDirectory)).filter((name) => name.endsWith(".sql") && name.slice(0, 14) > PHASE15_END).sort();
-  assert.deepEqual(later, [NONCE_SUFFIX.filename], "Unapproved or missing post-bundle suffix.");
-  const source = await readFile(path.join(migrationsDirectory, NONCE_SUFFIX.filename));
+  assert.deepEqual(later, APPROVED_SUFFIXES.map(row => row.filename), "Unapproved or missing post-bundle suffix.");
   const digest = (value) => createHash("sha256").update(value).digest("hex");
-  assert.equal(digest(source), NONCE_SUFFIX.rawSha256, "Suffix raw digest mismatch.");
-  assert.equal(digest(source.toString("utf8").replaceAll("\r\n", "\n").trim()), NONCE_SUFFIX.sourceSha256);
-  return { schemaVersion: 1, bundle, suffix: { schemaVersion: 1, environment: bundle.environment, migrationCount: 1, migrations: [NONCE_SUFFIX] } };
+  for (const suffix of APPROVED_SUFFIXES) {
+    const source = await readFile(path.join(migrationsDirectory, suffix.filename));
+    assert.equal(digest(source), suffix.rawSha256, "Suffix raw digest mismatch.");
+    assert.equal(digest(source.toString("utf8").replaceAll("\r\n", "\n").trim()), suffix.sourceSha256);
+  }
+  return { schemaVersion: 1, bundle, suffix: { schemaVersion: 1, environment: bundle.environment,
+    migrationCount: APPROVED_SUFFIXES.length, migrations: APPROVED_SUFFIXES } };
 }
 
 export function partitionRehearsalLedger(plan, live) {

@@ -344,3 +344,61 @@ assertBefore(recoverLoan, "metadata ->> 'idempotency_key'", "LOAN_NOT_RESTRUCTUR
 assert.match(recoverLoan, /'active', 'delinquent', 'defaulted'/u);
 assert.doesNotMatch(recoverLoan, /request_hash|IDEMPOTENCY_KEY_CONFLICT|set principal_balance/u);
 console.log("REF025a loan binding, servicing and replay SQL source characterization passed (not database execution).");
+
+const liability = await readFile("backend/supabase/migrations/20261004145731_add_loan_liability_contract_v1.sql", "utf8");
+for (const table of ["loan_applications", "player_loans"]) {
+  assert.ok(liability.includes(`${table}_business_liability_disabled_v1`));
+  assert.ok(liability.includes(`${table}_operator_scope_fk_v1`));
+  assert.ok(liability.includes(`${table}_borrower_scope_fk_v1`));
+}
+assert.equal((liability.match(/check \(liability_kind = 'legacy_v1'\)/g) || []).length, 2);
+assert.doesNotMatch(liability, /create (?:or replace )?function|drop constraint|grant |disable row level/i);
+console.log("REF025c1 inert liability schema source contract passed (not database proof).");
+
+// c2-0 records existing provenance/classification, not an approved income policy.
+const receiptSource = await readFile("backend/supabase/migrations/20260827094000_multicurrency_store_funding_settlement_v1.sql", "utf8");
+const receiptStart = receiptSource.indexOf("create or replace function economy_private.validate_store_offer_purchase_receipt_v2()");
+assert.ok(receiptStart >= 0);
+const receiptValidator = receiptSource.slice(receiptStart, receiptSource.indexOf("\ncreate or replace function ", receiptStart + 1));
+const receiptBranches = receiptValidator.split("\n  else\n");
+assert.equal(receiptBranches.length, 2);
+for (const marker of ["funding_row.game_session_id = new.game_session_id", "funding_row.target_account_id = new.target_bank_account_id",
+  "funding_row.target_currency_code = new.currency_code", "funding_row.target_amount = new.total_price",
+  "funding_row.source_action = 'business_offer_purchase_funding'", "party_row.business_id = new.business_id",
+  "entry_row.bank_transaction_id = new.bank_transaction_id", "entry_row.line_metadata ->> 'lineRole' = 'purchase_funding_recipient_credit'"])
+  assert.ok(receiptBranches[0].includes(marker), marker);
+for (const marker of ["entry_row.id = new.business_credit_ledger_entry_id", "entry_row.business_id = new.business_id",
+  "entry_row.game_session_id = new.game_session_id", "entry_row.currency_code = new.currency_code",
+  "entry_row.amount = new.business_credit", "entry_row.source_action = 'business_offer_purchase_credit'", "entry_row.source_id = new.id"])
+  assert.ok(receiptBranches[1].includes(marker), marker);
+const cashClasses = await readFile("backend/supabase/migrations/20260918032648_business_financial_statements_v1.sql", "utf8");
+assert.ok(cashClasses.includes("when l.source_domain='banking_fx' then 'exchange'"));
+assert.ok(cashClasses.includes("when l.source_action in ('capital_contribution_in','capitalization_in','ipo_primary_subscription') then 'capital'"));
+assert.ok(cashClasses.includes("when l.source_action='loan_disbursement' then 'financing'"));
+assert.match(cashClasses, /'account_transfer_in','account_transfer_out'\)[\s\S]*?then 'operating'/u);
+console.log("REF025c2-0 receipt provenance and cash classification SOURCE characterization passed; approved income policy awaits separate c2-2 implementation.");
+
+// c2-1 SOURCE only: legacy bodies are spliced, gates and economic RPCs stay intact.
+const loanBindings = await readFile(new URL("../backend/supabase/migrations/20261004221307_prepare_business_loan_bindings_v1.sql", import.meta.url), "utf8");
+for (const token of ["BUSINESS_LOAN_IDENTITY_IMMUTABLE", "BUSINESS_LOAN_BINDING_SOURCE_DRIFT",
+  "public.resolve_player_business_v2", "ep.business_id=b.id", "a.obligation_currency_code=new.currency_code",
+  "a.initiating_operator_player_id=new.initiating_operator_player_id", "for share of b,p",
+  "conname=tg_table_name||'_business_liability_disabled_v1'", "to_jsonb(new)->>'liability_kind'"]) {
+  assert.ok(loanBindings.includes(token), `c2-1 missing binding invariant: ${token}`);
+}
+assert.doesNotMatch(loanBindings, /drop constraint|create table|foreign key|grant |record_player_ledger_entry/iu);
+console.log("REF025c2-1 gated binding SOURCE contract passed (not database execution).");
+
+const salesAssessment = await readFile(new URL("../backend/supabase/migrations/20261004235046_add_private_business_loan_sales_assessment_v1.sql", import.meta.url), "utf8");
+assert.match(salesAssessment, /stable security invoker/u);
+assert.match(salesAssessment, /sum\(r.gross_revenue\)/u);
+assert.match(salesAssessment, /business_sales_authority_committed_at <= p_as_of/u);
+assert.doesNotMatch(salesAssessment, /create table|add column|foreign key|grant |drop constraint|insert into|update public/iu);
+console.log("REF025c2-2a private sales assessment SOURCE contract passed (not database execution).");
+
+const businessSubmission = await readFile(new URL("../backend/supabase/migrations/20261005004013_add_gated_business_loan_submission_v1.sql", import.meta.url), "utf8");
+assert.match(businessSubmission, /volatile security invoker/u);
+assert.match(businessSubmission, /BUSINESS_LOAN_READ_COMMITTED_REQUIRED/u);
+assert.match(businessSubmission, /loan_applications_business_request_unique_v1/u);
+assert.doesNotMatch(businessSubmission, /drop constraint|create table|add column|foreign key|grant |create or replace/iu);
+console.log("REF025c2-2b gated submission SOURCE contract passed (not database/race proof).");

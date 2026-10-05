@@ -8,13 +8,13 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1276,
+    "sourceFiles": 1277,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 26,
-    "compatibilityMarkerFiles": 209,
+    "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 100,
     "capabilityStrings": 136
@@ -2402,6 +2402,12 @@
         "file": "backend/src/domains/auth/api/staffSignupResendHttpHandler.ts",
         "markers": [
           "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts",
+        "markers": [
+          "legacy_v1"
         ]
       },
       {
