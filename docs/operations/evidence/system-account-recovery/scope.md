@@ -3,6 +3,7 @@
 Status: IN_PROGRESS; not deployed or approved for live execution.
 Dependency: PR862 at 422c8dbeb5b20111739778a2ce1a17f7842f7c74.
 Owner branch: feat/staging-system-account-recovery.
+Dependent draft PR: https://github.com/kohnerbouchard-star/Student-Profile/pull/863. Implementation commit: b12c24fe993c498cce6569a5629c386b4de140c3.
 
 The owner authorized code, disposable tests, independent review and a separate dependent draft PR on 2026-10-05. The parent approved two tranches: security state/operator, then user journey. This explicitly expands the former four-file/400-line routing repair; that budget is not represented as satisfied by this capability. Each tranche requires independent review. Existing PR862 authority is unchanged.
 
@@ -44,3 +45,5 @@ Local focused run passed 10 tests: seven operator-adapter contracts, two Chromiu
 ## Remaining execution blockers
 
 No live operator adapter is bound. Fresh external operator authentication, approved provider session revocation, encrypted durable grant delivery, audit/notification delivery and trusted reconciliation/restart for interrupted or expired attempts still require implementation and review. The workflow rejects manual execution. In particular, an ambiguous password-provider result must never be retried automatically: the account stays restricted pending trusted reconciliation. The private outbox records intent; it is not a delivery worker. Do not deploy these incomplete execution paths or claim operational recovery readiness.
+
+Repository-wide rerun passed inventory consistency, then failed the architecture ratchet: oversizedSourceFiles=101 exceeds baseline 100 because staff-mfa-api/index.ts grew past its size limit. Do not raise the baseline or compress formatting. A reviewed extraction into a dedicated recovery module is needed; that new implementation path is outside the exact current allowlist. Full repository validation and exact-head CI are therefore not green.
