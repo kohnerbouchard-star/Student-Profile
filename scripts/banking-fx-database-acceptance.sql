@@ -515,7 +515,7 @@ declare
   item uuid := gen_random_uuid(); store_item uuid := gen_random_uuid(); offer uuid := gen_random_uuid();
   listing uuid; product uuid; quote jsonb; result jsonb; assessed record; account_key text;
   offer_key text; business_key text; receipt public.store_offer_purchase_receipts%rowtype;
-  first_time timestamptz; last_time timestamptz; before_effects bigint; after_effects bigint;
+  first_time timestamptz; last_time timestamptz; assessment_time timestamptz; before_effects bigint; after_effects bigint;
   role_name text; action text; definition text; credit record; eco_key text; nrc_key text;
 begin
   insert into public.staff_users(id,supabase_auth_user_id,email,display_name)
@@ -605,9 +605,12 @@ begin
   quote := public.create_business_fx_quote_v1(g,owner_id,nrc_key,'ECO',1,'instant','ref025-fx-in-quote',eco_key);
   result := public.execute_business_instant_fx_v1(g,owner_id,quote#>>'{quote,quote_key}','ref025-fx-in-order');
   if result#>>'{order,status}'<>'settled' then raise exception 'REF025 inbound FX fixture failed'; end if;
+  perform public.record_player_ledger_entry(g,owner_id,'checking',1000,'ECO','credit','admin',
+    'business_banking_correction',null,'system',null,jsonb_build_object('bankTransactionIdempotencyKey','ref025-personal-credit'));
+  assessment_time := clock_timestamp();
   select count(*) into before_effects from public.audit_log where game_session_id=g;
-  select * into assessed from economy_private.assess_business_loan_application_v1(g,b,product,60,last_time);
-  if assessed.obligation_currency_code<>'ECO' or assessed.assessed_at<>last_time
+  select * into assessed from economy_private.assess_business_loan_application_v1(g,b,product,60,assessment_time);
+  if assessed.obligation_currency_code<>'ECO' or assessed.assessed_at<>assessment_time
     or assessed.qualifying_income<>240 or assessed.income_per_payment<>40 or assessed.projected_payment<>10
     or assessed.affordability_ratio<>0.25 or not assessed.affordable or assessed.minimum_credit_score<>600
     or assessed.maximum_payment_to_income<>0.45 then raise exception 'REF025 sales assessment mismatch: %',assessed; end if;
