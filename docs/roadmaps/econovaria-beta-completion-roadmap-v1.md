@@ -21,6 +21,13 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`BETA-PROD-WEB-SESSION-CANONICAL-ORIGIN-001` — Canonical production auth release target (2026-09-21)**
+  - Status: `IMPLEMENTED_NOT_MERGED`. Draft PR #735 / `fix/production-web-session-canonical-origin-v1`, implementation commit `ae8c0ca6c3da77ceca23e23de11c3aa0b6565b1e`, based on main `a303d9f067f8f37dbd2a57391cc8b31e7a4021e1`.
+  - Scope: replace the retired `https://econovaria.vercel.app` production probe target with canonical `https://www.econovaria.com` across the active orchestrated and fallback web-session recovery/release workflows, the active release request and recovery authorization, and their regression contracts. The apex and legacy Vercel aliases remain only in the exact CORS allowlist; historical completed-deployment evidence remains unchanged.
+  - Safety: exact-main identity, immutable source packaging, staging deployment, protected production approval, project binding, database preconditions, deployed-source equality and fail-closed probes remain mandatory. Pull-request validation performs no deployment, database change, secret change or production mutation. Merging the release-request path is itself a protected release trigger and must not occur independently of the Admin and Player authentication repairs.
+  - Verification: `npm run test:web-session-release` passed 45/45; eight edited workflows and two JSON contracts parsed; changed-source secret scan and `git diff --check` passed. Exact-head CI is pending.
+  - Next exact item: merge and certify the Admin and Player service-role credential repairs, rebase #735 onto that exact main, rerun its exact-head matrix, then merge #735 only as the coordinated staging-to-production web-session release trigger and verify both canonical login paths.
+
 - **`BETA-LIVE-MIGRATION-PARITY-001` — Phase 15 program (2026-09-20)**
   - Owner authorizes the full gated 15A–15F program. This supersedes prior no-Phase-15/no-release authorization statements, while preserving the requirement that production changes follow certified 15A–15E gates.
   - Status: `IN_PROGRESS`; 15A hard gate `BLOCKED`, later tranches unopened. Owner branch `fix/phase15-live-migration-parity-v1`, source main `22dc9ce5023eb200a6608d5bb90a9ac30cb36c90`.
