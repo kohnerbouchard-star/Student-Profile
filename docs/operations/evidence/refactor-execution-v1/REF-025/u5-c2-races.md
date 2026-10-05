@@ -34,7 +34,7 @@ Base 7268f9ccec7bf411ca359f1058ccbe7386f7e2eb: Child1 #865 merged qualified923f7
 User approved merge and Child2 continuation on2026-10-05; parent retains Child2 review/merge authority.
 Exactly5 paths /390 semantic changed lines (additions+deletions), including this record:
 scripts/ref025-business-loan-concurrency.sql (new fixture), scripts/ref025-business-loan-concurrency.mjs,
-scripts/ref025-business-loan-concurrency.test.mjs, this file, and the newly assigned draft PR authority JSON.
+scripts/ref025-business-loan-concurrency.test.mjs, this file, and docs/operations/contracts/player-cross-cutting/pr-866.json (draft #866).
 Fresh13-open-PR full-path census: no collisions, including paginated #620; #859 remains unqualified history.
 Only duplicate/conflicting submission races, injected rollback and two-game isolation; existing private command unchanged.
 Remove only application creation CHECK in the attested disposable Banking phase; retain validated player_loans CHECK throughout.
