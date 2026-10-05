@@ -33,7 +33,7 @@ Deno.test('shared Staff resolver rejects restricted access before any Staff data
     createAuthClient:()=>({auth:{getUser:async()=>({data:{user:{id:user}},error:null})}} as any),
     createServiceClient:()=>service as any,
   },{missingMessage:'missing'});
-  if(result.ok || result.error.code!=='staff_recovery_restricted' || queried) throw Error('shared route bypass');
+  if(result.ok !== false || result.error.code!=='staff_recovery_restricted' || queried) throw Error('shared route bypass');
 });
 
 Deno.test('independent Admin API rejects restriction before loading grants', async () => {
@@ -46,5 +46,5 @@ Deno.test('independent Admin API rejects restriction before loading grants', asy
   const result=await guardAdminRequest(new Request(`${staging}/functions/v1/admin-api/games`,{
     headers:{'x-econovaria-recovery-grant':'forged'},
   }),{token:token(),user:{id:user},staff:{id:user},games:[],service:service as any},'/games');
-  if(result.ok || result.code!=='staff_recovery_restricted' || queried!==1) throw Error('Admin route bypass');
+  if(result.ok !== false || result.code!=='staff_recovery_restricted' || queried!==1) throw Error('Admin route bypass');
 });

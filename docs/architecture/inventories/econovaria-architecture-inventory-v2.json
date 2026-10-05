@@ -8,15 +8,15 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1276,
+    "sourceFiles": 1278,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
-    "persistenceOutsideInfrastructure": 53,
+    "persistenceOutsideInfrastructure": 54,
     "crossDomainDeepImports": 163,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 101,
+    "oversizedSourceFiles": 100,
     "capabilityStrings": 136
   },
   "domains": [
@@ -693,6 +693,10 @@
       },
       {
         "file": "backend/supabase/functions/staff-mfa-api/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/staff-mfa-api/systemRecovery.ts",
         "layer": "outside-domain"
       },
       {
@@ -3493,10 +3497,6 @@
       {
         "file": "admin/v2/src/routes/news-events/NewsEventsRoute.js",
         "lines": 544
-      },
-      {
-        "file": "backend/supabase/functions/staff-mfa-api/index.ts",
-        "lines": 541
       },
       {
         "file": "admin/v2/src/routes/market/MarketController.js",

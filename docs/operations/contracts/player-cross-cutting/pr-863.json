@@ -20,6 +20,8 @@
     "backend/supabase/functions/admin-api/systemRecoveryGuard.test.ts",
     "backend/supabase/functions/password-reset-api/index.ts",
     "backend/supabase/functions/staff-mfa-api/index.ts",
+    "backend/supabase/functions/staff-mfa-api/systemRecovery.test.ts",
+    "backend/supabase/functions/staff-mfa-api/systemRecovery.ts",
     "backend/supabase/migrations/20261005212732_system_account_recovery_v1.sql",
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-863.json",

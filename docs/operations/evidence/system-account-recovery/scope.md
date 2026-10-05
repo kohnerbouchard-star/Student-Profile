@@ -18,6 +18,7 @@ Recovery approval belongs to an external system operator, never game_admin or th
 - backend/supabase/functions/admin-api/adminSecurityGuard.ts and focused tests.
 - backend/src/domains/auth/api/staffLoginHttpHandler.ts and focused tests.
 - backend/supabase/functions/staff-mfa-api/index.ts and focused tests.
+- Parent approved systemRecovery.ts and systemRecovery.test.ts in the same directory for behavior-preserving extraction and concurrent handler tests.
 - backend/supabase/functions/password-reset-api/index.ts.
 - backend/supabase/functions/web-session-api/index.ts.
 - api/password-reset.js and focused proxy tests.
@@ -46,4 +47,10 @@ Local focused run passed 10 tests: seven operator-adapter contracts, two Chromiu
 
 No live operator adapter is bound. Fresh external operator authentication, approved provider session revocation, encrypted durable grant delivery, audit/notification delivery and trusted reconciliation/restart for interrupted or expired attempts still require implementation and review. The workflow rejects manual execution. In particular, an ambiguous password-provider result must never be retried automatically: the account stays restricted pending trusted reconciliation. The private outbox records intent; it is not a delivery worker. Do not deploy these incomplete execution paths or claim operational recovery readiness.
 
-Repository-wide rerun passed inventory consistency, then failed the architecture ratchet: oversizedSourceFiles=101 exceeds baseline 100 because staff-mfa-api/index.ts grew past its size limit. Do not raise the baseline or compress formatting. A reviewed extraction into a dedicated recovery module is needed; that new implementation path is outside the exact current allowlist. Full repository validation and exact-head CI are therefore not green.
+### Extraction checkpoint
+
+Parent approved `backend/supabase/functions/staff-mfa-api/systemRecovery.ts` and `systemRecovery.test.ts`. The handler and shared error class were extracted without changing its entrypoint authorization or signed-factor callbacks. Five handler tests now cover overlapping enrollment against an atomic reservation mock, interruption, backup assurance, slot ownership and response filtering. Independent review found no new blocker. The architecture ratchet returns to its unchanged baseline of 100 oversized sources.
+
+CI on `24c5a013` passed the recovery workflow and actual Edge typecheck step. Backend/Admin test jobs exposed two test discriminant checks under their non-strict configuration; explicit boolean narrowing fixes those, with nine affected handler/guard tests passing under that exact configuration. New head CI is still required.
+
+Database Replay on that head stops before database startup because `scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs` does not register the new migration in `APPROVED_SUFFIXES`. The file governs both staging and production rehearsal plans. No approval list or immutable certificate was changed. Parent must approve the exact suffix registration path/change before that gate can be resolved; this is code/evidence registration, not authorization to run a live rehearsal or deploy. Operator implementation work remains outstanding as above.

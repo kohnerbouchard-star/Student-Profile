@@ -12,6 +12,7 @@ on:
       - 'backend/supabase/functions/admin-api/*SecurityGuard*'
       - 'backend/supabase/functions/admin-api/systemRecoveryGuard.test.ts'
       - 'backend/supabase/functions/staff-mfa-api/index.ts'
+      - 'backend/supabase/functions/staff-mfa-api/systemRecovery*'
       - 'backend/supabase/functions/password-reset-api/index.ts'
       - 'api/password-reset.js'
       - 'auth/reset-password.*'
@@ -38,6 +39,7 @@ jobs:
       - name: Staff restriction and session guards
         run: >-
           deno test --deny-net --allow-env --config backend/supabase/functions/deno.json
+          backend/supabase/functions/staff-mfa-api/systemRecovery.test.ts
           backend/supabase/functions/admin-api/systemRecoveryGuard.test.ts
           backend/supabase/functions/admin-api/adminSecurityGuard.test.ts
           backend/supabase/functions/admin-api/edgeStaffSessionMfaPolicy.test.ts
