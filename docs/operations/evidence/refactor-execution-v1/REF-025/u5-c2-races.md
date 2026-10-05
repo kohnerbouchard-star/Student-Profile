@@ -28,3 +28,19 @@ Next: exact-head Child1 qualification and parent review, then separately registe
 Independent review blocked d17d7e8: empty execFile output parsed as zero; no post-await cleanup deadline check.
 Pinned Node22.23.1 reproduced resolved empty stdout after41ms with timeout5ms/blocked loop40ms; new strict parser checks deadline first.
 Earlier green lifecycle/reset evidence is retained but cannot qualify the corrected head; fresh CI/review required.
+
+## Child 2 — approved disposable submission races
+Base 7268f9ccec7bf411ca359f1058ccbe7386f7e2eb: Child1 #865 merged qualified923f7a75 with identical tree; all7 main workflows passed.
+User approved merge and Child2 continuation on2026-10-05; parent retains Child2 review/merge authority.
+Exactly5 paths /390 semantic changed lines (additions+deletions), including this record:
+scripts/ref025-business-loan-concurrency.sql (new fixture), scripts/ref025-business-loan-concurrency.mjs,
+scripts/ref025-business-loan-concurrency.test.mjs, this file, and the newly assigned draft PR authority JSON.
+Fresh13-open-PR full-path census: no collisions, including paginated #620; #859 remains unqualified history.
+Only duplicate/conflicting submission races, injected rollback and two-game isolation; existing private command unchanged.
+Remove only application creation CHECK in the attested disposable Banking phase; retain validated player_loans CHECK throughout.
+Use real Store sales, existing canonical authority and unchanged session helper; exact PID/start lock barrier, no sleeps as race proof.
+Compare complete application/profile/audit and monetary snapshots; replay keeps original initiator/assessment; no extra loan/ledger effects.
+Full database reset remains mandatory, followed by independent gate/migration and new fixture-absence checks; client/backend exit stays bounded.
+No workflow/shared helper/package/migration/Player/Markets/auth edits, hosted access, dispatch or deployment. Nine U1 holds unchanged.
+REF025 remains BLOCKED; REF027 depends025+026. No new liability/default/FX semantics or activation credit.
+Validation: pending implementation, pinned tests, disposable Banking CI and parent review. Revert only this bounded test change.
