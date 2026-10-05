@@ -5,6 +5,8 @@ import {
 } from "../../../src/platform/supabase/edgeResponse.ts";
 import {
   resolveStaffSessionForRequest,
+  recoveryGrantDigest,
+  recoverySessionId,
   type EdgeSupabaseClient,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
 import {
@@ -46,6 +48,16 @@ Deno.serve(async (incomingRequest) => {
   }
 
   const path = functionPath(request);
+  const recoveryOperation = path.startsWith("/staff/mfa/recovery/") ? path.split("/").at(-1) : null;
+  let recoveryBody: Record<string, unknown> | null = null;
+  let grantDigest: string | null = null;
+  if (recoveryOperation) {
+    if (env.value.supabaseUrl !== "https://eecvbssdvarfcykcfrny.supabase.co" || request.method !== "POST" ||
+      !["claim", "status", "enroll", "verify"].includes(recoveryOperation)) return jsonError(403, {code:"recovery_unavailable",message:"Recovery is unavailable.",retryable:false});
+    try { recoveryBody = await readJsonBody(request); grantDigest = await recoveryGrantDigest(recoveryBody.grant); }
+    catch { return jsonError(400, {code:"invalid_recovery_request",message:"Recovery request is invalid.",retryable:false}); }
+    if (!grantDigest) return jsonError(403, {code:"recovery_unavailable",message:"Recovery is unavailable.",retryable:false});
+  }
   const requiredAal = path.endsWith("/verify") || path.endsWith("/enroll")
     ? "aal1"
     : path.endsWith("/unenroll")
@@ -57,6 +69,7 @@ Deno.serve(async (incomingRequest) => {
     { createAuthClient, createServiceClient },
     {
       missingMessage: "A verified staff user is required for MFA management.",
+      ...(grantDigest ? {recoveryGrantDigest: grantDigest, claimRecovery: recoveryOperation === "claim"} : {}),
       requiredRole: "game_admin",
       requiredAssuranceLevel: requiredAal,
       allowedStatuses: ["active", "onboarding"],
@@ -73,6 +86,10 @@ Deno.serve(async (incomingRequest) => {
   }) as any;
 
   try {
+    if (recoveryOperation && recoveryBody && grantDigest) {
+      return await handleSystemRecovery(userClient, staffResult.serviceClient, staffResult.authUser.id,
+        authorization.replace(/^Bearer\s+/iu, ""), grantDigest, recoveryOperation, recoveryBody, staffResult.assuranceLevel);
+    }
     if (path === "/staff/mfa" && request.method === "GET") {
       return handleStatus(userClient, staffResult.authUser.id);
     }
@@ -480,4 +497,44 @@ class MfaRequestError extends Error {
     super(message);
     this.name = "MfaRequestError";
   }
+}
+
+async function handleSystemRecovery(
+  userClient: any, service: EdgeSupabaseClient, userId: string, token: string,
+  digest: string, operation: string, body: Record<string, unknown>, aal: string,
+): Promise<Response> {
+  const allowed = operation === "enroll" ? ["grant", "slot"] : operation === "verify"
+    ? ["grant", "slot", "factorHandle", "code"] : ["grant"];
+  rejectUnknownFields(body, new Set(allowed));
+  const args = {p_user:userId,p_session:recoverySessionId(token,userId),p_digest:digest};
+  const found=await service.rpc<any>("system_recovery_context_v1",args);
+  const context=found.data;
+  if(found.error || !context || context.phase!=="enrolling") throw new MfaRequestError("recovery_unavailable","Recovery requires a fresh authorized attempt.",403,false);
+  if(operation==="claim" || operation==="status") return jsonResponse(200,{ok:true,
+    primaryVerified:context.primaryVerified===true,backupVerified:context.backupVerified===true,
+    setupInterrupted:Boolean((context.primaryReserved && !context.primaryVerified)||(context.backupReserved && !context.backupVerified)),
+  },privateHeaders());
+  const slot=body.slot;
+  if(slot!=="primary" && slot!=="backup") throw new MfaRequestError("invalid_recovery_request","Choose the recovery authenticator slot.",400,false);
+  if(slot==="backup" && (!context.primaryVerified || aal!=="aal2")) throw new MfaRequestError("staff_mfa_required","Verify the primary authenticator first.",403,false);
+  if(operation==="enroll") {
+    if(context[slot]) throw new MfaRequestError("recovery_setup_interrupted","This setup already started. Contact the system operator if its QR code is unavailable.",409,false);
+    const reservation=await service.rpc("system_recovery_reserve_factor_v1",{...args,p_slot:slot});
+    if(reservation.error) throw new MfaRequestError("recovery_setup_interrupted","Recovery setup already started. Contact the system operator if interrupted.",409,false);
+    const enrolled=await createCanonicalTotpEnrollment(userClient,`Econovaria recovery ${slot}`);
+    if(!enrolled.ok) throw new MfaRequestError(enrolled.code,enrolled.message,enrolled.status,enrolled.retryable);
+    const saved=await service.rpc("system_recovery_record_factor_v1",{...args,p_factor:enrolled.factorId,p_slot:slot});
+    if(saved.error) {
+      await userClient.auth.mfa.unenroll({factorId:enrolled.factorId});
+      throw new MfaRequestError("recovery_setup_failed","Recovery setup could not be recorded.",503,false);
+    }
+    return jsonResponse(201,{ok:true,factor:{handle:await createFactorHandle(userId,enrolled.factorId),
+      qrCode:enrolled.qrCode,secret:enrolled.secret}},privateHeaders());
+  }
+  const factorId=await readFactorHandle(body.factorHandle,userId);
+  if(!context[slot] || context[slot]!==factorId) throw new MfaRequestError("recovery_factor_denied","This factor does not belong to this recovery attempt.",403,false);
+  const verified=await handleVerify(userClient,userId,{factorHandle:body.factorHandle,code:body.code});
+  if(!verified.ok) return verified;
+  const data=await verified.json();
+  return jsonResponse(200,{ok:true,accessToken:data.session.accessToken},privateHeaders());
 }

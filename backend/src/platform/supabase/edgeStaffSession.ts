@@ -191,6 +191,8 @@ interface ResolveStaffSessionOptions {
   readonly allowedStatuses?: readonly ("active" | "onboarding")[];
   readonly allowLegacyMetadata?: boolean;
   readonly skipUniversalRateLimit?: boolean;
+  readonly recoveryGrantDigest?: string;
+  readonly claimRecovery?: boolean;
 }
 
 const DEFAULT_STAFF_LOOKUP_ERROR: EdgeErrorBody["error"] = {
@@ -225,6 +227,18 @@ export async function resolveStaffSessionForRequest(
   }
 
   const serviceClient = dependencies.createServiceClient(env);
+  if (options.claimRecovery) {
+    if (env.supabaseUrl !== "https://eecvbssdvarfcykcfrny.supabase.co" || !options.recoveryGrantDigest) {
+      return authorizationFailure(403, "recovery_unavailable", "Recovery is unavailable.");
+    }
+    const claim = await serviceClient.rpc("system_recovery_claim_v1", {
+      p_user: authUser.id, p_session: recoverySessionId(accessToken, authUser.id), p_digest: options.recoveryGrantDigest,
+    });
+    if (claim.error || !claim.data) return authorizationFailure(403, "recovery_unavailable", "Recovery is unavailable.");
+  }
+  if (!await systemRecoveryAccessAllowed(env.supabaseUrl, serviceClient, authUser.id, accessToken, options.recoveryGrantDigest)) {
+    return authorizationFailure(403, "staff_recovery_restricted", "This session cannot access the application during account recovery.");
+  }
   const staffResponse = await serviceClient
     .from("staff_users")
     .select(
@@ -544,4 +558,41 @@ function authorizationFailure(
     status,
     error: { code, message, retryable },
   };
+}
+
+// The provider has already validated this bearer through getUser. This additional
+// staging-only lookup rejects revoked sessions and restricted application access.
+// A browser-supplied recovery header never authorizes ordinary Staff routes.
+export async function systemRecoveryAccessAllowed(
+  supabaseUrl: string,
+  service: Pick<EdgeSupabaseClient, "rpc">,
+  userId: string,
+  accessToken: string,
+  recoveryGrantDigest?: string,
+): Promise<boolean> {
+  if (supabaseUrl.replace(/\/+$/u, "") !== "https://eecvbssdvarfcykcfrny.supabase.co") return true;
+  try {
+    const sessionId = recoverySessionId(accessToken, userId);
+    if (!sessionId) return false;
+    const result = await service.rpc<boolean>("system_recovery_access_v1", {
+      p_user: userId, p_session: sessionId, p_digest: recoveryGrantDigest ?? null,
+    });
+    return !result.error && result.data === true;
+  } catch { return false; }
+}
+
+export function recoverySessionId(accessToken: string, userId: string): string | null {
+  try {
+    const encoded=accessToken.split(".")[1];
+    const claims=JSON.parse(atob(encoded.replace(/-/gu,"+").replace(/_/gu,"/")));
+    return claims.sub===userId && typeof claims.session_id==="string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(claims.session_id)
+      ? claims.session_id : null;
+  } catch { return null; }
+}
+
+export async function recoveryGrantDigest(value: unknown): Promise<string | null> {
+  if (typeof value!=="string" || !/^[A-Za-z0-9_-]{43}$/u.test(value)) return null;
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("");
 }
