@@ -58,8 +58,8 @@ import {
   SupabasePlayerStoryContextRepository,
 } from "../../storylines/infrastructure/supabasePlayerStoryContextRepository.ts";
 import {
-  SupabaseStoryNotificationRepository,
-} from "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts";
+  createStoryNotificationPublisher,
+} from "../../notifications/public/storyNotifications.ts";
 import {
   SupabaseStorylineRepository,
 } from "../../storylines/infrastructure/supabaseStorylineRepository.ts";
@@ -398,7 +398,7 @@ function createDefaultStorylineRunnerAfterTick(
   client: EdgeSupabaseClient,
 ): StockMarketRunnerStorylineTickHook {
   const storylineRepository = new SupabaseStorylineRepository(client as any);
-  const notificationRepository = new SupabaseStoryNotificationRepository(
+  const notificationRepository = createStoryNotificationPublisher(
     client as any,
   );
   const playerContextRepository = new SupabasePlayerStoryContextRepository(
