@@ -6,7 +6,7 @@ Base: 7004ada7a0cd2a5138085a05ba0d0561b63d0819. Child 1: five paths, <=360 seman
 - scripts/ref025-business-loan-concurrency.test.mjs
 - .github/workflows/banking-fx-clearing-v1.yml
 - docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md
-- Assigned PR authority: bind number before implementation.
+- docs/operations/contracts/player-cross-cutting/pr-865.json (draft PR865).
 
 Only banking-fx-clearing-v1/database-acceptance, attested exclusively disposable local database.
 Reuse unchanged Store openPsqlSession; track backend PID/start, exact blocker, deadline, client/backend exit.
