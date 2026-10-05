@@ -87,7 +87,7 @@ jobs:
         run: npm run audit:architecture
       - name: Upload exact-head qualification evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ref009-reward-qualification-${{ github.event.pull_request.head.sha || github.sha }}
           path: /tmp/ref009/
