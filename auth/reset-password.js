@@ -17,6 +17,9 @@
   const form = document.getElementById("resetPasswordForm");
   const message = document.getElementById("resetMessage");
   const intro = document.getElementById("resetIntro");
+  const mfaForm = document.getElementById("recoveryMfaForm");
+  let busy = false;
+  let closed = false;
 
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const query = new URLSearchParams(window.location.search);
@@ -37,8 +40,78 @@
   }
 
   function clearRecoveryUrl() {
+    hash.delete("access_token");
+    query.delete("access_token");
     window.history.replaceState({}, document.title, window.location.pathname);
   }
+
+  function endRecovery(text) {
+    accessToken = "";
+    closed = true;
+    form.reset();
+    mfaForm.reset();
+    form.hidden = mfaForm.hidden = true;
+    setMessage(text, true);
+  }
+  window.addEventListener("pagehide", () => endRecovery("Request a fresh recovery email to continue."));
+  document.getElementById("recoveryMfaUnavailable").addEventListener("click", () =>
+    endRecovery("Contact your administrator for verified account recovery. Do not remove or replace an authenticator yourself."));
+
+  async function recoveryMfa(operation, fields = {}) {
+    if (PASSWORD_RESET_API_URL !== "/api/password-reset") throw new Error("Recovery MFA requires the hosted recovery page.");
+    const response = await fetch(`${PASSWORD_RESET_API_URL}?operation=${operation}`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ projectRef, ...fields }), credentials: "same-origin",
+      cache: "no-store", redirect: "error", referrerPolicy: "no-referrer"
+    });
+    const data = await response.json();
+    if (closed) return null;
+    if (!response.ok || data?.ok !== true) {
+      if (response.status === 401 && data?.error?.code !== "mfa_verification_failed") {
+        endRecovery("Recovery expired. Request a fresh recovery email.");
+      } else setMessage(data?.error?.message || "Recovery verification is unavailable.", true);
+      return null;
+    }
+    return data;
+  }
+
+  async function showMfa() {
+    form.reset();
+    form.hidden = true;
+    const data = await recoveryMfa("mfa-status");
+    if (!data) return endRecovery(message.textContent);
+    if (!data.factors?.length) return endRecovery("No verified authenticator is available. Contact your administrator for verified account recovery.");
+    mfaForm.elements.factorHandle.replaceChildren();
+    for (const factor of data.factors) {
+      const option = document.createElement("option");
+      option.value = factor.handle;
+      option.textContent = factor.friendlyName;
+      mfaForm.elements.factorHandle.append(option);
+    }
+    mfaForm.hidden = false;
+    setMessage("Verify an authenticator for this account before choosing your new password.");
+    mfaForm.elements.code.focus();
+  }
+
+  mfaForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (busy || closed || !accessToken) return;
+    busy = true;
+    const button = mfaForm.querySelector("button[type='submit']");
+    button.disabled = true;
+    try {
+      const data = await recoveryMfa("mfa-verify", {
+        factorHandle: mfaForm.elements.factorHandle.value, code: mfaForm.elements.code.value.trim()
+      });
+      if (!data) return;
+      accessToken = data.accessToken;
+      mfaForm.hidden = true;
+      form.hidden = false;
+      setMessage("Authenticator verified. Choose your new password.");
+      form.elements.password.focus();
+    } catch (_) { if (!closed) setMessage("Could not verify the authenticator. Try again or contact your administrator.", true); }
+    finally { busy = false; button.disabled = false; mfaForm.elements.code.value = ""; }
+  });
 
   function validatePassword(password) {
     if (password.length < PASSWORD_MIN_LENGTH) {
@@ -84,6 +157,7 @@
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (busy || closed || form.hidden) return;
 
     const password = String(form.elements.password.value || "");
     const confirmPassword = String(form.elements.confirmPassword.value || "");
@@ -98,6 +172,7 @@
       return setMessage("This password recovery link is invalid or expired.", true);
     }
 
+    busy = true;
     button.disabled = true;
     button.textContent = "Updating Password...";
 
@@ -121,6 +196,10 @@
         data = await response.json();
       } catch (_) {}
 
+      if (closed) return;
+      if (data?.error?.code === "staff_mfa_required") return await showMfa();
+      if (response.status === 401) return endRecovery("Recovery expired. Request a fresh recovery email.");
+
       if (!response.ok || data?.ok !== true) {
         return setMessage(
           data?.error?.message || data?.message ||
@@ -130,6 +209,7 @@
       }
 
       accessToken = "";
+      closed = true;
       form.reset();
       window.sessionStorage.removeItem("econovaria.admin.auth.v1");
       window.EconovariaAdminGameSelection?.clear?.();
@@ -142,11 +222,13 @@
         window.location.replace("../?mode=admin&reason=password-reset");
       }, 900);
     } catch (_) {
+      if (closed) return;
       setMessage(
         "Could not connect to password recovery. Check your connection and try again.",
         true
       );
     } finally {
+      busy = false;
       button.disabled = false;
       button.textContent = "Update Password";
     }

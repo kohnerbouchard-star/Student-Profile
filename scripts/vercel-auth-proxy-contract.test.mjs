@@ -303,3 +303,78 @@ function restoreEnv(name, value) {
   if (value === undefined) delete process.env[name];
   else process.env[name] = value;
 }
+
+const RECOVERY_PROJECT = "eecvbssdvarfcykcfrny";
+const FACTOR_HANDLE = `mfa1.${"a".repeat(16)}.${"b".repeat(80)}`;
+async function recoveryOperation(operation, body = {}, headers = {}) {
+  const response = mockResponse();
+  await passwordResetProxy({ ...adminRequest(), url: `/api/password-reset?operation=${operation}`,
+    body: { projectRef: RECOVERY_PROJECT, ...body },
+    headers: { ...adminRequest().headers, authorization: `Bearer ${jwt()}`, ...headers }
+  }, response);
+  return { status: response.statusCode, body: JSON.parse(response.text()), headers: response };
+}
+
+test("recovery MFA keeps project, bearer, Origin and trusted IP; projects only verified factors", async () => {
+  let call;
+  globalThis.fetch = async (url, options) => {
+    call = { url, options };
+    return Response.json({ ok: true, factors: [
+      { handle: FACTOR_HANDLE, friendlyName: "My authenticator", factorType: "totp", status: "verified", id: "private-id" },
+      { handle: "unverified", factorType: "totp", status: "unverified" }
+    ], session: { refreshToken: "never-return" } });
+  };
+  const result = await recoveryOperation("mfa-status");
+  assert.equal(result.status, 200);
+  assert.equal(call.url, `https://${RECOVERY_PROJECT}.supabase.co/functions/v1/staff-mfa-api/staff/mfa`);
+  assert.equal(call.options.method, "GET");
+  assert.equal(call.options.headers.Authorization, `Bearer ${jwt()}`);
+  assert.equal(call.options.headers.Origin, "https://econovaria.example");
+  assert.equal(call.options.headers["x-real-ip"], "198.51.100.25");
+  assert.deepEqual(result.body, { ok: true, factors: [{ handle: FACTOR_HANDLE, friendlyName: "My authenticator" }] });
+  assert.match(result.headers.getHeader("cache-control"), /no-store/);
+});
+
+test("MFA verification returns only elevated bearer and never auto-submits a password", async () => {
+  let calls = 0;
+  globalThis.fetch = async (url, options) => {
+    calls++;
+    assert.match(url, /staff-mfa-api\/staff\/mfa\/verify$/);
+    assert.deepEqual(JSON.parse(options.body), { factorHandle: FACTOR_HANDLE, code: "123456" });
+    return Response.json({ ok: true, session: { assuranceLevel: "aal2", accessToken: jwt(), refreshToken: "never-return" } });
+  };
+  const result = await recoveryOperation("mfa-verify", { factorHandle: FACTOR_HANDLE, code: "123456" });
+  assert.deepEqual(result.body, { ok: true, accessToken: jwt() });
+  assert.equal(calls, 1);
+});
+
+test("MFA boundary rejects missing project, unknown fields, invalid codes, missing bearer and wrong Origin before fetch", async () => {
+  globalThis.fetch = async () => { assert.fail("Rejected input must not reach upstream"); };
+  for (const body of [{ projectRef: "" }, { projectRef: "otherproject" }, { password: "forbidden" }]) {
+    assert.equal((await recoveryOperation("mfa-status", body)).status, 400);
+  }
+  assert.equal((await recoveryOperation("mfa-verify", { factorHandle: FACTOR_HANDLE, code: "bad" })).status, 400);
+  assert.equal((await recoveryOperation("mfa-status", {}, { origin: "" })).status, 403);
+  assert.equal((await recoveryOperation("mfa-status", {}, { origin: "https://evil.example" })).status, 502);
+  assert.equal((await recoveryOperation("mfa-status", {}, { authorization: "" })).status, 401);
+});
+
+test("expired/wrong-project sessions and invalid MFA remain denied without leaking upstream material", async () => {
+  for (const code of ["bad_jwt", "session_expired", "invalid_factor_handle", "mfa_verification_failed"]) {
+    globalThis.fetch = async () => Response.json({ error: { code, message: "private upstream material" }, access_token: jwt() }, { status: 401 });
+    const result = await recoveryOperation("mfa-verify", { factorHandle: FACTOR_HANDLE, code: "123456" });
+    assert.equal(result.status, 401);
+    assert.equal(result.body.error.code, code === "mfa_verification_failed" ? code : "recovery_mfa_unavailable");
+    assert.doesNotMatch(JSON.stringify(result.body), /private upstream material|header123/);
+  }
+  globalThis.fetch = async () => Response.json({ ok: true, session: { assuranceLevel: "aal1", accessToken: jwt() } });
+  assert.equal((await recoveryOperation("mfa-verify", { factorHandle: FACTOR_HANDLE, code: "123456" })).status, 502);
+});
+
+test("an explicitly selected production project never falls back to staging on a denied session", async () => {
+  const calls = [];
+  globalThis.fetch = async (url) => { calls.push(url); return Response.json({ error: { code: "bad_jwt" } }, { status: 401 }); };
+  const result = await recoveryOperation("mfa-status", { projectRef: "cgiukdjwicykrmtkhudh" });
+  assert.equal(result.status, 401);
+  assert.deepEqual(calls, [`${process.env.ECONOVARIA_SUPABASE_URL}/functions/v1/staff-mfa-api/staff/mfa`]);
+});
