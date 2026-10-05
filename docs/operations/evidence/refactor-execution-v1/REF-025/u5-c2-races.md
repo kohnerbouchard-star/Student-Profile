@@ -18,4 +18,9 @@ PR859 remains superseded and unqualified: busy source (2 unidentified sessions),
 Its code is not imported. Original failure: run37255720724/job111592230701; local Docker capacity failure retained there.
 PR620 overlaps only unchanged upload-artifact pins; PR863 and other open owners have no selected-path collision.
 REF025 BLOCKED; REF027 depends025+026; all nine U1 holds remain. No production lending activation.
-Next: Child1 disposable lifecycle qualification, then separately registered Child2 races. NOT_RUN pending implementation.
+Implementation: scoped async wrapper plus harmless advisory-lock barrier and SQL-timeout probe; no fixture writes.
+Local pinned Node22.23.1: focused tests and authority tests pass; scope/whitespace verification required before push.
+CI must prove exact blocker PID/start, client/backend exit, full reset and independent restored gates/ledger checks.
+Child1 fixture-absence checks assert zero nonlegacy applications/loans; future fixtures need their own registered checks.
+No GUC copying, clone, marker-based ownership or atomic DROP claims. Existing background sessions are not terminated.
+Next: exact-head Child1 qualification and parent review, then separately registered Child2; runtime evidence NOT_RUN until CI.
