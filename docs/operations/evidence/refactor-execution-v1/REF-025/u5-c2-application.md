@@ -42,3 +42,8 @@ unqualified audit action conflicted with the outer fixture variable. Qualify aud
 assertion semantics and migration remain unchanged. Corrected-head qualification required.
 Review also identified two incorrect governance fixture column names; use existing
 approval_threshold_basis_points/snapshot_total_voting_units, with no schema change.
+
+Approved diagnostic amendment from a6a46b00: eighth path player-terminal/tools/connected-banking-loans-mutation-runner.mjs.
+Cap runner30 changed lines + existing registration8; total399. One sanitized8KiB record/eight currency pairs; one500ms failure-only DOM observation.
+Preserve assertion/timeouts/replay/gates and failed job111574748273/artifact11321070944; no retry, runtime change or inferred causality. Separate isolated race plan stays gated.
+Extracted diagnostic probe6/6 and authority16/16 PASS; maximal synthetic record3549bytes, deadline500ms, original error preserved on throw/timeout; exact-head CI pending.

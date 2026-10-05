@@ -459,13 +459,38 @@ async function proveLoans(page, fixtureData) {
 
   approveLatestApplication();
   const loanPayload = await reloadLoansSnapshot(page);
+  const payloadObservedAt = performance.now();
   const projection = (loanPayload.data || loanPayload).currencyProjection;
   if (!projection?.complete || !projection.groups.length) throw new Error("Connected Loans currency projection unavailable.");
   const summary = await page.locator(".player-terminal-loan-metrics").innerText();
+  const metricReadAt = performance.now();
   for (const group of projection.groups) {
     const [whole, fraction] = group.outstanding.split(".");
     const expected = `${group.currencyCode} ${whole.replace(/\B(?=(?:[0-9]{3})+(?![0-9]))/gu, ",")}.${fraction}`;
-    if (!summary.includes(expected)) throw new Error("Connected Loans did not render authoritative exact totals.");
+    if (!summary.includes(expected)) {
+      let timer;
+      try {
+        const code = (value) => typeof value === "string" && /^[A-Z]{3,12}$/u.test(value) ? value : null;
+        const money = (value) => typeof value === "string" && /^(0|[1-9][0-9]{0,39})\.[0-9]{2}$/u.test(value) ? value : null;
+        const lines = summary.split("\n").map((line) => line.trim()).slice(0, 256);
+        const metrics = lines.flatMap((label, i) => ["Available credit", "Outstanding", "Next payment"].includes(label)
+          ? [{ label, value: /^(?:[A-Z]{3,12} (?:[0-9]{1,3}(?:,[0-9]{3}){0,13}\.[0-9]{2}|Unavailable)|Unavailable|None scheduled|Currency unavailable)$/u.test(lines[i + 1] || "") ? lines[i + 1] : null }] : []).slice(0, 24);
+        const diagnostic = { payloadObservedAt, metricReadAt, version: Number.isSafeInteger(projection.version) ? projection.version : null,
+          complete: projection.complete === true, unknownCurrencyRows: Number.isSafeInteger(projection.unknownCurrencyRows) && projection.unknownCurrencyRows >= 0 ? projection.unknownCurrencyRows : null,
+          groups: projection.groups.slice(0, 8).map((row) => ({ currencyCode: code(row.currencyCode), outstanding: money(row.outstanding) })),
+          truncated: projection.groups.length > 8 || summary.split("\n").length > 256 || lines.filter((line) => ["Available credit", "Outstanding", "Next payment"].includes(line)).length > 24, metrics, readiness: null };
+        diagnostic.readiness = await Promise.race([page.evaluate(() => ({
+          loansRoute: location.hash === "#loans", pageVisible: Boolean(document.querySelector(".player-terminal-loans-page")?.getClientRects().length),
+          metricsVisible: Boolean(document.querySelector(".player-terminal-loan-metrics")?.getClientRects().length),
+          skeleton: Boolean(document.querySelector(".player-terminal-skeleton-surface")), routeError: Boolean(document.querySelector(".player-terminal-route-error")),
+          busy: Boolean(document.querySelector('[aria-busy="true"]'))
+        })), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("Diagnostic deadline")), 500); })]).catch(() => null);
+        diagnostic.observedAt = performance.now();
+        evidence.loanTotalsDiagnostic = Buffer.byteLength(JSON.stringify(diagnostic), "utf8") <= 8192 ? diagnostic : { truncated: true };
+      } catch { evidence.loanTotalsDiagnostic = { diagnosticFailed: true }; }
+      finally { clearTimeout(timer); }
+      throw new Error("Connected Loans did not render authoritative exact totals.");
+    }
   }
   const repayForm = page.locator(`form[data-endpoint="loanRepay"][data-loan-id="${LOAN_KEY}"]`);
   await openDisclosureForm(repayForm);

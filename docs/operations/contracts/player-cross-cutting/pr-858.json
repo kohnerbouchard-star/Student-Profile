@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    "player-terminal/tools/connected-banking-loans-mutation-runner.mjs",
     "backend/supabase/migrations/20261005004013_add_gated_business_loan_submission_v1.sql",
     "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-application.md",
     "scripts/banking-fx-database-acceptance.sql",
@@ -50,5 +51,5 @@
     "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-application.md",
-  "authorizationNote": "User approved c2-2b gated submission and current-operator successor replay: seven paths/390 semantic lines. Locked verifier/test dependencies grant no edit permission. Partial Business request index preserves existing player uniqueness. Both gates/nine U1 holds remain. No review/disbursement/servicing/UI or global-authority race certification. Parent review/merge; no hosted SQL/deployment/credentials."
+  "authorizationNote": "User approved c2-2b plus bounded diagnostic-only Loans runner amendment: eight paths/399 changed lines; runner amendment <=30 and existing registration <=8 lines. Locked verifier/test dependencies grant no edit permission. Replay policy, both gates/nine U1 holds remain. One sanitized <=8KiB record; one <=500ms failure-only DOM observation; no retries/assertion/runtime changes. Parent review/merge; no hosted SQL/deployment/credentials or race certification."
 }
