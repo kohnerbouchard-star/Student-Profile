@@ -37,7 +37,7 @@ test('successive commands share one deadline, and late markers fail', async () =
     const remaining = deadline(100);
     await exchange(session, '10', remaining);
     await assert.rejects(exchange(session, '150', remaining));
-    await assert.rejects(exchange(session, '0', remaining), /DEADLINE/);
+    await assert.rejects(exchange(session, '0', deadline(3000)), /CLOSED/);
   } finally { await closeClient(session, deadline(3000)); }
 });
 test('a marker that resolves after a blocked event loop is still rejected', async () => {

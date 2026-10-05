@@ -12,13 +12,15 @@ export function deadline(ms) {
 }
 export async function exchange(session, sql, remaining) {
   assert(!session.closed, 'REF025_CLOSED');
-  const marker = `r${randomUUID().replaceAll('-', '')}`;
-  const wait = session.waitFor(`${marker}:done`, remaining());
-  wait.catch(() => {});
-  session.write(`${sql}\nselect '${marker}:done';`);
-  await wait;
-  remaining();
-  assert.equal(session.errors, '', 'REF025_SQL_ERROR');
+  try {
+    const marker = `r${randomUUID().replaceAll('-', '')}`;
+    const wait = session.waitFor(`${marker}:done`, remaining());
+    wait.catch(() => {});
+    session.write(`${sql}\nselect '${marker}:done';`);
+    await wait;
+    remaining();
+    assert.equal(session.errors, '', 'REF025_SQL_ERROR');
+  } catch (error) { session.closed = true; throw error; }
 }
 export async function json(session, expression, remaining) {
   const marker = `r${randomUUID().replaceAll('-', '')}:`;
