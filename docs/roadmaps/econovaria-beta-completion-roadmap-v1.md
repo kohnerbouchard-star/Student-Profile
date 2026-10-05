@@ -21,7 +21,7 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
-- **`STAFF-RECOVERY-MFA-001` — U4 recovery MFA repair (2026-10-05):** `IN_PROGRESS`; owner approved code, synthetic tests and draft PR on `fix/password-recovery-mfa`, base `d7669d39f60cbfbf80b79ce05856e315cf60d9aa`. Add the missing existing-factor challenge through the existing recovery proxy while preserving AAL2/reset safeguards. [Scope, evidence, limitations and gated rollout](../operations/evidence/password-recovery-mfa/implementation.md). No deployment, account/factor/settings change or REF-019/020 resumption. Next: parent review, exact-head checks and separately approved rollout.
+- **`STAFF-RECOVERY-MFA-001` — U4 recovery MFA repair (2026-10-05):** `IMPLEMENTED_NOT_MERGED`; draft [#862](https://github.com/kohnerbouchard-star/Student-Profile/pull/862), implementation `4faa2a70fac6ffd1bda857b7ab9d7e2a3a0a6f77`; owner approved code, synthetic tests and draft PR on `fix/password-recovery-mfa`, base `d7669d39f60cbfbf80b79ce05856e315cf60d9aa`. Add the missing existing-factor challenge through the existing recovery proxy while preserving AAL2/reset safeguards. [Scope, evidence, limitations and gated rollout](../operations/evidence/password-recovery-mfa/implementation.md). No deployment, account/factor/settings change or REF-019/020 resumption. Next: parent review, exact-head checks and separately approved rollout.
 
 - **`BETA-LIVE-MIGRATION-PARITY-001` — Phase 15 program (2026-09-20)**
   - Owner authorizes the full gated 15A–15F program. This supersedes prior no-Phase-15/no-release authorization statements, while preserving the requirement that production changes follow certified 15A–15E gates.
