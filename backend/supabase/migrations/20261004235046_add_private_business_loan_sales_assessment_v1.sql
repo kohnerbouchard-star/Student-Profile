@@ -7,7 +7,7 @@ create function economy_private.assess_business_loan_application_v1(
   p_game_session_id uuid, p_business_id uuid, p_product_id uuid,
   p_amount numeric, p_as_of timestamptz
 ) returns table (
-  qualifying_income numeric, income_per_payment numeric, projected_payment numeric,
+  obligation_currency_code text, assessed_at timestamptz, qualifying_income numeric, income_per_payment numeric, projected_payment numeric,
   affordability_ratio numeric, maximum_payment_to_income numeric,
   minimum_credit_score integer, affordable boolean
 )
@@ -50,6 +50,8 @@ begin
     product.annual_rate, product.term_cycles, product.payment_frequency_cycles);
   affordability_ratio := case when income_per_payment <= 0 then 100
     else least(100, round(projected_payment / income_per_payment, 6)) end;
+  obligation_currency_code := product.currency_code;
+  assessed_at := p_as_of;
   maximum_payment_to_income := product.maximum_payment_to_income;
   minimum_credit_score := product.minimum_credit_score;
   affordable := affordability_ratio <= maximum_payment_to_income;

@@ -24,3 +24,15 @@ REF025 BLOCKED; REF027 depends025+026. No hosted SQL/deployment/credential chang
 Validation pending: positive retained/funded receipts, boundaries/exclusions/isolation,
 formula/product limits, disposable replay, inherited lint delta, exact-head checks.
 Rollback: unmerged source revert; applied corrections require approved forward SQL.
+
+Migration raw SHA256: 26a09c87287ff685493d8a5aec4f9e5478cd6ff49c9cb925104939bb5cc4021d.
+Helper is STABLE SECURITY INVOKER, revoked from PUBLIC/anon/authenticated/service_role;
+returns obligation currency/time, gross sales, existing payment/ratio and product limits.
+It does not decide operator eligibility or write credit profiles. Future command owns locks,
+fresh snapshots and captured time. Canonical positive settlement fixtures roll back;
+predicate-unit receipt copies cover invalid game/business/currency and pre-authority rows.
+Local root tests, architecture/boundary/legacy/secret checks and forward17/17 passed.
+Local backend typecheck blocked by esm.sh tunnel; local DB image registration exhausted
+Docker storage. CI3088e82d replayed successfully but fixture country activation was missing;
+that exact fixture setup error is corrected, without changing receipt guards or policy.
+Exact final-head DB/lint/full qualification pending; inherited baseline142 findings/17errors.

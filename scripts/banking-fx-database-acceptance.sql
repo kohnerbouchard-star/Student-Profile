@@ -556,6 +556,7 @@ begin
       statement_timestamp()-interval '3 minutes' from public.country_profiles c
     cross join public.difficulty_policy_profiles d where c.status='active' and d.preset_key='standard';
   perform public.initialize_fx_authority_for_game_v1(g,clock_timestamp()-interval '1 minute',true);
+  update public.country_profiles set status='active' where id=country;
   update public.game_sessions set lifecycle_state='active',status='active' where id=g;
   insert into public.country_economic_snapshots(game_session_id,country_profile_id,snapshot_sequence,
     effective_at,snapshot_label,difficulty_policy_profile_id,difficulty_preset,created_at)
@@ -588,7 +589,8 @@ begin
   end loop;
   select count(*) into before_effects from public.audit_log where game_session_id=g;
   select * into assessed from economy_private.assess_business_loan_application_v1(g,b,product,60,last_time);
-  if assessed.qualifying_income<>240 or assessed.income_per_payment<>40 or assessed.projected_payment<>10
+  if assessed.obligation_currency_code<>'ECO' or assessed.assessed_at<>last_time
+    or assessed.qualifying_income<>240 or assessed.income_per_payment<>40 or assessed.projected_payment<>10
     or assessed.affordability_ratio<>0.25 or not assessed.affordable or assessed.minimum_credit_score<>600
     or assessed.maximum_payment_to_income<>0.45 then raise exception 'REF025 sales assessment mismatch: %',assessed; end if;
   select * into assessed from economy_private.assess_business_loan_application_v1(g,b,product,60,first_time);
@@ -616,6 +618,18 @@ begin
   update public.loan_products set maximum_payment_to_income=0.20 where id=product;
   select * into assessed from economy_private.assess_business_loan_application_v1(g,b,product,60,last_time);
   if assessed.affordable then raise exception 'REF025 product affordability limit bypassed'; end if;
+  update public.loan_products set annual_rate=0.05 where id=product;
+  select * into assessed from economy_private.assess_business_loan_application_v1(g,b,product,60,last_time);
+  if assessed.projected_payment<>10.07 or assessed.affordability_ratio<>0.251750 then
+    raise exception 'REF025 existing installment/ratio rounding changed'; end if;
+  begin
+    perform * from economy_private.assess_business_loan_application_v1(g,b,product,0.50,last_time);
+    raise exception 'REF025 minimum amount bypassed';
+  exception when raise_exception then if sqlerrm<>'LOAN_AMOUNT_OUT_OF_RANGE' then raise; end if; end;
+  begin
+    perform * from economy_private.assess_business_loan_application_v1(g,b,product,60,null);
+    raise exception 'REF025 uncaptured assessment time accepted';
+  exception when invalid_parameter_value then null; end;
   -- Predicate-unit coverage uses copies of real receipts; no canonical row/guard is changed.
   create temp table ref025_assessment_receipts as select * from public.store_offer_purchase_receipts where game_session_id=g;
   definition := pg_get_functiondef('economy_private.assess_business_loan_application_v1(uuid,uuid,uuid,numeric,timestamptz)'::regprocedure);
