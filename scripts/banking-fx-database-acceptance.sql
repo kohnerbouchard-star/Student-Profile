@@ -562,6 +562,8 @@ begin
     effective_at,snapshot_label,difficulty_policy_profile_id,difficulty_preset,created_at)
     select g,country,0,statement_timestamp()-interval '2 minutes','REF025 sales TST',id,preset_key,
       statement_timestamp()-interval '3 minutes' from public.difficulty_policy_profiles where preset_key='standard';
+  perform public.record_business_ledger_entry_v2(g,b,20,'ECO','credit','business',
+    'capital_contribution_in',b,'system',null,jsonb_build_object('bankTransactionIdempotencyKey','ref025-business-seed'));
   quote := public.create_business_store_offer_quote_v2(g,buyer,offer_key,1,2,'ref025-retained-quote');
   result := public.settle_business_store_offer_v2(g,buyer,offer_key,quote->>'quoteKey',1,2,'ref025-retained-sale');
   select * into strict receipt from public.store_offer_purchase_receipts where public_key=result->>'receiptKey';

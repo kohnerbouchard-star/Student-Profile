@@ -32,7 +32,11 @@ It does not decide operator eligibility or write credit profiles. Future command
 fresh snapshots and captured time. Canonical positive settlement fixtures roll back;
 predicate-unit receipt copies cover invalid game/business/currency and pre-authority rows.
 Local root tests, architecture/boundary/legacy/secret checks and forward17/17 passed.
-Local backend typecheck blocked by esm.sh tunnel; local DB image registration exhausted
+Local backend typecheck/smoke blocked by esm.sh tunnel; local DB image registration exhausted
 Docker storage. CI3088e82d replayed successfully but fixture country activation was missing;
 that exact fixture setup error is corrected, without changing receipt guards or policy.
 Exact final-head DB/lint/full qualification pending; inherited baseline142 findings/17errors.
+
+CI3000a895 replay/backend typecheck passed; retained Store fixture lacked the initial
+Business cash projection. Added the existing canonical capital seed, still excluded
+from sales income. Current-head replay/acceptance/lint remain required before review.
