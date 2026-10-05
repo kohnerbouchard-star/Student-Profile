@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref015-settings-caller-pr-861.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 861,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "admin/admin-bootstrap.js",
+    "scripts/admin-settings-save-lifecycle.test.mjs",
+    "scripts/admin-settings-disclosure-smoke.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-015/reversible-retirement-amendment.md",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
+    "docs/operations/contracts/player-cross-cutting/pr-861.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-861.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium",
+    "Admin Shell Smoke",
+    "Admin Browser E2E",
+    "Runtime Interaction Wiring",
+    "Admin Game Session Controls"
+  ],
+  "criticalJobChecks": [
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-015/reversible-retirement-amendment.md",
+  "authorizationNote": "Parent accepted seven paths maximum, 180 total changed lines and 30 runtime lines. Six paths change; generated inventory is unchanged. Verifier/tests remain unchanged locks. Refresh exactly four current supporting bootstrap hashes; preserve history/dispositions/deletion flags. Keep bridge bytes/URL, serial slot, error reporting and older/missing-owner fallback. Qualification is BLOCKED by CSS order regression; do not merge or expand owner scope. No deployment, URL removal, production/security/retention change, elapsed observation claim or task closure. Parent retains review and merge; all retirement/release holds remain."
+}
