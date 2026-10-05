@@ -720,8 +720,8 @@ begin
       select * into submitted from economy_private.submit_business_loan_application_v1(
         g,owner_id,business_key,product_key,60,'Sales request','ref025-submission');
       select to_jsonb(a) into original from public.loan_applications a where a.public_key=submitted.application_key;
-      if not exists(select 1 from public.audit_log where game_session_id=g and target_id=(original->>'id')::uuid
-        and action='business.loan.application.submit' and (metadata#>>'{assessment,qualifying_income}')::numeric=240) then
+      if not exists(select 1 from public.audit_log audit where audit.game_session_id=g and audit.target_id=(original->>'id')::uuid
+        and audit.action='business.loan.application.submit' and (audit.metadata#>>'{assessment,qualifying_income}')::numeric=240) then
         raise exception 'REF025 application assessment audit missing'; end if;
       select to_jsonb(p) into profile_before from public.credit_profiles p where p.game_session_id=g and p.player_id=owner_id;
       select count(*) into audit_before from public.audit_log where game_session_id=g;

@@ -36,3 +36,7 @@ No hosted SQL/deployment/credential actions. Validation and exact forward hashes
 Rollback: revert unmerged source; applied changes require an approved forward correction.
 
 Registered migration raw SHA256 e9ab53f6d86cfe0712c5366ee8f174b7331a23ddcb210056d0bd4bd3f6b77ab2.
+
+Head33e648ee Banking-FX job111572768452 failed in the disposable acceptance assertion:
+unqualified audit action conflicted with the outer fixture variable. Qualify audit columns;
+assertion semantics and migration remain unchanged. Corrected-head qualification required.
