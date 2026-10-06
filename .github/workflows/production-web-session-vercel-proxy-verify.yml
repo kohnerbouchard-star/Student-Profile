@@ -187,7 +187,7 @@ jobs:
             throw new Error('Explicit production probe confirmation inputs are missing.');
           }
 
-          const probeNeedle = '--request POST "$PRODUCTION_ORIGIN/api/admin-session/login"';
+          const probeNeedle = ['--request POST "', '$PRODUCTION_ORIGIN/api/admin-session/login"'].join('');
           if (workflow.split(probeNeedle).length - 1 !== 1) {
             throw new Error('Production Admin route probe count drifted from one bounded verifier.');
           }
