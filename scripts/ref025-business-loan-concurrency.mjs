@@ -129,7 +129,7 @@ async function submissionRaces(observer, first, second, remaining) {
   await exchange(observer, sql, remaining);
   await verifyGates(observer, remaining, false);
   for (const session of [first, second]) await exchange(session, parts[1], remaining);
-  const fixtures = await json(observer, '(select json_agg(f order by n) from ref025_fixtures f)', remaining);
+  const fixtures = await json(observer, '(select json_agg(f order by n) from ref025_fixtures f where n<=2)', remaining);
   assert.equal(fixtures.length, 2); const [one, two] = fixtures;
   const state = (session, f) => json(session, `pg_temp.ref025_state(${sqlLiteral(f.g)}::uuid)`, remaining);
   const command = (f, key, actor = f.owner_id, amount = 60) => `select * from economy_private.submit_business_loan_application_v1(
@@ -171,6 +171,58 @@ async function submissionRaces(observer, first, second, remaining) {
   await exchange(first, 'rollback;', remaining);
   assert.deepEqual(await state(observer, one), beforeOne); assert.deepEqual(await state(observer, two), isolated);
 }
+export function authorityEffects(before, after, fixture, committed) {
+  assert.deepEqual(before.mandates, [], 'REF025_EXPECTED_OWNER_FALLBACK');
+  assert.deepEqual(after.business, before.business, 'REF025_BUSINESS_CHANGED');
+  assert.deepEqual(after.proposal, before.proposal, 'REF025_PROPOSAL_CHANGED');
+  if (!committed) { assert.deepEqual(after, before); return; }
+  assert.equal(after.mandates.length, 1);
+  const mandate = after.mandates[0];
+  assert.equal(mandate.game_session_id, fixture.g); assert.equal(mandate.business_id, fixture.b);
+  assert.equal(mandate.player_id, fixture.buyer); assert.equal(mandate.source_proposal_id, fixture.proposal_id);
+}
+async function authorityRaces(observer, first, second, remaining) {
+  const fixtures = await json(observer, '(select json_agg(f order by n) from ref025_fixtures f where n>=3)', remaining);
+  assert.deepEqual(fixtures.map(f => f.n), [3, 4, 5, 6]);
+  for (const f of fixtures) {
+    const committed = f.n % 2 === 1, replay = f.n >= 5, key = `ref025-authority-${f.n}`;
+    const command = (actor = f.owner_id) => `select * from economy_private.submit_business_loan_application_v1(
+      ${[f.g, actor, f.business_key, f.product_key, 60, 'REF025 authority request', key].map(sqlLiteral).join(',')})`;
+    const submit = (session, actor) => json(session, `(select to_jsonb(r) from (${command(actor)}) r)`, remaining);
+    const economic = session => json(session, `pg_temp.ref025_state(${sqlLiteral(f.g)})`, remaining);
+    const authority = session => json(session, `pg_temp.ref025_authority(${[f.g, f.b, f.proposal_id].map(sqlLiteral).join(',')})`, remaining);
+    const resolve = actor => `(select to_jsonb(business_id) from public.resolve_player_business_v2(${sqlLiteral(f.g)},${sqlLiteral(actor)}))`;
+    assert.equal(await json(observer, resolve(f.owner_id), remaining), f.b);
+    const original = replay ? await submit(observer) : null;
+    if (replay) assert.equal(original.replayed, false);
+    const before = await economic(observer), priorAuthority = await authority(observer);
+    await exchange(first, `begin; select pg_temp.ref025_handoff(${[f.g, f.b, f.buyer, f.proposal_id].map(sqlLiteral).join(',')});`, remaining);
+    const granted = await authority(first); authorityEffects(priorAuthority, granted, f, true);
+    const competing = committed
+      ? exchange(second, `select pg_temp.ref025_reject(${sqlLiteral(command())},'BUSINESS_NOT_FOUND');`, remaining)
+      : submit(second);
+    competing.catch(() => {});
+    for (;;) {
+      const row = await json(observer, `pg_temp.ref025_blocker(${second.pid},${first.pid})`, remaining);
+      if (row?.wait === 'Lock') { intendedBlocker(row, second, first); break; }
+      await new Promise(resolve => setTimeout(resolve, Math.min(20, remaining())));
+    }
+    await exchange(first, committed ? 'commit;' : 'rollback;', remaining);
+    const result = await competing, after = await economic(observer), currentAuthority = await authority(observer);
+    authorityEffects(priorAuthority, currentAuthority, f, committed);
+    assert.deepEqual(currentAuthority, committed ? granted : priorAuthority);
+    if (committed || replay) assert.deepEqual(after, before);
+    else { assert.equal(result.replayed, false); applicationEffects(before, after, f.owner_id, key, f.b); }
+    if (!committed && replay) assert.deepEqual(result, { ...original, replayed: true });
+    assert.equal(await json(observer, resolve(committed ? f.buyer : f.owner_id), remaining), f.b);
+    if (committed) await exchange(observer, `select pg_temp.ref025_reject(${sqlLiteral(`select ${resolve(f.owner_id)}`)},'BUSINESS_NOT_FOUND');`, remaining);
+    if (committed && replay) {
+      assert.deepEqual(await submit(observer, f.buyer), { ...original, replayed: true });
+      assert.deepEqual(await economic(observer), before);
+    }
+    await verifyGates(observer, remaining, false);
+  }
+}
 export async function lifecycle(mode = '--phase') {
   assert(['--phase', '--verify', '--attest'].includes(mode), 'REF025_MODE');
   const binding = attest(), sessions = [], remaining = deadline(15000);
@@ -181,6 +233,7 @@ export async function lifecycle(mode = '--phase') {
     if (mode === '--phase') {
       const first = await connect(binding, sessions, remaining), second = await connect(binding, sessions, remaining);
       await submissionRaces(observer, first, second, remaining);
+      await authorityRaces(observer, first, second, remaining);
       await assert.rejects(exchange(second, 'select pg_sleep(0.1);', deadline(10)), /Timed out waiting|REF025_DEADLINE/);
       await verifyGates(observer, remaining, false);
     }

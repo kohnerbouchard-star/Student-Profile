@@ -1,19 +1,19 @@
 -- Invoked only inside the attested, exclusively disposable REF025 Banking phase.
 -- Real settled sales use existing canonical helpers; no production routine is replaced.
 set client_min_messages=warning; -- Canonical funding emits harmless DROP IF EXISTS notices; SQL errors remain fatal.
-create temporary table ref025_fixtures(n integer,g uuid,owner_id uuid,buyer uuid,b uuid,business_key text,product_key text,country_id uuid);
+create temporary table ref025_fixtures(n integer,g uuid,owner_id uuid,buyer uuid,b uuid,business_key text,product_key text,country_id uuid,proposal_id uuid);
 begin;
 alter table public.loan_applications drop constraint loan_applications_business_liability_disabled_v1;
 do $fixture$
 begin
-for i in 1..2 loop
+for i in 1..6 loop
  declare
   staff uuid:=gen_random_uuid(); g uuid:=gen_random_uuid(); country uuid:=gen_random_uuid();
   owner_id uuid:=gen_random_uuid(); buyer uuid:=gen_random_uuid(); b uuid:=gen_random_uuid();
   item uuid:=gen_random_uuid(); store_item uuid:=gen_random_uuid(); offer uuid:=gen_random_uuid();
   listing uuid; product uuid; proposal uuid; quote jsonb; result jsonb; account_key text;
   offer_key text; business_key text; receipt public.store_offer_purchase_receipts%rowtype;
-  code text:=case i when 1 then 'RFA' else 'RFB' end;
+  code text:='RF'||chr(64+i);
  begin
   -- Bootstrap expects the ten canonical active countries; hide only this phase's earlier synthetic country while bootstrapping.
   update public.country_profiles set status='disabled' where id in(select country_id from ref025_fixtures);
@@ -84,9 +84,11 @@ for i in 1..2 loop
   insert into public.business_governance_proposals(game_session_id,business_id,proposer_player_id,
     proposal_type,approval_threshold_basis_points,snapshot_total_voting_units,idempotency_key,expires_at)
     values(g,b,owner_id,'capital_raise',5001,1,'ref025-race-mandates',now()+interval '1 day') returning id into proposal;
-  insert into public.business_management_mandates(game_session_id,business_id,player_id,source_proposal_id)
-    values(g,b,owner_id,proposal),(g,b,buyer,proposal);
-  insert into ref025_fixtures select i,g,owner_id,buyer,b,business_key,public_key,country from public.loan_products where id=product;
+  if i<=2 then
+    insert into public.business_management_mandates(game_session_id,business_id,player_id,source_proposal_id)
+      values(g,b,owner_id,proposal),(g,b,buyer,proposal);
+  end if;
+  insert into ref025_fixtures select i,g,owner_id,buyer,b,business_key,public_key,country,proposal from public.loan_products where id=product;
  end;
 end loop;
 end $fixture$;
@@ -129,3 +131,14 @@ create function pg_temp.ref025_rollback(g uuid,statement text) returns void lang
   drop trigger ref025_race_failure on public.audit_log;
  end;
 $rollback$;
+-- Guarded fixture-state transition only; not a new governance command or explicit mandate revocation.
+create function pg_temp.ref025_handoff(g uuid,b uuid,successor uuid,proposal uuid) returns void language sql as $handoff$
+ insert into public.business_management_mandates(game_session_id,business_id,player_id,source_proposal_id)
+ values(g,b,successor,proposal);
+$handoff$;
+create function pg_temp.ref025_authority(g uuid,b uuid,proposal uuid) returns jsonb language sql as $authority$
+ select jsonb_build_object(
+  'business',(select to_jsonb(x) from public.business_entities x where game_session_id=g and id=b),
+  'proposal',(select to_jsonb(x) from public.business_governance_proposals x where game_session_id=g and id=proposal),
+  'mandates',(select coalesce(jsonb_agg(to_jsonb(x) order by player_id),'[]') from public.business_management_mandates x where game_session_id=g and business_id=b));
+$authority$;
