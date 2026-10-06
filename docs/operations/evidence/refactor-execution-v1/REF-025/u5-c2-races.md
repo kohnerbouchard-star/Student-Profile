@@ -28,3 +28,32 @@ Next: exact-head Child1 qualification and parent review, then separately registe
 Independent review blocked d17d7e8: empty execFile output parsed as zero; no post-await cleanup deadline check.
 Pinned Node22.23.1 reproduced resolved empty stdout after41ms with timeout5ms/blocked loop40ms; new strict parser checks deadline first.
 Earlier green lifecycle/reset evidence is retained but cannot qualify the corrected head; fresh CI/review required.
+
+## Child 2 — approved disposable submission races
+Base 7268f9ccec7bf411ca359f1058ccbe7386f7e2eb: Child1 #865 merged qualified923f7a75 with identical tree; all7 main workflows passed.
+User approved merge and Child2 continuation on2026-10-05; parent retains Child2 review/merge authority.
+Exactly5 paths /390 semantic changed lines (additions+deletions), including this record:
+scripts/ref025-business-loan-concurrency.sql (new fixture), scripts/ref025-business-loan-concurrency.mjs,
+scripts/ref025-business-loan-concurrency.test.mjs, this file, and docs/operations/contracts/player-cross-cutting/pr-866.json (draft #866).
+Fresh13-open-PR full-path census: no collisions, including paginated #620; #859 remains unqualified history.
+Only duplicate/conflicting submission races, injected rollback and two-game isolation; existing private command unchanged.
+Remove only application creation CHECK in the attested disposable Banking phase; retain validated player_loans CHECK throughout.
+Use real Store sales, existing canonical authority and unchanged session helper; exact PID/start lock barrier, no sleeps as race proof.
+Compare complete application/profile/audit and monetary snapshots; replay keeps original initiator/assessment; no extra loan/ledger effects.
+Full database reset remains mandatory, followed by independent gate/migration and new fixture-absence checks; client/backend exit stays bounded.
+No workflow/shared helper/package/migration/Player/Markets/auth edits, hosted access, dispatch or deployment. Nine U1 holds unchanged.
+REF025 remains BLOCKED; REF027 depends025+026. No new liability/default/FX semantics or activation credit.
+Validation: pending implementation, pinned tests, disposable Banking CI and parent review. Revert only this bounded test change.
+Implementation now uses two real-sale games, exact business-row blockers, cross-operator replay/conflict and scoped audit-failure injection.
+Independent game commits while the first game's transaction remains open; rollback leaves the other game's rows unchanged.
+Pinned Node22.23.1:11 focused+16 authority tests PASS; boundary ratchet80 PASS. Disposable exact-head CI and parent review remain pending.
+Head18ecd477 failed fixture setup before races: run37391390936/job112037043071 FX_FIXING_NOT_FOUND; reset+independent verification PASS.
+Source trace: the second bootstrap sees the first synthetic country as an eleventh active snapshot; hide only fixture-owned countries during bootstrap.
+Assert ready bootstrap explicitly and suppress canonical DROP IF EXISTS notices only (client_min_messages=warning); SQL errors remain fatal. Fresh CI required.
+Heada4b2fc8f job112038553698 failed with Unexpected end of JSON input; full reset+independent verification again PASS.
+The one-line JSON parser truncated valid multiline composite aggregates. Frame complete rows between unique markers; reject absent/duplicate/incomplete frames.
+Regression reproduces truncation and checks complete multiline decoding; unchanged shared Store helper and all deadline/cleanup checks retained. Fresh CI required.
+Head16970edd database job112040537032 PASS including phase, reset, independent restoration and lint; budget review still blocked runner118/105 and authority39/35.
+Per-path nonblank ceilings are binding: SQL155, runner105, tests65, this record30, authority35; count braces/comments/metadata, exclude only blank lines.
+Move SQL-only rejection/blocker/injection helpers into the fixture and simplify bounded polling; keep every effect assertion and required check.
+Authority drops duplicated descriptions and redundant self-file requirements: CLI executes verifier and explicitly checks/reads manifest before validation; regression-file requirement and all locked paths/checks remain.

@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events';
 import { promisify } from 'node:util';
 import { spawn, execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { deadline, exchange, closeClient, intendedBlocker, checkedBackendCount } from './ref025-business-loan-concurrency.mjs';
+import { deadline, exchange, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow } from './ref025-business-loan-concurrency.mjs';
 
 // Exercise the same asynchronous process/marker boundary without requiring a database.
 function processSession() {
@@ -90,4 +90,48 @@ test('actual execFile timeout plus blocked loop cannot bypass cleanup deadline',
   while (performance.now() < until) {}
   await assert.rejects(async () => checkedBackendCount((await result).stdout, remaining),
     error => /REF025_DEADLINE/.test(error.message) || error.killed === true);
+});
+
+test('submission effect oracle rejects extra money, debt, audit, profile or application effects', () => {
+  const before = { applications: [], profiles: [], audits: [], loans: [], ledger: [{ id: 'ledger', amount: 240 }], balances: [{ id: 'balance', balance: 260 }] };
+  const app = { id: 'application', borrower_business_id: 'business', business_id: 'business', initiating_operator_player_id: 'operator', player_id: 'operator',
+    idempotency_key: 'request-key', obligation_currency_code: 'ECO', liability_kind: 'business_v1', status: 'pending_review', amount: 60 };
+  const after = { ...structuredClone(before), applications: [app], profiles: [{ player_id: 'operator' }],
+    audits: [{ id: 'audit', action: 'business.loan.application.submit', target_id: app.id, actor_id: 'operator', metadata: { assessment: { qualifying_income: 240 } } }] };
+  applicationEffects(before, after, 'operator', 'request-key', 'business');
+  for (const corrupt of [
+    s => s.ledger[0].amount++, s => s.balances[0].balance++, s => s.loans.push({ id: 'new-debt' }),
+    s => s.applications.push({ ...app, id: 'duplicate' }), s => s.applications[0].initiating_operator_player_id = 'successor',
+    s => s.applications[0].borrower_business_id = 'foreign-business', s => s.applications[0].obligation_currency_code = 'NRC', s => s.applications[0].idempotency_key = 'other-key',
+    s => s.audits.push({ ...s.audits[0], id: 'duplicate' }), s => s.audits[0].metadata.assessment.qualifying_income = 0,
+    s => s.profiles.push({ player_id: 'successor' })
+  ]) {
+    const changed = structuredClone(after); corrupt(changed);
+    assert.throws(() => applicationEffects(before, changed, 'operator', 'request-key', 'business'));
+  }
+});
+test('fixture removes only the application gate and uses real settlement helpers', () => {
+  const sql = readFileSync(new URL('./ref025-business-loan-concurrency.sql', import.meta.url), 'utf8');
+  assert.equal(sql.split('-- REF025 session helpers').length, 2);
+  assert.deepEqual(sql.match(/alter table[^;]+;/gi), ['alter table public.loan_applications drop constraint loan_applications_business_liability_disabled_v1;']);
+  assert(sql.includes('public.settle_business_store_offer_v2('));
+  assert(sql.includes('public.settle_business_store_offer_funding_v1('));
+  assert(!/disable trigger|session_replication_role|security definer/i.test(sql));
+});
+test('JSON framing preserves multiline composite aggregates and rejects missing or extra rows', () => {
+  const payload = '[{"game":1},\n {"game":2,"text":"escaped\\nline"}]', marker = 'rnonce:';
+  assert.throws(() => JSON.parse(payload.split('\n')[0]), /Unexpected end/);
+  assert.deepEqual(decodeRow(`previous\n${marker}${payload}${marker}\nrdone:done\n`, marker), JSON.parse(payload));
+  assert.equal(decodeRow(`${marker}0${marker}\r\n`, marker), 0);
+  for (const output of ['', `${marker}${payload}`, `prefix${marker}0${marker}\n`, `${marker}0${marker}`, `${marker}0${marker}\n${marker}1${marker}\n`]) {
+    assert.throws(() => decodeRow(output, marker), /JSON_FRAMING/);
+  }
+});
+test('bounded authority retains all predecessor verification checks and protected locks', () => {
+  const read = n => JSON.parse(readFileSync(new URL(`../docs/operations/contracts/player-cross-cutting/pr-${n}.json`, import.meta.url)));
+  const prior = read(865), current = read(866);
+  assert.deepEqual(current.requiredChecks, prior.requiredChecks);
+  assert.deepEqual(current.criticalJobChecks, prior.criticalJobChecks);
+  for (const p of ['scripts/verify-player-cross-cutting-authority.mjs', 'scripts/player-cross-cutting-authority.test.mjs']) assert(current.allowedPaths.includes(p));
+  assert(current.requiredFiles.includes('scripts/player-cross-cutting-authority.test.mjs'));
 });

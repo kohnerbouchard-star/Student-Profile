@@ -24,8 +24,13 @@ export async function exchange(session, sql, remaining) {
 }
 export async function json(session, expression, remaining) {
   const marker = `r${randomUUID().replaceAll('-', '')}:`;
-  await exchange(session, `select '${marker}' || (${expression})::text;`, remaining);
-  return JSON.parse(session.output.split('\n').find(line => line.startsWith(marker))?.slice(marker.length));
+  await exchange(session, `select '${marker}' || (${expression})::text || '${marker}';`, remaining);
+  return decodeRow(session.output, marker);
+}
+export function decodeRow(output, marker) {
+  const parts = output.split(marker);
+  assert(parts.length === 3 && (!parts[0] || parts[0].endsWith('\n')) && /^\r?\n/u.test(parts[2]), 'REF025_JSON_FRAMING');
+  return JSON.parse(parts[1]); // JSON aggregates of composite rows can contain literal newlines.
 }
 export function intendedBlocker(row, waiter, blocker) {
   assert(row && row.pid === waiter.pid && row.start === waiter.start, 'REF025_WAITER_IDENTITY');
@@ -85,16 +90,86 @@ async function connect(binding, sessions, remaining) {
   Object.assign(session, { pid: row.pid, start: row.start });
   return session;
 }
-async function verifyGates(session, remaining) {
+async function verifyGates(session, remaining, applicationGate = true) {
   const rows = await json(session, `(select json_agg(json_build_array(c.conname,c.convalidated,pg_get_constraintdef(c.oid)) order by c.conname)
     from pg_constraint c where (c.conrelid,c.conname) in
     (('public.loan_applications'::regclass,'loan_applications_business_liability_disabled_v1'),
      ('public.player_loans'::regclass,'player_loans_business_liability_disabled_v1')))`, remaining);
-  assert.deepEqual(rows, ['loan_applications', 'player_loans'].map(t => [`${t}_business_liability_disabled_v1`, true, "CHECK ((liability_kind = 'legacy_v1'::text))"]));
+  assert.deepEqual(rows, (applicationGate ? ['loan_applications', 'player_loans'] : ['player_loans']).map(t => [`${t}_business_liability_disabled_v1`, true, "CHECK ((liability_kind = 'legacy_v1'::text))"]));
   const versions = readdirSync('backend/supabase/migrations').filter(f => /^\d{14}_.+\.sql$/.test(f)).sort().map(f => f.slice(0, 14));
   assert.deepEqual(await json(session, '(select json_agg(version order by version) from supabase_migrations.schema_migrations)', remaining), versions);
-  assert.equal(await json(session, `(select count(*) from public.loan_applications where liability_kind<>'legacy_v1')`, remaining), 0);
+  if (applicationGate) {
+    assert.equal(await json(session, `(select count(*) from public.loan_applications where liability_kind<>'legacy_v1')`, remaining), 0);
+    assert.equal(await json(session, `(select count(*) from public.game_sessions where name like 'REF025 concurrency %')+
+      (select count(*) from public.staff_users where display_name='REF025 concurrency staff')+
+      (select count(*) from public.country_profiles where country_name like 'REF025 concurrency %')`, remaining), 0);
+  }
   assert.equal(await json(session, `(select count(*) from public.player_loans where liability_kind<>'legacy_v1')`, remaining), 0);
+}
+export function applicationEffects(before, after, actor, key, business) {
+  for (const field of ['loans', 'ledger', 'balances']) assert.deepEqual(after[field], before[field], `REF025_${field}`);
+  const created = after.applications.filter(a => !before.applications.some(b => b.id === a.id));
+  assert.equal(created.length, 1); const app = created[0];
+  assert.deepEqual(after.applications.filter(a => a.id !== app.id), before.applications);
+  assert.equal(app.initiating_operator_player_id, actor); assert.equal(app.player_id, actor);
+  assert.equal(app.borrower_business_id, business); assert.equal(app.business_id, business);
+  assert.equal(app.idempotency_key, key); assert.equal(app.obligation_currency_code, 'ECO');
+  assert.equal(app.liability_kind, 'business_v1'); assert.equal(app.status, 'pending_review'); assert.equal(app.amount, 60);
+  const added = after.audits.filter(a => !before.audits.some(b => b.id === a.id));
+  assert.equal(added.length, 1); assert.equal(added[0].action, 'business.loan.application.submit');
+  assert.equal(added[0].target_id, app.id); assert.equal(added[0].actor_id, actor);
+  assert.equal(added[0].metadata.assessment.qualifying_income, 240);
+  assert.deepEqual(after.audits.filter(a => a.id !== added[0].id), before.audits);
+  assert.equal(after.profiles.filter(p => p.player_id === actor).length, 1);
+  assert.deepEqual(after.profiles.filter(p => p.player_id !== actor), before.profiles.filter(p => p.player_id !== actor));
+}
+async function submissionRaces(observer, first, second, remaining) {
+  const sql = readFileSync(new URL('./ref025-business-loan-concurrency.sql', import.meta.url), 'utf8');
+  const parts = sql.split('-- REF025 session helpers'); assert.equal(parts.length, 2);
+  await exchange(observer, sql, remaining);
+  await verifyGates(observer, remaining, false);
+  for (const session of [first, second]) await exchange(session, parts[1], remaining);
+  const fixtures = await json(observer, '(select json_agg(f order by n) from ref025_fixtures f)', remaining);
+  assert.equal(fixtures.length, 2); const [one, two] = fixtures;
+  const state = (session, f) => json(session, `pg_temp.ref025_state(${sqlLiteral(f.g)}::uuid)`, remaining);
+  const command = (f, key, actor = f.owner_id, amount = 60) => `select * from economy_private.submit_business_loan_application_v1(
+    ${[f.g, actor, f.business_key, f.product_key, amount, 'REF025 race request', key].map(sqlLiteral).join(',')})`;
+  const submit = (session, f, key, actor) => json(session, `(select to_jsonb(r) from (${command(f, key, actor)}) r)`, remaining);
+  for (const conflict of [false, true]) {
+    const key = conflict ? 'ref025-conflict' : 'ref025-duplicate', before = await state(observer, one);
+    await exchange(first, 'begin;', remaining);
+    const result = await submit(first, one, key), committed = await state(first, one);
+    assert.equal(result.replayed, false); applicationEffects(before, committed, one.owner_id, key, one.b);
+    const competing = conflict
+      ? exchange(second, `select pg_temp.ref025_reject(${sqlLiteral(command(one, key, one.buyer, 61))},'IDEMPOTENCY_KEY_CONFLICT');`, remaining)
+      : submit(second, one, key, one.buyer);
+    competing.catch(() => {});
+    for (;;) {
+      const row = await json(observer, `pg_temp.ref025_blocker(${second.pid},${first.pid})`, remaining);
+      if (row?.wait === 'Lock') { intendedBlocker(row, second, first); break; }
+      await new Promise(resolve => setTimeout(resolve, Math.min(20, remaining())));
+    }
+    await exchange(first, 'commit;', remaining);
+    const replay = await competing;
+    if (!conflict) assert.deepEqual(replay, { ...result, replayed: true });
+    assert.deepEqual(await state(observer, one), committed);
+    await verifyGates(observer, remaining, false);
+  }
+  const beforeFailure = await state(observer, one);
+  await exchange(observer, `select pg_temp.ref025_rollback(${sqlLiteral(one.g)},${sqlLiteral(command(one, 'ref025-rollback', one.buyer))});`, remaining);
+  assert.deepEqual(await state(observer, one), beforeFailure);
+  assert.equal((await submit(observer, one, 'ref025-rollback', one.buyer)).replayed, false);
+  applicationEffects(beforeFailure, await state(observer, one), one.buyer, 'ref025-rollback', one.b);
+  const beforeOne = await state(observer, one), beforeTwo = await state(observer, two);
+  await exchange(observer, `select pg_temp.ref025_reject(${sqlLiteral(command({ ...two, business_key: one.business_key }, 'ref025-isolation'))},'BUSINESS_NOT_FOUND');`, remaining);
+  assert.deepEqual(await state(observer, one), beforeOne); assert.deepEqual(await state(observer, two), beforeTwo);
+  await exchange(first, 'begin;', remaining);
+  assert.equal((await submit(first, one, 'ref025-isolation')).replayed, false);
+  assert.equal((await submit(second, two, 'ref025-isolation')).replayed, false); // Must finish while game one's lock is held.
+  const isolated = await state(observer, two); applicationEffects(beforeTwo, isolated, two.owner_id, 'ref025-isolation', two.b);
+  assert.deepEqual(await state(observer, one), beforeOne);
+  await exchange(first, 'rollback;', remaining);
+  assert.deepEqual(await state(observer, one), beforeOne); assert.deepEqual(await state(observer, two), isolated);
 }
 export async function lifecycle(mode = '--phase') {
   assert(['--phase', '--verify', '--attest'].includes(mode), 'REF025_MODE');
@@ -105,23 +180,9 @@ export async function lifecycle(mode = '--phase') {
     if (mode !== '--attest') await verifyGates(observer, remaining);
     if (mode === '--phase') {
       const first = await connect(binding, sessions, remaining), second = await connect(binding, sessions, remaining);
-      const key = Math.floor(Math.random() * 2147483647);
-      await exchange(first, `begin; select pg_advisory_xact_lock(25025,${key});`, remaining);
-      const competing = exchange(second, `begin; select pg_advisory_xact_lock(25025,${key}); commit;`, remaining);
-      competing.catch(() => {});
-      let row;
-      do {
-        row = await json(observer, `(select json_build_object('pid',pid,'start',backend_start::text,'wait',wait_event_type,
-          'blockers',pg_blocking_pids(pid),'blockerStart',(select backend_start::text from pg_stat_activity where pid=${first.pid}))
-          from pg_stat_activity where pid=${second.pid})`, remaining);
-        if (row?.wait === 'Lock') break;
-        await new Promise(resolve => setTimeout(resolve, Math.min(20, remaining())));
-      } while (remaining());
-      intendedBlocker(row, second, first);
-      await exchange(first, 'rollback;', remaining);
-      await competing;
+      await submissionRaces(observer, first, second, remaining);
       await assert.rejects(exchange(second, 'select pg_sleep(0.1);', deadline(10)), /Timed out waiting|REF025_DEADLINE/);
-      await verifyGates(observer, remaining);
+      await verifyGates(observer, remaining, false);
     }
   } catch (error) { failure = error; }
   finally {
@@ -143,7 +204,7 @@ export async function lifecycle(mode = '--phase') {
     if (errors.length) failure = new AggregateError([failure, ...errors].filter(Boolean), 'REF025_CLOSE_FAILED');
   }
   if (failure) throw failure;
-  console.log(JSON.stringify({ ref025: mode, gates: mode === '--attest' ? 'not_checked' : 'retained', clientsAndBackends: 'closed' }));
+  console.log(JSON.stringify({ ref025: mode, gates: mode === '--attest' ? 'not_checked' : mode === '--phase' ? 'loan_retained_application_reset_required' : 'retained', clientsAndBackends: 'closed' }));
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   lifecycle(process.argv[2]).catch(error => { console.error(JSON.stringify({ failure: error.message, causes: error.errors?.map(e => e.message) })); process.exitCode = 1; });
