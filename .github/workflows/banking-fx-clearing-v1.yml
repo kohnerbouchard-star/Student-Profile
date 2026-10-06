@@ -16,6 +16,7 @@ on:
       - docs/roadmaps/banking-fx-clearing-scope-v1.md
       - docs/roadmaps/multicurrency-funding-core-scope-v1.md
       - player-terminal/**
+      - scripts/ref025-business-loan-concurrency*
       - scripts/banking-fx-*.mjs
       - scripts/banking-fx-*.sql
       - scripts/business-phase10-atomic-settlement-database-support.mjs
@@ -31,6 +32,7 @@ on:
       - backend/supabase/**
       - docs/operations/contracts/player-cross-cutting/pr-672.json
       - player-terminal/**
+      - scripts/ref025-business-loan-concurrency*
       - scripts/banking-fx-*.mjs
       - scripts/banking-fx-*.sql
       - scripts/business-phase10-atomic-settlement-database-support.mjs
@@ -101,6 +103,8 @@ jobs:
           git diff --check
 
   database-acceptance:
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
     name: Verify Banking FX database acceptance
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -161,6 +165,25 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: node scripts/banking-fx-database-acceptance.mjs
+
+      - name: Test REF025 session lifecycle
+        run: node --test scripts/ref025-business-loan-concurrency.test.mjs
+
+      - name: REF025 disposable race phase
+        id: ref025_phase
+        run: node scripts/ref025-business-loan-concurrency.mjs --phase
+
+      - name: Restore REF025 disposable database from zero
+        if: always() && steps.ref025_phase.outcome != 'skipped' && steps.ref025_phase.outcome != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ref025-business-loan-concurrency.mjs --attest
+          npx supabase db reset --workdir backend --local
+
+      - name: Verify REF025 restored gates and migration ledger
+        if: always() && steps.ref025_phase.outcome != 'skipped' && steps.ref025_phase.outcome != ''
+        run: node scripts/ref025-business-loan-concurrency.mjs --verify
 
       - name: Lint rebuilt database
         run: npx supabase db lint --workdir backend --local --level warning

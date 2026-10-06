@@ -1,7 +1,7 @@
 # STAFF-RECOVERY-OPERATOR-001 — staging system recovery
 
 Status: IN_PROGRESS; not deployed or approved for live execution.
-Dependency: PR862 at 422c8dbeb5b20111739778a2ce1a17f7842f7c74.
+Dependency: reconciled PR862 at 039a74dd1161b31898bc49252c39dedbbc8cd809.
 Owner branch: feat/staging-system-account-recovery.
 Dependent draft PR: https://github.com/kohnerbouchard-star/Student-Profile/pull/863. Implementation commit: b12c24fe993c498cce6569a5629c386b4de140c3.
 
@@ -35,7 +35,7 @@ This guarantees application-access restriction, not restriction of Supabase's pu
 
 ## Live gates
 
-No live factor deletion, session revocation, account/security metadata change, email send, credential/grant provisioning, deployment or merge is authorized. No production actions. All operator provider effects use disposable adapters in tests. The existing production-mutating recovery release workflow remains a separate merge blocker. REF-019/020 holds remain unchanged.
+No live factor deletion, session revocation, account/security metadata change, email send, credential/grant provisioning, deployment or merge is authorized. No production actions. All operator provider effects use disposable adapters in tests. The former automatic production writer in the recovery release workflow was removed by merged PR868 at guarded main `2661dd7399ee9877e4af236d3c77a5f3cc8780d7`; other Auth writers remain unchanged. REF-019/020 holds remain unchanged.
 
 ## Local verification and review
 
@@ -84,3 +84,16 @@ The operator runner now has a concrete service-RPC persistence adapter for begin
 Independent adapter review found no new security defect. A timestamp-format-only assertion was corrected to compare equivalent instants. Implementation `eacce71e9f853e2dc37ee9a6d95d1644aea7bfd3` passed exact-head Repository Quality, Backend Typecheck, Admin API Check, Auth Browser Review, Staging System Account Recovery and Database Replay (including full replay from zero twice). Final adapter-head CI must be qualified separately.
 
 Final operator-store focused run passed 39 tests (19 script, 19 suffix, one disposable database suite); secret scan passed.
+
+## Guarded-main stack reconciliation (2026-10-06)
+
+Parent authorized reconciliation and synthetic/draft qualification only. PR862
+now includes guarded main `2661dd7399ee9877e4af236d3c77a5f3cc8780d7`; this
+branch merges that exact dependent base. The sole conflict was the generated
+architecture inventory, rebuilt mechanically from combined source. Oversized
+source count remains 100; no ratchet or policy limit changes. Relative to prior
+PR863 head `a94796e3150b1be37b685c15d8cc33eac9367e42`, recovery implementation,
+migration bytes, tests and live-execution rejection remain unchanged. New
+exact-head qualification and independent review precede parent handoff. No
+merge to main, dispatch, live bindings, account/reset/factor/credential/settings
+operation or production authorization. REF-019/020 and all existing holds remain.
