@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.production-admin-route-probe-guard-pr-871.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 871,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/production-web-session-vercel-proxy-verify.yml",
+    "docs/operations/contracts/player-cross-cutting/pr-871.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-871.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience"
+  ],
+  "authorizationNote": "Bounded CI safety guard only. Ordinary pull_request and main push activity must remain synthetic for the production Admin-session Vercel proxy verifier. Live production probing is preserved but may run only after separate manual workflow_dispatch authorization bound to current main, exact workflow production origin, the explicit action phrase, and the protected production environment. The probe is not credentialed by the caller but the BFF adds deployment identity; backend request-protection nonce insertion and expired-nonce cleanup may occur. This PR authorizes no workflow dispatch, production deployment, Auth configuration change, account recovery, factor deletion, credential creation, or other live recovery action. PR #735 retains ownership of canonical production-origin convergence; this draft must not merge until that ownership collision is explicitly reconciled. REF-019/020 and existing release holds remain intact."
+}
