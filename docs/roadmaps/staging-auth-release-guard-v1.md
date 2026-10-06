@@ -3,6 +3,8 @@
 Status: `IMPLEMENTED_NOT_MERGED`. Owner: `fix/staging-auth-release-guard`.
 Roadmap item: `BETA-STAGING-AUTH-RELEASE-GUARD-001`.
 Base: `88b6cf6aa16c92726f4b0adb6788fa0784bd1513` (current main at intake).
+Draft PR: [#868](https://github.com/kohnerbouchard-star/Student-Profile/pull/868).
+Reviewed implementation: `bdfdc30a0cb619238da40d5e60041931e1d60106`.
 
 ## Scope and ownership
 
@@ -68,7 +70,9 @@ write, retained redirects, scanner safety and ambiguous failure without retry.
 Independent review found and resolved a missing staging project selector in the
 recovery email link; re-review found no remaining blocker. YAML parsed with
 exact event/job/permission and shared path filter checks; secret/diff checks pass.
-Broader checks and exact-head CI are pending. Local full typecheck is blocked
+Full root `npm test` passes. GitHub recovery validation run `37396235961`
+passed its focused tests and secret scan; final-head CI remains a handoff gate.
+Local backend full typecheck and smoke are blocked
 fetching the existing pinned Supabase 2.108.2 module from esm.sh (proxy tunnel
 failure); no application source was changed to bypass this dependency gate. No live
 staging evidence is claimed. Next: complete draft PR qualification, hand back
