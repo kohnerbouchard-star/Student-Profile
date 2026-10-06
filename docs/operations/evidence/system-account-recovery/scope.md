@@ -97,3 +97,14 @@ migration bytes, tests and live-execution rejection remain unchanged. New
 exact-head qualification and independent review precede parent handoff. No
 merge to main, dispatch, live bindings, account/reset/factor/credential/settings
 operation or production authorization. REF-019/020 and all existing holds remain.
+
+## Current-main reconciliation after PR869
+
+Parent authorized conflict-free normal integration of main
+`853b225dd684a50c710a65f3d4afdd006df6ec71` through dependent PR862
+`28e745554fcf28affe209dfeda43f6e2f4e3a1e1`. Only the five merged REF025
+test/evidence paths and PR862 scoped evidence are imported. Recovery source,
+migration, tests, authority, generated inventory and workflow bytes remain
+unchanged from qualified head `f62ff785178ef0be2097c0b05f631bc4ed12476a`.
+Fresh exact-head CI and independent source/merge-trigger review are required.
+No live bindings, merge to main, dispatch or account/settings operation; all holds remain.

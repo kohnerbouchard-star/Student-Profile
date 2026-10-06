@@ -24,3 +24,12 @@ unchanged; no other automatic Auth writer is edited. New exact-head checks and
 independent review are required before parent handoff. PR863 remains dependent.
 No merge to main, dispatch, live account/factor/credential/settings change or
 production authorization; REF-019/020 and all existing release holds remain.
+
+## Current-main reconciliation after PR869
+
+Parent authorized a normal merge of main `853b225dd684a50c710a65f3d4afdd006df6ec71`.
+The merge is conflict-free and imports only the five REF025 test/evidence paths.
+Recovery implementation, tests, authority and all workflow bytes remain unchanged
+from qualified head `c6d74a99ff3ff3f5e3dba3c94566be9e38ce07d1`. Fresh exact-head
+CI and independent source/merge-trigger review supersede the prior-head certificate.
+Both drafts remain unmerged; live bindings, REF-019/020 and release holds stay intact.
