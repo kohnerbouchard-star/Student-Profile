@@ -125,3 +125,5 @@ Cancellation/runner loss cannot guarantee restoration. New mode adds infrastruct
 Pinned regressions, exact-head Banking source/database/browser and applicable CI required; parent review before merge.
 No hosted access, captures, dispatch, credentials/settings or production actions; no protected-main merge attempt.
 40/50 unchanged; REF025 BLOCKED; REF027 depends025+026; nine U1 holds retained; no lending activation.
+Review blocked ac004ebc: the workflow-condition test reused one outcome for both phases and could miss wrong-phase cleanup references.
+Vary phase/income outcomes independently and require swapped-reference mutations to disagree when only one phase was attempted; workflow remains unchanged.

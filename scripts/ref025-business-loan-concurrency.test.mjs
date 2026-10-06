@@ -203,19 +203,29 @@ test('both actual workflow failure chains restore independently and gate the nex
   const step = name => workflow.split(`      - name: ${name}\n`)[1].split('      - name: ')[0];
   const condition = name => step(name).match(/^        if: (.+)$/mu)[1];
   const admission = condition('REF025 separate income phase');
-  const contexts = (phase, verified, healthy) => ({ always: () => true, success: () => healthy,
-    steps: { ref025_phase: { outcome: phase }, ref025_verified: { outcome: verified }, ref025_income: { outcome: phase } } });
+  const contexts = (phase, income, verified, healthy) => ({ always: () => true, success: () => healthy,
+    steps: { ref025_phase: { outcome: phase }, ref025_verified: { outcome: verified }, ref025_income: { outcome: income } } });
   const run = (expression, context) => vm.runInNewContext(expression, context);
-  for (const phase of ['success', 'failure', 'skipped', '']) {
+  for (const phase of ['success', 'failure', 'skipped', ''])
+  for (const income of ['success', 'failure', 'skipped', '']) {
     for (const reset of ['success', 'failure']) for (const verified of ['success', 'failure', 'skipped', '']) {
       const healthy = phase === 'success' && reset === 'success' && verified === 'success';
-      assert.equal(run(admission, contexts(phase, verified, healthy)), healthy);
-      assert.equal(run(admission, contexts(phase, verified, true)), verified === 'success');
-      assert.equal(run(admission, contexts(phase, verified, false)), false); // Any earlier job failure blocks admission.
-      for (const name of ['Restore REF025 disposable database from zero', 'Verify REF025 restored gates and migration ledger',
-        'Restore REF025 income database from zero', 'Verify REF025 income restored gates and migration ledger']) {
-        assert.equal(run(condition(name), contexts(phase, verified, healthy)), !['skipped', ''].includes(phase));
-        assert.equal(run(condition(name), contexts(phase, verified, false)), !['skipped', ''].includes(phase));
+      assert.equal(run(admission, contexts(phase, income, verified, healthy)), healthy);
+      assert.equal(run(admission, contexts(phase, income, verified, true)), verified === 'success');
+      assert.equal(run(admission, contexts(phase, income, verified, false)), false); // Any earlier job failure blocks admission.
+      for (const [name, owner] of [
+        ['Restore REF025 disposable database from zero', 'ref025_phase'],
+        ['Verify REF025 restored gates and migration ledger', 'ref025_phase'],
+        ['Restore REF025 income database from zero', 'ref025_income'],
+        ['Verify REF025 income restored gates and migration ledger', 'ref025_income']
+      ]) {
+        const expected = !['skipped', ''].includes(owner === 'ref025_phase' ? phase : income);
+        assert.equal(run(condition(name), contexts(phase, income, verified, healthy)), expected);
+        assert.equal(run(condition(name), contexts(phase, income, verified, false)), expected);
+        const wrong = owner === 'ref025_phase' ? 'ref025_income' : 'ref025_phase';
+        if (['skipped', ''].includes(phase) !== ['skipped', ''].includes(income)) {
+          assert.notEqual(run(condition(name).replaceAll(owner, wrong), contexts(phase, income, verified, false)), expected);
+        }
       }
     }
   }
