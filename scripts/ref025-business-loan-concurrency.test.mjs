@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events';
 import { promisify } from 'node:util';
 import { spawn, execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { deadline, exchange, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow } from './ref025-business-loan-concurrency.mjs';
+import { deadline, exchange, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow, authorityEffects } from './ref025-business-loan-concurrency.mjs';
 
 // Exercise the same asynchronous process/marker boundary without requiring a database.
 function processSession() {
@@ -134,4 +134,30 @@ test('bounded authority retains all predecessor verification checks and protecte
   assert.deepEqual(current.criticalJobChecks, prior.criticalJobChecks);
   for (const p of ['scripts/verify-player-cross-cutting-authority.mjs', 'scripts/player-cross-cutting-authority.test.mjs']) assert(current.allowedPaths.includes(p));
   assert(current.requiredFiles.includes('scripts/player-cross-cutting-authority.test.mjs'));
+});
+test('authority transition preserves borrower/proposal and rejects incorrect or rolled-back mandates', () => {
+  const fixture = { g: 'game', b: 'business', buyer: 'successor', proposal_id: 'proposal' };
+  const before = { business: { owner_player_id: 'original', currency_code: 'ECO' }, proposal: { id: 'proposal', status: 'open' }, mandates: [] };
+  const after = { ...structuredClone(before), mandates: [{ game_session_id: 'game', business_id: 'business', player_id: 'successor', source_proposal_id: 'proposal' }] };
+  authorityEffects(before, after, fixture, true);
+  authorityEffects(before, structuredClone(before), fixture, false);
+  assert.throws(() => authorityEffects(before, after, fixture, false));
+  assert.throws(() => authorityEffects(after, after, fixture, true), /OWNER_FALLBACK/);
+  for (const corrupt of [
+    s => s.business.owner_player_id = 'successor', s => s.business.currency_code = 'NRC',
+    s => s.proposal.status = 'closed', s => s.mandates.push({ ...s.mandates[0] }),
+    ...['game_session_id', 'business_id', 'player_id', 'source_proposal_id'].map(field => s => s.mandates[0][field] = 'wrong')
+  ]) {
+    const changed = structuredClone(after); corrupt(changed);
+    assert.throws(() => authorityEffects(before, changed, fixture, true));
+  }
+});
+test('Child3 retains predecessor required checks and exact authority-only paths', () => {
+  const read = n => JSON.parse(readFileSync(new URL(`../docs/operations/contracts/player-cross-cutting/pr-${n}.json`, import.meta.url)));
+  const prior = read(866), current = read(867);
+  assert.deepEqual(current.requiredChecks, prior.requiredChecks);
+  assert.deepEqual(current.criticalJobChecks, prior.criticalJobChecks);
+  assert.deepEqual(current.allowedPaths, prior.allowedPaths.map(p => p.replace('pr-866.json', 'pr-867.json')));
+  assert.deepEqual(current.requiredFiles, prior.requiredFiles);
+  for (const flag of ['productionDeploymentAllowed', 'productionMutationAllowed', 'secretValuesAllowed']) assert.equal(current[flag], false);
 });
