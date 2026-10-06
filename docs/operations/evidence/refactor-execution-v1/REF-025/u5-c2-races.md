@@ -102,3 +102,26 @@ Cancellation/runner loss cannot guarantee restoration. No hosted access, capture
 Income visibility is reserved for separately registered Child5; complete interacting lock graph and activation remain unqualified.
 Pinned regressions, exact-head Banking source/database/browser, Player and applicable CI required; parent reviews before merge.
 REF025 stays BLOCKED; REF027 depends025+026; nine U1 holds retained. No lending-policy or runtime change.
+
+## Child 5a — approved separately bounded income-phase infrastructure
+APPROVED_SCOPE; base853b225dd684a50c710a65f3d4afdd006df6ec71; #869 merged with qualified tree; all7 fresh-main workflows PASS.
+Six paths /270 nonblank additions+deletions, counting braces/comments/metadata:
+- .github/workflows/banking-fx-clearing-v1.yml:45
+- scripts/ref025-business-loan-concurrency.mjs:70
+- scripts/ref025-business-loan-concurrency.sql:30
+- scripts/ref025-business-loan-concurrency.test.mjs:60
+- docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:30
+- docs/operations/contracts/player-cross-cutting/pr-<assigned>.json:35; bind draft PR before implementation.
+Fresh13-open-PR full-path census: only #620 overlaps the Banking workflow; its137-file list was fully paginated.
+Disjoint workflow scope: add id to original restored-gate verification and insert income phase/reset/verification before Lint rebuilt database.
+Protect #620's Upload disposable diagnostics and Upload failed Chromium artifacts steps, both upload-artifact pins and all their settings.
+No workflow trigger, permission, retry, timeout, shared helper, other owner, migration/package/Player/Markets/auth change.
+Keep original15s phase and every Child1-4 assertion; new attested15s income mode prepares only two real-sale synthetic games.
+Start new phase only after the prior full reset and independent verification succeed, with no preceding job failure.
+Every attempted phase has its own always full reset after identity attestation and independent gates/ledger/fixture-absence verification.
+Retain bounded client/backend cleanup, exact identity/blocker/framing checks and validated loan gate; temporarily remove only application gate.
+Test both failure chains, including phase/reset/verification failures and skipped phases; no failed phase gains passing qualification.
+Cancellation/runner loss cannot guarantee restoration. New mode adds infrastructure only; complete income proof remains Child5b.
+Pinned regressions, exact-head Banking source/database/browser and applicable CI required; parent review before merge.
+No hosted access, captures, dispatch, credentials/settings or production actions; no protected-main merge attempt.
+40/50 unchanged; REF025 BLOCKED; REF027 depends025+026; nine U1 holds retained; no lending activation.
