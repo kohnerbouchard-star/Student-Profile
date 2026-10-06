@@ -22,7 +22,7 @@ on:
       - "api/admin/**"
       - "scripts/vercel-auth-proxy-contract.test.mjs"
 
-workflow_dispatch:
+  workflow_dispatch:
     inputs:
       source_commit:
         description: "Exact current main SHA reviewed for the production route probe"
@@ -146,7 +146,6 @@ jobs:
             'utf8',
           );
           for (const required of [
-            'statuses: write',
             'econovaria/vercel-admin-session-route',
             'api/admin-session/**',
             'api/admin/**',
@@ -155,19 +154,39 @@ jobs:
             'publish_pending',
             'verify_production',
             'publish_final',
-            'workflow_dispatch:',
-            'environment: production',
-            "github.event_name == 'workflow_dispatch'",
-            'PROBE PRODUCTION ADMIN SESSION ROUTE',
-            'confirm_origin:',
           ]) {
             if (!workflow.includes(required)) {
               throw new Error(`Observable production verification contract missing: ${required}`);
             }
           }
-          if (workflow.includes("github.event_name == 'push'")) {
+
+          const dispatchTrigger = ['workflow_', 'dispatch:'].join('');
+          const dispatchExpression = ['github.event_name', " == 'workflow_dispatch'"].join('');
+          const forbiddenPushExpression = ['github.event_name', " == 'push'"].join('');
+          const productionEnvironment = ['environment', ': production'].join('');
+          const statusWrite = ['statuses', ': write'].join('');
+          const actionPhrase = ['PROBE PRODUCTION', ' ADMIN SESSION ROUTE'].join('');
+          const originInput = ['confirm_', 'origin:'].join('');
+
+          if (workflow.split(dispatchTrigger).length - 1 < 1) {
+            throw new Error('Manual production probe trigger is missing.');
+          }
+          if (workflow.split(dispatchExpression).length - 1 < 4) {
+            throw new Error('A live production job is not restricted to manual dispatch.');
+          }
+          if (workflow.includes(forbiddenPushExpression)) {
             throw new Error('Live production verification must not run from ordinary push activity.');
           }
+          if (workflow.split(productionEnvironment).length - 1 !== 1) {
+            throw new Error('Production environment approval gate drifted.');
+          }
+          if (workflow.split(statusWrite).length - 1 !== 2) {
+            throw new Error('Commit-status write permission must remain scoped to the two publisher jobs.');
+          }
+          if (!workflow.includes(actionPhrase) || !workflow.includes(originInput)) {
+            throw new Error('Explicit production probe confirmation inputs are missing.');
+          }
+
           const probeNeedle = '--request POST "$PRODUCTION_ORIGIN/api/admin-session/login"';
           if (workflow.split(probeNeedle).length - 1 !== 1) {
             throw new Error('Production Admin route probe count drifted from one bounded verifier.');
