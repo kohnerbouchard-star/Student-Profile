@@ -1,7 +1,7 @@
 # STAFF-RECOVERY-OPERATOR-001 — staging system recovery
 
 Status: IN_PROGRESS; not deployed or approved for live execution.
-Dependency: reconciled PR862 at 039a74dd1161b31898bc49252c39dedbbc8cd809.
+Dependency: reconciled PR862 at c6d74a99ff3ff3f5e3dba3c94566be9e38ce07d1.
 Owner branch: feat/staging-system-account-recovery.
 Dependent draft PR: https://github.com/kohnerbouchard-star/Student-Profile/pull/863. Implementation commit: b12c24fe993c498cce6569a5629c386b4de140c3.
 
