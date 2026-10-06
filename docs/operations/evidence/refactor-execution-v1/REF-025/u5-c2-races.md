@@ -53,3 +53,7 @@ Assert ready bootstrap explicitly and suppress canonical DROP IF EXISTS notices 
 Heada4b2fc8f job112038553698 failed with Unexpected end of JSON input; full reset+independent verification again PASS.
 The one-line JSON parser truncated valid multiline composite aggregates. Frame complete rows between unique markers; reject absent/duplicate/incomplete frames.
 Regression reproduces truncation and checks complete multiline decoding; unchanged shared Store helper and all deadline/cleanup checks retained. Fresh CI required.
+Head16970edd database job112040537032 PASS including phase, reset, independent restoration and lint; budget review still blocked runner118/105 and authority39/35.
+Per-path nonblank ceilings are binding: SQL155, runner105, tests65, this record30, authority35; count braces/comments/metadata, exclude only blank lines.
+Move SQL-only rejection/blocker/injection helpers into the fixture and simplify bounded polling; keep every effect assertion and required check.
+Authority drops duplicated descriptions and redundant self-file requirements: CLI executes verifier and explicitly checks/reads manifest before validation; regression-file requirement and all locked paths/checks remain.

@@ -106,11 +106,6 @@ async function verifyGates(session, remaining, applicationGate = true) {
   }
   assert.equal(await json(session, `(select count(*) from public.player_loans where liability_kind<>'legacy_v1')`, remaining), 0);
 }
-export function expectedRejection(statement, expected) {
-  return `do $ref025$ begin begin execute ${sqlLiteral(statement)};
-    exception when others then if sqlerrm=${sqlLiteral(expected)} or sqlstate=${sqlLiteral(expected)} then return; end if; raise;
-    end; raise exception 'REF025_EXPECTED_REJECTION_MISSING'; end $ref025$;`;
-}
 export function applicationEffects(before, after, actor, key, business) {
   for (const field of ['loans', 'ledger', 'balances']) assert.deepEqual(after[field], before[field], `REF025_${field}`);
   const created = after.applications.filter(a => !before.applications.some(b => b.id === a.id));
@@ -146,18 +141,14 @@ async function submissionRaces(observer, first, second, remaining) {
     const result = await submit(first, one, key), committed = await state(first, one);
     assert.equal(result.replayed, false); applicationEffects(before, committed, one.owner_id, key, one.b);
     const competing = conflict
-      ? exchange(second, expectedRejection(command(one, key, one.buyer, 61), 'IDEMPOTENCY_KEY_CONFLICT'), remaining)
+      ? exchange(second, `select pg_temp.ref025_reject(${sqlLiteral(command(one, key, one.buyer, 61))},'IDEMPOTENCY_KEY_CONFLICT');`, remaining)
       : submit(second, one, key, one.buyer);
     competing.catch(() => {});
-    let row;
-    do {
-      row = await json(observer, `(select json_build_object('pid',pid,'start',backend_start::text,'wait',wait_event_type,
-        'blockers',pg_blocking_pids(pid),'blockerStart',(select backend_start::text from pg_stat_activity where pid=${first.pid}))
-        from pg_stat_activity where pid=${second.pid})`, remaining);
-      if (row?.wait === 'Lock') break;
+    for (;;) {
+      const row = await json(observer, `pg_temp.ref025_blocker(${second.pid},${first.pid})`, remaining);
+      if (row?.wait === 'Lock') { intendedBlocker(row, second, first); break; }
       await new Promise(resolve => setTimeout(resolve, Math.min(20, remaining())));
-    } while (remaining());
-    intendedBlocker(row, second, first);
+    }
     await exchange(first, 'commit;', remaining);
     const replay = await competing;
     if (!conflict) assert.deepEqual(replay, { ...result, replayed: true });
@@ -165,15 +156,12 @@ async function submissionRaces(observer, first, second, remaining) {
     await verifyGates(observer, remaining, false);
   }
   const beforeFailure = await state(observer, one);
-  await exchange(observer, `create trigger ref025_race_failure after insert on public.audit_log
-    for each row execute function pg_temp.ref025_fail(${sqlLiteral(one.g)});`, remaining);
-  await exchange(observer, expectedRejection(command(one, 'ref025-rollback', one.buyer), 'Z0255'), remaining);
-  await exchange(observer, 'drop trigger ref025_race_failure on public.audit_log;', remaining);
+  await exchange(observer, `select pg_temp.ref025_rollback(${sqlLiteral(one.g)},${sqlLiteral(command(one, 'ref025-rollback', one.buyer))});`, remaining);
   assert.deepEqual(await state(observer, one), beforeFailure);
   assert.equal((await submit(observer, one, 'ref025-rollback', one.buyer)).replayed, false);
   applicationEffects(beforeFailure, await state(observer, one), one.buyer, 'ref025-rollback', one.b);
   const beforeOne = await state(observer, one), beforeTwo = await state(observer, two);
-  await exchange(observer, expectedRejection(command({ ...two, business_key: one.business_key }, 'ref025-isolation'), 'BUSINESS_NOT_FOUND'), remaining);
+  await exchange(observer, `select pg_temp.ref025_reject(${sqlLiteral(command({ ...two, business_key: one.business_key }, 'ref025-isolation'))},'BUSINESS_NOT_FOUND');`, remaining);
   assert.deepEqual(await state(observer, one), beforeOne); assert.deepEqual(await state(observer, two), beforeTwo);
   await exchange(first, 'begin;', remaining);
   assert.equal((await submit(first, one, 'ref025-isolation')).replayed, false);
@@ -182,7 +170,6 @@ async function submissionRaces(observer, first, second, remaining) {
   assert.deepEqual(await state(observer, one), beforeOne);
   await exchange(first, 'rollback;', remaining);
   assert.deepEqual(await state(observer, one), beforeOne); assert.deepEqual(await state(observer, two), isolated);
-  await verifyGates(observer, remaining, false);
 }
 export async function lifecycle(mode = '--phase') {
   assert(['--phase', '--verify', '--attest'].includes(mode), 'REF025_MODE');

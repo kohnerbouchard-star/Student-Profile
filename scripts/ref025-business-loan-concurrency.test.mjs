@@ -127,3 +127,11 @@ test('JSON framing preserves multiline composite aggregates and rejects missing 
     assert.throws(() => decodeRow(output, marker), /JSON_FRAMING/);
   }
 });
+test('bounded authority retains all predecessor verification checks and protected locks', () => {
+  const read = n => JSON.parse(readFileSync(new URL(`../docs/operations/contracts/player-cross-cutting/pr-${n}.json`, import.meta.url)));
+  const prior = read(865), current = read(866);
+  assert.deepEqual(current.requiredChecks, prior.requiredChecks);
+  assert.deepEqual(current.criticalJobChecks, prior.criticalJobChecks);
+  for (const p of ['scripts/verify-player-cross-cutting-authority.mjs', 'scripts/player-cross-cutting-authority.test.mjs']) assert(current.allowedPaths.includes(p));
+  assert(current.requiredFiles.includes('scripts/player-cross-cutting-authority.test.mjs'));
+});

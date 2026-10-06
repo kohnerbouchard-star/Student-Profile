@@ -18,8 +18,6 @@
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
   "requiredFiles": [
-    "docs/operations/contracts/player-cross-cutting/pr-866.json",
-    "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
   "requiredChecks": [
@@ -33,7 +31,5 @@
   ],
   "criticalJobChecks": [
     "Verify Banking FX database acceptance"
-  ],
-  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md",
-  "authorizationNote": "Approved Child2 five paths/390 semantic changed lines. Unchanged verifier dependencies confer no edit authority. Exclusive disposable Banking submission races/rollback/game isolation only; remove application gate only, keep validated loan gate. Full reset and independent restoration verification. No hosted access/deployment/activation. Parent review/merge; nine U1 holds retained."
+  ]
 }

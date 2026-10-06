@@ -110,3 +110,22 @@ create function pg_temp.ref025_fail() returns trigger language plpgsql as $fail$
   return new;
  end;
 $fail$;
+create function pg_temp.ref025_reject(statement text,expected text) returns void language plpgsql as $reject$
+ begin
+  begin execute statement;
+  exception when others then if sqlerrm=expected or sqlstate=expected then return; end if; raise;
+  end; raise exception 'REF025_EXPECTED_REJECTION_MISSING';
+ end;
+$reject$;
+create function pg_temp.ref025_blocker(waiter integer,blocker integer) returns json language sql as $blocker$
+ select json_build_object('pid',pid,'start',backend_start::text,'wait',wait_event_type,
+  'blockers',pg_blocking_pids(pid),'blockerStart',(select backend_start::text from pg_stat_activity where pid=blocker))
+ from pg_stat_activity where pid=waiter;
+$blocker$;
+create function pg_temp.ref025_rollback(g uuid,statement text) returns void language plpgsql as $rollback$
+ begin
+  execute format('create trigger ref025_race_failure after insert on public.audit_log for each row execute function pg_temp.ref025_fail(%L)',g);
+  perform pg_temp.ref025_reject(statement,'Z0255');
+  drop trigger ref025_race_failure on public.audit_log;
+ end;
+$rollback$;
