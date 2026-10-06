@@ -57,3 +57,25 @@ Head16970edd database job112040537032 PASS including phase, reset, independent r
 Per-path nonblank ceilings are binding: SQL155, runner105, tests65, this record30, authority35; count braces/comments/metadata, exclude only blank lines.
 Move SQL-only rejection/blocker/injection helpers into the fixture and simplify bounded polling; keep every effect assertion and required check.
 Authority drops duplicated descriptions and redundant self-file requirements: CLI executes verifier and explicitly checks/reads manifest before validation; regression-file requirement and all locked paths/checks remain.
+
+## Child 3 — approved authority-only race qualification
+APPROVED_SCOPE; base88b6cf6aa16c92726f4b0adb6788fa0784bd1513, merged Child2 #866; seven fresh-main workflows PASS.
+Five exact paths;380 nonblank changed lines total, additions+deletions including braces/comments/metadata:
+- scripts/ref025-business-loan-concurrency.sql:150
+- scripts/ref025-business-loan-concurrency.mjs:105
+- scripts/ref025-business-loan-concurrency.test.mjs:60
+- docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:30
+- docs/operations/contracts/player-cross-cutting/pr-<assigned>.json:35 (bind before source edits).
+Fresh13-open-PR full-path census including137 files in #620: no overlap; #859 remains superseded/unqualified history.
+Add fresh owner-fallback fixtures and real immutable successor-mandate insertion; never update/delete mandates or disable guards.
+Observe exact tracked blocker PID/start before committing or rolling back the authority writer against waiting creation/replay.
+Commit denies former operator without effects; rollback preserves authority and correct creation/replay; successor replay preserves original obligation/assessment.
+Check complete economic and authority snapshots, original actor/account/currency, current resolver and zero extra loan/ledger effects.
+No explicit-mandate revocation, governance RPC qualification or global exactly-one-business serialization claim.
+Product/account/party eligibility races and committed-income visibility remain OUTSTANDING for subsequent bounded qualification.
+Existing Child1/2 scenarios, strict framing, deadlines and bounded client/backend cleanup remain; no workflow/shared helper changes.
+Application-gate-only removal in the attested exclusively disposable Banking phase; validated loan gate remains throughout.
+Always full reset after attempted phase, then independent exact gates/migration ledger/all fixture absence; failures remain failures.
+Cancellation/runner loss cannot guarantee restoration. No hosted access, captures, dispatches, credentials/settings or release changes.
+Pinned focused/authority tests, exact-head Banking source/database/browser, Player and applicable CI must pass; preserve failed evidence.
+Parent independently reviews before merge. REF025 BLOCKED; REF027 depends025+026; nine U1 holds retained. No lending activation.
