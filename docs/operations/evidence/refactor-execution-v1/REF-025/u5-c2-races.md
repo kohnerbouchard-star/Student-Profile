@@ -111,7 +111,7 @@ Six paths /270 nonblank additions+deletions, counting braces/comments/metadata:
 - scripts/ref025-business-loan-concurrency.sql:30
 - scripts/ref025-business-loan-concurrency.test.mjs:60
 - docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:30
-- docs/operations/contracts/player-cross-cutting/pr-<assigned>.json:35; bind draft PR before implementation.
+- docs/operations/contracts/player-cross-cutting/pr-870.json:35; draft #870 bound before implementation.
 Fresh13-open-PR full-path census: only #620 overlaps the Banking workflow; its137-file list was fully paginated.
 Disjoint workflow scope: add id to original restored-gate verification and insert income phase/reset/verification before Lint rebuilt database.
 Protect #620's Upload disposable diagnostics and Upload failed Chromium artifacts steps, both upload-artifact pins and all their settings.
