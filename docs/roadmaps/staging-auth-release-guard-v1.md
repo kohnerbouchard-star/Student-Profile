@@ -17,7 +17,9 @@ unchanged and is no longer consumed by this workflow. There is no production
 release path or authorization in this change.
 
 The workflow, `scripts/staging-auth-recovery-release.mjs`, its focused test,
-this record and the global Scope Intake entry are the complete scope. No
+this record, the global Scope Intake entry and parent-approved PR868 verification
+manifest are the complete scope. The shared verifier and regression file remain
+unchanged locks, not edit permission. No
 application, migration, RPC, API, realtime, auth/session semantics, dependency,
 architecture inventory or release hold changes. REF-019/020 remain held.
 Active #736 owns Player credential selection; #735 owns production origin gates;
@@ -78,3 +80,9 @@ failure); no application source was changed to bypass this dependency gate. No l
 staging evidence is claimed. Next: complete draft PR qualification, hand back
 for parent review/merge coordination, then obtain separate staging-operation
 approval and bindings. Production remains unauthorized.
+
+Parent independently reviewed and approved the exact six-change/eight-lock/four-critical
+verification manifest on 2026-10-06. Its identity/base/path/false-flag rejection
+cases pass without verifier changes. This resolves the manifest registration gap;
+new exact-final-head CI must pass before parent review. The guard applies only
+to `admin-password-recovery-release.yml`; other production Auth writers are unchanged.
