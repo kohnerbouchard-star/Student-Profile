@@ -50,3 +50,6 @@ Pinned Node22.23.1:11 focused+16 authority tests PASS; boundary ratchet80 PASS. 
 Head18ecd477 failed fixture setup before races: run37391390936/job112037043071 FX_FIXING_NOT_FOUND; reset+independent verification PASS.
 Source trace: the second bootstrap sees the first synthetic country as an eleventh active snapshot; hide only fixture-owned countries during bootstrap.
 Assert ready bootstrap explicitly and suppress canonical DROP IF EXISTS notices only (client_min_messages=warning); SQL errors remain fatal. Fresh CI required.
+Heada4b2fc8f job112038553698 failed with Unexpected end of JSON input; full reset+independent verification again PASS.
+The one-line JSON parser truncated valid multiline composite aggregates. Frame complete rows between unique markers; reject absent/duplicate/incomplete frames.
+Regression reproduces truncation and checks complete multiline decoding; unchanged shared Store helper and all deadline/cleanup checks retained. Fresh CI required.

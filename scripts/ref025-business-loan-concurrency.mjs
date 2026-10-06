@@ -24,8 +24,13 @@ export async function exchange(session, sql, remaining) {
 }
 export async function json(session, expression, remaining) {
   const marker = `r${randomUUID().replaceAll('-', '')}:`;
-  await exchange(session, `select '${marker}' || (${expression})::text;`, remaining);
-  return JSON.parse(session.output.split('\n').find(line => line.startsWith(marker))?.slice(marker.length));
+  await exchange(session, `select '${marker}' || (${expression})::text || '${marker}';`, remaining);
+  return decodeRow(session.output, marker);
+}
+export function decodeRow(output, marker) {
+  const parts = output.split(marker);
+  assert(parts.length === 3 && (!parts[0] || parts[0].endsWith('\n')) && /^\r?\n/u.test(parts[2]), 'REF025_JSON_FRAMING');
+  return JSON.parse(parts[1]); // JSON aggregates of composite rows can contain literal newlines.
 }
 export function intendedBlocker(row, waiter, blocker) {
   assert(row && row.pid === waiter.pid && row.start === waiter.start, 'REF025_WAITER_IDENTITY');
