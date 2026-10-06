@@ -22,9 +22,23 @@ on:
       - "api/admin/**"
       - "scripts/vercel-auth-proxy-contract.test.mjs"
 
+workflow_dispatch:
+    inputs:
+      source_commit:
+        description: "Exact current main SHA reviewed for the production route probe"
+        required: true
+        type: string
+      confirm_origin:
+        description: "Type the exact PRODUCTION_ORIGIN value from this reviewed workflow"
+        required: true
+        type: string
+      confirm_action:
+        description: "Type PROBE PRODUCTION ADMIN SESSION ROUTE"
+        required: true
+        type: string
+
 permissions:
   contents: read
-  statuses: write
 
 concurrency:
   group: production-web-session-vercel-proxy-${{ github.ref }}
@@ -35,9 +49,32 @@ env:
   STATUS_CONTEXT: econovaria/vercel-admin-session-route
 
 jobs:
+  authorize_production_probe:
+    name: Authorize scoped production route probe
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - name: Enforce explicit production probe authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          [[ "${{ inputs.source_commit }}" =~ ^[a-f0-9]{40}$ ]]
+          test "${{ inputs.source_commit }}" = "$GITHUB_SHA"
+          test "${{ inputs.confirm_origin }}" = "$PRODUCTION_ORIGIN"
+          test "${{ inputs.confirm_action }}" = "PROBE PRODUCTION ADMIN SESSION ROUTE"
+
   publish_pending:
     name: Publish production route verification location
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs:
+      - authorize_production_probe
+      - validate
+    permissions:
+      contents: read
+      statuses: write
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -118,16 +155,28 @@ jobs:
             'publish_pending',
             'verify_production',
             'publish_final',
+            'workflow_dispatch:',
+            'environment: production',
+            "github.event_name == 'workflow_dispatch'",
+            'PROBE PRODUCTION ADMIN SESSION ROUTE',
+            'confirm_origin:',
           ]) {
             if (!workflow.includes(required)) {
               throw new Error(`Observable production verification contract missing: ${required}`);
             }
           }
+          if (workflow.includes("github.event_name == 'push'")) {
+            throw new Error('Live production verification must not run from ordinary push activity.');
+          }
+          const probeNeedle = '--request POST "$PRODUCTION_ORIGIN/api/admin-session/login"';
+          if (workflow.split(probeNeedle).length - 1 !== 1) {
+            throw new Error('Production Admin route probe count drifted from one bounded verifier.');
+          }
           NODE
 
   verify_production:
     name: Verify deployed Vercel Admin session route
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     needs:
       - publish_pending
       - validate
@@ -186,16 +235,21 @@ jobs:
             echo '- Controlled invalid-input response: `400`'
             echo '- Route-not-found response: `rejected`'
             echo '- Supabase deployment performed: `false`'
-            echo '- Secret or database mutation performed: `false`'
+            echo '- Credential or account mutation requested: `false`'
+            echo '- Request-protection nonce database effects: `possible (claim/expiry cleanup)`'
           } >> "$GITHUB_STEP_SUMMARY"
 
   publish_final:
     name: Publish production route verification result
-    if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && needs.authorize_production_probe.result == 'success' }}
     needs:
+      - authorize_production_probe
       - publish_pending
       - validate
       - verify_production
+    permissions:
+      contents: read
+      statuses: write
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
