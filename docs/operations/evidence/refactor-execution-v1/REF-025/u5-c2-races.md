@@ -65,7 +65,7 @@ Five exact paths;380 nonblank changed lines total, additions+deletions including
 - scripts/ref025-business-loan-concurrency.mjs:105
 - scripts/ref025-business-loan-concurrency.test.mjs:60
 - docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:30
-- docs/operations/contracts/player-cross-cutting/pr-<assigned>.json:35 (bind before source edits).
+- docs/operations/contracts/player-cross-cutting/pr-867.json:35 (draft #867, exact authority-only path lock).
 Fresh13-open-PR full-path census including137 files in #620: no overlap; #859 remains superseded/unqualified history.
 Add fresh owner-fallback fixtures and real immutable successor-mandate insertion; never update/delete mandates or disable guards.
 Observe exact tracked blocker PID/start before committing or rolling back the authority writer against waiting creation/replay.
