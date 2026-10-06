@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events';
 import { promisify } from 'node:util';
 import { spawn, execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { deadline, exchange, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow, authorityEffects } from './ref025-business-loan-concurrency.mjs';
+import { deadline, exchange, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow, authorityEffects, eligibilityEffects } from './ref025-business-loan-concurrency.mjs';
 
 // Exercise the same asynchronous process/marker boundary without requiring a database.
 function processSession() {
@@ -158,6 +158,42 @@ test('Child3 retains predecessor required checks and exact authority-only paths'
   assert.deepEqual(current.requiredChecks, prior.requiredChecks);
   assert.deepEqual(current.criticalJobChecks, prior.criticalJobChecks);
   assert.deepEqual(current.allowedPaths, prior.allowedPaths.map(p => p.replace('pr-866.json', 'pr-867.json')));
+  assert.deepEqual(current.requiredFiles, prior.requiredFiles);
+  for (const flag of ['productionDeploymentAllowed', 'productionMutationAllowed', 'secretValuesAllowed']) assert.equal(current[flag], false);
+});
+test('eligibility oracle permits only the selected status and exact transaction timestamp', () => {
+  const before = {
+    business: { id: 'borrower', currency_code: 'ECO' },
+    product: { id: 'product', status: 'active', updated_at: '2026-10-06T00:00:00+00:00', annual_rate: 0 },
+    party: { id: 'party', status: 'active', updated_at: '2026-10-06T00:00:00+00:00', business_id: 'borrower' },
+    account: { id: 'account', status: 'active', updated_at: '2026-10-06T00:00:00+00:00', currency_code: 'ECO' }
+  };
+  const time = '2026-10-06T01:00:00+00:00';
+  for (const [target, status] of [['product', 'paused'], ['party', 'disabled'], ['account', 'restricted']]) {
+    const after = structuredClone(before);
+    Object.assign(after[target], { status, updated_at: time });
+    eligibilityEffects(before, after, target, status, time);
+    assert.throws(() => eligibilityEffects(before, before, target, status, time));
+    for (const corrupt of [
+      s => s[target].status = 'active', s => s[target].id = 'other',
+      s => s[target].updated_at = before[target].updated_at,
+      s => s.business.currency_code = 'NRC', s => s.product.annual_rate = 10,
+      s => s.party.business_id = 'other', s => s.account.currency_code = 'NRC',
+      s => s.extra = 'unexpected'
+    ]) {
+      const changed = structuredClone(after); corrupt(changed);
+      assert.throws(() => eligibilityEffects(before, changed, target, status, time));
+    }
+    assert.throws(() => eligibilityEffects(before, after, target, status, 'not-a-time'));
+  }
+  assert.throws(() => eligibilityEffects(before, before, 'business', 'closed', time));
+});
+test('Child4 retains predecessor required checks and exact eligibility-only paths', () => {
+  const read = n => JSON.parse(readFileSync(new URL(`../docs/operations/contracts/player-cross-cutting/pr-${n}.json`, import.meta.url)));
+  const prior = read(867), current = read(869);
+  assert.deepEqual(current.requiredChecks, prior.requiredChecks);
+  assert.deepEqual(current.criticalJobChecks, prior.criticalJobChecks);
+  assert.deepEqual(current.allowedPaths, prior.allowedPaths.map(p => p.replace('pr-867.json', 'pr-869.json')));
   assert.deepEqual(current.requiredFiles, prior.requiredFiles);
   for (const flag of ['productionDeploymentAllowed', 'productionMutationAllowed', 'secretValuesAllowed']) assert.equal(current[flag], false);
 });
