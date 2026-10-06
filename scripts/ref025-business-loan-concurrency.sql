@@ -1,6 +1,7 @@
 -- Invoked only inside the attested, exclusively disposable REF025 Banking phase.
 -- Real settled sales use existing canonical helpers; no production routine is replaced.
-create temporary table ref025_fixtures(n integer,g uuid,owner_id uuid,buyer uuid,b uuid,business_key text,product_key text);
+set client_min_messages=warning; -- Canonical funding emits harmless DROP IF EXISTS notices; SQL errors remain fatal.
+create temporary table ref025_fixtures(n integer,g uuid,owner_id uuid,buyer uuid,b uuid,business_key text,product_key text,country_id uuid);
 begin;
 alter table public.loan_applications drop constraint loan_applications_business_liability_disabled_v1;
 do $fixture$
@@ -14,6 +15,8 @@ for i in 1..2 loop
   offer_key text; business_key text; receipt public.store_offer_purchase_receipts%rowtype;
   code text:=case i when 1 then 'RFA' else 'RFB' end;
  begin
+  -- Bootstrap expects the ten canonical active countries; hide only this phase's earlier synthetic country while bootstrapping.
+  update public.country_profiles set status='disabled' where id in(select country_id from ref025_fixtures);
   insert into public.staff_users(id,supabase_auth_user_id,email,display_name)
     values(staff,gen_random_uuid(),staff||'@example.test','REF025 concurrency staff');
   insert into public.game_sessions(id,owner_staff_user_id,name,lifecycle_state,provisioning_status)
@@ -51,8 +54,9 @@ for i in 1..2 loop
     select g,c.id,0,statement_timestamp()-interval '2 minutes','REF025 concurrency game '||i,d.id,d.preset_key,
       statement_timestamp()-interval '3 minutes' from public.country_profiles c
     cross join public.difficulty_policy_profiles d where c.status='active' and d.preset_key='standard';
-  perform public.initialize_fx_authority_for_game_v1(g,clock_timestamp()-interval '1 minute',true);
-  update public.country_profiles set status='active' where id=country;
+  result := public.initialize_fx_authority_for_game_v1(g,clock_timestamp()-interval '1 minute',true);
+  if result->>'cutoverStatus' is distinct from 'ready' then raise exception 'REF025 fixture FX bootstrap: %',result; end if;
+  update public.country_profiles set status='active' where id=country or id in(select country_id from ref025_fixtures);
   update public.game_sessions set lifecycle_state='active',status='active' where id=g;
   insert into public.country_economic_snapshots(game_session_id,country_profile_id,snapshot_sequence,
     effective_at,snapshot_label,difficulty_policy_profile_id,difficulty_preset,created_at)
@@ -82,7 +86,7 @@ for i in 1..2 loop
     values(g,b,owner_id,'capital_raise',5001,1,'ref025-race-mandates',now()+interval '1 day') returning id into proposal;
   insert into public.business_management_mandates(game_session_id,business_id,player_id,source_proposal_id)
     values(g,b,owner_id,proposal),(g,b,buyer,proposal);
-  insert into ref025_fixtures select i,g,owner_id,buyer,b,business_key,public_key from public.loan_products where id=product;
+  insert into ref025_fixtures select i,g,owner_id,buyer,b,business_key,public_key,country from public.loan_products where id=product;
  end;
 end loop;
 end $fixture$;

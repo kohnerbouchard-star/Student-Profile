@@ -47,3 +47,6 @@ Validation: pending implementation, pinned tests, disposable Banking CI and pare
 Implementation now uses two real-sale games, exact business-row blockers, cross-operator replay/conflict and scoped audit-failure injection.
 Independent game commits while the first game's transaction remains open; rollback leaves the other game's rows unchanged.
 Pinned Node22.23.1:11 focused+16 authority tests PASS; boundary ratchet80 PASS. Disposable exact-head CI and parent review remain pending.
+Head18ecd477 failed fixture setup before races: run37391390936/job112037043071 FX_FIXING_NOT_FOUND; reset+independent verification PASS.
+Source trace: the second bootstrap sees the first synthetic country as an eleventh active snapshot; hide only fixture-owned countries during bootstrap.
+Assert ready bootstrap explicitly and suppress canonical DROP IF EXISTS notices only (client_min_messages=warning); SQL errors remain fatal. Fresh CI required.
