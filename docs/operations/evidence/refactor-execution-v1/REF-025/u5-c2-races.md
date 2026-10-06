@@ -79,3 +79,26 @@ Always full reset after attempted phase, then independent exact gates/migration 
 Cancellation/runner loss cannot guarantee restoration. No hosted access, captures, dispatches, credentials/settings or release changes.
 Pinned focused/authority tests, exact-head Banking source/database/browser, Player and applicable CI must pass; preserve failed evidence.
 Parent independently reviews before merge. REF025 BLOCKED; REF027 depends025+026; nine U1 holds retained. No lending activation.
+
+## Child 4 — approved eligibility-only race qualification
+APPROVED_SCOPE; base fb915676b7e419d8046a8f837112d19e2cc82423; Child3 #867 merged with identical qualified tree; seven main workflows PASS.
+Five exact paths /385 nonblank additions+deletions, including braces/comments/metadata:
+- scripts/ref025-business-loan-concurrency.sql:155
+- scripts/ref025-business-loan-concurrency.mjs:105
+- scripts/ref025-business-loan-concurrency.test.mjs:60
+- docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:30
+- docs/operations/contracts/player-cross-cutting/pr-869.json:35; draft #869 bound before implementation.
+Fresh14-open-PR full-path census including #868 and all137 files of #620: no selected-path collision.
+Product active-to-paused, Business party active-to-disabled and checking account active-to-restricted only.
+Writer-first creation: exact tracked blocker; commit rejects, rollback creates one application.
+Writer-first replay: synchronize on borrower lock, preserve current authority and original assessment/account/currency; no eligibility-lock claim.
+Submission-first: each status writer waits on retained SHARE locks until submission commits or rolls back.
+Compare complete eligibility/economic snapshots and unrelated-game sentinels; no extra loan or ledger effects.
+Use three additional synthetic games with distinct request keys; restore only fixture-owned statuses through ordinary guarded writes.
+Preserve every Child1-3 assertion, framing/deadlines and bounded client/backend cleanup; no shared-helper/workflow changes.
+Application-gate-only removal in the attested disposable Banking phase; validated loan gate remains throughout.
+Every attempted phase requires full reset plus independent exact gate/migration/fixture-absence verification; failures remain failures.
+Cancellation/runner loss cannot guarantee restoration. No hosted access, captures, dispatch, credentials/settings or release changes.
+Income visibility is reserved for separately registered Child5; complete interacting lock graph and activation remain unqualified.
+Pinned regressions, exact-head Banking source/database/browser, Player and applicable CI required; parent reviews before merge.
+REF025 stays BLOCKED; REF027 depends025+026; nine U1 holds retained. No lending-policy or runtime change.
