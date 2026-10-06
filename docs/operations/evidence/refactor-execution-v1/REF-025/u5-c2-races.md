@@ -87,7 +87,7 @@ Five exact paths /385 nonblank additions+deletions, including braces/comments/me
 - scripts/ref025-business-loan-concurrency.mjs:105
 - scripts/ref025-business-loan-concurrency.test.mjs:60
 - docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:30
-- docs/operations/contracts/player-cross-cutting/pr-<assigned>.json:35; bind actual draft PR before implementation.
+- docs/operations/contracts/player-cross-cutting/pr-869.json:35; draft #869 bound before implementation.
 Fresh14-open-PR full-path census including #868 and all137 files of #620: no selected-path collision.
 Product active-to-paused, Business party active-to-disabled and checking account active-to-restricted only.
 Writer-first creation: exact tracked blocker; commit rejects, rollback creates one application.
