@@ -23,6 +23,11 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 - **`STAFF-RECOVERY-MFA-001` — U4 recovery MFA repair (2026-10-05):** `IMPLEMENTED_NOT_MERGED`; draft [#862](https://github.com/kohnerbouchard-star/Student-Profile/pull/862), implementation `4faa2a70fac6ffd1bda857b7ab9d7e2a3a0a6f77`; owner approved code, synthetic tests and draft PR on `fix/password-recovery-mfa`, base `d7669d39f60cbfbf80b79ce05856e315cf60d9aa`. Add the missing existing-factor challenge through the existing recovery proxy while preserving AAL2/reset safeguards. [Scope, evidence, limitations and gated rollout](../operations/evidence/password-recovery-mfa/implementation.md). No deployment, account/factor/settings change or REF-019/020 resumption. Next: parent review, exact-head checks and separately approved rollout.
 
+- **`BETA-STAGING-AUTH-RELEASE-GUARD-001` — Recovery merge safety (2026-10-06)**
+  - Status: `VERIFIED_COMPLETE` for the merge-safety guard only. [PR #868](https://github.com/kohnerbouchard-star/Student-Profile/pull/868) merged as `2661dd7399ee9877e4af236d3c77a5f3cc8780d7` from qualified source `e5f03672181fcb8789c6e6161ec63f1baf332fa5`. All eight fresh-main workflows passed; staging reconciliation and production publication skipped. Live recovery is not certified.
+  - Remove the legacy automatic production Auth settings writer; retain synthetic PR/main validation and prepare only an explicitly confirmed staging reconciliation path. Scope, ownership, tests, required bindings and release limits: [staging guard record](staging-auth-release-guard-v1.md).
+  - No dispatch, deployment, live auth setting/factor/credential/reset operation or production authorization. #862/#863 remain separate drafts; REF-019/020 and existing release holds remain unchanged. Next: reconcile and synthetically qualify the recovery stack against guarded main, then parent review.
+
 - **`BETA-LIVE-MIGRATION-PARITY-001` — Phase 15 program (2026-09-20)**
   - Owner authorizes the full gated 15A–15F program. This supersedes prior no-Phase-15/no-release authorization statements, while preserving the requirement that production changes follow certified 15A–15E gates.
   - Status: `IN_PROGRESS`; 15A hard gate `BLOCKED`, later tranches unopened. Owner branch `fix/phase15-live-migration-parity-v1`, source main `22dc9ce5023eb200a6608d5bb90a9ac30cb36c90`.

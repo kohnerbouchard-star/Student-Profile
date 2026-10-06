@@ -11,3 +11,16 @@ Missing/inaccessible factors stop with administrator recovery guidance. Independ
 Validation: Node 22.23.1/npm 10.9.8; pinned root/backend installs; full root `npm test` PASS; 29 focused auth contracts PASS; disposable Chromium recovery journey PASS using the system Chromium because the pinned browser download was network-blocked. Synthetic provider responses cover valid/invalid code, expired or wrong-project denial, missing/inaccessible factors, no token storage/refresh disclosure, no automatic password resubmit, page exit and elevated reset handoff. CI installs pinned Playwright Chromium and runs the same test. Backend full typecheck is blocked locally by the network tunnel denying the pinned esm.sh dependency; Node TypeScript stages passed. Backend smoke likewise reaches the unchanged Admin API dependency and is blocked by that tunnel denial after its earlier suites pass; neither full backend gate is claimed passed locally. These results do not establish live provider acceptance or a user's factor access.
 
 Rollout: parent review and required exact-head CI precede any merge. No automatic merge/deployment. A separately approved reviewed frontend/proxy deployment to the shared www recovery surface is necessary; this patch requires no Edge deployment or secret/factor change. Then separately authorize a private staging recovery/MFA/reset test and verify session revocation; never reuse tokens exposed in chat. Lost-factor replacement and session safety remain separate controlled operations. Production promotion remains blocked. Rollback the frontend/proxy together to the prior reviewed commit, preserving all MFA checks and settings.
+
+## Guarded-main reconciliation (2026-10-06)
+
+Parent authorized reconciliation and draft qualification against main
+`2661dd7399ee9877e4af236d3c77a5f3cc8780d7`. The only merge conflict was the
+additive Scope Intake entry; both entries are retained and the merged guard
+status is reconciled from its exact-main evidence. Recovery implementation,
+proxy/browser tests and workflow are byte-identical to prior head
+`422c8dbeb5b20111739778a2ce1a17f7842f7c74`. Main's release guard is retained
+unchanged; no other automatic Auth writer is edited. New exact-head checks and
+independent review are required before parent handoff. PR863 remains dependent.
+No merge to main, dispatch, live account/factor/credential/settings change or
+production authorization; REF-019/020 and all existing release holds remain.

@@ -26,8 +26,8 @@ import {
   SupabaseStoryImpactWriter,
 } from "../../../src/domains/storylines/infrastructure/supabaseStoryImpactWriter.ts";
 import {
-  SupabaseStoryNotificationRepository,
-} from "../../../src/domains/storylines/infrastructure/supabaseStoryNotificationRepository.ts";
+  createStoryNotificationPublisher,
+} from "../../../src/domains/notifications/public/storyNotifications.ts";
 import {
   SupabaseStorylineRepository,
 } from "../../../src/domains/storylines/infrastructure/supabaseStorylineRepository.ts";
@@ -53,7 +53,7 @@ export function createStorylineRunnerAfterTick(
   const executionRepository = new SupabaseStoryEventExecutionRepository(
     client as any,
   );
-  const notificationRepository = new SupabaseStoryNotificationRepository(
+  const notificationRepository = createStoryNotificationPublisher(
     client as any,
   );
   const playerContextRepository = new SupabasePlayerStoryContextRepository(
