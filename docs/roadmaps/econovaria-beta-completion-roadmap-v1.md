@@ -21,6 +21,11 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`BETA-STAGING-AUTH-RELEASE-GUARD-001` — Recovery merge safety (2026-10-06)**
+  - Status: `IMPLEMENTED_NOT_MERGED`; draft [PR #868](https://github.com/kohnerbouchard-star/Student-Profile/pull/868), reviewed implementation `bdfdc30a0cb619238da40d5e60041931e1d60106`, base `88b6cf6aa16c92726f4b0adb6788fa0784bd1513`.
+  - Remove the legacy automatic production Auth settings writer; retain synthetic PR/main validation and prepare only an explicitly confirmed staging reconciliation path. Scope, ownership, tests, required bindings and release limits: [staging guard record](staging-auth-release-guard-v1.md).
+  - No merge, dispatch, deployment, live auth setting/factor/credential/reset operation or production authorization. #862/#863 remain separate drafts; REF-019/020 and existing release holds remain unchanged. Next: independent review and exact-head draft qualification, then parent handoff.
+
 - **`BETA-LIVE-MIGRATION-PARITY-001` — Phase 15 program (2026-09-20)**
   - Owner authorizes the full gated 15A–15F program. This supersedes prior no-Phase-15/no-release authorization statements, while preserving the requirement that production changes follow certified 15A–15E gates.
   - Status: `IN_PROGRESS`; 15A hard gate `BLOCKED`, later tranches unopened. Owner branch `fix/phase15-live-migration-parity-v1`, source main `22dc9ce5023eb200a6608d5bb90a9ac30cb36c90`.
