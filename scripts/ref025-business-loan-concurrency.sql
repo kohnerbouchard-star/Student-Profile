@@ -6,7 +6,7 @@ begin;
 alter table public.loan_applications drop constraint loan_applications_business_liability_disabled_v1;
 do $fixture$
 begin
-for i in 1..6 loop
+for i in 1..9 loop
  declare
   staff uuid:=gen_random_uuid(); g uuid:=gen_random_uuid(); country uuid:=gen_random_uuid();
   owner_id uuid:=gen_random_uuid(); buyer uuid:=gen_random_uuid(); b uuid:=gen_random_uuid();
@@ -142,3 +142,31 @@ create function pg_temp.ref025_authority(g uuid,b uuid,proposal uuid) returns js
   'proposal',(select to_jsonb(x) from public.business_governance_proposals x where game_session_id=g and id=proposal),
   'mandates',(select coalesce(jsonb_agg(to_jsonb(x) order by player_id),'[]') from public.business_management_mandates x where game_session_id=g and business_id=b));
 $authority$;
+create function pg_temp.ref025_eligibility(g uuid,b uuid,product text) returns jsonb language sql as $eligibility$
+ select jsonb_build_object(
+  'business',(select to_jsonb(x) from public.business_entities x where game_session_id=g and id=b),
+  'product',(select to_jsonb(x) from public.loan_products x where game_session_id=g and public_key=product),
+  'party',(select to_jsonb(x) from public.economic_parties x where game_session_id=g and business_id=b and party_kind='business'),
+  'account',(select to_jsonb(a) from public.bank_accounts a join public.economic_parties p
+    on p.game_session_id=a.game_session_id and p.id=a.party_id
+    where a.game_session_id=g and p.business_id=b and a.account_kind='checking' and a.currency_code='ECO'));
+$eligibility$;
+-- Ordinary guarded fixture status writes; no trigger suppression or identity mutation.
+create function pg_temp.ref025_status(g uuid,b uuid,product text,target text,value text) returns timestamptz language plpgsql as $status$
+ declare changed integer;
+ begin
+  if target='product' and value in ('active','paused') then
+   update public.loan_products set status=value where game_session_id=g and public_key=product;
+  elsif target='party' and value in ('active','disabled') then
+   update public.economic_parties set status=value where game_session_id=g and business_id=b and party_kind='business';
+  elsif target='account' and value in ('active','restricted') then
+   update public.bank_accounts a set status=value from public.economic_parties p
+    where p.game_session_id=a.game_session_id and p.id=a.party_id
+      and a.game_session_id=g and p.business_id=b and a.account_kind='checking' and a.currency_code='ECO';
+  else raise exception 'REF025_STATUS_TARGET';
+  end if;
+  get diagnostics changed=row_count;
+  if changed<>1 then raise exception 'REF025_STATUS_ROW_COUNT: %',changed; end if;
+  return transaction_timestamp();
+ end;
+$status$;

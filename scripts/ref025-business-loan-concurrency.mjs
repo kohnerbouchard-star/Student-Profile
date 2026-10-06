@@ -182,7 +182,7 @@ export function authorityEffects(before, after, fixture, committed) {
   assert.equal(mandate.player_id, fixture.buyer); assert.equal(mandate.source_proposal_id, fixture.proposal_id);
 }
 async function authorityRaces(observer, first, second, remaining) {
-  const fixtures = await json(observer, '(select json_agg(f order by n) from ref025_fixtures f where n>=3)', remaining);
+  const fixtures = await json(observer, '(select json_agg(f order by n) from ref025_fixtures f where n between 3 and 6)', remaining);
   assert.deepEqual(fixtures.map(f => f.n), [3, 4, 5, 6]);
   for (const f of fixtures) {
     const committed = f.n % 2 === 1, replay = f.n >= 5, key = `ref025-authority-${f.n}`;
@@ -223,6 +223,88 @@ async function authorityRaces(observer, first, second, remaining) {
     await verifyGates(observer, remaining, false);
   }
 }
+export function eligibilityEffects(before, after, target, status, transactionTime) {
+  assert(['product', 'party', 'account'].includes(target), 'REF025_ELIGIBILITY_TARGET');
+  assert.equal(typeof transactionTime, 'string');
+  assert(Number.isFinite(Date.parse(transactionTime)), 'REF025_STATUS_TIMESTAMP');
+  const expected = structuredClone(before);
+  expected[target].status = status;
+  expected[target].updated_at = transactionTime;
+  assert.deepEqual(after, expected, 'REF025_ELIGIBILITY_EFFECTS');
+}
+async function eligibilityRaces(observer, first, second, remaining) {
+  const fixtures = await json(observer, '(select json_agg(f order by n) from ref025_fixtures f where n>=7)', remaining);
+  assert.deepEqual(fixtures.map(f => f.n), [7, 8, 9]);
+  for (const f of fixtures) {
+    const [target, status] = [['product', 'paused'], ['party', 'disabled'], ['account', 'restricted']][f.n - 7];
+    const args = [f.g, f.b, f.product_key].map(sqlLiteral).join(',');
+    const economic = session => json(session, `pg_temp.ref025_state(${sqlLiteral(f.g)})`, remaining);
+    const eligibility = session => json(session, `pg_temp.ref025_eligibility(${args})`, remaining);
+    const change = (session, value) => json(session, `to_jsonb(pg_temp.ref025_status(${args},${sqlLiteral(target)},${sqlLiteral(value)}))`, remaining);
+    const sentinels = () => json(observer, `(select jsonb_agg(jsonb_build_array(n,pg_temp.ref025_state(g),
+      pg_temp.ref025_eligibility(g,b,product_key)) order by n) from ref025_fixtures where n<>${f.n})`, remaining);
+    const command = key => `select * from economy_private.submit_business_loan_application_v1(
+      ${[f.g, f.owner_id, f.business_key, f.product_key, 60, 'REF025 eligibility request', key].map(sqlLiteral).join(',')})`;
+    const submit = (session, key) => json(session, `(select to_jsonb(r) from (${command(key)}) r)`, remaining);
+    for (const mode of ['creation', 'replay', 'retention']) for (const committed of [true, false]) {
+      const key = `ref025-${target}-${mode}-${committed}`;
+      const seed = await economic(observer), original = mode === 'replay' ? await submit(observer, key) : null;
+      if (original) {
+        assert.equal(original.replayed, false);
+        applicationEffects(seed, await economic(observer), f.owner_id, key, f.b);
+      }
+      const before = await economic(observer), prior = await eligibility(observer), isolated = await sentinels();
+      assert.equal(prior[target].status, 'active');
+      let changed, staged, competing;
+      await exchange(first, 'begin;', remaining);
+      if (mode === 'retention') {
+        assert.equal((await submit(first, key)).replayed, false);
+        staged = await economic(first);
+        applicationEffects(before, staged, f.owner_id, key, f.b);
+        competing = change(second, status);
+      } else {
+        // Replay deliberately bypasses eligibility locks; synchronize it on its borrower lock.
+        if (mode === 'replay') await exchange(first, `select id from public.business_entities where game_session_id=${sqlLiteral(f.g)} and id=${sqlLiteral(f.b)} for update;`, remaining);
+        const time = await change(first, status);
+        changed = await eligibility(first);
+        eligibilityEffects(prior, changed, target, status, time);
+        const error = target === 'product' ? 'BUSINESS_LOAN_ASSESSMENT_PRODUCT_INVALID' : 'LOAN_REPAYMENT_ACCOUNT_UNAVAILABLE';
+        competing = mode === 'creation' && committed
+          ? exchange(second, `select pg_temp.ref025_reject(${sqlLiteral(command(key))},${sqlLiteral(error)});`, remaining)
+          : submit(second, key);
+      }
+      competing.catch(() => {});
+      for (;;) {
+        const row = await json(observer, `pg_temp.ref025_blocker(${second.pid},${first.pid})`, remaining);
+        if (row?.wait === 'Lock') { intendedBlocker(row, second, first); break; }
+        await new Promise(resolve => setTimeout(resolve, Math.min(20, remaining())));
+      }
+      assert.deepEqual(await economic(observer), before);
+      assert.deepEqual(await eligibility(observer), prior);
+      assert.deepEqual(await sentinels(), isolated);
+      await exchange(first, committed ? 'commit;' : 'rollback;', remaining);
+      const result = await competing, after = await economic(observer), current = await eligibility(observer);
+      if (mode === 'retention') {
+        assert.deepEqual(after, committed ? staged : before);
+        eligibilityEffects(prior, current, target, status, result);
+      } else {
+        assert.deepEqual(current, committed ? changed : prior);
+        if (mode === 'creation' && !committed) {
+          assert.equal(result.replayed, false);
+          applicationEffects(before, after, f.owner_id, key, f.b);
+        } else assert.deepEqual(after, before);
+        if (mode === 'replay') assert.deepEqual(result, { ...original, replayed: true });
+      }
+      if (current[target].status !== 'active') {
+        const time = await change(observer, 'active');
+        eligibilityEffects(current, await eligibility(observer), target, 'active', time);
+      }
+      assert.deepEqual(await economic(observer), after);
+      assert.deepEqual(await sentinels(), isolated);
+      await verifyGates(observer, remaining, false);
+    }
+  }
+}
 export async function lifecycle(mode = '--phase') {
   assert(['--phase', '--verify', '--attest'].includes(mode), 'REF025_MODE');
   const binding = attest(), sessions = [], remaining = deadline(15000);
@@ -234,6 +316,7 @@ export async function lifecycle(mode = '--phase') {
       const first = await connect(binding, sessions, remaining), second = await connect(binding, sessions, remaining);
       await submissionRaces(observer, first, second, remaining);
       await authorityRaces(observer, first, second, remaining);
+      await eligibilityRaces(observer, first, second, remaining);
       await assert.rejects(exchange(second, 'select pg_sleep(0.1);', deadline(10)), /Timed out waiting|REF025_DEADLINE/);
       await verifyGates(observer, remaining, false);
     }
