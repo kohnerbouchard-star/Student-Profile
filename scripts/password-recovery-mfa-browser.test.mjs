@@ -160,6 +160,14 @@ for (const project of ["eecvbssdvarfcykcfrny","cgiukdjwicykrmtkhudh"]) test(`sys
   try {
     const page=await browser.newPage();
     await page.route('**/*',route=>route.request().url().startsWith(origin)?route.continue():route.abort());
+    for(const suffix of ['',`&project_ref=${project}&project_ref=${project}`]) {
+      await page.goto(`${origin}/auth/reset-password.html#recovery_grant=${'g'.repeat(43)}&token_hash=${'t'.repeat(32)}&type=recovery${suffix}`);
+      await page.getByText('This approved recovery link is invalid.',{exact:true}).waitFor();
+      assert.equal(calls.length,0,'missing or ambiguous target never consumes a token');
+      assert.equal(await page.getByRole('button',{name:'Continue approved account recovery'}).isVisible(),false);
+      assert.equal(new URL(page.url()).hash,'');
+      await page.goto('about:blank');
+    }
     await page.goto(`${origin}/auth/reset-password.html#recovery_grant=${'g'.repeat(43)}&token_hash=${'t'.repeat(32)}&type=recovery&project_ref=${project}`);
     assert.equal(new URL(page.url()).hash,'');
     assert.equal(calls.length,0,'email scanners do not consume the link');

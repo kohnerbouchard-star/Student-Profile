@@ -180,7 +180,7 @@ export function createRecoveryDelivery({ key, store, provider, target, clock = D
       // Recipient resolution belongs to the trusted provider by approved user ID.
       // It MUST support durable idempotency; a timeout does not acknowledge mail.
       let delivered;
-      try { delivered = await provider.sendRecovery(request, payload, { idempotencyKey: `recovery:${request.requestId}` }); }
+      try { delivered = await provider.sendRecovery(request, payload, { idempotencyKey: request.version === '2' ? `recovery:${request.projectRef}:${individualRecoveryDigest(request)}` : `recovery:${request.requestId}` }); }
       catch { throw Error('Recovery delivery outcome unknown'); }
       if (delivered?.acknowledged !== true) throw Error('Recovery delivery outcome unknown');
       if (await store.acknowledgeDelivery(request, record.grantDigest) !== true) throw Error('Recovery delivery acknowledgement unavailable');

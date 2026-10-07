@@ -483,8 +483,8 @@ test("individual recovery registers eighth suffix without rewriting prior seven 
   "filename": "20261007221252_system_account_recovery_targets_v2.sql",
   "version": "20261007221252",
   "name": "system_account_recovery_targets_v2",
-  "sourceSha256": "a21d4ae0e68fcb11f0504a842f92cca1d6474ae4dfcc15447f7e5ccf41be9815",
-  "rawSha256": "7a1b9338b9107013eabc1532a82249161907dd5fbcd71bf9b284b72b25a764b2",
+  "sourceSha256": "4a67f0a36dc310c1bc98a121364148bb9221923e173026e2b749a207866c6b0a",
+  "rawSha256": "3f2fab06e884df2b463809f1e953f6d9926cd07314a108c52cfc74830284b474",
   "statementCount": 1
 });
 });

@@ -73,3 +73,59 @@ Required evidence: exact scope verification, synthetic negative target/approval
 matrix, isolated database replay/ACL/invariants, browser and proxy regressions,
 root tests, backend typecheck/smoke, inventory and secret checks, independent
 source review and fresh exact-head CI. No source or live readiness is claimed yet.
+
+## Source implementation and qualification checkpoint
+
+Implementation `28f9ef52c94acf7ebaa714745f7d74fda1cfb324` adds the versioned
+request/approval contract, target-bound `system_recovery_operator_v2` wrapper and
+existing-runtime production guards. The forward migration provisions no target
+or administrator. It rejects unresolved restricted legacy attempts, retains all
+historical migration bytes and removes service execution of six legacy operator
+RPCs while keeping the existing user recovery state machine. Immutable operation
+metadata and the projected five-field approval receipt remain private. Receipt
+fields record the trusted verifier's decision; they do not independently prove
+human authentication.
+
+Independent review found and verified two corrections: v2 email idempotency now
+binds project plus operation digest; approved browser links require exactly one
+explicit supported project instead of using the ordinary reset fallback. The
+same-request-ID shared-sender regression and missing/duplicate-project browser
+cases pass. Final receipt minimization was separately reviewed with no new issue.
+
+Local evidence uses Node22.23.1/npm10.9.8/Deno2.9.3 and clean root/backend installs.
+49 operator/proxy/local-Edge tests, 21 suffix/disposable-database tests, three
+Chromium journeys and 28 network-denied Deno guard tests pass, with zero skips.
+The database runs in its digest-pinned network-isolated disposable container;
+there is no hosted URL. Independent reviewer reran 32 operator tests and the
+full disposable suite successfully. Root `npm test` passed on implementation
+28f9ef52; post-review final-source rerun and exact-head hosted results belong in
+the PR description. Secret and diff checks pass. Generated inventory retains
+100 oversized sources. Exact authority currently accepts 20 changed paths under
+23 locks; unused candidate paths are not edit permission beyond this capability.
+
+Full backend typecheck/smoke were attempted locally and stopped at the pinned
+esm.sh import tunnel. No dependency, assertion, permission or check workaround.
+Hosted Backend Typecheck, Admin API and Database Replay/lint are mandatory.
+Earlier-head CI is not substituted for the final review-fix head. Status remains
+IN_PROGRESS pending qualification and parent review; no merge authorization.
+
+## Remaining live decisions and rollout dependency
+
+- Select and review the external sole-administrator identity/approval integration
+  that proves fresh human authentication and independent support identity checks.
+- Establish an approved account-specific provider revocation/verification method.
+  Do not assume the documented JWT-based admin signOut is a user-ID-only API.
+- Review separately bound staging/production service credentials, encryption keys,
+  recipient resolution and sender with durable idempotency. None is discovered,
+  created or selected here; target metadata is not credential-provenance proof.
+- Review protected execution, exact-source approvals and separately provisioned
+  database target/admin bindings. CLI remains plan-only and dispatch rejects.
+
+Apply and verify the forward migration before expanded production guards; absent
+RPCs fail closed and would deny Staff access. Migration refuses active legacy
+attempts, which require their own reconciliation. Never roll back to a
+staging-only restriction guard while a production attempt remains restricted;
+a forward correction must preserve restriction and audit history. These are
+rollout requirements, not authorization to deploy, migrate or execute recovery.
+Next: exact-head qualification and parent review, followed only by independently
+approved live integration/staging work. No production recovery is authorized.

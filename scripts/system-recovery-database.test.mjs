@@ -233,7 +233,7 @@ test('recovery transactions: grants, identity, revoked sessions, exact factors a
       if(environment==='staging' && Object.hasOwn(change,'productionConfirmed'))continue;
       denied(invoke(r,'begin',{...receipt(r),...change}));
     }
-    sql(`set role service_role; ${invoke(r,'begin',receipt(r))}; reset role;`);
+    sql(`set role service_role; ${invoke(r,'begin',{...receipt(r),unexpected:'must-not-persist'})}; reset role;`);
     sql(invoke(r,'begin',receipt(r)));
     assert.match(sql(`select count(*) from recovery_private.operations;`),/^1\s*$/);
     for(const change of [{supportRequestRef:'support/altered-01'},{factorIds:[]},{operation:'disable-all-mfa'},
@@ -262,6 +262,21 @@ test('recovery transactions: grants, identity, revoked sessions, exact factors a
     assert.match(sql(`select count(*) from auth.sessions where user_id='00000000-0000-4000-8000-000000000099';`),/^1\s*$/);
     assert.match(sql(`select count(*) from auth.mfa_factors where user_id='00000000-0000-4000-8000-000000000099';`),/^1\s*$/);
     assert.match(sql(`select count(*) from recovery_private.outbox where attempt_id='${r.requestId}' and kind='started';`),/^1\s*$/);
+    const stored=JSON.parse(sql(`select approval_receipt from recovery_private.operations where attempt_id='${r.requestId}';`).trim());
+    assert.equal(stored.operator,'sole-external-admin');assert.equal(stored.confirmedOperationDigest,individualRecoveryDigest(r));
+    assert.equal(stored.productionConfirmed,true);assert.equal(Object.hasOwn(stored,'unexpected'),false);
+    // Advance the disposable fixture's clock coordinates to exercise an expired attempt.
+    const expired={...r,expiresAt:new Date(Date.now()-60_000).toISOString()};
+    sql(`update recovery_private.attempts set expires_at=${literal(expired.expiresAt)},request_expires_at=${literal(expired.expiresAt)} where id='${r.requestId}';
+      update recovery_private.operations set request=${literal(JSON.stringify(expired))}::jsonb,digest=${literal(individualRecoveryDigest(expired))} where attempt_id='${r.requestId}';`);
+    const fresh={...r,requestId:'00000000-0000-4000-8000-000000000071',expiresAt:new Date(Date.now()+600_000).toISOString()};
+    denied(invoke({...fresh,supportRequestRef:'support/different-request'},'restart',{...receipt({...fresh,supportRequestRef:'support/different-request'}),previous:expired}));
+    sql(invoke(fresh,'restart',{...receipt(fresh),previous:expired}));
+    sql(invoke(fresh,'restart',{...receipt(fresh),previous:expired}));
+    assert.match(sql(`select count(*) from recovery_private.attempts where auth_user_id='${r.authUserId}' and restricted;`),/^1\s*$/);
+    assert.match(sql(`select phase from recovery_private.attempts where id='${r.requestId}';`),/^superseded\s*$/);
+    assert.match(sql(`select count(*) from recovery_private.operations;`),/^2\s*$/);
+
   }
 
   } finally { execFileSync('docker',['rm','-f',container],{stdio:'pipe'}); }

@@ -92,7 +92,9 @@ begin
       new_id:=public.system_recovery_restart_v1(old_id,old_request->>'sourceCommit',old_request->>'identityEvidenceRef',
         (old_request->>'expiresAt')::timestamptz,rid,u,src,t.operator_subject,evidence,expiry);
     end if;
-    insert into recovery_private.operations(attempt_id,request,digest,approval_receipt) values(rid,p_request,p_digest,p_payload-'previous') on conflict do nothing;
+    insert into recovery_private.operations(attempt_id,request,digest,approval_receipt) values(rid,p_request,p_digest,
+      jsonb_build_object('operator',t.operator_subject,'authenticatedAt',p_payload->'authenticatedAt',
+        'confirmedOperationDigest',p_digest,'productionConfirmed',p_payload->'productionConfirmed','supportRequestVerified',true)) on conflict do nothing;
     return to_jsonb(rid);
   end if;
   if o.attempt_id is null then raise exception 'approved individual operation absent'; end if;

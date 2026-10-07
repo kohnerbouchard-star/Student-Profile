@@ -96,3 +96,23 @@ test('restart requires fresh approval of both exact versioned requests',async()=
 test('live CLI still rejects execution switches',async()=>{
   for(const args of [['--execute','production'],['--approve','all'],['--live']])await assert.rejects(main(args),/disabled/);
 });
+
+
+test('same request ID in separate targets cannot collide in a shared sender namespace',async()=>{
+  const messages=new Map();
+  for (const environment of Object.keys(RECOVERY_TARGETS)) {
+    const r=request(environment);let record=null;
+    const store={target:target(r),readDelivery:async()=>record,reserveDelivery:async()=>true,
+      saveDelivery:async(_r,v)=>{record=v;return true;},deliveryReady:async()=>true,
+      acknowledgeDelivery:async()=>{record.delivered=true;return true;}};
+    const provider={target:target(r),issueRecoveryToken:async()=>({authUserId:r.authUserId,projectRef:r.projectRef,tokenHash:'t'.repeat(32)}),
+      sendRecovery:async(req,payload,{idempotencyKey})=>{
+        assert.equal(idempotencyKey,`recovery:${r.projectRef}:${individualRecoveryDigest(r)}`);
+        if(!messages.has(idempotencyKey))messages.set(idempotencyKey,{projectRef:req.projectRef,payload});
+        return {acknowledged:true};
+      }};
+    const d=createRecoveryDelivery({key:Buffer.alloc(32,environment==='production'?8:7),target:target(r),store,provider,clock:()=>now});
+    await d.prepare(r);await d.send(r);await d.send(r);
+  }
+  assert.equal(messages.size,2);assert.equal(new Set([...messages.values()].map(m=>m.projectRef)).size,2);
+});

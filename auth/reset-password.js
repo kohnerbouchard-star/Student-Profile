@@ -27,6 +27,7 @@
     hash.get("access_token") || query.get("access_token") || ""
   ).trim();
   const recoveryType = String(hash.get("type") || query.get("type") || "").trim();
+  const explicitProjectRefs = [...hash.getAll("project_ref"), ...query.getAll("project_ref")];
   const projectRef = String(
     hash.get("project_ref") || query.get("project_ref") || runtimeConfig.projectRef || ""
   ).trim().toLowerCase();
@@ -239,7 +240,7 @@
   }
 
   if (systemGrant) {
-    if(!PROJECT_REFS.has(projectRef) || !/^[A-Za-z0-9_-]{43}$/.test(systemGrant) || !/^[A-Za-z0-9_-]{16,256}$/.test(systemTokenHash)) {
+    if(explicitProjectRefs.length !== 1 || !PROJECT_REFS.has(explicitProjectRefs[0]) || !PROJECT_REFS.has(projectRef) || !/^[A-Za-z0-9_-]{43}$/.test(systemGrant) || !/^[A-Za-z0-9_-]{16,256}$/.test(systemTokenHash)) {
       endRecovery("This approved recovery link is invalid."); clearRecoveryUrl(); return;
     }
     form.hidden=true; systemBegin.hidden=false;
