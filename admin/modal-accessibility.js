@@ -110,7 +110,7 @@
     const parentController = stackTop();
     parentController?.suspend?.();
 
-    const opener = stableFocusTarget(options.opener || document.activeElement);
+    const opener = options.opener || document.activeElement;
     const dismissOnEscape = options.dismissOnEscape !== false;
     const dismissOnBackdrop = options.dismissOnBackdrop !== false;
     const trapFocus = options.trapFocus !== false;
