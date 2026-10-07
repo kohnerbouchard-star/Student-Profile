@@ -182,3 +182,7 @@ Implementation covers four writer/submission outcomes, exact two-edge identity b
 Other-game real submission rolls back completely while both edges remain held; held-profile replay/conflict completes without recalculation effects.
 Pinned Node22.23.1:43 focused/authority tests PASS, full npm test PASS, boundary80/authority/secret/diff checks PASS.
 Sandbox prevented existing subprocess marker delivery; unchanged focused suite PASS outside sandbox. Local typecheck blocked by esm.sh unsuccessful tunnel; CI required.
+Implementation cd8c4219f3e78fba28cf85c2b2e28bcf8d9b2f69: Banking run37693699446/job113039917804 PASS; all four exact lock chains269–330ms each.
+Original phase5.71s, income phase2.06s; bounded clients/backends closed, both full resets and independent gates/ledger/fixture checks PASS; rebuilt lint/stack stop PASS.
+Exact backend run37693699418/job113039917257 PASS including typecheck:all and full smoke; local smoke shares the recorded esm.sh tunnel block.
+Architecture/legacy audits PASS; final documentation head requires its own CI. Parent independent review and merge remain pending; no activation credit.
