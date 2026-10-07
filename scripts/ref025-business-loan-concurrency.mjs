@@ -402,9 +402,13 @@ export async function lifecycle(mode = '--phase') {
     if (mode === '--phase' || mode === '--income-phase') {
       const first = await connect(binding, sessions, remaining), second = await connect(binding, sessions, remaining);
       if (mode === '--phase') {
+        console.log(JSON.stringify({ ref025Stage: 'submission-start' }));
         await submissionRaces(observer, first, second, remaining);
+        console.log(JSON.stringify({ ref025Stage: 'authority-start' }));
         await authorityRaces(observer, first, second, remaining);
+        console.log(JSON.stringify({ ref025Stage: 'eligibility-start' }));
         await eligibilityRaces(observer, first, second, remaining);
+        console.log(JSON.stringify({ ref025Stage: 'original-races-complete' }));
       } else {
         await prepareFixtures(observer, first, second, remaining, true);
         assert.deepEqual(await json(observer, '(select json_agg(n order by n) from ref025_fixtures)', remaining), [1, 2]);
