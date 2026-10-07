@@ -20,6 +20,7 @@
     "scripts/admin-mounted-operational-modal-focus-smoke.mjs",
     "docs/operations/evidence/refactor-execution-v1/REF-015/u7-logout-trigger-migration.md",
     "docs/operations/contracts/player-cross-cutting/pr-874.json",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
@@ -55,5 +56,5 @@
     "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-015/u7-logout-trigger-migration.md",
-  "authorizationNote": "User and parent approve the existing logout guard and opener repair plus pending Share repair dismissal cancellation under admin/game-session-controls.js and its existing browser smoke. Eleven changed files; maximum391 total changed lines (existing241 plus150 for this amendment: runtime35, tests95, authority/evidence20). Register this amendment before implementation. Preserve legitimate fallback, later native mount, repeated opens, cancel/keyboard/native behavior, every existing assertion/timeout, and original guard/opener repair. No broad modal rewrite, Settings/bootstrap/bridge/URL change, merge, deployment or production request; all retirement/release holds remain. Verifier/test entries remain unchanged locks."
+  "authorizationNote": "User and parent approve the existing logout guard and opener repair plus pending Share repair dismissal cancellation under admin/game-session-controls.js and its existing browser smoke. Twelve changed files; maximum391 total changed lines, runtime addition35 and browser addition95 maximum for the Share amendment. Parent also approves only the deterministic game-session-controls line-count/order inventory refresh after ownership check; preserve all other entries and PR736/668 source locks. PR876 coordination is owned by parent. Register this amendment before implementation. Preserve legitimate fallback, later native mount, repeated opens, cancel/keyboard/native behavior, every existing assertion/timeout, and original guard/opener repair. No broad modal rewrite, Settings/bootstrap/bridge/URL change, merge, deployment or production request; all retirement/release holds remain. Verifier/test entries remain unchanged locks."
 }
