@@ -186,7 +186,7 @@ create function pg_temp.ref025_income_state(g uuid) returns jsonb language plpgs
  end;
 $income_state$;
 create function pg_temp.ref025_sale(g uuid,b uuid,buyer uuid,key text,funded boolean,saved jsonb default null)
- returns jsonb language plpgsql as $sale$
+ returns jsonb language plpgsql set client_min_messages=warning as $sale$
  declare offer text; version bigint; quote jsonb; result jsonb; account text;
  begin
   if saved is null then

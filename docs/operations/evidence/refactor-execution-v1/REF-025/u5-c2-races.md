@@ -153,3 +153,5 @@ Headb77898e6 job112625219316 failed while installing the new helper: unparenthes
 Original full reset and independent verification PASS; income phase correctly skipped. Parenthesize the expression; retain failed evidence and require fresh CI.
 Head452b73dd job112626231720 passed original races but income oracle hit JSON operator precedence (boolean -> text).
 Both phase resets and independent checks PASS. Parenthesize JSON operands of containment; expected effects and production routines unchanged.
+Headb102949a job112627233579 failed on canonical funded-helper DROP IF EXISTS NOTICE; both resets/independent verifications PASS.
+Scope client_min_messages=warning to temporary sale helper, matching fixture setup; SQL errors stay fatal. Emit per-lane proof summaries; fresh exact-head CI required.

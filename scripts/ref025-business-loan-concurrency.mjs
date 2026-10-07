@@ -389,6 +389,7 @@ async function incomeRaces(observer, first, second, remaining) {
     assert.deepEqual(await submit(second, f.buyer), { ...original, replayed: true });
     assert.deepEqual(await state(observer, f), written); assert.deepEqual(await state(observer, other), isolated);
     await verifyGates(observer, remaining, false);
+    console.log(JSON.stringify({ ref025Income: funded ? 'funded' : 'retained', waitingSubmission: ['rollback', 'commit'], statementSnapshot: 'verified', saleReplay: 'unchanged', applicationReplay: 'original', otherGame: 'unchanged' }));
   }
 }
 export async function lifecycle(mode = '--phase') {
