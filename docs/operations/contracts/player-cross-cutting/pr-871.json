@@ -42,5 +42,18 @@
       "existing production release holds"
     ]
   },
+  "qualificationScope": {
+    "ownerInstructionDate": "2026-10-07",
+    "purpose": "Complete the two outstanding backend qualification commands at the final PR871 head using an isolated non-dispatch CI job in the already allowed workflow; revise the external recovery proposal as documentation only.",
+    "commands": [
+      "npm --prefix backend run typecheck:all",
+      "npm --prefix backend run smoke"
+    ],
+    "exactHeadRequired": true,
+    "syntheticOnly": true,
+    "liveRecoveryImplementationAllowed": false,
+    "scopeAmendmentBeforeRecoveryImplementationRequired": true,
+    "note": "No additional changed path, backend source change, canonical-origin change, live-job change, second recovery approver requirement, credential creation or persistent access is authorized. The sole-operator proposal does not amend or enable PR863; its current scope, identity-evidence requirements, execution rejection and live holds remain intact pending design review and explicit exact-path authority amendment."
+  },
   "authorizationNote": "Owner-approved narrow ownership reconciliation (2026-10-07), not merge or execution approval. PR #871 owns only bounded trigger/authorization safety on the shared workflow; PR #735 retains canonical-origin work. The PR #735 manifest is recorded here solely to preserve that shared-file boundary and its original exact allowlist, required checks, and prohibitions; no canonical-origin implementation or release-request change is imported. Ordinary pull_request and main push validation remains synthetic. Future probing requires a separate fresh manual dispatch, protected production approval, inert exact action/origin confirmations, and equality of approved commit, workflow commit, dispatch source and authoritative current main after approval and immediately before every side effect/retry. Reruns cannot reuse approval. BFF request-protection nonce insertion/expiry cleanup remains a possible live effect. No merge, workflow dispatch, production deployment, Auth configuration change, recovery attempt, factor deletion, credential creation, persistent access, or lending activation is authorized. Preserve merged PR #868 and execution-disabled plan-only PR #863. Do not reconcile #862/#863 onto this unmerged guard. REF-019/020 and all existing release holds remain intact; any future main merge requires parent approval and loan-workstream coordination."
 }
