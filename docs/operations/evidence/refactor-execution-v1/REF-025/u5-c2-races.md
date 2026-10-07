@@ -160,3 +160,29 @@ Head5ccb898a/job112631283958 passed phases/reset checks (original13.13s/eligibil
 Head5e337a4e/job112638015127 reproduced15s failure:17 cases11.93s elapsed/11.19s CPU/0.44s blocker detection, retained output34.4MB; reset/verification PASS, income skipped.
 Pinned Node22.23.1 focused/authority tests40/40 PASS: pending waiters, retained stderr, old callers, bad frames, late completion and stale-output rejection; exact-head DB proof pending.
 Full typecheck:all/smoke and required Backend Typecheck remain unresolved: existing job excludes these paths; separately approved16-line workflow correction preserves #620 action-version ownership and #668/#736 authority.
+
+## Child 6 — approved credit-profile / borrower lock-chain proof
+APPROVED_SCOPE2026-10-07; base1de01562af5b78a3407ca9bc8d7ee8935ca080f8; predecessor income proof accepted; no predecessor requalification.
+Owner refactor/ref-025c2-credit-profile-chain; draft #875 and exact authority registered before implementation.
+Four editable paths /380 nonblank additions+deletions, including braces/comments/metadata:
+- scripts/ref025-business-loan-concurrency.mjs:210; new profile-chain oracle/races plus original-phase invocation and tracked fourth client.
+- scripts/ref025-business-loan-concurrency.test.mjs:90; appended corruption, cleanup and scope regressions.
+- docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:40; this append-only record.
+- docs/operations/contracts/player-cross-cutting/pr-875.json:40; actual draft authority; verifier and its regression remain read-only.
+Fresh12-open-PR heads match inspected ownership census; no selected-path overlap; #859 adjacent disposable code remains excluded.
+Protect #620 workflow, #668/#736 authority, REF042/REF040 boundaries; SQL fixtures/migrations/shared helper/workflow/verifier remain unchanged.
+Canonical credit recalculation holds profile; submission waits while holding borrower; second operator request waits on borrower.
+Prove both exact PID/backend-start edges, writer/submission commit+rollback, original replay and unrelated-game progress without debt/ledger changes.
+Reuse canonical fixtures and complete snapshots; preserve all previous assertions, both15s phase deadlines and bounded client/backend cleanup.
+Only attested disposable Banking database; retain loan gate, mandatory full reset and independent gate/migration/fixture verification.
+No lending activation, live DB, policy change, credentials/settings, dispatch/deployment or hold restoration; all nine U1 holds remain.
+REF025 BLOCKED; REF027 depends025+026. Full legacy repayment/servicing lock graph remains unqualified; parent reviews before merge.
+Validation pending implementation and exact-head CI. Rollback is a bounded source revert; no migrations, routes or RPC changes.
+Implementation covers four writer/submission outcomes, exact two-edge identity barriers, cross-operator replay/fresh retry and unchanged guarded authority/eligibility.
+Other-game real submission rolls back completely while both edges remain held; held-profile replay/conflict completes without recalculation effects.
+Pinned Node22.23.1:43 focused/authority tests PASS, full npm test PASS, boundary80/authority/secret/diff checks PASS.
+Sandbox prevented existing subprocess marker delivery; unchanged focused suite PASS outside sandbox. Local typecheck blocked by esm.sh unsuccessful tunnel; CI required.
+Implementation cd8c4219f3e78fba28cf85c2b2e28bcf8d9b2f69: Banking run37693699446/job113039917804 PASS; all four exact lock chains269–330ms each.
+Original phase5.71s, income phase2.06s; bounded clients/backends closed, both full resets and independent gates/ledger/fixture checks PASS; rebuilt lint/stack stop PASS.
+Exact backend run37693699418/job113039917257 PASS including typecheck:all and full smoke; local smoke shares the recorded esm.sh tunnel block.
+Architecture/legacy audits PASS; final documentation head requires its own CI. Parent independent review and merge remain pending; no activation credit.

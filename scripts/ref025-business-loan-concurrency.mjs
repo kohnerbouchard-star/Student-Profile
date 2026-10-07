@@ -409,6 +409,102 @@ async function incomeRaces(observer, first, second, remaining) {
     console.log(JSON.stringify({ ref025Income: funded ? 'funded' : 'retained', waitingSubmission: ['rollback', 'commit'], statementSnapshot: 'verified', saleReplay: 'unchanged', applicationReplay: 'original', freshApplicationIncome: 480, otherGame: 'settled-assessed-rolled-back' }));
   }
 }
+export function profileEffects(before, after, actor, credit, at) {
+  assert(Number.isFinite(Date.parse(at)), 'REF025_PROFILE_TIME');
+  const expected = structuredClone(before), profiles = expected.economic.profiles;
+  assert.equal(profiles.filter(p => p.player_id === actor).length, 1, 'REF025_EXISTING_PROFILE');
+  assert.equal(credit.player_id, actor);
+  expected.economic.profiles = profiles.map(p => p.player_id === actor ? { ...credit, calculated_at: at, updated_at: at } : p);
+  assert.deepEqual(after, expected, 'REF025_PROFILE_EFFECTS');
+}
+export function profileApplicationEffects(before, after, f, key, actor, credit) {
+  applicationEffects(before.economic, after.economic, actor, key, f.b);
+  const app = after.economic.applications.find(a => a.idempotency_key === key);
+  const audit = after.economic.audits.find(a => a.target_id === app.id);
+  assert.equal(app.game_session_id, f.g); assert.equal(app.credit_score, credit.score);
+  assert.equal(app.repayment_source, `business:${f.business_key}`);
+  assert.equal(app.projected_payment, 10); assert.equal(app.affordability_ratio, 0.25);
+  assert.deepEqual(audit.metadata.assessment, { obligation_currency_code: 'ECO', assessed_at: audit.metadata.assessment.assessed_at,
+    qualifying_income: 240, income_per_payment: 40, projected_payment: 10, affordability_ratio: 0.25,
+    maximum_payment_to_income: 0.45, minimum_credit_score: 600, affordable: true });
+  assert(Number.isFinite(Date.parse(audit.metadata.assessment.assessed_at)), 'REF025_ASSESSMENT_TIME');
+  const withoutApplication = structuredClone(after);
+  withoutApplication.economic.applications = after.economic.applications.filter(a => a.id !== app.id);
+  withoutApplication.economic.audits = after.economic.audits.filter(a => a.id !== audit.id);
+  profileEffects(before, withoutApplication, actor, credit, app.created_at);
+}
+async function profileRaces(observer, first, second, third, remaining) {
+  const fixtures = await json(observer, '(select json_agg(f order by n) from ref025_fixtures f where n<=2)', remaining);
+  assert.equal(fixtures.length, 2); const [one, two] = fixtures;
+  const state = (session, f) => json(session, `pg_temp.ref025_income_state(${sqlLiteral(f.g)})`, remaining);
+  const credit = (f, actor) => json(observer, `pg_temp.ref025_expected_credit(${[f.g, actor].map(sqlLiteral)})`, remaining);
+  const command = (f, key, actor, amount = 60) => `select * from economy_private.submit_business_loan_application_v1(
+    ${[f.g, actor, f.business_key, f.product_key, amount, 'REF025 profile chain', key].map(sqlLiteral)})`;
+  const submit = (session, f, key, actor) => json(session, `(select to_jsonb(r) from (${command(f, key, actor)}) r)`, remaining);
+  const recalculate = async actor => {
+    await exchange(first, `begin; select * from public.recalculate_player_credit_v1(${[one.g, actor].map(sqlLiteral)});`, remaining);
+    return json(first, 'to_jsonb(now())', remaining);
+  };
+  const blocked = async (waiter, blocker) => {
+    for (;;) {
+      const row = await json(observer, `pg_temp.ref025_blocker(${waiter.pid},${blocker.pid})`, remaining);
+      if (row?.wait === 'Lock') { intendedBlocker(row, waiter, blocker); return; }
+      await new Promise(resolve => setTimeout(resolve, Math.min(20, remaining())));
+    }
+  };
+  const guards = () => json(observer, `(select jsonb_agg(jsonb_build_array(n,pg_temp.ref025_authority(g,b,proposal_id),
+    pg_temp.ref025_eligibility(g,b,product_key)) order by n) from ref025_fixtures)`, remaining);
+  for (const writerCommit of [false, true]) for (const submissionCommit of [false, true]) {
+    const started = performance.now(), key = `ref025-profile-${writerCommit}-${submissionCommit}`;
+    const before = await state(observer, one), isolated = await state(observer, two), guarded = await guards();
+    const ownerCredit = await credit(one, one.owner_id), buyerCredit = await credit(one, one.buyer), otherCredit = await credit(two, two.owner_id);
+    assert.deepEqual(await state(observer, one), before); assert.deepEqual(await state(observer, two), isolated);
+    const at = await recalculate(one.owner_id), written = await state(first, one);
+    profileEffects(before, written, one.owner_id, ownerCredit, at);
+    await exchange(second, 'begin;', remaining);
+    const waiting = submit(second, one, key, one.owner_id); waiting.catch(() => {});
+    await blocked(second, first);
+    await exchange(third, 'begin;', remaining);
+    const queued = submit(third, one, key, one.buyer); queued.catch(() => {});
+    await blocked(third, second); await blocked(second, first);
+    assert.deepEqual(await state(observer, one), before);
+    // Real other-game submission and full rollback while both exact wait edges persist.
+    await exchange(observer, 'begin;', remaining);
+    assert.equal((await submit(observer, two, key, two.owner_id)).replayed, false);
+    profileApplicationEffects(isolated, await state(observer, two), two, key, two.owner_id, otherCredit);
+    await exchange(observer, 'rollback;', remaining);
+    assert.deepEqual(await state(observer, two), isolated);
+    await blocked(second, first); await blocked(third, second);
+    await exchange(first, writerCommit ? 'commit;' : 'rollback;', remaining);
+    const created = await waiting, staged = await state(second, one), baseline = writerCommit ? written : before;
+    assert.equal(created.replayed, false);
+    profileApplicationEffects(baseline, staged, one, key, one.owner_id, ownerCredit);
+    assert.deepEqual(await state(observer, one), baseline); await blocked(third, second);
+    await exchange(second, submissionCommit ? 'commit;' : 'rollback;', remaining);
+    const result = await queued, resulting = await state(third, one);
+    if (submissionCommit) {
+      assert.deepEqual(result, { ...created, replayed: true }); assert.deepEqual(resulting, staged);
+    } else {
+      assert.equal(result.replayed, false); assert.notEqual(result.application_key, created.application_key);
+      profileApplicationEffects(baseline, resulting, one, key, one.buyer, buyerCredit);
+    }
+    await exchange(third, 'commit;', remaining);
+    assert.deepEqual(await state(observer, one), resulting);
+    // Existing replay must finish while its caller's profile writer remains open.
+    const replayCredit = await credit(one, one.owner_id), replayAt = await recalculate(one.owner_id);
+    profileEffects(resulting, await state(first, one), one.owner_id, replayCredit, replayAt);
+    assert.deepEqual(await submit(second, one, key, one.owner_id), { ...result, replayed: true });
+    await exchange(second, `select pg_temp.ref025_reject(${sqlLiteral(command(one, key, one.owner_id, 61))},'IDEMPOTENCY_KEY_CONFLICT');`, remaining);
+    assert.deepEqual(await state(observer, one), resulting);
+    await exchange(first, 'rollback;', remaining);
+    assert.deepEqual(await state(observer, one), resulting); assert.deepEqual(await state(observer, two), isolated);
+    assert.deepEqual(await guards(), guarded); await verifyGates(observer, remaining, false);
+    console.log(JSON.stringify({ ref025ProfileChain: key, exactEdges: [[second.pid, second.start, first.pid, first.start],
+      [third.pid, third.start, second.pid, second.start]], writerCommit, submissionCommit,
+      queued: submissionCommit ? 'original-replay' : 'fresh-after-rollback', profileHeldReplay: true,
+      otherGame: 'submitted-rolled-back', elapsedMs: performance.now() - started }));
+  }
+}
 export async function lifecycle(mode = '--phase') {
   assert(['--phase', '--income-phase', '--verify', '--attest'].includes(mode), 'REF025_MODE');
   const binding = attest(), sessions = [], remaining = deadline(15000);
@@ -426,6 +522,9 @@ export async function lifecycle(mode = '--phase') {
         console.log(JSON.stringify({ ref025Stage: 'eligibility-start' }));
         await eligibilityRaces(observer, first, second, remaining);
         console.log(JSON.stringify({ ref025Stage: 'original-races-complete' }));
+        const third = await connect(binding, sessions, remaining);
+        await exchange(third, readFileSync(new URL('./ref025-business-loan-concurrency.sql', import.meta.url), 'utf8').split('-- REF025 session helpers')[1], remaining);
+        await profileRaces(observer, first, second, third, remaining);
       } else {
         await prepareFixtures(observer, first, second, remaining, true);
         assert.deepEqual(await json(observer, '(select json_agg(n order by n) from ref025_fixtures)', remaining), [1, 2]);

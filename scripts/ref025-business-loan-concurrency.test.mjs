@@ -5,7 +5,7 @@ import { promisify } from 'node:util';
 import { spawn, execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { deadline, exchange, json, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow, authorityEffects, eligibilityEffects, incomeAssessment, incomeApplicationEffects } from './ref025-business-loan-concurrency.mjs';
+import { deadline, exchange, json, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow, authorityEffects, eligibilityEffects, incomeAssessment, incomeApplicationEffects, profileEffects, profileApplicationEffects } from './ref025-business-loan-concurrency.mjs';
 
 // Exercise the same asynchronous process/marker boundary without requiring a database.
 function processSession() {
@@ -326,4 +326,69 @@ test('REF025 drains only validated completions and rejects bad frames, late resu
     if (kind === 'valid') { assert.equal(await result, 1); assert.equal(output, ''); assert.equal(await json(session, '2', deadline(500)), 2); assert.equal(taken, 2); }
     else { await assert.rejects(result); assert.equal(taken, ['late', 'stderr'].includes(kind) ? 0 : 1); }
   }
+});
+
+test('profile-chain oracles reject altered identity, timestamps, credit, assessment and extra effects', () => {
+  const at = '2026-10-07T12:00:00+00:00', f = { g: 'game', b: 'business', business_key: 'bkey' };
+  const credit = { id: 'profile', game_session_id: 'game', player_id: 'operator', score: 700, default_count: 0,
+    calculated_at: '2026-10-07T11:00:00+00:00', updated_at: '2026-10-07T11:00:00+00:00', created_at: '2026-10-01T00:00:00Z' };
+  const before = { economic: { applications: [], audits: [], profiles: [credit, { id: 'other', player_id: 'other' }], loans: [], ledger: [], balances: [] }, bank_transactions: [], inventory_holdings: [] };
+  const written = structuredClone(before); Object.assign(written.economic.profiles[0], { calculated_at: at, updated_at: at });
+  profileEffects(before, written, 'operator', credit, at);
+  const after = structuredClone(written);
+  after.economic.applications.push({ id: 'app', game_session_id: f.g, borrower_business_id: f.b, business_id: f.b,
+    initiating_operator_player_id: 'operator', player_id: 'operator', idempotency_key: 'key', obligation_currency_code: 'ECO',
+    liability_kind: 'business_v1', status: 'pending_review', amount: 60, credit_score: 700, repayment_source: 'business:bkey',
+    projected_payment: 10, affordability_ratio: 0.25, created_at: at });
+  after.economic.audits.push({ id: 'audit', action: 'business.loan.application.submit', target_id: 'app', actor_id: 'operator',
+    metadata: { assessment: { obligation_currency_code: 'ECO', assessed_at: at, qualifying_income: 240, income_per_payment: 40,
+      projected_payment: 10, affordability_ratio: 0.25, maximum_payment_to_income: 0.45, minimum_credit_score: 600, affordable: true } } });
+  profileApplicationEffects(before, after, f, 'key', 'operator', credit);
+  for (const corrupt of [s => s.economic.profiles[0].id = 'changed', s => s.economic.profiles[0].score++, s => s.economic.profiles[0].default_count++,
+    s => s.economic.profiles[0].created_at = at, s => s.economic.profiles[0].calculated_at = credit.calculated_at,
+    s => s.economic.profiles[0].updated_at = credit.updated_at, s => s.economic.profiles[0].extra = true,
+    s => s.economic.profiles[1].id = 'changed', s => s.economic.loans.push({}), s => s.economic.ledger.push({}),
+    s => s.economic.balances.push({}), s => s.bank_transactions.push({}), s => s.inventory_holdings.push({})]) {
+    const badWriter = structuredClone(written), badApplication = structuredClone(after); corrupt(badWriter); corrupt(badApplication);
+    assert.throws(() => profileEffects(before, badWriter, 'operator', credit, at));
+    assert.throws(() => profileApplicationEffects(before, badApplication, f, 'key', 'operator', credit));
+  }
+  for (const corrupt of [s => s.economic.applications[0].game_session_id = 'other', s => s.economic.applications[0].credit_score++,
+    s => s.economic.applications[0].repayment_source = 'checking', s => s.economic.applications[0].created_at = 'bad',
+    s => s.economic.audits[0].metadata.assessment.affordable = false, s => s.economic.audits[0].metadata.assessment.projected_payment++,
+    s => s.economic.audits[0].metadata.assessment.assessed_at = 'bad']) {
+    const bad = structuredClone(after); corrupt(bad); assert.throws(() => profileApplicationEffects(before, bad, f, 'key', 'operator', credit));
+  }
+});
+test('actual lifecycle closes and independently checks all four tracked clients after chain failure', async () => {
+  const source = readFileSync(new URL('./ref025-business-loan-concurrency.mjs', import.meta.url), 'utf8');
+  const body = source.slice(source.indexOf('export async function lifecycle('), source.indexOf("if (process.argv[1]"))
+    .replace('export ', '').replaceAll('import.meta.url', "'file:///fixture.mjs'");
+  for (const closeFailure of [false, true]) {
+    const tracked = [], closed = []; let backendQuery;
+    const run = vm.runInNewContext(`${body}; lifecycle`, { assert, deadline, URL, AggregateError, setTimeout,
+      console: { log() {} }, attest: () => ({ args: [] }), verifyGates: async () => {},
+      connect: async (binding, sessions) => { const s = { pid: tracked.length + 1, start: `start${tracked.length + 1}` }; tracked.push(s); sessions.push(s); return s; },
+      submissionRaces: async () => {}, authorityRaces: async () => {}, eligibilityRaces: async () => {},
+      profileRaces: async (...args) => { assert.equal(args[3], tracked[3]); throw new Error('CHAIN_FAILURE'); },
+      readFileSync: () => '-- REF025 session helpers\nhelpers', exchange: async () => {},
+      closeClient: async s => { closed.push(s.pid); if (closeFailure && s.pid === 4) throw new Error('FOURTH_CLOSE_FAILURE'); },
+      execFile() {}, promisify: () => async (cmd, args) => { backendQuery = args.at(-1); return { stdout: '0\n' }; }, sqlLiteral: s => `'${s}'`, checkedBackendCount });
+    await assert.rejects(run('--phase'), error => closeFailure
+      ? error.message === 'REF025_CLOSE_FAILED' && error.errors.some(e => e.message === 'FOURTH_CLOSE_FAILURE')
+      : error.message === 'CHAIN_FAILURE');
+    assert.equal(tracked.length, 4); assert.deepEqual(closed, [4, 3, 2, 1]);
+    for (const s of tracked) assert(backendQuery.includes(`pid=${s.pid} and backend_start::text='${s.start}'`));
+  }
+});
+test('Child6 locks four editable files and preserves all required verification checks', () => {
+  const read = n => JSON.parse(readFileSync(new URL(`../docs/operations/contracts/player-cross-cutting/pr-${n}.json`, import.meta.url)));
+  const current = read(875), prior = read(872);
+  for (const field of ['requiredChecks', 'criticalJobChecks', 'requiredFiles', 'readOnlyPaths']) assert.deepEqual(current[field], prior[field]);
+  assert.deepEqual(current.editablePathLineLimits, { 'scripts/ref025-business-loan-concurrency.mjs': 210,
+    'scripts/ref025-business-loan-concurrency.test.mjs': 90, 'docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md': 40,
+    'docs/operations/contracts/player-cross-cutting/pr-875.json': 40 });
+  assert.equal(current.nonblankChangedLineLimit, 380);
+  assert.deepEqual([...current.allowedPaths].sort(), [...Object.keys(current.editablePathLineLimits), ...current.readOnlyPaths].sort());
+  for (const flag of ['productionDeploymentAllowed', 'productionMutationAllowed', 'secretValuesAllowed']) assert.equal(current[flag], false);
 });
