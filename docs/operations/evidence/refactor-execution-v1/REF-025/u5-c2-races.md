@@ -155,3 +155,5 @@ Head452b73dd job112626231720 passed original races but income oracle hit JSON op
 Both phase resets and independent checks PASS. Parenthesize JSON operands of containment; expected effects and production routines unchanged.
 Headb102949a job112627233579 failed on canonical funded-helper DROP IF EXISTS NOTICE; both resets/independent verifications PASS.
 Scope client_min_messages=warning to temporary sale helper, matching fixture setup; SQL errors stay fatal. Emit per-lane proof summaries; fresh exact-head CI required.
+Parent directed reconciliation after #871: merge accepted mainf4fc25d7ad8b9792a659a9c3c942ad53d31b97c2 normally; preserve its six paths, then requalify exact head.
+Head29073cec database job112628280386 passed both income lanes, all resets/independent checks and unchanged lint142/17; local full edge typecheck/smoke blocked by esm.sh tunnel (no pass claim).
