@@ -271,7 +271,7 @@ test('income application oracle rejects extra settlement effects, lost rows and 
   const f = { owner_id: 'owner', b: 'business', business_key: 'biz_key' };
   const app = { id: 'app', amount: 120, liability_kind: 'business_v1', status: 'pending_review', player_id: 'owner',
     initiating_operator_player_id: 'owner', borrower_business_id: 'business', business_id: 'business',
-    idempotency_key: 'key', obligation_currency_code: 'ECO', repayment_source: 'business:biz_key' };
+    idempotency_key: 'key', obligation_currency_code: 'ECO', projected_payment: 20, affordability_ratio: 0.333333, repayment_source: 'business:biz_key' };
   const assessment = { obligation_currency_code: 'ECO', assessed_at: '2026-10-07T00:00:00Z', qualifying_income: 360,
     income_per_payment: 60, projected_payment: 20, affordability_ratio: 0.333333, maximum_payment_to_income: 0.45, minimum_credit_score: 600, affordable: true };
   const after = structuredClone(before); after.economic.applications.push(app); after.economic.profiles.push({ player_id: 'owner' });

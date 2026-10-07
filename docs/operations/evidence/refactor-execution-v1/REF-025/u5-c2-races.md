@@ -146,6 +146,8 @@ Only attested disposable Banking database; application gate temporarily removed,
 No workflow/shared-helper/package/migration/auth/Player/Markets changes, hosted access, dispatch, deployment or hold restoration.
 REF025 BLOCKED; REF027 depends025+026;40/50 and nine U1 holds unchanged. Full interacting lock graph/activation remain unqualified.
 Baseline pinned Node22.23.1:35 focused/authority tests, Banking source contract and4 release workflow tests PASS; DB proof pending.
-Implementation preserves immutable receipts, uses a temporary STABLE barrier wrapper around unchanged assessment, and snapshots14 settlement tables plus full loan/profile/audit/ledger/balances.
+Implementation preserves immutable receipts, uses a temporary STABLE barrier wrapper around unchanged assessment, and snapshots15 settlement tables plus full loan/profile/audit/ledger/balances.
 Local pinned Node22.23.1:38/38 focused/authority PASS, boundary80 PASS, Banking source contract and exact five-path authority PASS.
 Disposable exact-head Banking and applicable CI remain pending; no database proof is inferred from local source/oracle tests.
+Headb77898e6 job112625219316 failed while installing the new helper: unparenthesized CASE in a PL/pgSQL IF expression.
+Original full reset and independent verification PASS; income phase correctly skipped. Parenthesize the expression; retain failed evidence and require fresh CI.

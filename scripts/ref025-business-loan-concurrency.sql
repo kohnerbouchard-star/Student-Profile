@@ -176,7 +176,7 @@ create function pg_temp.ref025_income_state(g uuid) returns jsonb language plpgs
  declare result jsonb:=jsonb_build_object('economic',pg_temp.ref025_state(g)); name text; rows jsonb;
  begin
   foreach name in array array['store_offer_purchase_receipts','store_offer_purchase_quotes','store_seller_offers',
-    'purchase_funding_receipts','purchase_funding_quotes','bank_transactions','bank_accounts','bank_account_holds',
+    'purchase_funding_receipts','purchase_funding_quotes','purchase_funding_quote_lines','bank_transactions','bank_accounts','bank_account_holds',
     'inventory_transactions','inventory_transaction_lines','inventory_holdings','inventory_accounts','inventory_events',
     'business_activity_events'] loop
    execute format('select coalesce(jsonb_agg(to_jsonb(t) order by id),''[]'') from public.%I t where game_session_id=$1',name) into rows using g;
@@ -239,7 +239,7 @@ create function pg_temp.ref025_sale_effects(before_state jsonb,after_state jsonb
     and ((receipt->>'funding_receipt_id') is not null)=funded) is not true then raise exception 'REF025_SALE_RECEIPT'; end if;
   if jsonb_array_length(after_state->'purchase_funding_receipts')<>jsonb_array_length(before_state->'purchase_funding_receipts')+funded::integer
     or not (after_state->'purchase_funding_receipts' @> before_state->'purchase_funding_receipts')
-    or jsonb_array_length(after_state->'economic'->'ledger')<>jsonb_array_length(before_state->'economic'->'ledger')+case when funded then 2 else 4 end
+    or jsonb_array_length(after_state->'economic'->'ledger')<>jsonb_array_length(before_state->'economic'->'ledger')+(case when funded then 2 else 4 end)
     or not (after_state->'economic'->'ledger' @> before_state->'economic'->'ledger') then raise exception 'REF025_SALE_MONEY_COUNT'; end if;
   if jsonb_array_length(after_state->'economic'->'balances')<>jsonb_array_length(before_state->'economic'->'balances')
     or jsonb_array_length(after_state->'inventory_holdings')<>jsonb_array_length(before_state->'inventory_holdings') then raise exception 'REF025_SALE_PROJECTION_COUNT'; end if;

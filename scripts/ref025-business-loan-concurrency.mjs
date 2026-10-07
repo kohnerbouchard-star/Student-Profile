@@ -324,7 +324,7 @@ export function incomeApplicationEffects(before, after, f, key) {
   assert.equal(added.length, 1); const app = added[0];
   for (const [field, value] of Object.entries({ amount: 120, liability_kind: 'business_v1', status: 'pending_review',
     initiating_operator_player_id: f.owner_id, player_id: f.owner_id, borrower_business_id: f.b, business_id: f.b,
-    idempotency_key: key, obligation_currency_code: 'ECO', repayment_source: `business:${f.business_key}` })) assert.equal(app[field], value);
+    idempotency_key: key, obligation_currency_code: 'ECO', projected_payment: 20, affordability_ratio: 0.333333, repayment_source: `business:${f.business_key}` })) assert.equal(app[field], value);
   const audits = after.economic.audits.filter(a => !before.economic.audits.some(b => b.id === a.id));
   assert.equal(audits.length, 1); assert.equal(audits[0].action, 'business.loan.application.submit');
   assert.equal(audits[0].actor_id, f.owner_id); assert.equal(audits[0].target_id, app.id);
@@ -347,7 +347,10 @@ async function incomeRaces(observer, first, second, remaining) {
   };
   for (const f of fixtures) {
     const other = fixtures.find(x => x.g !== f.g), isolated = await state(observer, other), funded = f.n === 2;
-    const assess = (session, at, barrier = null) => json(session, `pg_temp.ref025_income(${[f.g, f.b, f.product_key, at, barrier].map(sqlLiteral)})`, remaining);
+    const assess = async (session, at, barrier = null) => {
+      const row = await json(session, `pg_temp.ref025_income(${[f.g, f.b, f.product_key, at, barrier].map(sqlLiteral)})`, remaining);
+      assert.equal(row.assessed_at, at, 'REF025_CAPTURED_TIME'); return row;
+    };
     const sale = (key, saved = null) => json(first, `pg_temp.ref025_sale(${[f.g, f.b, f.buyer, key, funded, saved && JSON.stringify(saved)].map(sqlLiteral)})`, remaining);
     const command = actor => `select * from economy_private.submit_business_loan_application_v1(${[f.g, actor, f.business_key, f.product_key, 120, 'REF025 income request', 'ref025-income-application'].map(sqlLiteral)})`;
     const submit = (session, actor = f.owner_id) => json(session, `(select to_jsonb(r) from (${command(actor)}) r)`, remaining);
