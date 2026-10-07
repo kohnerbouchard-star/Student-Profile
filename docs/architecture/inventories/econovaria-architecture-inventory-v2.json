@@ -3414,6 +3414,10 @@
         "lines": 609
       },
       {
+        "file": "admin/game-session-controls.js",
+        "lines": 606
+      },
+      {
         "file": "frontend/src/core/admin-mfa.js",
         "lines": 603
       },
@@ -3440,10 +3444,6 @@
       {
         "file": "backend/src/simulations/economy/creditRecoveryScenarioSimulation.ts",
         "lines": 592
-      },
-      {
-        "file": "admin/game-session-controls.js",
-        "lines": 591
       },
       {
         "file": "admin/interaction-quality.js",
