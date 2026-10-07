@@ -6,7 +6,7 @@ begin;
 alter table public.loan_applications drop constraint loan_applications_business_liability_disabled_v1;
 do $fixture$
 begin
-for i in 1..9 loop
+for i in 1..(select case when income then 2 else 9 end from ref025_phase) loop
  declare
   staff uuid:=gen_random_uuid(); g uuid:=gen_random_uuid(); country uuid:=gen_random_uuid();
   owner_id uuid:=gen_random_uuid(); buyer uuid:=gen_random_uuid(); b uuid:=gen_random_uuid();

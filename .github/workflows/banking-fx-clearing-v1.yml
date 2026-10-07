@@ -182,7 +182,25 @@ jobs:
           npx supabase db reset --workdir backend --local
 
       - name: Verify REF025 restored gates and migration ledger
+        id: ref025_verified
         if: always() && steps.ref025_phase.outcome != 'skipped' && steps.ref025_phase.outcome != ''
+        run: node scripts/ref025-business-loan-concurrency.mjs --verify
+
+      - name: REF025 separate income phase
+        id: ref025_income
+        if: success() && steps.ref025_verified.outcome == 'success'
+        run: node scripts/ref025-business-loan-concurrency.mjs --income-phase
+
+      - name: Restore REF025 income database from zero
+        if: always() && steps.ref025_income.outcome != 'skipped' && steps.ref025_income.outcome != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ref025-business-loan-concurrency.mjs --attest
+          npx supabase db reset --workdir backend --local
+
+      - name: Verify REF025 income restored gates and migration ledger
+        if: always() && steps.ref025_income.outcome != 'skipped' && steps.ref025_income.outcome != ''
         run: node scripts/ref025-business-loan-concurrency.mjs --verify
 
       - name: Lint rebuilt database

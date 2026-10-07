@@ -4,6 +4,7 @@ import { EventEmitter } from 'node:events';
 import { promisify } from 'node:util';
 import { spawn, execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
 import { deadline, exchange, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow, authorityEffects, eligibilityEffects } from './ref025-business-loan-concurrency.mjs';
 
 // Exercise the same asynchronous process/marker boundary without requiring a database.
@@ -57,7 +58,7 @@ test('exact waiter and blocker identities are required', () => {
 });
 test('workflow restores after failures and independently checks restoration', () => {
   const workflow = readFileSync(new URL('../.github/workflows/banking-fx-clearing-v1.yml', import.meta.url), 'utf8');
-  const section = workflow.slice(workflow.indexOf('      - name: REF025 disposable race phase'), workflow.indexOf('      - name: Lint rebuilt database'));
+  const section = workflow.slice(workflow.indexOf('      - name: REF025 disposable race phase'), workflow.indexOf('      - name: REF025 separate income phase'));
   assert.equal((section.match(/if: always\(\)/g) || []).length, 2);
   assert(section.indexOf('--attest') < section.indexOf('supabase db reset'));
   assert(section.indexOf('supabase db reset') < section.indexOf('--verify'));
@@ -194,6 +195,61 @@ test('Child4 retains predecessor required checks and exact eligibility-only path
   assert.deepEqual(current.requiredChecks, prior.requiredChecks);
   assert.deepEqual(current.criticalJobChecks, prior.criticalJobChecks);
   assert.deepEqual(current.allowedPaths, prior.allowedPaths.map(p => p.replace('pr-867.json', 'pr-869.json')));
+  assert.deepEqual(current.requiredFiles, prior.requiredFiles);
+  for (const flag of ['productionDeploymentAllowed', 'productionMutationAllowed', 'secretValuesAllowed']) assert.equal(current[flag], false);
+});
+test('both actual workflow failure chains restore independently and gate the next phase', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/banking-fx-clearing-v1.yml', import.meta.url), 'utf8');
+  const step = name => workflow.split(`      - name: ${name}\n`)[1].split('      - name: ')[0];
+  const condition = name => step(name).match(/^        if: (.+)$/mu)[1];
+  const admission = condition('REF025 separate income phase');
+  const contexts = (phase, income, verified, healthy) => ({ always: () => true, success: () => healthy,
+    steps: { ref025_phase: { outcome: phase }, ref025_verified: { outcome: verified }, ref025_income: { outcome: income } } });
+  const run = (expression, context) => vm.runInNewContext(expression, context);
+  for (const phase of ['success', 'failure', 'skipped', ''])
+  for (const income of ['success', 'failure', 'skipped', '']) {
+    for (const reset of ['success', 'failure']) for (const verified of ['success', 'failure', 'skipped', '']) {
+      const healthy = phase === 'success' && reset === 'success' && verified === 'success';
+      assert.equal(run(admission, contexts(phase, income, verified, healthy)), healthy);
+      assert.equal(run(admission, contexts(phase, income, verified, true)), verified === 'success');
+      assert.equal(run(admission, contexts(phase, income, verified, false)), false); // Any earlier job failure blocks admission.
+      for (const [name, owner] of [
+        ['Restore REF025 disposable database from zero', 'ref025_phase'],
+        ['Verify REF025 restored gates and migration ledger', 'ref025_phase'],
+        ['Restore REF025 income database from zero', 'ref025_income'],
+        ['Verify REF025 income restored gates and migration ledger', 'ref025_income']
+      ]) {
+        const expected = !['skipped', ''].includes(owner === 'ref025_phase' ? phase : income);
+        assert.equal(run(condition(name), contexts(phase, income, verified, healthy)), expected);
+        assert.equal(run(condition(name), contexts(phase, income, verified, false)), expected);
+        const wrong = owner === 'ref025_phase' ? 'ref025_income' : 'ref025_phase';
+        if (['skipped', ''].includes(phase) !== ['skipped', ''].includes(income)) {
+          assert.notEqual(run(condition(name).replaceAll(owner, wrong), contexts(phase, income, verified, false)), expected);
+        }
+      }
+    }
+  }
+  for (const [restore, verify] of [
+    ['Restore REF025 disposable database from zero', 'Verify REF025 restored gates and migration ledger'],
+    ['Restore REF025 income database from zero', 'Verify REF025 income restored gates and migration ledger']
+  ]) {
+    assert.match(step(restore), /set -euo pipefail/u);
+    assert.match(step(restore), /--attest/u);
+    assert(step(restore).indexOf('--attest') < step(restore).indexOf('supabase db reset --workdir backend --local'));
+    assert.match(step(verify), /run: node scripts\/ref025-business-loan-concurrency\.mjs --verify/u);
+    assert.doesNotMatch(step(restore) + step(verify), /continue-on-error|\|\| true/u);
+  }
+  assert.match(step('Verify REF025 restored gates and migration ledger'), /id: ref025_verified/u);
+  assert.match(step('REF025 separate income phase'), /id: ref025_income/u);
+  assert.match(step('REF025 separate income phase'), /run: node scripts\/ref025-business-loan-concurrency\.mjs --income-phase/u);
+  for (const name of ['REF025 disposable race phase', 'REF025 separate income phase']) assert.doesNotMatch(step(name), /continue-on-error|\|\| true/u);
+});
+test('Child5a preserves predecessor checks and adds only the registered workflow path', () => {
+  const read = n => JSON.parse(readFileSync(new URL(`../docs/operations/contracts/player-cross-cutting/pr-${n}.json`, import.meta.url)));
+  const prior = read(869), current = read(870);
+  assert.deepEqual(current.requiredChecks, prior.requiredChecks);
+  assert.deepEqual(current.criticalJobChecks, prior.criticalJobChecks);
+  assert.deepEqual(current.allowedPaths, ['.github/workflows/banking-fx-clearing-v1.yml', ...prior.allowedPaths.map(p => p.replace('pr-869.json', 'pr-870.json'))]);
   assert.deepEqual(current.requiredFiles, prior.requiredFiles);
   for (const flag of ['productionDeploymentAllowed', 'productionMutationAllowed', 'secretValuesAllowed']) assert.equal(current[flag], false);
 });

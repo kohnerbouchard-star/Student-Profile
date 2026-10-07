@@ -123,12 +123,17 @@ export function applicationEffects(before, after, actor, key, business) {
   assert.equal(after.profiles.filter(p => p.player_id === actor).length, 1);
   assert.deepEqual(after.profiles.filter(p => p.player_id !== actor), before.profiles.filter(p => p.player_id !== actor));
 }
-async function submissionRaces(observer, first, second, remaining) {
+async function prepareFixtures(observer, first, second, remaining, income = false) {
   const sql = readFileSync(new URL('./ref025-business-loan-concurrency.sql', import.meta.url), 'utf8');
   const parts = sql.split('-- REF025 session helpers'); assert.equal(parts.length, 2);
+  await exchange(observer, `create temporary table ref025_phase(income boolean not null);
+    insert into ref025_phase values(${income ? 'true' : 'false'});`, remaining);
   await exchange(observer, sql, remaining);
   await verifyGates(observer, remaining, false);
   for (const session of [first, second]) await exchange(session, parts[1], remaining);
+}
+async function submissionRaces(observer, first, second, remaining) {
+  await prepareFixtures(observer, first, second, remaining);
   const fixtures = await json(observer, '(select json_agg(f order by n) from ref025_fixtures f where n<=2)', remaining);
   assert.equal(fixtures.length, 2); const [one, two] = fixtures;
   const state = (session, f) => json(session, `pg_temp.ref025_state(${sqlLiteral(f.g)}::uuid)`, remaining);
@@ -306,17 +311,24 @@ async function eligibilityRaces(observer, first, second, remaining) {
   }
 }
 export async function lifecycle(mode = '--phase') {
-  assert(['--phase', '--verify', '--attest'].includes(mode), 'REF025_MODE');
+  assert(['--phase', '--income-phase', '--verify', '--attest'].includes(mode), 'REF025_MODE');
   const binding = attest(), sessions = [], remaining = deadline(15000);
   let failure;
   try {
     const observer = await connect(binding, sessions, remaining);
     if (mode !== '--attest') await verifyGates(observer, remaining);
-    if (mode === '--phase') {
+    if (mode === '--phase' || mode === '--income-phase') {
       const first = await connect(binding, sessions, remaining), second = await connect(binding, sessions, remaining);
-      await submissionRaces(observer, first, second, remaining);
-      await authorityRaces(observer, first, second, remaining);
-      await eligibilityRaces(observer, first, second, remaining);
+      if (mode === '--phase') {
+        await submissionRaces(observer, first, second, remaining);
+        await authorityRaces(observer, first, second, remaining);
+        await eligibilityRaces(observer, first, second, remaining);
+      } else {
+        await prepareFixtures(observer, first, second, remaining, true);
+        assert.deepEqual(await json(observer, '(select json_agg(n order by n) from ref025_fixtures)', remaining), [1, 2]);
+        assert.equal(await json(observer, `(select count(*) from public.loan_applications where liability_kind<>'legacy_v1')`, remaining), 0);
+        // Infrastructure only: the separate Child5b owns income-visibility assertions.
+      }
       await assert.rejects(exchange(second, 'select pg_sleep(0.1);', deadline(10)), /Timed out waiting|REF025_DEADLINE/);
       await verifyGates(observer, remaining, false);
     }
@@ -340,7 +352,7 @@ export async function lifecycle(mode = '--phase') {
     if (errors.length) failure = new AggregateError([failure, ...errors].filter(Boolean), 'REF025_CLOSE_FAILED');
   }
   if (failure) throw failure;
-  console.log(JSON.stringify({ ref025: mode, gates: mode === '--attest' ? 'not_checked' : mode === '--phase' ? 'loan_retained_application_reset_required' : 'retained', clientsAndBackends: 'closed' }));
+  console.log(JSON.stringify({ ref025: mode, gates: mode === '--attest' ? 'not_checked' : mode.endsWith('phase') ? 'loan_retained_application_reset_required' : 'retained', clientsAndBackends: 'closed' }));
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   lifecycle(process.argv[2]).catch(error => { console.error(JSON.stringify({ failure: error.message, causes: error.errors?.map(e => e.message) })); process.exitCode = 1; });
