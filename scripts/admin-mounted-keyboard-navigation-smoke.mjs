@@ -37,6 +37,19 @@ function assert(condition, message) {
 
 async function createPage(viewport, label) {
   const harness = await createQualityHarness(`mounted-keyboard-${label}`);
+  await harness.page.addInitScript(() => {
+    window.__ref015FocusTrace = [];
+    const nativeFocus = HTMLElement.prototype.focus;
+    HTMLElement.prototype.focus = function (...args) {
+      window.__ref015FocusTrace.push({ type: "focus-call", tag: this.tagName, action: this.getAttribute("data-admin-terminal-action"), section: this.getAttribute("data-admin-section"), stack: new Error().stack?.split("\n").slice(1, 5) });
+      window.__ref015FocusTrace.splice(0, Math.max(0, window.__ref015FocusTrace.length - 24));
+      return Reflect.apply(nativeFocus, this, args);
+    };
+    for (const type of ["focusin", "keydown"]) window.addEventListener(type, (event) => {
+      window.__ref015FocusTrace.push({ type, time: event.timeStamp, key: event.key || "", tag: event.target?.tagName, name: event.target?.getAttribute?.("name"), className: event.target?.className, section: event.target?.getAttribute?.("data-admin-section"), action: event.target?.getAttribute?.("data-admin-terminal-action") });
+      window.__ref015FocusTrace.splice(0, Math.max(0, window.__ref015FocusTrace.length - 24));
+    }, true);
+  });
   harness.state.delayReads = false;
   harness.state.writeDelay = 0;
   await harness.page.setViewportSize(viewport);
@@ -171,6 +184,16 @@ async function exerciseNavigation(viewport) {
 
     assert(errors.length === 0, `Mounted Admin navigation emitted browser errors: ${errors[0]}`);
     return { viewport, sections, errors };
+  } catch (error) {
+    const diagnostic = await page.evaluate(() => {
+      const describe = (node) => node instanceof HTMLElement ? { tag: node.tagName, name: node.getAttribute("name"), className: node.className, section: node.getAttribute("data-admin-section"), action: node.getAttribute("data-admin-terminal-action"), connected: node.isConnected, disabled: node.matches(":disabled,[aria-disabled='true']"), excluded: Boolean(node.closest("[inert],[hidden],[aria-hidden='true'],[data-admin-stale='true'],[data-admin-shape-skeleton-stage],.admin-shape-surface-overlay")), display: getComputedStyle(node).display, visibility: getComputedStyle(node).visibility, width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height, selected: node.getAttribute("aria-current"), busy: node.getAttribute("aria-busy") } : null;
+      const owner = window.EconovariaAdminModalAccessibility;
+      return { active: describe(document.activeElement), navigation: [...document.querySelectorAll("[data-admin-section]")].map(describe), modal: describe(owner?.getActiveController?.()?.dialog), stack: owner?.getStackDepth?.(), trace: window.__ref015FocusTrace };
+    }).catch((failure) => ({ captureError: String(failure) }));
+    const record = { failure: String(error), viewport, completedSections: sections.map(({ section }) => section), diagnostic };
+    writeFileSync(`${ARTIFACT_DIR}/navigation-focus-failure.json`, JSON.stringify(record, null, 2));
+    console.error("REF015_NAV_FOCUS " + JSON.stringify(record));
+    throw error;
   } finally {
     await harness.finish({ viewport, sections });
   }

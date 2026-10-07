@@ -202,6 +202,19 @@ async function exercise([action, section, key]) {
   const harness = await createQualityHarness(`mounted-modal-focus-${action}`);
   const { page, errors, state } = harness;
   const result = { action, section, key };
+  await harness.page.addInitScript(() => {
+    window.__ref015FocusTrace = [];
+    const nativeFocus = HTMLElement.prototype.focus;
+    HTMLElement.prototype.focus = function (...args) {
+      window.__ref015FocusTrace.push({ type: "focus-call", tag: this.tagName, action: this.getAttribute("data-admin-terminal-action"), section: this.getAttribute("data-admin-section"), stack: new Error().stack?.split("\n").slice(1, 5) });
+      window.__ref015FocusTrace.splice(0, Math.max(0, window.__ref015FocusTrace.length - 24));
+      return Reflect.apply(nativeFocus, this, args);
+    };
+    for (const type of ["focusin", "keydown"]) window.addEventListener(type, (event) => {
+      window.__ref015FocusTrace.push({ type, time: event.timeStamp, key: event.key || "", tag: event.target?.tagName, name: event.target?.getAttribute?.("name"), className: event.target?.className, section: event.target?.getAttribute?.("data-admin-section"), action: event.target?.getAttribute?.("data-admin-terminal-action") });
+      window.__ref015FocusTrace.splice(0, Math.max(0, window.__ref015FocusTrace.length - 24));
+    }, true);
+  });
   state.delayReads = false;
 
   page.on("console", message => {
@@ -279,6 +292,13 @@ async function exercise([action, section, key]) {
   } catch (error) {
     result.failure = error?.stack || error?.message || String(error);
     result.errors = [...errors];
+    result.focusDiagnostic = await page.evaluate(() => {
+      const describe = (node) => node instanceof HTMLElement ? { tag: node.tagName, name: node.getAttribute("name"), className: node.className, action: node.getAttribute("data-admin-terminal-action"), connected: node.isConnected, disabled: node.matches(":disabled,[aria-disabled='true']"), excluded: Boolean(node.closest("[inert],[hidden],[aria-hidden='true']")), display: getComputedStyle(node).display, visibility: getComputedStyle(node).visibility } : null;
+      const dialog = document.querySelector(".admin-terminal-modal:not([hidden])"), owner = window.EconovariaAdminModalAccessibility;
+      const controls = dialog ? owner?.focusableElements?.(dialog) || [] : [];
+      return { active: describe(document.activeElement), dialog: describe(dialog), activeInside: Boolean(dialog?.contains(document.activeElement)), controllerMatches: owner?.getActiveController?.()?.dialog === dialog, stack: owner?.getStackDepth?.(), first: describe(controls[0]), last: describe(controls.at(-1)), controlCount: controls.length, forward: dialog?.dataset.adminForwardBoundaryReached, reverse: dialog?.dataset.adminReverseBoundaryReached, trace: window.__ref015FocusTrace };
+    }).catch((failure) => ({ captureError: String(failure) }));
+    console.error("REF015_MODAL_FOCUS " + JSON.stringify({ action, section, key, failure: result.failure, diagnostic: result.focusDiagnostic }));
     result.authorization = await authorizationDiagnostics(page).catch(() => null);
     await harness.capture(`${action}-failure`).catch(() => {});
     throw error;
