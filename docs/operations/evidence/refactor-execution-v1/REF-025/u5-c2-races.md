@@ -131,12 +131,14 @@ Vary phase/income outcomes independently and require swapped-reference mutations
 ## Child 5b — approved qualifying-income visibility proof
 APPROVED_SCOPE; base452abd0ef08825e3929fe4f46572b4cc347787da; #870 merged. Parent retains review/merge authority.
 Draft #872; user authorized implementation/test/push2026-10-07; independent review corrections remain required before completion.
-Five paths /385 nonblank additions+deletions, including comments/braces/metadata:
+User approved transport amendment2026-10-07T05:47:27Z; register before implementation; no competing helper writer in full14-PR census.
+Six paths /385 nonblank additions+deletions, including comments/braces/metadata:
+- scripts/business-phase10-atomic-settlement-database-support.mjs:8; opt-in completed-output consumption, existing callers unchanged.
 - scripts/ref025-business-loan-concurrency.sql:155
-- scripts/ref025-business-loan-concurrency.mjs:105
-- scripts/ref025-business-loan-concurrency.test.mjs:60
-- docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:30
-- docs/operations/contracts/player-cross-cutting/pr-872.json:35; verifier/tests read-only.
+- scripts/ref025-business-loan-concurrency.mjs:110
+- scripts/ref025-business-loan-concurrency.test.mjs:75
+- docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:32
+- docs/operations/contracts/player-cross-cutting/pr-872.json:36; verifier/tests read-only.
 Fresh mainf4fc25d7 and14-open-PR heads unchanged; #859 superseded/unqualified; preserve #668/#736 and other owners.
 Canonical retained/funded sales only: uncommitted/committed income, rollback, statement snapshots and waiting submissions.
 Require exact tracked blocker PID/start; preserve original application assessment and prove sale replay cannot double-count.
@@ -146,7 +148,7 @@ Seed income-fixture owner credit profile canonically; application oracle permits
 Corruption regressions reject changed profile identity, score, defaults, creation/recalculation timestamps and arbitrary fields; preserve complete other rows.
 All Child1-4 assertions, both15s deadlines, strict framing, bounded cleanup and independent reset verification remain mandatory.
 Only attested disposable Banking database; application gate temporarily removed, validated loan gate retained; mandatory full reset.
-No workflow/shared-helper/package/migration/auth/Player/Markets changes, hosted access, dispatch, deployment or hold restoration.
+No workflow/package/migration/auth/Player/Markets changes, hosted access, dispatch, deployment or hold restoration; qualification workflow is a separately owned draft.
 REF025 BLOCKED; REF027 depends025+026;40/50 and nine U1 holds unchanged. Full interacting lock graph/activation remain unqualified.
 Failed headb77898e6/job112625219316: unparenthesized CASE in new SQL; original reset/verification PASS, income skipped; expression corrected.
 Failed head452b73dd/job112626231720: JSON containment precedence; both resets/verifications PASS; operands parenthesized.
@@ -155,6 +157,6 @@ Parent directed normal integration of mainf4fc25d7 after #871, preserving its si
 Head29073cec/job112628280386 passed both income lanes and resets/verifications; unchanged lint142/17. Local full backend checks blocked by esm.sh tunnel.
 Failed head251519a2/job112630139120: original15s deadline; reset/verification PASS, income skipped. Cause remains unresolved; no variance claim.
 Head5ccb898a/job112631283958 passed both phases/reset checks; original13.13s, eligibility10.58s; this does not explain the prior failure.
-Correction adds bounded per-eligibility-case elapsed/lock/CPU/output-size measurements; no deadline or assertion relaxation. Corrected-head DB qualification pending.
+Head5e337a4e/job112638015127 reproduced15s failure:17 cases11.93s elapsed/11.19s CPU/0.44s blocker detection, retained output34.4MB; reset/verification PASS, income skipped.
 Pinned Node22.23.1 focused/authority tests38/38 PASS locally; corrected oracle covers480 and profile corruption; no local DB proof inferred.
-Full typecheck:all/smoke and required Backend Typecheck remain unresolved: existing exact-head qualification job excludes these paths; workflow-filter scope amendment needed.
+Full typecheck:all/smoke and required Backend Typecheck remain unresolved: existing job excludes these paths; separately approved16-line workflow correction preserves #620 action-version ownership and #668/#736 authority.

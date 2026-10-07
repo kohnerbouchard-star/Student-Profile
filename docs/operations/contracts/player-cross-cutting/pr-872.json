@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    "scripts/business-phase10-atomic-settlement-database-support.mjs",
     "scripts/ref025-business-loan-concurrency.sql",
     "scripts/ref025-business-loan-concurrency.mjs",
     "scripts/ref025-business-loan-concurrency.test.mjs",
@@ -25,10 +26,11 @@
   "readOnlyPaths": ["scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
   "nonblankChangedLineLimit": 385,
   "editablePathLineLimits": {
+    "scripts/business-phase10-atomic-settlement-database-support.mjs": 8,
     "scripts/ref025-business-loan-concurrency.sql": 155,
-    "scripts/ref025-business-loan-concurrency.mjs": 105,
-    "scripts/ref025-business-loan-concurrency.test.mjs": 60,
-    "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md": 30,
-    "docs/operations/contracts/player-cross-cutting/pr-872.json": 35
+    "scripts/ref025-business-loan-concurrency.mjs": 110,
+    "scripts/ref025-business-loan-concurrency.test.mjs": 75,
+    "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md": 32,
+    "docs/operations/contracts/player-cross-cutting/pr-872.json": 36
   }
 }
