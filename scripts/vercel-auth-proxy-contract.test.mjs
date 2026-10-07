@@ -378,3 +378,21 @@ test("an explicitly selected production project never falls back to staging on a
   assert.equal(result.status, 401);
   assert.deepEqual(calls, [`${process.env.ECONOVARIA_SUPABASE_URL}/functions/v1/staff-mfa-api/staff/mfa`]);
 });
+
+test('system recovery selects one exact project and rejects mismatched production configuration before fetch',async()=>{
+  const prior=process.env.ECONOVARIA_SUPABASE_URL,calls=[];
+  globalThis.fetch=async(url)=>{calls.push(url);return Response.json({error:{code:'recovery_unavailable'}},{status:403});};
+  try {
+    const body={projectRef:'cgiukdjwicykrmtkhudh',grant:'g'.repeat(43)};
+    assert.equal((await recoveryOperation('recovery-claim',body)).status,502);
+    assert.equal(calls.length,0);
+    process.env.ECONOVARIA_SUPABASE_URL='https://cgiukdjwicykrmtkhudh.supabase.co';
+    assert.equal((await recoveryOperation('recovery-claim',body)).status,403);
+    assert.deepEqual(calls,['https://cgiukdjwicykrmtkhudh.supabase.co/functions/v1/staff-mfa-api/staff/mfa/recovery/claim']);
+    calls.length=0;
+    for(const projectRef of [undefined,'unknown',['eecvbssdvarfcykcfrny','cgiukdjwicykrmtkhudh']]) {
+      assert.equal((await recoveryOperation('recovery-claim',{...body,projectRef})).status,400);
+    }
+    assert.equal(calls.length,0);
+  } finally {restoreEnv('ECONOVARIA_SUPABASE_URL',prior);}
+});

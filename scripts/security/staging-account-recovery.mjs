@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { validateIndividualRecovery, individualRecoveryDigest, sameIndividualRecovery, assertIndividualTarget, assertIndividualApproval } from './individual-account-recovery.mjs';
 import { randomBytes, createCipheriv, createDecipheriv, createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
@@ -11,6 +12,7 @@ const FIELDS = ['requestId', 'projectRef', 'authUserId', 'sourceCommit', 'identi
 // This parses an operator request, not proof of approval. Neither application
 // roles nor a caller-supplied actor/MFA flag can authorize the live operation.
 export function validateRecoveryRequest(value, now = Date.now()) {
+  if (value?.version === '2') return validateIndividualRecovery(value, now);
   if (!value || typeof value !== 'object' || Array.isArray(value) ||
       Object.keys(value).some(key => !FIELDS.includes(key)) ||
       FIELDS.some(key => typeof value[key] !== 'string')) throw new Error('Invalid recovery request');
@@ -29,6 +31,7 @@ export function validateRecoveryRequest(value, now = Date.now()) {
 export function recoveryPlan(value, now = Date.now()) {
   const request = validateRecoveryRequest(value, now);
   return Object.freeze({
+    ...(request.version === '2' ? {environment:request.environment,operationDigest:individualRecoveryDigest(request)} : {}),
     mode: 'plan-only', requestId: request.requestId, projectRef: request.projectRef,
     sourceCommit: request.sourceCommit, liveExecutionEnabled: false,
     steps: Object.freeze([
@@ -52,10 +55,14 @@ export async function runApprovedRecovery(value, adapters, now = Date.now()) {
   if (!approval || approval.verified !== true || approval.principalKind !== 'system' ||
       approval.identityChecksVerified !== true || typeof approval.subject !== 'string' || !approval.subject ||
       !Number.isFinite(approval.authenticatedAt) || approval.authenticatedAt > now || now-approval.authenticatedAt > 300_000 ||
-      FIELDS.some(key => approval.request?.[key] !== request[key]) ||
+      (request.version === '2' ? !sameIndividualRecovery(approval.request,request) : FIELDS.some(key => approval.request?.[key] !== request[key])) ||
       !Array.isArray(approval.factorIds) || approval.factorIds.length > 20 ||
       approval.factorIds.some(id => typeof id !== 'string' || !UUID.test(id)) ||
       new Set(approval.factorIds).size !== approval.factorIds.length) throw Error('External operator approval required');
+  if (request.version === '2') {
+    assertIndividualApproval(request,approval,adapters.target);
+    for (const adapter of [adapters.store,adapters.provider,adapters.delivery]) assertIndividualTarget(request,adapter.target);
+  }
   await adapters.store.begin(request, approval);
   let state = await adapters.store.read(request);
   const advance = async (expected, next, evidence = {}) => {
@@ -97,18 +104,19 @@ export async function runApprovedRecovery(value, adapters, now = Date.now()) {
 
 // Concrete service-RPC persistence composition. The caller must supply its
 // reviewed credential binding; this module never discovers or creates one.
-export function createRecoveryOperatorStore(rpc) {
+export function createRecoveryOperatorStore(rpc, target) {
   const call = async (name, args) => {
     const result = await rpc(name, args);
     if (result.error) throw Error('Recovery operator persistence unavailable');
     return result.data;
   };
   const identity = request => ({ p_id: request.requestId, p_user: request.authUserId, p_source: request.sourceCommit });
-  return {
-    begin: (request, approval) => call('system_recovery_begin_v1', { ...identity(request),
+  const bound = (request, action, payload = {}) => individualRpc(rpc,target,request,action,payload);
+  return { target,
+    begin: (request, approval) => request.version === '2' ? bound(request,'begin',individualApprovalReceipt(approval)) : call('system_recovery_begin_v1', { ...identity(request),
       p_project: request.projectRef, p_operator: approval.subject, p_evidence: request.identityEvidenceRef, p_expires: request.expiresAt }),
-    read: request => call('system_recovery_operator_state_v1', { ...identity(request), p_evidence: request.identityEvidenceRef }),
-    advance: (request, expected, next, evidence = {}) => call('system_recovery_advance_v1', { ...identity(request),
+    read: request => request.version === '2' ? bound(request,'read') : call('system_recovery_operator_state_v1', { ...identity(request), p_evidence: request.identityEvidenceRef }),
+    advance: (request, expected, next, evidence = {}) => request.version === '2' ? bound(request,'advance',{expected,next,...evidence}) : call('system_recovery_advance_v1', { ...identity(request),
       p_expected: expected, p_next: next, p_digest: evidence.grantDigest ?? null,
       p_expires: evidence.expiresAt == null ? null : new Date(evidence.expiresAt).toISOString() }),
   };
@@ -116,18 +124,20 @@ export function createRecoveryOperatorStore(rpc) {
 
 // Only injected disposable integrations are used here. The CLI never constructs
 // this adapter or obtains a key, provider token, recipient, or delivery credential.
-export function createRecoveryDelivery({ key, store, provider, clock = Date.now }) {
+export function createRecoveryDelivery({ key, store, provider, target, clock = Date.now }) {
   if (!(key instanceof Uint8Array) || key.length !== 32) throw Error('Delivery encryption key unavailable');
-  const binding = request => Buffer.from(JSON.stringify(['recovery-delivery-v1', ...FIELDS.map(field => request[field])]));
+  const binding = request => Buffer.from(JSON.stringify(request.version === '2' ? ['recovery-delivery-v2',individualRecoveryDigest(request)] : ['recovery-delivery-v1', ...FIELDS.map(field => request[field])]));
+  const checkTarget = request => { if (request.version === '2') for (const bound of [target,store.target,provider.target]) assertIndividualTarget(request,bound); };
   const checkedRecord = (request, record) => {
     if (!record || record.version !== 1 || record.expiresAt !== Date.parse(request.expiresAt) ||
         record.expiresAt <= clock() || !/^[a-f0-9]{64}$/.test(record.grantDigest) ||
         typeof record.sealed !== 'string') throw Error('Recovery delivery unavailable');
     return record;
   };
-  return {
+  return { target,
     async prepare(value) {
       const request = validateRecoveryRequest(value, clock());
+      checkTarget(request);
       const existing = await store.readDelivery(request);
       if (existing) return { grantDigest: checkedRecord(request, existing).grantDigest, expiresAt: existing.expiresAt };
       // One-shot reservation precedes the provider call: even a lost token-issue
@@ -153,6 +163,7 @@ export function createRecoveryDelivery({ key, store, provider, clock = Date.now 
     },
     async send(value) {
       const request = validateRecoveryRequest(value, clock());
+      checkTarget(request);
       const record = checkedRecord(request, await store.readDelivery(request));
       if (await store.deliveryReady(request, record.grantDigest) !== true) throw Error('Recovery delivery is not ready');
       if (record.delivered === true) return;
@@ -179,8 +190,9 @@ export function createRecoveryDelivery({ key, store, provider, clock = Date.now 
 
 // Callable only with an explicitly supplied service RPC adapter; no connection,
 // credentials or executable command is provided here.
-export function createRecoveryDeliveryStore(rpc) {
+export function createRecoveryDeliveryStore(rpc, target) {
   const call = async (request, action, record = null) => {
+    if (request.version === '2') return individualRpc(rpc,target,request,'delivery',{action,record});
     const result = await rpc('system_recovery_delivery_v1', {
       p_id: request.requestId, p_user: request.authUserId, p_source: request.sourceCommit,
       p_evidence: request.identityEvidenceRef, p_request_expires: request.expiresAt,
@@ -189,7 +201,7 @@ export function createRecoveryDeliveryStore(rpc) {
     if (result.error || (['save','ack'].includes(action) && result.data !== true)) throw Error('Recovery delivery persistence unavailable');
     return result.data;
   };
-  return {
+  return { target,
     readDelivery: request => call(request, 'read'),
     reserveDelivery: request => call(request, 'reserve'),
     saveDelivery: (request, record) => call(request, 'save', record),
@@ -209,6 +221,7 @@ export async function assessRecoveryReconciliation(value, adapters, now = Date.n
       approval.identityChecksVerified !== true || typeof approval.subject !== 'string' || !approval.subject ||
       !Number.isFinite(approval.authenticatedAt) || approval.authenticatedAt > now || now-approval.authenticatedAt > 300_000 ||
       FIELDS.some(field => approval.request?.[field] !== request[field])) throw Error('External operator approval required');
+  if (request.version === '2') { assertIndividualApproval(request,approval,adapters.target); assertIndividualTarget(request,adapters.store.target); }
   const state = await adapters.store.read(request);
   if (!state || state.restricted !== true || !['restricted','revoking','revoked','removing','removed','ready','enrolling','completing','cancelled'].includes(state.phase)) {
     throw Error('Restricted recovery attempt unavailable');
@@ -226,7 +239,7 @@ export async function restartExpiredRecovery(previous, value, adapters, now = Da
   if (!Number.isFinite(oldExpiry) || oldExpiry > now) throw Error('Previous attempt is not expired');
   const oldRequest = validateRecoveryRequest(previous, oldExpiry - 1);
   const request = validateRecoveryRequest(value, now);
-  if (request.requestId === oldRequest.requestId || request.authUserId !== oldRequest.authUserId ||
+  if (request.version !== oldRequest.version || request.requestId === oldRequest.requestId || request.authUserId !== oldRequest.authUserId ||
       request.projectRef !== oldRequest.projectRef) throw Error('Restart identity mismatch');
   const approval = await adapters.verifyRestartApproval(oldRequest, request);
   if (!approval || approval.verified !== true || approval.principalKind !== 'system' ||
@@ -234,6 +247,13 @@ export async function restartExpiredRecovery(previous, value, adapters, now = Da
       !Number.isFinite(approval.authenticatedAt) || approval.authenticatedAt > now || now-approval.authenticatedAt > 300_000 ||
       FIELDS.some(field => approval.previous?.[field] !== oldRequest[field] || approval.request?.[field] !== request[field])) {
     throw Error('Fresh external operator restart approval required');
+  }
+  if (request.version === '2') {
+    assertIndividualApproval(request,approval,adapters.target);
+    if (!sameIndividualRecovery(approval.previous,oldRequest)) throw Error('Previous individual approval mismatch');
+    const result = await individualRpc(adapters.rpc,adapters.target,request,'restart',{previous:oldRequest,...individualApprovalReceipt(approval)});
+    if (result !== request.requestId) throw Error('Recovery restart unavailable; restriction preserved');
+    return Object.freeze({requestId:request.requestId,phase:'restricted',restricted:true});
   }
   const result = await adapters.rpc('system_recovery_restart_v1', {
     p_old_id: oldRequest.requestId, p_old_source: oldRequest.sourceCommit,
@@ -247,10 +267,23 @@ export async function restartExpiredRecovery(previous, value, adapters, now = Da
 
 // A separately bound worker may deliver non-secret lifecycle notices. Provider
 // support for this idempotency key is required; unknown outcomes stay pending.
-export async function deliverRecoveryNotice(value, kind, { rpc, provider }, now = Date.now()) {
+export async function deliverRecoveryNotice(value, kind, { rpc, provider, target }, now = Date.now()) {
   const expiry = Date.parse(value?.expiresAt);
   if (!Number.isFinite(expiry) || !['started','completed'].includes(kind)) throw Error('Invalid recovery notice');
   const request = validateRecoveryRequest(value, Math.min(now, expiry - 1));
+  if (request.version === '2') {
+    assertIndividualTarget(request,provider.target);
+    const notice = await individualRpc(rpc,target,request,'notice',{kind});
+    if (notice?.kind !== kind) throw Error('Recovery notice unavailable');
+    if (notice.delivered === true) return;
+    let receipt;
+    try { receipt = await provider.sendNotice(request,{kind},{idempotencyKey:`recovery-notice:${request.projectRef}:${request.requestId}:${kind}`}); }
+    catch { throw Error('Recovery notice outcome unknown'); }
+    if (receipt?.acknowledged !== true) throw Error('Recovery notice outcome unknown');
+    const ack = await individualRpc(rpc,target,request,'notice',{kind,ack:true});
+    if (ack?.delivered !== true) throw Error('Recovery notice acknowledgement unavailable');
+    return;
+  }
   const args = { p_id: request.requestId, p_user: request.authUserId, p_source: request.sourceCommit, p_kind: kind };
   const pending = await rpc('system_recovery_notice_v1', args);
   if (pending.error || pending.data?.kind !== kind) throw Error('Recovery notice unavailable');
@@ -261,6 +294,19 @@ export async function deliverRecoveryNotice(value, kind, { rpc, provider }, now 
   if (receipt?.acknowledged !== true) throw Error('Recovery notice outcome unknown');
   const ack = await rpc('system_recovery_notice_v1', { ...args, p_ack: true });
   if (ack.error || ack.data?.delivered !== true) throw Error('Recovery notice acknowledgement unavailable');
+}
+
+function individualApprovalReceipt(approval) {
+  return {operator:approval.subject,authenticatedAt:approval.authenticatedAt,
+    confirmedOperationDigest:approval.confirmedOperationDigest,productionConfirmed:approval.productionConfirmed===true,
+    supportRequestVerified:approval.supportRequestVerified===true};
+}
+
+async function individualRpc(rpc,target,request,action,payload) {
+  assertIndividualTarget(request,target);
+  const result = await rpc('system_recovery_operator_v2',{p_request:request,p_digest:individualRecoveryDigest(request),p_action:action,p_payload:payload});
+  if (result.error) throw Error('Individual recovery persistence unavailable');
+  return result.data;
 }
 
 export async function main(args) {

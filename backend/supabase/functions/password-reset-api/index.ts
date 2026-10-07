@@ -4,7 +4,7 @@ import {
   createAuthClient,
   createServiceClient,
 } from "../_shared/econovariaAuth.ts";
-import { resolveStaffSessionForRequest, recoveryGrantDigest, recoverySessionId } from "../../../src/platform/supabase/edgeStaffSession.ts";
+import { resolveStaffSessionForRequest, recoveryGrantDigest, recoverySessionId, isSystemRecoveryProject } from "../../../src/platform/supabase/edgeStaffSession.ts";
 import { extractBearerToken } from "../../../src/platform/supabase/edgeAuth.ts";
 import { validateStaffPassword } from "../../../src/security/staffPasswordPolicy.ts";
 
@@ -59,7 +59,7 @@ Deno.serve(async (request: Request) => {
   const env = readEdgeSupabaseEnv();
   if (!env.ok) return unavailable(request);
   const digest=bodyResult.grant ? await recoveryGrantDigest(bodyResult.grant) : null;
-  if(bodyResult.grant && (env.value.supabaseUrl!=="https://eecvbssdvarfcykcfrny.supabase.co" || !digest)) return unavailable(request);
+  if(bodyResult.grant && (!isSystemRecoveryProject(env.value.supabaseUrl) || !digest)) return unavailable(request);
   const resolved = await resolveStaffSessionForRequest(request, env.value, {createAuthClient,createServiceClient}, {
     ...(digest ? {recoveryGrantDigest:digest} : {}),
     missingMessage: "A valid password-recovery session is required.",

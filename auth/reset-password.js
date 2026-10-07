@@ -50,7 +50,7 @@
     document.getElementById("systemRecoverySecret").textContent = "";
   }
   async function systemCall(operation, fields = {}) {
-    if (PASSWORD_RESET_API_URL !== "/api/password-reset" || projectRef !== "eecvbssdvarfcykcfrny") throw Error("Unsupported recovery origin");
+    if (PASSWORD_RESET_API_URL !== "/api/password-reset" || !PROJECT_REFS.has(projectRef)) throw Error("Unsupported recovery origin");
     const response = await fetch(`${PASSWORD_RESET_API_URL}?operation=recovery-${operation}`, {
       method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${accessToken}`},
       body:JSON.stringify({projectRef,grant:systemGrant,...fields}),credentials:"same-origin",cache:"no-store",redirect:"error",referrerPolicy:"no-referrer",
@@ -239,7 +239,7 @@
   }
 
   if (systemGrant) {
-    if(projectRef!=="eecvbssdvarfcykcfrny" || !/^[A-Za-z0-9_-]{43}$/.test(systemGrant) || !/^[A-Za-z0-9_-]{16,256}$/.test(systemTokenHash)) {
+    if(!PROJECT_REFS.has(projectRef) || !/^[A-Za-z0-9_-]{43}$/.test(systemGrant) || !/^[A-Za-z0-9_-]{16,256}$/.test(systemTokenHash)) {
       endRecovery("This approved recovery link is invalid."); clearRecoveryUrl(); return;
     }
     form.hidden=true; systemBegin.hidden=false;

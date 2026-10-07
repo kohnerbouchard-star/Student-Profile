@@ -113,7 +113,10 @@ test("disposable browser recovery: MFA, isolation, expiry, missing/lost factors 
   }
 });
 
-test("system-approved recovery enrolls exact primary and backup before password, without old password", async () => {
+for (const project of ["eecvbssdvarfcykcfrny","cgiukdjwicykrmtkhudh"]) test(`system-approved ${project} recovery enrolls exact primary and backup before password`, async () => {
+  const priorUrl=process.env.ECONOVARIA_SUPABASE_URL,priorKey=process.env.ECONOVARIA_SUPABASE_PUBLISHABLE_KEY;
+  process.env.ECONOVARIA_SUPABASE_URL=`https://${project}.supabase.co`;
+  process.env.ECONOVARIA_SUPABASE_PUBLISHABLE_KEY="sb_publishable_disposable_recovery_fixture";
   const originalFetch=globalThis.fetch;
   const calls=[];
   let enrolled=0,verified=0;
@@ -176,5 +179,8 @@ test("system-approved recovery enrolls exact primary and backup before password,
     await page.getByText(/Password updated and existing administrator sessions revoked/).waitFor();
     assert.equal(await page.evaluate(()=>localStorage.length+sessionStorage.length),0);
     assert.equal(verified,2);
-  } finally {await browser.close();await new Promise(resolve=>server.close(resolve));globalThis.fetch=originalFetch;}
+  } finally {await browser.close();await new Promise(resolve=>server.close(resolve));globalThis.fetch=originalFetch;
+    if(priorUrl===undefined)delete process.env.ECONOVARIA_SUPABASE_URL;else process.env.ECONOVARIA_SUPABASE_URL=priorUrl;
+    if(priorKey===undefined)delete process.env.ECONOVARIA_SUPABASE_PUBLISHABLE_KEY;else process.env.ECONOVARIA_SUPABASE_PUBLISHABLE_KEY=priorKey;
+  }
 });
