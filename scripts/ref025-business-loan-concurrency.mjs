@@ -505,6 +505,104 @@ async function profileRaces(observer, first, second, third, remaining) {
       otherGame: 'submitted-rolled-back', elapsedMs: performance.now() - started }));
   }
 }
+export function pauseEffects(before, after, f, key, paused) {
+  assert.equal(before.game.id, f.g); assert.equal(before.game.lifecycle_state, 'active'); assert.equal(before.game.status, 'active');
+  const { at, lower, upper, result } = paused, expected = structuredClone(before);
+  const stamp = value => { const time = Date.parse(value); assert(Number.isFinite(time), 'REF025_PAUSE_TIME'); return time; };
+  assert(stamp(lower) <= stamp(upper)); assert(stamp(at) <= stamp(lower));
+  Object.assign(expected.game, { lifecycle_state: 'paused', status: 'disabled', lifecycle_version: before.game.lifecycle_version + 1, paused_at: at, updated_at: at });
+  const game = expected.game, metadata = { previous_state: 'active', lifecycle_state: 'paused', operational_status: 'disabled',
+    lifecycle_version: game.lifecycle_version, sessions_revoked: 0, join_code_status: game.game_join_code_status, outcome: 'applied' };
+  const transitions = after.transitions.filter(r => !before.transitions.some(p => p.id === r.id));
+  const audits = after.economic.audits.filter(r => !before.economic.audits.some(p => p.id === r.id));
+  assert.equal(transitions.length, 1); assert.equal(audits.length, 1);
+  for (const row of [transitions[0], audits[0]]) assert.match(row.id, /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/);
+  const times = Object.fromEntries(['started_at', 'paused_at', 'resumed_at', 'ended_at', 'archived_at'].map(k => [k, game[k]]));
+  assert.deepEqual(transitions[0], { id: transitions[0].id, game_session_id: f.g, staff_user_id: game.owner_staff_user_id,
+    idempotency_key: key, action: 'pause', ...metadata, ...times, game_updated_at: at, created_at: at, completed_at: at });
+  assert.deepEqual(audits[0], { id: audits[0].id, game_session_id: f.g, actor_type: 'staff_user', actor_id: game.owner_staff_user_id,
+    action: 'game.lifecycle.pause', target_type: 'game_session', target_id: f.g, metadata, created_at: at });
+  assert.deepEqual(result, { transition_outcome: 'applied', transition_action: 'pause', previous_state: 'active', lifecycle_state: 'paused',
+    operational_status: 'disabled', lifecycle_version: game.lifecycle_version, sessions_revoked: 0,
+    join_code_status: game.game_join_code_status, allowed_actions: ['resume', 'end', 'revoke_sessions'], ...times, updated_at: at });
+  assert.equal(before.fx.cutover_status, 'ready'); assert.notEqual(before.fx.next_due_at, null, 'REF025_NONVACUOUS_FX_PAUSE');
+  assert(stamp(after.fx.updated_at) >= stamp(lower) && stamp(after.fx.updated_at) <= stamp(upper), 'REF025_FX_PAUSE_TIME');
+  for (const field of ['next_due_at', 'retry_after_at', 'claimed_local_date', 'claimed_effective_at', 'lease_token', 'lease_owner', 'lease_expires_at', 'claimed_input_hash', 'claimed_engine_input']) expected.fx[field] = null;
+  expected.fx.updated_at = after.fx.updated_at;
+  const actual = structuredClone(after);
+  actual.transitions = actual.transitions.filter(r => r.id !== transitions[0].id);
+  actual.economic.audits = actual.economic.audits.filter(r => r.id !== audits[0].id);
+  assert.deepEqual(actual, expected, 'REF025_PAUSE_EFFECTS');
+}
+async function pauseRaces(observer, first, second, third, remaining) {
+  const fixtures = await json(observer, '(select json_agg(f order by n) from ref025_fixtures f where n<=2)', remaining);
+  assert.equal(fixtures.length, 2); const [one, two] = fixtures;
+  const state = (session, f = one) => json(session, `pg_temp.ref025_pause_state(${sqlLiteral(f.g)})`, remaining);
+  const credit = f => json(observer, `pg_temp.ref025_expected_credit(${[f.g, f.owner_id].map(sqlLiteral)})`, remaining);
+  const command = (f, key) => `select * from economy_private.submit_business_loan_application_v1(${[f.g, f.owner_id, f.business_key, f.product_key, 60, 'REF025 pause request', key].map(sqlLiteral)})`;
+  const submit = (session, f, key) => json(session, `(select to_jsonb(r) from (${command(f, key)}) r)`, remaining);
+  const pause = (session, key) => json(session, `pg_temp.ref025_pause(${[one.g, key].map(sqlLiteral)})`, remaining);
+  const blocked = async (waiter, blocker) => {
+    for (;;) {
+      const row = await json(observer, `pg_temp.ref025_blocker(${waiter.pid},${blocker.pid})`, remaining);
+      if (row?.wait === 'Lock') { intendedBlocker(row, waiter, blocker); return; }
+      await new Promise(resolve => setTimeout(resolve, Math.min(20, remaining())));
+    }
+  };
+  const otherGame = async key => {
+    const before = await state(observer, two), expectedCredit = await credit(two);
+    await exchange(observer, 'begin;', remaining);
+    assert.equal((await submit(observer, two, key)).replayed, false);
+    profileApplicationEffects(before, await state(observer, two), two, key, two.owner_id, expectedCredit);
+    await exchange(observer, 'rollback;', remaining); assert.deepEqual(await state(observer, two), before);
+  };
+  const seedKey = 'ref025-pause-seed', seedBefore = await state(observer), seedCredit = await credit(one);
+  const original = await submit(observer, one, seedKey); assert.equal(original.replayed, false);
+  profileApplicationEffects(seedBefore, await state(observer), one, seedKey, one.owner_id, seedCredit);
+  for (const replay of [false, true]) for (const commit of [false, true]) {
+    const key = `ref025-pause-retention-${replay}-${commit}`, loanKey = replay ? seedKey : key;
+    const before = await state(observer), other = await state(observer, two), expectedCredit = await credit(one);
+    await exchange(first, 'begin;', remaining);
+    const result = await submit(first, one, loanKey), staged = await state(first);
+    if (replay) { assert.deepEqual(result, { ...original, replayed: true }); assert.deepEqual(staged, before); }
+    else { assert.equal(result.replayed, false); profileApplicationEffects(before, staged, one, loanKey, one.owner_id, expectedCredit); }
+    await exchange(second, 'begin;', remaining);
+    const waiting = pause(second, key); waiting.catch(() => {}); await blocked(second, first);
+    await otherGame(key); await blocked(second, first); assert.deepEqual(await state(observer), before);
+    await exchange(first, commit ? 'commit;' : 'rollback;', remaining);
+    const paused = await waiting, baseline = commit ? staged : before;
+    pauseEffects(baseline, await state(second), one, key, paused); assert.deepEqual(await state(observer), baseline);
+    await exchange(second, 'rollback;', remaining);
+    assert.deepEqual(await state(observer), baseline); assert.deepEqual(await state(observer, two), other);
+    console.log(JSON.stringify({ ref025PauseRetention: key, edge: [second.pid, second.start, first.pid, first.start], replay, commit, pauseRollback: true, otherGame: 'submitted-rolled-back' }));
+  }
+  // Commit is last: no resume command or additional lifecycle semantics enter this proof.
+  for (const commit of [false, true]) {
+    const key = `ref025-pause-first-${commit}`, before = await state(observer), other = await state(observer, two), expectedCredit = await credit(one);
+    await exchange(first, 'begin;', remaining);
+    const paused = await pause(first, key), staged = await state(first); pauseEffects(before, staged, one, key, paused);
+    const request = (session, loanKey) => commit
+      ? exchange(session, `select pg_temp.ref025_reject(${sqlLiteral(command(one, loanKey))},'BUSINESS_LOAN_GAME_UNAVAILABLE');`, remaining)
+      : submit(session, one, loanKey);
+    const creation = request(second, key), replay = request(third, seedKey); creation.catch(() => {}); replay.catch(() => {});
+    await blocked(second, first); await blocked(third, first);
+    await otherGame(key); await blocked(second, first); await blocked(third, first);
+    assert.deepEqual(await state(observer), before);
+    await exchange(first, commit ? 'commit;' : 'rollback;', remaining);
+    const [created, replayed] = await Promise.all([creation, replay]), after = await state(observer);
+    if (commit) {
+      assert.deepEqual(after, staged);
+      const again = await pause(first, key); assert.deepEqual(again.result, { ...paused.result, transition_outcome: 'replayed' });
+      assert.deepEqual(await state(observer), staged);
+    } else {
+      assert.equal(created.replayed, false); assert.deepEqual(replayed, { ...original, replayed: true });
+      profileApplicationEffects(before, after, one, key, one.owner_id, expectedCredit);
+    }
+    assert.deepEqual(await state(observer, two), other); await verifyGates(observer, remaining, false);
+    console.log(JSON.stringify({ ref025PauseFirst: key, edges: [[second.pid, second.start, first.pid, first.start],
+      [third.pid, third.start, first.pid, first.start]], commit, creationAndReplay: commit ? 'denied' : 'preserved', otherGame: 'submitted-rolled-back' }));
+  }
+}
 export async function lifecycle(mode = '--phase') {
   assert(['--phase', '--income-phase', '--verify', '--attest'].includes(mode), 'REF025_MODE');
   const binding = attest(), sessions = [], remaining = deadline(15000);
@@ -525,6 +623,7 @@ export async function lifecycle(mode = '--phase') {
         const third = await connect(binding, sessions, remaining);
         await exchange(third, readFileSync(new URL('./ref025-business-loan-concurrency.sql', import.meta.url), 'utf8').split('-- REF025 session helpers')[1], remaining);
         await profileRaces(observer, first, second, third, remaining);
+        await pauseRaces(observer, first, second, third, remaining);
       } else {
         await prepareFixtures(observer, first, second, remaining, true);
         assert.deepEqual(await json(observer, '(select json_agg(n order by n) from ref025_fixtures)', remaining), [1, 2]);

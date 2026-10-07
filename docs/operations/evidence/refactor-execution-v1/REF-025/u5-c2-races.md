@@ -205,3 +205,6 @@ Preserve all existing assertions, both15s deadlines, bounded client/backend clea
 Production SQL, shared helper, workflow, packages and authority verifier/tests remain unchanged; no live DB, credentials/settings, dispatch, deployment or activation.
 REF025 BLOCKED; REF027 depends025+026; all nine U1 holds remain. Parent independently reviews before merge; rollback is a bounded source revert.
 Validation pending implementation, pinned local checks and exact-head disposable/CI evidence; stop for policy decisions or budget expansion.
+Implemented four submission-first retention cases and two pause-first cases; canonical pause replay adds no effects; committed pause is last.
+Pinned Node22.23.1 focused/authority45/45, full npm test, architecture/legacy/boundary80, secret/authority/diff checks PASS.
+Local backend typecheck is blocked by esm.sh dependency tunnel; full smoke and exact-head disposable/CI qualification pending. No assertion or timeout change.

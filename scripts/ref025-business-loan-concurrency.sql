@@ -290,3 +290,23 @@ create function pg_temp.ref025_expected_credit(g uuid,actor uuid) returns jsonb 
   return expected;
  end;
 $credit$;
+
+-- Canonical pause observation only; no fixture, production routine or trigger replacement.
+create function pg_temp.ref025_pause_state(g uuid) returns jsonb language sql as $pause_state$
+ select pg_temp.ref025_income_state(g)||jsonb_build_object(
+  'game',(select to_jsonb(x) from public.game_sessions x where id=g),
+  'transitions',(select coalesce(jsonb_agg(to_jsonb(x) order by id),'[]') from public.game_lifecycle_transition_requests x where game_session_id=g),
+  'sessions',(select coalesce(jsonb_agg(to_jsonb(x) order by id),'[]') from public.player_sessions x where game_session_id=g),
+  'players',(select coalesce(jsonb_agg(to_jsonb(x) order by id),'[]') from public.players x where game_session_id=g),
+  'fx',(select to_jsonb(x) from private.fx_runtime_state x where game_session_id=g),
+  'fixings',(select coalesce(jsonb_agg(to_jsonb(x) order by id),'[]') from public.fx_fixings x where game_session_id=g));
+$pause_state$;
+create function pg_temp.ref025_pause(g uuid,key text) returns jsonb language plpgsql as $pause$
+ declare lower_bound timestamptz:=clock_timestamp(); result jsonb;
+ begin
+  select to_jsonb(r) into strict result from public.transition_game_lifecycle_atomic_v1(g,
+    (select owner_staff_user_id from public.game_sessions where id=g),'pause',key,
+    (select lifecycle_version from public.game_sessions where id=g)) r;
+  return jsonb_build_object('at',transaction_timestamp(),'lower',lower_bound,'upper',clock_timestamp(),'result',result);
+ end;
+$pause$;
