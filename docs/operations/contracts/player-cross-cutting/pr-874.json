@@ -10,6 +10,8 @@
   "secretValuesAllowed": false,
   "allowedPaths": [
     "admin/logout-confirmation.js",
+    "admin/modal-accessibility.js",
+    "scripts/admin-modal-accessibility-smoke.mjs",
     "scripts/admin-logout-account-trigger-source-smoke.mjs",
     "scripts/admin-logout-confirmation-browser-smoke.mjs",
     "scripts/admin-mounted-keyboard-navigation-smoke.mjs",
@@ -51,5 +53,5 @@
     "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-015/u7-logout-trigger-migration.md",
-  "authorizationNote": "User and parent approved the diagnostic amendment: seven changed files, at most 240 changed lines; runtime remains the six-line logout guard. Add failure-state diagnostics only to the two registered focus tests, preserving assertions, timeouts and focus actions. No new runtime owner, global marker, caller cutover or PR861 Settings/bootstrap change. Verifier/test remain unchanged locks; fallback-only behavior, URLs, rollback and all retirement/release holds remain. Proven repairs beyond this purpose require precise parent scope review; no merge, deployment or production requests."
+  "authorizationNote": "User and parent approve nine changed files, at most 260 changed lines: existing six-line logout guard, approved focus diagnostics, and one-line modal opener-identity repair with focused regression cases. Keep eligibility and semantic/fallback resolution at restoration, all existing assertions/timeouts/focus actions, cancel/keyboard/native behavior. Fresh ownership check finds no conflicting PR on the two added modal paths. No new marker, timer, Settings/bootstrap/bridge/URL change or other owner transfer. Verifier/test remain unchanged locks; all retirement/release holds remain. No merge, deployment or production requests."
 }
