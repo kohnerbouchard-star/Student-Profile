@@ -172,8 +172,9 @@ try {
 
   report.shareDismissal = [];
   for (const mode of ["close", "Escape", "backdrop"]) {
-    const closed = await page.evaluate(async (mode) => {
-      document.querySelector("[data-econovaria-share-game]").click();
+    await shareButton.waitFor({ state: "visible", timeout: 5_000 });
+    const closed = await shareButton.evaluate(async (button, mode) => {
+      button.click();
       const surface = [...document.querySelectorAll('[data-modal-id="share-game-access"]')].at(-1);
       if (mode !== "close") {
         window.EconovariaAdminModalLifecycleBridge.reconcile();
