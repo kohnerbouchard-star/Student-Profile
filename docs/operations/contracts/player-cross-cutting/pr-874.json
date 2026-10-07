@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref015-logout-guard-pr-874.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 874,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "admin/logout-confirmation.js",
+    "scripts/admin-logout-account-trigger-source-smoke.mjs",
+    "scripts/admin-logout-confirmation-browser-smoke.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-015/u7-logout-trigger-migration.md",
+    "docs/operations/contracts/player-cross-cutting/pr-874.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-874.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium",
+    "Admin Shell Smoke",
+    "Admin Browser E2E",
+    "Runtime Interaction Wiring",
+    "Admin Game Session Controls"
+  ],
+  "criticalJobChecks": [
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-015/u7-logout-trigger-migration.md",
+  "authorizationNote": "User and parent approved five changed files, at most 180 changed lines and 12 added runtime lines. Initial compatible-owner reuse and trigger-installer reuse only; preserve first-install capture order, API identity/dynamic lookup. Verifier and its test are unchanged locks. PR861 exclusively retains Settings/bootstrap ownership and remains blocked. Bridge and old URLs, fallback-only behavior, rollback evidence and all retirement/release holds remain unchanged. No new global marker, caller cutover, merge, deployment or production requests. Parent retains review and merge."
+}
