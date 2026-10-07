@@ -20,12 +20,13 @@ export async function exchange(session, sql, remaining) {
     await wait;
     remaining();
     assert.equal(session.errors, '', 'REF025_SQL_ERROR');
+    return session.takeOutput ? session.takeOutput() : session.output;
   } catch (error) { session.closed = true; throw error; }
 }
 export async function json(session, expression, remaining) {
   const marker = `r${randomUUID().replaceAll('-', '')}:`;
-  await exchange(session, `select '${marker}' || (${expression})::text || '${marker}';`, remaining);
-  return decodeRow(session.output, marker);
+  const output = await exchange(session, `select '${marker}' || (${expression})::text || '${marker}';`, remaining);
+  return decodeRow(output, marker);
 }
 export function decodeRow(output, marker) {
   const parts = output.split(marker);
@@ -252,7 +253,7 @@ async function eligibilityRaces(observer, first, second, remaining) {
       ${[f.g, f.owner_id, f.business_key, f.product_key, 60, 'REF025 eligibility request', key].map(sqlLiteral).join(',')})`;
     const submit = (session, key) => json(session, `(select to_jsonb(r) from (${command(key)}) r)`, remaining);
     for (const mode of ['creation', 'replay', 'retention']) for (const committed of [true, false]) {
-      const started = performance.now(), cpu = process.cpuUsage(), bytes = observer.output.length;
+      const started = performance.now(), cpu = process.cpuUsage();
       const key = `ref025-${target}-${mode}-${committed}`;
       const seed = await economic(observer), original = mode === 'replay' ? await submit(observer, key) : null;
       if (original) {
@@ -310,7 +311,7 @@ async function eligibilityRaces(observer, first, second, remaining) {
       assert.deepEqual(await economic(observer), after);
       assert.deepEqual(await sentinels(), isolated);
       await verifyGates(observer, remaining, false);
-      console.log(JSON.stringify({ ref025Eligibility: key, elapsedMs: performance.now() - started, lockMs, cpuUs: process.cpuUsage(cpu), observerBytes: observer.output.length, addedBytes: observer.output.length - bytes }));
+      console.log(JSON.stringify({ ref025Eligibility: key, elapsedMs: performance.now() - started, lockMs, cpuUs: process.cpuUsage(cpu), retainedObserverBytes: observer.output.length }));
     }
   }
 }

@@ -158,5 +158,5 @@ Head29073cec/job112628280386 passed both income lanes and resets/verifications; 
 Failed head251519a2/job112630139120: original15s deadline; reset/verification PASS, income skipped. Cause remains unresolved; no variance claim.
 Head5ccb898a/job112631283958 passed both phases/reset checks; original13.13s, eligibility10.58s; this does not explain the prior failure.
 Head5e337a4e/job112638015127 reproduced15s failure:17 cases11.93s elapsed/11.19s CPU/0.44s blocker detection, retained output34.4MB; reset/verification PASS, income skipped.
-Pinned Node22.23.1 focused/authority tests38/38 PASS locally; corrected oracle covers480 and profile corruption; no local DB proof inferred.
+Pinned Node22.23.1 focused/authority tests40/40 PASS: pending waiters, retained stderr, old callers, bad frames, late completion and stale-output rejection; exact-head DB proof pending.
 Full typecheck:all/smoke and required Backend Typecheck remain unresolved: existing job excludes these paths; separately approved16-line workflow correction preserves #620 action-version ownership and #668/#736 authority.

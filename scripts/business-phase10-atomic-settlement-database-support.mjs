@@ -582,6 +582,12 @@ select 'SESSION_READY:' || pg_backend_pid();`);
     child,
     write,
     waitFor,
+    takeOutput() {
+      if (waiters.size) throw new Error("Cannot consume output with pending waiters.");
+      const completed = output;
+      output = "";
+      return completed;
+    },
     get output() {
       return output;
     },

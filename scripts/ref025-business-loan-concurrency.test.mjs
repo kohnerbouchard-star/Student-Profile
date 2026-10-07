@@ -5,7 +5,7 @@ import { promisify } from 'node:util';
 import { spawn, execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { deadline, exchange, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow, authorityEffects, eligibilityEffects, incomeAssessment, incomeApplicationEffects } from './ref025-business-loan-concurrency.mjs';
+import { deadline, exchange, json, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow, authorityEffects, eligibilityEffects, incomeAssessment, incomeApplicationEffects } from './ref025-business-loan-concurrency.mjs';
 
 // Exercise the same asynchronous process/marker boundary without requiring a database.
 function processSession() {
@@ -293,12 +293,37 @@ test('income application oracle rejects extra settlement effects, lost rows and 
     const bad = structuredClone(after); corrupt(bad); assert.throws(() => incomeApplicationEffects(before, bad, f, 'key'));
   }
 });
-test('Child5b preserves required checks and excludes workflow/shared helper from editable scope', () => {
+test('Child5b preserves required checks and limits helper amendment while excluding workflows', () => {
   const read = n => JSON.parse(readFileSync(new URL(`../docs/operations/contracts/player-cross-cutting/pr-${n}.json`, import.meta.url)));
   const prior = read(870), current = read(872);
   for (const field of ['requiredChecks', 'criticalJobChecks', 'requiredFiles']) assert.deepEqual(current[field], prior[field]);
-  assert.deepEqual([...current.allowedPaths].sort(), prior.allowedPaths.filter(p => !p.startsWith('.github/')).map(p => p.replace('pr-870.json', 'pr-872.json')).sort());
+  assert.deepEqual([...current.allowedPaths].sort(), ['scripts/business-phase10-atomic-settlement-database-support.mjs', ...prior.allowedPaths.filter(p => !p.startsWith('.github/')).map(p => p.replace('pr-870.json', 'pr-872.json'))].sort());
   assert.deepEqual(current.readOnlyPaths, ['scripts/verify-player-cross-cutting-authority.mjs', 'scripts/player-cross-cutting-authority.test.mjs']);
-  assert.equal(current.nonblankChangedLineLimit, 385); assert.equal(Object.keys(current.editablePathLineLimits).length, 5);
+  assert.equal(current.nonblankChangedLineLimit, 385); assert.equal(Object.keys(current.editablePathLineLimits).length, 6);
+  assert.equal(current.editablePathLineLimits['scripts/business-phase10-atomic-settlement-database-support.mjs'], 8);
   for (const flag of ['productionDeploymentAllowed', 'productionMutationAllowed', 'secretValuesAllowed']) assert.equal(current[flag], false);
+});
+test('actual session output consumption rejects pending waiters and preserves stderr and non-opt-in behavior', async () => {
+  const source = readFileSync(new URL('./business-phase10-atomic-settlement-database-support.mjs', import.meta.url), 'utf8');
+  const stream = () => Object.assign(new EventEmitter(), { setEncoding() {} });
+  const child = Object.assign(new EventEmitter(), { exitCode: null, killed: false, stdout: stream(), stderr: stream(), stdin: Object.assign(new EventEmitter(), { writable: true, write() {} }) });
+  const body = source.slice(source.indexOf('export function openPsqlSession('), source.indexOf('export async function pollForDatabaseWait(')).replace('export ', '');
+  const session = vm.runInNewContext(`${body}; openPsqlSession('ref025-test')`, { spawn: () => child, PSQL_ARGS: [], sqlLiteral: JSON.stringify, redact: x => x, setTimeout, clearTimeout });
+  child.stdout.emit('data', 'prior\n'); const pending = session.waitFor('complete', 1000);
+  assert.throws(() => session.takeOutput(), /pending waiters/); assert.equal(session.output, 'prior\n');
+  child.stdout.emit('data', 'complete\n'); await pending; child.stdout.emit('data', 'later\n');
+  assert.equal(session.output, 'prior\ncomplete\nlater\n'); assert.equal(session.takeOutput(), 'prior\ncomplete\nlater\n');
+  assert.equal(session.output, ''); assert.equal(session.takeOutput(), ''); child.stderr.emit('data', 'SQL failure');
+  child.stdout.emit('data', 'next\n'); assert.equal(session.takeOutput(), 'next\n'); assert.equal(session.errors, 'SQL failure');
+});
+test('REF025 drains only validated completions and rejects bad frames, late results and stale output', async () => {
+  for (const kind of ['valid', 'missing', 'duplicate', 'malformed', 'late', 'stderr']) {
+    let output = '', taken = 0, sequence = 0;
+    const session = { errors: kind === 'stderr' ? 'SQL failure' : '', waitFor: async () => { if (kind === 'late') await new Promise(r => setTimeout(r, 10)); },
+      write(sql) { const marker = sql.match(/select '(r[0-9a-f]+:)'/u)[1]; const frame = `${marker}${kind === 'malformed' ? '{bad}' : ++sequence}${marker}\n`; output += kind === 'missing' ? 'missing\n' : kind === 'duplicate' ? frame + frame : frame; },
+      takeOutput() { taken++; const completed = output; output = ''; return completed; } };
+    const result = json(session, '1', deadline(kind === 'late' ? 1 : 500));
+    if (kind === 'valid') { assert.equal(await result, 1); assert.equal(output, ''); assert.equal(await json(session, '2', deadline(500)), 2); assert.equal(taken, 2); }
+    else { await assert.rejects(result); assert.equal(taken, ['late', 'stderr'].includes(kind) ? 0 : 1); }
+  }
 });
