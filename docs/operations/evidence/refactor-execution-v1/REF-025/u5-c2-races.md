@@ -208,3 +208,7 @@ Validation pending implementation, pinned local checks and exact-head disposable
 Implemented four submission-first retention cases and two pause-first cases; canonical pause replay adds no effects; committed pause is last.
 Pinned Node22.23.1 focused/authority45/45, full npm test, architecture/legacy/boundary80, secret/authority/diff checks PASS.
 Local backend typecheck is blocked by esm.sh dependency tunnel; full smoke and exact-head disposable/CI qualification pending. No assertion or timeout change.
+Implementation1a50d836b026043a06de3710a06b15ad80f4cfa8: Banking run37698718554/job113056723368 PASS; all six pause cases prove exact PID/start edges and other-game rollback.
+Original phase6.08s; both15s deadlines, client/backend closure, both full resets, independent restored gates/ledger/fixtures and stack shutdown PASS.
+Backend run37698718546/job113056722503 full typecheck/smoke PASS; local smoke shares the esm.sh tunnel block. Lint retains142 findings/17 error-level, unchanged production SQL.
+Final documentation head requires its own CI; parent independent review and merge remain pending. No whole lifecycle/FX or nonempty-session revocation qualification claim.
