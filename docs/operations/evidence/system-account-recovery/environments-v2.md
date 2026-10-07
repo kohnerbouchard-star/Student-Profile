@@ -2,7 +2,7 @@
 
 Status: IN_PROGRESS. Source base: main
 `1de01562af5b78a3407ca9bc8d7ee8935ca080f8` (merged PR863).
-Owner: `feat/individual-mfa-recovery-environments`; separate draft, no merge.
+Owner: `feat/individual-mfa-recovery-environments`; draft [PR876](https://github.com/kohnerbouchard-star/Student-Profile/pull/876), no merge.
 
 The owner approved source support for staging and production for one specific
 support requester, after independent identity verification and exact account and
@@ -20,7 +20,7 @@ describe this separately authorized successor.
 - C: existing proxy/browser/Staff environment guards and negative synthetic tests
   (under 400 semantic lines). Existing recovery state machine remains canonical.
 
-Exact candidate paths, to be bound to the actual draft PR before implementation:
+Exact paths bound to PR876 before source implementation:
 
 - `scripts/security/individual-account-recovery.mjs`
 - `scripts/security/staging-account-recovery.mjs`
