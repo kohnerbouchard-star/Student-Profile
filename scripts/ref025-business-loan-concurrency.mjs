@@ -310,6 +310,84 @@ async function eligibilityRaces(observer, first, second, remaining) {
     }
   }
 }
+export function incomeAssessment(row, income) {
+  const paymentIncome = income / 6;
+  assert.deepEqual(row, { obligation_currency_code: 'ECO', assessed_at: row.assessed_at,
+    qualifying_income: income, income_per_payment: paymentIncome, projected_payment: 20,
+    affordability_ratio: Math.round(20 / paymentIncome * 1e6) / 1e6,
+    maximum_payment_to_income: 0.45, minimum_credit_score: 600, affordable: income >= 360 });
+  assert(Number.isFinite(Date.parse(row.assessed_at)), 'REF025_ASSESSMENT_TIME');
+}
+export function incomeApplicationEffects(before, after, f, key) {
+  const original = structuredClone(before), expected = structuredClone(after);
+  const added = after.economic.applications.filter(a => !before.economic.applications.some(b => b.id === a.id));
+  assert.equal(added.length, 1); const app = added[0];
+  for (const [field, value] of Object.entries({ amount: 120, liability_kind: 'business_v1', status: 'pending_review',
+    initiating_operator_player_id: f.owner_id, player_id: f.owner_id, borrower_business_id: f.b, business_id: f.b,
+    idempotency_key: key, obligation_currency_code: 'ECO', repayment_source: `business:${f.business_key}` })) assert.equal(app[field], value);
+  const audits = after.economic.audits.filter(a => !before.economic.audits.some(b => b.id === a.id));
+  assert.equal(audits.length, 1); assert.equal(audits[0].action, 'business.loan.application.submit');
+  assert.equal(audits[0].actor_id, f.owner_id); assert.equal(audits[0].target_id, app.id);
+  incomeAssessment(audits[0].metadata.assessment, 360);
+  expected.economic.applications = expected.economic.applications.filter(a => a.id !== app.id);
+  expected.economic.audits = expected.economic.audits.filter(a => a.id !== audits[0].id);
+  assert.equal(expected.economic.profiles.filter(p => p.player_id === f.owner_id).length, 1);
+  for (const state of [original, expected]) state.economic.profiles = state.economic.profiles.filter(p => p.player_id !== f.owner_id);
+  assert.deepEqual(expected, original, 'REF025_INCOME_APPLICATION_EFFECTS');
+}
+async function incomeRaces(observer, first, second, remaining) {
+  const fixtures = await json(observer, '(select json_agg(f order by n) from ref025_fixtures f)', remaining);
+  const state = (session, f) => json(session, `pg_temp.ref025_income_state(${sqlLiteral(f.g)})`, remaining);
+  const blocked = async blocker => {
+    for (;;) {
+      const row = await json(observer, `pg_temp.ref025_blocker(${second.pid},${blocker.pid})`, remaining);
+      if (row?.wait === 'Lock') { intendedBlocker(row, second, blocker); return; }
+      await new Promise(resolve => setTimeout(resolve, Math.min(20, remaining())));
+    }
+  };
+  for (const f of fixtures) {
+    const other = fixtures.find(x => x.g !== f.g), isolated = await state(observer, other), funded = f.n === 2;
+    const assess = (session, at, barrier = null) => json(session, `pg_temp.ref025_income(${[f.g, f.b, f.product_key, at, barrier].map(sqlLiteral)})`, remaining);
+    const sale = (key, saved = null) => json(first, `pg_temp.ref025_sale(${[f.g, f.b, f.buyer, key, funded, saved && JSON.stringify(saved)].map(sqlLiteral)})`, remaining);
+    const command = actor => `select * from economy_private.submit_business_loan_application_v1(${[f.g, actor, f.business_key, f.product_key, 120, 'REF025 income request', 'ref025-income-application'].map(sqlLiteral)})`;
+    const submit = (session, actor = f.owner_id) => json(session, `(select to_jsonb(r) from (${command(actor)}) r)`, remaining);
+    const effects = (before, after, at) => exchange(observer, `select pg_temp.ref025_sale_effects(${[JSON.stringify(before), JSON.stringify(after), f.b, f.buyer, funded, at].map(sqlLiteral)});`, remaining);
+    let original;
+    for (const commit of [false, true]) {
+      const before = await state(observer, f);
+      await exchange(first, 'begin;', remaining);
+      const sold = await sale('ref025-income-wait'), written = await state(first, f);
+      assert.equal(sold.result.replayed, false); await effects(before, written, sold.asOf);
+      incomeAssessment(await assess(first, sold.asOf), 360); incomeAssessment(await assess(observer, sold.asOf), 240);
+      assert.deepEqual(await state(observer, f), before);
+      const waiting = commit ? submit(second) : exchange(second, `select pg_temp.ref025_reject(${sqlLiteral(command(f.owner_id))},'LOAN_UNAFFORDABLE');`, remaining);
+      waiting.catch(() => {}); await blocked(first);
+      assert.deepEqual(await state(observer, other), isolated);
+      await exchange(first, commit ? 'commit;' : 'rollback;', remaining);
+      const result = await waiting, after = await state(observer, f);
+      if (commit) { original = result; assert.equal(result.replayed, false); incomeApplicationEffects(written, after, f, 'ref025-income-application'); }
+      else assert.deepEqual(after, before);
+      incomeAssessment(await assess(observer, sold.asOf), commit ? 360 : 240);
+      assert.deepEqual(await state(observer, other), isolated);
+    }
+    const before = await state(observer, f), key = 'ref025-income-snapshot', barrier = 2500500 + f.n;
+    await exchange(first, 'begin;', remaining);
+    const sold = await sale(key), written = await state(first, f);
+    await effects(before, written, sold.asOf); incomeAssessment(await assess(observer, sold.asOf), 360);
+    await exchange(observer, `select pg_advisory_lock(${barrier});`, remaining);
+    const snapshot = assess(second, sold.asOf, barrier); snapshot.catch(() => {}); await blocked(observer);
+    await exchange(first, 'commit;', remaining);
+    await exchange(observer, `select pg_advisory_unlock(${barrier});`, remaining);
+    incomeAssessment(await snapshot, 360); incomeAssessment(await assess(second, sold.asOf), 480);
+    assert.deepEqual(await state(observer, f), written);
+    const replay = await sale(key, sold);
+    assert.deepEqual(replay.result, { ...sold.result, replayed: true });
+    incomeAssessment(await assess(observer, sold.asOf), 480);
+    assert.deepEqual(await submit(second, f.buyer), { ...original, replayed: true });
+    assert.deepEqual(await state(observer, f), written); assert.deepEqual(await state(observer, other), isolated);
+    await verifyGates(observer, remaining, false);
+  }
+}
 export async function lifecycle(mode = '--phase') {
   assert(['--phase', '--income-phase', '--verify', '--attest'].includes(mode), 'REF025_MODE');
   const binding = attest(), sessions = [], remaining = deadline(15000);
@@ -327,7 +405,7 @@ export async function lifecycle(mode = '--phase') {
         await prepareFixtures(observer, first, second, remaining, true);
         assert.deepEqual(await json(observer, '(select json_agg(n order by n) from ref025_fixtures)', remaining), [1, 2]);
         assert.equal(await json(observer, `(select count(*) from public.loan_applications where liability_kind<>'legacy_v1')`, remaining), 0);
-        // Infrastructure only: the separate Child5b owns income-visibility assertions.
+        await incomeRaces(observer, first, second, remaining);
       }
       await assert.rejects(exchange(second, 'select pg_sleep(0.1);', deadline(10)), /Timed out waiting|REF025_DEADLINE/);
       await verifyGates(observer, remaining, false);

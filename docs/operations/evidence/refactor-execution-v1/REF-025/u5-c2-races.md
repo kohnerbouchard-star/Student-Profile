@@ -127,3 +127,25 @@ No hosted access, captures, dispatch, credentials/settings or production actions
 40/50 unchanged; REF025 BLOCKED; REF027 depends025+026; nine U1 holds retained; no lending activation.
 Review blocked ac004ebc: the workflow-condition test reused one outcome for both phases and could miss wrong-phase cleanup references.
 Vary phase/income outcomes independently and require swapped-reference mutations to disagree when only one phase was attempted; workflow remains unchanged.
+
+## Child 5b — approved qualifying-income visibility proof
+APPROVED_SCOPE; base452abd0ef08825e3929fe4f46572b4cc347787da; #870 merged. Parent retains review/merge authority.
+Existing draft #872 registered headbe913a2c; user confirmed implementation/test/push on2026-10-07. No competing writer found.
+Five paths /385 nonblank additions+deletions, including comments/braces/metadata:
+- scripts/ref025-business-loan-concurrency.sql:155
+- scripts/ref025-business-loan-concurrency.mjs:105
+- scripts/ref025-business-loan-concurrency.test.mjs:60
+- docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:30
+- docs/operations/contracts/player-cross-cutting/pr-872.json:35; actual manifest already bound, verifier/tests read-only.
+Fresh15-open-PR full-path census including137 paths in #620: no selected-path collision; #859 superseded/unqualified.
+Canonical retained/funded sales only: uncommitted/committed income, rollback, statement snapshots and waiting submissions.
+Require exact tracked blocker PID/start; preserve original application assessment and prove sale replay cannot double-count.
+Compare complete economic/receipt/funding/inventory snapshots and unrelated-game sentinels; no fabricated sales or routine replacement.
+Preserve every Child1-4 assertion, both15s deadlines, strict framing, bounded client/backend cleanup and independent reset verification.
+Only attested disposable Banking database; application gate temporarily removed, validated loan gate retained; mandatory full reset.
+No workflow/shared-helper/package/migration/auth/Player/Markets changes, hosted access, dispatch, deployment or hold restoration.
+REF025 BLOCKED; REF027 depends025+026;40/50 and nine U1 holds unchanged. Full interacting lock graph/activation remain unqualified.
+Baseline pinned Node22.23.1:35 focused/authority tests, Banking source contract and4 release workflow tests PASS; DB proof pending.
+Implementation preserves immutable receipts, uses a temporary STABLE barrier wrapper around unchanged assessment, and snapshots14 settlement tables plus full loan/profile/audit/ledger/balances.
+Local pinned Node22.23.1:38/38 focused/authority PASS, boundary80 PASS, Banking source contract and exact five-path authority PASS.
+Disposable exact-head Banking and applicable CI remain pending; no database proof is inferred from local source/oracle tests.
