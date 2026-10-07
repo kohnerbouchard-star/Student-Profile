@@ -1,7 +1,7 @@
 # STAFF-RECOVERY-OPERATOR-001 — staging system recovery
 
 Status: IN_PROGRESS; not deployed or approved for live execution.
-Dependency: qualified PR862 at c6774c5138b9ccf972ca26468171417f9f43e0a0; older checkpoints below are historical.
+Base: main at 8f5ca00814e4823caeb241b5880f2c1cf4fb4af1, the verified PR862 source merge; older dependent-base checkpoints below are historical.
 Owner branch: feat/staging-system-account-recovery.
 Dependent draft PR: https://github.com/kohnerbouchard-star/Student-Profile/pull/863. Implementation commit: b12c24fe993c498cce6569a5629c386b4de140c3.
 
@@ -147,3 +147,39 @@ authority accepts 25 changed paths under 27 locks; generated inventory is unchan
 Full backend `typecheck:all` and `smoke` were attempted and BLOCKED locally by
 the pinned esm.sh import tunnel; no source or gate workaround. Fresh hosted
 exact-head qualification is required and will be recorded in the PR description.
+
+## Approved main retarget after PR862 merge (2026-10-07)
+
+User approved merging qualified PR862 and then retargeting/reconciling this PR,
+without merging PR863 or deploying. PR862 merged as
+`8f5ca00814e4823caeb241b5880f2c1cf4fb4af1`; tree
+`3b3a536bb3986fb08d9e5029344a224cff1bf9b6` exactly matches qualified head
+`c6774c5138b9ccf972ca26468171417f9f43e0a0`. All 13 merge-head workflows passed
+on attempt 1 (22 passed checks, ten expected skips). Staging reconciliation,
+production probing, live parity capture and production publication skipped.
+
+Main merges normally into prior PR863 head
+`bb40c0c80a4bfd615c14d898cf92ca6a284442be` with no conflict or content delta.
+This tranche changes only PR863's existing authority `baseRef` to `main`, this
+evidence and the two existing recovery roadmap entries. The same 25 changed
+paths remain within 27 exact locks; no new path, check waiver or permission is
+added. Recovery source, migration, tests, workflow, generated inventory, original
+suffix identities and all nine U1 holds remain byte-identical to the prior head.
+
+The new main base requires renewed local and exact-head hosted qualification;
+prior 39-workflow results do not substitute for the retargeted head. Parent
+review remains next; PR863 stays draft and unmerged. CLI remains plan-only and
+manual recovery rejects. External system-admin/sole-operator policy, independent
+identity evidence and engineering review remain. No live provider composition,
+signup/purchase/credentials, deployment, recovery dispatch or production config.
+REF019/020 pauses, REF025 BLOCKED and REF027's 025+026 dependencies remain.
+
+Renewed local qualification of the main-bound tree: pinned Node 22.23.1/npm
+10.9.8/Deno 2.9.3, clean root/backend installs, full root `npm test`, 137 focused
+operator/browser/disposable-database/suffix/proxy/probe/U1/authority tests and
+28 network-denied Deno guard tests PASS, zero focused skips. Authority accepts
+25 changed paths under the same 27 locks with base `main`; inventory is unchanged.
+Local Chromium uses the system executable; CI retains pinned Playwright. Full
+backend typecheck and smoke were attempted and remain locally BLOCKED by the
+pinned esm.sh import tunnel. Fresh hosted results must qualify the published
+main-bound head and are recorded in the PR description. No checks were bypassed.

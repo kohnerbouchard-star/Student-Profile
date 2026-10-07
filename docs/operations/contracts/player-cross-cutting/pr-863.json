@@ -3,7 +3,7 @@
   "authorityId": "econovaria.staff-system-recovery-pr-863.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 863,
-  "baseRef": "fix/password-recovery-mfa",
+  "baseRef": "main",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
