@@ -308,6 +308,18 @@ try {
   }, null, 2));
 } catch (error) {
   report.failure = String(error?.stack || error);
+  report.failureState = await page.evaluate(() => {
+    const state = node => ({ tag: node.tagName, classes: node.className, hidden: node.hidden, inert: Boolean(node.closest("[inert]")), width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height });
+    return {
+      ready: document.readyState,
+      owner: Boolean(window.EconovariaAdminGameSessionControls),
+      lifecycle: Boolean(window.EconovariaAdminGameSessionMountLifecycle),
+      cards: [...document.querySelectorAll("[data-econovaria-game-session-card]")].slice(0, 4).map(node => ({ ...state(node), shares: node.querySelectorAll("[data-econovaria-share-game]").length, logouts: node.querySelectorAll("[data-econovaria-admin-logout]").length })),
+      shares: [...document.querySelectorAll('[data-admin-terminal-share-button], [data-econovaria-share-game], [data-admin-terminal-action="share-current-game"], [data-admin-terminal-action="share-game-code"]')].slice(0, 8).map(state),
+      modals: [...document.querySelectorAll("[data-modal-id]")].slice(0, 8).map(node => ({ id: node.dataset.modalId, ...state(node) })),
+    };
+  }).catch(() => null);
+  console.log("REF015_SHARE_FAILURE " + JSON.stringify({ state: report.failureState, dismissal: report.shareDismissal }));
   report.errors = [...errors];
   report.requests = requests;
   await harness.capture("failure").catch(() => {});
