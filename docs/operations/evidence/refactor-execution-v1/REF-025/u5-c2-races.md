@@ -178,3 +178,7 @@ Only attested disposable Banking database; retain loan gate, mandatory full rese
 No lending activation, live DB, policy change, credentials/settings, dispatch/deployment or hold restoration; all nine U1 holds remain.
 REF025 BLOCKED; REF027 depends025+026. Full legacy repayment/servicing lock graph remains unqualified; parent reviews before merge.
 Validation pending implementation and exact-head CI. Rollback is a bounded source revert; no migrations, routes or RPC changes.
+Implementation covers four writer/submission outcomes, exact two-edge identity barriers, cross-operator replay/fresh retry and unchanged guarded authority/eligibility.
+Other-game real submission rolls back completely while both edges remain held; held-profile replay/conflict completes without recalculation effects.
+Pinned Node22.23.1:43 focused/authority tests PASS, full npm test PASS, boundary80/authority/secret/diff checks PASS.
+Sandbox prevented existing subprocess marker delivery; unchanged focused suite PASS outside sandbox. Local typecheck blocked by esm.sh unsuccessful tunnel; CI required.
