@@ -186,3 +186,22 @@ Implementation cd8c4219f3e78fba28cf85c2b2e28bcf8d9b2f69: Banking run37693699446/
 Original phase5.71s, income phase2.06s; bounded clients/backends closed, both full resets and independent gates/ledger/fixture checks PASS; rebuilt lint/stack stop PASS.
 Exact backend run37693699418/job113039917257 PASS including typecheck:all and full smoke; local smoke shares the recorded esm.sh tunnel block.
 Architecture/legacy audits PASS; final documentation head requires its own CI. Parent independent review and merge remain pending; no activation credit.
+
+## Child 7 — approved canonical game-pause / submission proof
+APPROVED_SCOPE2026-10-07; basec4e16e42b5850de9c5042949d421ad5eeb7b97b4; Child6 accepted/closed; no predecessor re-audit.
+Owner refactor/ref-025c2-game-pause-race; actual draft authority will be bound before implementation.
+Five exact editable paths /380 nonblank additions+deletions, including braces/comments/metadata:
+- scripts/ref025-business-loan-concurrency.mjs:180; appended pause oracle/races and original-phase invocation.
+- scripts/ref025-business-loan-concurrency.sql:55; appended lifecycle/FX snapshot helpers only.
+- scripts/ref025-business-loan-concurrency.test.mjs:70; appended oracle corruption and scope regressions.
+- docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:35; this append-only record.
+- docs/operations/contracts/player-cross-cutting/pr-<actual-number>.json:40; bind actual draft before implementation.
+Fresh13-open-PR full-path census, including137 #620 files: no selected-path collision. Preserve #859 adjacent code, #620 workflow, #668/#736 and REF042/REF040 ownership.
+Canonical transition_game_lifecycle_atomic_v1 pause only: pause-first commit/rollback versus fresh submission/replay, and submission-first lock retention.
+Game SHARE/UPDATE edges require exact tracked PID/backend-start barriers; other-game submission progresses and fully rolls back while the primary lock remains held.
+Snapshot complete game/transition/audit/session/FX/economic rows; assert only canonical pause effects, including FX schedule/lease clearing, and no added debt/ledger effects.
+Committed pause is last; mandatory full reset restores fixtures without adding resume/end/archive behavior. No policy changes or full lifecycle/FX graph qualification.
+Preserve all existing assertions, both15s deadlines, bounded client/backend cleanup, application-gate-only fixture scope, retained loan gate and independent reset verification.
+Production SQL, shared helper, workflow, packages and authority verifier/tests remain unchanged; no live DB, credentials/settings, dispatch, deployment or activation.
+REF025 BLOCKED; REF027 depends025+026; all nine U1 holds remain. Parent independently reviews before merge; rollback is a bounded source revert.
+Validation pending implementation, pinned local checks and exact-head disposable/CI evidence; stop for policy decisions or budget expansion.
