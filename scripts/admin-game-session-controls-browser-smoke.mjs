@@ -170,6 +170,71 @@ try {
     await shareSurface.waitFor({ state: "detached", timeout: 5_000 });
   });
 
+  report.shareDismissal = [];
+  for (const mode of ["close", "Escape", "backdrop"]) {
+    const closed = await page.evaluate(async (mode) => {
+      document.querySelector("[data-econovaria-share-game]").click();
+      const surface = [...document.querySelectorAll('[data-modal-id="share-game-access"]')].at(-1);
+      if (mode !== "close") {
+        window.EconovariaAdminModalLifecycleBridge.reconcile();
+        while (!surface.dataset.adminModalAccessibilityBound) await new Promise(requestAnimationFrame);
+      }
+      if (mode === "Escape") surface.querySelector("button").dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      else if (mode === "backdrop") surface.click();
+      else surface.querySelector("[data-admin-terminal-modal-close]").click();
+      return !surface.isConnected || surface.hidden;
+    }, mode);
+    await page.waitForTimeout(400); // Beyond the owner's two frames +180ms repair window.
+    const remaining = await page.locator('[data-modal-id="share-game-access"]:visible').count();
+    report.shareDismissal.push({ mode, closed, remaining });
+    if (remaining) await page.locator('[data-econovaria-close-share]').click();
+  }
+  report.shareRepair = [];
+  for (const mode of ["fallback", "early-close", "late-native", "late-close", "reopen", "modal-event", "unrelated-close"]) {
+    const fixture = await page.context().newPage();
+    await fixture.setContent('<button id="open" data-admin-terminal-action="share-current-game">Share</button>');
+    await fixture.addScriptTag({ url: new URL("./game-session-controls.js", BASE_URL).href });
+    report.shareRepair.push(await fixture.evaluate(async (mode) => {
+      const frame = () => new Promise(requestAnimationFrame);
+      const open = document.querySelector("#open");
+      const native = () => {
+        const node = document.createElement("div");
+        node.dataset.modalId = "share-game-access";
+        node.innerHTML = '<section role="dialog"><button data-admin-terminal-modal-close>Close</button></section>';
+        node.querySelector("button").onclick = () => node.remove();
+        document.body.append(node);
+        return node;
+      };
+      open.click();
+      if (mode === "early-close") native().querySelector("button").click();
+      await frame(); await frame(); // Delayed fallback is now pending.
+      let surface;
+      if (["late-native", "late-close", "reopen"].includes(mode)) surface = native();
+      if (["late-close", "reopen"].includes(mode)) surface.querySelector("button").click();
+      if (mode === "reopen") open.click();
+      if (mode === "modal-event") document.dispatchEvent(new CustomEvent("econovaria:admin-modal-closed", { detail: { modalId: "share-game-access" } }));
+      if (mode === "unrelated-close") document.dispatchEvent(new CustomEvent("econovaria:admin-modal-closed", { detail: { modalId: "another-modal" } }));
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const surfaces = [...document.querySelectorAll('[data-modal-id="share-game-access"]')];
+      const result = { mode, count: surfaces.length, fallback: surfaces.some(n => n.classList.contains("econovaria-admin-share-fallback")) };
+      if (result.fallback) {
+        document.querySelector('[data-econovaria-close-share]').click();
+        await new Promise((resolve) => setTimeout(resolve, 220));
+        result.afterFallbackClose = document.querySelectorAll('[data-modal-id="share-game-access"]').length;
+        result.openerRestored = document.activeElement === open;
+      }
+      return result;
+    }, mode));
+    await fixture.close();
+  }
+  console.log("REF015_SHARE_REPAIR " + JSON.stringify({ dismissal: report.shareDismissal, repair: report.shareRepair }));
+  assert(report.shareDismissal.every(r => r.closed && r.remaining === 0), "Dismissed native Share reopened through stale repair.");
+  for (const result of report.shareRepair) {
+    const fallback = ["fallback", "reopen", "unrelated-close"].includes(result.mode);
+    assert(result.count === (["early-close", "late-close", "modal-event"].includes(result.mode) ? 0 : 1) && result.fallback === fallback, `Share repair lifecycle failed: ${JSON.stringify(result)}`);
+    if (fallback) assert(result.afterFallbackClose === 0 && result.openerRestored, `Fallback dismissal failed: ${JSON.stringify(result)}`);
+  }
+
   const logoutButton = card.locator("[data-econovaria-admin-logout]");
   await logoutButton.waitFor({ state: "visible", timeout: 5_000 });
   assert(await logoutButton.isEnabled(), "Admin logout button is disabled.");

@@ -19,6 +19,7 @@
   let reconcileGeneration = 0;
   let signOutPromise = null;
   let fallbackShareSurface = null;
+  let shareRepairGeneration = 0;
 
   function text(value) {
     return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -383,9 +384,11 @@
   }
 
   function scheduleShareRepair(opener) {
+    const generation = ++shareRepairGeneration;
     const context = selectedGameContext();
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
+        if (generation !== shareRepairGeneration) return;
         const modal = visibleShareModal();
         if (modal) {
           setShareContext(modal, context);
@@ -394,6 +397,7 @@
           return;
         }
         window.setTimeout(() => {
+          if (generation !== shareRepairGeneration) return;
           const delayed = visibleShareModal();
           if (delayed) setShareContext(delayed, selectedGameContext());
           else createFallbackShareSurface(selectedGameContext(), opener);
@@ -504,6 +508,13 @@
   }
 
   document.addEventListener("click", (event) => {
+    const share = visibleShareModal();
+    const close = event.target?.closest?.(
+      "[data-admin-terminal-modal-close], [data-admin-modal-close], [data-econovaria-close-share], [aria-label^='Close']",
+    );
+    if (share && (event.target === share || (close && share.contains(close)))) {
+      shareRepairGeneration += 1;
+    }
     const action = event.target?.closest?.(
       "button, [role='button'], a, [data-admin-terminal-action]",
     );
@@ -533,6 +544,10 @@
       }
     }
   }, true);
+
+  document.addEventListener("econovaria:admin-modal-closed", (event) => {
+    if (event.detail?.modalId === "share-game-access") shareRepairGeneration += 1;
+  });
 
   document.addEventListener("keydown", (event) => {
     if (!["Enter", " "].includes(event.key)) return;
