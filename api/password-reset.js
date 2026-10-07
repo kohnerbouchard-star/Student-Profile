@@ -151,6 +151,13 @@ async function handlePasswordReset(request, response) {
       ));
     }
 
+    const operation = requestOperation(request);
+    if (operation === "mfa-status" || operation === "mfa-verify") {
+      if (safeHeader(request.headers?.origin) !== origin) {
+        return sendJson(response, 403, errorBody("origin_not_allowed", "Recovery must continue from this application."));
+      }
+      return await handleRecoveryMfa(request, response, operation, origin, clientIp, match[1]);
+    }
     const body = readPasswordResetBody(request);
     if (!body.ok) return sendJson(response, body.status, errorBody(body.code, body.message));
     const config = readConfig(body.projectRef);
@@ -190,6 +197,50 @@ async function handlePasswordReset(request, response) {
       "Administrator password reset is unavailable."
     ));
   }
+}
+
+async function handleRecoveryMfa(request, response, operation, origin, clientIp, accessToken) {
+  const body = readJsonObject(request);
+  if (!body.ok) return sendJson(response, body.status, errorBody(body.code, body.message));
+  const { projectRef, factorHandle, code } = body.value;
+  const verify = operation === "mfa-verify";
+  const allowed = verify ? ["projectRef", "factorHandle", "code"] : ["projectRef"];
+  if (Object.keys(body.value).some((key) => !allowed.includes(key)) ||
+      ![STAGING_PROJECT_REF, PRODUCTION_PROJECT_REF].includes(projectRef) ||
+      (verify && (typeof factorHandle !== "string" || !/^mfa1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]{32,2048}$/u.test(factorHandle) ||
+        typeof code !== "string" || !/^\d{6}$/u.test(code)))) {
+    return sendJson(response, 400, errorBody("invalid_mfa_request", "Recovery verification input is invalid."));
+  }
+  const config = readConfig(projectRef);
+  const upstream = await fetch(`${config.supabaseUrl}/functions/v1/staff-mfa-api/staff/mfa${verify ? "/verify" : ""}`, {
+    method: verify ? "POST" : "GET",
+    headers: { apikey: config.publishableKey, Authorization: `Bearer ${accessToken}`, Origin: origin,
+      "Content-Type": "application/json", "x-real-ip": clientIp },
+    ...(verify ? { body: JSON.stringify({ factorHandle, code }) } : {}),
+    cache: "no-store", redirect: "error"
+  });
+  const bytes = new Uint8Array(await upstream.arrayBuffer());
+  if (bytes.byteLength > MAX_AUTH_RESPONSE_BYTES) throw new Error("invalid MFA response");
+  const data = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  if (!upstream.ok || data?.ok !== true) {
+    const invalidCode = data?.error?.code === "mfa_verification_failed";
+    return sendJson(response, upstream.ok ? 502 : upstream.status, errorBody(
+      invalidCode ? "mfa_verification_failed" : "recovery_mfa_unavailable",
+      invalidCode ? "The authenticator code is invalid or expired." : "Recovery verification is unavailable. Request a fresh recovery email or contact your administrator."
+    ));
+  }
+  if (verify) {
+    if (data.session?.assuranceLevel !== "aal2" || !JWT_PATTERN.test(String(data.session?.accessToken || ""))) {
+      throw new Error("invalid elevated session");
+    }
+    // Keep the existing memory-only recovery bearer contract; never return refresh tokens.
+    return sendJson(response, 200, { ok: true, accessToken: data.session.accessToken });
+  }
+  const factors = (Array.isArray(data.factors) ? data.factors : []).filter((factor) =>
+    factor.factorType === "totp" && factor.status === "verified" && typeof factor.handle === "string").map((factor) => ({
+      handle: factor.handle, friendlyName: String(factor.friendlyName || "Authenticator").slice(0, 80)
+    }));
+  return sendJson(response, 200, { ok: true, factors });
 }
 
 async function verifyToken(config, tokenHash, type) {

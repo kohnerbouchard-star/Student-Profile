@@ -21,10 +21,12 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`STAFF-RECOVERY-MFA-001` — U4 recovery MFA repair (2026-10-05):** `IMPLEMENTED_NOT_MERGED`; draft [#862](https://github.com/kohnerbouchard-star/Student-Profile/pull/862), implementation `4faa2a70fac6ffd1bda857b7ab9d7e2a3a0a6f77`; owner approved code, synthetic tests and draft PR on `fix/password-recovery-mfa`, base `d7669d39f60cbfbf80b79ce05856e315cf60d9aa`. Add the missing existing-factor challenge through the existing recovery proxy while preserving AAL2/reset safeguards. [Scope, evidence, limitations and gated rollout](../operations/evidence/password-recovery-mfa/implementation.md). No deployment, account/factor/settings change or REF-019/020 resumption. Next: parent review, exact-head checks and separately approved rollout. Ownership transferred 2026-10-07 for reconciliation against main `96e8abd6d0cce7337985e09974f0fd2b7df4d8fb`; current qualification and remaining gates are recorded in the linked evidence. Existing branch, implementation and status are preserved.
+
 - **`BETA-STAGING-AUTH-RELEASE-GUARD-001` — Recovery merge safety (2026-10-06)**
-  - Status: `IMPLEMENTED_NOT_MERGED`; draft [PR #868](https://github.com/kohnerbouchard-star/Student-Profile/pull/868), reviewed implementation `bdfdc30a0cb619238da40d5e60041931e1d60106`, base `88b6cf6aa16c92726f4b0adb6788fa0784bd1513`.
+  - Status: `VERIFIED_COMPLETE` for the merge-safety guard only. [PR #868](https://github.com/kohnerbouchard-star/Student-Profile/pull/868) merged as `2661dd7399ee9877e4af236d3c77a5f3cc8780d7` from qualified source `e5f03672181fcb8789c6e6161ec63f1baf332fa5`. All eight fresh-main workflows passed; staging reconciliation and production publication skipped. Live recovery is not certified.
   - Remove the legacy automatic production Auth settings writer; retain synthetic PR/main validation and prepare only an explicitly confirmed staging reconciliation path. Scope, ownership, tests, required bindings and release limits: [staging guard record](staging-auth-release-guard-v1.md).
-  - No merge, dispatch, deployment, live auth setting/factor/credential/reset operation or production authorization. #862/#863 remain separate drafts; REF-019/020 and existing release holds remain unchanged. Next: independent review and exact-head draft qualification, then parent handoff.
+  - No dispatch, deployment, live auth setting/factor/credential/reset operation or production authorization. #862/#863 remain separate drafts; REF-019/020 and existing release holds remain unchanged. Next: reconcile and synthetically qualify the recovery stack against guarded main, then parent review.
 
 - **`BETA-LIVE-MIGRATION-PARITY-001` — Phase 15 program (2026-09-20)**
   - Owner authorizes the full gated 15A–15F program. This supersedes prior no-Phase-15/no-release authorization statements, while preserving the requirement that production changes follow certified 15A–15E gates.
