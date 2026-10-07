@@ -151,3 +151,5 @@ Local pinned Node22.23.1:38/38 focused/authority PASS, boundary80 PASS, Banking 
 Disposable exact-head Banking and applicable CI remain pending; no database proof is inferred from local source/oracle tests.
 Headb77898e6 job112625219316 failed while installing the new helper: unparenthesized CASE in a PL/pgSQL IF expression.
 Original full reset and independent verification PASS; income phase correctly skipped. Parenthesize the expression; retain failed evidence and require fresh CI.
+Head452b73dd job112626231720 passed original races but income oracle hit JSON operator precedence (boolean -> text).
+Both phase resets and independent checks PASS. Parenthesize JSON operands of containment; expected effects and production routines unchanged.

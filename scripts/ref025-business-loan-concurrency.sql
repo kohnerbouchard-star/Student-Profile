@@ -228,7 +228,7 @@ create function pg_temp.ref025_sale_effects(before_state jsonb,after_state jsonb
   end loop;
   for name in select unnest(array['store_offer_purchase_receipts','inventory_transactions','business_activity_events']) loop
    if jsonb_array_length(after_state->name)<>jsonb_array_length(before_state->name)+1
-     or not (after_state->name @> before_state->name) then raise exception 'REF025_SALE_ROW_COUNT: %',name; end if;
+     or not ((after_state->name) @> (before_state->name)) then raise exception 'REF025_SALE_ROW_COUNT: %',name; end if;
   end loop;
   select x into strict receipt from jsonb_array_elements(after_state->'store_offer_purchase_receipts') x
    where not (before_state->'store_offer_purchase_receipts' @> jsonb_build_array(x));
@@ -238,9 +238,9 @@ create function pg_temp.ref025_sale_effects(before_state jsonb,after_state jsonb
     and (receipt->>'business_sales_authority_committed_at')::timestamptz between at_time-interval '84 days' and at_time
     and ((receipt->>'funding_receipt_id') is not null)=funded) is not true then raise exception 'REF025_SALE_RECEIPT'; end if;
   if jsonb_array_length(after_state->'purchase_funding_receipts')<>jsonb_array_length(before_state->'purchase_funding_receipts')+funded::integer
-    or not (after_state->'purchase_funding_receipts' @> before_state->'purchase_funding_receipts')
+    or not ((after_state->'purchase_funding_receipts') @> (before_state->'purchase_funding_receipts'))
     or jsonb_array_length(after_state->'economic'->'ledger')<>jsonb_array_length(before_state->'economic'->'ledger')+(case when funded then 2 else 4 end)
-    or not (after_state->'economic'->'ledger' @> before_state->'economic'->'ledger') then raise exception 'REF025_SALE_MONEY_COUNT'; end if;
+    or not ((after_state->'economic'->'ledger') @> (before_state->'economic'->'ledger')) then raise exception 'REF025_SALE_MONEY_COUNT'; end if;
   if jsonb_array_length(after_state->'economic'->'balances')<>jsonb_array_length(before_state->'economic'->'balances')
     or jsonb_array_length(after_state->'inventory_holdings')<>jsonb_array_length(before_state->'inventory_holdings') then raise exception 'REF025_SALE_PROJECTION_COUNT'; end if;
   for old_row in select x from jsonb_array_elements(before_state->'economic'->'balances') x loop
