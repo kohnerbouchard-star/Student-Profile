@@ -6,7 +6,7 @@ begin;
 alter table public.loan_applications drop constraint loan_applications_business_liability_disabled_v1;
 do $fixture$
 begin
-for i in 1..9 loop
+for i in 1..(select case when income then 2 else 9 end from ref025_phase) loop
  declare
   staff uuid:=gen_random_uuid(); g uuid:=gen_random_uuid(); country uuid:=gen_random_uuid();
   owner_id uuid:=gen_random_uuid(); buyer uuid:=gen_random_uuid(); b uuid:=gen_random_uuid();
@@ -88,6 +88,7 @@ for i in 1..9 loop
     insert into public.business_management_mandates(game_session_id,business_id,player_id,source_proposal_id)
       values(g,b,owner_id,proposal),(g,b,buyer,proposal);
   end if;
+  if (select income from ref025_phase) then perform public.recalculate_player_credit_v1(g,owner_id); end if;
   insert into ref025_fixtures select i,g,owner_id,buyer,b,business_key,public_key,country,proposal from public.loan_products where id=product;
  end;
 end loop;
@@ -170,3 +171,122 @@ create function pg_temp.ref025_status(g uuid,b uuid,product text,target text,val
   return transaction_timestamp();
  end;
 $status$;
+
+-- Income phase observes complete rows, including canonical settlement journals and projections.
+create function pg_temp.ref025_income_state(g uuid) returns jsonb language plpgsql as $income_state$
+ declare result jsonb:=jsonb_build_object('economic',pg_temp.ref025_state(g)); name text; rows jsonb;
+ begin
+  foreach name in array array['store_offer_purchase_receipts','store_offer_purchase_quotes','store_seller_offers',
+    'purchase_funding_receipts','purchase_funding_quotes','purchase_funding_quote_lines','bank_transactions','bank_accounts','bank_account_holds',
+    'inventory_transactions','inventory_transaction_lines','inventory_holdings','inventory_accounts','inventory_events',
+    'business_activity_events'] loop
+   execute format('select coalesce(jsonb_agg(to_jsonb(t) order by id),''[]'') from public.%I t where game_session_id=$1',name) into rows using g;
+   result:=result||jsonb_build_object(name,rows);
+  end loop;
+  return result;
+ end;
+$income_state$;
+create function pg_temp.ref025_sale(g uuid,b uuid,buyer uuid,key text,funded boolean,saved jsonb default null)
+ returns jsonb language plpgsql set client_min_messages=warning as $sale$
+ declare offer text; version bigint; quote jsonb; result jsonb; account text;
+ begin
+  if saved is null then
+   select o.public_key,o.version into strict offer,version from public.store_seller_offers o
+    join public.economic_parties p on p.game_session_id=o.game_session_id and p.id=o.seller_party_id
+    where o.game_session_id=g and p.business_id=b;
+   if funded then
+    select a.public_key into strict account from public.bank_accounts a join public.economic_parties p
+     on p.game_session_id=a.game_session_id and p.id=a.party_id
+     where a.game_session_id=g and p.player_id=buyer and a.account_kind='checking' and a.currency_code='ECO';
+    quote:=public.create_business_store_offer_funding_quote_v1(g,buyer,offer,1,version,
+     jsonb_build_array(jsonb_build_object('sourceAccountKey',account,'targetAmount',120)),key||'-quote');
+   else quote:=public.create_business_store_offer_quote_v2(g,buyer,offer,1,version,key||'-quote'); end if;
+  else offer:=saved->>'offer'; version:=(saved->>'version')::bigint; quote:=saved->'quote'; end if;
+  if funded then result:=public.settle_business_store_offer_funding_v1(g,buyer,offer,quote->>'quoteKey',1,version,key);
+  else result:=public.settle_business_store_offer_v2(g,buyer,offer,quote->>'quoteKey',1,version,key); end if;
+  return jsonb_build_object('offer',offer,'version',version,'quote',quote,'result',result,'asOf',clock_timestamp());
+ end;
+$sale$;
+-- Same captured time on both sides of a commit isolates MVCC from time-window eligibility.
+-- STABLE propagates the outer statement snapshot; the temporary barrier does not replace assessment.
+create function pg_temp.ref025_income(g uuid,b uuid,product text,at_time timestamptz,barrier bigint default null)
+ returns jsonb language plpgsql stable as $income$
+ declare result jsonb;
+ begin
+  if barrier is not null then perform pg_advisory_xact_lock(barrier); end if;
+  select to_jsonb(a) into strict result from public.loan_products p cross join lateral
+   economy_private.assess_business_loan_application_v1(g,b,p.id,120,at_time) a
+   where p.game_session_id=g and p.public_key=product;
+  return result;
+ end;
+$income$;
+create function pg_temp.ref025_sale_effects(before_state jsonb,after_state jsonb,b uuid,buyer uuid,funded boolean,at_time timestamptz)
+ returns void language plpgsql as $sale_effects$
+ declare receipt jsonb; name text; old_row jsonb; new_row jsonb; delta numeric;
+ begin
+  for name in select unnest(array['applications','profiles','loans']) loop
+   if before_state->'economic'->name is distinct from after_state->'economic'->name then raise exception 'REF025_SALE_LOAN_EFFECT'; end if;
+  end loop;
+  for name in select unnest(array['store_offer_purchase_receipts','inventory_transactions','business_activity_events']) loop
+   if jsonb_array_length(after_state->name)<>jsonb_array_length(before_state->name)+1
+     or not ((after_state->name) @> (before_state->name)) then raise exception 'REF025_SALE_ROW_COUNT: %',name; end if;
+  end loop;
+  select x into strict receipt from jsonb_array_elements(after_state->'store_offer_purchase_receipts') x
+   where not (before_state->'store_offer_purchase_receipts' @> jsonb_build_array(x));
+  if (receipt->>'business_id'=b::text and receipt->>'buyer_player_id'=buyer::text
+    and receipt->>'currency_code'='ECO' and (receipt->>'gross_revenue')::numeric=120
+    and (receipt->>'quantity')::integer=1 and (receipt->>'business_sales_authority_version')::integer=1
+    and (receipt->>'business_sales_authority_committed_at')::timestamptz between at_time-interval '84 days' and at_time
+    and ((receipt->>'funding_receipt_id') is not null)=funded) is not true then raise exception 'REF025_SALE_RECEIPT'; end if;
+  if jsonb_array_length(after_state->'purchase_funding_receipts')<>jsonb_array_length(before_state->'purchase_funding_receipts')+funded::integer
+    or not ((after_state->'purchase_funding_receipts') @> (before_state->'purchase_funding_receipts'))
+    or jsonb_array_length(after_state->'economic'->'ledger')<>jsonb_array_length(before_state->'economic'->'ledger')+(case when funded then 2 else 4 end)
+    or not ((after_state->'economic'->'ledger') @> (before_state->'economic'->'ledger')) then raise exception 'REF025_SALE_MONEY_COUNT'; end if;
+  if jsonb_array_length(after_state->'economic'->'balances')<>jsonb_array_length(before_state->'economic'->'balances')
+    or jsonb_array_length(after_state->'inventory_holdings')<>jsonb_array_length(before_state->'inventory_holdings') then raise exception 'REF025_SALE_PROJECTION_COUNT'; end if;
+  for old_row in select x from jsonb_array_elements(before_state->'economic'->'balances') x loop
+   select x into strict new_row from jsonb_array_elements(after_state->'economic'->'balances') x where x->>'id'=old_row->>'id';
+   delta:=case when old_row->>'business_id'=b::text then 120 when old_row->>'player_id'=buyer::text and old_row->>'account_type'='checking' then -120 else 0 end;
+   if (new_row->>'balance')::numeric<>(old_row->>'balance')::numeric+delta
+     or new_row-array['balance','updated_at','last_ledger_entry_id'] is distinct from old_row-array['balance','updated_at','last_ledger_entry_id'] then raise exception 'REF025_SALE_BALANCE'; end if;
+  end loop;
+  for old_row in select x from jsonb_array_elements(before_state->'inventory_holdings') x loop
+   select x into strict new_row from jsonb_array_elements(after_state->'inventory_holdings') x where x->>'id'=old_row->>'id';
+   delta:=case when old_row->>'inventory_account_id'=receipt->>'listing_inventory_account_id' then -1
+     when old_row->>'inventory_account_id'=receipt->>'buyer_inventory_account_id' then 1 else 0 end;
+   if (new_row->>'quantity_owned')::numeric<>(old_row->>'quantity_owned')::numeric+delta
+     or new_row->'quantity_reserved' is distinct from old_row->'quantity_reserved' then raise exception 'REF025_SALE_INVENTORY'; end if;
+  end loop;
+ end;
+$sale_effects$;
+-- Real independent-game settlement and assessment finish while the primary writer remains held.
+-- Roll back this nested transaction so each lane keeps its exact original income baseline.
+create function pg_temp.ref025_other_income(g uuid,b uuid,buyer uuid,product text,funded boolean)
+ returns jsonb language plpgsql as $other_income$
+ declare before_state jsonb:=pg_temp.ref025_income_state(g); sold jsonb; assessments jsonb;
+ begin
+  begin
+   sold:=pg_temp.ref025_sale(g,b,buyer,'ref025-other-game',funded);
+   perform pg_temp.ref025_sale_effects(before_state,pg_temp.ref025_income_state(g),b,buyer,funded,(sold->>'asOf')::timestamptz);
+   assessments:=jsonb_build_object('after',pg_temp.ref025_income(g,b,product,(sold->>'asOf')::timestamptz));
+   raise sqlstate 'R2505' using message='REF025_OTHER_GAME_ROLLBACK';
+  exception when sqlstate 'R2505' then null;
+  end;
+  if pg_temp.ref025_income_state(g) is distinct from before_state then raise exception 'REF025_OTHER_GAME_EFFECT'; end if;
+  return assessments||jsonb_build_object('before',pg_temp.ref025_income(g,b,product,(sold->>'asOf')::timestamptz));
+ end;
+$other_income$;
+-- Capture canonical recalculation before application submission; roll back every observable effect.
+create function pg_temp.ref025_expected_credit(g uuid,actor uuid) returns jsonb language plpgsql as $credit$
+ declare before_state jsonb:=pg_temp.ref025_income_state(g); expected jsonb;
+ begin
+  begin
+   perform public.recalculate_player_credit_v1(g,actor);
+   select to_jsonb(p) into strict expected from public.credit_profiles p where p.game_session_id=g and p.player_id=actor;
+   raise sqlstate 'R2506' using message='REF025_EXPECTED_CREDIT_ROLLBACK';
+  exception when sqlstate 'R2506' then null;
+  end;
+  if pg_temp.ref025_income_state(g) is distinct from before_state then raise exception 'REF025_EXPECTED_CREDIT_EFFECT'; end if;
+  return expected;
+ end;
+$credit$;

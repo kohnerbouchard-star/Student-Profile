@@ -1,7 +1,7 @@
 # STAFF-RECOVERY-OPERATOR-001 — staging system recovery
 
 Status: IN_PROGRESS; not deployed or approved for live execution.
-Dependency: reconciled PR862 at c6d74a99ff3ff3f5e3dba3c94566be9e38ce07d1.
+Dependency: qualified PR862 at c6774c5138b9ccf972ca26468171417f9f43e0a0; older checkpoints below are historical.
 Owner branch: feat/staging-system-account-recovery.
 Dependent draft PR: https://github.com/kohnerbouchard-star/Student-Profile/pull/863. Implementation commit: b12c24fe993c498cce6569a5629c386b4de140c3.
 
@@ -108,3 +108,42 @@ migration, tests, authority, generated inventory and workflow bytes remain
 unchanged from qualified head `f62ff785178ef0be2097c0b05f631bc4ed12476a`.
 Fresh exact-head CI and independent source/merge-trigger review are required.
 No live bindings, merge to main, dispatch or account/settings operation; all holds remain.
+
+## Ownership handoff and PR872 stack reconciliation (2026-10-07)
+
+The user transferred ownership for reconciliation and qualification of these
+existing branches only. Prior PR863 head `e4c85e98beb79b71385bacffab8483f567afd921`
+merges qualified PR862 `c6774c5138b9ccf972ca26468171417f9f43e0a0`, containing main
+`96e8abd6d0cce7337985e09974f0fd2b7df4d8fb`. PR862 passed all 20 exact-head
+workflows (41 successful checks, nine intended skips, successful Vercel status),
+including full backend typecheck and smoke. Its local esm.sh tunnel limitation
+remains accurately recorded and was not bypassed.
+
+The sole conflict was adjacent recovery roadmap intake: preserve the operator
+entry and the updated MFA entry. New edits only refresh this scope record and the
+existing operator entry. Recovery source, migration, tests, generated inventory,
+authority and recovery workflow bytes remain unchanged from prior PR863 head.
+The original six suffix identities, registered seventh and all nine U1 holds
+remain; inherited production-probe safeguards and backend qualification fixes
+are retained. The older automatic-main-probe warning is superseded by merged
+#871's guard; its separately authorized manual path remains unauthorized here.
+
+Preserve #735/#736/#668/#620 ownership and the exact dependent PR base. External
+system-admin authority remains separate from application roles; sole-operator
+policy retains independent identity evidence and engineering review. No identity
+provider is selected, purchased or composed. CLI remains plan-only, manual
+recovery dispatch rejects, and live provider/session-revocation/key/recipient/
+idempotency bindings remain unavailable. No merge, deployment, dispatch, live
+account/credential/factor/settings operation or production authorization.
+REF019/020 pauses, REF025 BLOCKED and REF027's 025+026 dependencies remain.
+
+Reconciled-tree local qualification: pinned Node 22.23.1/npm 10.9.8/Deno 2.9.3,
+clean root/backend installs and full root `npm test` PASS; 121 focused operator,
+browser, disposable PostgreSQL, suffix, proxy/probe and U1-hold tests PASS with
+zero skips; 28 network-denied Deno guard tests PASS. The database test uses its
+existing digest-pinned PostgreSQL container with `--network none`, no hosted URL.
+System Chromium was used locally; hosted tests retain pinned Playwright. Exact
+authority accepts 25 changed paths under 27 locks; generated inventory is unchanged.
+Full backend `typecheck:all` and `smoke` were attempted and BLOCKED locally by
+the pinned esm.sh import tunnel; no source or gate workaround. Fresh hosted
+exact-head qualification is required and will be recorded in the PR description.
