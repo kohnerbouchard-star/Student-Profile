@@ -4,7 +4,8 @@ import { EventEmitter } from 'node:events';
 import { promisify } from 'node:util';
 import { spawn, execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { deadline, exchange, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow, authorityEffects, eligibilityEffects } from './ref025-business-loan-concurrency.mjs';
+import vm from 'node:vm';
+import { deadline, exchange, json, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow, authorityEffects, eligibilityEffects, incomeAssessment, incomeApplicationEffects } from './ref025-business-loan-concurrency.mjs';
 
 // Exercise the same asynchronous process/marker boundary without requiring a database.
 function processSession() {
@@ -57,7 +58,7 @@ test('exact waiter and blocker identities are required', () => {
 });
 test('workflow restores after failures and independently checks restoration', () => {
   const workflow = readFileSync(new URL('../.github/workflows/banking-fx-clearing-v1.yml', import.meta.url), 'utf8');
-  const section = workflow.slice(workflow.indexOf('      - name: REF025 disposable race phase'), workflow.indexOf('      - name: Lint rebuilt database'));
+  const section = workflow.slice(workflow.indexOf('      - name: REF025 disposable race phase'), workflow.indexOf('      - name: REF025 separate income phase'));
   assert.equal((section.match(/if: always\(\)/g) || []).length, 2);
   assert(section.indexOf('--attest') < section.indexOf('supabase db reset'));
   assert(section.indexOf('supabase db reset') < section.indexOf('--verify'));
@@ -196,4 +197,133 @@ test('Child4 retains predecessor required checks and exact eligibility-only path
   assert.deepEqual(current.allowedPaths, prior.allowedPaths.map(p => p.replace('pr-867.json', 'pr-869.json')));
   assert.deepEqual(current.requiredFiles, prior.requiredFiles);
   for (const flag of ['productionDeploymentAllowed', 'productionMutationAllowed', 'secretValuesAllowed']) assert.equal(current[flag], false);
+});
+test('both actual workflow failure chains restore independently and gate the next phase', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/banking-fx-clearing-v1.yml', import.meta.url), 'utf8');
+  const step = name => workflow.split(`      - name: ${name}\n`)[1].split('      - name: ')[0];
+  const condition = name => step(name).match(/^        if: (.+)$/mu)[1];
+  const admission = condition('REF025 separate income phase');
+  const contexts = (phase, income, verified, healthy) => ({ always: () => true, success: () => healthy,
+    steps: { ref025_phase: { outcome: phase }, ref025_verified: { outcome: verified }, ref025_income: { outcome: income } } });
+  const run = (expression, context) => vm.runInNewContext(expression, context);
+  for (const phase of ['success', 'failure', 'skipped', ''])
+  for (const income of ['success', 'failure', 'skipped', '']) {
+    for (const reset of ['success', 'failure']) for (const verified of ['success', 'failure', 'skipped', '']) {
+      const healthy = phase === 'success' && reset === 'success' && verified === 'success';
+      assert.equal(run(admission, contexts(phase, income, verified, healthy)), healthy);
+      assert.equal(run(admission, contexts(phase, income, verified, true)), verified === 'success');
+      assert.equal(run(admission, contexts(phase, income, verified, false)), false); // Any earlier job failure blocks admission.
+      for (const [name, owner] of [
+        ['Restore REF025 disposable database from zero', 'ref025_phase'],
+        ['Verify REF025 restored gates and migration ledger', 'ref025_phase'],
+        ['Restore REF025 income database from zero', 'ref025_income'],
+        ['Verify REF025 income restored gates and migration ledger', 'ref025_income']
+      ]) {
+        const expected = !['skipped', ''].includes(owner === 'ref025_phase' ? phase : income);
+        assert.equal(run(condition(name), contexts(phase, income, verified, healthy)), expected);
+        assert.equal(run(condition(name), contexts(phase, income, verified, false)), expected);
+        const wrong = owner === 'ref025_phase' ? 'ref025_income' : 'ref025_phase';
+        if (['skipped', ''].includes(phase) !== ['skipped', ''].includes(income)) {
+          assert.notEqual(run(condition(name).replaceAll(owner, wrong), contexts(phase, income, verified, false)), expected);
+        }
+      }
+    }
+  }
+  for (const [restore, verify] of [
+    ['Restore REF025 disposable database from zero', 'Verify REF025 restored gates and migration ledger'],
+    ['Restore REF025 income database from zero', 'Verify REF025 income restored gates and migration ledger']
+  ]) {
+    assert.match(step(restore), /set -euo pipefail/u);
+    assert.match(step(restore), /--attest/u);
+    assert(step(restore).indexOf('--attest') < step(restore).indexOf('supabase db reset --workdir backend --local'));
+    assert.match(step(verify), /run: node scripts\/ref025-business-loan-concurrency\.mjs --verify/u);
+    assert.doesNotMatch(step(restore) + step(verify), /continue-on-error|\|\| true/u);
+  }
+  assert.match(step('Verify REF025 restored gates and migration ledger'), /id: ref025_verified/u);
+  assert.match(step('REF025 separate income phase'), /id: ref025_income/u);
+  assert.match(step('REF025 separate income phase'), /run: node scripts\/ref025-business-loan-concurrency\.mjs --income-phase/u);
+  for (const name of ['REF025 disposable race phase', 'REF025 separate income phase']) assert.doesNotMatch(step(name), /continue-on-error|\|\| true/u);
+});
+test('Child5a preserves predecessor checks and adds only the registered workflow path', () => {
+  const read = n => JSON.parse(readFileSync(new URL(`../docs/operations/contracts/player-cross-cutting/pr-${n}.json`, import.meta.url)));
+  const prior = read(869), current = read(870);
+  assert.deepEqual(current.requiredChecks, prior.requiredChecks);
+  assert.deepEqual(current.criticalJobChecks, prior.criticalJobChecks);
+  assert.deepEqual(current.allowedPaths, ['.github/workflows/banking-fx-clearing-v1.yml', ...prior.allowedPaths.map(p => p.replace('pr-869.json', 'pr-870.json'))]);
+  assert.deepEqual(current.requiredFiles, prior.requiredFiles);
+  for (const flag of ['productionDeploymentAllowed', 'productionMutationAllowed', 'secretValuesAllowed']) assert.equal(current[flag], false);
+});
+
+test('income assessment oracle rejects missing, duplicate, cross-currency or changed affordability', () => {
+  for (const income of [240, 360, 480]) {
+    const row = { obligation_currency_code: 'ECO', assessed_at: '2026-10-07T00:00:00Z', qualifying_income: income,
+      income_per_payment: income / 6, projected_payment: 20, affordability_ratio: Math.round(120 / income * 1e6) / 1e6,
+      maximum_payment_to_income: 0.45, minimum_credit_score: 600, affordable: income >= 360 };
+    incomeAssessment(row, income);
+    for (const patch of [{ qualifying_income: income + 120 }, { obligation_currency_code: 'USD' },
+      { assessed_at: null }, { affordable: !row.affordable }, { maximum_payment_to_income: 1 }, { minimum_credit_score: 0 }]) {
+      assert.throws(() => incomeAssessment({ ...row, ...patch }, income));
+    }
+  }
+});
+test('income application oracle rejects extra settlement effects, lost rows and changed borrower assessment', () => {
+  const profile = { id: 'profile', player_id: 'owner', score: 660, on_time_payment_rate: 1, savings_ratio: 0, income_stability: 0, transfer_anomaly_count: 0, delinquency_count: 0, default_count: 0, model_version: 'economic-behavior-v1', created_at: '2026-10-06T00:00:00Z', calculated_at: '2026-10-06T00:00:00Z', updated_at: '2026-10-06T00:00:00Z' };
+  const before = { economic: { applications: [], audits: [], profiles: [profile], loans: [], ledger: [], balances: [] }, receipts: [{ id: 'sale' }] };
+  const f = { owner_id: 'owner', b: 'business', business_key: 'biz_key' }, credit = { ...profile, score: 695, income_stability: 0.5 };
+  const app = { id: 'app', amount: 120, credit_score: 695, created_at: '2026-10-07T00:00:00Z', liability_kind: 'business_v1', status: 'pending_review', player_id: 'owner',
+    initiating_operator_player_id: 'owner', borrower_business_id: 'business', business_id: 'business',
+    idempotency_key: 'key', obligation_currency_code: 'ECO', projected_payment: 20, affordability_ratio: 0.333333, repayment_source: 'business:biz_key' };
+  const assessment = { obligation_currency_code: 'ECO', assessed_at: '2026-10-07T00:00:00Z', qualifying_income: 360,
+    income_per_payment: 60, projected_payment: 20, affordability_ratio: 0.333333, maximum_payment_to_income: 0.45, minimum_credit_score: 600, affordable: true };
+  const after = structuredClone(before); after.economic.applications.push(app);
+  Object.assign(after.economic.profiles[0], { ...credit, calculated_at: app.created_at, updated_at: app.created_at });
+  after.economic.audits.push({ id: 'audit', action: 'business.loan.application.submit', actor_id: 'owner', target_id: 'app', metadata: { assessment } });
+  incomeApplicationEffects(before, after, f, 'key', credit);
+  const fresh = structuredClone(after); fresh.economic.applications[0].affordability_ratio = 0.25;
+  Object.assign(fresh.economic.audits[0].metadata.assessment, { qualifying_income: 480, income_per_payment: 80, affordability_ratio: 0.25 });
+  incomeApplicationEffects(before, fresh, f, 'key', credit, 480);
+  assert.throws(() => incomeApplicationEffects(before, after, f, 'key', credit, 480));
+  for (const [field, value] of Object.entries({ id: 'other', score: 850, on_time_payment_rate: 0, savings_ratio: 1, income_stability: 0, transfer_anomaly_count: 1, delinquency_count: 1, default_count: 1, model_version: 'corrupt', created_at: app.created_at, calculated_at: profile.calculated_at, updated_at: profile.updated_at, unexpected: true })) {
+    const bad = structuredClone(after); bad.economic.profiles[0][field] = value; assert.throws(() => incomeApplicationEffects(before, bad, f, 'key', credit));
+  }
+  for (const corrupt of [x => x.receipts.pop(), x => x.economic.ledger.push({ id: 'extra' }),
+    x => x.economic.applications[0].initiating_operator_player_id = 'successor', x => x.economic.applications[0].amount = 60,
+    x => x.economic.applications[0].repayment_source = 'checking', x => x.economic.profiles.push({ player_id: 'other' }),
+    x => x.economic.audits[0].metadata.assessment.qualifying_income = 480, x => x.economic.audits.push({ id: 'extra' })]) {
+    const bad = structuredClone(after); corrupt(bad); assert.throws(() => incomeApplicationEffects(before, bad, f, 'key', credit));
+  }
+});
+test('Child5b preserves required checks and limits helper amendment while excluding workflows', () => {
+  const read = n => JSON.parse(readFileSync(new URL(`../docs/operations/contracts/player-cross-cutting/pr-${n}.json`, import.meta.url)));
+  const prior = read(870), current = read(872);
+  for (const field of ['requiredChecks', 'criticalJobChecks', 'requiredFiles']) assert.deepEqual(current[field], prior[field]);
+  assert.deepEqual([...current.allowedPaths].sort(), ['scripts/business-phase10-atomic-settlement-database-support.mjs', ...prior.allowedPaths.filter(p => !p.startsWith('.github/')).map(p => p.replace('pr-870.json', 'pr-872.json'))].sort());
+  assert.deepEqual(current.readOnlyPaths, ['scripts/verify-player-cross-cutting-authority.mjs', 'scripts/player-cross-cutting-authority.test.mjs']);
+  assert.equal(current.nonblankChangedLineLimit, 385); assert.equal(Object.keys(current.editablePathLineLimits).length, 6);
+  assert.equal(current.editablePathLineLimits['scripts/business-phase10-atomic-settlement-database-support.mjs'], 8);
+  for (const flag of ['productionDeploymentAllowed', 'productionMutationAllowed', 'secretValuesAllowed']) assert.equal(current[flag], false);
+});
+test('actual session output consumption rejects pending waiters and preserves stderr and non-opt-in behavior', async () => {
+  const source = readFileSync(new URL('./business-phase10-atomic-settlement-database-support.mjs', import.meta.url), 'utf8');
+  const stream = () => Object.assign(new EventEmitter(), { setEncoding() {} });
+  const child = Object.assign(new EventEmitter(), { exitCode: null, killed: false, stdout: stream(), stderr: stream(), stdin: Object.assign(new EventEmitter(), { writable: true, write() {} }) });
+  const body = source.slice(source.indexOf('export function openPsqlSession('), source.indexOf('export async function pollForDatabaseWait(')).replace('export ', '');
+  const session = vm.runInNewContext(`${body}; openPsqlSession('ref025-test')`, { spawn: () => child, PSQL_ARGS: [], sqlLiteral: JSON.stringify, redact: x => x, setTimeout, clearTimeout });
+  child.stdout.emit('data', 'prior\n'); const pending = session.waitFor('complete', 1000);
+  assert.throws(() => session.takeOutput(), /pending waiters/); assert.equal(session.output, 'prior\n');
+  child.stdout.emit('data', 'complete\n'); await pending; child.stdout.emit('data', 'later\n');
+  assert.equal(session.output, 'prior\ncomplete\nlater\n'); assert.equal(session.takeOutput(), 'prior\ncomplete\nlater\n');
+  assert.equal(session.output, ''); assert.equal(session.takeOutput(), ''); child.stderr.emit('data', 'SQL failure');
+  child.stdout.emit('data', 'next\n'); assert.equal(session.takeOutput(), 'next\n'); assert.equal(session.errors, 'SQL failure');
+});
+test('REF025 drains only validated completions and rejects bad frames, late results and stale output', async () => {
+  for (const kind of ['valid', 'missing', 'duplicate', 'malformed', 'late', 'stderr']) {
+    let output = '', taken = 0, sequence = 0;
+    const session = { errors: kind === 'stderr' ? 'SQL failure' : '', waitFor: async () => { if (kind === 'late') await new Promise(r => setTimeout(r, 10)); },
+      write(sql) { const marker = sql.match(/select '(r[0-9a-f]+:)'/u)[1]; const frame = `${marker}${kind === 'malformed' ? '{bad}' : ++sequence}${marker}\n`; output += kind === 'missing' ? 'missing\n' : kind === 'duplicate' ? frame + frame : frame; },
+      takeOutput() { taken++; const completed = output; output = ''; return completed; } };
+    const result = json(session, '1', deadline(kind === 'late' ? 1 : 500));
+    if (kind === 'valid') { assert.equal(await result, 1); assert.equal(output, ''); assert.equal(await json(session, '2', deadline(500)), 2); assert.equal(taken, 2); }
+    else { await assert.rejects(result); assert.equal(taken, ['late', 'stderr'].includes(kind) ? 0 : 1); }
+  }
 });

@@ -33,3 +33,33 @@ Recovery implementation, tests, authority and all workflow bytes remain unchange
 from qualified head `c6d74a99ff3ff3f5e3dba3c94566be9e38ce07d1`. Fresh exact-head
 CI and independent source/merge-trigger review supersede the prior-head certificate.
 Both drafts remain unmerged; live bindings, REF-019/020 and release holds stay intact.
+
+## Ownership handoff and PR872 reconciliation (2026-10-07)
+
+The user transferred ownership of existing PRs #862/#863 for reconciliation and
+qualification only. Main `96e8abd6d0cce7337985e09974f0fd2b7df4d8fb` merges normally
+into prior #862 head `28e745554fcf28affe209dfeda43f6e2f4e3a1e1`, without conflicts.
+The 15 upstream paths preserve merged #870/#871/#872/#873 work. Recovery source,
+tests, action pins and PR862 authority remain byte-identical to the prior head.
+Only this evidence and the existing recovery roadmap entry receive new edits.
+
+Main's production Admin probe guard now removes automatic production probing on
+PR/main events; the older PR-description warning is historical. The guarded manual
+path remains unchanged and unauthorized. Backend qualification retains main's
+fail-closed exit-status handling. #735/#736/#668/#620 ownership remains intact.
+External system-admin authority and the sole-operator policy remain as documented
+in the review-only main proposal; no identity provider is selected or composed.
+
+New local and exact-head hosted results supersede older-head qualification. PR863
+remains dependent and plan-only. No merge, deployment, dispatch, live account,
+Auth settings, factor, credential or production operation is authorized. REF019/020
+pauses, REF025 BLOCKED, REF027's 025+026 dependencies and all nine U1 holds remain.
+
+Local qualification on the reconciled tree: pinned Node 22.23.1/npm 10.9.8/Deno
+2.9.3, root/backend clean installs, full root `npm test`, 97 focused auth/browser/
+production-probe/U1-hold tests, rendered email-config check and exact authority
+check PASS (10 changed paths under 12 locks). Chromium used `/usr/bin/chromium`;
+hosted tests retain pinned Playwright. Full backend `typecheck:all` and `smoke`
+were attempted and remain BLOCKED locally by the pinned esm.sh import tunnel
+failure; no import, test or gate was bypassed. Fresh exact-head hosted backend
+and remaining applicable workflows are required; PR description records results.
