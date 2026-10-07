@@ -11,6 +11,8 @@
   "allowedPaths": [
     "admin/logout-confirmation.js",
     "admin/modal-accessibility.js",
+    "admin/game-session-controls.js",
+    "scripts/admin-game-session-controls-browser-smoke.mjs",
     "scripts/admin-modal-accessibility-smoke.mjs",
     "scripts/admin-logout-account-trigger-source-smoke.mjs",
     "scripts/admin-logout-confirmation-browser-smoke.mjs",
@@ -53,5 +55,5 @@
     "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
   ],
   "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-015/u7-logout-trigger-migration.md",
-  "authorizationNote": "User and parent approve nine changed files, at most 260 changed lines: existing six-line logout guard, approved focus diagnostics, and one-line modal opener-identity repair with focused regression cases. Keep eligibility and semantic/fallback resolution at restoration, all existing assertions/timeouts/focus actions, cancel/keyboard/native behavior. Fresh ownership check finds no conflicting PR on the two added modal paths. No new marker, timer, Settings/bootstrap/bridge/URL change or other owner transfer. Verifier/test remain unchanged locks; all retirement/release holds remain. No merge, deployment or production requests."
+  "authorizationNote": "User and parent approve the existing logout guard and opener repair plus pending Share repair dismissal cancellation under admin/game-session-controls.js and its existing browser smoke. Eleven changed files; maximum391 total changed lines (existing241 plus150 for this amendment: runtime35, tests95, authority/evidence20). Register this amendment before implementation. Preserve legitimate fallback, later native mount, repeated opens, cancel/keyboard/native behavior, every existing assertion/timeout, and original guard/opener repair. No broad modal rewrite, Settings/bootstrap/bridge/URL change, merge, deployment or production request; all retirement/release holds remain. Verifier/test entries remain unchanged locks."
 }
