@@ -366,3 +366,91 @@ jobs:
             "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$APPROVED_COMMIT" \
             --data-binary "@$PAYLOAD_PATH" > /dev/null
           rm -f "$PAYLOAD_PATH"
+
+  backend_qualification:
+    name: Qualify exact-head backend typecheck and smoke
+    # General repository qualification only; never a live/manual execution job.
+    if: ${{ github.event_name != 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      QUALIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out exact qualification head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify and record exact source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          [[ "$QUALIFICATION_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$actual" = "$QUALIFICATION_SHA"
+          git show --no-patch --format='commit=%H%ntree=%T' HEAD > "$RUNNER_TEMP/pr871-backend-source.txt"
+          cat "$RUNNER_TEMP/pr871-backend-source.txt"
+
+      - name: Set up repository Node version
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Pin repository npm version
+        run: npm install --global npm@10.9.8
+
+      - name: Set up repository Deno version
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install locked backend tooling
+        id: tooling
+        run: npm --prefix backend ci
+
+      - name: Run complete backend typecheck
+        id: backend_typecheck
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          npm --prefix backend run typecheck:all > "$RUNNER_TEMP/pr871-backend-typecheck.log" 2>&1
+          status=$?
+          set -e
+          printf '%s\n' "$status" > "$RUNNER_TEMP/pr871-backend-typecheck.status"
+          tail -n 260 "$RUNNER_TEMP/pr871-backend-typecheck.log"
+          exit "$status"
+
+      - name: Run complete backend smoke independently
+        id: backend_smoke
+        if: ${{ !cancelled() && steps.tooling.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          npm --prefix backend run smoke > "$RUNNER_TEMP/pr871-backend-smoke.log" 2>&1
+          status=$?
+          set -e
+          printf '%s\n' "$status" > "$RUNNER_TEMP/pr871-backend-smoke.status"
+          tail -n 260 "$RUNNER_TEMP/pr871-backend-smoke.log"
+          exit "$status"
+
+      - name: Preserve exact-head backend qualification diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr871-exact-head-backend-qualification
+          path: |
+            ${{ runner.temp }}/pr871-backend-source.txt
+            ${{ runner.temp }}/pr871-backend-typecheck.log
+            ${{ runner.temp }}/pr871-backend-typecheck.status
+            ${{ runner.temp }}/pr871-backend-smoke.log
+            ${{ runner.temp }}/pr871-backend-smoke.status
+          if-no-files-found: error
+          retention-days: 7
