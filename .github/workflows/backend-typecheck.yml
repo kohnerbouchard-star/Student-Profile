@@ -4,6 +4,11 @@ on:
   # Inventory lifecycle qualification retains the required full backend smoke gate.
   pull_request:
     paths:
+      - "scripts/ref025-business-loan-concurrency.sql"
+      - "scripts/ref025-business-loan-concurrency.mjs"
+      - "scripts/ref025-business-loan-concurrency.test.mjs"
+      - "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md"
+      - "docs/operations/contracts/player-cross-cutting/pr-872.json"
       - "backend/**"
       - "api/**"
       - "admin/**"
@@ -46,6 +51,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -63,13 +71,15 @@ jobs:
           deno-version: v2.9.3
 
       - name: Install backend dependencies
+        id: tooling
         run: npm ci
 
       - name: Run backend typecheck
         shell: bash
         run: |
           set +e
-          {
+          (
+            set -e
             npm run typecheck:all
             deno check \
               --config supabase/functions/classroom-api/deno.json \
@@ -92,7 +102,7 @@ jobs:
             node --check ../frontend/src/core/api.js
             node --check ../frontend/src/core/admin-mfa.js
             node --check ../frontend/src/core/login.js
-          } > /tmp/backend-typecheck.log 2>&1
+          ) > /tmp/backend-typecheck.log 2>&1
           echo $? > /tmp/backend-typecheck.status
           tail -n 260 /tmp/backend-typecheck.log
           exit 0
@@ -118,6 +128,7 @@ jobs:
           fi
 
       - name: Run backend smoke tests
+        if: ${{ !cancelled() && steps.tooling.outcome == 'success' }}
         shell: bash
         run: |
           set +e
@@ -138,6 +149,7 @@ jobs:
           retention-days: 7
 
       - name: Enforce backend smoke tests
+        if: ${{ !cancelled() && steps.tooling.outcome == 'success' }}
         shell: bash
         run: |
           status="$(cat /tmp/backend-smoke.status)"
