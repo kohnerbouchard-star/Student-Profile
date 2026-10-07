@@ -8,10 +8,10 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1277,
+    "sourceFiles": 1280,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
-    "persistenceOutsideInfrastructure": 52,
+    "persistenceOutsideInfrastructure": 54,
     "crossDomainDeepImports": 168,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
@@ -689,7 +689,15 @@
         "layer": "outside-domain"
       },
       {
+        "file": "backend/supabase/functions/password-reset-api/index.ts",
+        "layer": "outside-domain"
+      },
+      {
         "file": "backend/supabase/functions/staff-mfa-api/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/staff-mfa-api/systemRecovery.ts",
         "layer": "outside-domain"
       },
       {
@@ -3418,6 +3426,10 @@
         "lines": 600
       },
       {
+        "file": "backend/src/platform/supabase/edgeStaffSession.ts",
+        "lines": 599
+      },
+      {
         "file": "backend/supabase/functions/admin-api/mutationAdapters.ts",
         "lines": 595
       },
@@ -3504,10 +3516,6 @@
       {
         "file": "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
         "lines": 550
-      },
-      {
-        "file": "backend/src/platform/supabase/edgeStaffSession.ts",
-        "lines": 548
       },
       {
         "file": "backend/src/domains/markets/calculations/bondMath.ts",

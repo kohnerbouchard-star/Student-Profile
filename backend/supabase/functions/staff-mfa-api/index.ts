@@ -1,3 +1,4 @@
+import { handleSystemRecovery, MfaRequestError } from "./systemRecovery.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.108.2";
 import {
   jsonError,
@@ -5,7 +6,7 @@ import {
 } from "../../../src/platform/supabase/edgeResponse.ts";
 import {
   resolveStaffSessionForRequest,
-  type EdgeSupabaseClient,
+  recoveryGrantDigest,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
 import {
   bindGatewayTrustedClientIp,
@@ -46,6 +47,16 @@ Deno.serve(async (incomingRequest) => {
   }
 
   const path = functionPath(request);
+  const recoveryOperation = path.startsWith("/staff/mfa/recovery/") ? path.split("/").at(-1) : null;
+  let recoveryBody: Record<string, unknown> | null = null;
+  let grantDigest: string | null = null;
+  if (recoveryOperation) {
+    if (env.value.supabaseUrl !== "https://eecvbssdvarfcykcfrny.supabase.co" || request.method !== "POST" ||
+      !["claim", "status", "enroll", "verify"].includes(recoveryOperation)) return jsonError(403, {code:"recovery_unavailable",message:"Recovery is unavailable.",retryable:false});
+    try { recoveryBody = await readJsonBody(request); grantDigest = await recoveryGrantDigest(recoveryBody.grant); }
+    catch { return jsonError(400, {code:"invalid_recovery_request",message:"Recovery request is invalid.",retryable:false}); }
+    if (!grantDigest) return jsonError(403, {code:"recovery_unavailable",message:"Recovery is unavailable.",retryable:false});
+  }
   const requiredAal = path.endsWith("/verify") || path.endsWith("/enroll")
     ? "aal1"
     : path.endsWith("/unenroll")
@@ -57,6 +68,7 @@ Deno.serve(async (incomingRequest) => {
     { createAuthClient, createServiceClient },
     {
       missingMessage: "A verified staff user is required for MFA management.",
+      ...(grantDigest ? {recoveryGrantDigest: grantDigest, claimRecovery: recoveryOperation === "claim"} : {}),
       requiredRole: "game_admin",
       requiredAssuranceLevel: requiredAal,
       allowedStatuses: ["active", "onboarding"],
@@ -73,6 +85,12 @@ Deno.serve(async (incomingRequest) => {
   }) as any;
 
   try {
+    if (recoveryOperation && recoveryBody && grantDigest) {
+      return await handleSystemRecovery(userClient, staffResult.serviceClient, staffResult.authUser.id,
+        authorization.replace(/^Bearer\s+/iu, ""), grantDigest, recoveryOperation, recoveryBody, staffResult.assuranceLevel, {
+          rejectUnknownFields, privateHeaders, createFactorHandle, readFactorHandle, handleVerify,
+        });
+    }
     if (path === "/staff/mfa" && request.method === "GET") {
       return handleStatus(userClient, staffResult.authUser.id);
     }
@@ -468,16 +486,4 @@ function fromBase64Url(value: string): Uint8Array {
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
   const binary = atob(padded);
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-}
-
-class MfaRequestError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly status: number,
-    readonly retryable = false,
-  ) {
-    super(message);
-    this.name = "MfaRequestError";
-  }
 }

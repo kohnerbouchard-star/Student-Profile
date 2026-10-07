@@ -443,7 +443,7 @@ test("application restore normalization preserves exact application schema autho
 });
 
 test("REF025c2-1 is an independently registered fourth suffix without rewriting prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 6);
+  assert.equal(APPROVED_SUFFIXES.length, 7);
   assert.equal(APPROVED_SUFFIXES[3].filename, "20261004221307_prepare_business_loan_bindings_v1.sql");
   assert.equal(APPROVED_SUFFIXES[3].order, 4);
   assert.equal(APPROVED_SUFFIXES[3].statementCount, 1);
@@ -459,4 +459,20 @@ test("REF025c2-2b registers the gated submission sixth suffix", () => {
   assert.equal(APPROVED_SUFFIXES[5].filename, "20261005004013_add_gated_business_loan_submission_v1.sql");
   assert.equal(APPROVED_SUFFIXES[5].order, 6);
   assert.equal(APPROVED_SUFFIXES[5].statementCount, 1);
+});
+
+
+test("system recovery is the sole seventh suffix and preserves all six prior identities", () => {
+  assert.equal(APPROVED_SUFFIXES.length, 7);
+  assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 6))).digest("hex"),
+    "cb7f435ac309f834abfeace4193b9165c8e843a538a01ca02a1cbaf2fde3780f");
+  assert.deepEqual(APPROVED_SUFFIXES[6], {
+    "order": 7,
+    "filename": "20261005212732_system_account_recovery_v1.sql",
+    "version": "20261005212732",
+    "name": "system_account_recovery_v1",
+    "sourceSha256": "eea1adcd5992a8bc6b40fe1d7f4ca196cd07fb38b0af4d1cf4698a17bda6b9fe",
+    "rawSha256": "05bde9fe9bb9e6a0f3024e8f0ab2b189cc75e513e1bcc70fd933600f5a0e0d93",
+    "statementCount": 1
+});
 });

@@ -1,8 +1,10 @@
 import {
   readEdgeSupabaseEnv,
   requirePublishableRequest,
-  resolveStaffForRequest,
+  createAuthClient,
+  createServiceClient,
 } from "../_shared/econovariaAuth.ts";
+import { resolveStaffSessionForRequest, recoveryGrantDigest, recoverySessionId } from "../../../src/platform/supabase/edgeStaffSession.ts";
 import { extractBearerToken } from "../../../src/platform/supabase/edgeAuth.ts";
 import { validateStaffPassword } from "../../../src/security/staffPasswordPolicy.ts";
 
@@ -11,6 +13,7 @@ const SESSION_REVOCATION_ATTEMPTS = 3;
 
 interface PasswordResetBody {
   readonly password?: unknown;
+  readonly grant?: unknown;
 }
 
 interface SecurityTransitionRow {
@@ -55,7 +58,10 @@ Deno.serve(async (request: Request) => {
 
   const env = readEdgeSupabaseEnv();
   if (!env.ok) return unavailable(request);
-  const resolved = await resolveStaffForRequest(request, env.value, {
+  const digest=bodyResult.grant ? await recoveryGrantDigest(bodyResult.grant) : null;
+  if(bodyResult.grant && (env.value.supabaseUrl!=="https://eecvbssdvarfcykcfrny.supabase.co" || !digest)) return unavailable(request);
+  const resolved = await resolveStaffSessionForRequest(request, env.value, {createAuthClient,createServiceClient}, {
+    ...(digest ? {recoveryGrantDigest:digest} : {}),
     missingMessage: "A valid password-recovery session is required.",
   });
   if (resolved.ok === false) {
@@ -71,6 +77,16 @@ Deno.serve(async (request: Request) => {
       "invalid_recovery_session",
       "A valid password-recovery session is required.",
     ));
+  }
+
+  let recovery: {id:string;source:string} | null=null;
+  if(digest) {
+    const args={p_user:resolved.authUser.id,p_session:recoverySessionId(accessToken,resolved.authUser.id),p_digest:digest};
+    const context=await resolved.serviceClient.rpc<{id:string;source:string}>("system_recovery_context_v1",args);
+    if(context.error || !context.data) return unavailable(request);
+    const prepared=await resolved.serviceClient.rpc("system_recovery_prepare_completion_v1",args);
+    if(prepared.error || prepared.data!==context.data.id) return unavailable(request);
+    recovery=context.data;
   }
 
   // Revoke the complete Auth session family before changing the password. A
@@ -104,8 +120,8 @@ Deno.serve(async (request: Request) => {
   const transitionResponse = await resolved.serviceClient.rpc<
     readonly SecurityTransitionRow[] | SecurityTransitionRow
   >(
-    "complete_staff_password_reset_security_v2",
-    { p_auth_user_id: resolved.authUser.id },
+    recovery ? "system_recovery_password_transition_v1" : "complete_staff_password_reset_security_v2",
+    recovery ? {p_id:recovery.id,p_user:resolved.authUser.id,p_source:recovery.source} : {p_auth_user_id:resolved.authUser.id},
   );
   const transition = Array.isArray(transitionResponse.data)
     ? transitionResponse.data[0]
@@ -134,6 +150,11 @@ Deno.serve(async (request: Request) => {
     ));
   }
 
+  if(recovery) {
+    const completed=await service.rpc("system_recovery_complete_v1",{p_id:recovery.id,p_user:resolved.authUser.id,p_source:recovery.source});
+    if(completed.error) return json(request,503,errorBody("recovery_completion_incomplete","Account recovery remains restricted. Contact the system operator.",false));
+  }
+
   return json(request, 200, {
     ok: true,
     passwordReset: true,
@@ -142,7 +163,7 @@ Deno.serve(async (request: Request) => {
 });
 
 async function readBody(request: Request): Promise<
-  | { readonly ok: true; readonly password: string }
+  | { readonly ok: true; readonly password: string; readonly grant?: string }
   | { readonly ok: false; readonly response: Response }
 > {
   const declaredLength = Number(request.headers.get("content-length") || "0");
@@ -173,7 +194,8 @@ async function readBody(request: Request): Promise<
     !body ||
     typeof body !== "object" ||
     Array.isArray(body) ||
-    Object.keys(body).some((key) => key !== "password") ||
+    Object.keys(body).some((key) => key !== "password" && key !== "grant") ||
+    (body.grant !== undefined && (typeof body.grant !== "string" || !/^[A-Za-z0-9_-]{43}$/u.test(body.grant))) ||
     typeof body.password !== "string"
   ) {
     return { ok: false, response: json(request, 400, errorBody(
@@ -181,7 +203,7 @@ async function readBody(request: Request): Promise<
       "Password reset request is invalid.",
     )) };
   }
-  return { ok: true, password: body.password };
+  return { ok: true, password: body.password, ...(typeof body.grant === "string" ? {grant:body.grant} : {}) };
 }
 
 async function revokeAllSessions(

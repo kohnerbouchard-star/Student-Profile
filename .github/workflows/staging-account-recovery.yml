@@ -1,0 +1,54 @@
+name: Staging System Account Recovery
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/staging-account-recovery.yml'
+      - 'scripts/security/staging-account-recovery.mjs'
+      - 'scripts/staging-account-recovery.test.mjs'
+      - 'scripts/system-recovery-database.test.mjs'
+      - 'backend/supabase/migrations/*system_account_recovery*'
+      - 'backend/src/platform/supabase/edgeStaffSession.ts'
+      - 'backend/src/domains/auth/api/staffLoginHttpHandler*'
+      - 'backend/supabase/functions/admin-api/*SecurityGuard*'
+      - 'backend/supabase/functions/admin-api/systemRecoveryGuard.test.ts'
+      - 'backend/supabase/functions/staff-mfa-api/index.ts'
+      - 'backend/supabase/functions/staff-mfa-api/systemRecovery*'
+      - 'backend/supabase/functions/password-reset-api/index.ts'
+      - 'api/password-reset.js'
+      - 'auth/reset-password.*'
+      - 'scripts/password-recovery-mfa-browser.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - name: Synthetic operator and disposable database contracts
+        env:
+          ECONOVARIA_RECOVERY_DATABASE_TEST: '1'
+        run: node --test scripts/staging-account-recovery.test.mjs scripts/system-recovery-database.test.mjs
+      - name: Staff restriction and session guards
+        run: >-
+          deno test --deny-net --allow-env --config backend/supabase/functions/deno.json
+          backend/supabase/functions/staff-mfa-api/systemRecovery.test.ts
+          backend/supabase/functions/admin-api/systemRecoveryGuard.test.ts
+          backend/supabase/functions/admin-api/adminSecurityGuard.test.ts
+          backend/supabase/functions/admin-api/edgeStaffSessionMfaPolicy.test.ts
+          backend/src/domains/auth/api/staffLoginHttpHandler.test.ts
+  unavailable:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Reject live execution until operator bindings are reviewed
+        run: |
+          echo 'Live account recovery is disabled. No credentials are bound to this workflow.'
+          exit 1
