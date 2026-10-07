@@ -189,13 +189,13 @@ Architecture/legacy audits PASS; final documentation head requires its own CI. P
 
 ## Child 7 — approved canonical game-pause / submission proof
 APPROVED_SCOPE2026-10-07; basec4e16e42b5850de9c5042949d421ad5eeb7b97b4; Child6 accepted/closed; no predecessor re-audit.
-Owner refactor/ref-025c2-game-pause-race; actual draft authority will be bound before implementation.
+Owner refactor/ref-025c2-game-pause-race; draft #877 and exact authority registered before implementation.
 Five exact editable paths /380 nonblank additions+deletions, including braces/comments/metadata:
 - scripts/ref025-business-loan-concurrency.mjs:180; appended pause oracle/races and original-phase invocation.
 - scripts/ref025-business-loan-concurrency.sql:55; appended lifecycle/FX snapshot helpers only.
 - scripts/ref025-business-loan-concurrency.test.mjs:70; appended oracle corruption and scope regressions.
 - docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:35; this append-only record.
-- docs/operations/contracts/player-cross-cutting/pr-<actual-number>.json:40; bind actual draft before implementation.
+- docs/operations/contracts/player-cross-cutting/pr-877.json:40; actual draft authority; verifier and regression read-only.
 Fresh13-open-PR full-path census, including137 #620 files: no selected-path collision. Preserve #859 adjacent code, #620 workflow, #668/#736 and REF042/REF040 ownership.
 Canonical transition_game_lifecycle_atomic_v1 pause only: pause-first commit/rollback versus fresh submission/replay, and submission-first lock retention.
 Game SHARE/UPDATE edges require exact tracked PID/backend-start barriers; other-game submission progresses and fully rolls back while the primary lock remains held.
