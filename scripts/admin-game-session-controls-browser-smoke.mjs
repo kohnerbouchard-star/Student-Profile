@@ -178,7 +178,20 @@ try {
       const surface = [...document.querySelectorAll('[data-modal-id="share-game-access"]')].at(-1);
       if (mode !== "close") {
         window.EconovariaAdminModalLifecycleBridge.reconcile();
-        while (!surface.dataset.adminModalAccessibilityBound) await new Promise(requestAnimationFrame);
+        await new Promise((resolve, reject) => {
+          let frame = 0;
+          const finish = error => {
+            clearTimeout(timer); cancelAnimationFrame(frame);
+            if (error) reject(error); else resolve();
+          };
+          const timer = setTimeout(() => finish(new Error("Share modal binding timed out")), 5_000);
+          const check = () => {
+            if (!surface?.isConnected || [...document.querySelectorAll('[data-modal-id="share-game-access"]')].at(-1) !== surface) return finish(new Error("Share modal detached or replaced before binding"));
+            if (surface.dataset.adminModalAccessibilityBound) return finish();
+            frame = requestAnimationFrame(check);
+          };
+          check();
+        });
       }
       if (mode === "Escape") surface.querySelector("button").dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       else if (mode === "backdrop") surface.click();
@@ -313,7 +326,7 @@ try {
     return {
       ready: document.readyState,
       owner: Boolean(window.EconovariaAdminGameSessionControls),
-      lifecycle: Boolean(window.EconovariaAdminGameSessionMountLifecycle),
+      lifecycle: typeof window.EconovariaAdminModalLifecycleBridge?.reconcile === "function",
       cards: [...document.querySelectorAll("[data-econovaria-game-session-card]")].slice(0, 4).map(node => ({ ...state(node), shares: node.querySelectorAll("[data-econovaria-share-game]").length, logouts: node.querySelectorAll("[data-econovaria-admin-logout]").length })),
       shares: [...document.querySelectorAll('[data-admin-terminal-share-button], [data-econovaria-share-game], [data-admin-terminal-action="share-current-game"], [data-admin-terminal-action="share-game-code"]')].slice(0, 8).map(state),
       modals: [...document.querySelectorAll("[data-modal-id]")].slice(0, 8).map(node => ({ id: node.dataset.modalId, ...state(node) })),
