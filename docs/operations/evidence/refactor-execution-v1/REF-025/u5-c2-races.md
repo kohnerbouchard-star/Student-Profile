@@ -163,12 +163,12 @@ Full typecheck:all/smoke and required Backend Typecheck remain unresolved: exist
 
 ## Child 6 — approved credit-profile / borrower lock-chain proof
 APPROVED_SCOPE2026-10-07; base1de01562af5b78a3407ca9bc8d7ee8935ca080f8; predecessor income proof accepted; no predecessor requalification.
-Owner refactor/ref-025c2-credit-profile-chain; actual draft PR authority will be bound before implementation.
+Owner refactor/ref-025c2-credit-profile-chain; draft #875 and exact authority registered before implementation.
 Four editable paths /380 nonblank additions+deletions, including braces/comments/metadata:
 - scripts/ref025-business-loan-concurrency.mjs:210; new profile-chain oracle/races plus original-phase invocation and tracked fourth client.
 - scripts/ref025-business-loan-concurrency.test.mjs:90; appended corruption, cleanup and scope regressions.
 - docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:40; this append-only record.
-- docs/operations/contracts/player-cross-cutting/pr-<allocated-number>.json:40; bind actual draft number before implementation.
+- docs/operations/contracts/player-cross-cutting/pr-875.json:40; actual draft authority; verifier and its regression remain read-only.
 Fresh12-open-PR heads match inspected ownership census; no selected-path overlap; #859 adjacent disposable code remains excluded.
 Protect #620 workflow, #668/#736 authority, REF042/REF040 boundaries; SQL fixtures/migrations/shared helper/workflow/verifier remain unchanged.
 Canonical credit recalculation holds profile; submission waits while holding borrower; second operator request waits on borrower.
