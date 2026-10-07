@@ -267,16 +267,25 @@ test('income assessment oracle rejects missing, duplicate, cross-currency or cha
   }
 });
 test('income application oracle rejects extra settlement effects, lost rows and changed borrower assessment', () => {
-  const before = { economic: { applications: [], audits: [], profiles: [], loans: [], ledger: [], balances: [] }, receipts: [{ id: 'sale' }] };
+  const profile = { id: 'profile', player_id: 'owner', score: 660, default_count: 0, created_at: '2026-10-06T00:00:00Z', calculated_at: '2026-10-06T00:00:00Z', updated_at: '2026-10-06T00:00:00Z' };
+  const before = { economic: { applications: [], audits: [], profiles: [profile], loans: [], ledger: [], balances: [] }, receipts: [{ id: 'sale' }] };
   const f = { owner_id: 'owner', b: 'business', business_key: 'biz_key' };
-  const app = { id: 'app', amount: 120, liability_kind: 'business_v1', status: 'pending_review', player_id: 'owner',
+  const app = { id: 'app', amount: 120, credit_score: 660, created_at: '2026-10-07T00:00:00Z', liability_kind: 'business_v1', status: 'pending_review', player_id: 'owner',
     initiating_operator_player_id: 'owner', borrower_business_id: 'business', business_id: 'business',
     idempotency_key: 'key', obligation_currency_code: 'ECO', projected_payment: 20, affordability_ratio: 0.333333, repayment_source: 'business:biz_key' };
   const assessment = { obligation_currency_code: 'ECO', assessed_at: '2026-10-07T00:00:00Z', qualifying_income: 360,
     income_per_payment: 60, projected_payment: 20, affordability_ratio: 0.333333, maximum_payment_to_income: 0.45, minimum_credit_score: 600, affordable: true };
-  const after = structuredClone(before); after.economic.applications.push(app); after.economic.profiles.push({ player_id: 'owner' });
+  const after = structuredClone(before); after.economic.applications.push(app);
+  Object.assign(after.economic.profiles[0], { calculated_at: app.created_at, updated_at: app.created_at });
   after.economic.audits.push({ id: 'audit', action: 'business.loan.application.submit', actor_id: 'owner', target_id: 'app', metadata: { assessment } });
   incomeApplicationEffects(before, after, f, 'key');
+  const fresh = structuredClone(after); fresh.economic.applications[0].affordability_ratio = 0.25;
+  Object.assign(fresh.economic.audits[0].metadata.assessment, { qualifying_income: 480, income_per_payment: 80, affordability_ratio: 0.25 });
+  incomeApplicationEffects(before, fresh, f, 'key', 480);
+  assert.throws(() => incomeApplicationEffects(before, after, f, 'key', 480));
+  for (const [field, value] of Object.entries({ id: 'other', score: 850, default_count: 1, created_at: app.created_at, calculated_at: profile.calculated_at, updated_at: profile.updated_at, unexpected: true })) {
+    const bad = structuredClone(after); bad.economic.profiles[0][field] = value; assert.throws(() => incomeApplicationEffects(before, bad, f, 'key'));
+  }
   for (const corrupt of [x => x.receipts.pop(), x => x.economic.ledger.push({ id: 'extra' }),
     x => x.economic.applications[0].initiating_operator_player_id = 'successor', x => x.economic.applications[0].amount = 60,
     x => x.economic.applications[0].repayment_source = 'checking', x => x.economic.profiles.push({ player_id: 'other' }),

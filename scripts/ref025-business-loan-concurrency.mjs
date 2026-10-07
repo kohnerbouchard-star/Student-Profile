@@ -252,6 +252,7 @@ async function eligibilityRaces(observer, first, second, remaining) {
       ${[f.g, f.owner_id, f.business_key, f.product_key, 60, 'REF025 eligibility request', key].map(sqlLiteral).join(',')})`;
     const submit = (session, key) => json(session, `(select to_jsonb(r) from (${command(key)}) r)`, remaining);
     for (const mode of ['creation', 'replay', 'retention']) for (const committed of [true, false]) {
+      const started = performance.now(), cpu = process.cpuUsage(), bytes = observer.output.length;
       const key = `ref025-${target}-${mode}-${committed}`;
       const seed = await economic(observer), original = mode === 'replay' ? await submit(observer, key) : null;
       if (original) {
@@ -279,11 +280,13 @@ async function eligibilityRaces(observer, first, second, remaining) {
           : submit(second, key);
       }
       competing.catch(() => {});
+      const lockStarted = performance.now();
       for (;;) {
         const row = await json(observer, `pg_temp.ref025_blocker(${second.pid},${first.pid})`, remaining);
         if (row?.wait === 'Lock') { intendedBlocker(row, second, first); break; }
         await new Promise(resolve => setTimeout(resolve, Math.min(20, remaining())));
       }
+      const lockMs = performance.now() - lockStarted;
       assert.deepEqual(await economic(observer), before);
       assert.deepEqual(await eligibility(observer), prior);
       assert.deepEqual(await sentinels(), isolated);
@@ -307,6 +310,7 @@ async function eligibilityRaces(observer, first, second, remaining) {
       assert.deepEqual(await economic(observer), after);
       assert.deepEqual(await sentinels(), isolated);
       await verifyGates(observer, remaining, false);
+      console.log(JSON.stringify({ ref025Eligibility: key, elapsedMs: performance.now() - started, lockMs, cpuUs: process.cpuUsage(cpu), observerBytes: observer.output.length, addedBytes: observer.output.length - bytes }));
     }
   }
 }
@@ -318,21 +322,23 @@ export function incomeAssessment(row, income) {
     maximum_payment_to_income: 0.45, minimum_credit_score: 600, affordable: income >= 360 });
   assert(Number.isFinite(Date.parse(row.assessed_at)), 'REF025_ASSESSMENT_TIME');
 }
-export function incomeApplicationEffects(before, after, f, key) {
+export function incomeApplicationEffects(before, after, f, key, income = 360) {
   const original = structuredClone(before), expected = structuredClone(after);
   const added = after.economic.applications.filter(a => !before.economic.applications.some(b => b.id === a.id));
   assert.equal(added.length, 1); const app = added[0];
   for (const [field, value] of Object.entries({ amount: 120, liability_kind: 'business_v1', status: 'pending_review',
     initiating_operator_player_id: f.owner_id, player_id: f.owner_id, borrower_business_id: f.b, business_id: f.b,
-    idempotency_key: key, obligation_currency_code: 'ECO', projected_payment: 20, affordability_ratio: 0.333333, repayment_source: `business:${f.business_key}` })) assert.equal(app[field], value);
+    idempotency_key: key, obligation_currency_code: 'ECO', projected_payment: 20, affordability_ratio: Math.round(120 / income * 1e6) / 1e6, repayment_source: `business:${f.business_key}` })) assert.equal(app[field], value);
   const audits = after.economic.audits.filter(a => !before.economic.audits.some(b => b.id === a.id));
   assert.equal(audits.length, 1); assert.equal(audits[0].action, 'business.loan.application.submit');
   assert.equal(audits[0].actor_id, f.owner_id); assert.equal(audits[0].target_id, app.id);
-  incomeAssessment(audits[0].metadata.assessment, 360);
+  incomeAssessment(audits[0].metadata.assessment, income);
   expected.economic.applications = expected.economic.applications.filter(a => a.id !== app.id);
   expected.economic.audits = expected.economic.audits.filter(a => a.id !== audits[0].id);
-  assert.equal(expected.economic.profiles.filter(p => p.player_id === f.owner_id).length, 1);
-  for (const state of [original, expected]) state.economic.profiles = state.economic.profiles.filter(p => p.player_id !== f.owner_id);
+  const prior = original.economic.profiles.filter(p => p.player_id === f.owner_id), current = expected.economic.profiles.filter(p => p.player_id === f.owner_id);
+  assert.equal(prior.length, 1); assert.equal(current.length, 1); assert.equal(app.credit_score, prior[0].score);
+  assert(Number.isFinite(Date.parse(app.created_at)), 'REF025_APPLICATION_TIME');
+  for (const field of ['calculated_at', 'updated_at']) { assert.equal(current[0][field], app.created_at); current[0][field] = prior[0][field]; }
   assert.deepEqual(expected, original, 'REF025_INCOME_APPLICATION_EFFECTS');
 }
 async function incomeRaces(observer, first, second, remaining) {
@@ -352,8 +358,8 @@ async function incomeRaces(observer, first, second, remaining) {
       assert.equal(row.assessed_at, at, 'REF025_CAPTURED_TIME'); return row;
     };
     const sale = (key, saved = null) => json(first, `pg_temp.ref025_sale(${[f.g, f.b, f.buyer, key, funded, saved && JSON.stringify(saved)].map(sqlLiteral)})`, remaining);
-    const command = actor => `select * from economy_private.submit_business_loan_application_v1(${[f.g, actor, f.business_key, f.product_key, 120, 'REF025 income request', 'ref025-income-application'].map(sqlLiteral)})`;
-    const submit = (session, actor = f.owner_id) => json(session, `(select to_jsonb(r) from (${command(actor)}) r)`, remaining);
+    const command = (actor, key = 'ref025-income-application') => `select * from economy_private.submit_business_loan_application_v1(${[f.g, actor, f.business_key, f.product_key, 120, 'REF025 income request', key].map(sqlLiteral)})`;
+    const submit = (session, actor = f.owner_id, key) => json(session, `(select to_jsonb(r) from (${command(actor, key)}) r)`, remaining);
     const effects = (before, after, at) => exchange(observer, `select pg_temp.ref025_sale_effects(${[JSON.stringify(before), JSON.stringify(after), f.b, f.buyer, funded, at].map(sqlLiteral)});`, remaining);
     let original;
     for (const commit of [false, true]) {
@@ -365,6 +371,9 @@ async function incomeRaces(observer, first, second, remaining) {
       assert.deepEqual(await state(observer, f), before);
       const waiting = commit ? submit(second) : exchange(second, `select pg_temp.ref025_reject(${sqlLiteral(command(f.owner_id))},'LOAN_UNAFFORDABLE');`, remaining);
       waiting.catch(() => {}); await blocked(first);
+      const independent = await json(observer, `pg_temp.ref025_other_income(${[other.g, other.b, other.buyer, other.product_key, other.n === 2].map(sqlLiteral)})`, remaining);
+      incomeAssessment(independent.before, f.n === 1 ? 240 : 480); incomeAssessment(independent.after, f.n === 1 ? 360 : 600);
+      await blocked(first); // The original writer and waiting submission still overlap the other game's settlement.
       assert.deepEqual(await state(observer, other), isolated);
       await exchange(first, commit ? 'commit;' : 'rollback;', remaining);
       const result = await waiting, after = await state(observer, f);
@@ -388,8 +397,11 @@ async function incomeRaces(observer, first, second, remaining) {
     incomeAssessment(await assess(observer, sold.asOf), 480);
     assert.deepEqual(await submit(second, f.buyer), { ...original, replayed: true });
     assert.deepEqual(await state(observer, f), written); assert.deepEqual(await state(observer, other), isolated);
+    assert.equal((await submit(second, f.owner_id, 'ref025-income-fresh')).replayed, false);
+    const fresh = await state(observer, f); incomeApplicationEffects(written, fresh, f, 'ref025-income-fresh', 480);
+    assert.deepEqual(await submit(second, f.buyer), { ...original, replayed: true }); assert.deepEqual(await state(observer, f), fresh);
     await verifyGates(observer, remaining, false);
-    console.log(JSON.stringify({ ref025Income: funded ? 'funded' : 'retained', waitingSubmission: ['rollback', 'commit'], statementSnapshot: 'verified', saleReplay: 'unchanged', applicationReplay: 'original', otherGame: 'unchanged' }));
+    console.log(JSON.stringify({ ref025Income: funded ? 'funded' : 'retained', waitingSubmission: ['rollback', 'commit'], statementSnapshot: 'verified', saleReplay: 'unchanged', applicationReplay: 'original', freshApplicationIncome: 480, otherGame: 'settled-assessed-rolled-back' }));
   }
 }
 export async function lifecycle(mode = '--phase') {

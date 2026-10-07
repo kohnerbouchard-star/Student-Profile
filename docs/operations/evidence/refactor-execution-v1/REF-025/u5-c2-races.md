@@ -130,31 +130,31 @@ Vary phase/income outcomes independently and require swapped-reference mutations
 
 ## Child 5b — approved qualifying-income visibility proof
 APPROVED_SCOPE; base452abd0ef08825e3929fe4f46572b4cc347787da; #870 merged. Parent retains review/merge authority.
-Existing draft #872 registered headbe913a2c; user confirmed implementation/test/push on2026-10-07. No competing writer found.
+Draft #872; user authorized implementation/test/push2026-10-07; independent review corrections remain required before completion.
 Five paths /385 nonblank additions+deletions, including comments/braces/metadata:
 - scripts/ref025-business-loan-concurrency.sql:155
 - scripts/ref025-business-loan-concurrency.mjs:105
 - scripts/ref025-business-loan-concurrency.test.mjs:60
 - docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md:30
-- docs/operations/contracts/player-cross-cutting/pr-872.json:35; actual manifest already bound, verifier/tests read-only.
-Fresh15-open-PR full-path census including137 paths in #620: no selected-path collision; #859 superseded/unqualified.
+- docs/operations/contracts/player-cross-cutting/pr-872.json:35; verifier/tests read-only.
+Fresh mainf4fc25d7 and14-open-PR heads unchanged; #859 superseded/unqualified; preserve #668/#736 and other owners.
 Canonical retained/funded sales only: uncommitted/committed income, rollback, statement snapshots and waiting submissions.
 Require exact tracked blocker PID/start; preserve original application assessment and prove sale replay cannot double-count.
-Compare complete economic/receipt/funding/inventory snapshots and unrelated-game sentinels; no fabricated sales or routine replacement.
-Preserve every Child1-4 assertion, both15s deadlines, strict framing, bounded client/backend cleanup and independent reset verification.
+Corrected scenarios: new application key assesses income480; old application replay remains original before and after the new command.
+Other-game canonical settlement/assessment completes while primary writer and waiter remain locked; nested rollback restores its complete state.
+Seed income-fixture owner credit profile canonically; application oracle permits only calculated_at/updated_at equal to application transaction time.
+Corruption regressions reject changed profile identity, score, defaults, creation/recalculation timestamps and arbitrary fields; preserve complete other rows.
+All Child1-4 assertions, both15s deadlines, strict framing, bounded cleanup and independent reset verification remain mandatory.
 Only attested disposable Banking database; application gate temporarily removed, validated loan gate retained; mandatory full reset.
 No workflow/shared-helper/package/migration/auth/Player/Markets changes, hosted access, dispatch, deployment or hold restoration.
 REF025 BLOCKED; REF027 depends025+026;40/50 and nine U1 holds unchanged. Full interacting lock graph/activation remain unqualified.
-Baseline pinned Node22.23.1:35 focused/authority tests, Banking source contract and4 release workflow tests PASS; DB proof pending.
-Implementation preserves immutable receipts, uses a temporary STABLE barrier wrapper around unchanged assessment, and snapshots15 settlement tables plus full loan/profile/audit/ledger/balances.
-Local pinned Node22.23.1:38/38 focused/authority PASS, boundary80 PASS, Banking source contract and exact five-path authority PASS.
-Disposable exact-head Banking and applicable CI remain pending; no database proof is inferred from local source/oracle tests.
-Headb77898e6 job112625219316 failed while installing the new helper: unparenthesized CASE in a PL/pgSQL IF expression.
-Original full reset and independent verification PASS; income phase correctly skipped. Parenthesize the expression; retain failed evidence and require fresh CI.
-Head452b73dd job112626231720 passed original races but income oracle hit JSON operator precedence (boolean -> text).
-Both phase resets and independent checks PASS. Parenthesize JSON operands of containment; expected effects and production routines unchanged.
-Headb102949a job112627233579 failed on canonical funded-helper DROP IF EXISTS NOTICE; both resets/independent verifications PASS.
-Scope client_min_messages=warning to temporary sale helper, matching fixture setup; SQL errors stay fatal. Emit per-lane proof summaries; fresh exact-head CI required.
-Parent directed reconciliation after #871: merge accepted mainf4fc25d7ad8b9792a659a9c3c942ad53d31b97c2 normally; preserve its six paths, then requalify exact head.
-Head29073cec database job112628280386 passed both income lanes, all resets/independent checks and unchanged lint142/17; local full edge typecheck/smoke blocked by esm.sh tunnel (no pass claim).
-Head251519a2 job112630139120 hit original15s phase deadline; reset/independent check PASS, income skipped. Cause unresolved; add stage progress only, preserving every assertion/deadline; requalify.
+Failed headb77898e6/job112625219316: unparenthesized CASE in new SQL; original reset/verification PASS, income skipped; expression corrected.
+Failed head452b73dd/job112626231720: JSON containment precedence; both resets/verifications PASS; operands parenthesized.
+Failed headb102949a/job112627233579: funded-helper DROP IF EXISTS NOTICE; both resets/verifications PASS; temporary sale helper scopes client_min_messages=warning.
+Parent directed normal integration of mainf4fc25d7 after #871, preserving its six paths; no upstream auth/qualification changes here.
+Head29073cec/job112628280386 passed both income lanes and resets/verifications; unchanged lint142/17. Local full backend checks blocked by esm.sh tunnel.
+Failed head251519a2/job112630139120: original15s deadline; reset/verification PASS, income skipped. Cause remains unresolved; no variance claim.
+Head5ccb898a/job112631283958 passed both phases/reset checks; original13.13s, eligibility10.58s; this does not explain the prior failure.
+Correction adds bounded per-eligibility-case elapsed/lock/CPU/output-size measurements; no deadline or assertion relaxation. Corrected-head DB qualification pending.
+Pinned Node22.23.1 focused/authority tests38/38 PASS locally; corrected oracle covers480 and profile corruption; no local DB proof inferred.
+Full typecheck:all/smoke and required Backend Typecheck remain unresolved: existing exact-head qualification job excludes these paths; workflow-filter scope amendment needed.

@@ -88,6 +88,7 @@ for i in 1..(select case when income then 2 else 9 end from ref025_phase) loop
     insert into public.business_management_mandates(game_session_id,business_id,player_id,source_proposal_id)
       values(g,b,owner_id,proposal),(g,b,buyer,proposal);
   end if;
+  if (select income from ref025_phase) then perform public.recalculate_player_credit_v1(g,owner_id); end if;
   insert into ref025_fixtures select i,g,owner_id,buyer,b,business_key,public_key,country,proposal from public.loan_products where id=product;
  end;
 end loop;
@@ -258,3 +259,20 @@ create function pg_temp.ref025_sale_effects(before_state jsonb,after_state jsonb
   end loop;
  end;
 $sale_effects$;
+-- Real independent-game settlement and assessment finish while the primary writer remains held.
+-- Roll back this nested transaction so each lane keeps its exact original income baseline.
+create function pg_temp.ref025_other_income(g uuid,b uuid,buyer uuid,product text,funded boolean)
+ returns jsonb language plpgsql as $other_income$
+ declare before_state jsonb:=pg_temp.ref025_income_state(g); sold jsonb; assessments jsonb;
+ begin
+  begin
+   sold:=pg_temp.ref025_sale(g,b,buyer,'ref025-other-game',funded);
+   perform pg_temp.ref025_sale_effects(before_state,pg_temp.ref025_income_state(g),b,buyer,funded,(sold->>'asOf')::timestamptz);
+   assessments:=jsonb_build_object('after',pg_temp.ref025_income(g,b,product,(sold->>'asOf')::timestamptz));
+   raise sqlstate 'R2505' using message='REF025_OTHER_GAME_ROLLBACK';
+  exception when sqlstate 'R2505' then null;
+  end;
+  if pg_temp.ref025_income_state(g) is distinct from before_state then raise exception 'REF025_OTHER_GAME_EFFECT'; end if;
+  return assessments||jsonb_build_object('before',pg_temp.ref025_income(g,b,product,(sold->>'asOf')::timestamptz));
+ end;
+$other_income$;
