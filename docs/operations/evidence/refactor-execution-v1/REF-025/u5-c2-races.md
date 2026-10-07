@@ -144,7 +144,7 @@ Canonical retained/funded sales only: uncommitted/committed income, rollback, st
 Require exact tracked blocker PID/start; preserve original application assessment and prove sale replay cannot double-count.
 Corrected scenarios: new application key assesses income480; old application replay remains original before and after the new command.
 Other-game canonical settlement/assessment completes while primary writer and waiter remain locked; nested rollback restores its complete state.
-Seed income-fixture owner credit profile canonically; application oracle permits only calculated_at/updated_at equal to application transaction time.
+Capture canonical recalculation before submission in a fully rolled-back subtransaction; compare every metric and all unrelated profile fields, with exact application timestamps.
 Corruption regressions reject changed profile identity, score, defaults, creation/recalculation timestamps and arbitrary fields; preserve complete other rows.
 All Child1-4 assertions, both15s deadlines, strict framing, bounded cleanup and independent reset verification remain mandatory.
 Only attested disposable Banking database; application gate temporarily removed, validated loan gate retained; mandatory full reset.
@@ -156,7 +156,7 @@ Failed headb102949a/job112627233579: funded-helper DROP IF EXISTS NOTICE; both r
 Parent directed normal integration of mainf4fc25d7 after #871, preserving its six paths; no upstream auth/qualification changes here.
 Head29073cec/job112628280386 passed both income lanes and resets/verifications; unchanged lint142/17. Local full backend checks blocked by esm.sh tunnel.
 Failed head251519a2/job112630139120: original15s deadline; reset/verification PASS, income skipped. Cause remains unresolved; no variance claim.
-Head5ccb898a/job112631283958 passed both phases/reset checks; original13.13s, eligibility10.58s; this does not explain the prior failure.
+Head5ccb898a/job112631283958 passed phases/reset checks (original13.13s/eligibility10.58s); head737d1c63/job112652452860 original4.31s PASS, income score oracle698!=692 FAIL; both resets/verifications PASS.
 Head5e337a4e/job112638015127 reproduced15s failure:17 cases11.93s elapsed/11.19s CPU/0.44s blocker detection, retained output34.4MB; reset/verification PASS, income skipped.
 Pinned Node22.23.1 focused/authority tests40/40 PASS: pending waiters, retained stderr, old callers, bad frames, late completion and stale-output rejection; exact-head DB proof pending.
 Full typecheck:all/smoke and required Backend Typecheck remain unresolved: existing job excludes these paths; separately approved16-line workflow correction preserves #620 action-version ownership and #668/#736 authority.

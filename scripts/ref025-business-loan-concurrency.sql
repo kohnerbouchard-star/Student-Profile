@@ -276,3 +276,17 @@ create function pg_temp.ref025_other_income(g uuid,b uuid,buyer uuid,product tex
   return assessments||jsonb_build_object('before',pg_temp.ref025_income(g,b,product,(sold->>'asOf')::timestamptz));
  end;
 $other_income$;
+-- Capture canonical recalculation before application submission; roll back every observable effect.
+create function pg_temp.ref025_expected_credit(g uuid,actor uuid) returns jsonb language plpgsql as $credit$
+ declare before_state jsonb:=pg_temp.ref025_income_state(g); expected jsonb;
+ begin
+  begin
+   perform public.recalculate_player_credit_v1(g,actor);
+   select to_jsonb(p) into strict expected from public.credit_profiles p where p.game_session_id=g and p.player_id=actor;
+   raise sqlstate 'R2506' using message='REF025_EXPECTED_CREDIT_ROLLBACK';
+  exception when sqlstate 'R2506' then null;
+  end;
+  if pg_temp.ref025_income_state(g) is distinct from before_state then raise exception 'REF025_EXPECTED_CREDIT_EFFECT'; end if;
+  return expected;
+ end;
+$credit$;
