@@ -12,7 +12,11 @@
     ".github/workflows/production-web-session-vercel-proxy-verify.yml",
     "docs/operations/contracts/player-cross-cutting/pr-871.json",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "scripts/verify-player-cross-cutting-authority.mjs"
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/production-admin-probe-guard.sh",
+    "scripts/production-admin-probe-guard.test.mjs",
+    "docs/operations/contracts/player-cross-cutting/pr-735.json",
+    "docs/roadmaps/production-admin-probe-guard-v1.md"
   ],
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting/pr-871.json",
@@ -25,5 +29,18 @@
     "player-production-secret-provision-contract",
     "player-api-read-resilience"
   ],
-  "authorizationNote": "Bounded CI safety guard only. Ordinary pull_request and main push activity must remain synthetic for the production Admin-session Vercel proxy verifier. Live production probing is preserved but may run only after separate manual workflow_dispatch authorization bound to current main, exact workflow production origin, the explicit action phrase, and the protected production environment. The probe is not credentialed by the caller but the BFF adds deployment identity; backend request-protection nonce insertion and expired-nonce cleanup may occur. This PR authorizes no workflow dispatch, production deployment, Auth configuration change, account recovery, factor deletion, credential creation, or other live recovery action. PR #735 retains ownership of canonical production-origin convergence; this draft must not merge until that ownership collision is explicitly reconciled. REF-019/020 and existing release holds remain intact."
+  "sharedWorkflowOwnership": {
+    "workflowPath": ".github/workflows/production-web-session-vercel-proxy-verify.yml",
+    "guardOwnerPullRequest": 871,
+    "canonicalOriginOwnerPullRequest": 735,
+    "guardScope": "Bounded manual-trigger, inert-input, approved-commit/current-main authorization safety and synthetic regression tests only.",
+    "canonicalOriginScope": "Canonical origin, CORS, release-request and recovery-authorization convergence remain exclusively PR #735; no implementation is imported by #871.",
+    "mergeAuthorized": false,
+    "releaseHolds": [
+      "REF-019",
+      "REF-020",
+      "existing production release holds"
+    ]
+  },
+  "authorizationNote": "Owner-approved narrow ownership reconciliation (2026-10-07), not merge or execution approval. PR #871 owns only bounded trigger/authorization safety on the shared workflow; PR #735 retains canonical-origin work. The PR #735 manifest is recorded here solely to preserve that shared-file boundary and its original exact allowlist, required checks, and prohibitions; no canonical-origin implementation or release-request change is imported. Ordinary pull_request and main push validation remains synthetic. Future probing requires a separate fresh manual dispatch, protected production approval, inert exact action/origin confirmations, and equality of approved commit, workflow commit, dispatch source and authoritative current main after approval and immediately before every side effect/retry. Reruns cannot reuse approval. BFF request-protection nonce insertion/expiry cleanup remains a possible live effect. No merge, workflow dispatch, production deployment, Auth configuration change, recovery attempt, factor deletion, credential creation, persistent access, or lending activation is authorized. Preserve merged PR #868 and execution-disabled plan-only PR #863. Do not reconcile #862/#863 onto this unmerged guard. REF-019/020 and all existing release holds remain intact; any future main merge requires parent approval and loan-workstream coordination."
 }
