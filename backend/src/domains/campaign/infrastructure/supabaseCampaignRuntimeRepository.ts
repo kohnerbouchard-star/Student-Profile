@@ -36,6 +36,8 @@ interface QueryBuilder<T = unknown> extends PromiseLike<DatabaseResult<T[]>> {
 
 export interface CampaignRuntimeSupabaseClient {
   from<T = Record<string, unknown>>(table: string): QueryBuilder<T>;
+  rpc(functionName: "complete_campaign_effect_command_v2" | "fail_campaign_effect_command_v2",
+    args: Readonly<Record<string, unknown>>): Promise<DatabaseResult<boolean>>;
   rpc<T = Record<string, unknown>>(
     functionName: string,
     args: Readonly<Record<string, unknown>>,
@@ -183,26 +185,27 @@ export function createSupabaseCampaignEffectWorkerRepository(
         mapClaimedCommand,
       ));
     },
-    complete: async ({ commandId, completedAt }) => {
-      const result = await client.rpc<{ complete_campaign_effect_command_v1: boolean }>(
-        "complete_campaign_effect_command_v1",
+    complete: async ({ commandId, attemptCount, completedAt }) => {
+      const result = await client.rpc(
+        "complete_campaign_effect_command_v2",
         {
           p_command_public_id: commandId,
+          p_expected_attempt_count: attemptCount,
           p_completed_at: completedAt,
         },
       );
-      assertNoError(result, "campaign effect completion");
-      if ((result.data as unknown) !== true) throw invalid("Campaign effect completion was not acknowledged.");
+      return requireAcknowledgement(result);
     },
-    fail: async ({ commandId, errorCode }) => {
-      const result = await client.rpc<{ fail_campaign_effect_command_v1: boolean }>(
-        "fail_campaign_effect_command_v1",
+    fail: async ({ commandId, attemptCount, errorCode }) => {
+      const result = await client.rpc(
+        "fail_campaign_effect_command_v2",
         {
           p_command_public_id: commandId,
+          p_expected_attempt_count: attemptCount,
           p_error_code: errorCode,
         },
       );
-      requireRows(result, "campaign effect failure");
+      return requireAcknowledgement(result);
     },
   };
   return Object.freeze(repository);
@@ -408,6 +411,12 @@ function requireFirst<T>(
   const rows = requireRows(result, label);
   if (rows.length !== 1) throw invalid(`${label} returned ${rows.length} rows.`);
   return rows[0]!;
+}
+
+function requireAcknowledgement(result: DatabaseResult<boolean>): boolean {
+  assertNoError(result, "campaign effect acknowledgement");
+  if (typeof result.data !== "boolean") throw invalid("Campaign acknowledgement must be boolean.");
+  return result.data;
 }
 
 function requireRows<T>(

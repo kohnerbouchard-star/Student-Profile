@@ -46,14 +46,14 @@ async function snapshot(game: string) {
     await json(`select coalesce(jsonb_agg(to_jsonb(r) order by id),'[]') from public.${ident(table)} r where game_session_id=${q(game)}`)])));
 }
 const rpcNames = ["execute_campaign_event_atomic_v2", "claim_campaign_effect_commands_v1", "complete_campaign_effect_command_v1",
-  "fail_campaign_effect_command_v1", "publish_campaign_notification_v1", "apply_world_route_state_v1"];
+  "fail_campaign_effect_command_v1", "publish_campaign_notification_v1", "apply_world_route_state_v1", "complete_campaign_effect_command_v2", "fail_campaign_effect_command_v2", "recover_campaign_effect_command_v1"];
 function client(app: string) {
   return {
     async rpc(name: string, args: Readonly<Record<string, unknown>>) {
       assert.ok(rpcNames.includes(name));
       const call = `public.${ident(name)}(${Object.entries(args).map(([k, v]) => `${ident(k)}=>${q(v)}`).join(",")})`;
       try {
-        const set = ["execute_campaign_event_atomic_v2", "claim_campaign_effect_commands_v1"].includes(name);
+        const set = ["execute_campaign_event_atomic_v2", "claim_campaign_effect_commands_v1", "recover_campaign_effect_command_v1"].includes(name);
         const data = JSON.parse(await sql(set ? `select coalesce(jsonb_agg(r),'[]') from ${call} r` : `select to_jsonb(${call})`, app, true));
         receipts.push({ app, name, data }); return { data, error: null };
       } catch (error) {
@@ -160,7 +160,7 @@ async function proveLeases() {
   for (const f of [first, second]) {
     const row = await state(f.game); assert.equal(row.status, "processing"); assert.equal(row.attempt_count, 1);
     assert.equal(row.public_id, f.command.public_id); assert.equal(row.idempotency_key, f.command.idempotency_key);
-    await effects.complete({ commandId: row.public_id, completedAt: now });
+    await effects.complete({ commandId: row.public_id, attemptCount: row.attempt_count, completedAt: now });
   }
   checks.disjointClaims = { rowLockObserved: true, claimedA, claimedB };
 
@@ -178,7 +178,7 @@ async function proveLeases() {
   assert.equal((await state(expired.game)).status, "processing");
   assert.equal(Date.parse((await state(expired.game)).claimed_at), Date.parse(now));
   checks.expiryAndAttemptCaps = { exactFiveMinutesExcluded: true, failedAndProcessing25Excluded: true, reclaimed };
-  for (const f of [exact, expired]) await effects.complete({ commandId: f.command.public_id, completedAt: now });
+  for (const f of [exact, expired]) await effects.complete({ commandId: f.command.public_id, attemptCount: (await state(f.game)).attempt_count, completedAt: now });
   const pendingCap = await pending();
   await sql(`update public.campaign_effect_commands set attempt_count=25 where public_id=${q(pendingCap.command.public_id)}`);
   const beforeCap = await snapshot(pendingCap.game);
@@ -191,11 +191,11 @@ async function proveLeases() {
   const stale = await pending(), reclaimedAt = new Date(Date.parse(now) + 300001).toISOString();
   const clientA = client("ref046-stale-a"), clientB = client("ref046-stale-b");
   const repoA = createSupabaseCampaignEffectWorkerRepository(clientA), repoB = createSupabaseCampaignEffectWorkerRepository(clientB);
-  let announceClaim!: () => void, releaseFailure!: () => void;
-  const aClaimed = new Promise<void>(resolve => announceClaim = resolve), mayFail = new Promise<void>(resolve => releaseFailure = resolve);
+  let announceClaim!: () => void, releaseDelivery!: () => void;
+  const aClaimed = new Promise<void>(resolve => announceClaim = resolve), mayDeliver = new Promise<void>(resolve => releaseDelivery = resolve);
   const workerA = runCampaignEffectWorker({ repository: repoA, claimedAt: now, limit: 1,
-    ports: { ...createSupabaseCampaignEffectPorts(clientA, now), notifyPlayers: async () => {
-      announceClaim(); await mayFail; throw { code: "ref046_injected_stale_delivery_failure" };
+    ports: { ...createSupabaseCampaignEffectPorts(clientA, now), notifyPlayers: async input => {
+      announceClaim(); await mayDeliver; await createSupabaseCampaignEffectPorts(clientA, now).notifyPlayers(input);
     } } });
   await aClaimed;
   const afterA = await state(stale.game); assert.equal(afterA.attempt_count, 1); assert.equal(afterA.status, "processing");
@@ -205,25 +205,62 @@ async function proveLeases() {
       const rows = await repoB.claim(input);
       assert.equal(rows.length, 1); assert.equal(rows[0].commandId, stale.command.public_id);
       assert.equal(rows[0].attemptCount, 2); assert.equal(rows[0].idempotencyKey, stale.command.idempotency_key);
-      releaseFailure(); resultA = await workerA;
+      const currentClaim = await state(stale.game);
+      assert.equal(await repoA.fail({ commandId: rows[0].commandId, attemptCount: 1, errorCode: "ref046_stale_failure" }), false);
+      releaseDelivery(); resultA = await workerA;
       const afterStaleFailure = await state(stale.game);
+      assert.deepEqual(afterStaleFailure, currentClaim, "Both stale acknowledgements must leave the current claim unchanged");
       checks.staleFailureState = afterStaleFailure;
-      assert.equal(afterStaleFailure.status, "failed"); assert.equal(afterStaleFailure.attempt_count, 2);
+      assert.equal(afterStaleFailure.status, "processing"); assert.equal(afterStaleFailure.attempt_count, 2);
       return rows;
     } }, ports: createSupabaseCampaignEffectPorts(clientB, reclaimedAt) });
   const persisted = await snapshot(stale.game);
-  const failure = receipts.find(r => r.app === "ref046-stale-a" && r.name === "fail_campaign_effect_command_v1");
-  const completion = receipts.find(r => r.app === "ref046-stale-b" && r.name === "complete_campaign_effect_command_v1");
-  checks.staleWorker = { resultA, resultB, failure, completion, persisted };
-  assert.equal(resultA?.failedCount, 1); assert.equal(resultA?.completedCount, 0); assert.equal(failure?.data, true);
+  const failure = receipts.find(r => r.app === "ref046-stale-a" && r.name === "fail_campaign_effect_command_v2");
+  const completion = receipts.find(r => r.app === "ref046-stale-b" && r.name === "complete_campaign_effect_command_v2");
+  const staleCompletion = receipts.find(r => r.app === "ref046-stale-a" && r.name === "complete_campaign_effect_command_v2");
+  checks.staleWorker = { resultA, resultB, failure, completion, staleCompletion, persisted };
+  assert.equal(resultA?.failedCount, 1); assert.equal(staleCompletion?.data, false); assert.equal(failure?.data, false);
+  assert.equal(receipts.filter(r => r.app === "ref046-stale-a" && r.name === "fail_campaign_effect_command_v2").length, 1);
   assert.equal(resultB.claimedCount, 1); assert.equal(persisted.notifications.length, 1);
   assert.equal(persisted.notification_deliveries.length, 1); assert.equal(persisted.notification_deliveries[0].player_id, stale.player);
   assert.equal(persisted.notifications[0].source_id, stale.command.idempotency_key);
   assert.equal(persisted.campaign_effect_commands[0].attempt_count, 2);
-  assert.equal(persisted.campaign_effect_commands[0].status, "failed"); assert.equal(completion?.data, false);
+  assert.equal(persisted.campaign_effect_commands[0].status, "completed"); assert.equal(completion?.data, true); assert.equal(resultB.completedCount, 1);
+  assert.deepEqual(receipts.find(r => r.app === "ref046-stale-b" && r.name === "publish_campaign_notification_v1")?.data,
+    { outcome: "replayed", notificationId: persisted.notifications[0].public_notification_id, totalDeliveries: 1, insertedDeliveries: 0 });
   assert.deepEqual(await foreignState(), foreignBaseline); checks.foreignFixturesUnchanged = true;
   // A false completion must never be credited as completed by the actual worker.
-  assert.equal(resultB.completedCount, 0, "REF046_STALE_WORKER_FALSE_COMPLETION: stop for separately authorized runtime correction");
+  assert.equal(resultA?.completedCount, 0, "REF046_STALE_WORKER_FALSE_COMPLETION: stop for separately authorized runtime correction");
+  const recovered = await pending(), commandId = recovered.command.public_id;
+  assert.equal((await effects.claim({ limit: 100, claimedAt: now }))[0].attemptCount, 1);
+  assert.equal(await effects.fail({ commandId, attemptCount: 1, errorCode: "ref046_recovery" }), true);
+  const recoveryArgs = { p_game_session_id: recovered.game, p_command_public_id: commandId,
+    p_actor_staff_user_id: staff.at(-1), p_reason: "REF046 synthetic recovery proof", p_idempotency_key: "ref046.recovery", p_recovered_at: now };
+  const recovery = await service.rpc("recover_campaign_effect_command_v1", recoveryArgs);
+  assert.equal(recovery.error, null); assert.equal(recovery.data[0].attempt_count, 1);
+  assert.equal((await effects.claim({ limit: 100, claimedAt: now }))[0].attemptCount, 2);
+  assert.equal(await effects.fail({ commandId, attemptCount: 1, errorCode: "ref046_stale_recovery" }), false);
+  assert.equal(await effects.complete({ commandId, attemptCount: 2, completedAt: now }), true);
+  const completed = await snapshot(recovered.game);
+  assert.equal(await effects.complete({ commandId, attemptCount: 2, completedAt: later }), true);
+  assert.equal(await effects.fail({ commandId, attemptCount: 2, errorCode: "ref046_after_completion" }), false);
+  const replay = await service.rpc("recover_campaign_effect_command_v1", recoveryArgs);
+  assert.equal(replay.error, null); assert.equal(replay.data[0].recovery_outcome, "replayed"); assert.equal(replay.data[0].attempt_count, 2);
+  for (const attemptCount of [null, 0, 26]) {
+    const complete = await service.rpc("complete_campaign_effect_command_v2", { p_command_public_id: commandId, p_expected_attempt_count: attemptCount, p_completed_at: now });
+    const fail = await service.rpc("fail_campaign_effect_command_v2", { p_command_public_id: commandId, p_expected_attempt_count: attemptCount, p_error_code: "ref046_invalid" });
+    assert.equal(complete.error?.code, "P0001"); assert.equal(fail.error?.code, "P0001");
+  }
+  for (const [name, args] of [["complete_campaign_effect_command_v1", { p_command_public_id: commandId, p_completed_at: now }],
+    ["fail_campaign_effect_command_v1", { p_command_public_id: commandId, p_error_code: "ref046_legacy" }]] as const) {
+    assert.match(String((await service.rpc(name, args)).error?.message), /CAMPAIGN_CLAIM_OWNERSHIP_REQUIRED/);
+  }
+  for (const role of ["anon", "authenticated"]) {
+    await assert.rejects(sql(`begin; set local role ${ident(role)}; select public.complete_campaign_effect_command_v2(${q(commandId)},${q(now)},2); commit;`), /permission denied/);
+    await assert.rejects(sql(`begin; set local role ${ident(role)}; select public.fail_campaign_effect_command_v2(${q(commandId)},'ref046_denied',2); commit;`), /permission denied/);
+  }
+  assert.deepEqual(await snapshot(recovered.game), completed); assert.deepEqual(await foreignState(), foreignBaseline);
+  checks.recoveryReplayAndRoles = { attemptBeforeRecovery: 1, attemptAfterReclaim: 2, completionReplayUnchanged: true, legacyAndWrongRolesDenied: true };
 }
 try {
   const migrations: string[] = [];

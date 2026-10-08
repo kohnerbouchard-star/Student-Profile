@@ -3478,6 +3478,10 @@
         "lines": 567
       },
       {
+        "file": "backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts",
+        "lines": 564
+      },
+      {
         "file": "admin/game-code-wiring.js",
         "lines": 563
       },
@@ -3492,10 +3496,6 @@
       {
         "file": "admin/v2/src/routes/world-management/WorldManagementApi.js",
         "lines": 556
-      },
-      {
-        "file": "backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts",
-        "lines": 555
       },
       {
         "file": "backend/src/domains/store/infrastructure/supabaseStorePurchaseRepository.ts",
