@@ -586,7 +586,9 @@
     reconcileFrame = window.requestAnimationFrame(step);
   }
 
-  window.addEventListener("econovaria:admin-bootstrap-complete", scheduleReconcile);
+  window.addEventListener("econovaria:admin-bootstrap-complete", () => {
+    Promise.resolve(feature()?.sessionBootstrapPromise).then(scheduleReconcile, scheduleReconcile);
+  });
   window.addEventListener("econovaria:admin-session-refreshed", scheduleReconcile);
   window.addEventListener("storage", scheduleReconcile);
   window.addEventListener("load", scheduleReconcile, { once: true });

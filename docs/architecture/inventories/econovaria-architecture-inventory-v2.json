@@ -3415,7 +3415,7 @@
       },
       {
         "file": "admin/game-session-controls.js",
-        "lines": 606
+        "lines": 608
       },
       {
         "file": "backend/src/platform/supabase/edgeStaffSession.ts",

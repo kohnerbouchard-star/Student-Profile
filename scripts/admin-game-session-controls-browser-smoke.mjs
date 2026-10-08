@@ -87,6 +87,29 @@ await page.route("**/functions/v1/web-session-api/logout", async (route) => {
 });
 
 try {
+  report.bootstrapCompletion = [];
+  for (const mode of ["resolve", "reject", "none"]) {
+    const fixture = await page.context().newPage();
+    await fixture.setContent('<main id="adminPreview"><aside></aside></main>');
+    await fixture.addScriptTag({ url: new URL("./game-session-controls.js", BASE_URL).href });
+    report.bootstrapCompletion.push(await fixture.evaluate(async mode => {
+      const frame = () => new Promise(requestAnimationFrame);
+      const feature = {}; let resolve, reject;
+      window.Econovaria = { features: { adminOverviewTerminal: feature } };
+      if (mode !== "none") {
+        feature.sessionBootstrapPromise = new Promise((yes, no) => { resolve = yes; reject = no; });
+        feature.sessionBootstrapPromise.catch(() => {});
+      }
+      await frame(); await frame(); window.dispatchEvent(new Event("econovaria:admin-bootstrap-complete"));
+      await frame(); await frame();
+      if (mode !== "none") { document.querySelector("aside").replaceChildren(); mode === "resolve" ? resolve() : reject(new Error("synthetic bootstrap failure")); }
+      await frame(); await frame();
+      return { mode, cards: document.querySelectorAll("[data-econovaria-game-session-card]").length, shares: document.querySelectorAll("[data-econovaria-share-game]").length };
+    }, mode));
+    await fixture.close();
+  }
+  console.log("REF015_BOOTSTRAP_COMPLETION " + JSON.stringify(report.bootstrapCompletion));
+  assert(report.bootstrapCompletion.every(result => result.cards === 1 && result.shares === 1), "Bootstrap completion lost or duplicated game controls.");
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
   await page.evaluate((snapshotKey) => localStorage.removeItem(snapshotKey), LOGOUT_SNAPSHOT_KEY);
