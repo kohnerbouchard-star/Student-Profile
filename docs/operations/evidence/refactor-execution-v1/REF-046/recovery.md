@@ -130,3 +130,5 @@ foreign resource identities; finalization rechecks absence after a separate clea
 Campaign runs last in its exclusive job, with a nonempty foreign sentinel and lint parity.
 Local supervisor rejection checks (3), frozen Deno check, root tests, authority and diff pass.
 Disposable acceptance remains NOT_RUN pending exact-head CI; failed history is unchanged.
+First isolated run37844060685 failed closed on reset-recreated volume identity;
+artifact11579032496 retained. Explicit replay generations added; four guard tests pass.
