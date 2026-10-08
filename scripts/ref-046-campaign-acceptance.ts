@@ -237,6 +237,7 @@ try {
   try {
     for (const game of games) await sql(`delete from public.campaign_instances where game_session_id=${q(game)};
       delete from public.notifications where game_session_id=${q(game)};
+      delete from public.game_settings where game_session_id=${q(game)};
       delete from public.game_sessions where id=${q(game)}`);
     for (const owner of staff) await sql(`delete from public.staff_users where id=${q(owner)}`);
     await sql(`delete from public.campaign_program_definitions where pack_id=${q(pack)}; delete from public.campaign_effect_definitions where pack_id=${q(pack)}`);
