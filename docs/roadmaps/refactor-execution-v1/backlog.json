@@ -815,9 +815,10 @@
           "implementationSha": null,
           "mergeSha": null,
           "evidence": null
-        }
+        },
+        { "id": "REF-046c", "status": "PLANNED", "dependsOn": ["REF-046b"], "scope": "Approved current-claim acknowledgement correction; forward migration, truthful completion, legacy rejection; 400 lines/11 paths; task record controls", "implementationSha": null, "mergeSha": null, "evidence": null }
       ],
-      "cumulativeAllowedPaths": 16,
+      "cumulativeAllowedPaths": 21,
       "qualificationAmendment": "Approved four exact REF046 PR path registrations; preserve required checks and pins; see task record"
     },
     {
