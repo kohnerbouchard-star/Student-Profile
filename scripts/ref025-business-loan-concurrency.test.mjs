@@ -5,7 +5,7 @@ import { promisify } from 'node:util';
 import { spawn, execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { deadline, exchange, json, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow, authorityEffects, eligibilityEffects, incomeAssessment, incomeApplicationEffects, profileEffects, profileApplicationEffects } from './ref025-business-loan-concurrency.mjs';
+import { deadline, exchange, json, closeClient, intendedBlocker, checkedBackendCount, applicationEffects, decodeRow, authorityEffects, eligibilityEffects, incomeAssessment, incomeApplicationEffects, profileEffects, profileApplicationEffects, pauseEffects } from './ref025-business-loan-concurrency.mjs';
 
 // Exercise the same asynchronous process/marker boundary without requiring a database.
 function processSession() {
@@ -391,4 +391,54 @@ test('Child6 locks four editable files and preserves all required verification c
   assert.equal(current.nonblankChangedLineLimit, 380);
   assert.deepEqual([...current.allowedPaths].sort(), [...Object.keys(current.editablePathLineLimits), ...current.readOnlyPaths].sort());
   for (const flag of ['productionDeploymentAllowed', 'productionMutationAllowed', 'secretValuesAllowed']) assert.equal(current[flag], false);
+});
+
+test('canonical pause oracle rejects extra lifecycle, receipt, audit, session, FX and economic effects', () => {
+  const at = '2026-10-07T12:00:00+00:00', lower = '2026-10-07T12:00:01+00:00', upper = '2026-10-07T12:00:02+00:00', f = { g: 'game' };
+  const transitionId = '00000000-0000-4000-8000-000000000001', auditId = '00000000-0000-4000-8000-000000000002';
+  const before = { game: { id: f.g, owner_staff_user_id: 'staff', lifecycle_state: 'active', status: 'active', lifecycle_version: 1,
+    game_join_code_status: 'pending', started_at: '2026-10-01T00:00:00Z', paused_at: null, resumed_at: null, ended_at: null, archived_at: null, updated_at: '2026-10-01T00:00:00Z' },
+    transitions: [], sessions: [{ id: 'session', status: 'active' }], players: [{ id: 'player', status: 'active' }], fixings: [{ id: 'fixing' }],
+    fx: { cutover_status: 'ready', current_fixing_id: 'fixing', next_due_at: '2026-10-08T00:00:00Z', retry_after_at: at,
+      claimed_local_date: '2026-10-07', claimed_effective_at: at, lease_token: 'token', lease_owner: 'owner', lease_expires_at: upper,
+      claimed_input_hash: 'hash', claimed_engine_input: { input: 1 }, updated_at: at },
+    economic: { applications: [], profiles: [], audits: [], loans: [], ledger: [], balances: [] }, bank_transactions: [], inventory_holdings: [] };
+  const after = structuredClone(before); Object.assign(after.game, { lifecycle_state: 'paused', status: 'disabled', lifecycle_version: 2, paused_at: at, updated_at: at });
+  const times = { started_at: before.game.started_at, paused_at: at, resumed_at: null, ended_at: null, archived_at: null };
+  const metadata = { previous_state: 'active', lifecycle_state: 'paused', operational_status: 'disabled', lifecycle_version: 2, sessions_revoked: 0, join_code_status: 'pending', outcome: 'applied' };
+  after.transitions.push({ id: transitionId, game_session_id: f.g, staff_user_id: 'staff', idempotency_key: 'key', action: 'pause', ...metadata, ...times, game_updated_at: at, created_at: at, completed_at: at });
+  after.economic.audits.push({ id: auditId, game_session_id: f.g, actor_type: 'staff_user', actor_id: 'staff', action: 'game.lifecycle.pause', target_type: 'game_session', target_id: f.g, metadata, created_at: at });
+  for (const k of ['next_due_at', 'retry_after_at', 'claimed_local_date', 'claimed_effective_at', 'lease_token', 'lease_owner', 'lease_expires_at', 'claimed_input_hash', 'claimed_engine_input']) after.fx[k] = null;
+  after.fx.updated_at = '2026-10-07T12:00:01.5+00:00';
+  const paused = { at, lower, upper, result: { transition_outcome: 'applied', transition_action: 'pause', previous_state: 'active', lifecycle_state: 'paused',
+    operational_status: 'disabled', lifecycle_version: 2, sessions_revoked: 0, join_code_status: 'pending', allowed_actions: ['resume', 'end', 'revoke_sessions'], ...times, updated_at: at } };
+  pauseEffects(before, after, f, 'key', paused);
+  for (const corrupt of [s => s.game.lifecycle_version++, s => s.game.game_join_code_status = 'revoked', s => s.game.owner_staff_user_id = 'other',
+    s => s.game.paused_at = upper, s => s.game.updated_at = upper, s => s.game.extra = true,
+    s => s.transitions[0].game_session_id = 'other', s => s.transitions[0].staff_user_id = 'other', s => s.transitions[0].idempotency_key = 'other',
+    s => s.transitions[0].created_at = upper, s => s.transitions[0].completed_at = upper, s => s.transitions.push({}),
+    s => s.economic.audits[0].target_id = 'other', s => s.economic.audits[0].metadata.sessions_revoked++, s => s.economic.audits.push({}),
+    s => s.sessions[0].status = 'revoked', s => s.players[0].status = 'archived', s => s.fixings[0].id = 'changed',
+    s => s.fx.current_fixing_id = 'changed', s => s.fx.next_due_at = upper, s => s.fx.lease_owner = 'owner', s => s.fx.claimed_engine_input = {},
+    s => s.fx.updated_at = at, s => s.fx.updated_at = 'bad', s => s.fx.updated_at = '2026-10-08T00:00:00Z', s => s.fx.extra = true,
+    s => s.economic.applications.push({}), s => s.economic.profiles.push({}), s => s.economic.loans.push({}), s => s.economic.ledger.push({}),
+    s => s.economic.balances.push({}), s => s.bank_transactions.push({}), s => s.inventory_holdings.push({})]) {
+    const bad = structuredClone(after); corrupt(bad); assert.throws(() => pauseEffects(before, bad, f, 'key', paused));
+  }
+  for (const patch of [{ at: 'bad' }, { lower: upper, upper: lower }, { result: { ...paused.result, sessions_revoked: 1 } }, { result: { ...paused.result, lifecycle_version: 1 } }])
+    assert.throws(() => pauseEffects(before, after, f, 'key', { ...paused, ...patch }));
+});
+test('Child7 preserves verification authority and limits SQL to canonical observation helpers', () => {
+  const read = n => JSON.parse(readFileSync(new URL(`../docs/operations/contracts/player-cross-cutting/pr-${n}.json`, import.meta.url)));
+  const current = read(877), prior = read(875);
+  for (const field of ['requiredChecks', 'criticalJobChecks', 'requiredFiles', 'readOnlyPaths']) assert.deepEqual(current[field], prior[field]);
+  assert.deepEqual(current.editablePathLineLimits, { 'scripts/ref025-business-loan-concurrency.mjs': 180, 'scripts/ref025-business-loan-concurrency.sql': 55,
+    'scripts/ref025-business-loan-concurrency.test.mjs': 70, 'docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md': 35,
+    'docs/operations/contracts/player-cross-cutting/pr-877.json': 40 });
+  assert.equal(current.nonblankChangedLineLimit, 380);
+  assert.deepEqual([...current.allowedPaths].sort(), [...Object.keys(current.editablePathLineLimits), ...current.readOnlyPaths].sort());
+  for (const flag of ['productionDeploymentAllowed', 'productionMutationAllowed', 'secretValuesAllowed']) assert.equal(current[flag], false);
+  const sql = readFileSync(new URL('./ref025-business-loan-concurrency.sql', import.meta.url), 'utf8').split('-- Canonical pause observation only;')[1];
+  assert(sql.includes('public.transition_game_lifecycle_atomic_v1(')); assert(sql.includes('private.fx_runtime_state'));
+  assert(!/\b(?:update|insert|delete|alter|security definer)\b/i.test(sql));
 });
