@@ -236,11 +236,10 @@ try {
   if (blocker) { blocker.kill("SIGTERM"); await blocker.status; }
   try {
     for (const game of games) await sql(`delete from public.campaign_instances where game_session_id=${q(game)};
-      delete from public.notifications where game_session_id=${q(game)}; delete from public.players where game_session_id=${q(game)};
+      delete from public.notifications where game_session_id=${q(game)};
       delete from public.game_sessions where id=${q(game)}`);
     for (const owner of staff) await sql(`delete from public.staff_users where id=${q(owner)}`);
     await sql(`delete from public.campaign_program_definitions where pack_id=${q(pack)}; delete from public.campaign_effect_definitions where pack_id=${q(pack)}`);
   } catch (error) { evidence.status = "failed"; checks.cleanupError = String(error); throw error; }
-  finally { await Deno.writeTextFile("/tmp/ref018/ref046-events.json", JSON.stringify(evidence, null, 2) + "\n"); }
+  finally { await Deno.writeTextFile("/tmp/ref018/ref046-events.json", JSON.stringify(evidence, null, 2) + "\n"); console.log(JSON.stringify(evidence)); }
 }
-console.log(JSON.stringify(evidence));
