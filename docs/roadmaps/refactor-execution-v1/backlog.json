@@ -794,11 +794,23 @@
           "evidence": null
         },
         {
+          "id": "REF-046a-cleanup",
+          "status": "PLANNED",
+          "scope": "Approved 380-line isolated disposable qualification; twelve cumulative paths; see REF-046 cleanup child section",
+          "dependsOn": [
+            "REF-046a"
+          ],
+          "implementationSha": null,
+          "mergeSha": null,
+          "evidence": null
+        },
+        {
           "id": "REF-046b",
           "status": "PLANNED",
           "scope": "Competing claims, exact expiry and stale-worker defect-finding gate; see REF-046 task child section",
           "dependsOn": [
-            "REF-046a"
+            "REF-046a",
+            "REF-046a-cleanup"
           ],
           "implementationSha": null,
           "mergeSha": null,
