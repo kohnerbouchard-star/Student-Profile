@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.individual-recovery-environments-pr-876.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 876,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/staging-account-recovery.yml",
+    "api/password-reset.js",
+    "auth/reset-password.js",
+    "backend/src/platform/supabase/edgeStaffSession.ts",
+    "backend/supabase/functions/admin-api/systemRecoveryGuard.test.ts",
+    "backend/supabase/functions/password-reset-api/index.ts",
+    "backend/supabase/functions/staff-mfa-api/index.ts",
+    "backend/supabase/migrations/20261007221252_system_account_recovery_targets_v2.sql",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-876.json",
+    "docs/operations/evidence/system-account-recovery/environments-v2.md",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/individual-account-recovery.test.mjs",
+    "scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+    "scripts/password-recovery-mfa-browser.test.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/security/individual-account-recovery.mjs",
+    "scripts/security/staging-account-recovery.mjs",
+    "scripts/staging-account-recovery.test.mjs",
+    "scripts/system-recovery-database.test.mjs",
+    "scripts/vercel-auth-proxy-contract.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-876.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Auth Browser Review Contract",
+    "Staging System Account Recovery"
+  ],
+  "scopeRecord": "docs/operations/evidence/system-account-recovery/environments-v2.md",
+  "authorizationNote": "Owner approved individual-support recovery source for staging and production; parent approved bounded successor implementation with live execution disabled. Exact three-child scope; no Player edits. Verifier/regression are unchanged locks. Phase15 changes only register one CLI-generated forward migration and preserve original seven identities and all holds. No live credentials/provider purchase/bindings, dispatch, deployment, hosted migration, factor/session/account mutation or merge. Sole external system administrator and independent identity evidence remain mandatory. REF019/020 pauses and owner boundaries remain."
+}

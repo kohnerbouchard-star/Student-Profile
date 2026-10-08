@@ -4,6 +4,8 @@ on:
     paths:
       - '.github/workflows/staging-account-recovery.yml'
       - 'scripts/security/staging-account-recovery.mjs'
+      - 'scripts/security/individual-account-recovery.mjs'
+      - 'scripts/individual-account-recovery.test.mjs'
       - 'scripts/staging-account-recovery.test.mjs'
       - 'scripts/system-recovery-database.test.mjs'
       - 'backend/supabase/migrations/*system_account_recovery*'
@@ -35,7 +37,7 @@ jobs:
       - name: Synthetic operator and disposable database contracts
         env:
           ECONOVARIA_RECOVERY_DATABASE_TEST: '1'
-        run: node --test scripts/staging-account-recovery.test.mjs scripts/system-recovery-database.test.mjs
+        run: node --test scripts/individual-account-recovery.test.mjs scripts/staging-account-recovery.test.mjs scripts/system-recovery-database.test.mjs
       - name: Staff restriction and session guards
         run: >-
           deno test --deny-net --allow-env --config backend/supabase/functions/deno.json

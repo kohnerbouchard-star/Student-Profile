@@ -16,11 +16,13 @@ Deno.test('staging guard denies missing/revoked/restricted sessions and never fo
     if(await systemRecoveryAccessAllowed(staging,service as any,user,value)) throw Error('invalid bearer accepted');
   }
 });
-Deno.test('staging guard accepts only explicit boolean success and preserves production behavior', async () => {
+Deno.test('staging guard accepts only explicit boolean success and enforces production restriction', async () => {
   const yes={rpc:async()=>({data:true,error:null})};
   if(!await systemRecoveryAccessAllowed(staging,yes as any,user,token())) throw Error('valid session denied');
   const noCalls={rpc:async()=>{throw Error('production queried recovery state');}};
-  if(!await systemRecoveryAccessAllowed('https://cgiukdjwicykrmtkhudh.supabase.co',noCalls as any,user,token())) throw Error('production changed');
+  if(await systemRecoveryAccessAllowed('https://cgiukdjwicykrmtkhudh.supabase.co',noCalls as any,user,token())) throw Error('production restriction bypass');
+  if(!await systemRecoveryAccessAllowed('https://cgiukdjwicykrmtkhudh.supabase.co',yes as any,user,token())) throw Error('valid production session denied');
+  if(!await systemRecoveryAccessAllowed('http://127.0.0.1:54321',noCalls as any,user,token())) throw Error('local behavior changed');
 });
 
 Deno.test('shared Staff resolver rejects restricted access before any Staff data query', async () => {

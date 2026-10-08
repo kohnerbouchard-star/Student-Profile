@@ -6,7 +6,7 @@ import {
 } from "../../../src/platform/supabase/edgeResponse.ts";
 import {
   resolveStaffSessionForRequest,
-  recoveryGrantDigest,
+  recoveryGrantDigest, isSystemRecoveryProject,
 } from "../../../src/platform/supabase/edgeStaffSession.ts";
 import {
   bindGatewayTrustedClientIp,
@@ -51,7 +51,7 @@ Deno.serve(async (incomingRequest) => {
   let recoveryBody: Record<string, unknown> | null = null;
   let grantDigest: string | null = null;
   if (recoveryOperation) {
-    if (env.value.supabaseUrl !== "https://eecvbssdvarfcykcfrny.supabase.co" || request.method !== "POST" ||
+    if (!isSystemRecoveryProject(env.value.supabaseUrl) || request.method !== "POST" ||
       !["claim", "status", "enroll", "verify"].includes(recoveryOperation)) return jsonError(403, {code:"recovery_unavailable",message:"Recovery is unavailable.",retryable:false});
     try { recoveryBody = await readJsonBody(request); grantDigest = await recoveryGrantDigest(recoveryBody.grant); }
     catch { return jsonError(400, {code:"invalid_recovery_request",message:"Recovery request is invalid.",retryable:false}); }
