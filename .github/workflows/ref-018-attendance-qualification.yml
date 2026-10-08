@@ -2,7 +2,7 @@ name: REF-018 and REF-022 Staff Mutation Qualification
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, refactor/ref-046-db-registration, refactor/ref-046a-campaign-events]
     paths:
       - '.github/workflows/ref-018-attendance-qualification.yml'
       - 'backend/src/domains/attendance/**'
@@ -20,6 +20,7 @@ on:
       - 'scripts/ref-036-progression-acceptance.ts'
       - 'scripts/ref-039-stock-runner-acceptance.ts'
       - 'scripts/ref-045-license-issuance-acceptance.ts'
+      - 'scripts/ref-046-campaign-acceptance.ts'
       - 'backend/supabase/functions/license-issuance-worker/**'
       - 'backend/supabase/functions/_shared/licenseCode.ts'
       - 'backend/src/domains/licensing/**'
@@ -50,6 +51,7 @@ on:
       - 'scripts/ref-036-progression-acceptance.ts'
       - 'scripts/ref-039-stock-runner-acceptance.ts'
       - 'scripts/ref-045-license-issuance-acceptance.ts'
+      - 'scripts/ref-046-campaign-acceptance.ts'
       - 'backend/supabase/functions/license-issuance-worker/**'
       - 'backend/supabase/functions/_shared/licenseCode.ts'
       - 'backend/src/domains/licensing/**'
@@ -82,6 +84,8 @@ jobs:
       REF036_DISPOSABLE_DATABASE: '1'
       REF039_DISPOSABLE_DATABASE: '1'
       REF045_DISPOSABLE_DATABASE: '1'
+      REF046_DISPOSABLE_DATABASE: '1'
+      REF046_STACK_ID: econovaria
       RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Check out exact qualification head
@@ -112,6 +116,7 @@ jobs:
           deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-036-progression-acceptance.ts
           deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-039-stock-runner-acceptance.ts
           deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-045-license-issuance-acceptance.ts
+          deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-046-campaign-acceptance.ts
           npx supabase --version
           npx supabase start --help > /tmp/ref018/start-help.log
           npx supabase db reset --help > /tmp/ref018/reset-help.log
@@ -195,6 +200,11 @@ jobs:
           set -euo pipefail
           node --experimental-strip-types --test scripts/license-issuance-queue-contract.test.mjs scripts/license-issuance-hardening-contract.test.mjs scripts/license-email-outbox-contract.test.mjs scripts/stripe-license-adapter-contract.test.mjs 2>&1 | tee /tmp/ref018/ref045-contracts.log
           deno run --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF045_DISPOSABLE_DATABASE,RELEASE_COMMIT,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,ECONOVARIA_LICENSE_CODE_DERIVATION_SECRET,ECONOVARIA_PURCHASE_CODE_HMAC_SECRET --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-045-license-issuance-acceptance.ts 2>&1 | tee /tmp/ref018/ref045-database-qualification.log
+      - name: Prove Campaign event replay, rollback and destination effects
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno run --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF046_DISPOSABLE_DATABASE,REF046_STACK_ID,RELEASE_COMMIT,PATH --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-046-campaign-acceptance.ts --phase=events 2>&1 | tee /tmp/ref018/ref046-events.log
       - name: Preserve baseline lint findings without introducing new diagnostics
         shell: bash
         run: |
