@@ -19,7 +19,7 @@ const sourceSha = Deno.env.get("RELEASE_COMMIT") || "";
 assert.match(sourceSha, /^[a-f0-9]{40}$/);
 const checks: Record<string, unknown> = {}, receipts: Array<Record<string, unknown>> = [];
 const evidence = { task: "REF-046a", sourceSha, status: "running", productionTouched: false, checks, receipts };
-const now = "2026-10-08T00:00:00.000Z", later = "2026-10-09T00:00:00.000Z";
+let now = "2026-10-08T00:00:00.000Z", later = "2026-10-09T00:00:00.000Z";
 const pack = `ref046-${crypto.randomUUID()}`, digest = `sha256:${"a".repeat(64)}`;
 const games: string[] = [], staff: string[] = [], decoder = new TextDecoder(), encoder = new TextEncoder();
 const q = (v: unknown): string => v === null ? "null" : `'${String(typeof v === "object" ? JSON.stringify(v) : v).replaceAll("'", "''")}'`;
@@ -84,7 +84,7 @@ const schedule = { nextScheduledAt: ({ event }: { event: { completeCampaign: boo
 const repository = createSupabaseCampaignSchedulerRepository(service, schedule);
 const programs = createSupabaseCampaignProgramProvider(service);
 const effects = createSupabaseCampaignEffectWorkerRepository(service);
-const ports = createSupabaseCampaignEffectPorts(service, now);
+
 const notify = { kind: "notify_players" as const, audience: "all_players" as const, notificationDefinitionId: "ref046.notice" };
 const event = (phase: string, nextPhase: string | null, completeCampaign = false) => ({
   eventKey: `ref046.${completeCampaign ? nextPhase : phase}`, phase, nextPhase, completeCampaign, prerequisites: [], effects: [notify],
@@ -96,16 +96,17 @@ async function seed(phase = "arrival", definition = "ref046.program") {
   const game = crypto.randomUUID(), owner = crypto.randomUUID(), player = crypto.randomUUID(); games.push(game); staff.push(owner);
   await sql(`begin;
     insert into public.staff_users(id,supabase_auth_user_id,email,display_name) values(${q(owner)},${q(crypto.randomUUID())},${q(owner + "@example.test")},'REF046 synthetic');
-    insert into public.game_sessions(id,owner_staff_user_id,name,status,lifecycle_state,provisioning_status) values(${q(game)},${q(owner)},'REF046 synthetic','active','active','ready');
+    insert into public.game_sessions(id,owner_staff_user_id,name,status,lifecycle_state,provisioning_status,provisioning_pack_id,provisioning_pack_version,started_at)
+      values(${q(game)},${q(owner)},'REF046 synthetic','active','active','ready',${q(pack)},'1',${q(now)});
     insert into public.players(id,game_session_id,display_name,status) values(${q(player)},${q(game)},'REF046 synthetic','active');
-    insert into public.campaign_instances(game_session_id,pack_id,pack_version,definition_id,definition_digest,current_phase,scheduled_at)
-      values(${q(game)},${q(pack)},'1',${q(definition)},${q(digest)},${q(phase)},${q(now)});
+    update public.campaign_instances set definition_id=${q(definition)},current_phase=${q(phase)},scheduled_at=${q(now)}
+      where game_session_id=${q(game)} and pack_id=${q(pack)};
     insert into public.campaign_outcome_evidence_snapshots(game_session_id,evidence_revision,recovery_readiness_basis_points,evidence_digest,observed_at)
       values(${q(game)},1,8000,${q(digest)},${q(now)}); commit;`);
   return { game, player, instance: (await repository.listDueCampaigns({ dueAt: now, limit: 100 })).find(r => r.gameId === game)! };
 }
 const run = (runId: string = crypto.randomUUID(), c = service) => runCampaignScheduler({ repository: createSupabaseCampaignSchedulerRepository(c, schedule), programs: createSupabaseCampaignProgramProvider(c), dueAt: now, runId, limit: 25 });
-const deliver = () => runCampaignEffectWorker({ repository: effects, ports, claimedAt: now, limit: 100 });
+const deliver = () => runCampaignEffectWorker({ repository: effects, ports: createSupabaseCampaignEffectPorts(service, now), claimedAt: now, limit: 100 });
 async function definition() {
   await sql(`insert into public.campaign_effect_definitions(pack_id,pack_version,definition_id,effect_kind,payload)
     values(${q(pack)},'1','ref046.notice','notify_players',${q({ title: "REF046", summary: "Synthetic proof", priority: "normal", displayMode: "inbox", notificationType: "campaign" })})`);
@@ -117,17 +118,28 @@ async function waitFor(predicate: string) {
   }
   throw new Error("Real PostgreSQL contention was not observed");
 }
-let blocker: Deno.ChildProcess | undefined;
+async function foreignState() {
+  const excluded = games.length ? `where game_session_id not in (${games.map(q)})` : "";
+  return Object.fromEntries(await Promise.all(tables.map(async table => [table,
+    await json(`select coalesce(jsonb_agg(to_jsonb(r) order by id),'[]') from public.${ident(table)} r ${excluded}`)])));
+}
+let foreignBaseline: unknown, blocker: Deno.ChildProcess | undefined;
 try {
   const migrations: string[] = [];
   for await (const entry of Deno.readDir("backend/supabase/migrations")) if (entry.isFile && /^\d+_.+\.sql$/.test(entry.name)) migrations.push(entry.name.split("_")[0]);
   migrations.sort(); assert.ok(migrations.length > 0);
   assert.deepEqual(await json("select jsonb_agg(version order by version) from supabase_migrations.schema_migrations"), migrations, "Full frozen migration replay required");
   checks.migrations = { count: migrations.length, head: migrations.at(-1) };
-  assert.equal(await sql("select count(*) from public.campaign_instances"), "0", "Owned replay must begin with no Campaign fixtures");
+  // Retained suites provision their own campaigns; preserve them and choose a clock before their work.
+  foreignBaseline = await foreignState();
+  const earliest = await json("select coalesce(to_jsonb(min(scheduled_at)),'null'::jsonb) from public.campaign_instances");
+  if (earliest) now = new Date(Math.min(Date.parse(now), Date.parse(earliest) - 86400000)).toISOString();
+  later = new Date(Date.parse(now) + 86400000).toISOString();
+  assert.equal(await sql("select count(*) from public.campaign_effect_commands where status <> 'completed'"), "0", "No foreign claimable work may enter this test");
+  checks.fixtureClock = now;
   await sql(`insert into public.campaign_program_definitions(pack_id,pack_version,definition_id,definition_digest,program) values(${q(pack)},'1','ref046.program',${q(digest)},${q(program)})`);
   const empty = await run(); assert.deepEqual(empty, { dueCount: 0, executedCount: 0, replayedCount: 0, failedCount: 0, failures: [] });
-  assert.equal(await sql("select count(*) from public.campaign_effect_commands"), "0"); assert.equal(await sql("select count(*) from public.campaign_event_executions"), "0"); checks.emptyWork = empty;
+  assert.deepEqual(await foreignState(), foreignBaseline); checks.emptyWork = empty;
 
   const paused = await seed();
   await sql(`update public.game_sessions set status='disabled',lifecycle_state='paused' where id=${q(paused.game)}`);
@@ -210,6 +222,7 @@ try {
     assert.equal((await deliver()).completedCount, 1); assert.equal((await snapshot(f.game)).notification_deliveries.length, 1);
     checks[`${tag}RunContention`] = results;
   }
+  assert.deepEqual(await foreignState(), foreignBaseline); checks.foreignFixturesUnchanged = true;
   evidence.status = "passed";
 } catch (error) {
   evidence.status = "failed"; checks.error = String(error); throw error;
