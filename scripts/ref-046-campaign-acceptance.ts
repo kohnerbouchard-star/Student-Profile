@@ -20,7 +20,8 @@ assert.match(sourceSha, /^[a-f0-9]{40}$/);
 const checks: Record<string, unknown> = {}, receipts: Array<Record<string, unknown>> = [];
 const evidence = { task: "REF-046a", sourceSha, status: "running", productionTouched: false, checks, receipts };
 let now = "2026-10-08T00:00:00.000Z", later = "2026-10-09T00:00:00.000Z";
-const pack = `ref046-${crypto.randomUUID()}`, digest = `sha256:${"a".repeat(64)}`;
+const pack = `ref046-${crypto.randomUUID()}`;
+let digest = `sha256:${"a".repeat(64)}`;
 const games: string[] = [], staff: string[] = [], decoder = new TextDecoder(), encoder = new TextEncoder();
 const q = (v: unknown): string => v === null ? "null" : `'${String(typeof v === "object" ? JSON.stringify(v) : v).replaceAll("'", "''")}'`;
 const ident = (v: string) => { assert.match(v, /^[a-z_][a-z0-9_]*$/); return `"${v}"`; };
@@ -137,6 +138,8 @@ try {
   later = new Date(Date.parse(now) + 86400000).toISOString();
   assert.equal(await sql("select count(*) from public.campaign_effect_commands where status <> 'completed'"), "0", "No foreign claimable work may enter this test");
   checks.fixtureClock = now;
+  digest = await sql(`select public.campaign_program_digest_v1(${q(program)})`);
+  program.definitionDigest = digest;
   await sql(`insert into public.campaign_program_definitions(pack_id,pack_version,definition_id,definition_digest,program) values(${q(pack)},'1','ref046.program',${q(digest)},${q(program)})`);
   const empty = await run(); assert.deepEqual(empty, { dueCount: 0, executedCount: 0, replayedCount: 0, failedCount: 0, failures: [] });
   assert.deepEqual(await foreignState(), foreignBaseline); checks.emptyWork = empty;
