@@ -123,3 +123,10 @@ Prior FK failures remain: runs37791861889,37792879204,37793958640; last artifact
 This approved amendment replaces row deletion with verified resource disposal;
 no guard/constraint/purge/credential/production change or local registry retry.
 Actual authority precedes implementation. No merge; A/B/parent stay unaccepted.
+Actual child authority: PR882, committed before implementation at
+`ece66b6bbcbf6fa2dbd3873f516ca25ed52bb9c9`; base is registration PR881.
+Supervisor independently inventories exact Docker resource identities and preserves
+foreign resource identities; finalization rechecks absence after a separate cleanup step.
+Campaign runs last in its exclusive job, with a nonempty foreign sentinel and lint parity.
+Local supervisor rejection checks (3), frozen Deno check, root tests, authority and diff pass.
+Disposable acceptance remains NOT_RUN pending exact-head CI; failed history is unchanged.

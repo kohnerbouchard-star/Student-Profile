@@ -2,7 +2,7 @@ name: REF-018 and REF-022 Staff Mutation Qualification
 
 on:
   pull_request:
-    branches: [main, refactor/ref-046-db-registration, refactor/ref-046a-campaign-events]
+    branches: [main, refactor/ref-046-db-registration, refactor/ref-046a-campaign-events, refactor/ref-046-cleanup-registration]
     paths:
       - '.github/workflows/ref-018-attendance-qualification.yml'
       - 'backend/src/domains/attendance/**'
@@ -21,6 +21,7 @@ on:
       - 'scripts/ref-039-stock-runner-acceptance.ts'
       - 'scripts/ref-045-license-issuance-acceptance.ts'
       - 'scripts/ref-046-campaign-acceptance.ts'
+      - 'scripts/ref-046-disposable-qualification.mjs'
       - 'backend/supabase/functions/license-issuance-worker/**'
       - 'backend/supabase/functions/_shared/licenseCode.ts'
       - 'backend/src/domains/licensing/**'
@@ -52,6 +53,7 @@ on:
       - 'scripts/ref-039-stock-runner-acceptance.ts'
       - 'scripts/ref-045-license-issuance-acceptance.ts'
       - 'scripts/ref-046-campaign-acceptance.ts'
+      - 'scripts/ref-046-disposable-qualification.mjs'
       - 'backend/supabase/functions/license-issuance-worker/**'
       - 'backend/supabase/functions/_shared/licenseCode.ts'
       - 'backend/src/domains/licensing/**'
@@ -200,11 +202,6 @@ jobs:
           set -euo pipefail
           node --experimental-strip-types --test scripts/license-issuance-queue-contract.test.mjs scripts/license-issuance-hardening-contract.test.mjs scripts/license-email-outbox-contract.test.mjs scripts/stripe-license-adapter-contract.test.mjs 2>&1 | tee /tmp/ref018/ref045-contracts.log
           deno run --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF045_DISPOSABLE_DATABASE,RELEASE_COMMIT,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,ECONOVARIA_LICENSE_CODE_DERIVATION_SECRET,ECONOVARIA_PURCHASE_CODE_HMAC_SECRET --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-045-license-issuance-acceptance.ts 2>&1 | tee /tmp/ref018/ref045-database-qualification.log
-      - name: Prove Campaign event replay, rollback and destination effects
-        shell: bash
-        run: |
-          set -euo pipefail
-          deno run --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF046_DISPOSABLE_DATABASE,REF046_STACK_ID,RELEASE_COMMIT,PATH --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-046-campaign-acceptance.ts --phase=events 2>&1 | tee /tmp/ref018/ref046-events.log
       - name: Preserve baseline lint findings without introducing new diagnostics
         shell: bash
         run: |
@@ -241,3 +238,44 @@ jobs:
       - name: Stop disposable database
         if: always()
         run: npx supabase stop --workdir backend --no-backup
+
+  campaign-qualification:
+    name: REF046 exclusive disposable qualification
+    needs: attendance-qualification
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out exact qualification head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - name: Install frozen supervisor dependencies
+        run: npm ci
+      - name: Verify supervisor fail-closed guards
+        run: node scripts/ref-046-disposable-qualification.mjs --self-test
+      - name: Prove Campaign assertions in an exclusive owned stack
+        run: node scripts/ref-046-disposable-qualification.mjs run events
+      - name: Independently reconcile owned resource teardown
+        if: always()
+        run: node scripts/ref-046-disposable-qualification.mjs cleanup events
+      - name: Certify only after assertions and teardown succeed
+        if: success() && !cancelled()
+        run: node scripts/ref-046-disposable-qualification.mjs finalize events
+      - name: Upload exact-head Campaign receipts and teardown evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ref046-owned-events-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/ref018/
+          if-no-files-found: error
+          retention-days: 30

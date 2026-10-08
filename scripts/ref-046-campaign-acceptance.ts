@@ -9,7 +9,8 @@ import { CAMPAIGN_PROGRESS_PHASES } from "../backend/src/domains/campaign/servic
 // Replace only the transport: application adapters and frozen PostgreSQL RPCs remain real.
 const database = Deno.env.get("DATABASE_URL") || "", url = new URL(database);
 assert.equal(Deno.env.get("REF046_DISPOSABLE_DATABASE"), "1");
-assert.equal(Deno.env.get("REF046_STACK_ID"), "econovaria");
+const stackId = Deno.env.get("REF046_STACK_ID") || "";
+assert.match(stackId, /^ref046-\d+-\d+-events-[a-f0-9]{8}$/);
 assert.ok(["postgres:", "postgresql:"].includes(url.protocol));
 assert.ok(["localhost", "127.0.0.1"].includes(url.hostname));
 assert.equal(url.port, "54322"); assert.equal(url.pathname, "/postgres");
@@ -18,7 +19,7 @@ assert.deepEqual(Deno.args, ["--phase=events"]);
 const sourceSha = Deno.env.get("RELEASE_COMMIT") || "";
 assert.match(sourceSha, /^[a-f0-9]{40}$/);
 const checks: Record<string, unknown> = {}, receipts: Array<Record<string, unknown>> = [];
-const evidence = { task: "REF-046a", sourceSha, status: "running", productionTouched: false, checks, receipts };
+const evidence = { task: "REF-046a", sourceSha, stackId, status: "running", productionTouched: false, checks, receipts };
 let now = "2026-10-08T00:00:00.000Z", later = "2026-10-09T00:00:00.000Z";
 const pack = `ref046-${crypto.randomUUID()}`;
 let digest = `sha256:${"a".repeat(64)}`;
@@ -144,6 +145,12 @@ try {
   digest = await sql(`select public.campaign_program_digest_v1(${q(program)})`);
   program.definitionDigest = digest;
   await sql(`insert into public.campaign_program_definitions(pack_id,pack_version,definition_id,definition_digest,program) values(${q(pack)},'1','ref046.program',${q(digest)},${q(program)})`);
+  // A nonempty foreign sentinel belongs to this job, outside the proof's owned game set.
+  const foreign = await seed(); assert.equal(games.pop(), foreign.game);
+  await sql(`update public.campaign_instances set scheduled_at=${q(later)} where game_session_id=${q(foreign.game)}`);
+  foreignBaseline = await foreignState();
+  checks.foreignSentinelCount = Number(await sql(`select count(*) from public.campaign_instances where game_session_id=${q(foreign.game)}`));
+  assert.equal(checks.foreignSentinelCount, 1);
   const empty = await run(); assert.deepEqual(empty, { dueCount: 0, executedCount: 0, replayedCount: 0, failedCount: 0, failures: [] });
   assert.deepEqual(await foreignState(), foreignBaseline); checks.emptyWork = empty;
 
@@ -229,21 +236,15 @@ try {
     checks[`${tag}RunContention`] = results;
   }
   assert.deepEqual(await foreignState(), foreignBaseline); checks.foreignFixturesUnchanged = true;
-  evidence.status = "passed";
+  evidence.status = "assertions_passed";
 } catch (error) {
   evidence.status = "failed"; checks.error = String(error); throw error;
 } finally {
-  if (blocker) { blocker.kill("SIGTERM"); await blocker.status; }
-  try {
-    for (const game of games) await sql(`delete from public.campaign_instances where game_session_id=${q(game)};
-      delete from public.notifications where game_session_id=${q(game)};
-      delete from public.inventory_accounts where game_session_id=${q(game)};
-      delete from public.economic_parties where game_session_id=${q(game)};
-      delete from public.players where game_session_id=${q(game)};
-      delete from public.game_settings where game_session_id=${q(game)};
-      delete from public.game_sessions where id=${q(game)}`);
-    for (const owner of staff) await sql(`delete from public.staff_users where id=${q(owner)}`);
-    await sql(`delete from public.campaign_program_definitions where pack_id=${q(pack)}; delete from public.campaign_effect_definitions where pack_id=${q(pack)}`);
-  } catch (error) { evidence.status = "failed"; checks.cleanupError = String(error); throw error; }
-  finally { await Deno.writeTextFile("/tmp/ref018/ref046-events.json", JSON.stringify(evidence, null, 2) + "\n"); console.log(JSON.stringify(evidence)); }
+  try { if (blocker) { blocker.kill("SIGTERM"); await blocker.status; } }
+  catch (error) { evidence.status = "failed"; checks.cleanupError = String(error); throw error; }
+  finally {
+    // Provisional only: the supervisor must independently verify owned-resource disposal.
+    await Deno.writeTextFile("/tmp/ref018/ref046-events.json", JSON.stringify(evidence, null, 2) + "\n");
+    console.log(JSON.stringify(evidence));
+  }
 }
