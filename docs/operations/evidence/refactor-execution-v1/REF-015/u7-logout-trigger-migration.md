@@ -114,3 +114,5 @@ Root `npm test` is BLOCKED by an additional strict v606 bundle hash at `scripts/
 ## Approved strict bundle identity refresh (2026-10-08)
 
 User explicitly approves the fifteenth path `scripts/admin-v606-full-drift-audit.mjs` for its expected bundle hash only, retaining strict equality and525 total changed lines. Resumed clean `1bae746f`; main remains `b48476c1`, PR874 remains existing draft. Prior source/browser evidence retained; register before implementation. This supersedes only the hash-path scope blocker, not qualification or retirement/release holds.
+
+Qualification after approved hash refresh: root `npm test`, strict v606 drift audit and15-path authority pass. Runtime/browser sources are identical to the saved successful mounted keyboard/modal and manual-scanner/create runs; no redundant rerun. REF003 changes only the bundle hash, inventory remains Controls608/Staff603 with no new delta. Exact-head hosted qualification follows push; no merge/deployment or hold change.
