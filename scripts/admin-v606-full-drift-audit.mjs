@@ -13,7 +13,7 @@ function gitBlobSha(path) {
 }
 
 const acceptedV606Blobs = {
-  "admin/dist/admin-overview-terminal.js": "03cf8d402136502688994e6cce670b9701f8f74f",
+  "admin/dist/admin-overview-terminal.js": "763f6c1af68eb985a77f36fed412a2ec7e6e819d",
   "admin/css/admin-overview-terminal.css": "7a609ccff33d61fee96d2ea944e0d1a6059a6081",
   "admin/css/page-shell.css": "a9644c2af3d2851f49c5f0354ed80d31784cf397",
   "admin/css/admin-overview-integrity.css": "887ae8ffaff27e9013093f6aae92529134b80c18",

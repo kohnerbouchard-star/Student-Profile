@@ -1,6 +1,11 @@
 (function initEconovariaAdminLogoutConfirmation() {
   "use strict";
 
+  const existingOwner = window.EconovariaAdminLogoutConfirmation;
+  if (typeof existingOwner?.open === "function" &&
+      typeof existingOwner?.close === "function" &&
+      typeof existingOwner?.installAccountTriggerBridge === "function") return;
+
   const SESSION_KEY = "econovaria.admin.auth.v1";
   const SELECTED_GAME_KEY = "econovaria.admin.selected-game.v1";
   const CSRF_TOKEN_KEY = "econovaria.admin.csrf.v1";
@@ -301,6 +306,7 @@
 
   // Called by the retained bridge at its existing bootstrap position.
   function installAccountTriggerBridge() {
+    if (typeof window.EconovariaAdminLogoutAccountTriggerBridge?.isLogoutControl === "function") return;
     const CONTROL_SELECTOR = "button, [role='button'], a, [data-admin-terminal-action]";
     const LOGOUT_PATTERN = /(?:^|[\s_-])(?:sign[\s_-]*out|log[\s_-]*out|logout)(?:$|[\s_-])/i;
 

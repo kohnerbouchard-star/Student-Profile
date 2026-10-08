@@ -8336,6 +8336,9 @@ function renderAdminHelpArticleModal(articleId = "") {
     if (isAdminTerminalLeftMenuSection(nextSection)) {
       setAdminTerminalLeftMenuSection(nextSection);
     }
+    const focused = document.activeElement;
+    const focusAttribute = (menu?.contains(focused) || main?.contains(focused)) && ["data-admin-section", "data-admin-terminal-action", "data-admin-terminal-bell", "data-admin-terminal-user", "data-marketplace-search", "data-marketplace-filter", "data-marketplace-sort"].find(name => focused.hasAttribute(name));
+    const focusSelector = focusAttribute && `[${focusAttribute}="${CSS.escape(focused.getAttribute(focusAttribute))}"]`;
     if (menu) menu.outerHTML = renderLeftMenu(model, leftMenuSection);
     if (main) {
       main.innerHTML = renderTerminalSection(model, nextSection);
@@ -8345,6 +8348,10 @@ function renderAdminHelpArticleModal(articleId = "") {
       scheduleSciIdRankAlignment(main);
       if (nextSection === "Market") startMarketplaceRealtimeFeed(main);
       if (!options.skipDataLoad) scheduleAdminTerminalPageDataLoad(nextSection, { silent: true });
+    }
+    if (focusSelector && document.activeElement === document.body) {
+      const replacements = [...shell.querySelectorAll(focusSelector)].filter(node => window.EconovariaAdminKeyboardNavigation?.enabled?.(node));
+      if (replacements.length === 1) replacements[0].focus({ preventScroll: true });
     }
     window.requestAnimationFrame(() => {
       syncInitialMenuStates();
@@ -12861,7 +12868,7 @@ function bindTerminalScannerInputCapture() {
     document.addEventListener("focusin", (event) => {
       const consoleRoot = document.querySelector("[data-admin-terminal-scanner-console]");
       if (!consoleRoot || consoleRoot.dataset.scanMode !== "auto") return;
-      const isModalControl = event.target?.closest?.("[data-admin-terminal-modal-close], [data-admin-terminal-modal-secondary], [data-admin-terminal-modal-primary], [data-admin-terminal-set-mode]");
+      const isModalControl = event.target?.closest?.("[data-admin-terminal-modal-close], [data-admin-terminal-modal-secondary], [data-admin-terminal-modal-primary], [data-admin-terminal-set-mode], [data-admin-terminal-action=\"refocus-attendance-scanner\"]");
       if (isModalControl) return;
       const autoInput = consoleRoot.querySelector("[data-admin-terminal-auto-scan-input]");
       if (event.target !== autoInput) window.requestAnimationFrame(() => autoInput?.focus?.());
