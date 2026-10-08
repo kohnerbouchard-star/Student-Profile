@@ -8336,7 +8336,9 @@ function renderAdminHelpArticleModal(articleId = "") {
     if (isAdminTerminalLeftMenuSection(nextSection)) {
       setAdminTerminalLeftMenuSection(nextSection);
     }
-    const focusedSection = menu?.contains(document.activeElement) ? document.activeElement.getAttribute("data-admin-section") : null;
+    const focused = document.activeElement;
+    const focusAttribute = (menu?.contains(focused) || main?.contains(focused)) && ["data-admin-section", "data-admin-terminal-action", "data-admin-terminal-bell", "data-admin-terminal-user", "data-marketplace-search", "data-marketplace-filter", "data-marketplace-sort"].find(name => focused.hasAttribute(name));
+    const focusSelector = focusAttribute && `[${focusAttribute}="${CSS.escape(focused.getAttribute(focusAttribute))}"]`;
     if (menu) menu.outerHTML = renderLeftMenu(model, leftMenuSection);
     if (main) {
       main.innerHTML = renderTerminalSection(model, nextSection);
@@ -8347,9 +8349,9 @@ function renderAdminHelpArticleModal(articleId = "") {
       if (nextSection === "Market") startMarketplaceRealtimeFeed(main);
       if (!options.skipDataLoad) scheduleAdminTerminalPageDataLoad(nextSection, { silent: true });
     }
-    if (focusedSection && document.activeElement === document.body) {
-      const replacement = shell.querySelector(`[data-admin-section="${CSS.escape(focusedSection)}"]`);
-      if (window.EconovariaAdminKeyboardNavigation?.enabled?.(replacement)) replacement.focus({ preventScroll: true });
+    if (focusSelector && document.activeElement === document.body) {
+      const replacements = [...shell.querySelectorAll(focusSelector)].filter(node => window.EconovariaAdminKeyboardNavigation?.enabled?.(node));
+      if (replacements.length === 1) replacements[0].focus({ preventScroll: true });
     }
     window.requestAnimationFrame(() => {
       syncInitialMenuStates();
