@@ -132,3 +132,28 @@ Local supervisor rejection checks (3), frozen Deno check, root tests, authority 
 Disposable acceptance remains NOT_RUN pending exact-head CI; failed history is unchanged.
 First isolated run37844060685 failed closed on reset-recreated volume identity;
 artifact11579032496 retained. Explicit replay generations added; four guard tests pass.
+
+## REF-046b accepted-base registration — 2026-10-08
+
+A plus isolated cleanup accepted at PR882 head
+`2b393745f2ccea3d7666e742a423e8a35be7b2b1`, tree `7708abe768ce6b05bd5f92c47a771500021e8603`.
+All 11 workflows succeeded; 17 checks passed, 3 existing conditional checks skipped.
+Banking and Player Chromium each passed 155 tests with 11 existing skips.
+Run37850374546 jobs113561507751/113563551888 passed frozen456 migration replay,
+all A assertions, foreign sentinel preservation, lint parity and independent disposal.
+Artifact11582365508 SHA256 `2025a5c698a6411acdcea09819349e2b6bcd1d570c55dc9051e4d63722ee0361`.
+Owned resources remaining: containers0, volumes0, networks0. Main remains unchanged.
+B branch: refactor/ref-046b-campaign-leases; base refactor/ref-046-owned-disposable.
+Approved delta ceilings: shared harness295, supervisor25, attendance workflow15,
+actual B authority40, this recovery25; total400, cumulative16 paths unchanged.
+Authority binds the actual returned PR number before implementation.
+Use real row contention, frozen claim/complete/fail RPCs and notification delivery.
+Prove disjoint SKIP LOCKED claims, exact/expired five-minute boundary, attempt25
+exclusions/constraint, stable identities and increments, then stale A/B failure.
+Retain scalar booleans, worker counters and persisted rows; false completion is
+a failing defect gate requiring separate correction, never expected-pass behavior.
+Run events and leases on separate fresh owned stacks with phase-specific receipts.
+No runtime/SQL, package, credential, deployment, merge or primary closeout changes.
+B authority PR883 committed before implementation at
+`6ffb66a2de1e5f87693c6751ad12f558511df583`; registration `9ed1b91af5225d24a4218a6cc10471dfe4d7ccf6`.
+

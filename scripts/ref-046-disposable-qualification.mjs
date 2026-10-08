@@ -40,7 +40,7 @@ export function acceptance(receipt, assertions) {
 }
 async function main() {
   const mode = process.argv[2], phase = process.argv[3];
-  assert(['run', 'cleanup', 'finalize'].includes(mode)); assert.equal(phase, 'events');
+  assert(['run', 'cleanup', 'finalize'].includes(mode)); assert(['events', 'leases'].includes(phase));
   const env = process.env, root = realpathSync('.'), out = '/tmp/ref018';
   assert.equal(env.GITHUB_ACTIONS, 'true'); assert.equal(env.GITHUB_JOB, 'campaign-qualification');
   assert.equal(root, realpathSync(env.GITHUB_WORKSPACE)); assert.match(env.GITHUB_RUN_ID, /^\d+$/); assert.match(env.GITHUB_RUN_ATTEMPT, /^\d+$/);
@@ -48,7 +48,7 @@ async function main() {
   const event = JSON.parse(readFileSync(env.GITHUB_EVENT_PATH)), sourceSha = event.pull_request?.head.sha || env.GITHUB_SHA;
   assert.match(sourceSha, /^[a-f0-9]{40}$/); assert.equal(env.RELEASE_COMMIT, sourceSha);
   const work = join(realpathSync(env.RUNNER_TEMP), `ref046-${env.GITHUB_RUN_ID}-${env.GITHUB_RUN_ATTEMPT}-${phase}`);
-  const journal = join(out, `ref046-${phase}-ownership.json`), provisional = join(out, 'ref046-events.json');
+  const journal = join(out, `ref046-${phase}-ownership.json`), provisional = join(out, `ref046-${phase}.json`);
   const childEnv = { PATH: env.PATH, HOME: env.HOME, CI: 'true', DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' };
   const cli = resolve('node_modules/.bin/supabase'); let active, interrupted = false, receipt, cancellationTimer;
   const save = () => writeFileSync(journal, JSON.stringify(receipt, null, 2) + '\n');
@@ -64,8 +64,8 @@ async function main() {
       child.stdout.on('data', b => { stdout += b; }); child.stderr.on('data', b => { stderr += b; });
       child.on('error', error => { clearTimeout(timer); clearTimeout(cancellationTimer); active = undefined; reject(error); });
       child.on('close', code => { clearTimeout(timer); clearTimeout(cancellationTimer); active = undefined;
-        if (log) writeFileSync(join(out, log), stdout + stderr);
-        if (log === 'ref046-events.log') { const line = stdout.split('\n').find(x => x.startsWith('{"task":"REF-046a"')); if (line) console.log(line); }
+        if (log) writeFileSync(join(out, log.replace('ref046-', `ref046-${phase}-`)), stdout + stderr);
+        if (log === 'ref046-assertions.log') { const line = stdout.split('\n').find(x => x.startsWith('{"task":"REF-046')); if (line) console.log(line); }
         if (code !== 0 || (!cleanup && interrupted)) reject(new Error(`PROCESS_FAILED:${command.split('/').at(-1)}:${code}`)); else done(stdout.trim());
       });
     });
@@ -103,12 +103,12 @@ async function main() {
     if (mode === 'cleanup') {
       try { await cleanup(); } catch (error) { receipt.status = 'failed'; receipt.cleanupError = String(error); throw error; }
       finally { receipt.interrupted ||= interrupted; if (interrupted) receipt.status = 'failed'; save(); }
-      assert(!interrupted, 'INTERRUPTED'); return;
+      assert(!interrupted, 'INTERRUPTED'); console.log(JSON.stringify({ phase, sourceSha, project: receipt.project, status: receipt.status, teardownVerifiedAt: receipt.teardownVerifiedAt, remaining: receipt.remaining, error: receipt.error, cleanupError: receipt.cleanupError })); return;
     }
     const assertions = JSON.parse(readFileSync(provisional)); acceptance(receipt, assertions); assert(!interrupted);
     const current = await inventory(); absent([...(receipt.replayBefore || []), ...receipt.owned], current, receipt.project); ownedDelta(receipt.before, current, receipt.project);
     assert(!interrupted, 'INTERRUPTED');
-    writeFileSync(join(out, 'ref046-acceptance.json'), JSON.stringify({ status: 'passed', sourceSha, phase, receipt, assertions,
+    writeFileSync(join(out, `ref046-${phase}-acceptance.json`), JSON.stringify({ status: 'passed', sourceSha, phase, receipt, assertions,
       requiresSuccessfulWorkflowConclusion: true }, null, 2) + '\n');
     console.log(JSON.stringify({ status: 'passed', sourceSha, project: receipt.project, owned: receipt.owned, remaining: receipt.remaining, checks: assertions.checks })); return;
   }
@@ -129,7 +129,7 @@ async function main() {
     const lintArgs = ['db', 'lint', '--workdir', work, '--local', '--level', 'warning', '--output', 'json'];
     const lintBefore = JSON.parse(await run(cli, lintArgs, 'ref046-lint-before.log'));
     await run('deno', ['run', '--config', 'backend/supabase/functions/deno.json', '--lock=backend/supabase/functions/deno.lock', '--frozen',
-      '--allow-env=DATABASE_URL,REF046_DISPOSABLE_DATABASE,REF046_STACK_ID,RELEASE_COMMIT,PATH', '--allow-read', '--allow-run=psql', '--allow-write=/tmp/ref018', '--deny-net', 'scripts/ref-046-campaign-acceptance.ts', '--phase=events'], 'ref046-events.log');
+      '--allow-env=DATABASE_URL,REF046_DISPOSABLE_DATABASE,REF046_STACK_ID,RELEASE_COMMIT,PATH', '--allow-read', '--allow-run=psql', '--allow-write=/tmp/ref018', '--deny-net', 'scripts/ref-046-campaign-acceptance.ts', `--phase=${phase}`], 'ref046-assertions.log');
     const lintAfter = JSON.parse(await run(cli, lintArgs, 'ref046-lint-after.log'));
     const normalize = rows => rows.flatMap(row => row.issues.map(issue => JSON.stringify({ function: row.function, issue }))).sort();
     assert.deepEqual(normalize(lintAfter), normalize(lintBefore), 'LINT_CHANGED'); receipt.lintUnchanged = true;

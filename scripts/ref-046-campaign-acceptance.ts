@@ -10,16 +10,18 @@ import { CAMPAIGN_PROGRESS_PHASES } from "../backend/src/domains/campaign/servic
 const database = Deno.env.get("DATABASE_URL") || "", url = new URL(database);
 assert.equal(Deno.env.get("REF046_DISPOSABLE_DATABASE"), "1");
 const stackId = Deno.env.get("REF046_STACK_ID") || "";
-assert.match(stackId, /^ref046-\d+-\d+-events-[a-f0-9]{8}$/);
+const phase = Deno.args[0]?.replace("--phase=", "");
+assert.ok(["events", "leases"].includes(phase));
+assert.match(stackId, new RegExp(`^ref046-\\d+-\\d+-${phase}-[a-f0-9]{8}$`));
 assert.ok(["postgres:", "postgresql:"].includes(url.protocol));
 assert.ok(["localhost", "127.0.0.1"].includes(url.hostname));
 assert.equal(url.port, "54322"); assert.equal(url.pathname, "/postgres");
 assert.equal(url.username, "postgres"); assert.equal(url.search + url.hash, "");
-assert.deepEqual(Deno.args, ["--phase=events"]);
+assert.deepEqual(Deno.args, [`--phase=${phase}`]);
 const sourceSha = Deno.env.get("RELEASE_COMMIT") || "";
 assert.match(sourceSha, /^[a-f0-9]{40}$/);
 const checks: Record<string, unknown> = {}, receipts: Array<Record<string, unknown>> = [];
-const evidence = { task: "REF-046a", sourceSha, stackId, status: "running", productionTouched: false, checks, receipts };
+const evidence = { task: phase === "events" ? "REF-046a" : "REF-046b", sourceSha, stackId, status: "running", productionTouched: false, checks, receipts };
 let now = "2026-10-08T00:00:00.000Z", later = "2026-10-09T00:00:00.000Z";
 const pack = `ref046-${crypto.randomUUID()}`;
 let digest = `sha256:${"a".repeat(64)}`;
@@ -129,6 +131,100 @@ async function foreignState() {
     await json(`select coalesce(jsonb_agg(to_jsonb(r) order by id),'[]') from public.${ident(table)} r ${excluded}`)])));
 }
 let foreignBaseline: unknown, blocker: Deno.ChildProcess | undefined;
+async function proveLeases() {
+  await definition();
+  const state = async (game: string) => (await snapshot(game)).campaign_effect_commands[0];
+  async function pending() {
+    const f = await seed(); assert.equal((await run()).executedCount, 1);
+    return { ...f, command: await state(f.game) };
+  }
+  const first = await pending(), second = await pending();
+  const ordered = await json(`select jsonb_agg(public_id order by created_at,public_id) from public.campaign_effect_commands`);
+  assert.equal(ordered.length, 2);
+  // Worker A claims in an open transaction. A probe observes the exact row lock;
+  // worker B must claim the other row without waiting for A to commit.
+  blocker = command(undefined, "ref046-claim-a").spawn(); const writer = blocker.stdin.getWriter();
+  await writer.write(encoder.encode(`begin; set local role service_role;
+    select coalesce(jsonb_agg(r),'[]') from public.claim_campaign_effect_commands_v1(1,${q(now)}) r;\n`));
+  await waitFor("select 1 from pg_stat_activity where application_name='ref046-claim-a' and state='idle in transaction'");
+  const probe = sql(`select public_id from public.campaign_effect_commands where public_id=${q(ordered[0])} for update`, "ref046-row-probe");
+  await waitFor("select 1 from pg_stat_activity where application_name='ref046-row-probe' and wait_event_type='Lock'");
+  const claimedB = await createSupabaseCampaignEffectWorkerRepository(client("ref046-claim-b")).claim({ limit: 100, claimedAt: now });
+  assert.deepEqual(claimedB.map(row => row.commandId), [ordered[1]]);
+  await writer.write(encoder.encode("commit;\n\\q\n")); await writer.close();
+  const output = await blocker.output(); assert.equal(output.code, 0); blocker = undefined;
+  assert.equal(await probe, ordered[0]);
+  const claimedA = JSON.parse(decoder.decode(output.stdout).trim());
+  assert.deepEqual(claimedA.map((row: any) => row.command_id), [ordered[0]]);
+  receipts.push({ app: "ref046-claim-a", name: "claim_campaign_effect_commands_v1", data: claimedA });
+  for (const f of [first, second]) {
+    const row = await state(f.game); assert.equal(row.status, "processing"); assert.equal(row.attempt_count, 1);
+    assert.equal(row.public_id, f.command.public_id); assert.equal(row.idempotency_key, f.command.idempotency_key);
+    await effects.complete({ commandId: row.public_id, completedAt: now });
+  }
+  checks.disjointClaims = { rowLockObserved: true, claimedA, claimedB };
+
+  const exact = await pending(), expired = await pending(), failedCap = await pending(), processingCap = await pending();
+  const fiveAgo = new Date(Date.parse(now) - 300000).toISOString(), older = new Date(Date.parse(now) - 300001).toISOString();
+  for (const [f, status, attempts, claimedAt] of [
+    [exact, "processing", 1, fiveAgo], [expired, "processing", 24, older],
+    [failedCap, "failed", 25, null], [processingCap, "processing", 25, older],
+  ] as const) await sql(`update public.campaign_effect_commands set status=${q(status)},attempt_count=${attempts},claimed_at=${q(claimedAt)} where public_id=${q(f.command.public_id)}`);
+  const untouched = await Promise.all([exact, failedCap, processingCap].map(f => snapshot(f.game)));
+  const reclaimed = await effects.claim({ limit: 100, claimedAt: now });
+  assert.equal(reclaimed.length, 1); assert.equal(reclaimed[0].commandId, expired.command.public_id);
+  assert.equal(reclaimed[0].idempotencyKey, expired.command.idempotency_key); assert.equal(reclaimed[0].attemptCount, 25);
+  assert.deepEqual(await Promise.all([exact, failedCap, processingCap].map(f => snapshot(f.game))), untouched);
+  assert.equal((await state(expired.game)).status, "processing");
+  assert.equal(Date.parse((await state(expired.game)).claimed_at), Date.parse(now));
+  checks.expiryAndAttemptCaps = { exactFiveMinutesExcluded: true, failedAndProcessing25Excluded: true, reclaimed };
+  for (const f of [exact, expired]) await effects.complete({ commandId: f.command.public_id, completedAt: now });
+  const pendingCap = await pending();
+  await sql(`update public.campaign_effect_commands set attempt_count=25 where public_id=${q(pendingCap.command.public_id)}`);
+  const beforeCap = await snapshot(pendingCap.game);
+  await assert.rejects(effects.claim({ limit: 100, claimedAt: now }));
+  assert.equal(receipts.at(-1)?.code, "23514");
+  assert.match(String(receipts.at(-1)?.message), /campaign_effect_commands_attempt_valid/);
+  assert.deepEqual(await snapshot(pendingCap.game), beforeCap); checks.pending25IncrementRollsBack = true;
+  await sql(`update public.campaign_effect_commands set status='failed' where public_id=${q(pendingCap.command.public_id)}`);
+
+  const stale = await pending(), reclaimedAt = new Date(Date.parse(now) + 300001).toISOString();
+  const clientA = client("ref046-stale-a"), clientB = client("ref046-stale-b");
+  const repoA = createSupabaseCampaignEffectWorkerRepository(clientA), repoB = createSupabaseCampaignEffectWorkerRepository(clientB);
+  let announceClaim!: () => void, releaseFailure!: () => void;
+  const aClaimed = new Promise<void>(resolve => announceClaim = resolve), mayFail = new Promise<void>(resolve => releaseFailure = resolve);
+  const workerA = runCampaignEffectWorker({ repository: repoA, claimedAt: now, limit: 1,
+    ports: { ...createSupabaseCampaignEffectPorts(clientA, now), notifyPlayers: async () => {
+      announceClaim(); await mayFail; throw { code: "ref046_injected_stale_delivery_failure" };
+    } } });
+  await aClaimed;
+  const afterA = await state(stale.game); assert.equal(afterA.attempt_count, 1); assert.equal(afterA.status, "processing");
+  let resultA: Awaited<typeof workerA> | undefined;
+  const resultB = await runCampaignEffectWorker({ claimedAt: reclaimedAt, limit: 1,
+    repository: { ...repoB, claim: async input => {
+      const rows = await repoB.claim(input);
+      assert.equal(rows.length, 1); assert.equal(rows[0].commandId, stale.command.public_id);
+      assert.equal(rows[0].attemptCount, 2); assert.equal(rows[0].idempotencyKey, stale.command.idempotency_key);
+      releaseFailure(); resultA = await workerA;
+      const afterStaleFailure = await state(stale.game);
+      checks.staleFailureState = afterStaleFailure;
+      assert.equal(afterStaleFailure.status, "failed"); assert.equal(afterStaleFailure.attempt_count, 2);
+      return rows;
+    } }, ports: createSupabaseCampaignEffectPorts(clientB, reclaimedAt) });
+  const persisted = await snapshot(stale.game);
+  const failure = receipts.find(r => r.app === "ref046-stale-a" && r.name === "fail_campaign_effect_command_v1");
+  const completion = receipts.find(r => r.app === "ref046-stale-b" && r.name === "complete_campaign_effect_command_v1");
+  checks.staleWorker = { resultA, resultB, failure, completion, persisted };
+  assert.equal(resultA?.failedCount, 1); assert.equal(resultA?.completedCount, 0); assert.equal(failure?.data, true);
+  assert.equal(resultB.claimedCount, 1); assert.equal(persisted.notifications.length, 1);
+  assert.equal(persisted.notification_deliveries.length, 1); assert.equal(persisted.notification_deliveries[0].player_id, stale.player);
+  assert.equal(persisted.notifications[0].source_id, stale.command.idempotency_key);
+  assert.equal(persisted.campaign_effect_commands[0].attempt_count, 2);
+  assert.equal(persisted.campaign_effect_commands[0].status, "failed"); assert.equal(completion?.data, false);
+  assert.deepEqual(await foreignState(), foreignBaseline); checks.foreignFixturesUnchanged = true;
+  // A false completion must never be credited as completed by the actual worker.
+  assert.equal(resultB.completedCount, 0, "REF046_STALE_WORKER_FALSE_COMPLETION: stop for separately authorized runtime correction");
+}
 try {
   const migrations: string[] = [];
   for await (const entry of Deno.readDir("backend/supabase/migrations")) if (entry.isFile && /^\d+_.+\.sql$/.test(entry.name)) migrations.push(entry.name.split("_")[0]);
@@ -154,87 +250,89 @@ try {
   const empty = await run(); assert.deepEqual(empty, { dueCount: 0, executedCount: 0, replayedCount: 0, failedCount: 0, failures: [] });
   assert.deepEqual(await foreignState(), foreignBaseline); checks.emptyWork = empty;
 
-  const paused = await seed();
-  await sql(`update public.game_sessions set status='disabled',lifecycle_state='paused' where id=${q(paused.game)}`);
-  const beforePause = await snapshot(paused.game), denied = await run();
-  assert.equal(denied.failedCount, 1); assert.match(String(receipts.at(-1)?.message), /CAMPAIGN_GAME_NOT_ACTIVE/);
-  assert.deepEqual(await snapshot(paused.game), beforePause); checks.pausedGame = denied;
-  await sql(`update public.campaign_instances set scheduled_at=${q(later)} where game_session_id=${q(paused.game)}`);
+  if (phase === "events") {
+    const paused = await seed();
+    await sql(`update public.game_sessions set status='disabled',lifecycle_state='paused' where id=${q(paused.game)}`);
+    const beforePause = await snapshot(paused.game), denied = await run();
+    assert.equal(denied.failedCount, 1); assert.match(String(receipts.at(-1)?.message), /CAMPAIGN_GAME_NOT_ACTIVE/);
+    assert.deepEqual(await snapshot(paused.game), beforePause); checks.pausedGame = denied;
+    await sql(`update public.campaign_instances set scheduled_at=${q(later)} where game_session_id=${q(paused.game)}`);
 
-  const missing = await seed("arrival", "ref046.missing"), beforeMissing = await snapshot(missing.game);
-  assert.equal((await run()).failures[0]?.code, "campaign_program_not_found");
-  assert.deepEqual(await snapshot(missing.game), beforeMissing); checks.missingProgram = true;
-  await sql(`update public.campaign_instances set scheduled_at=${q(later)} where game_session_id=${q(missing.game)}`);
+    const missing = await seed("arrival", "ref046.missing"), beforeMissing = await snapshot(missing.game);
+    assert.equal((await run()).failures[0]?.code, "campaign_program_not_found");
+    assert.deepEqual(await snapshot(missing.game), beforeMissing); checks.missingProgram = true;
+    await sql(`update public.campaign_instances set scheduled_at=${q(later)} where game_session_id=${q(missing.game)}`);
 
-  const a = await seed(), b = await seed("adaptation");
-  assert.equal((await run()).executedCount, 2);
-  const committedA = await snapshot(a.game), committedB = await snapshot(b.game);
-  assert.equal(committedA.campaign_instances[0].current_phase, "opportunity");
-  assert.equal(committedB.campaign_instances[0].current_phase, "reconstruction");
-  for (const state of [committedA, committedB]) {
-    assert.equal(state.campaign_instances[0].revision, 1); assert.equal(state.campaign_event_executions.length, 1);
-    assert.equal(state.campaign_effect_commands.length, 1); assert.equal(state.notifications.length, 0);
-  }
-  // A missing destination definition fails after the atomic event/outbox commit.
-  assert.equal((await deliver()).failedCount, 2);
-  assert.deepEqual((await snapshot(a.game)).campaign_event_executions, committedA.campaign_event_executions);
-  assert.deepEqual((await snapshot(b.game)).campaign_event_executions, committedB.campaign_event_executions);
-  assert.equal((await snapshot(a.game)).campaign_effect_commands[0].status, "failed");
-  await definition(); assert.equal((await deliver()).completedCount, 2);
-  for (const f of [a, b]) {
-    const state = await snapshot(f.game), command = state.campaign_effect_commands[0];
-    assert.equal(command.status, "completed"); assert.equal(command.attempt_count, 2);
-    assert.equal(state.notifications.length, 1); assert.equal(state.notifications[0].source_id, command.idempotency_key);
-    assert.equal(state.notification_deliveries.length, 1); assert.equal(state.notification_deliveries[0].player_id, f.player);
-    const result = await service.rpc("publish_campaign_notification_v1", { p_game_session_id: f.game, p_idempotency_key: command.idempotency_key,
-      p_title: "REF046", p_summary: "Synthetic proof", p_priority: "normal", p_display_mode: "inbox", p_notification_type: "campaign", p_published_at: now });
-    assert.equal(result.data.outcome, "replayed"); assert.equal(result.data.insertedDeliveries, 0);
-    assert.deepEqual(await snapshot(f.game), state);
-  }
-  checks.twoGamesAndDestinationRetry = { games: [a.game, b.game], notifications: 2, deliveries: 2 };
+    const a = await seed(), b = await seed("adaptation");
+    assert.equal((await run()).executedCount, 2);
+    const committedA = await snapshot(a.game), committedB = await snapshot(b.game);
+    assert.equal(committedA.campaign_instances[0].current_phase, "opportunity");
+    assert.equal(committedB.campaign_instances[0].current_phase, "reconstruction");
+    for (const state of [committedA, committedB]) {
+      assert.equal(state.campaign_instances[0].revision, 1); assert.equal(state.campaign_event_executions.length, 1);
+      assert.equal(state.campaign_effect_commands.length, 1); assert.equal(state.notifications.length, 0);
+    }
+    // A missing destination definition fails after the atomic event/outbox commit.
+    assert.equal((await deliver()).failedCount, 2);
+    assert.deepEqual((await snapshot(a.game)).campaign_event_executions, committedA.campaign_event_executions);
+    assert.deepEqual((await snapshot(b.game)).campaign_event_executions, committedB.campaign_event_executions);
+    assert.equal((await snapshot(a.game)).campaign_effect_commands[0].status, "failed");
+    await definition(); assert.equal((await deliver()).completedCount, 2);
+    for (const f of [a, b]) {
+      const state = await snapshot(f.game), command = state.campaign_effect_commands[0];
+      assert.equal(command.status, "completed"); assert.equal(command.attempt_count, 2);
+      assert.equal(state.notifications.length, 1); assert.equal(state.notifications[0].source_id, command.idempotency_key);
+      assert.equal(state.notification_deliveries.length, 1); assert.equal(state.notification_deliveries[0].player_id, f.player);
+      const result = await service.rpc("publish_campaign_notification_v1", { p_game_session_id: f.game, p_idempotency_key: command.idempotency_key,
+        p_title: "REF046", p_summary: "Synthetic proof", p_priority: "normal", p_display_mode: "inbox", p_notification_type: "campaign", p_published_at: now });
+      assert.equal(result.data.outcome, "replayed"); assert.equal(result.data.insertedDeliveries, 0);
+      assert.deepEqual(await snapshot(f.game), state);
+    }
+    checks.twoGamesAndDestinationRetry = { games: [a.game, b.game], notifications: 2, deliveries: 2 };
 
-  const rollback = await seed(), prior = await snapshot(rollback.game);
-  const selected = (await programs.readProgram(rollback.instance)).eventsByPhase.arrival;
-  await assert.rejects(repository.executeEventAtomic({ instance: rollback.instance,
-    event: { ...selected, effects: [notify, { ...notify, kind: "invalid" } as any] }, triggerKey: "ref046.rollback",
-    occurredAt: now, actorStaffUserId: null, reason: null }));
-  assert.match(String(receipts.at(-1)?.message), /CAMPAIGN_EFFECT_COMMAND_INVALID/);
-  assert.deepEqual(await snapshot(rollback.game), prior); checks.atomicSecondCommandRollback = true;
-  await sql(`update public.campaign_instances set scheduled_at=${q(later)} where game_session_id=${q(rollback.game)}`);
+    const rollback = await seed(), prior = await snapshot(rollback.game);
+    const selected = (await programs.readProgram(rollback.instance)).eventsByPhase.arrival;
+    await assert.rejects(repository.executeEventAtomic({ instance: rollback.instance,
+      event: { ...selected, effects: [notify, { ...notify, kind: "invalid" } as any] }, triggerKey: "ref046.rollback",
+      occurredAt: now, actorStaffUserId: null, reason: null }));
+    assert.match(String(receipts.at(-1)?.message), /CAMPAIGN_EFFECT_COMMAND_INVALID/);
+    assert.deepEqual(await snapshot(rollback.game), prior); checks.atomicSecondCommandRollback = true;
+    await sql(`update public.campaign_instances set scheduled_at=${q(later)} where game_session_id=${q(rollback.game)}`);
 
-  const missingRuntime = await seed();
-  await sql(`insert into public.world_runtime_instances(game_session_id,pack_id,pack_version,definition_digest,initialized_at) values(${q(missingRuntime.game)},${q(pack)},'1',${q(digest)},${q(now)});
-    delete from public.world_runtime_instances where game_session_id=${q(missingRuntime.game)}`);
-  await repository.executeEventAtomic({ instance: missingRuntime.instance, event: { ...selected, effects: [{ kind: "set_route_state", routeDefinitionIds: ["rte_ref046"], state: "closed", reason: "war" }] },
-    triggerKey: "ref046.missing-runtime", occurredAt: now, actorStaffUserId: null, reason: null });
-  const runtimeCommitted = await snapshot(missingRuntime.game), runtimeFailure = await deliver();
-  assert.equal(runtimeFailure.failures[0]?.errorCode, "campaign_world_runtime_missing");
-  assert.deepEqual((await snapshot(missingRuntime.game)).campaign_event_executions, runtimeCommitted.campaign_event_executions);
-  assert.equal(await sql(`select count(*) from public.world_runtime_commands where game_session_id=${q(missingRuntime.game)}`), "0");
-  checks.missingRuntime = runtimeFailure;
-  await sql(`update public.campaign_effect_commands set attempt_count=25 where game_session_id=${q(missingRuntime.game)}`);
+    const missingRuntime = await seed();
+    await sql(`insert into public.world_runtime_instances(game_session_id,pack_id,pack_version,definition_digest,initialized_at) values(${q(missingRuntime.game)},${q(pack)},'1',${q(digest)},${q(now)});
+      delete from public.world_runtime_instances where game_session_id=${q(missingRuntime.game)}`);
+    await repository.executeEventAtomic({ instance: missingRuntime.instance, event: { ...selected, effects: [{ kind: "set_route_state", routeDefinitionIds: ["rte_ref046"], state: "closed", reason: "war" }] },
+      triggerKey: "ref046.missing-runtime", occurredAt: now, actorStaffUserId: null, reason: null });
+    const runtimeCommitted = await snapshot(missingRuntime.game), runtimeFailure = await deliver();
+    assert.equal(runtimeFailure.failures[0]?.errorCode, "campaign_world_runtime_missing");
+    assert.deepEqual((await snapshot(missingRuntime.game)).campaign_event_executions, runtimeCommitted.campaign_event_executions);
+    assert.equal(await sql(`select count(*) from public.world_runtime_commands where game_session_id=${q(missingRuntime.game)}`), "0");
+    checks.missingRuntime = runtimeFailure;
+    await sql(`update public.campaign_effect_commands set attempt_count=25 where game_session_id=${q(missingRuntime.game)}`);
 
-  // Both real scheduler runs must reach the frozen RPC's game-row lock before release.
-  for (const sameRun of [true, false]) {
-    const f = await seed(), tag = sameRun ? "same" : "distinct";
-    blocker = command(undefined, "ref046-blocker").spawn(); const writer = blocker.stdin.getWriter();
-    await writer.write(encoder.encode(`begin; select id from public.game_sessions where id=${q(f.game)} for update;\n`));
-    await waitFor("select 1 from pg_stat_activity where application_name='ref046-blocker' and state='idle in transaction'");
-    const left = run(`ref046-${tag}-run-a`, client("ref046-race-a")), right = run(`ref046-${tag}-run-${sameRun ? "a" : "b"}`, client("ref046-race-b"));
-    await waitFor("select 1 from pg_stat_activity where application_name='ref046-race-a' and wait_event_type='Lock'");
-    await waitFor("select 1 from pg_stat_activity where application_name='ref046-race-b' and wait_event_type='Lock'");
-    await writer.write(encoder.encode("commit;\n\\q\n")); await writer.close();
-    assert.equal((await blocker.output()).code, 0); blocker = undefined;
-    const results = await Promise.all([left, right]);
-    assert.equal(results.reduce((n, r) => n + r.executedCount, 0), 1);
-    assert.equal(results.reduce((n, r) => n + r.replayedCount, 0), sameRun ? 1 : 0);
-    assert.equal(results.reduce((n, r) => n + r.failedCount, 0), sameRun ? 0 : 1);
-    if (!sameRun) assert.equal(results.flatMap(r => r.failures)[0]?.code, "campaign_revision_conflict");
-    const state = await snapshot(f.game); assert.equal(state.campaign_event_executions.length, 1);
-    assert.equal(state.campaign_effect_commands.length, 1); assert.equal(state.campaign_instances[0].revision, 1);
-    assert.equal((await deliver()).completedCount, 1); assert.equal((await snapshot(f.game)).notification_deliveries.length, 1);
-    checks[`${tag}RunContention`] = results;
-  }
+    // Both real scheduler runs must reach the frozen RPC's game-row lock before release.
+    for (const sameRun of [true, false]) {
+      const f = await seed(), tag = sameRun ? "same" : "distinct";
+      blocker = command(undefined, "ref046-blocker").spawn(); const writer = blocker.stdin.getWriter();
+      await writer.write(encoder.encode(`begin; select id from public.game_sessions where id=${q(f.game)} for update;\n`));
+      await waitFor("select 1 from pg_stat_activity where application_name='ref046-blocker' and state='idle in transaction'");
+      const left = run(`ref046-${tag}-run-a`, client("ref046-race-a")), right = run(`ref046-${tag}-run-${sameRun ? "a" : "b"}`, client("ref046-race-b"));
+      await waitFor("select 1 from pg_stat_activity where application_name='ref046-race-a' and wait_event_type='Lock'");
+      await waitFor("select 1 from pg_stat_activity where application_name='ref046-race-b' and wait_event_type='Lock'");
+      await writer.write(encoder.encode("commit;\n\\q\n")); await writer.close();
+      assert.equal((await blocker.output()).code, 0); blocker = undefined;
+      const results = await Promise.all([left, right]);
+      assert.equal(results.reduce((n, r) => n + r.executedCount, 0), 1);
+      assert.equal(results.reduce((n, r) => n + r.replayedCount, 0), sameRun ? 1 : 0);
+      assert.equal(results.reduce((n, r) => n + r.failedCount, 0), sameRun ? 0 : 1);
+      if (!sameRun) assert.equal(results.flatMap(r => r.failures)[0]?.code, "campaign_revision_conflict");
+      const state = await snapshot(f.game); assert.equal(state.campaign_event_executions.length, 1);
+      assert.equal(state.campaign_effect_commands.length, 1); assert.equal(state.campaign_instances[0].revision, 1);
+      assert.equal((await deliver()).completedCount, 1); assert.equal((await snapshot(f.game)).notification_deliveries.length, 1);
+      checks[`${tag}RunContention`] = results;
+    }
+  } else await proveLeases();
   assert.deepEqual(await foreignState(), foreignBaseline); checks.foreignFixturesUnchanged = true;
   evidence.status = "assertions_passed";
 } catch (error) {
@@ -244,7 +342,7 @@ try {
   catch (error) { evidence.status = "failed"; checks.cleanupError = String(error); throw error; }
   finally {
     // Provisional only: the supervisor must independently verify owned-resource disposal.
-    await Deno.writeTextFile("/tmp/ref018/ref046-events.json", JSON.stringify(evidence, null, 2) + "\n");
+    await Deno.writeTextFile(`/tmp/ref018/ref046-${phase}.json`, JSON.stringify(evidence, null, 2) + "\n");
     console.log(JSON.stringify(evidence));
   }
 }
