@@ -282,10 +282,11 @@ async function exerciseReadCompletionFocus() {
     const gate = new Promise(resolve => { release = resolve; });
     try {
       await loadAdmin(page);
-      await page.evaluate(async () => { await window.Econovaria.features.adminOverviewTerminal.sessionBootstrapPromise; });
+      await page.waitForFunction(() => !window.Econovaria.features.adminOverviewTerminal.sessionBootstrapPromise, null, { timeout: 5000 });
       const nav = page.locator('[data-admin-section="Assignments"]').first();
       await nav.focus(); await page.keyboard.press("Enter");
-      await page.evaluate(async () => { await window.Econovaria.features.adminOverviewTerminal.loadAdminTerminalPageData("Assignments", { noLoadingRender: true }); });
+      await page.evaluate(() => { window.Econovaria.features.adminOverviewTerminal.loadAdminTerminalPageData("Assignments", { noLoadingRender: true }).then(() => { window.__ref015InitialReadDone = true; }); });
+      await page.waitForFunction(() => window.__ref015InitialReadDone, null, { timeout: 5000 });
       await page.route("**/*", async route => {
         if (route.request().method() === "GET" && /\/contracts(?:\?|$)/.test(route.request().url())) { sawRead = true; await gate; }
         await route.fallback();
