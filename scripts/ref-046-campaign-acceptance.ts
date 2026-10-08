@@ -98,7 +98,9 @@ async function seed(phase = "arrival", definition = "ref046.program") {
   await sql(`begin;
     insert into public.staff_users(id,supabase_auth_user_id,email,display_name) values(${q(owner)},${q(crypto.randomUUID())},${q(owner + "@example.test")},'REF046 synthetic');
     insert into public.game_sessions(id,owner_staff_user_id,name,status,lifecycle_state,provisioning_status,provisioning_pack_id,provisioning_pack_version,started_at)
-      values(${q(game)},${q(owner)},'REF046 synthetic','active','active','ready',${q(pack)},'1',${q(now)});
+      values(${q(game)},${q(owner)},'REF046 synthetic','active','active','pending',${q(pack)},'1',${q(now)});
+    insert into public.game_settings(game_session_id,stock_market_window) values(${q(game)},'{"timezone":"UTC"}');
+    update public.game_sessions set provisioning_status='ready' where id=${q(game)};
     insert into public.players(id,game_session_id,display_name,status) values(${q(player)},${q(game)},'REF046 synthetic','active');
     update public.campaign_instances set definition_id=${q(definition)},current_phase=${q(phase)},scheduled_at=${q(now)}
       where game_session_id=${q(game)} and pack_id=${q(pack)};
