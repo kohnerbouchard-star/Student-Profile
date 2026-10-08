@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref046-campaign-verification-pr-878.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 878,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/supabase/functions/admin-api/campaignWorkersRuntime.test.ts",
+    "docs/operations/evidence/refactor-execution-v1/REF-046/preflight.md",
+    "docs/operations/evidence/refactor-execution-v1/REF-046/recovery.md",
+    "docs/operations/contracts/player-cross-cutting/pr-878.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": ["docs/operations/contracts/player-cross-cutting/pr-878.json", "scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "requiredChecks": [
+    "player-terminal-verify", "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract", "player-api-read-resilience",
+    "Backend Typecheck", "Repository Quality", "World Runtime", "Admin API Check",
+    "Certify Banking FX clearing source", "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance"
+  ],
+  "criticalJobChecks": ["Certify Banking FX clearing source", "Verify Banking FX database acceptance", "Verify Banking FX Chromium acceptance"],
+  "readOnlyPaths": ["scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "nonblankChangedLineLimit": 400,
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-046/recovery.md",
+  "authorizationNote": "User authorized completing bounded REF046 verification and publishing a draft PR through the explicitly selected GitHub plugin. Register the actual PR-specific verification manifest; preserve the verifier, assertions, existing package ownership, all eight acceptance scenarios and separate database-child gates. Four changed paths, under 400 semantic lines; no production/runtime/SQL/cadence/lease changes, merge or release-hold restoration."
+}

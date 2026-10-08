@@ -29,7 +29,9 @@ no database has been started or queried during recovery.
 
 Editable paths in this PR: campaignWorkersRuntime.test.ts under the existing
 Admin API directory, historical REF-046/preflight.md, and this recovery.md.
-Three meaningful files, under 400 semantic changed lines; no package edits.
+Add docs/operations/contracts/player-cross-cutting/pr-878.json to bind the actual
+PR's verification gates. Four meaningful files, under 400 semantic changed lines;
+no package edits. The verifier and its tests are locked read-only.
 
 | Required scenario | Characterization | Remaining proof |
 | --- | --- | --- |
@@ -57,3 +59,11 @@ Children require their own exact-path/budget registration and exact base. Keep
 all 50 parent IDs and parent-owned closeout. Do not claim the eight scenarios
 qualified from mocks or historical results. No merge, deployment, production SQL,
 schedule/cadence change, lease change or release-hold restoration is authorized.
+
+## PR registration correction
+
+Draft PR878 head 26795fd0 failed Banking source run 37776758517/job 113309452120:
+Player authority identifier was not bound to this pull request. Preserve that
+failure; the added PR878 manifest binds exact paths and required checks without
+weakening the verifier. Requalify the new head. Approved Docker metadata access
+subsequently succeeded; no database startup, fixture or SQL execution occurred.
