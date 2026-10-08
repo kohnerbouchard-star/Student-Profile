@@ -96,3 +96,9 @@ subsequently succeeded; no database startup, fixture or SQL execution occurred.
   filesystem permissions. No alternate registry or credential changes attempted.
 - Workflow proposal is retained outside Git; no DB CI integration credit yet.
 - REF-046b remains unopened pending A acceptance; no race/lease proof claimed.
+- Subsequent parent allocation resolves workflow coordination: only the prepared
+  12-line registration slice; preserve PR620's action-version/pin ownership.
+- This internal allocation is not formal CODEOWNER approval or merge permission.
+- Deno permits only DATABASE_URL, REF046_DISPOSABLE_DATABASE, REF046_STACK_ID,
+  RELEASE_COMMIT and PATH; network stays denied and subprocess access is psql-only.
+- Prior ad192c18: five selected workflows passed; new-head DB proof remains 0/8.
