@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref046-campaign-acknowledgements-pr-884.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 884,
+  "baseRef": "refactor/ref-046b-campaign-leases",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": ["backend/supabase/migrations/20261009000000_fence_campaign_effect_acknowledgements_v2.sql", "backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts", "backend/src/domains/campaign/services/campaignEffectWorker.ts", "backend/supabase/functions/admin-api/campaignWorkersRuntime.test.ts", "docs/architecture/inventories/econovaria-architecture-inventory-v2.json", "scripts/ref-046-campaign-acceptance.ts", ".github/workflows/ref-018-attendance-qualification.yml", "docs/operations/contracts/player-cross-cutting/pr-884.json", "docs/operations/evidence/refactor-execution-v1/REF-046/recovery.md", "docs/roadmaps/refactor-execution-v1/tasks/REF-046.md", "docs/roadmaps/refactor-execution-v1/backlog.json", "scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "requiredFiles": ["docs/operations/contracts/player-cross-cutting/pr-884.json", "scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "requiredChecks": ["player-terminal-verify", "player-edge-trusted-ip-entrypoint-contract", "player-production-secret-provision-contract", "player-api-read-resilience", "Backend Typecheck", "Repository Quality", "World Runtime", "Admin API Check", "Certify Banking FX clearing source", "Verify Banking FX database acceptance", "Verify Banking FX Chromium acceptance", "Staff Attendance and ledger adjustment database/race qualification", "REF046 exclusive disposable qualification"],
+  "criticalJobChecks": ["Certify Banking FX clearing source", "Verify Banking FX database acceptance", "Verify Banking FX Chromium acceptance"],
+  "readOnlyPaths": ["scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "nonblankChangedLineLimit": 400,
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-046/recovery.md",
+  "authorizationNote": "User approved REF046c runtime correction and forward migration including legacy ownership-free acknowledgement rejection, draft/test only. Root registration96dadbb8700646916f43da568b49c6a147e04ceb precedes code. Current command/attempt fencing, scalar true accounting, generation continuity and full isolated DB proof. Caps: migration100/repository50/worker40/tests40/inventory20/harness80/workflow2/authority25/recovery15/task18/backlog10=400;11paths,cumulative21. Preserve PR883 red evidence, PR620 pins and PR668/REF034 other inventory/package ownership. No merge/deploy/live SQL or secret handling."
+}
