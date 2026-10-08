@@ -779,7 +779,32 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": null,
+      "children": [
+        {
+          "id": "REF-046a",
+          "status": "PLANNED",
+          "scope": "Atomic event/outbox replay and rollback with real notification destination effects; see REF-046 task child section",
+          "dependsOn": [
+            "REF-032",
+            "REF-033"
+          ],
+          "implementationSha": null,
+          "mergeSha": null,
+          "evidence": null
+        },
+        {
+          "id": "REF-046b",
+          "status": "PLANNED",
+          "scope": "Competing claims, exact expiry and stale-worker defect-finding gate; see REF-046 task child section",
+          "dependsOn": [
+            "REF-046a"
+          ],
+          "implementationSha": null,
+          "mergeSha": null,
+          "evidence": null
+        }
+      ]
     },
     {
       "id": "REF-047",
