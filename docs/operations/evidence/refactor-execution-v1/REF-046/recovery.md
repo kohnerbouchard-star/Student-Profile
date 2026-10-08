@@ -67,3 +67,32 @@ Player authority identifier was not bound to this pull request. Preserve that
 failure; the added PR878 manifest binds exact paths and required checks without
 weakening the verifier. Requalify the new head. Approved Docker metadata access
 subsequently succeeded; no database startup, fixture or SQL execution occurred.
+
+## REF-046a registered disposable qualification
+
+- Parent accepted test-only children on 2026-10-08; primary 50 IDs remain stable.
+- Registration PR879 commit: `79d725b87a0215c46b346cb1446a291892b3cb95`.
+- A branch: `refactor/ref-046a-campaign-events`, based exactly on that commit.
+- Dependency PR878: `b9d0a030358ad4c9e97d7fd466d370149ef01c8d`.
+- Current main: `9634ff92d8e28fd29623f7f4db41ff9a797e3171`.
+- Local snapshot tree matched PR878 `4bbfdd2272cf5c88781bf6f521e7071f5ad05ad0`;
+  registration tree matched `72ffa5460eb7339a6cad13eef3546e215bae14a6`.
+- Allowed A edits: `scripts/ref-046-campaign-acceptance.ts` (300 lines), this
+  recovery record (35), existing REF018 qualification workflow (25), actual
+  A PR authority (40); maximum 400 semantic changed lines.
+- Shared workflow remains pending PR620 ownership coordination requested at
+  https://github.com/kohnerbouchard-star/Student-Profile/pull/620#issuecomment-6060442671.
+- No workflow/action version or package change until coordination resolves.
+- Harness uses actual scheduler/repository/effect adapters, real PostgreSQL
+  RPCs and synthetic destination rows; no mocked database correctness claim.
+- Full frozen migration replay is required. No production migration/routine,
+  runtime, cadence, lease, credentials, settings, deployment or hold changes.
+- Raw local results: `/tmp/ref018/`; final exact source and outcomes pending.
+- Stacked main-only CI may not run; absent checks do not qualify acceptance.
+- Final local Deno 2.9.3 frozen-lock typecheck: PASS (source script before PR authority).
+- Local DB replay: BLOCKED/NOT_RUN. Approved stack startup returned
+  `Get "https://public.ecr.aws/v2/": Forbidden`; pull retries stopped and no
+  cached images exist. No SQL executed. PostgreSQL client install also lacked
+  filesystem permissions. No alternate registry or credential changes attempted.
+- Workflow proposal is retained outside Git; no DB CI integration credit yet.
+- REF-046b remains unopened pending A acceptance; no race/lease proof claimed.
