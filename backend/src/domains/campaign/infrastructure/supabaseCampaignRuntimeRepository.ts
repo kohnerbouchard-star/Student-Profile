@@ -191,7 +191,8 @@ export function createSupabaseCampaignEffectWorkerRepository(
           p_completed_at: completedAt,
         },
       );
-      requireRows(result, "campaign effect completion");
+      assertNoError(result, "campaign effect completion");
+      if ((result.data as unknown) !== true) throw invalid("Campaign effect completion was not acknowledged.");
     },
     fail: async ({ commandId, errorCode }) => {
       const result = await client.rpc<{ fail_campaign_effect_command_v1: boolean }>(

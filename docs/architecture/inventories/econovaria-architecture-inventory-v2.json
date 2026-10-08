@@ -3494,6 +3494,10 @@
         "lines": 556
       },
       {
+        "file": "backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts",
+        "lines": 555
+      },
+      {
         "file": "backend/src/domains/store/infrastructure/supabaseStorePurchaseRepository.ts",
         "lines": 555
       },
@@ -3503,10 +3507,6 @@
       },
       {
         "file": "admin/v2/src/routes/marketplace/MarketplaceController.js",
-        "lines": 554
-      },
-      {
-        "file": "backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts",
         "lines": 554
       },
       {

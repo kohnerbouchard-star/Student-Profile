@@ -2,7 +2,7 @@ name: REF-018 and REF-022 Staff Mutation Qualification
 
 on:
   pull_request:
-    branches: [main, refactor/ref-046-db-registration, refactor/ref-046a-campaign-events, refactor/ref-046-cleanup-registration, refactor/ref-046-owned-disposable]
+    branches: [main, refactor/ref-046-db-registration, refactor/ref-046a-campaign-events, refactor/ref-046-cleanup-registration, refactor/ref-046-owned-disposable, refactor/ref-046b-campaign-leases]
     paths:
       - '.github/workflows/ref-018-attendance-qualification.yml'
       - 'backend/src/domains/attendance/**'
