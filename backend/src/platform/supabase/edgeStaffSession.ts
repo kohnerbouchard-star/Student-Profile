@@ -228,7 +228,7 @@ export async function resolveStaffSessionForRequest(
 
   const serviceClient = dependencies.createServiceClient(env);
   if (options.claimRecovery) {
-    if (env.supabaseUrl !== "https://eecvbssdvarfcykcfrny.supabase.co" || !options.recoveryGrantDigest) {
+    if (!isSystemRecoveryProject(env.supabaseUrl) || !options.recoveryGrantDigest) {
       return authorizationFailure(403, "recovery_unavailable", "Recovery is unavailable.");
     }
     const claim = await serviceClient.rpc("system_recovery_claim_v1", {
@@ -561,7 +561,7 @@ function authorizationFailure(
 }
 
 // The provider has already validated this bearer through getUser. This additional
-// staging-only lookup rejects revoked sessions and restricted application access.
+// deployment-bound lookup rejects revoked sessions and restricted application access.
 // A browser-supplied recovery header never authorizes ordinary Staff routes.
 export async function systemRecoveryAccessAllowed(
   supabaseUrl: string,
@@ -570,7 +570,7 @@ export async function systemRecoveryAccessAllowed(
   accessToken: string,
   recoveryGrantDigest?: string,
 ): Promise<boolean> {
-  if (supabaseUrl.replace(/\/+$/u, "") !== "https://eecvbssdvarfcykcfrny.supabase.co") return true;
+  if (!isSystemRecoveryProject(supabaseUrl.replace(/\/+$/u, ""))) return true;
   try {
     const sessionId = recoverySessionId(accessToken, userId);
     if (!sessionId) return false;
@@ -595,4 +595,8 @@ export async function recoveryGrantDigest(value: unknown): Promise<string | null
   if (typeof value!=="string" || !/^[A-Za-z0-9_-]{43}$/u.test(value)) return null;
   const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("");
+}
+
+export function isSystemRecoveryProject(url: string): boolean {
+  return ["https://eecvbssdvarfcykcfrny.supabase.co", "https://cgiukdjwicykrmtkhudh.supabase.co"].includes(url);
 }

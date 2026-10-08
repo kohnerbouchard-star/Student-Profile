@@ -3418,6 +3418,10 @@
         "lines": 606
       },
       {
+        "file": "backend/src/platform/supabase/edgeStaffSession.ts",
+        "lines": 603
+      },
+      {
         "file": "frontend/src/core/admin-mfa.js",
         "lines": 603
       },
@@ -3428,10 +3432,6 @@
       {
         "file": "backend/src/domains/contracts/contracts/contractContracts.ts",
         "lines": 600
-      },
-      {
-        "file": "backend/src/platform/supabase/edgeStaffSession.ts",
-        "lines": 599
       },
       {
         "file": "backend/supabase/functions/admin-api/mutationAdapters.ts",

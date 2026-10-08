@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { validateIndividualRecovery, individualRecoveryDigest } from './security/individual-account-recovery.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -15,6 +16,7 @@ test('recovery transactions: grants, identity, revoked sessions, exact factors a
     do $$ begin create role anon; exception when duplicate_object then null; end $$;
     do $$ begin create role authenticated; exception when duplicate_object then null; end $$;
     do $$ begin create role service_role; exception when duplicate_object then null; end $$;
+    grant usage on schema public to anon,authenticated,service_role;
     create schema auth;
     create table auth.users(id uuid primary key, raw_app_meta_data jsonb default '{}');
     create table auth.sessions(id uuid primary key,user_id uuid,created_at timestamptz default clock_timestamp(),not_after timestamptz);
@@ -195,6 +197,87 @@ test('recovery transactions: grants, identity, revoked sessions, exact factors a
     select 'restart-contract-passed';
   `);
   assert.match(restart,/restart-contract-passed/);
+
+  const forward=readFileSync(new URL('../backend/supabase/migrations/20261007221252_system_account_recovery_targets_v2.sql',import.meta.url),'utf8');
+  assert.throws(()=>sql(forward),/reconcile restricted legacy/);
+  // Discard only disposable fixtures, never interpret or unblock legacy attempts.
+  sql('truncate recovery_private.attempts cascade;');
+  sql(forward);
+  const literal=value=>`'${String(value).replaceAll("'","''")}'`;
+  const receipt=r=>({operator:'sole-external-admin',authenticatedAt:Date.now(),confirmedOperationDigest:individualRecoveryDigest(r),productionConfirmed:true,supportRequestVerified:true});
+  const invoke=(r,action,payload={})=>`select public.system_recovery_operator_v2(${literal(JSON.stringify(r))}::jsonb,${literal(individualRecoveryDigest(r))},${literal(action)},${literal(JSON.stringify(payload))}::jsonb)`;
+  const denied=query=>sql(`select public.expect_denied(${literal(query)});`);
+  for (const [environment,projectRef] of Object.entries({staging:'eecvbssdvarfcykcfrny',production:'cgiukdjwicykrmtkhudh'})) {
+    sql(`truncate recovery_private.attempts cascade; truncate recovery_private.target;
+      truncate auth.sessions,auth.mfa_factors;
+      insert into auth.users values('00000000-0000-4000-8000-000000000099','{}') on conflict do nothing;
+      insert into public.staff_users values('00000000-0000-4000-8000-000000000099','active',true,1) on conflict do nothing;
+      insert into auth.sessions(id,user_id) values
+        ('00000000-0000-4000-8000-000000000090','00000000-0000-4000-8000-000000000001'),
+        ('00000000-0000-4000-8000-000000000091','00000000-0000-4000-8000-000000000099');
+      insert into auth.mfa_factors(id,user_id,status) values
+        ('00000000-0000-4000-8000-000000000080','00000000-0000-4000-8000-000000000001','verified'),
+        ('00000000-0000-4000-8000-000000000081','00000000-0000-4000-8000-000000000099','verified');`);
+    const now=Date.now(),r=validateIndividualRecovery({version:'2',environment,projectRef,
+      authUserId:'00000000-0000-4000-8000-000000000001',requestId:'00000000-0000-4000-8000-000000000070',
+      operation:'reset-individual-mfa',factorIds:['00000000-0000-4000-8000-000000000080'],sourceCommit:'a'.repeat(40),
+      supportRequestRef:'support/individual-01',identityEvidenceRef:'identity/verified-01',expiresAt:new Date(now+600_000).toISOString()},now);
+    denied(invoke(r,'begin',receipt(r)));
+    sql(`insert into recovery_private.target(environment,project_ref,operator_subject) values(${literal(environment)},${literal(projectRef)},'sole-external-admin');`);
+    denied(invoke(r,'begin',{...receipt(r),operator:'game_admin'}));
+    const opposite={...r,environment:environment==='staging'?'production':'staging',projectRef:environment==='staging'?'cgiukdjwicykrmtkhudh':'eecvbssdvarfcykcfrny'};
+    denied(invoke(opposite,'begin',receipt(opposite)));
+    const wrongFactor={...r,factorIds:['00000000-0000-4000-8000-000000000081']};
+    denied(invoke(wrongFactor,'begin',receipt(wrongFactor)));
+    for(const change of [{productionConfirmed:false},{supportRequestVerified:false},{authenticatedAt:Date.now()-300_001},{confirmedOperationDigest:'d'.repeat(64)}]) {
+      if(environment==='staging' && Object.hasOwn(change,'productionConfirmed'))continue;
+      denied(invoke(r,'begin',{...receipt(r),...change}));
+    }
+    sql(`set role service_role; ${invoke(r,'begin',{...receipt(r),unexpected:'must-not-persist'})}; reset role;`);
+    sql(invoke(r,'begin',receipt(r)));
+    assert.match(sql(`select count(*) from recovery_private.operations;`),/^1\s*$/);
+    for(const change of [{supportRequestRef:'support/altered-01'},{factorIds:[]},{operation:'disable-all-mfa'},
+      {authUserId:'00000000-0000-4000-8000-000000000099'},{sourceCommit:'b'.repeat(40)},{projectRef:opposite.projectRef}]) {
+      denied(invoke({...r,...change},'read'));
+    }
+    assert.match(sql(`select public.system_recovery_access_v1('${r.authUserId}','00000000-0000-4000-8000-000000000090');`),/^f\s*$/);
+    assert.match(sql(`select public.system_recovery_access_v1('00000000-0000-4000-8000-000000000099','00000000-0000-4000-8000-000000000091');`),/^t\s*$/);
+    for(const name of ['begin','operator_state','advance','restart','delivery','notice']) {
+      assert.match(sql(`select bool_and(not has_function_privilege('service_role',oid,'execute')) from pg_proc where proname='system_recovery_${name}_v1';`),/^t\s*$/);
+    }
+    assert.match(sql(`select not has_function_privilege('authenticated','public.system_recovery_operator_v2(jsonb,text,text,jsonb)','execute')
+      and not has_table_privilege('service_role','recovery_private.target','select')
+      and not has_table_privilege('service_role','recovery_private.operations','update');`),/^t\s*$/);
+    sql(invoke(r,'advance',{expected:'restricted',next:'revoking'}));
+    denied(invoke(r,'advance',{expected:'restricted',next:'revoking'}));
+    denied(invoke(r,'advance',{expected:'revoking',next:'revoked'})); // Old session must be revoked first.
+    sql(`delete from auth.sessions where user_id='${r.authUserId}';`);
+    sql(invoke(r,'advance',{expected:'revoking',next:'revoked'}));
+    sql(invoke(r,'advance',{expected:'revoked',next:'removing'}));
+    denied(invoke(r,'advance',{expected:'removing',next:'removed'})); // Factors must be gone.
+    sql(`delete from auth.mfa_factors where user_id='${r.authUserId}';`);
+    sql(invoke(r,'advance',{expected:'removing',next:'removed'}));
+    sql(invoke(r,'advance',{expected:'removed',next:'ready',grantDigest:'c'.repeat(64),expiresAt:Date.parse(r.expiresAt)}));
+    assert.match(sql(`select restricted from recovery_private.attempts where id='${r.requestId}';`),/^t\s*$/);
+    assert.match(sql(`select count(*) from auth.sessions where user_id='00000000-0000-4000-8000-000000000099';`),/^1\s*$/);
+    assert.match(sql(`select count(*) from auth.mfa_factors where user_id='00000000-0000-4000-8000-000000000099';`),/^1\s*$/);
+    assert.match(sql(`select count(*) from recovery_private.outbox where attempt_id='${r.requestId}' and kind='started';`),/^1\s*$/);
+    const stored=JSON.parse(sql(`select approval_receipt from recovery_private.operations where attempt_id='${r.requestId}';`).trim());
+    assert.equal(stored.operator,'sole-external-admin');assert.equal(stored.confirmedOperationDigest,individualRecoveryDigest(r));
+    assert.equal(stored.productionConfirmed,true);assert.equal(Object.hasOwn(stored,'unexpected'),false);
+    // Advance the disposable fixture's clock coordinates to exercise an expired attempt.
+    const expired={...r,expiresAt:new Date(Date.now()-60_000).toISOString()};
+    sql(`update recovery_private.attempts set expires_at=${literal(expired.expiresAt)},request_expires_at=${literal(expired.expiresAt)} where id='${r.requestId}';
+      update recovery_private.operations set request=${literal(JSON.stringify(expired))}::jsonb,digest=${literal(individualRecoveryDigest(expired))} where attempt_id='${r.requestId}';`);
+    const fresh={...r,requestId:'00000000-0000-4000-8000-000000000071',expiresAt:new Date(Date.now()+600_000).toISOString()};
+    denied(invoke({...fresh,supportRequestRef:'support/different-request'},'restart',{...receipt({...fresh,supportRequestRef:'support/different-request'}),previous:expired}));
+    sql(invoke(fresh,'restart',{...receipt(fresh),previous:expired}));
+    sql(invoke(fresh,'restart',{...receipt(fresh),previous:expired}));
+    assert.match(sql(`select count(*) from recovery_private.attempts where auth_user_id='${r.authUserId}' and restricted;`),/^1\s*$/);
+    assert.match(sql(`select phase from recovery_private.attempts where id='${r.requestId}';`),/^superseded\s*$/);
+    assert.match(sql(`select count(*) from recovery_private.operations;`),/^2\s*$/);
+
+  }
 
   } finally { execFileSync('docker',['rm','-f',container],{stdio:'pipe'}); }
 });

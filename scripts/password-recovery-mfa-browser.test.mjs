@@ -113,7 +113,10 @@ test("disposable browser recovery: MFA, isolation, expiry, missing/lost factors 
   }
 });
 
-test("system-approved recovery enrolls exact primary and backup before password, without old password", async () => {
+for (const project of ["eecvbssdvarfcykcfrny","cgiukdjwicykrmtkhudh"]) test(`system-approved ${project} recovery enrolls exact primary and backup before password`, async () => {
+  const priorUrl=process.env.ECONOVARIA_SUPABASE_URL,priorKey=process.env.ECONOVARIA_SUPABASE_PUBLISHABLE_KEY;
+  process.env.ECONOVARIA_SUPABASE_URL=`https://${project}.supabase.co`;
+  process.env.ECONOVARIA_SUPABASE_PUBLISHABLE_KEY="sb_publishable_disposable_recovery_fixture";
   const originalFetch=globalThis.fetch;
   const calls=[];
   let enrolled=0,verified=0;
@@ -157,6 +160,14 @@ test("system-approved recovery enrolls exact primary and backup before password,
   try {
     const page=await browser.newPage();
     await page.route('**/*',route=>route.request().url().startsWith(origin)?route.continue():route.abort());
+    for(const suffix of ['',`&project_ref=${project}&project_ref=${project}`]) {
+      await page.goto(`${origin}/auth/reset-password.html#recovery_grant=${'g'.repeat(43)}&token_hash=${'t'.repeat(32)}&type=recovery${suffix}`);
+      await page.getByText('This approved recovery link is invalid.',{exact:true}).waitFor();
+      assert.equal(calls.length,0,'missing or ambiguous target never consumes a token');
+      assert.equal(await page.getByRole('button',{name:'Continue approved account recovery'}).isVisible(),false);
+      assert.equal(new URL(page.url()).hash,'');
+      await page.goto('about:blank');
+    }
     await page.goto(`${origin}/auth/reset-password.html#recovery_grant=${'g'.repeat(43)}&token_hash=${'t'.repeat(32)}&type=recovery&project_ref=${project}`);
     assert.equal(new URL(page.url()).hash,'');
     assert.equal(calls.length,0,'email scanners do not consume the link');
@@ -176,5 +187,8 @@ test("system-approved recovery enrolls exact primary and backup before password,
     await page.getByText(/Password updated and existing administrator sessions revoked/).waitFor();
     assert.equal(await page.evaluate(()=>localStorage.length+sessionStorage.length),0);
     assert.equal(verified,2);
-  } finally {await browser.close();await new Promise(resolve=>server.close(resolve));globalThis.fetch=originalFetch;}
+  } finally {await browser.close();await new Promise(resolve=>server.close(resolve));globalThis.fetch=originalFetch;
+    if(priorUrl===undefined)delete process.env.ECONOVARIA_SUPABASE_URL;else process.env.ECONOVARIA_SUPABASE_URL=priorUrl;
+    if(priorKey===undefined)delete process.env.ECONOVARIA_SUPABASE_PUBLISHABLE_KEY;else process.env.ECONOVARIA_SUPABASE_PUBLISHABLE_KEY=priorKey;
+  }
 });

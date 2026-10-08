@@ -424,11 +424,12 @@ async function handleSystemRecoveryProxy(request,response,operation,origin,clien
   const fields=action==="enroll" ? ["projectRef","grant","slot"] : action==="verify"
     ? ["projectRef","grant","slot","factorHandle","code"] : action==="complete"
     ? ["projectRef","grant","password"] : ["projectRef","grant"];
-  if(!["claim","status","enroll","verify","complete"].includes(action) || body.projectRef!==STAGING_PROJECT_REF ||
+  if(!["claim","status","enroll","verify","complete"].includes(action) || ![STAGING_PROJECT_REF,PRODUCTION_PROJECT_REF].includes(body.projectRef) ||
     Object.keys(body).some(key=>!fields.includes(key)) || typeof body.grant!=="string" || !/^[A-Za-z0-9_-]{43}$/u.test(body.grant)) {
     return sendJson(response,400,errorBody("invalid_recovery_request","Recovery request is invalid."));
   }
-  const config=readConfig(STAGING_PROJECT_REF);
+  const config=readConfig(body.projectRef);
+  if (config.supabaseUrl !== `https://${body.projectRef}.supabase.co`) throw Error("Recovery target configuration mismatch");
   const {projectRef,...payload}=body;
   const upstream=await fetch(`${config.supabaseUrl}/functions/v1/${action==="complete" ? "password-reset-api" : `staff-mfa-api/staff/mfa/recovery/${action}`}`,{
     method:"POST",headers:{apikey:config.publishableKey,Authorization:`Bearer ${accessToken}`,Origin:origin,"Content-Type":"application/json","x-real-ip":clientIp},
