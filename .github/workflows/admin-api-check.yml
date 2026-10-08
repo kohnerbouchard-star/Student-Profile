@@ -3,6 +3,7 @@ name: Admin API Check
 on:
   pull_request:
     paths:
+      - "scripts/ref-046-*"
       - "backend/supabase/functions/admin-api/**"
       - "backend/supabase/migrations/**"
       - ".github/workflows/admin-api-check.yml"

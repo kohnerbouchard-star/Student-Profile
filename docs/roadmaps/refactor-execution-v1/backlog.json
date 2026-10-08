@@ -807,7 +807,7 @@
         {
           "id": "REF-046b",
           "status": "PLANNED",
-          "scope": "Competing claims, exact expiry and stale-worker defect-finding gate; see REF-046 task child section",
+          "scope": "Competing claims, expiry and stale-worker failing defect gate after accepted A; 400 total: harness295/supervisor25/workflow15/authority40/recovery25",
           "dependsOn": [
             "REF-046a",
             "REF-046a-cleanup"
@@ -816,7 +816,9 @@
           "mergeSha": null,
           "evidence": null
         }
-      ]
+      ],
+      "cumulativeAllowedPaths": 16,
+      "qualificationAmendment": "Approved four exact REF046 PR path registrations; preserve required checks and pins; see task record"
     },
     {
       "id": "REF-047",
