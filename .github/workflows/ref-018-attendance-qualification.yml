@@ -2,7 +2,7 @@ name: REF-018 and REF-022 Staff Mutation Qualification
 
 on:
   pull_request:
-    branches: [main, refactor/ref-046-db-registration, refactor/ref-046a-campaign-events, refactor/ref-046-cleanup-registration]
+    branches: [main, refactor/ref-046-db-registration, refactor/ref-046a-campaign-events, refactor/ref-046-cleanup-registration, refactor/ref-046-owned-disposable]
     paths:
       - '.github/workflows/ref-018-attendance-qualification.yml'
       - 'backend/src/domains/attendance/**'
@@ -264,18 +264,21 @@ jobs:
       - name: Verify supervisor fail-closed guards
         run: node scripts/ref-046-disposable-qualification.mjs --self-test
       - name: Prove Campaign assertions in an exclusive owned stack
-        run: node scripts/ref-046-disposable-qualification.mjs run events
+        run: for phase in events leases; do node scripts/ref-046-disposable-qualification.mjs run "$phase"; done
       - name: Independently reconcile owned resource teardown
         if: always()
-        run: node scripts/ref-046-disposable-qualification.mjs cleanup events
+        run: |
+          status=0
+          for phase in events leases; do node scripts/ref-046-disposable-qualification.mjs cleanup "$phase" || status=1; done
+          exit "$status"
       - name: Certify only after assertions and teardown succeed
         if: success() && !cancelled()
-        run: node scripts/ref-046-disposable-qualification.mjs finalize events
+        run: for phase in events leases; do node scripts/ref-046-disposable-qualification.mjs finalize "$phase"; done
       - name: Upload exact-head Campaign receipts and teardown evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ref046-owned-events-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ref046-owned-phases-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: /tmp/ref018/
           if-no-files-found: error
           retention-days: 30

@@ -154,4 +154,6 @@ Retain scalar booleans, worker counters and persisted rows; false completion is
 a failing defect gate requiring separate correction, never expected-pass behavior.
 Run events and leases on separate fresh owned stacks with phase-specific receipts.
 No runtime/SQL, package, credential, deployment, merge or primary closeout changes.
+B authority PR883 committed before implementation at
+`6ffb66a2de1e5f87693c6751ad12f558511df583`; registration `9ed1b91af5225d24a4218a6cc10471dfe4d7ccf6`.
 
