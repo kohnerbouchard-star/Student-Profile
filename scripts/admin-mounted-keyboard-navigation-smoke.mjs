@@ -274,9 +274,55 @@ async function exerciseQuickActions() {
   return { viewport, results };
 }
 
+async function exerciseReadCompletionFocus() {
+  for (const mode of ["navigation", "outside", "hidden-replacement"]) {
+    const harness = await createPage(VIEWPORTS[0], `read-focus-${mode}`);
+    const { page } = harness;
+    let release, sawRead = false;
+    const gate = new Promise(resolve => { release = resolve; });
+    try {
+      await loadAdmin(page);
+      await page.evaluate(async () => { await window.Econovaria.features.adminOverviewTerminal.sessionBootstrapPromise; });
+      const nav = page.locator('[data-admin-section="Assignments"]').first();
+      await nav.focus(); await page.keyboard.press("Enter");
+      await page.evaluate(async () => { await window.Econovaria.features.adminOverviewTerminal.loadAdminTerminalPageData("Assignments", { noLoadingRender: true }); });
+      await page.route("**/*", async route => {
+        if (route.request().method() === "GET" && /\/contracts(?:\?|$)/.test(route.request().url())) { sawRead = true; await gate; }
+        await route.fallback();
+      });
+      await page.evaluate(() => {
+        window.__ref015Read = window.Econovaria.features.adminOverviewTerminal.loadAdminTerminalPageData("Assignments", { force: true, noLoadingRender: true });
+      });
+      const deadline = Date.now() + 5000;
+      while (!sawRead && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
+      assert(sawRead, `${mode}: controlled read did not start.`);
+      if (mode === "outside") await page.evaluate(() => { const button = document.createElement("button"); button.id = "ref015Outside"; button.textContent = "Outside render scope"; document.body.append(button); });
+      const target = mode === "outside" ? page.locator("#ref015Outside") : nav;
+      await target.focus();
+      if (mode === "hidden-replacement") {
+        await nav.evaluate(node => { node.dataset.ref015Original = "true"; });
+        await page.addStyleTag({ content: '[data-admin-section="Assignments"]:not([data-ref015-original]) { visibility: hidden !important; }' });
+      }
+      await page.evaluate(mode => {
+        const original = document.activeElement;
+        const snapshot = () => ({ tag: document.activeElement.tagName, section: document.activeElement.getAttribute("data-admin-section"), original: document.activeElement === original });
+        window.__ref015Read.then(async () => { const immediate = snapshot(); await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); window.__ref015ReadResult = { immediate, settled: snapshot(), mode }; }, error => { window.__ref015ReadResult = { error: String(error) }; });
+      }, mode);
+      release(); await page.waitForFunction(() => window.__ref015ReadResult, null, { timeout: 5000 });
+      const result = await page.evaluate(() => window.__ref015ReadResult);
+      assert(!result.error, `${mode}: ${result.error}`);
+      for (const state of [result.immediate, result.settled]) assert(mode === "navigation" ? state.section === "Assignments" : mode === "outside" ? state.original : state.tag === "BODY", `${mode}: read completion lost or stole focus: ${JSON.stringify(result)}`);
+      if (mode === "navigation") { await page.keyboard.press("Shift+Tab"); assert((await activeElementDetail(page)).eligible, "Read completion Shift+Tab lost focus."); await page.keyboard.press("Tab"); assert((await activeElementDetail(page)).section === "Assignments", "Read completion Tab did not return."); }
+      assert(harness.errors.length === 0, `Read focus browser errors: ${harness.errors[0]}`);
+      console.log("REF015_READ_FOCUS " + JSON.stringify(result));
+    } finally { release(); await harness.finish({ mode }); }
+  }
+}
+
 const report = { navigation: [], quickActions: null };
 
 try {
+  await exerciseReadCompletionFocus();
   for (const viewport of VIEWPORTS) {
     report.navigation.push(await exerciseNavigation(viewport));
   }

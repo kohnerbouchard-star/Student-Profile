@@ -8336,6 +8336,7 @@ function renderAdminHelpArticleModal(articleId = "") {
     if (isAdminTerminalLeftMenuSection(nextSection)) {
       setAdminTerminalLeftMenuSection(nextSection);
     }
+    const focusedSection = menu?.contains(document.activeElement) ? document.activeElement.getAttribute("data-admin-section") : null;
     if (menu) menu.outerHTML = renderLeftMenu(model, leftMenuSection);
     if (main) {
       main.innerHTML = renderTerminalSection(model, nextSection);
@@ -8345,6 +8346,10 @@ function renderAdminHelpArticleModal(articleId = "") {
       scheduleSciIdRankAlignment(main);
       if (nextSection === "Market") startMarketplaceRealtimeFeed(main);
       if (!options.skipDataLoad) scheduleAdminTerminalPageDataLoad(nextSection, { silent: true });
+    }
+    if (focusedSection && document.activeElement === document.body) {
+      const replacement = shell.querySelector(`[data-admin-section="${CSS.escape(focusedSection)}"]`);
+      if (window.EconovariaAdminKeyboardNavigation?.enabled?.(replacement)) replacement.focus({ preventScroll: true });
     }
     window.requestAnimationFrame(() => {
       syncInitialMenuStates();
@@ -12861,7 +12866,7 @@ function bindTerminalScannerInputCapture() {
     document.addEventListener("focusin", (event) => {
       const consoleRoot = document.querySelector("[data-admin-terminal-scanner-console]");
       if (!consoleRoot || consoleRoot.dataset.scanMode !== "auto") return;
-      const isModalControl = event.target?.closest?.("[data-admin-terminal-modal-close], [data-admin-terminal-modal-secondary], [data-admin-terminal-modal-primary], [data-admin-terminal-set-mode]");
+      const isModalControl = event.target?.closest?.("[data-admin-terminal-modal-close], [data-admin-terminal-modal-secondary], [data-admin-terminal-modal-primary], [data-admin-terminal-set-mode], [data-admin-terminal-action=\"refocus-attendance-scanner\"]");
       if (isModalControl) return;
       const autoInput = consoleRoot.querySelector("[data-admin-terminal-auto-scan-input]");
       if (event.target !== autoInput) window.requestAnimationFrame(() => autoInput?.focus?.());

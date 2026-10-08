@@ -246,6 +246,14 @@ async function exercise([action, section, key]) {
       action: document.activeElement?.getAttribute?.("data-admin-terminal-action") || "",
       inside: Boolean(document.activeElement?.closest?.(".admin-terminal-modal")),
     }));
+    if (action === "scan-attendance") {
+      const refocus = modal.locator('[data-admin-terminal-action="refocus-attendance-scanner"]');
+      await refocus.focus();
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      assert(await refocus.evaluate(node => document.activeElement === node), "Scanner autofocus stole Refocus keyboard focus.");
+      await page.keyboard.press("Enter");
+      await page.waitForFunction(() => document.activeElement?.matches("[data-admin-terminal-auto-scan-input]"), null, { timeout: 5000 });
+    }
     const bounds = await boundary(modal, true);
     assert(bounds.count > 0, `${action} modal contains no focusable controls.`);
     await traceBoundary(modal, "first");
