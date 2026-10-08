@@ -102,3 +102,24 @@ subsequently succeeded; no database startup, fixture or SQL execution occurred.
 - Deno permits only DATABASE_URL, REF046_DISPOSABLE_DATABASE, REF046_STACK_ID,
   RELEASE_COMMIT and PATH; network stays denied and subprocess access is psql-only.
 - Prior ad192c18: five selected workflows passed; new-head DB proof remains 0/8.
+
+## Approved isolated cleanup child
+
+User approved 380-line child; registration PR881 at
+`703ae397361655eb5f36041c2c7cdb652e5029c9`, from PR880
+`2522babe6ccd4e76bdec5713e9652d5382462ca3`. Main remains `9634ff92d8e28fd29623f7f4db41ff9a797e3171`.
+Branch: `refactor/ref-046-owned-disposable`; implementation initially NOT_RUN.
+Allowed deltas: new scripts/ref-046-disposable-qualification.mjs 180;
+existing ref-018-attendance-qualification.yml 75; campaign acceptance script 55;
+this evidence 30; actual-number child authority 40. Twelve cumulative paths.
+Parent allocates test workflow changes only; PR620 retains action-version/pins.
+Use exclusive run/attempt/phase resources, recorded exact ownership, meaningful
+foreign fixtures, frozen replay and unchanged assertions/lint. A/B never share
+resources. Provisional assertions cannot certify acceptance before independent
+absence verification of every owned container, volume and network succeeds.
+Missing evidence, failed inspection, cancellation or failed teardown cannot pass.
+Prior FK failures remain: runs37791861889,37792879204,37793958640; last artifact
+11558471244 SHA256 `19a25f48240c371e5c35b6fca2eb804eb2d3af5cbd86a896a5b320b3c72d25e5`.
+This approved amendment replaces row deletion with verified resource disposal;
+no guard/constraint/purge/credential/production change or local registry retry.
+Actual authority precedes implementation. No merge; A/B/parent stay unaccepted.
