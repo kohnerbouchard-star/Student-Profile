@@ -61,6 +61,137 @@ Deno.test("scheduler orders campaigns, records replay, and isolates one failure"
   });
 });
 
+Deno.test("scheduler empty discovery preserves the bounded clock and performs no work", async () => {
+  let discovery: unknown;
+  const unexpected = async (): Promise<never> => { throw new Error("unexpected work"); };
+  const result = await runCampaignScheduler({
+    repository: {
+      listDueCampaigns: async (input) => { discovery = input; return []; },
+      executeEventAtomic: unexpected,
+    },
+    programs: { readProgram: unexpected, readOutcomeEvidence: unexpected },
+    dueAt: NOW,
+    runId: "scheduler-empty-0001",
+    limit: 25,
+  });
+  assertEquals(discovery, { dueAt: NOW, limit: 25 });
+  assertEquals(result, {
+    dueCount: 0, executedCount: 0, replayedCount: 0, failedCount: 0, failures: [],
+  });
+});
+
+Deno.test("scheduler isolates a missing program and continues the next campaign", async () => {
+  const executed: string[] = [];
+  const result = await runCampaignScheduler({
+    repository: {
+      listDueCampaigns: async () => [instance("cmp_missing"), instance("cmp_next")],
+      executeEventAtomic: async (input) => {
+        executed.push(input.instance.campaignInstanceId);
+        return execution(input);
+      },
+    },
+    programs: {
+      ...provider(),
+      readProgram: async (campaign) => {
+        if (campaign.campaignInstanceId === "cmp_missing") {
+          throw Object.assign(new Error("missing synthetic program"), {
+            code: "campaign_program_not_found",
+          });
+        }
+        return program();
+      },
+    },
+    dueAt: NOW,
+    runId: "scheduler-missing-0001",
+  });
+  assertEquals(executed, ["cmp_next"]);
+  assertEquals(result, {
+    dueCount: 2, executedCount: 1, replayedCount: 0, failedCount: 1,
+    failures: [{ campaignId: "cmp_missing", code: "campaign_program_not_found" }],
+  });
+});
+
+Deno.test("scheduler rejects paused candidates before program reads or atomic execution", async () => {
+  let programReads = 0;
+  let executions = 0;
+  const result = await runCampaignScheduler({
+    repository: {
+      listDueCampaigns: async () => [{ ...instance("cmp_paused"), status: "paused", pausedAt: NOW }],
+      executeEventAtomic: async (input) => { executions += 1; return execution(input); },
+    },
+    programs: {
+      ...provider(),
+      readProgram: async () => { programReads += 1; return program(); },
+    },
+    dueAt: NOW,
+    runId: "scheduler-paused-0001",
+  });
+  assertEquals([programReads, executions], [0, 0]);
+  assertEquals(result, {
+    dueCount: 1, executedCount: 0, replayedCount: 0, failedCount: 1,
+    failures: [{ campaignId: "cmp_paused", code: "campaign_event_invalid" }],
+  });
+});
+
+Deno.test("scheduler keeps two games at different stages scoped to their own event and evidence", async () => {
+  const arrival = instance("cmp_arrival");
+  const adaptation: CampaignInstance = {
+    ...instance("cmp_adaptation"), gameId: "game-2", currentPhase: "adaptation",
+    revision: 6, eventSequence: 6,
+  };
+  const candidates = [arrival, adaptation];
+  const before = JSON.stringify(candidates);
+  const calls: unknown[] = [];
+  const evidenceGames: string[] = [];
+  const result = await runCampaignScheduler({
+    repository: {
+      listDueCampaigns: async () => candidates,
+      executeEventAtomic: async (input) => {
+        calls.push({ game: input.instance.gameId, phase: input.event.phase,
+          next: input.event.nextPhase, event: input.event.eventKey,
+          effects: input.event.effects, trigger: input.triggerKey,
+          revision: input.instance.revision, at: input.occurredAt, actor: input.actorStaffUserId });
+        return execution(input);
+      },
+    },
+    programs: {
+      ...provider(),
+      readOutcomeEvidence: async (campaign) => {
+        evidenceGames.push(campaign.gameId);
+        return { recoveryReadinessBasisPoints: 7_000, evidenceRevision: 7, evidenceDigest: digest("e") };
+      },
+    },
+    dueAt: NOW,
+    runId: "scheduler-two-games-0001",
+  });
+  assertEquals(evidenceGames, ["game-2"]);
+  assertEquals(calls, [
+    { game: "game-2", phase: "adaptation", next: "reconstruction",
+      event: "campaign.reconstruction.v1", effects: program().terminalEvents.reconstruction.effects,
+      trigger: "scheduler:scheduler-two-games-0001:7", revision: 6, at: NOW, actor: null },
+    { game: "game-1", phase: "arrival", next: "opportunity",
+      event: "campaign.arrival.v1", effects: program().eventsByPhase.arrival.effects,
+      trigger: "scheduler:scheduler-two-games-0001:1", revision: 0, at: NOW, actor: null },
+  ]);
+  assertEquals(result, {
+    dueCount: 2, executedCount: 2, replayedCount: 0, failedCount: 0, failures: [],
+  });
+  assertEquals(JSON.stringify(candidates), before);
+});
+
+function execution(input: Parameters<CampaignSchedulerRepository["executeEventAtomic"]>[0]) {
+  return {
+    executionOutcome: "executed" as const,
+    campaignId: input.instance.campaignInstanceId,
+    eventId: `evt_${input.instance.campaignInstanceId}`,
+    status: input.instance.status,
+    currentPhase: input.event.nextPhase ?? input.instance.currentPhase,
+    revision: input.instance.revision + 1,
+    eventSequence: input.instance.eventSequence + 1,
+    outcome: null,
+  };
+}
+
 Deno.test("protected manual trigger uses server-owned actor game and request key", async () => {
   let captured: unknown = null;
   const repository: CampaignSchedulerRepository = {
