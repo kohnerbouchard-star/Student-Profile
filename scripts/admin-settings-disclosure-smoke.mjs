@@ -4,11 +4,14 @@ const harness = await createQualityHarness("settings-disclosure");
 const { page, errors, capture, finish } = harness;
 const styleMeasurements = [];
 async function measureStyles(target, label) {
+  if (label !== "after-save-remount") await target.waitForLoadState("networkidle");
   const cdp = await target.context().newCDPSession(target);
-  const listeners = [];
+  const listeners = [], listenerSignatures = [];
   for (const expression of ["window", "document"]) {
     const { result } = await cdp.send("Runtime.evaluate", { expression });
-    listeners.push((await cdp.send("DOMDebugger.getEventListeners", { objectId: result.objectId })).listeners.length);
+    const entries = (await cdp.send("DOMDebugger.getEventListeners", { objectId: result.objectId })).listeners;
+    listeners.push(entries.length);
+    listenerSignatures.push(entries.map((entry) => `${entry.type}:${entry.useCapture}:${entry.lineNumber}:${entry.columnNumber}`).sort());
   }
   await cdp.detach();
   const styles = await target.evaluate(() => ({
@@ -17,7 +20,7 @@ async function measureStyles(target, label) {
     requests: performance.getEntriesByType("resource").filter((entry) => /\/settings-save-error-bridge\.js(?:\?|$)|\/settings-final-polish\.css(?:\?|$)/.test(entry.name)).map((entry) => new URL(entry.name).pathname),
   }));
   if (styles.count !== 1) throw new Error(`${label}: final-polish stylesheet is not unique.`);
-  styleMeasurements.push({ label, listeners, ...styles });
+  styleMeasurements.push({ label, listeners, listenerSignatures, ...styles });
 }
 page.setDefaultTimeout(10_000);
 page.setDefaultNavigationTimeout(30_000);
@@ -30,6 +33,8 @@ const deadline = setTimeout(() => {
 }, 120_000);
 deadline.unref();
 
+await page.addInitScript(() => window.addEventListener("econovaria:admin-bootstrap-complete", () => { window.__ref015BootstrapComplete = true; }, { once: true }));
+
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
@@ -39,7 +44,15 @@ try {
     return root?.getAttribute("data-settings-ux-ready") === "true" &&
       root?.getAttribute("data-settings-ux-baseline-ready") === "true";
   }, null, { timeout: 10_000 });
+  await page.waitForFunction(() => window.__ref015BootstrapComplete);
   await measureStyles(page, "canonical-settings");
+  await page.reload({ waitUntil: "load" });
+  await page.waitForSelector("#adminPreview:not([hidden])");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.waitForFunction(() => document.querySelector(".admin-terminal-settings-page")?.getAttribute("data-settings-ux-ready") === "true");
+  await page.waitForFunction(() => window.__ref015BootstrapComplete);
+  await measureStyles(page, "reused-session-settings");
+  for (const sample of styleMeasurements) if (sample.requests.filter((path) => path.endsWith("settings-save-error-bridge.js")).length !== Number(process.env.REF015_EXPECT_BRIDGE ?? 0)) throw new Error("Unexpected normal-path bridge request count.");
   const standalone = await harness.context.newPage();
   await standalone.route("**/ref015-style-fixture.html", (route) => route.fulfill({
     contentType: "text/html", body: '<!doctype html><link rel="stylesheet" href="./css/settings-simplified.css"><script src="./settings-save-error-bridge.js"></script><script>window.styleWasSynchronous = !!document.getElementById("econovaria-settings-final-polish-style");</script><script src="./settings-save-error-bridge.js?repeat"></script>',
@@ -54,6 +67,8 @@ try {
       fallback.order.join(",") !== "./css/settings-simplified.css,./css/settings-final-polish.css") {
     throw new Error("Standalone stylesheet order/request/listener contract changed.");
   }
+  await standalone.reload({ waitUntil: "load" });
+  await measureStyles(standalone, "standalone-repeat-reload");
   await standalone.close();
 
   await page.locator("[data-settings-custom-toggle]").click();

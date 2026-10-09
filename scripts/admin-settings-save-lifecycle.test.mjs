@@ -259,3 +259,34 @@ test("REF-014 selector mismatch prevents a direct write", async () => {
   const h = fixture(); h.state.selected = "other-game"; h.click(); await tick();
   assert.equal(h.calls.length, 0); assert.equal(h.saved().length, 0);
 });
+
+for (const mode of ["present", "older", "missing", "throws"]) {
+  test(`REF015 Settings bootstrap preserves serial slot and ${mode} owner behavior`, async () => {
+    const calls = [], events = [], attributes = [];
+    const owner = mode === "missing" ? undefined : {};
+    if (["present", "throws"].includes(mode)) owner.ensureFinalPolishStylesheet = () => {
+      calls.push("owner"); if (mode === "throws") throw new Error("synthetic style error");
+    };
+    const context = {
+      window: { EconovariaSimplifiedSettings: owner, dispatchEvent: (event) => events.push(event) },
+      document: { readyState: "loading", addEventListener() {}, getElementById: () => ({ setAttribute: (...args) => attributes.push(args), querySelector: () => null }) },
+      console: { error() {} }, CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
+      load: async (path) => { calls.push(path); },
+    };
+    // Keep the real serial loop/error handler; replace only the VM import boundary.
+    const bootstrap = readFileSync("admin/admin-bootstrap.js", "utf8");
+    vm.runInNewContext(bootstrap.replaceAll("import(modulePath)", "load(modulePath)"), context);
+    await until(() => events.some((event) => event.type === "econovaria:admin-bootstrap-complete"));
+    const position = calls.indexOf("./settings-lifecycle-bridge.js") + 1;
+    assert.equal(calls[position], ["present", "throws"].includes(mode) ? "owner" : "./settings-save-error-bridge.js");
+    assert.equal(calls[position + 1], "./inventory-redemption-queue-loader.js");
+    assert.equal(calls.filter((x) => x === "./settings-save-error-bridge.js").length, ["present", "throws"].includes(mode) ? 0 : 1);
+    const failures = events.filter((event) => event.type === "econovaria:admin-bootstrap-error");
+    assert.equal(failures.length, mode === "throws" ? 1 : 0);
+    if (mode === "throws") {
+      assert.equal(failures[0].detail.phase, "attendance-settings");
+      assert.equal(failures[0].detail.modulePath, "./settings-save-error-bridge.js");
+      assert.equal(attributes[0][0], "data-admin-bootstrap-error");
+    }
+  });
+}
