@@ -1,3 +1,4 @@
+import { createSupabaseCampaignEffectWorkerRepository } from "../../../src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts";
 import type {
   CampaignEventDefinition,
   CampaignInstance,
@@ -243,8 +244,8 @@ Deno.test("effect worker completes all reviewed kinds, records failures, and nev
   const delivered: string[] = [];
   const repository: CampaignEffectWorkerRepository = {
     claim: async () => commands(),
-    complete: async ({ commandId }) => { completed.push(commandId); },
-    fail: async (input) => { failed.push(input); },
+    complete: async ({ commandId, attemptCount }) => { assertEquals(attemptCount, 1); completed.push(commandId); return true; },
+    fail: async (input) => { assertEquals(input.attemptCount, 1); failed.push({ commandId: input.commandId, errorCode: input.errorCode }); return true; },
   };
   const ports: CampaignEffectPorts = {
     publishNews: async ({ idempotencyKey }) => { delivered.push(`news:${idempotencyKey}`); },
@@ -296,7 +297,7 @@ Deno.test("malformed effect payload fails closed before any domain port", async 
       attemptCount: 1,
     }],
     complete: async () => { throw new Error("must not complete"); },
-    fail: async ({ commandId }) => { failed.push(commandId); },
+    fail: async ({ commandId, attemptCount }) => { assertEquals(attemptCount, 1); failed.push(commandId); return true; },
   };
   const ports: CampaignEffectPorts = {
     publishNews: async () => { portCalls += 1; },
@@ -312,6 +313,15 @@ Deno.test("malformed effect payload fails closed before any domain port", async 
   assertEquals(result.failedCount, 1);
   assertEquals(portCalls, 0);
   assertEquals(failed, [id("a")]);
+});
+
+Deno.test("acknowledgements preserve booleans and reject malformed scalar results", async () => {
+  for (const data of [true, false, null, "true"]) {
+    const repo = createSupabaseCampaignEffectWorkerRepository({ rpc: async () => ({ data, error: null }) } as any);
+    const complete = () => repo.complete({ commandId: id("a"), attemptCount: 1, completedAt: NOW });
+    if (typeof data === "boolean") assertEquals(await complete(), data);
+    else await assertRejectsCode(complete, "campaign_event_invalid");
+  }
 });
 
 function provider(): CampaignProgramProvider {

@@ -157,3 +157,18 @@ No runtime/SQL, package, credential, deployment, merge or primary closeout chang
 B authority PR883 committed before implementation at
 `6ffb66a2de1e5f87693c6751ad12f558511df583`; registration `9ed1b91af5225d24a4218a6cc10471dfe4d7ccf6`.
 
+## REF-046c approved correction
+
+User approved runtime acknowledgement fencing and forward migration, including legacy rejection.
+Frozen red PR883 head4a7f5d9c243b6d7d13fa5bcbb1d8c07630182404 remains unchanged;
+run37852322673/job113570334094/artifact11583022041 preserves false completion proof.
+Root registration96dadbb8700646916f43da568b49c6a147e04ceb precedes code;
+actual PR884 authority4ebd50c8125c3cc7a8cc0fdcd963d60a2dd4018d also precedes code.
+Eleven approved paths,400 changed lines,cumulative21; task/backlog carry per-path caps.
+PR620 coordination comment6070636450 preserves pins; PR668 comment6070637389
+allocates only Campaign inventory measurement and retains REF034/package ownership.
+First checkpoint proves unchanged PR883 regression with confirmed-true accounting.
+Then fence current command/attempt acknowledgements and strengthen the full real DB matrix.
+Exact-head CI/receipts recorded on PR884; no merge, deploy, live SQL or completion credit.
+
+2026-10-09 user approved exact ninth-suffix registration (plan10/test25),13paths/cumulative23,total400; preserve passing proof37857966710/artifact11585257146 and failed replay37857967004/job113586633188; requalify final head.

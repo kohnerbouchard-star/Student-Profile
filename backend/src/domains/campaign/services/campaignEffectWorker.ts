@@ -21,12 +21,14 @@ export interface CampaignEffectWorkerRepository {
   }): Promise<readonly ClaimedCampaignEffectCommand[]>;
   complete(input: {
     readonly commandId: string;
+    readonly attemptCount: number;
     readonly completedAt: string;
-  }): Promise<void>;
+  }): Promise<boolean>;
   fail(input: {
     readonly commandId: string;
+    readonly attemptCount: number;
     readonly errorCode: string;
-  }): Promise<void>;
+  }): Promise<boolean>;
 }
 
 export interface CampaignEffectPorts {
@@ -86,18 +88,25 @@ export async function runCampaignEffectWorker(input: {
     try {
       const decoded = decodePurposeBuiltCommand(command);
       await dispatch(decoded, input.ports);
-      await input.repository.complete({
+      const completed = await input.repository.complete({
         commandId: command.commandId,
+        attemptCount: command.attemptCount,
         completedAt: input.claimedAt,
       });
+      if (completed !== true) {
+        failures.push({ commandId: command.commandId, errorCode: "campaign_effect_lease_lost" });
+        continue;
+      }
       completedCount += 1;
     } catch (error) {
-      const errorCode = readErrorCode(error);
+      let errorCode = readErrorCode(error);
       try {
-        await input.repository.fail({
+        const failed = await input.repository.fail({
           commandId: command.commandId,
+          attemptCount: command.attemptCount,
           errorCode,
         });
+        if (failed !== true) errorCode = "campaign_effect_lease_lost";
       } finally {
         failures.push({ commandId: command.commandId, errorCode });
       }
