@@ -171,3 +171,4 @@ First checkpoint proves unchanged PR883 regression with confirmed-true accountin
 Then fence current command/attempt acknowledgements and strengthen the full real DB matrix.
 Exact-head CI/receipts recorded on PR884; no merge, deploy, live SQL or completion credit.
 
+2026-10-09 user approved exact ninth-suffix registration (plan10/test25),13paths/cumulative23,total400; preserve passing proof37857966710/artifact11585257146 and failed replay37857967004/job113586633188; requalify final head.
