@@ -43,7 +43,7 @@ jobs:
           npm run security:secrets
       - name: Start exclusive disposable API and database
         run: |
-          npx --no-install supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,realtime,mailpit,postgres-meta > /tmp/claims-startup.log 2>&1
+          npx --no-install supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,realtime,mailpit,postgres-meta > /tmp/claims-startup.log 2>&1
       - name: Replay from zero twice
         run: |
           npx --no-install supabase db reset --workdir backend --local
