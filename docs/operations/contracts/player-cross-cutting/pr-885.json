@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.game-provisioning-service-claims-pr-885.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 885,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/supabase/migrations/20261010040738_economic_core_request_claims_v1.sql",
+    "scripts/economic-core-request-claims-acceptance.mjs",
+    "scripts/economic-core-request-claims.test.mjs",
+    ".github/workflows/economic-core-request-claims.yml",
+    "docs/operations/evidence/game-provisioning-service-claims-v1.md",
+    "docs/operations/contracts/player-cross-cutting/pr-885.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": ["docs/operations/contracts/player-cross-cutting/pr-885.json", "scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "requiredChecks": ["player-terminal-verify", "player-edge-trusted-ip-entrypoint-contract", "player-production-secret-provision-contract", "player-api-read-resilience", "Backend Typecheck", "Repository Quality", "Database Replay", "Economic Core Request Claims"],
+  "scopeRecord": "docs/operations/evidence/game-provisioning-service-claims-v1.md",
+  "authorizationNote": "Owner approved the diagnosed game provisioning correction. Verifier and regression remain read-only locks. Only modern-request-claims compatibility in two existing economic-core guards; unchanged grants, owners, session-user administrator exception, provisioning/financial behavior, MFA and all production/U1 holds. No account or licence mutation. Staging rollout requires successful independent qualification and release gates. No existing shared registry/workflow edits; coordinate suffix registration separately with the release owner and PR884 before merge."
+}
