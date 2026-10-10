@@ -23,7 +23,8 @@ export function assertDisposable(config, environment) {
   assert.equal(config.API_URL, "http://127.0.0.1:54321");
   assert.equal(environment.DATABASE_URL, config.DB_URL);
   assert.match(environment.RELEASE_COMMIT || "", /^[0-9a-f]{40}$/);
-  assert.ok(config.SERVICE_ROLE_KEY && config.ANON_KEY, "Local API keys unavailable");
+  assert.ok(/^sb_secret_[A-Za-z0-9_-]+$/.test(config.SECRET_KEY || ""), "Local secret key unavailable");
+  assert.ok(/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.PUBLISHABLE_KEY || ""), "Local publishable key unavailable");
 }
 async function main() {
   // Never read a hosted credential or accept a URL supplied by a caller.
@@ -75,14 +76,15 @@ async function main() {
       assert.ok(result.stderr.includes("42501"), `${role} must not execute the privileged function`);
     }
   }
-  const rpc = async (name, body, key = config.SERVICE_ROLE_KEY) => {
+  console.log(JSON.stringify({ phase: "database-role-matrix", passed: 24 }));
+  const rpc = async (name, body, key = config.SECRET_KEY) => {
     const response = await fetch(`${config.API_URL}/rest/v1/rpc/${name}`, {
-      method: "POST", headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
+      method: "POST", headers: { "Content-Type": "application/json", apikey: key },
       body: JSON.stringify(body), signal: AbortSignal.timeout(120000), redirect: "error",
     });
     return { status: response.status, data: await response.json() };
   };
-  assert.ok([401, 403].includes((await rpc("sync_game_item_catalog_v2", { p_game_session_id: MISSING }, config.ANON_KEY)).status));
+  assert.ok([401, 403].includes((await rpc("sync_game_item_catalog_v2", { p_game_session_id: MISSING }, config.PUBLISHABLE_KEY)).status));
   const primary = randomBytes(32).toString("hex"), legacy = randomBytes(32).toString("hex");
   sql(`insert into public.purchase_codes(code_hash, code_hash_version, status, max_redemptions, redeemed_count)
        values (${literal(primary)}, 'hmac-sha256-v2', 'active', 3, 0);`);
@@ -106,6 +108,7 @@ async function main() {
       execute replace(d, ${literal(NEW_ROLE)}, ${literal(OLD_ROLE)}); end $test$;`);
   }
   const broken = await rpc("redeem_purchase_code_for_game", input);
+  console.log(JSON.stringify({ phase: "old-guard-http", status: broken.status, code: broken.data?.code }));
   assert.equal(broken.status, 403);
   assert.equal(broken.data.code, "42501");
   assert.equal(broken.data.message, "ECONOMIC_CORE_SERVICE_ROLE_REQUIRED");
@@ -113,6 +116,7 @@ async function main() {
   sql(readFileSync(MIGRATION, "utf8"));
   assert.deepEqual(definitions(), installed, "Migration must restore the exact qualified definitions and metadata");
   const created = await rpc("redeem_purchase_code_for_game", input);
+  console.log(JSON.stringify({ phase: "corrected-guard-http", status: created.status, code: created.data?.code }));
   assert.equal(created.status, 200, "Real PostgREST provisioning failed");
   assert.equal(created.data.length, 1);
   assert.equal(created.data[0].redeemed_count, 1);

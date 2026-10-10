@@ -3,13 +3,13 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { MIGRATION, OLD_ROLE, NEW_ROLE, assertDisposable } from "./economic-core-request-claims-acceptance.mjs";
 const sql = readFileSync(new URL(`../${MIGRATION}`, import.meta.url), "utf8");
-const config = { DB_URL: "postgresql://postgres:postgres@127.0.0.1:54322/postgres", API_URL: "http://127.0.0.1:54321", SERVICE_ROLE_KEY: "synthetic", ANON_KEY: "synthetic" };
+const config = { DB_URL: "postgresql://postgres:postgres@127.0.0.1:54322/postgres", API_URL: "http://127.0.0.1:54321", SECRET_KEY: "sb_secret_synthetic", PUBLISHABLE_KEY: "sb_publishable_synthetic" };
 const env = { CI: "true", ECONOMIC_CORE_DISPOSABLE_TEST: "1", DATABASE_URL: config.DB_URL, RELEASE_COMMIT: "a".repeat(40) };
 test("only explicitly attested local CI configuration is accepted", () => assert.doesNotThrow(() => assertDisposable(config, env)));
 for (const key of ["CI", "ECONOMIC_CORE_DISPOSABLE_TEST", "DATABASE_URL", "RELEASE_COMMIT"]) {
   test(`missing ${key} fails closed before fixture operations`, () => assert.throws(() => assertDisposable(config, { ...env, [key]: "" })));
 }
-for (const [key, value] of [["DB_URL", "postgresql://postgres@example.invalid/postgres"], ["API_URL", "https://example.invalid"], ["SERVICE_ROLE_KEY", ""], ["ANON_KEY", ""]]) {
+for (const [key, value] of [["DB_URL", "postgresql://postgres@example.invalid/postgres"], ["API_URL", "https://example.invalid"], ["SECRET_KEY", ""], ["PUBLISHABLE_KEY", ""]]) {
   test(`unavailable or nonlocal ${key} is rejected`, () => assert.throws(() => assertDisposable({ ...config, [key]: value }, env)));
 }
 test("migration uses the tested modern-first expression exactly", () => {
@@ -29,4 +29,10 @@ test("only the two existing guard definitions may change", () => {
   assert.match(sql, /ECONOMIC_CORE_CLAIMS_POSTCONDITION_FAILED/);
   assert.match(sql, /begin;/);
   assert.ok(sql.trim().endsWith("commit;"));
+});
+
+test("modern local keys are never passed as bearer JWTs", () => {
+  const source = readFileSync(new URL("./economic-core-request-claims-acceptance.mjs", import.meta.url), "utf8");
+  assert.ok(source.includes("apikey: key") && !source.includes("Authorization:"));
+  assert.throws(() => assertDisposable({ ...config, SECRET_KEY: "invalid" }, env));
 });
