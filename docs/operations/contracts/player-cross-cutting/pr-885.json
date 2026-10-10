@@ -14,12 +14,15 @@
     "scripts/economic-core-request-claims.test.mjs",
     ".github/workflows/economic-core-request-claims.yml",
     "docs/operations/evidence/game-provisioning-service-claims-v1.md",
+    "docs/operations/evidence/game-provisioning-staging-convergence-v1.md",
     "docs/operations/contracts/player-cross-cutting/pr-885.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
   ],
   "requiredFiles": ["docs/operations/contracts/player-cross-cutting/pr-885.json", "scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
   "requiredChecks": ["player-terminal-verify", "player-edge-trusted-ip-entrypoint-contract", "player-production-secret-provision-contract", "player-api-read-resilience", "Backend Typecheck", "Repository Quality", "Database Replay", "Economic Core Request Claims"],
   "scopeRecord": "docs/operations/evidence/game-provisioning-service-claims-v1.md",
-  "authorizationNote": "Owner approved the diagnosed game provisioning correction. Verifier and regression remain read-only locks. Only modern-request-claims compatibility in two existing economic-core guards; unchanged grants, owners, session-user administrator exception, provisioning/financial behavior, MFA and all production/U1 holds. No account or licence mutation. Staging rollout requires successful independent qualification and release gates. No existing shared registry/workflow edits; coordinate suffix registration separately with the release owner and PR884 before merge."
+  "authorizationNote": "Owner approved the diagnosed game provisioning correction and, on 2026-10-10, its bounded two-file suffix-registration amendment coordinated with PR884. Verifier and regression remain read-only locks. Preserve the exact existing migration, runtime harness and workflow bytes. Register only the migration present on this source, pin all eight prior identities and preserve every fail-closed registry check. The eventual combined source requires Campaign ninth, claims tenth, exact unchanged digests and fresh qualification; no absent suffix imports or conditional exemptions. The convergence record is planning/evidence only and does not edit release-owner ledgers or workflows. Unchanged grants, owners, session-user administrator exception, provisioning/financial behavior, MFA and all production/U1 holds. No account or licence mutation, live database or Edge/frontend execution, merge, force promotion, lending activation or account recovery is authorized."
 }

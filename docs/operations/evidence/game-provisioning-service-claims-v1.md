@@ -50,3 +50,59 @@ No existing workflow, package, historical migration, application account,
 credential, role, MFA factor or licence record may be changed by this source work.
 Staging may receive only the independently qualified, reviewed repository
 migration under the established rollout gates. No production change is approved.
+
+## Bounded suffix-registration amendment — 2026-10-10
+
+The owner's release/provisioning request supersedes only the preceding exclusion
+of the two shared suffix files. Register this amendment before implementation.
+Rechecked main is `9634ff92d8e28fd29623f7f4db41ff9a797e3171`; implementation
+starts at existing #885 head `9fa9ee70d69926f5c99b260f68dbc7d3b892fd3e`.
+The historical base and incident evidence above are retained, not recertified.
+
+Additional editable paths are exactly:
+
+- `scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs`
+- `scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs`
+- `docs/operations/evidence/game-provisioning-staging-convergence-v1.md`
+
+The first path may add only the existing claims migration's literal suffix entry
+and necessary array punctuation (at most 15 changed lines). The second may
+update the two exact total-count assertions and add an exact ninth-entry/prior-
+eight digest regression (at most 30 changed lines). No loader, ledger, missing-
+file, extra-file, digest, order, transaction or certificate check may be relaxed.
+The third is a staging-first release plan and evidence handoff, not execution
+code or a replacement for any release owner's authority. Existing authority
+verifier/test files remain read-only. SQL, the disposable acceptance harness,
+unit tests, package files and all workflow bytes remain unchanged by this slice.
+
+Preserve original-eight identity digest
+`c7a9f4db5d67f975dcb67926d5168abeab8ed31304211b4bd6a94324465c2d39`.
+Register `20261010040738_economic_core_request_claims_v1.sql` with source digest
+`2b6e4533392550f497db25d3ffdd0cfe9a50bbfb91b335d6971c967d6ef30ada`,
+raw digest `4a324bd5d4395fe05a40347492f5c80f11cb9d701e509f1b0e67cb51edbbe5c2`,
+and statementCount 1. The original Git blob is
+`676c43e92f84da4bfbecc6f1bc069f8af01a06bd`.
+
+#884 remains at `a9a532be4deb884aa864c9489b7d174e8f33f167`, based on
+#883 `4a7f5d9c243b6d7d13fa5bcbb1d8c07630182404`. Its absent Campaign migration
+must not be imported into this incident branch or conditionally ignored.
+An eventual combined source must retain the original eight, then Campaign
+`20261009000000` as ninth, then claims `20261010040738` as tenth. Preserve
+Campaign source digest
+`d011ef91c21d9f8ce4ae93364c332e368a9f1101fb2decb74e91a8e368f7db7b`
+and raw digest
+`adc44f3ca4def361179c6610c0b952c200b26c697f0025aaf3724022ae1c27b7`.
+The proposed integration gate is to reconcile the existing Campaign stack first,
+then qualify this correction against the exact combined source before any live
+ledger advance. Independent-branch green checks do not certify that union.
+Coordination is recorded on #884 in comment 6094193923; acknowledgement and
+owner-selected source order remain outstanding. No other owner's approval is
+inferred from that comment or from this owner's bounded amendment.
+
+Rerun exact-head disposable PostgREST provisioning, denial, replay and rollback,
+two clean resets, migration audit, secret scan, Database Replay and required
+repository checks. Report executed, failed and independently skipped tests
+separately. Prior passing run 38024614031 is historical evidence only; failed
+Database Replay run 38024614077 remains retained. No force push, merge, live
+rehearsal, staging/production mutation, migration-history rewrite, lending
+activation, account recovery or release-hold restoration is authorized here.
