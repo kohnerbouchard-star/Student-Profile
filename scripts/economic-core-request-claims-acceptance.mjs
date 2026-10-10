@@ -33,14 +33,17 @@ async function main() {
   const config = JSON.parse(execFileSync("npx", ["--no-install", "supabase", "status", "--workdir", "backend", "-o", "json"], { encoding: "utf8", timeout: 15000, stdio: ["ignore", "pipe", "pipe"] }));
   assertDisposable(config, process.env);
   assert.equal(execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), process.env.RELEASE_COMMIT);
-  const sql = (query, allowFailure = false) => {
-    const result = spawnSync("psql", [config.DB_URL, "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-v", "VERBOSITY=verbose"], {
+  const apiDatabase = new URL(config.DB_URL);
+  apiDatabase.username = "authenticator"; // Same local password configured by the pinned CLI for PostgREST.
+  const sql = (query, allowFailure = false, database = config.DB_URL) => {
+    const result = spawnSync("psql", [database, "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-v", "VERBOSITY=verbose"], {
       input: query, encoding: "utf8", timeout: 120000, maxBuffer: 8 * 1024 * 1024,
     });
     assert.ifError(result.error);
     if (!allowFailure) assert.equal(result.status, 0, "Disposable SQL failed; no qualification credit");
     return result;
   };
+  assert.equal(sql("select session_user;", false, apiDatabase.href).stdout.trim(), "authenticator");
   const json = query => JSON.parse(sql(query).stdout.trim());
   const definitions = () => json(`select jsonb_agg(to_jsonb(p) order by p.oid) from pg_proc p where p.oid in (${TARGETS.map(x => `${literal(x)}::regprocedure`).join(",")});`);
   const installed = definitions();
@@ -63,15 +66,16 @@ async function main() {
   for (const signature of TARGETS) {
     const call = signature.includes("jsonb") ? `public.sync_game_item_catalog_v2('${MISSING}', null)` : `public.validate_economic_asset_core_v2('${MISSING}')`;
     for (const [label, claims, legacy, expected] of roleCases) {
-      const result = sql(`begin; set session authorization authenticator; set local role service_role;
+      const result = sql(`begin; set local role service_role;
         select set_config('request.jwt.claims', ${literal(claims)}, true);
         select set_config('request.jwt.claim.role', ${literal(legacy)}, true);
-        select ${call}; rollback;`, true);
+        select ${call}; rollback;`, true, apiDatabase.href);
+      if (!result.stderr.includes(expected)) console.error(JSON.stringify({ phase: "role-matrix", signature, label, databaseError: result.stderr.match(/ERROR:\s+([0-9A-Z]{5}):\s*([^\n]*)/)?.slice(1) || [] }));
       assert.notEqual(result.status, 0, label);
       assert.ok(result.stderr.includes(expected), `${signature}: ${label} failed`);
     }
     for (const role of ["anon", "authenticated"]) {
-      const result = sql(`begin; set session authorization authenticator; set local role ${role}; select ${call}; rollback;`, true);
+      const result = sql(`begin; set local role ${role}; select ${call}; rollback;`, true, apiDatabase.href);
       assert.notEqual(result.status, 0);
       assert.ok(result.stderr.includes("42501"), `${role} must not execute the privileged function`);
     }
