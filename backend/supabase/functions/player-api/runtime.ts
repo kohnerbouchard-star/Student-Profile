@@ -2,6 +2,7 @@ import {
   jsonError,
   jsonResponse,
 } from "../../../src/platform/supabase/edgeResponse.ts";
+import type { SupabaseEnv } from "../../../src/platform/supabase/edgeStaffSession.ts";
 import {
   handlePlayerBankingPublicRequest,
 } from "../../../src/domains/economy/api/playerBankingPublicHttpHandler.ts";
@@ -143,7 +144,7 @@ import {
 import { dispatchClassroomMessagingRequest } from "../../../src/domains/messaging/api/playerMessagingDispatch.ts";
 import { dispatchPlayerBusinessRequest } from "../_shared/playerBusinessDispatch.ts";
 import {
-  createServiceClient,
+  createServiceRoleClient,
   readEdgeSupabaseEnv,
   requirePublishableRequest,
 } from "../_shared/econovariaAuth.ts";
@@ -151,6 +152,14 @@ interface EdgeHealthBody {
   readonly ok: true;
   readonly service: "player-api";
   readonly status: "ready";
+}
+
+function readBuiltInPlayerServiceRoleKey(): string {
+  try {
+    return String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim();
+  } catch {
+    return "";
+  }
 }
 
 Deno.serve(async (request: Request) => {
@@ -177,6 +186,21 @@ Deno.serve(async (request: Request) => {
       retryable: false,
     });
   }
+
+  const playerServiceRoleKey = readBuiltInPlayerServiceRoleKey();
+  if (!playerServiceRoleKey) {
+    return jsonError(500, {
+      code: "player_runtime_not_configured",
+      message: "The Player API runtime is not configured.",
+      retryable: false,
+    });
+  }
+  const createServiceClient = (_environment: SupabaseEnv) =>
+    createServiceRoleClient(
+      env.value.supabaseUrl,
+      playerServiceRoleKey,
+      "econovaria-player-api",
+    );
 
   const playerCapabilityManifestRoute = readPlayerCapabilityManifestRoutePath(
     url.pathname,
