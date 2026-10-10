@@ -1,0 +1,142 @@
+name: Phase 15 Prepare Certification Tree
+
+on:
+  push:
+    branches: [fix/phase15-certification-controls-v1]
+    paths: [.github/workflows/phase15-prepare-certification-tree.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-reviewed-tree:
+    if: github.repository == 'kohnerbouchard-star/Student-Profile'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      EXPECTED_BASE: 5b11f344bc0e725cf7028c3f7c4a2a890e9972e3
+    steps:
+      - name: Check out the isolated repair branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up repository-pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22.23.1"
+      - name: Retrieve immutable repair input and verify all before and after hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/fix/phase15-certification-controls-v1
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$EXPECTED_BASE"
+          mkdir -p "$RUNNER_TEMP/phase15-prepared-tree"
+          gh api "repos/$GITHUB_REPOSITORY/git/blobs/9322aacf8642b3ebb1fb814936de2f50676836e8" > "$RUNNER_TEMP/phase15-part1.json"
+          gh api "repos/$GITHUB_REPOSITORY/git/blobs/7a6f1e226bd5bed762ad22090876d9456c2867dc" > "$RUNNER_TEMP/phase15-part2.json"
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import { brotliDecompressSync } from 'node:zlib';
+          const input = [1,2].map(i => JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/phase15-part${i}.json`, 'utf8')));
+          const encoded = input.map((item) => { assert.equal(item.encoding,'base64'); return Buffer.from(item.content,'base64').toString('utf8'); }).join('');
+          const bytes = Buffer.from(encoded,'base64');
+          assert.equal(createHash('sha256').update(bytes).digest('hex'),'7e8f8777a2d29fddb5b0d395a7021dd7fc5714080020550a4c5fd1660fc54e6c');
+          writeFileSync(`${process.env.RUNNER_TEMP}/phase15-payload.json`,brotliDecompressSync(bytes));
+          JS
+          python3 <<'PY'
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+          payload = json.loads((Path(os.environ['RUNNER_TEMP'])/'phase15-payload.json').read_text())
+          assert payload['schemaVersion'] == 1
+          assert payload['repository'] == os.environ['GITHUB_REPOSITORY']
+          assert payload['baseCommit'] == os.environ['EXPECTED_BASE']
+          assert payload['baseTree'] == 'e06c33db2a4db2e7fc437f7c92b1af152926b83a'
+          assert subprocess.check_output(['git','rev-parse',payload['baseCommit']+'^{tree}'],text=True).strip() == payload['baseTree']
+          assert len(payload['entries']) == 22
+          paths = [e['path'] for e in payload['entries']]
+          assert len(set(paths)) == len(paths)
+          for entry in payload['entries']:
+              name = entry['path']; target = Path(name)
+              assert not target.is_absolute() and '..' not in target.parts and not target.is_symlink()
+              assert name == '.github/workflows/phase15-controlled-production.yml' or name.startswith(('scripts/operations/live-migration-reconciliation/','docs/operations/','docs/roadmaps/'))
+              assert entry['mode'] in ('100644','100755')
+              if entry['oldSha256'] is None:
+                  assert not target.exists(), name
+              else:
+                  before = subprocess.check_output(['git','show',payload['baseCommit']+':'+name])
+                  assert hashlib.sha256(before).hexdigest() == entry['oldSha256'], name
+                  assert target.read_bytes() == before, name
+          patch = Path(os.environ['RUNNER_TEMP'])/'phase15-reviewed.patch'
+          patch.write_text(payload['patch'])
+          subprocess.run(['git','apply','--check',str(patch)],check=True)
+          subprocess.run(['git','apply',str(patch)],check=True)
+          for entry in payload['entries']:
+              assert hashlib.sha256(Path(entry['path']).read_bytes()).hexdigest() == entry['newSha256'], entry['path']
+          # Exact one-byte formatting correction; do not suppress whitespace checks.
+          name='docs/roadmaps/business-v2-development-execution-plan-v1.md'
+          entry=next(e for e in payload['entries'] if e['path']==name)
+          assert entry['newSha256']=='3883170b81c01582162c9e97c1c96b854c18e3a9d396d020e374dd35269702fd'
+          value=Path(name).read_bytes(); assert value.endswith(b'\n\n')
+          value=value[:-1]
+          assert hashlib.sha256(value).hexdigest()=='4e870e15a3c6976a5c5945e71d4a7e13386d66a205edf9caa0f41169b58ae5c1'
+          Path(name).write_bytes(value); entry['newSha256']=hashlib.sha256(value).hexdigest()
+          (Path(os.environ['RUNNER_TEMP'])/'phase15-payload.json').write_text(json.dumps(payload))
+          PY
+          rm .github/workflows/phase15-control-review-source.yml .github/workflows/phase15-exact-load-dispatch.yml .github/workflows/phase15-prepare-certification-tree.yml
+          git add --all
+          git diff --cached --name-only "$EXPECTED_BASE" > "$RUNNER_TEMP/phase15-prepared-tree/changed-files.txt"
+          git diff --cached --check "$EXPECTED_BASE"
+          python3 <<'PY'
+          import json, os
+          from pathlib import Path
+          payload=json.loads((Path(os.environ['RUNNER_TEMP'])/'phase15-payload.json').read_text())
+          actual=(Path(os.environ['RUNNER_TEMP'])/'phase15-prepared-tree/changed-files.txt').read_text().splitlines()
+          assert sorted(actual)==sorted(e['path'] for e in payload['entries'])
+          PY
+      - name: Run focused release-control and retained authority contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/operations/live-migration-reconciliation/*.test.mjs | tee "$RUNNER_TEMP/phase15-prepared-tree/focused-tests.tap"
+          node --test scripts/player-cross-cutting-authority.test.mjs scripts/staging/golden-five-contract.test.mjs scripts/edge-function-inventory/validate.test.mjs scripts/local-edge-runtime-contract.test.mjs scripts/runtime-config-contract.test.mjs scripts/vercel-git-release-contract.test.mjs | tee "$RUNNER_TEMP/phase15-prepared-tree/retained-contracts.tap"
+          bash -n scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh
+          bash -n scripts/operations/live-migration-reconciliation/fetch-phase15-original-application.sh
+          node scripts/verify-player-cross-cutting-authority.mjs --manifest docs/operations/contracts/player-cross-cutting/pr-730.json --changed-files "$RUNNER_TEMP/phase15-prepared-tree/changed-files.txt" --pr-number 730 --base-ref main | tee "$RUNNER_TEMP/phase15-prepared-tree/authority.txt"
+          node scripts/operations/live-migration-reconciliation/verify-immutable-manifest.mjs | tee "$RUNNER_TEMP/phase15-prepared-tree/immutable-migrations.txt"
+      - name: Create a verified Git tree only without updating any branch or deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$EXPECTED_BASE"
+          python3 <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP']); payload=json.loads((root/'phase15-payload.json').read_text())
+          tree=[]
+          for entry in payload['entries']:
+              value=Path(entry['path']).read_bytes()
+              assert hashlib.sha256(value).hexdigest()==entry['newSha256']
+              tree.append({'path':entry['path'],'mode':entry['mode'],'type':'blob','content':value.decode('utf8')})
+          (root/'phase15-tree-request.json').write_text(json.dumps({'base_tree':payload['baseTree'],'tree':tree}))
+          PY
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/trees" --input "$RUNNER_TEMP/phase15-tree-request.json" > "$RUNNER_TEMP/phase15-prepared-tree/tree-result.json"
+          test "$(jq -r .sha "$RUNNER_TEMP/phase15-prepared-tree/tree-result.json")" = "$(git write-tree)"
+          python3 <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP']); out=root/'phase15-prepared-tree'; payload=json.loads((root/'phase15-payload.json').read_text())
+          cert={'schemaVersion':1,'status':'PASS','repository':os.environ['GITHUB_REPOSITORY'],'baseCommit':payload['baseCommit'],'parentCommit':os.environ['GITHUB_SHA'],'treeSha':json.loads((out/'tree-result.json').read_text())['sha'],'runId':int(os.environ['GITHUB_RUN_ID']),'runAttempt':int(os.environ['GITHUB_RUN_ATTEMPT']),'entries':payload['entries'],'productionMutationPerformed':False,'branchRefUpdated':False,'temporaryHelpersInFinalTree':False}
+          (out/'prepared-tree-certificate.json').write_text(json.dumps(cert,indent=2)+'\n')
+          PY
+      - name: Preserve sanitized preparation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phase15-prepared-tree-${{ github.sha }}
+          path: ${{ runner.temp }}/phase15-prepared-tree/
+          retention-days: 1
+          if-no-files-found: error
