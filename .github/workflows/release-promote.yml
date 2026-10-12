@@ -111,7 +111,7 @@ jobs:
           test -f "$PROMOTION_RECORD_PATH"
 
       - name: Download the exact immutable artifact by ID
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           artifact-ids: ${{ inputs.source_artifact_id }}
           run-id: ${{ inputs.source_run_id }}
@@ -170,7 +170,7 @@ jobs:
         run: sha256sum --check checksums.sha256
 
       - name: Seal the approved promotion package without rebuilding
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: approved-${{ inputs.target_environment }}-${{ inputs.release_commit }}
           path: dist/release

@@ -42,7 +42,7 @@ jobs:
           git diff --exit-code -- \
             docs/architecture/inventories/econovaria-architecture-inventory-v2.json
       - name: Upload Phase 4A review bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: business-workforce-payroll-v2-review
           path: |

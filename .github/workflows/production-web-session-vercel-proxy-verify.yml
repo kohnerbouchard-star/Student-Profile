@@ -443,7 +443,7 @@ jobs:
 
       - name: Preserve exact-head backend qualification diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pr871-exact-head-backend-qualification
           path: |

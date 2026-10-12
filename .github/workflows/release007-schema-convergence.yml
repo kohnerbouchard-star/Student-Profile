@@ -63,7 +63,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up exact validation runtime
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22.23.1"
           cache: npm
@@ -86,7 +86,7 @@ jobs:
           test "${economic[-1]%%_*}" = "$EXPECTED_ECONOMIC_FINAL"
 
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v1
         with:
           version: 2.109.1
 
@@ -215,7 +215,7 @@ jobs:
 
       - name: Upload sanitized staging convergence evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release007-staging-${{ github.sha }}
           path: |
@@ -258,7 +258,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up exact validation runtime
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22.23.1"
           cache: npm
@@ -419,7 +419,7 @@ jobs:
 
       - name: Upload sanitized production convergence evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release007-production-${{ github.sha }}
           path: |
