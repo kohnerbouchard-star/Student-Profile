@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload admin API diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: admin-api-diagnostics
           path: |
@@ -76,7 +76,7 @@ jobs:
 
       - name: Upload validated admin API runtime
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: admin-api-runtime
           path: backend/supabase/functions/admin-api/

@@ -57,7 +57,7 @@ jobs:
       source_sha256: ${{ steps.package.outputs.source_sha256 }}
     steps:
       - name: Check out reviewed trigger commit
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
@@ -121,7 +121,7 @@ jobs:
           NODE
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "22.23.1"
           cache: npm
@@ -191,7 +191,7 @@ jobs:
 
       - name: Upload immutable release artifact
         if: github.event_name == 'push'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: production-web-session-${{ steps.request.outputs.source_commit }}
           path: dist/production-web-session
@@ -224,19 +224,19 @@ jobs:
           test "${{ needs.validate-and-package.outputs.request_id }}" != ""
 
       - name: Check out orchestration control plane
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "22.23.1"
 
       - name: Download exact immutable release artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: production-web-session-${{ needs.validate-and-package.outputs.source_commit }}
           path: dist/production-web-session
@@ -278,7 +278,7 @@ jobs:
             backend/src/security
 
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.109.1
 
@@ -403,19 +403,19 @@ jobs:
           test "${{ needs.validate-and-package.outputs.request_id }}" != ""
 
       - name: Check out exact release control plane
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "22.23.1"
 
       - name: Download exact staging-verified artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: production-web-session-${{ needs.validate-and-package.outputs.source_commit }}
           path: dist/production-web-session
@@ -514,7 +514,7 @@ jobs:
           FUNCTIONS_PATH: ${{ runner.temp }}/staging-functions.json
 
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.109.1
 
