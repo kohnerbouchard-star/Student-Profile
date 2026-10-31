@@ -49,6 +49,7 @@ jobs:
         with:
           deno-version: v2.9.3
       - name: Install pinned tooling and check qualification source
+        id: qualification_source
         shell: bash
         run: |
           set -euo pipefail
@@ -60,6 +61,103 @@ jobs:
           npx supabase --version
           npx supabase start --help > /tmp/ref009/start-help.log
           npx supabase db reset --help > /tmp/ref009/reset-help.log
+      - name: Capture failed frozen-module response as bounded data
+        if: failure() && github.event_name == 'pull_request' && steps.qualification_source.outcome == 'failure'
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          python3 - <<'DIAGNOSTIC'
+          """Proposed failure-only CI diagnostic; never import or execute response bytes."""
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import signal
+          import subprocess
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          URL = "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs"
+          MAX_BYTES = 131072
+          OUT = Path("/tmp/ref009/frozen-module-evidence")
+          OUT.mkdir(parents=True, exist_ok=True)
+          lock_path = Path("backend/supabase/functions/deno.lock")
+          lock_bytes = lock_path.read_bytes()
+          report = {
+              "schemaVersion": 1, "sourceSha": os.environ.get("RELEASE_COMMIT"),
+              "url": URL, "bodyExecution": "never", "maximumBodyBytes": MAX_BYTES,
+              "purpose": "new data observation, not proof of original failed-response bytes",
+              "workingDirectory": str(Path.cwd()), "denoModuleCache": "not read or modified",
+              "approvedLockSha256": "66b40862285f9bd9a7426a48671427cde664f17043f02ad88ba4eef85979423b",
+              "lockPath": str(lock_path), "lockSha256": hashlib.sha256(lock_bytes).hexdigest(),
+              "expectedModuleSha256": json.loads(lock_bytes)["remote"][URL],
+              "configPath": "backend/supabase/functions/admin-api/deno.json",
+              "requestHeaders": {"User-Agent": "Deno/2.9.3", "Accept-Encoding": "identity"},
+              "runner": {key: os.environ.get(key) for key in ["RUNNER_OS", "ImageOS", "ImageVersion"]},
+              "redirects": [], "fetchState": "pending",
+          }
+          for executable in ["deno", "node", "npm"]:
+              try:
+                  result = subprocess.run([executable, "--version"], capture_output=True, timeout=3)
+                  report[executable] = {"exit": result.returncode, "version": result.stdout.decode()[:512]}
+              except (OSError, subprocess.TimeoutExpired) as error:
+                  report[executable] = {"error": type(error).__name__}
+
+          def save():
+              (OUT / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+
+          def safe_url(value):
+              parsed = urllib.parse.urlsplit(value)
+              return urllib.parse.urlunsplit((parsed.scheme, parsed.hostname or "", parsed.path,
+                                             "[redacted]" if parsed.query else "", ""))[:512]
+
+          class PublicModuleRedirects(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, request, response, code, message, headers, new_url):
+                  parsed = urllib.parse.urlsplit(new_url)
+                  report["redirects"].append({"status": code, "url": safe_url(new_url)})
+                  if (len(report["redirects"]) > 2 or parsed.scheme != "https"
+                          or parsed.netloc != "esm.sh" or parsed.username or parsed.password):
+                      raise ValueError("redirect_boundary_rejected")
+                  return super().redirect_request(request, response, code, message, headers, new_url)
+
+          def timeout(_signum, _frame):
+              raise TimeoutError("diagnostic_deadline")
+
+          report["lockMatchesApproved"] = report["lockSha256"] == report["approvedLockSha256"]
+          save()  # Retain a pending receipt even if the CI step itself is interrupted.
+          signal.signal(signal.SIGALRM, timeout)
+          signal.alarm(20)
+          try:
+              if not report["lockMatchesApproved"]:
+                  raise ValueError("approved_lock_identity_changed")
+              # Default proxy handling is retained. No credentials, cookies or alternate URL.
+              opener = urllib.request.build_opener(PublicModuleRedirects())
+              request = urllib.request.Request(URL, headers=report["requestHeaders"])
+              try:
+                  response = opener.open(request, timeout=10)
+              except urllib.error.HTTPError as error:
+                  response = error
+              with response:
+                  report["status"] = response.status
+                  report["finalUrl"] = safe_url(response.geturl())
+                  allowed = ["Content-Type", "Content-Encoding", "ETag", "Cache-Control", "Age", "Date", "X-ESM-Path"]
+                  report["headers"] = {key: str(response.headers[key])[:512] for key in allowed if key in response.headers}
+                  body = response.read(MAX_BYTES + 1)
+                  report["byteLength"] = len(body)
+                  if len(body) > MAX_BYTES:
+                      raise ValueError("response_size_boundary_exceeded")
+                  report["bodySha256"] = hashlib.sha256(body).hexdigest()
+                  report["matchesFrozenLock"] = report["bodySha256"] == report["expectedModuleSha256"]
+                  (OUT / "public-module.bin").write_bytes(body)
+                  report["fetchState"] = "captured_untrusted_data"
+          except Exception as error:
+              report["fetchState"] = "failed"
+              report["fetchErrorType"] = type(error).__name__
+          finally:
+              signal.alarm(0)
+              save()
+          DIAGNOSTIC
       - name: Verify focused application and retained parity regressions
         shell: bash
         run: |
