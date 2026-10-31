@@ -58,3 +58,59 @@ No push before checking workflow and Git-connected deployment side effects.
 No remote merge/approval, deployment, hosted SQL, hold restoration, credential
 or permission change, feature activation, account operation or file upload.
 An unavailable prerequisite is BLOCKED/NOT_RUN, not a waived or passing check.
+
+## Local source checkpoint
+
+Registration commit: `33812b6ccd5a70087a52acf523ae2c260fb8a33f`.
+Tested integration commit: `b9138de730ea93567e6d7b306c51eefa773d78f5`.
+Tested tree: `dca77d411f5a5d5e52da9839583de72b31f5147d`.
+The checkpoint record is metadata added after those tests; it is not a claim of
+fresh CI or database qualification at a later documentation commit.
+
+Only the two registry files conflicted. Relative to the exact Campaign tip,
+the plan changes 2 additions/1 deletion (3/15); the test changes 18 additions/
+3 deletions (21/30). Every inherited Campaign runtime/harness/workflow/migration
+file and every claims migration/harness/test/workflow file is byte-identical
+to its owner tip. Main's historical migration tree, lockfiles, release-hold
+workflows and authority verifier/test are unchanged. All 50 parent REF statuses
+are unchanged. Authority validation accepts 28 changed paths under 30 locks.
+
+Original-eight vector SHA256 remains
+`c7a9f4db5d67f975dcb67926d5168abeab8ed31304211b4bd6a94324465c2d39`.
+Campaign ninth raw/source SHA256 remain
+`adc44f3ca4def361179c6610c0b952c200b26c697f0025aaf3724022ae1c27b7` /
+`d011ef91c21d9f8ce4ae93364c332e368a9f1101fb2decb74e91a8e368f7db7b`.
+Claims tenth raw/source SHA256 remain
+`4a324bd5d4395fe05a40347492f5c80f11cb9d701e509f1b0e67cb51edbbe5c2` /
+`2b6e4533392550f497db25d3ffdd0cfe9a50bbfb91b335d6971c967d6ef30ada`.
+
+- PASS: focused suffix/claims/authority Node tests 50/50; supervisor guards 4/4.
+- PASS: World/Campaign 50 domain + 16 Admin Deno tests.
+- PASS: root npm test, including 223 emitted Node passes plus source audits;
+  Player verify; Admin v2 91 + local mutation lifecycle 60; secret scan.
+- PASS: actual worker/repository with synthetic false-completion transport reports
+  completedCount 0, failedCount 1, campaign_effect_lease_lost and attempt 1 on
+  the v2 acknowledgement. This is not real database race/replay proof.
+- PASS: backend tsc. BLOCKED: full Edge check and smoke cannot fetch the pinned
+  esm.sh Supabase module (unsuccessful tunnel). Smoke emitted 16 Node and 887
+  Deno passes before game-session imports failed; later chained suites did not run.
+- NOT_RUN: blank replay twice, schema/catalog determinism/lint, actual PostgREST
+  role/provisioning/replay/rollback and real Campaign lease/game-isolation tests.
+  Pinned Supabase CLI initialization fails with EROFS creating
+  /home/agent/.supabase, including with a scoped additional write grant. No
+  local stack, fixture or SQL operation started; no teardown acceptance is claimed.
+- NOT_RUN: pinned affected browser gates; pinned cache is unavailable and the
+  prior browser download was blocked. No browser/dependency substitution.
+
+Publication is pending, not attempted. Existing #885 remote target still resolves
+to `a03c1720dfd1df8db95e0b00e738428a12f8fb47`; main/Campaign remain at the identities
+above. GitHub PR conditions preserve the live holds, but vercel.json leaves the
+claims branch unlisted. Vercel documentation specifies unlisted branches default
+to deployment-enabled, and this branch has an existing Git-connected preview.
+The current no-deployment instruction does not clearly authorize that preview
+side effect. No setting change, replacement branch or other bypass was attempted.
+
+Next action: parent resolves preview publication authorization and an environment
+for the unchanged disposable qualification. Then recheck expected remote head,
+publish only to the existing #885 stream if safe, and inspect every required
+actual job on that exact combined source. No source/release completion is claimed.
