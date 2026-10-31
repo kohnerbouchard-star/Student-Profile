@@ -443,7 +443,7 @@ test("application restore normalization preserves exact application schema autho
 });
 
 test("REF025c2-1 is an independently registered fourth suffix without rewriting prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 9);
+  assert.equal(APPROVED_SUFFIXES.length, 10);
   assert.equal(APPROVED_SUFFIXES[3].filename, "20261004221307_prepare_business_loan_bindings_v1.sql");
   assert.equal(APPROVED_SUFFIXES[3].order, 4);
   assert.equal(APPROVED_SUFFIXES[3].statementCount, 1);
@@ -463,7 +463,7 @@ test("REF025c2-2b registers the gated submission sixth suffix", () => {
 
 
 test("system recovery is the sole seventh suffix and preserves all six prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 9);
+  assert.equal(APPROVED_SUFFIXES.length, 10);
   assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 6))).digest("hex"),
     "cb7f435ac309f834abfeace4193b9165c8e843a538a01ca02a1cbaf2fde3780f");
   assert.deepEqual(APPROVED_SUFFIXES[6], {
@@ -489,12 +489,27 @@ test("individual recovery registers eighth suffix without rewriting prior seven 
 });
 });
 
-test("PR885 registers ninth suffix and preserves all eight prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 9);
+test("REF046c registers ninth suffix and preserves all eight prior identities", () => {
+  assert.equal(APPROVED_SUFFIXES.length, 10);
   assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 8))).digest("hex"),
     "c7a9f4db5d67f975dcb67926d5168abeab8ed31304211b4bd6a94324465c2d39");
   assert.deepEqual(APPROVED_SUFFIXES[8], {
     "order": 9,
+    "filename": "20261009000000_fence_campaign_effect_acknowledgements_v2.sql",
+    "version": "20261009000000",
+    "name": "fence_campaign_effect_acknowledgements_v2",
+    "sourceSha256": "d011ef91c21d9f8ce4ae93364c332e368a9f1101fb2decb74e91a8e368f7db7b",
+    "rawSha256": "adc44f3ca4def361179c6610c0b952c200b26c697f0025aaf3724022ae1c27b7",
+    "statementCount": 1
+});
+});
+
+test("PR885 registers tenth suffix after Campaign and preserves all eight prior identities", () => {
+  assert.equal(APPROVED_SUFFIXES.length, 10);
+  assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 8))).digest("hex"),
+    "c7a9f4db5d67f975dcb67926d5168abeab8ed31304211b4bd6a94324465c2d39");
+  assert.deepEqual(APPROVED_SUFFIXES[9], {
+    "order": 10,
     "filename": "20261010040738_economic_core_request_claims_v1.sql",
     "version": "20261010040738",
     "name": "economic_core_request_claims_v1",

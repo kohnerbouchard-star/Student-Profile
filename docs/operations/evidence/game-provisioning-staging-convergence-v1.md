@@ -16,9 +16,11 @@ No other owner's acknowledgement is inferred from coordination comments.
 - Existing claims PR885: `a03c1720dfd1df8db95e0b00e738428a12f8fb47`.
 - Local detached worktree starts at PR885. Merge the exact Campaign tip locally;
   existing owner target remains `fix/game-provisioning-service-claims-v1`.
-- Proposed eventual PR885 base is `fix/ref-046c-campaign-acknowledgements`.
-  Its authority is adapted for that proposed base without expanding its path
-  allowlist. Remote PR base/head remain unchanged until a safe, qualified update.
+- PR885 retains `main`: inspection showed its claims workflow is main-only;
+  retargeting to Campaign would skip required qualification. The initial local
+  retarget proposal is superseded before publication. Its exact-path authority
+  includes only the inherited Campaign-tip delta plus the existing claims scope.
+  Remote PR base/head remain unchanged until a safe, qualified owner update.
 
 New reconciliation edits are restricted to the two existing shared files,
 PR885's authority and this already-allowed convergence record:
@@ -31,8 +33,9 @@ PR885's authority and this already-allowed convergence record:
    retain both exact migration regressions, update literal count/index/order and
    assert the combined suffix length. Keep the existing 30-changed-line cap
    relative to the Campaign tip. No absent-file or conditional exemption.
-3. `docs/operations/contracts/player-cross-cutting/pr-885.json`: proposed base
-   binding and qualification checks/note only; verifier/test stay read-only.
+3. `docs/operations/contracts/player-cross-cutting/pr-885.json`: retain main,
+   register the exact inherited Campaign-tip paths and required checks/note;
+   verifier/test stay read-only. This grants no new edit to inherited bytes.
 4. This record: exact provenance, evidence, unresolved gates and next action.
 
 Inherited Campaign application, harnesses, historical failure evidence, approved

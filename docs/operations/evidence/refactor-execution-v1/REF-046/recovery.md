@@ -67,3 +67,108 @@ Player authority identifier was not bound to this pull request. Preserve that
 failure; the added PR878 manifest binds exact paths and required checks without
 weakening the verifier. Requalify the new head. Approved Docker metadata access
 subsequently succeeded; no database startup, fixture or SQL execution occurred.
+
+## REF-046a registered disposable qualification
+
+- Parent accepted test-only children on 2026-10-08; primary 50 IDs remain stable.
+- Registration PR879 commit: `79d725b87a0215c46b346cb1446a291892b3cb95`.
+- A branch: `refactor/ref-046a-campaign-events`, based exactly on that commit.
+- Dependency PR878: `b9d0a030358ad4c9e97d7fd466d370149ef01c8d`.
+- Current main: `9634ff92d8e28fd29623f7f4db41ff9a797e3171`.
+- Local snapshot tree matched PR878 `4bbfdd2272cf5c88781bf6f521e7071f5ad05ad0`;
+  registration tree matched `72ffa5460eb7339a6cad13eef3546e215bae14a6`.
+- Allowed A edits: `scripts/ref-046-campaign-acceptance.ts` (300 lines), this
+  recovery record (35), existing REF018 qualification workflow (25), actual
+  A PR authority (40); maximum 400 semantic changed lines.
+- Shared workflow remains pending PR620 ownership coordination requested at
+  https://github.com/kohnerbouchard-star/Student-Profile/pull/620#issuecomment-6060442671.
+- No workflow/action version or package change until coordination resolves.
+- Harness uses actual scheduler/repository/effect adapters, real PostgreSQL
+  RPCs and synthetic destination rows; no mocked database correctness claim.
+- Full frozen migration replay is required. No production migration/routine,
+  runtime, cadence, lease, credentials, settings, deployment or hold changes.
+- Raw local results: `/tmp/ref018/`; final exact source and outcomes pending.
+- Stacked main-only CI may not run; absent checks do not qualify acceptance.
+- Final local Deno 2.9.3 frozen-lock typecheck: PASS (source script before PR authority).
+- Local DB replay: BLOCKED/NOT_RUN. Approved stack startup returned
+  `Get "https://public.ecr.aws/v2/": Forbidden`; pull retries stopped and no
+  cached images exist. No SQL executed. PostgreSQL client install also lacked
+  filesystem permissions. No alternate registry or credential changes attempted.
+- Workflow proposal is retained outside Git; no DB CI integration credit yet.
+- REF-046b remains unopened pending A acceptance; no race/lease proof claimed.
+- Subsequent parent allocation resolves workflow coordination: only the prepared
+  12-line registration slice; preserve PR620's action-version/pin ownership.
+- This internal allocation is not formal CODEOWNER approval or merge permission.
+- Deno permits only DATABASE_URL, REF046_DISPOSABLE_DATABASE, REF046_STACK_ID,
+  RELEASE_COMMIT and PATH; network stays denied and subprocess access is psql-only.
+- Prior ad192c18: five selected workflows passed; new-head DB proof remains 0/8.
+
+## Approved isolated cleanup child
+
+User approved 380-line child; registration PR881 at
+`703ae397361655eb5f36041c2c7cdb652e5029c9`, from PR880
+`2522babe6ccd4e76bdec5713e9652d5382462ca3`. Main remains `9634ff92d8e28fd29623f7f4db41ff9a797e3171`.
+Branch: `refactor/ref-046-owned-disposable`; implementation initially NOT_RUN.
+Allowed deltas: new scripts/ref-046-disposable-qualification.mjs 180;
+existing ref-018-attendance-qualification.yml 75; campaign acceptance script 55;
+this evidence 30; actual-number child authority 40. Twelve cumulative paths.
+Parent allocates test workflow changes only; PR620 retains action-version/pins.
+Use exclusive run/attempt/phase resources, recorded exact ownership, meaningful
+foreign fixtures, frozen replay and unchanged assertions/lint. A/B never share
+resources. Provisional assertions cannot certify acceptance before independent
+absence verification of every owned container, volume and network succeeds.
+Missing evidence, failed inspection, cancellation or failed teardown cannot pass.
+Prior FK failures remain: runs37791861889,37792879204,37793958640; last artifact
+11558471244 SHA256 `19a25f48240c371e5c35b6fca2eb804eb2d3af5cbd86a896a5b320b3c72d25e5`.
+This approved amendment replaces row deletion with verified resource disposal;
+no guard/constraint/purge/credential/production change or local registry retry.
+Actual authority precedes implementation. No merge; A/B/parent stay unaccepted.
+Actual child authority: PR882, committed before implementation at
+`ece66b6bbcbf6fa2dbd3873f516ca25ed52bb9c9`; base is registration PR881.
+Supervisor independently inventories exact Docker resource identities and preserves
+foreign resource identities; finalization rechecks absence after a separate cleanup step.
+Campaign runs last in its exclusive job, with a nonempty foreign sentinel and lint parity.
+Local supervisor rejection checks (3), frozen Deno check, root tests, authority and diff pass.
+Disposable acceptance remains NOT_RUN pending exact-head CI; failed history is unchanged.
+First isolated run37844060685 failed closed on reset-recreated volume identity;
+artifact11579032496 retained. Explicit replay generations added; four guard tests pass.
+
+## REF-046b accepted-base registration — 2026-10-08
+
+A plus isolated cleanup accepted at PR882 head
+`2b393745f2ccea3d7666e742a423e8a35be7b2b1`, tree `7708abe768ce6b05bd5f92c47a771500021e8603`.
+All 11 workflows succeeded; 17 checks passed, 3 existing conditional checks skipped.
+Banking and Player Chromium each passed 155 tests with 11 existing skips.
+Run37850374546 jobs113561507751/113563551888 passed frozen456 migration replay,
+all A assertions, foreign sentinel preservation, lint parity and independent disposal.
+Artifact11582365508 SHA256 `2025a5c698a6411acdcea09819349e2b6bcd1d570c55dc9051e4d63722ee0361`.
+Owned resources remaining: containers0, volumes0, networks0. Main remains unchanged.
+B branch: refactor/ref-046b-campaign-leases; base refactor/ref-046-owned-disposable.
+Approved delta ceilings: shared harness295, supervisor25, attendance workflow15,
+actual B authority40, this recovery25; total400, cumulative16 paths unchanged.
+Authority binds the actual returned PR number before implementation.
+Use real row contention, frozen claim/complete/fail RPCs and notification delivery.
+Prove disjoint SKIP LOCKED claims, exact/expired five-minute boundary, attempt25
+exclusions/constraint, stable identities and increments, then stale A/B failure.
+Retain scalar booleans, worker counters and persisted rows; false completion is
+a failing defect gate requiring separate correction, never expected-pass behavior.
+Run events and leases on separate fresh owned stacks with phase-specific receipts.
+No runtime/SQL, package, credential, deployment, merge or primary closeout changes.
+B authority PR883 committed before implementation at
+`6ffb66a2de1e5f87693c6751ad12f558511df583`; registration `9ed1b91af5225d24a4218a6cc10471dfe4d7ccf6`.
+
+## REF-046c approved correction
+
+User approved runtime acknowledgement fencing and forward migration, including legacy rejection.
+Frozen red PR883 head4a7f5d9c243b6d7d13fa5bcbb1d8c07630182404 remains unchanged;
+run37852322673/job113570334094/artifact11583022041 preserves false completion proof.
+Root registration96dadbb8700646916f43da568b49c6a147e04ceb precedes code;
+actual PR884 authority4ebd50c8125c3cc7a8cc0fdcd963d60a2dd4018d also precedes code.
+Eleven approved paths,400 changed lines,cumulative21; task/backlog carry per-path caps.
+PR620 coordination comment6070636450 preserves pins; PR668 comment6070637389
+allocates only Campaign inventory measurement and retains REF034/package ownership.
+First checkpoint proves unchanged PR883 regression with confirmed-true accounting.
+Then fence current command/attempt acknowledgements and strengthen the full real DB matrix.
+Exact-head CI/receipts recorded on PR884; no merge, deploy, live SQL or completion credit.
+
+2026-10-09 user approved exact ninth-suffix registration (plan10/test25),13paths/cumulative23,total400; preserve passing proof37857966710/artifact11585257146 and failed replay37857967004/job113586633188; requalify final head.
