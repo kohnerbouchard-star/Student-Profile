@@ -106,6 +106,27 @@ export function expectedLocalFailure(result, localPath) {
   return output.split("\n").some((line) => [localPath, pathToFileURL(localPath).href].includes(missingTarget(line)));
 }
 
+export function inspectRuntimeCliVersion(result) {
+  // v1.74.2 cli/Cargo.toml, deno/Cargo.toml and cli/src/flags.rs:
+  // CLI crate 0.1.0, Deno 2.1.4, then build profile/target metadata.
+  // Locked Clap 4.5.23 adds the program name and one terminal LF.
+  // Display metadata is not image/build provenance; never trim raw output.
+  const stdout = typeof result.stdout === "string" ? result.stdout : "";
+  const stderr = typeof result.stderr === "string" ? result.stderr : "";
+  const display = /^edge-runtime ([0-9]{1,4}(?:\.[0-9]{1,4}){2})\ndeno ([0-9]{1,4}(?:\.[0-9]{1,4}){2}) \([a-z][a-z0-9_-]{0,31}, [a-z0-9_][a-z0-9_-]{0,63}\)\n(?![\s\S])/u.exec(stdout);
+  const error = result.error == null ? null : ["ETIMEDOUT", "ENOBUFS", "ENOENT", "EACCES", "EROFS", "ENOSPC"].includes(result.error.code) ? result.error.code : "unrecognized";
+  const signal = result.signal == null ? null : ["SIGTERM", "SIGKILL", "SIGINT", "SIGABRT", "SIGSEGV", "SIGBUS", "SIGILL", "SIGQUIT", "SIGPIPE"].includes(result.signal) ? result.signal : "unrecognized";
+  return {
+    accepted: result.status === 0 && result.error == null && result.signal == null && stderr === "" && typeof result.stderr === "string" && display?.[1] === "0.1.0" && display[2] === "2.1.4",
+    cli: display ? { name: "edge-runtime", version: display[1] } : null,
+    denoVersion: display?.[2] ?? null,
+    status: Number.isInteger(result.status) ? result.status : null, signal, error,
+    stdoutBytes: Buffer.byteLength(stdout), stdoutSha256: hash(stdout),
+    stderrBytes: Buffer.byteLength(stderr), stderrSha256: hash(stderr),
+    outputEncoding: "utf8", rawOutputOmitted: true, proof: "CLI display only; image provenance checked separately",
+  };
+}
+
 export function failureExcerpt(output) {
   const text = plain(output);
   const bounded = text.length > 32768 ? `${text.slice(0, 16384)}\n${text.slice(-16384)}` : text;
@@ -264,8 +285,10 @@ function main() {
     }
     assert.deepEqual(selected, journal.imageIdentity, "Recorded stack image changed");
     stackJournal = journal;
+    receipt.phase = "runtime-cli-version";
     const version = container(image.Id, ["--version"], null, null, "none");
-    assert(!version.error && version.status === 0 && /\b1\.74\.2\b/u.test(version.stdout), "Runtime binary version mismatch");
+    receipt.cliDisplay = inspectRuntimeCliVersion(version);
+    assert(receipt.cliDisplay.accepted, "Runtime CLI display mismatch");
     Object.assign(receipt, { image: image.Id, imageDigests: selected.digests, stackImage: selected, deno: "2.9.3", runtimeOverride: existsSync(override) ? "matching" : "absent" });
     const graphEnv = { ...env, DENO_DIR: join(work, "fresh-deno-cache") };
     // Preserve the existing three-family CI typecheck command and frozen operands.

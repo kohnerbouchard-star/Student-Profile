@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { CLASSROOM, NEUTRAL, LOCK, SUITES, TSLIB_URL, TSLIB_FILE, TSLIB_SHA256, tslibImports, trustedTslibConfigs, verifyTrustedTslibGraphs, validateConfigs, validateScripts, commandArgs, withConfig, junitCases, runParity } from "./verifyNeutralDenoTestConfig.mjs";
-import { inspectSdkGraph, expectedLocalFailure, failureExcerpt, selectOwnedStackImage } from "../../scripts/verify-edge-tslib-bundle-closure.mjs";
+import { inspectSdkGraph, expectedLocalFailure, failureExcerpt, selectOwnedStackImage, inspectRuntimeCliVersion } from "../../scripts/verify-edge-tslib-bundle-closure.mjs";
 
 const neutralConfig = () => ({ compilerOptions: { strict: true }, imports: tslibImports() });
 const classroomConfig = () => ({ ...neutralConfig(), imports: tslibImports(true), tasks: { check: "deno check index.ts" } });
@@ -63,6 +63,41 @@ test("negative bundle credit requires an actual missing-LOCAL-path failure", () 
   for (const result of [{ status: 0, stderr: `Module not found: ${local}` }, { stderr: `Module not found: ${local}` }, { status: 137, stderr: `Module not found: ${local}` }, { status: 1, stderr: "HTTP403 remote dependency denied" }, { status: 1, error: { code: "ETIMEDOUT" }, stderr: `Module not found: file://${local}` }, { status: 1, stderr: "Module not found: /different.mjs" }, { status: 1, stderr: `Module not found: https://example.test/remote.mjs\nImported from ${local}` }]) assert.equal(expectedLocalFailure(result, local), false);
   for (const stderr of [`Module not found "https://example.test/remote.mjs" (imported from file://${local})`, `Error: Module not found "https://example.test/remote.mjs". Imported from "file://${local}".`, `File not found elsewhere; importer ${local}`, `Module not found: file://${local}\nout of memory`, `Module not found: file://${local}\nFailed to complete the bundle within the given time.`]) assert.equal(expectedLocalFailure({ status: 1, stderr }, local), false);
   assert.equal(expectedLocalFailure({ status: 1, signal: "SIGKILL", stderr: `Module not found: file://${local}` }, local), false);
+});
+
+test("runtime CLI display follows the tagged producer, separately from image release", () => {
+  // v1.74.2 flags.rs uses crate_version!() + Deno/profile/target;
+  // locked Clap 4.5.23 prefixes the named program and adds one final LF.
+  const stdout = "edge-runtime 0.1.0\ndeno 2.1.4 (release, x86_64-unknown-linux-gnu)\n";
+  const success = { status: 0, signal: null, error: undefined, stdout, stderr: "" };
+  assert.equal(inspectRuntimeCliVersion(success).accepted, true);
+  assert.equal(inspectRuntimeCliVersion({ ...success, stdout: stdout.replace("x86_64", "aarch64") }).accepted, true);
+  for (const output of ["", "0.1.0\n", "edge-runtime 0.1.0\n", stdout.replace("edge-runtime", "other-runtime"), stdout.replace("0.1.0", "1.74.2"), stdout.replace("2.1.4", "2.1.5"), stdout.slice(0, -1), stdout + "\n", stdout + "extra\n", "extra\n" + stdout, " " + stdout, stdout.replace("0.1.0", "0.1.0 "), stdout.replaceAll("\n", "\r\n"), stdout.replace("deno ", "Deno "), stdout.replace("release, ", "release,"), stdout.replace("release", ""), stdout.replace("x86_64-unknown-linux-gnu", ""), stdout + "\u0000", "\u001b[0m" + stdout]) {
+    assert.equal(inspectRuntimeCliVersion({ ...success, stdout: output }).accepted, false);
+  }
+  for (const delta of [{ status: 1 }, { status: 137 }, { status: null }, { signal: "SIGKILL" }, { error: { code: "ETIMEDOUT" } }, { error: {} }, { stderr: "unexpected warning\n" }, { stderr: undefined }]) {
+    assert.equal(inspectRuntimeCliVersion({ ...success, ...delta }).accepted, false);
+  }
+});
+
+test("CLI version receipt retains bounded parsed fields and hashes, never unexpected raw output", () => {
+  const stdout = "edge-runtime 1.74.2\ndeno 2.1.4 (release, x86_64-unknown-linux-gnu)\n";
+  const parsed = inspectRuntimeCliVersion({ status: 0, stdout, stderr: "" });
+  assert.deepEqual(parsed.cli, { name: "edge-runtime", version: "1.74.2" });
+  assert.equal(parsed.accepted, false);
+  assert.equal(parsed.stdoutBytes, Buffer.byteLength(stdout));
+  assert.equal(parsed.stdoutSha256, createHash("sha256").update(stdout).digest("hex"));
+  const body = "Authorization: Bearer PRIVATE_BODY https://proxy-user:proxy-password@proxy.example.test/?token=SECRET\n";
+  const receipt = inspectRuntimeCliVersion({ status: 0, signal: "PRIVATE_SIGNAL", error: { code: "PRIVATE_ERROR", message: body }, stdout: body.repeat(2000), stderr: body });
+  assert.equal(receipt.accepted, false);
+  assert.equal(receipt.cli, null);
+  assert.equal(receipt.signal, "unrecognized"); assert.equal(receipt.error, "unrecognized");
+  assert.equal(receipt.stdoutBytes, Buffer.byteLength(body.repeat(2000)));
+  assert.equal(receipt.stderrSha256, createHash("sha256").update(body).digest("hex"));
+  assert.equal(receipt.rawOutputOmitted, true);
+  assert(JSON.stringify(receipt).length < 700);
+  for (const value of ["PRIVATE_BODY", "PRIVATE_SIGNAL", "PRIVATE_ERROR", "Authorization", "proxy-user", "proxy-password", "proxy.example.test", "SECRET"]) assert(!JSON.stringify(receipt).includes(value));
+  assert.equal(inspectRuntimeCliVersion({ status: null, error: { code: "ETIMEDOUT" }, stdout: "", stderr: "" }).error, "ETIMEDOUT");
 });
 
 test("failure excerpts retain bounded diagnostic targets/codes without bodies or proxy credentials", () => {
