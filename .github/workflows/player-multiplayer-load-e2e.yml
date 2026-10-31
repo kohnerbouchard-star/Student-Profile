@@ -129,10 +129,6 @@ jobs:
         with:
           deno-version: v2.9.3
 
-      - name: Qualify accepted tslib through real configs and pinned bundles
-        timeout-minutes: 30
-        run: node scripts/verify-edge-tslib-bundle-closure.mjs
-
       - name: Build exact authorized Crafting pack
         shell: bash
         run: |
@@ -156,6 +152,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/verify-edge-tslib-bundle-closure.mjs --stack-baseline
           LOG=/tmp/player-runtime-supabase-startup.log
           : > "$LOG"
           mkdir -p backend/supabase/functions
@@ -173,12 +170,17 @@ jobs:
             STATUS=${PIPESTATUS[0]}
             set -e
             if [ "$STATUS" -eq 0 ]; then
+              node scripts/verify-edge-tslib-bundle-closure.mjs --stack-receipt
               exit 0
             fi
             npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
             sleep $((ATTEMPT * 10))
           done
           exit "$STATUS"
+
+      - name: Qualify accepted tslib through real configs and pinned bundles
+        timeout-minutes: 30
+        run: node scripts/verify-edge-tslib-bundle-closure.mjs
 
       - name: Rebuild database from zero and refresh REST schema
         shell: bash

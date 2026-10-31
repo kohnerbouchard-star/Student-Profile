@@ -1,16 +1,55 @@
 #!/usr/bin/env node
 // Bundle-only qualification. Never start a server or invoke a function handler.
 import assert from "node:assert/strict";
-import { copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { LOCK, NEUTRAL, TSLIB_FILE, TSLIB_SHA256, TSLIB_URL, trustedTslibConfigs } from "../backend/scripts/verifyNeutralDenoTestConfig.mjs";
+import { ownedDelta } from "./ref-046-disposable-qualification.mjs";
 
-const IMAGE = "public.ecr.aws/supabase/edge-runtime:v1.74.2";
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
+const officialRuntime = (reference) => /^(?:public\.ecr\.aws\/supabase|ghcr\.io\/supabase|(?:docker\.io\/)?supabase)\/edge-runtime:v1\.74\.2$/u.test(reference);
+const canonicalRepo = (reference) => reference.replace(/^docker\.io\//u, "").replace(/:v1\.74\.2$/u, "");
+
+export function selectOwnedStackImage(journal, current, runtime, image, binding) {
+  assert.equal(journal.schemaVersion, 1);
+  assert.equal(journal.status, "stack-owned");
+  assert.deepEqual(journal.binding, binding, "Stack receipt belongs to a different job/source/project");
+  assert(!journal.before.some((row) => row.name.endsWith(`_${binding.project}`) || row.labels?.["com.supabase.cli.project"] === binding.project), "Preexisting stack cannot be adopted");
+  const owned = ownedDelta(journal.before, current, binding.project);
+  assert.deepEqual(owned, journal.owned, "Recorded stack resources changed");
+  const matches = owned.filter((row) => row.kind === "container" && row.name === `supabase_edge_runtime_${binding.project}`);
+  assert.equal(matches.length, 1, "Expected one recorded runtime resource");
+  const [row] = matches;
+  assert.match(row.id, /^[a-f0-9]{64}$/u);
+  assert.equal(row.id, journal.runtimeId);
+  assert.equal(runtime.Id, row.id);
+  assert.equal(runtime.Name, `/${row.name}`);
+  assert.equal(runtime.Created, row.created);
+  assert(Date.parse(row.created) >= Math.floor(Date.parse(journal.startedAt) / 1000) * 1000, "Runtime predates this startup");
+  assert.deepEqual(runtime.Config.Labels, row.labels);
+  assert.equal(runtime.Config.Labels["com.supabase.cli.project"], binding.project);
+  assert.equal(runtime.State.Running, true);
+  const networks = owned.filter((item) => item.kind === "network" && item.name === `supabase_network_${binding.project}`);
+  assert.equal(networks.length, 1);
+  assert.deepEqual(Object.values(runtime.NetworkSettings.Networks).map((network) => network.NetworkID), [networks[0].id], "Runtime is attached to an unrecorded network");
+  assert.equal(image.Id, runtime.Image);
+  assert.match(image.Id, /^sha256:[a-f0-9]{64}$/u);
+  const reference = runtime.Config.Image;
+  assert(officialRuntime(reference), "Runtime was not provisioned from a pinned official CLI image reference");
+  assert(image.RepoTags.some((tag) => officialRuntime(tag) && canonicalRepo(tag) === canonicalRepo(reference)));
+  const digests = image.RepoDigests.filter((digest) => {
+    const match = /^(.*)@sha256:[a-f0-9]{64}$/u.exec(digest);
+    return match && canonicalRepo(`${match[1]}:v1.74.2`) === canonicalRepo(reference);
+  }).sort();
+  assert(digests.length > 0, "CLI-selected image lacks matching repository digest provenance");
+  assert.equal(image.Config.Entrypoint.length, 1);
+  assert.match(image.Config.Entrypoint[0], /(?:^|\/)edge-runtime$/u);
+  return { runtimeContainerId: row.id, networkId: networks[0].id, imageId: image.Id, reference, digests };
+}
 
 export function inspectSdkGraph(graph, localUrl) {
   assert.equal(graph.version, 1, "Unreviewed Deno graph schema");
@@ -107,7 +146,14 @@ export function failureExcerpt(output) {
 function main() {
   assert.equal(process.env.GITHUB_ACTIONS, "true", "Only the reviewed ephemeral CI venue may execute this helper");
   assert.equal(process.env.RUNNER_ENVIRONMENT, "github-hosted", "Shared/persistent runners are not allowed");
+  const mode = process.argv[2] ?? "qualify";
+  assert(["qualify", "--stack-baseline", "--stack-receipt"].includes(mode) && process.argv.length <= 3, "Unknown ownership/qualification mode");
+  assert.equal(process.env.GITHUB_JOB, "connected-player-runtime");
+  assert.match(process.env.GITHUB_RUN_ID ?? "", /^\d+$/u);
+  assert.match(process.env.GITHUB_RUN_ATTEMPT ?? "", /^\d+$/u);
+  assert(!process.env.DOCKER_HOST && !process.env.DOCKER_CONTEXT && !process.env.DOCKER_TLS_VERIFY, "Remote/custom Docker context is not allowed");
   const repo = realpathSync(fileURLToPath(new URL("../", import.meta.url)));
+  assert.equal(realpathSync(process.env.GITHUB_WORKSPACE), repo);
   const backend = join(repo, "backend");
   const functions = join(backend, "supabase/functions");
   const lock = join(backend, LOCK);
@@ -122,6 +168,11 @@ function main() {
   assert.equal(JSON.parse(readFileSync(join(repo, "node_modules/supabase/package.json"))).version, "2.109.1");
   const override = join(backend, "supabase/.temp/edge-runtime-version");
   assert(!existsSync(override) || readFileSync(override, "utf8").trim() === "1.74.2", "Unexpected runtime override");
+  const config = readFileSync(join(backend, "supabase/config.toml"), "utf8");
+  const projects = [...config.matchAll(/^project_id\s*=\s*"([A-Za-z0-9_-]+)"\s*$/gmu)];
+  assert.equal(projects.length, 1); assert.equal(projects[0][1], "econovaria");
+  const binding = { sourceSha: process.env.RELEASE_COMMIT, project: projects[0][1], configHash: hash(config), workspace: repo, runId: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT, job: process.env.GITHUB_JOB };
+  const journalPath = join(realpathSync(process.env.RUNNER_TEMP), "econovaria-tslib-stack-ownership.json");
   const env = Object.fromEntries(["PATH", "HOME", "TMPDIR", "SSL_CERT_FILE", "SSL_CERT_DIR", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "no_proxy", "all_proxy"].filter((key) => process.env[key] !== undefined).map((key) => [key, process.env[key]]));
   Object.assign(env, { NO_COLOR: "1", DENO_NO_PROMPT: "1" });
   const work = mkdtempSync(join(tmpdir(), "econovaria-tslib-bundle-"));
@@ -146,6 +197,20 @@ function main() {
     assert(!result.error && result.status === 0, `${command} ${args[0]} failed (exit ${result.status}, ${result.error?.code ?? "no process error"})`);
     return result.stdout.trim();
   };
+  const inventory = (cleanup = false) => {
+    const rows = [];
+    for (const kind of ["container", "volume", "network"]) {
+      const ids = ok("docker", [kind, "ls", ...(kind === "container" ? ["-a"] : []), "-q"], { cleanup }).split(/\s+/u).filter(Boolean);
+      assert(ids.length <= 32, "Unexpected resource census in ephemeral job");
+      for (const id of ids) {
+        const format = `{ "name": {{json .Name}}, "labels": {{json ${kind === "container" ? ".Config.Labels" : ".Labels"}}}, "created": {{json ${kind === "volume" ? ".CreatedAt" : ".Created"}}}${kind === "volume" ? "" : ', "id": {{json .Id}}'} }`;
+        const row = JSON.parse(ok("docker", [kind, "inspect", id, "--format", format], { cleanup }));
+        row.name = row.name.replace(/^\//u, ""); rows.push({ kind, ...row, key: `${kind}:${row.id || row.name}` });
+      }
+    }
+    return rows.sort((left, right) => left.key.localeCompare(right.key));
+  };
+  let stackJournal;
   let serial = 0;
   const container = (image, args, source, output, network = "bridge") => {
     const name = `econovaria-tslib-${owner}-${serial++}`;
@@ -170,16 +235,38 @@ function main() {
     assert.equal(ok("git", ["rev-parse", "HEAD"]), receipt.candidate);
     assert.equal(ok(join(repo, "node_modules/.bin/supabase"), ["--version"]), "2.109.1");
     assert.match(ok("deno", ["--version"]), /^deno 2\.9\.3\b/u);
-    ok("docker", ["pull", IMAGE]);
-    const [image] = JSON.parse(ok("docker", ["image", "inspect", IMAGE]));
-    assert.match(image.Id, /^sha256:[a-f0-9]{64}$/u);
-    assert(image.RepoTags.includes(IMAGE));
-    assert(image.RepoDigests.some((digest) => /^public\.ecr\.aws\/supabase\/edge-runtime@sha256:[a-f0-9]{64}$/u.test(digest)));
-    assert.equal(image.Config.Entrypoint.length, 1);
-    assert.match(image.Config.Entrypoint[0], /(?:^|\/)edge-runtime$/u);
+    assert.equal(JSON.parse(ok("docker", ["context", "inspect", "--format", "{{json .Endpoints.docker.Host}}"])), "unix:///var/run/docker.sock");
+    receipt.phase = mode;
+    if (mode === "--stack-baseline") {
+      const before = inventory();
+      assert(!before.some((row) => row.name.endsWith(`_${binding.project}`) || row.labels?.["com.supabase.cli.project"] === binding.project), "Preexisting project resources");
+      writeFileSync(journalPath, JSON.stringify({ schemaVersion: 1, status: "baseline", binding, startedAt: new Date().toISOString(), before }), { flag: "wx", mode: 0o600 });
+      receipt.status = "stack-baseline-recorded"; return;
+    }
+    const journal = JSON.parse(readFileSync(journalPath, "utf8"));
+    assert.deepEqual(journal.binding, binding, "Ownership receipt is not from this job/source/config");
+    const current = inventory();
+    if (mode === "--stack-receipt") {
+      assert.equal(journal.status, "baseline");
+      journal.owned = ownedDelta(journal.before, current, binding.project);
+      const rows = journal.owned.filter((row) => row.kind === "container" && row.name === `supabase_edge_runtime_${binding.project}`);
+      assert.equal(rows.length, 1); journal.runtimeId = rows[0].id; journal.status = "stack-owned";
+    } else assert(journal.imageIdentity, "Missing verified stack-image receipt");
+    assert.match(journal.runtimeId, /^[a-f0-9]{64}$/u);
+    const [runtime] = JSON.parse(ok("docker", ["inspect", "--type", "container", journal.runtimeId]));
+    assert.match(runtime.Image, /^sha256:[a-f0-9]{64}$/u);
+    const [image] = JSON.parse(ok("docker", ["image", "inspect", runtime.Image]));
+    const selected = selectOwnedStackImage(journal, current, runtime, image, binding);
+    if (mode === "--stack-receipt") {
+      journal.imageIdentity = selected;
+      writeFileSync(journalPath, JSON.stringify(journal), { mode: 0o600 });
+      receipt.status = "stack-ownership-recorded"; receipt.stackImage = selected; return;
+    }
+    assert.deepEqual(selected, journal.imageIdentity, "Recorded stack image changed");
+    stackJournal = journal;
     const version = container(image.Id, ["--version"], null, null, "none");
     assert(!version.error && version.status === 0 && /\b1\.74\.2\b/u.test(version.stdout), "Runtime binary version mismatch");
-    Object.assign(receipt, { image: image.Id, imageDigests: image.RepoDigests, deno: "2.9.3", runtimeOverride: existsSync(override) ? "matching" : "absent" });
+    Object.assign(receipt, { image: image.Id, imageDigests: selected.digests, stackImage: selected, deno: "2.9.3", runtimeOverride: existsSync(override) ? "matching" : "absent" });
     const graphEnv = { ...env, DENO_DIR: join(work, "fresh-deno-cache") };
     // Preserve the existing three-family CI typecheck command and frozen operands.
     ok(process.execPath, [join(backend, "scripts/typecheckAllEdgeRoots.mjs")], { env: graphEnv });
@@ -248,6 +335,13 @@ function main() {
   } finally {
     try {
       assert.equal(ok("docker", ["ps", "-aq", "--filter", `label=econovaria.ts-lib-owner=${owner}`], { cleanup: true }), "", "Owned containers remain; preserve source copies for inspection");
+      if (stackJournal) {
+        const current = inventory(true);
+        const [runtime] = JSON.parse(ok("docker", ["inspect", "--type", "container", stackJournal.runtimeId], { cleanup: true }));
+        const [image] = JSON.parse(ok("docker", ["image", "inspect", stackJournal.imageIdentity.imageId], { cleanup: true }));
+        assert.deepEqual(selectOwnedStackImage(stackJournal, current, runtime, image, binding), stackJournal.imageIdentity, "Application stack/image changed");
+        receipt.applicationStackUnchanged = true;
+      }
       rmSync(work, { recursive: true });
       receipt.cleanup = "owned containers and temporary copies removed";
       assert.deepEqual(readFileSync(lock), originalLock, "Original frozen lock changed");
@@ -257,7 +351,7 @@ function main() {
       receipt.cleanup = "blocked or uncertain; no forced cleanup";
       receipt.cleanupFailure = { name: error.name, ...failureExcerpt(error.message) };
       throw error;
-    } finally { console.log(`TSLIB_BUNDLE_QUALIFICATION ${JSON.stringify(receipt)}`); }
+    } finally { console.log(`${mode === "qualify" ? "TSLIB_BUNDLE_QUALIFICATION" : "TSLIB_STACK_RESOURCE_RECEIPT"} ${JSON.stringify(receipt)}`); }
   }
 }
 

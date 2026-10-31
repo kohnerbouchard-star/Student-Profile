@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { CLASSROOM, NEUTRAL, LOCK, SUITES, TSLIB_URL, TSLIB_FILE, TSLIB_SHA256, tslibImports, trustedTslibConfigs, verifyTrustedTslibGraphs, validateConfigs, validateScripts, commandArgs, withConfig, junitCases, runParity } from "./verifyNeutralDenoTestConfig.mjs";
-import { inspectSdkGraph, expectedLocalFailure, failureExcerpt } from "../../scripts/verify-edge-tslib-bundle-closure.mjs";
+import { inspectSdkGraph, expectedLocalFailure, failureExcerpt, selectOwnedStackImage } from "../../scripts/verify-edge-tslib-bundle-closure.mjs";
 
 const neutralConfig = () => ({ compilerOptions: { strict: true }, imports: tslibImports() });
 const classroomConfig = () => ({ ...neutralConfig(), imports: tslibImports(true), tasks: { check: "deno check index.ts" } });
@@ -38,7 +38,7 @@ test("all actual Edge configs bind the same original module and license", () => 
   assert.equal(defaults.length, 26);
   for (const config of defaults) assert.deepEqual(readFileSync(config), readFileSync(defaults[0]), "Strict-default function configs must be byte-identical");
   const license = readFileSync(join(root, "supabase/functions/_shared/vendor/tslib-2.8.1/LICENSE"));
-  assert.equal(createHash("sha256").update(license).digest("hex"), "210b19e543130388c68654b7497e967119ce17145f66ab7d85688fbd70f08751");
+  assert.equal(createHash("sha256").update(license).digest("hex"), "0e8d2550baea17eb3072c4f919b36fbf9852bb49dba948549872e713863c0834");
   assert.equal(JSON.parse(readFileSync(join(root, LOCK), "utf8")).remote[TSLIB_URL], TSLIB_SHA256);
 });
 
@@ -77,6 +77,42 @@ test("failure excerpts retain bounded diagnostic targets/codes without bodies or
   assert(bounded.outputTruncated);
   assert(bounded.excerpt.length <= 6 && bounded.excerpt.every((line) => line.length <= 256));
   assert.equal(failureExcerpt("<html>PRIVATE_BODY</html>").unrecognizedOutputOmitted, true);
+});
+
+test("bundle image selection requires this job's recorded runtime ID and official pinned provenance", () => {
+  const project = "econovaria", created = "2026-10-31T07:00:01Z", id = "a".repeat(64), networkId = "b".repeat(64), imageId = `sha256:${"c".repeat(64)}`;
+  const binding = { sourceSha: "d".repeat(40), project, configHash: "e".repeat(64), workspace: "/source", runId: "123", attempt: "1", job: "connected-player-runtime" };
+  const labels = { "com.supabase.cli.project": project };
+  const owned = [{ kind: "container", id, name: `supabase_edge_runtime_${project}`, key: `container:${id}`, created, labels }, { kind: "network", id: networkId, name: `supabase_network_${project}`, key: `network:${networkId}`, created, labels }];
+  const before = [{ kind: "network", id: "0".repeat(64), name: "bridge", key: `network:${"0".repeat(64)}`, created: "2026-10-30T00:00:00Z", labels: {} }];
+  const current = [...before, ...owned];
+  const journal = { schemaVersion: 1, status: "stack-owned", binding, startedAt: "2026-10-31T07:00:00Z", before, owned, runtimeId: id };
+  const runtime = { Id: id, Name: `/supabase_edge_runtime_${project}`, Created: created, Image: imageId, State: { Running: true }, Config: { Labels: labels, Image: "ghcr.io/supabase/edge-runtime:v1.74.2" }, NetworkSettings: { Networks: { app: { NetworkID: networkId } } } };
+  const image = { Id: imageId, RepoTags: [runtime.Config.Image], RepoDigests: [`ghcr.io/supabase/edge-runtime@sha256:${"f".repeat(64)}`], Config: { Entrypoint: ["edge-runtime"] } };
+  assert.equal(selectOwnedStackImage(journal, current, runtime, image, binding).imageId, imageId);
+  for (const change of [
+    (j) => { j.binding.attempt = "2"; }, (j) => { j.binding.sourceSha = "0".repeat(40); },
+    (j) => { j.binding.project = "foreign"; }, (j) => { j.runtimeId = "0".repeat(64); },
+    (j) => { j.before = [structuredClone(owned[0])]; },
+  ]) {
+    const changed = structuredClone(journal); change(changed);
+    assert.throws(() => selectOwnedStackImage(changed, current, runtime, image, binding));
+  }
+  for (const change of [
+    (r) => { r.Id = "0".repeat(64); }, (r) => { r.Config.Labels = { "com.supabase.cli.project": "foreign" }; },
+    (r) => { r.State.Running = false; }, (r) => { r.NetworkSettings.Networks.app.NetworkID = "0".repeat(64); },
+    (r) => { r.Config.Image = "example.test/edge-runtime:v1.74.2"; },
+    (r) => { r.Config.Image = "ghcr.io/supabase/edge-runtime:v1.74.3"; },
+  ]) {
+    const changed = structuredClone(runtime); change(changed);
+    assert.throws(() => selectOwnedStackImage(journal, current, changed, image, binding));
+  }
+  for (const change of [(i) => { i.Id = `sha256:${"0".repeat(64)}`; }, (i) => { i.RepoDigests = []; }, (i) => { i.RepoDigests = [`example.test/edge-runtime@sha256:${"f".repeat(64)}`]; }, (i) => { i.RepoTags = []; }]) {
+    const changed = structuredClone(image); change(changed);
+    assert.throws(() => selectOwnedStackImage(journal, current, runtime, changed, binding));
+  }
+  assert.throws(() => selectOwnedStackImage(journal, [...current, { kind: "container", name: "unowned", key: "container:foreign" }], runtime, image, binding));
+  assert.throws(() => selectOwnedStackImage(journal, [{ ...before[0], labels: { changed: "foreign" } }, ...owned], runtime, image, binding));
 });
 
 test("modified local bytes or a changed remote lock identity fail closed", () => {

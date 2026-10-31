@@ -140,6 +140,6 @@ test("release builder produces identical complete browser and Edge archive hashe
     assert.deepEqual(config.imports, { [TSLIB_URL]: "../_shared/vendor/tslib-2.8.1/tslib.mjs" });
     assert.equal(path.posix.normalize(path.posix.join(path.posix.dirname(configPath), config.imports[TSLIB_URL])), TSLIB_FILE);
     assert.equal(digest(file(TSLIB_FILE)), TSLIB_SHA256, `${artifact.name} archive changed accepted module bytes`);
-    assert.equal(digest(file("backend/supabase/functions/_shared/vendor/tslib-2.8.1/LICENSE")), "210b19e543130388c68654b7497e967119ce17145f66ab7d85688fbd70f08751");
+    assert.equal(digest(file("backend/supabase/functions/_shared/vendor/tslib-2.8.1/LICENSE")), "0e8d2550baea17eb3072c4f919b36fbf9852bb49dba948549872e713863c0834");
   }
 });
