@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { LOCK, NEUTRAL, TSLIB_FILE, TSLIB_SHA256, TSLIB_URL, trustedTslibConfigs } from "../backend/scripts/verifyNeutralDenoTestConfig.mjs";
 import { ownedDelta } from "./ref-046-disposable-qualification.mjs";
+import { redactEconovariaCiLog } from "./redact-econovaria-ci-log.mjs";
 
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const officialRuntime = (reference) => /^(?:public\.ecr\.aws\/supabase|ghcr\.io\/supabase|(?:docker\.io\/)?supabase)\/edge-runtime:v1\.74\.2$/u.test(reference);
@@ -164,6 +165,33 @@ export function failureExcerpt(output) {
   return { excerpt: [...excerpt].slice(0, 6).map((line) => line.slice(0, 256)), outputTruncated: text.length > 32768, unrecognizedOutputOmitted: excerpt.size === 0 };
 }
 
+export function preserveDenoInfoStderr(value, proxyValues = []) {
+  const original = String(value ?? "");
+  const controls = (text) => text.replace(/(?:\x1b\]|\x9d)[\s\S]*?(?:\x07|\x1b\\|\x9c|$)/gu, "").replace(/(?:\x1b\[|\x9b)[0-?]*[ -/]*[@-~]/gu, "").replace(/\x1b[ -/]*[@-~]/gu, "").replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f\u2028\u2029]/gu, "");
+  let text = controls(original);
+  for (const secret of proxyValues.filter((item) => typeof item === "string" && item).map(controls).filter(Boolean).sort((a, b) => b.length - a.length)) text = text.split(secret).join("[proxy-redacted]");
+  text = text.replace(/(?:\b[a-z][a-z0-9+.-]{0,15}:)?\/\/[^\s<>"'`]+/giu, (value) => {
+    try { const url = new URL(value, "https://redaction.invalid"); url.username = ""; url.password = ""; url.search = ""; url.hash = ""; return value.startsWith("//") ? url.href.slice(url.protocol.length) : url.href; } catch { return "[url-redacted]"; }
+  });
+  text = redactEconovariaCiLog(text)
+    .replace(/["']?\b(?:headers|requestHeaders|responseHeaders)\b["']?\s*[:=]\s*(?:\{[\s\S]*?\}|\[[\s\S]*?\]|[^\n]+)/giu, "[headers-redacted]")
+    .replace(/["']?\b[a-z0-9_-]{0,64}(?:key|token|secret|password|credential|authorization|cookie)[a-z0-9_-]{0,32}\b["']?[ \t]*[:=][ \t]*(?:"[^"\n]*"|'[^'\n]*'|[^\s,;|]+)/giu, "[credential-redacted]")
+    .replace(/\b(?:Bearer|Basic)[ \t]+[^\s"'<>]+/giu, "[authorization-redacted]")
+    .replace(/\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|sk_(?:live|test)_[A-Za-z0-9]{16,}|AIza[0-9A-Za-z_-]{35}|(?:AKIA|ASIA)[0-9A-Z]{16})\b/gu, "[token-redacted]");
+  const bytes = Buffer.from(text, "utf8");
+  let start = Math.max(0, bytes.length - 8192);
+  while (start < bytes.length && (bytes[start] & 0xc0) === 0x80) start += 1;
+  let retained = bytes.subarray(start).toString("utf8");
+  while (Buffer.byteLength(qualificationReceiptJson(retained)) > 8192) {
+    start += Math.max(1, Math.ceil((bytes.length - start) / 8));
+    while (start < bytes.length && (bytes[start] & 0xc0) === 0x80) start += 1;
+    retained = bytes.subarray(start).toString("utf8");
+  }
+  return { text: retained, originalBytes: Buffer.byteLength(original), originalSha256: hash(original), redactedBytes: bytes.length, retainedBytes: Buffer.byteLength(retained), retainedJsonBytes: Buffer.byteLength(qualificationReceiptJson(retained)), truncated: start > 0, retention: "diagnostic tail", encoding: "utf8" };
+}
+
+export const qualificationReceiptJson = (value) => JSON.stringify(value).replaceAll("::", "\\u003a\\u003a").replaceAll("##[", "\\u0023\\u0023[");
+
 function main() {
   assert.equal(process.env.GITHUB_ACTIONS, "true", "Only the reviewed ephemeral CI venue may execute this helper");
   assert.equal(process.env.RUNNER_ENVIRONMENT, "github-hosted", "Shared/persistent runners are not allowed");
@@ -208,6 +236,7 @@ function main() {
     const expectedAbsent = cleanup && args[0] === "inspect" && !result.error && result.status === 1 && /no such (object|container)/iu.test(result.stderr);
     if ((result.error || result.status !== 0) && !expectedAbsent) {
       result.failureReceipt = { phase: receipt.phase ?? "preflight", program: basename(command), operation: args.find((arg) => ["bundle", "unbundle", "--version"].includes(arg)) ?? basename(args[0]), status: result.status, signal: result.signal, processError: result.error?.code, stdoutBytes: Buffer.byteLength(result.stdout ?? ""), stderrBytes: Buffer.byteLength(result.stderr ?? ""), ...failureExcerpt(`${result.stderr ?? ""}\n${result.stdout ?? ""}`), expected: false };
+      if (command === "deno" && args[0] === "info") result.failureReceipt.denoInfoStderr = preserveDenoInfoStderr(result.stderr, Object.entries(env).filter(([key]) => /^(?:https?|all|no)_proxy$/iu.test(key)).map(([, value]) => value));
       receipt.failures.push(result.failureReceipt);
       if (receipt.failures.length > 8) receipt.failures.shift();
     }
@@ -374,7 +403,7 @@ function main() {
       receipt.cleanup = "blocked or uncertain; no forced cleanup";
       receipt.cleanupFailure = { name: error.name, ...failureExcerpt(error.message) };
       throw error;
-    } finally { console.log(`${mode === "qualify" ? "TSLIB_BUNDLE_QUALIFICATION" : "TSLIB_STACK_RESOURCE_RECEIPT"} ${JSON.stringify(receipt)}`); }
+    } finally { console.log(`${mode === "qualify" ? "TSLIB_BUNDLE_QUALIFICATION" : "TSLIB_STACK_RESOURCE_RECEIPT"} ${qualificationReceiptJson(receipt)}`); }
   }
 }
 

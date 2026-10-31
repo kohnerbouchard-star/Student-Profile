@@ -76,6 +76,8 @@
     "backend/supabase/functions/web-session-api/deno.json",
     "scripts/release-build-determinism.test.mjs",
     "scripts/verify-edge-tslib-bundle-closure.mjs",
+    ".github/workflows/runtime-stabilization-onboarding.yml",
+    "scripts/auth-boundary-contract.test.mjs",
     "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
     ".github/workflows/player-multiplayer-load-e2e.yml"
   ],

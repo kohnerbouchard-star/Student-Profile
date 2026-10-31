@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { CLASSROOM, NEUTRAL, LOCK, SUITES, TSLIB_URL, TSLIB_FILE, TSLIB_SHA256, tslibImports, trustedTslibConfigs, verifyTrustedTslibGraphs, validateConfigs, validateScripts, commandArgs, withConfig, junitCases, runParity } from "./verifyNeutralDenoTestConfig.mjs";
-import { inspectSdkGraph, expectedLocalFailure, failureExcerpt, selectOwnedStackImage, inspectRuntimeCliVersion } from "../../scripts/verify-edge-tslib-bundle-closure.mjs";
+import { inspectSdkGraph, expectedLocalFailure, failureExcerpt, selectOwnedStackImage, inspectRuntimeCliVersion, preserveDenoInfoStderr, qualificationReceiptJson } from "../../scripts/verify-edge-tslib-bundle-closure.mjs";
 
 const neutralConfig = () => ({ compilerOptions: { strict: true }, imports: tslibImports() });
 const classroomConfig = () => ({ ...neutralConfig(), imports: tslibImports(true), tasks: { check: "deno check index.ts" } });
@@ -112,6 +112,40 @@ test("failure excerpts retain bounded diagnostic targets/codes without bodies or
   assert(bounded.outputTruncated);
   assert(bounded.excerpt.length <= 6 && bounded.excerpt.every((line) => line.length <= 256));
   assert.equal(failureExcerpt("<html>PRIVATE_BODY</html>").unrecognizedOutputOmitted, true);
+});
+
+test("unfamiliar Deno info stderr remains readable as redacted data", () => {
+  const proxy = "http://proxy-user:proxy-pass@proxy.invalid:3128";
+  const raw = `\u001b[31merror: unfamiliar graph invariant Z37 at module 12\u001b[0m\nhttps://url-user:url-pass@example.invalid/path/module.ts?private=QUERY_PRIVATE#FRAGMENT_PRIVATE\nfile:///source/backend/root.ts?query=FILE_PRIVATE#FILE_FRAGMENT\nproxy ${proxy}\nNO_PROXY=LOCAL_PROXY_PRIVATE\nHeaders: {"X-Private":"HEADER_PRIVATE"}\naccess_token=TOKEN_PRIVATE\nCookie: session=COOKIE_PRIVATE\nBearer BEARER_PRIVATE\n${["ghp", "x".repeat(30)].join("_")}\n::error::untrusted data\n##[warning]untrusted data\n\u001b]0;OSC_PRIVATE\u0007`;
+  assert.equal(failureExcerpt(raw).unrecognizedOutputOmitted, true);
+  const receipt = preserveDenoInfoStderr(raw, [proxy, "LOCAL_PROXY_PRIVATE"]);
+  assert.equal(preserveDenoInfoStderr('{"headers":{"X-Private":"JSON_HEADER_PRIVATE"}}').text, "{[headers-redacted]}");
+  assert.equal(preserveDenoInfoStderr("//relative-user:relative-pass@example.invalid/mod.ts?private=RELATIVE_PRIVATE#RELATIVE_FRAGMENT").text, "//example.invalid/mod.ts");
+  assert(receipt.text.includes("error: unfamiliar graph invariant Z37 at module 12"));
+  assert(receipt.text.includes("https://example.invalid/path/module.ts"));
+  assert(receipt.text.includes("file:///source/backend/root.ts"));
+  for (const secret of ["url-user", "url-pass", "QUERY_PRIVATE", "FRAGMENT_PRIVATE", "FILE_PRIVATE", "FILE_FRAGMENT", "proxy-user", "proxy-pass", "proxy.invalid", "LOCAL_PROXY_PRIVATE", "HEADER_PRIVATE", "TOKEN_PRIVATE", "COOKIE_PRIVATE", "BEARER_PRIVATE", "OSC_PRIVATE", "x".repeat(30)]) assert(!receipt.text.includes(secret));
+  assert.equal(receipt.originalBytes, Buffer.byteLength(raw));
+  assert.equal(receipt.originalSha256, createHash("sha256").update(raw).digest("hex"));
+  assert.equal(receipt.truncated, false);
+  const wire = qualificationReceiptJson({ failures: [{ denoInfoStderr: receipt }] });
+  assert.equal(wire.split("\n").length, 1);
+  assert(!wire.includes("::") && !wire.includes("##["));
+  assert.deepEqual(JSON.parse(wire).failures[0].denoInfoStderr, receipt);
+});
+
+test("preserved stderr caps its UTF-8 diagnostic tail without replacement characters", () => {
+  const raw = "界".repeat(4000) + "\nunfamiliar final diagnosis Z39\n";
+  const receipt = preserveDenoInfoStderr(raw);
+  assert(receipt.truncated);
+  assert(receipt.retainedBytes <= 8192);
+  assert.equal(receipt.retainedBytes, Buffer.byteLength(receipt.text));
+  assert.equal(receipt.redactedBytes, Buffer.byteLength(raw));
+  assert(receipt.text.endsWith("unfamiliar final diagnosis Z39\n"));
+  assert(!receipt.text.includes("\ufffd"));
+  const escaped = preserveDenoInfoStderr("::error::".repeat(3000) + "\nfinal diagnosis Z41\n");
+  assert(escaped.truncated && escaped.retainedBytes <= 8192 && escaped.retainedJsonBytes <= 8192);
+  assert(escaped.text.endsWith("final diagnosis Z41\n"));
 });
 
 test("bundle image selection requires this job's recorded runtime ID and official pinned provenance", () => {
