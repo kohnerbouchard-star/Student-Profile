@@ -3,7 +3,7 @@
   "authorityId": "econovaria.game-provisioning-service-claims-pr-885.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 885,
-  "baseRef": "main",
+  "baseRef": "fix/ref-046c-campaign-acknowledgements",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
@@ -22,7 +22,7 @@
     "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
   ],
   "requiredFiles": ["docs/operations/contracts/player-cross-cutting/pr-885.json", "scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
-  "requiredChecks": ["player-terminal-verify", "player-edge-trusted-ip-entrypoint-contract", "player-production-secret-provision-contract", "player-api-read-resilience", "Backend Typecheck", "Repository Quality", "Database Replay", "Economic Core Request Claims"],
+  "requiredChecks": ["player-terminal-verify", "player-edge-trusted-ip-entrypoint-contract", "player-production-secret-provision-contract", "player-api-read-resilience", "Backend Typecheck", "Repository Quality", "Database Replay", "Economic Core Request Claims", "World Runtime", "Admin API Check", "Certify Banking FX clearing source", "Verify Banking FX database acceptance", "Verify Banking FX Chromium acceptance", "Staff Attendance and ledger adjustment database/race qualification", "REF046 exclusive disposable qualification"],
   "scopeRecord": "docs/operations/evidence/game-provisioning-service-claims-v1.md",
-  "authorizationNote": "Owner approved the diagnosed game provisioning correction and, on 2026-10-10, its bounded two-file suffix-registration amendment coordinated with PR884. Verifier and regression remain read-only locks. Preserve the exact existing migration, runtime harness and workflow bytes. Register only the migration present on this source, pin all eight prior identities and preserve every fail-closed registry check. The eventual combined source requires Campaign ninth, claims tenth, exact unchanged digests and fresh qualification; no absent suffix imports or conditional exemptions. The convergence record is planning/evidence only and does not edit release-owner ledgers or workflows. Unchanged grants, owners, session-user administrator exception, provisioning/financial behavior, MFA and all production/U1 holds. No account or licence mutation, live database or Edge/frontend execution, merge, force promotion, lending activation or account recovery is authorized."
+  "authorizationNote": "Owner approved the provisioning correction, its bounded suffix amendment and on 2026-10-31 the GPT-6.1 Max-led combined Campaign/provisioning source qualification. Proposed base is the exact existing Campaign owner tip; remote retarget/update remains pending safe qualification. Original-eight identities, Campaign ninth and claims tenth retain exact digests. Shared plan/test caps remain 15/30 changed lines relative to the Campaign tip; no absent-file exemption, guard relaxation or owner acknowledgement is inferred. Preserve existing runtime/migration/harness/workflow bytes from each owner and read-only verifier/regression locks. The convergence record documents local source integration/evidence, not release execution or another owner's ledger. No merge/approval, deployment, hosted SQL, hold restoration, credentials/permission changes, account operation, feature activation, lending activation or file upload is authorized."
 }
