@@ -114,3 +114,28 @@ Next action: parent resolves preview publication authorization and an environmen
 for the unchanged disposable qualification. Then recheck expected remote head,
 publish only to the existing #885 stream if safe, and inspect every required
 actual job on that exact combined source. No source/release completion is claimed.
+
+
+## Local trusted-source dependency preparation — publication pending
+
+Baseline: `eb9fb5dbd3af152129f1fbc1c29fd4e884ece574`; existing draft PR885. This is an authorized local preparation, not a source commit/publication, merge, deployment, hosted operation or qualification certificate.
+
+Preserve the original `c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9` identity for the exact `https://esm.sh/tslib@2.8.1/denonext/tslib.mjs` URL. The 11,226-byte local copy is byte-identical to the accepted REF009 observation at run 41172691709 / job 124453825349. It is accompanied by the package's license and honest provenance. The rejected `ebce3cd5...55905ca` bytes/cause remain unknown; matching helper names is not a full semantic/provenance proof.
+
+Each of the 28 actual Edge entrypoints has an exact per-function Deno mapping to the same `_shared` file; the existing CI default/Admin/Classroom configs resolve that same target. This avoids assuming the development-only global fallback is an actual deployment contract. Only one exact URL key is allowed; query/version neighbors are not remapped. Compiler/task settings and all original qualification arguments, permissions and frozen-lock bytes remain intact.
+
+The existing neutral-config owning suite checks immutable local length/digest and original lock identity, rejects other resolution/compiler/test drift, and verifies all 29 effective config paths with a transitive offline Deno graph. It inspects graph errors even when Deno info exits zero. The existing deterministic release-archive test checks that every current function archive retains the per-function map, identical local bytes and license. The architecture inventory is regenerated without changing thresholds.
+
+Actual Supabase CLI bundling/serve/deploy has NOT run: the existing CLI wrapper fails EROFS creating `/home/agent/.supabase`. No bypass, installation, external workflow, suspect CDN fetch, cache replacement or live operation is allowed by this preparation. Existing online nineteen-suite parity/full backend/Edge/browser/security/economic and actual disposable bundling qualification remain required on a separately approved candidate. Offline fixture graph/archives are not substituted for those gates.
+
+The exact new paths are registered in PR885's allowlist; no broad directory scope. No SDK or dependency upgrade, remote lock refresh/deletion, integrity bypass, migration, workflow/retry/JWT/credential/permission/hold or Loans change. Source publication is PENDING separate explicit commit/push approval after technical parity review.
+
+### Prepared bundle-only qualification — not executed
+
+The parent authorized local preparation of `scripts/verify-edge-tslib-bundle-closure.mjs` and two steps in the existing `player-multiplayer-load-e2e.yml` disposable job. The added Deno setup reuses the existing `denoland/setup-deno@v2` / `v2.9.3` selection; no existing action pin, command, trigger, permission, timeout, retry or hold changes. This is the sole additional preparation exception to the inherited workflow freeze, not publication or workflow execution authority.
+
+Pinned CLI v2.109.1 source selects Runtime 1.74.2 and adjacent deno.json discovery for Docker bundling. The proposal guards the installed CLI/Deno versions, runtime override, image tag/digest/ID and binary version; invokes the existing frozen all-root typecheck; compares real SDK graph identities through adjacent and actual CI configs; bundles all 28 actual roots without an import-map override; and uses extraction only for positive local-helper evidence. Roots without this dependency are classified explicitly. Fresh owned containers/cache and disposable source copies remove only the helper for Admin, Classroom and one SDK-bearing identical strict-default root. Only a failure naming the expected LOCAL missing file receives negative-control credit; remote failures/timeouts do not. No handler, server, hosted token, project reference, deployment, upload or new ESZIP parser is involved.
+
+Acceptance is that the original dependency resolves to the byte-identical local implementation through actual CI/deploy-mode config, not that URL strings are absent from ESZIP. The input hash and lock remain unchanged. Existing upstream unbundle filters file-like specifiers, so it is not a complete HTTPS index. All new real graphs, image identity, bundling/extraction, controls and independent teardown remain NOT RUN pending review and separate publication/CI approval. Source remains unpublished on eb9fb5d; the prior local EROFS restriction is not bypassed.
+
+Owner approval received at 2026-10-31 06:48:47 UTC covers this bounded correction, necessary helper/CI steps, ordinary existing-PR885 fast-forward, automatic staging Preview and normal checks/artifacts. Publication remains HELD FOR INDEPENDENT TECHNICAL REVIEW of the final patch, refreshed expected head and verified staging binding. No publication, CI, runtime image or live operation has occurred in this preparation. Earlier publication-pending statements are retained as history, superseded only for this exact conditional wave; all release holds and live-operation exclusions remain.

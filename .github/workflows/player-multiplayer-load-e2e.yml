@@ -124,6 +124,15 @@ jobs:
           PY
           npx playwright install --with-deps chromium
 
+      - name: Set up pinned Deno for bundle qualification
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Qualify accepted tslib through real configs and pinned bundles
+        timeout-minutes: 30
+        run: node scripts/verify-edge-tslib-bundle-closure.mjs
+
       - name: Build exact authorized Crafting pack
         shell: bash
         run: |
