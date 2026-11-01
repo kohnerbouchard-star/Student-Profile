@@ -155,15 +155,19 @@ jobs:
             backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts \
             backend/src/domains/players/contracts/playerBrowserSessionContracts.ts \
             backend/src/platform/supabase/adminMutation.ts
+          node --input-type=module -e 'import { resolve } from "node:path"; import { verifyTypecheckOnlyImports } from "./backend/scripts/typecheckAllEdgeRoots.mjs"; verifyTypecheckOnlyImports(resolve("backend"));'
           deno check --config backend/supabase/functions/classroom-api/deno.json \
             --lock=backend/supabase/functions/deno.lock --frozen \
+            --import-map=backend/scripts/typecheck-only/import-map.json \
             backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts \
             backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts \
             backend/src/domains/players/api/playerSessionBootstrapCurrencyHttpHandler.test.ts \
             backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts \
             backend/src/domains/players/contracts/playerBrowserSessionContracts.ts
+          node --input-type=module -e 'import { resolve } from "node:path"; import { verifyTypecheckOnlyImports } from "./backend/scripts/typecheckAllEdgeRoots.mjs"; verifyTypecheckOnlyImports(resolve("backend"));'
           deno check --config backend/supabase/functions/admin-api/deno.json \
             --lock=backend/supabase/functions/deno.lock --frozen \
+            --import-map=backend/scripts/typecheck-only/import-map.json \
             backend/src/domains/contracts/application/adminContractMutation.ts \
             backend/src/platform/supabase/adminMutation.ts \
             backend/supabase/functions/admin-api/attendanceOperations.ts \

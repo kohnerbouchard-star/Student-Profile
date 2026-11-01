@@ -26,14 +26,16 @@ Official tagged source: https://github.com/microsoft/tslib/tree/v2.8.1 .
 The CDN module is minified and includes an additional default aggregate export;
 its original sourceMappingURL comment remains untouched. No source map is fetched.
 
-Only `backend/scripts/typecheckAllEdgeRoots.mjs` explicitly consumes
-`backend/scripts/typecheck-only/import-map.json`. It maps the original URL to these bytes
-for its existing three configuration groups and all discovered Edge roots.
-The runner verifies the original remote lock entry, local module length/SHA256,
+`backend/scripts/typecheckAllEdgeRoots.mjs` and the two standalone Local Currency
+workflow typechecks explicitly consume `backend/scripts/typecheck-only/import-map.json`.
+It maps the original URL to these bytes for the every-root checker's existing
+three configuration groups and the standalone checks' unchanged file lists.
+Both paths invoke the same guard immediately before Deno, verifying the original
+remote lock entry, local module length/SHA256,
 map shape and unchanged effective config shapes before invoking Deno. Compiler
 settings, the shared lock, `--frozen`, roots and package commands remain intact.
 
-All callers of this every-root checker, in CI or locally, use the map. Other
+All callers of this every-root checker, in CI or locally, use the map. All other
 Deno invocation paths, deployments, bundles, Edge startup and SDK2.45.4 runtime
 closure are unchanged. This supplies no runtime, bundle,
 hosted or full-workflow qualification claim. The existing full `typecheck:all`

@@ -41,7 +41,10 @@
     "backend/scripts/typecheck-only/vendor/tslib-2.8.1/README.md",
     "backend/scripts/typecheck-only/vendor/tslib-2.8.1/tslib.mjs",
     "backend/scripts/typecheckAllEdgeRoots.mjs",
-    "backend/scripts/verifyNeutralDenoTestConfig.test.mjs"
+    "backend/scripts/verifyNeutralDenoTestConfig.test.mjs",
+    ".github/workflows/player-local-currency-authority.yml",
+    "scripts/player-local-currency-authority-contract.test.mjs",
+    "scripts/onboarding-edge-failure-receipt.mjs"
   ],
   "requiredFiles": [
     "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
@@ -76,7 +79,10 @@
     "backend/scripts/typecheck-only/vendor/tslib-2.8.1/README.md",
     "backend/scripts/typecheck-only/vendor/tslib-2.8.1/tslib.mjs",
     "backend/scripts/typecheckAllEdgeRoots.mjs",
-    "backend/scripts/verifyNeutralDenoTestConfig.test.mjs"
+    "backend/scripts/verifyNeutralDenoTestConfig.test.mjs",
+    ".github/workflows/player-local-currency-authority.yml",
+    "scripts/player-local-currency-authority-contract.test.mjs",
+    "scripts/onboarding-edge-failure-receipt.mjs"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -175,5 +181,6 @@
     "reviewedPatchSha256": "339f190897dc22c6f56567067e3429ab0a4c05bfb12036a5a697324ca133eeee",
     "authorization": "User approved this six-file typecheck-only correction, exact registrations, ordinary fast-forward existing draft888 and automatic staging Preview/normal CI. Preserve28roots,3configgroups, original lock/config/package bytes and frozen checks. No runtime mapping, workflow/package/lock/pin/permission/production/merge/holds changes, retry or further successor authority. Existing885 and FX diagnostic remain unchanged.",
     "validation": "24Node22.23.1 tests;3mapped and3missing-local Deno2.9.3 fixture controls; original argv/config/lock integrity verified. Full original typecheck:all and complete Timezone/normal CI required on published head; native fixtures are not SDK/runtime convergence proof."
-  }
+  },
+  "standaloneTypechecksAndOwnedEdgeObservationApproval": "On 2026-11-01 the user explicitly approved correcting both Local Currency standalone typechecks to reuse the accepted exact-URL map and integrity guard, adding bounded sanitized failure logs from the Onboarding job's verified owned Edge container, focused contracts, truthful vendor documentation and necessary exact-path authority metadata, then an ordinary fast-forward update of this existing draft PR with automatic staging-bound Preview and normal CI. Expected predecessor 4ce7bc49496da1f665827de041cbce3b5d44b417 was reverified. Original Deno file lists, configs, lock and frozen flags, seven OPTIONS requests, status gates and teardown are preserved. Only a container absent before this same job's stack startup and subsequently matching exact name, project label, creation time, run/attempt/job and checked-out candidate may be read; unknown ownership produces unavailable evidence. Capture is failure-only, bounded, redacted JSON and read-only. No new dependency bytes/pins, runtime behavior, credentials, permissions, live writes, merge, production, activation or release-hold changes are authorized. PR885 and the FX diagnostic branch remain unchanged. The current Loans ZIP has not materialized and no Loans correction is included. Actual exact-head CI/Preview remains required; offline tests are not a runtime qualification claim."
 }

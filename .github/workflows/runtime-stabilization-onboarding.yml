@@ -98,12 +98,16 @@ jobs:
 
       - name: Start local Supabase with Edge Functions
         shell: bash
+        env:
+          RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
+          node scripts/onboarding-edge-failure-receipt.mjs prepare
           EXCLUDED="studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit"
           npx supabase start --workdir backend --exclude "$EXCLUDED"
 
       - name: Prove publishable-key functions are reachable
+        id: local-options
         shell: bash
         run: |
           set -euo pipefail
@@ -153,6 +157,13 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Observe owned Edge runtime after failed OPTIONS
+        if: ${{ failure() && !cancelled() && steps.local-options.outcome == 'failure' }}
+        timeout-minutes: 1
+        env:
+          RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/onboarding-edge-failure-receipt.mjs capture
 
       - name: Stop local Supabase
         if: always()
