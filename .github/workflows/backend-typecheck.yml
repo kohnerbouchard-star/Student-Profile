@@ -4,6 +4,7 @@ on:
   # Inventory lifecycle qualification retains the required full backend smoke gate.
   pull_request:
     paths:
+      - "scripts/ref-046-*"
       - "scripts/ref025-business-loan-concurrency.sql"
       - "scripts/ref025-business-loan-concurrency.mjs"
       - "scripts/ref025-business-loan-concurrency.test.mjs"
@@ -41,6 +42,46 @@ permissions:
   contents: read
 
 jobs:
+  # One reviewed successor collects untrusted dependency DATA, never handlers.
+  # Remove this temporary collection job when reviewed pins are adopted.
+  sdk2454-runtime-closure:
+    if: ${{ github.event_name == 'pull_request' && github.event.action == 'synchronize' && github.event.pull_request.number == 885 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/game-provisioning-service-claims-v1' && github.run_attempt == 1 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Check out exact owner candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Set up pinned Node without installing packages
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Set up pinned non-evaluating resolver
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Collect existing SDK runtime closure for review only
+        timeout-minutes: 4
+        run: node scripts/collect-sdk2454-runtime-closure.mjs
+
+      - name: Retain untrusted closure review data
+        if: ${{ always() && !cancelled() }}
+        timeout-minutes: 1
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk2454-runtime-closure-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/sdk2454-runtime-closure/
+          if-no-files-found: error
+          retention-days: 7
+
   backend-typecheck:
     runs-on: ubuntu-latest
 

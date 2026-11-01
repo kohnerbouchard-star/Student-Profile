@@ -1,0 +1,63 @@
+name: Economic Core Request Claims
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - backend/supabase/migrations/20261010040738_economic_core_request_claims_v1.sql
+      - scripts/economic-core-request-claims-acceptance.mjs
+      - scripts/economic-core-request-claims.test.mjs
+      - .github/workflows/economic-core-request-claims.yml
+      - docs/operations/contracts/player-cross-cutting/pr-885.json
+      - docs/operations/evidence/game-provisioning-service-claims-v1.md
+permissions:
+  contents: read
+concurrency:
+  group: economic-core-request-claims-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  disposable:
+    name: Economic Core Request Claims
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      ECONOMIC_CORE_DISPOSABLE_TEST: '1'
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha }}
+      PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - name: Install pinned tools and verify source guards
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          node --test scripts/economic-core-request-claims.test.mjs
+          npm run audit:migrations
+          npm run security:secrets
+      - name: Start exclusive disposable API and database
+        run: |
+          npx --no-install supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,realtime,mailpit,postgres-meta > /tmp/claims-startup.log 2>&1
+      - name: Replay from zero twice
+        run: |
+          npx --no-install supabase db reset --workdir backend --local
+          npx --no-install supabase db reset --workdir backend --local
+      - name: Prepare existing canonical synthetic fixtures
+        run: |
+          SOURCE_COMMIT=$(node -p "require('./docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json').acceptedImplementationSourceSha")
+          node scripts/build-physical-economy-runtime-pack.mjs --source-root . --source-commit "$SOURCE_COMMIT" --approved-source-commit "$SOURCE_COMMIT" --output "$PHYSICAL_ECONOMY_PACK"
+          node scripts/game-creation-provisioning-local-acceptance.mjs
+          node scripts/full-game-local-e2e-acceptance.mjs
+      - name: Prove real API authority, provisioning, replay and rollback
+        run: node scripts/economic-core-request-claims-acceptance.mjs
+      - name: Lint disposable database
+        run: npx --no-install supabase db lint --workdir backend --local --level warning
+      - name: Stop disposable services without a retained backup
+        if: always()
+        run: npx --no-install supabase stop --workdir backend --no-backup

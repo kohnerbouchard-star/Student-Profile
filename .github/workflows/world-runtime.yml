@@ -3,6 +3,7 @@ name: World Runtime
 on:
   pull_request:
     paths:
+      - "scripts/ref-046-*"
       - ".github/workflows/world-runtime.yml"
       - "backend/package.json"
       - "backend/src/domains/arrival/**"

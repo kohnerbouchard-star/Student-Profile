@@ -1,10 +1,18 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { buildImmutableRelease } from "./release-platform-index.mjs";
+
+const TSLIB_URL = "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs";
+const TSLIB_FILE = "backend/supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs";
+const TSLIB_SHA256 = "c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9";
+const FUNCTIONS = new URL("../backend/supabase/functions/", import.meta.url);
+const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 async function write(root, relativePath, content) {
   const absolute = path.join(root, relativePath);
@@ -29,9 +37,16 @@ async function releaseRepository() {
   await write(root, "auth/reset-password.js", "export const api = '/auth/v1/recover';\n");
   await write(root, "assets/icon.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>\n");
   await write(root, "backend/supabase/migrations/20260101000000_init.sql", "select 1;\n");
-  await write(root, "backend/supabase/functions/admin-api/index.ts", "export default true;\n");
+  for (const entry of await readdir(FUNCTIONS, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !existsSync(new URL(`${entry.name}/index.ts`, FUNCTIONS))) continue;
+    const config = await readFile(new URL(`${entry.name}/deno.json`, FUNCTIONS));
+    await write(root, `backend/supabase/functions/${entry.name}/index.ts`, "export default true;\n");
+    await write(root, `backend/supabase/functions/${entry.name}/deno.json`, config);
+  }
   await write(root, "backend/supabase/functions/_shared/helper.ts", "export const shared = true;\n");
-  await write(root, "backend/supabase/functions/deno.json", "{}\n");
+  await write(root, "backend/supabase/functions/deno.json", await readFile(new URL("deno.json", FUNCTIONS)));
+  await write(root, TSLIB_FILE, await readFile(new URL("_shared/vendor/tslib-2.8.1/tslib.mjs", FUNCTIONS)));
+  await write(root, "backend/supabase/functions/_shared/vendor/tslib-2.8.1/LICENSE", await readFile(new URL("_shared/vendor/tslib-2.8.1/LICENSE", FUNCTIONS)));
   await write(root, "docs/operations/release-configuration.v1.json", JSON.stringify({
     schemaVersion: 1,
     configurationVersion: "2026-07-20.1",
@@ -111,4 +126,20 @@ test("release builder produces identical complete browser and Edge archive hashe
     "auth",
   ]);
   assert.equal(first.source.commit, fixture.commit);
+  const edgeArtifacts = first.artifacts.filter((artifact) => artifact.kind === "edge-function");
+  assert.equal(edgeArtifacts.length, 28, "All current Edge roots need an archive-resolution check");
+  for (const artifact of edgeArtifacts) {
+    const archive = path.join(firstRoot, artifact.file);
+    const file = (name) => {
+      const result = spawnSync("tar", ["-xOzf", archive, `./${name}`], { encoding: null });
+      assert.equal(result.status, 0, `Missing ${name} in ${artifact.name} archive`);
+      return result.stdout;
+    };
+    const configPath = `backend/supabase/functions/${artifact.name}/deno.json`;
+    const config = JSON.parse(file(configPath).toString("utf8"));
+    assert.deepEqual(config.imports, { [TSLIB_URL]: "../_shared/vendor/tslib-2.8.1/tslib.mjs" });
+    assert.equal(path.posix.normalize(path.posix.join(path.posix.dirname(configPath), config.imports[TSLIB_URL])), TSLIB_FILE);
+    assert.equal(digest(file(TSLIB_FILE)), TSLIB_SHA256, `${artifact.name} archive changed accepted module bytes`);
+    assert.equal(digest(file("backend/supabase/functions/_shared/vendor/tslib-2.8.1/LICENSE")), "0e8d2550baea17eb3072c4f919b36fbf9852bb49dba948549872e713863c0834");
+  }
 });

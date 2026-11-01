@@ -3,6 +3,7 @@ name: banking-fx-clearing-v1
 on:
   pull_request:
     paths:
+      - "scripts/ref-046-*"
       - .github/workflows/banking-fx-clearing-v1.yml
       - backend/package.json
       - backend/src/domains/banking-fx/**
