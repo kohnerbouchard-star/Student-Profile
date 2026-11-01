@@ -11,9 +11,6 @@ import {
   toNumber,
   unique,
 } from "./dashboardFinancialProjection.ts";
-import {
-  readStockMarketOpenState,
-} from "../../stocks/infrastructure/supabaseStockMarketWindowRepository.ts";
 import type {
   PlayerGameDashboardInventoryItemDto,
   PlayerGameDashboardLeaderboardEntryDto,
@@ -29,6 +26,7 @@ import {
 } from "../contracts/playerGameDashboardContracts.ts";
 import {
   type StockMarketBoardStockDto,
+  type StockMarketOpenStateReadRepository,
   type StockMarketReadRepository,
   StockMarketReadError,
 } from "../../stocks/index.ts";
@@ -290,6 +288,7 @@ export class SupabasePlayerGameDashboardRepository
   constructor(
     private readonly client: SupabasePlayerGameDashboardClient,
     private readonly stockMarketReadRepository: StockMarketReadRepository,
+    private readonly stockMarketOpenStateReadRepository: StockMarketOpenStateReadRepository,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -317,7 +316,7 @@ export class SupabasePlayerGameDashboardRepository
       contractProgress,
     ] = await Promise.all([
       this.readGameSession(input.gameSessionId),
-      readStockMarketOpenState(this.client, input.gameSessionId, this.now()),
+      this.stockMarketOpenStateReadRepository.read(input.gameSessionId, this.now()),
       this.readPublicStockMarket(input.gameSessionId),
       this.readActivePlayers(input.gameSessionId),
       this.readCountryAssignments(input.gameSessionId),

@@ -12,7 +12,7 @@
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 165,
+    "crossDomainDeepImports": 164,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -955,12 +955,6 @@
         "ownerDomain": "game-dashboard",
         "importedDomain": "storylines",
         "target": "../../storylines/contracts/storyNotificationContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/infrastructure/supabaseStockMarketWindowRepository.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
@@ -3171,7 +3165,7 @@
     "oversizedFiles": [
       {
         "file": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
-        "lines": 1927
+        "lines": 2065
       },
       {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
@@ -3211,7 +3205,7 @@
       },
       {
         "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "lines": 954
+        "lines": 953
       },
       {
         "file": "admin/v2/src/routes/world-management/WorldManagementRoute.js",

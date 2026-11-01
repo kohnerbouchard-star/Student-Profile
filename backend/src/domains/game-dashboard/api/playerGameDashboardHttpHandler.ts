@@ -32,6 +32,7 @@ import {
   SupabasePlayerGameDashboardRepository,
 } from "../infrastructure/supabasePlayerGameDashboardRepository.ts";
 import {
+  createStockMarketOpenStateReadRepository,
   createStockMarketReadRepository,
 } from "../../stocks/index.ts";
 import {
@@ -161,6 +162,7 @@ export async function handlePlayerGameDashboardRequest(
       : new SupabasePlayerGameDashboardRepository(
         serviceClient as any,
         createStockMarketReadRepository(serviceClient),
+        createStockMarketOpenStateReadRepository(serviceClient),
       );
     const snapshot = await withPlayerGameDashboardReadPermit(() =>
       repository.read({
