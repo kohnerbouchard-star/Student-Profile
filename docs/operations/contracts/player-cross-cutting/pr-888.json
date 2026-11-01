@@ -33,7 +33,9 @@
     "player-terminal/tests/banking-read-model.mjs",
     "player-terminal/tools/connected-banking-loans-mutation-runner.mjs",
     "player-terminal/tools/loan-totals-diagnostic.mjs",
-    "player-terminal/tools/connected-banking-loans-bff-adapter.mjs"
+    "player-terminal/tools/connected-banking-loans-bff-adapter.mjs",
+    ".github/workflows/runtime-stabilization-onboarding.yml",
+    "scripts/auth-boundary-contract.test.mjs"
   ],
   "requiredFiles": [
     "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
@@ -60,7 +62,9 @@
     "player-terminal/tests/banking-read-model.mjs",
     "player-terminal/tools/connected-banking-loans-mutation-runner.mjs",
     "player-terminal/tools/loan-totals-diagnostic.mjs",
-    "player-terminal/tools/connected-banking-loans-bff-adapter.mjs"
+    "player-terminal/tools/connected-banking-loans-bff-adapter.mjs",
+    ".github/workflows/runtime-stabilization-onboarding.yml",
+    "scripts/auth-boundary-contract.test.mjs"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -143,5 +147,13 @@
     "scope": "Only three import-type module specifiers redirect to existing exact public DTO exports; DTO definitions, aliases, runtime behavior, assertions, SDK/locks, workflows, thresholds and other metadata remain unchanged.",
     "validation": "Reuse accepted46 frozen cached-only offline tests and deterministic inventory/ratchet evidence. Actual inventory162 deep imports/5 foreign infrastructure imports, no exemption or ceiling change. Local evidence is not exact-head CI qualification.",
     "limits": "No merge, PR approval, production or hosted SQL/Edge/Auth/settings writes, permissions, holds, manual dispatch or retries authorized. Earlier CI failures remain preserved."
+  },
+  "onboardingObservationApproval": {
+    "approvalMessageId": "Sentinel_10cf5674be0c81918b6e49f5ee6e17ea",
+    "publishedBaseline": "ac498245e9e6d28081d1894f2d2d83efa421ea66",
+    "reviewedPatchBytes": 8522,
+    "reviewedPatchSha256": "c139f3c2dfd1678c751a7caf647f18baffea9a31059cf8553a5f9dcbc506a004",
+    "authorization": "User approved only this two-file diagnostic successor, exact path registrations, ordinary fast-forward existing draft888, automatic staging Preview and normal CI. Reuse reviewed885 OPTIONS receipt without altering requests, expected204, negative checks or failure exits. No runtime/security/permissions/locks/thresholds/holds, merge, production, hosted writes, manual dispatch or retries; historical failures preserved. Existing885 and successful FX diagnostic remain unchanged.",
+    "validation": "27 pinned Node22.23.1 tests passed; ten offline diagnostic scenarios, original shell/source reconstruction, YAML, secret and whitespace checks pass. Real OPTIONS and exact-head CI not yet executed."
   }
 }
