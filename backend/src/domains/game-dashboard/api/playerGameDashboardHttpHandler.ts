@@ -32,6 +32,9 @@ import {
   SupabasePlayerGameDashboardRepository,
 } from "../infrastructure/supabasePlayerGameDashboardRepository.ts";
 import {
+  createStockMarketReadRepository,
+} from "../../stocks/index.ts";
+import {
   SupabaseStoryNotificationRepository,
 } from "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts";
 import type {
@@ -155,7 +158,10 @@ export async function handlePlayerGameDashboardRequest(
 
     const repository = dependencies.createRepository
       ? dependencies.createRepository(serviceClient)
-      : new SupabasePlayerGameDashboardRepository(serviceClient as any);
+      : new SupabasePlayerGameDashboardRepository(
+        serviceClient as any,
+        createStockMarketReadRepository(serviceClient),
+      );
     const snapshot = await withPlayerGameDashboardReadPermit(() =>
       repository.read({
         gameSessionId,

@@ -27,20 +27,16 @@ import type {
 import {
   PlayerGameDashboardError,
 } from "../contracts/playerGameDashboardContracts.ts";
-import type {
-  StockMarketBoardStockDto,
-} from "../../stocks/contracts/stockMarketReadContracts.ts";
 import {
+  type StockMarketBoardStockDto,
+  type StockMarketReadRepository,
   StockMarketReadError,
-} from "../../stocks/contracts/stockMarketReadContracts.ts";
+} from "../../stocks/index.ts";
 import type {
   StockMarketPlayerOrderDto,
   StockMarketPlayerOrderStatus,
   StockMarketPlayerTradeDto,
 } from "../../stocks/contracts/stockMarketPlayerReadContracts.ts";
-import {
-  SupabaseStockMarketReadRepository,
-} from "../../stocks/infrastructure/supabaseStockMarketReadRepository.ts";
 import type {
   StoreItemDto,
 } from "../../store/contracts/storeCatalogContracts.ts";
@@ -293,6 +289,7 @@ export class SupabasePlayerGameDashboardRepository
   implements PlayerGameDashboardRepository {
   constructor(
     private readonly client: SupabasePlayerGameDashboardClient,
+    private readonly stockMarketReadRepository: StockMarketReadRepository,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -495,14 +492,11 @@ export class SupabasePlayerGameDashboardRepository
     readonly stocks: readonly StockMarketBoardStockDto[];
   }> {
     try {
-      const result = await new SupabaseStockMarketReadRepository(
-        this.client as any,
-      )
-        .read({
-          gameSessionId,
-          includeHistory: false,
-          historyLimit: 1,
-        });
+      const result = await this.stockMarketReadRepository.read({
+        gameSessionId,
+        includeHistory: false,
+        historyLimit: 1,
+      });
 
       return {
         tickIndex: result.tickIndex,

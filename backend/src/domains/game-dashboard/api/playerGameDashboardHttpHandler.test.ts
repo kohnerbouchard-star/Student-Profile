@@ -4,6 +4,13 @@ import {
   toHoldingDto,
 } from "../infrastructure/dashboardFinancialProjection.ts";
 import { SupabasePlayerGameDashboardRepository } from "../infrastructure/supabasePlayerGameDashboardRepository.ts";
+import { PlayerGameDashboardError } from "../contracts/playerGameDashboardContracts.ts";
+import {
+  createStockMarketReadRepository,
+  StockMarketReadError,
+  type StockMarketReadInput,
+  type StockMarketReadRepository,
+} from "../../stocks/index.ts";
 import {
   handlePlayerGameDashboardRequest,
 } from "./playerGameDashboardHttpHandler.ts";
@@ -770,6 +777,7 @@ Deno.test("dashboard financial extraction preserves snapshots and scoped query t
     );
     const repository = new SupabasePlayerGameDashboardRepository(
       client as any,
+      createStockMarketReadRepository(client as any),
       () => new Date("2026-06-24T00:00:00Z"),
     );
     let result: unknown;
@@ -809,6 +817,114 @@ Deno.test("dashboard financial extraction preserves snapshots and scoped query t
     ], expected[scenario]);
     assertEquals(client.forbiddenCalls, []);
   }
+});
+
+Deno.test("dashboard preserves public stock-read error codes, messages and statuses", async () => {
+  const cases = [
+    {
+      error: new StockMarketReadError("game_session_not_found", "Missing game", 404),
+      code: "game_dashboard_game_session_not_found",
+    },
+    {
+      error: new StockMarketReadError("stock_market_schema_not_applied", "Schema unavailable", 503),
+      code: "game_dashboard_read_failed",
+    },
+    {
+      error: new StockMarketReadError("invalid_stock_market_read_request", "Invalid read", 400),
+      code: "game_dashboard_read_failed",
+    },
+    {
+      error: new StockMarketReadError("stock_market_read_failed", "Read unavailable", 500),
+      code: "game_dashboard_read_failed",
+    },
+  ];
+  for (const { error, code } of cases) {
+    const client = new FakeClient(tables());
+    const repository = new SupabasePlayerGameDashboardRepository(
+      client as any,
+      { read: () => Promise.reject(error) },
+    );
+    let caught: unknown;
+    try {
+      await repository.read({
+        gameSessionId: GAME_SESSION_ID,
+        playerId: PLAYER_ID,
+        playerSessionId: PLAYER_SESSION_ID,
+        playerDisplayName: "Avery",
+        playerRosterLabel: "A-1",
+      });
+    } catch (failure) {
+      caught = failure;
+    }
+    if (!(caught instanceof PlayerGameDashboardError)) {
+      throw new Error("Expected the public Dashboard error type");
+    }
+    assertEquals([caught.code, caught.message, caught.status], [
+      code, error.message, error.status,
+    ]);
+  }
+});
+
+Deno.test("dashboard rethrows unknown stock-read failures unchanged", async () => {
+  const failure = new Error("Synthetic provider failure");
+  const client = new FakeClient(tables());
+  const repository = new SupabasePlayerGameDashboardRepository(
+    client as any,
+    { read: () => Promise.reject(failure) },
+  );
+  let caught: unknown;
+  try {
+    await repository.read({
+      gameSessionId: GAME_SESSION_ID,
+      playerId: PLAYER_ID,
+      playerSessionId: PLAYER_SESSION_ID,
+      playerDisplayName: "Avery",
+      playerRosterLabel: "A-1",
+    });
+  } catch (error) {
+    caught = error;
+  }
+  if (caught !== failure) throw new Error("Unknown stock failure was replaced");
+});
+
+Deno.test("dashboard consumes its injected stock port with fresh game-scoped reads", async () => {
+  const client = new FakeClient(tables());
+  const calls: StockMarketReadInput[] = [];
+  const stockMarket: StockMarketReadRepository = {
+    read: (input) => {
+      calls.push(input);
+      return Promise.resolve({
+        gameSessionId: input.gameSessionId,
+        tickIndex: calls.length,
+        stocks: [],
+      });
+    },
+  };
+  const repository = new SupabasePlayerGameDashboardRepository(
+    client as any,
+    stockMarket,
+    () => new Date("2026-06-24T00:00:00Z"),
+  );
+  const games = [GAME_SESSION_ID, OTHER_GAME_SESSION_ID, GAME_SESSION_ID];
+  for (const [index, gameSessionId] of games.entries()) {
+    const snapshot = await repository.read({
+      gameSessionId,
+      playerId: gameSessionId === GAME_SESSION_ID ? PLAYER_ID : OTHER_GAME_PLAYER_ID,
+      playerSessionId: PLAYER_SESSION_ID,
+      playerDisplayName: "Synthetic player",
+      playerRosterLabel: "A-1",
+    });
+    assertEquals(snapshot.gameSession.currentTick, index + 1);
+    assertEquals(snapshot.public.market.stocks, []);
+  }
+  assertEquals(calls, games.map((gameSessionId) => ({
+    gameSessionId,
+    includeHistory: false,
+    historyLimit: 1,
+  })));
+  assertEquals(client.trace.filter((entry) =>
+    (entry as { rpc?: string }).rpc === "read_latest_stock_market_ticks_for_game"
+  ), []);
 });
 
 function dependencies(options: {
