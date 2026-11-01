@@ -3,6 +3,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
+import { captureLoanTotalsSummary } from "./loan-totals-diagnostic.mjs";
 
 const BASE_URL = process.env.ECONOVARIA_BROWSER_BASE_URL || "http://127.0.0.1:4173";
 const OUTPUT_DIR = process.env.ECONOVARIA_PLAYER_BROWSER_OUTPUT_DIR || "/tmp/econovaria-player-browser";
@@ -472,12 +473,16 @@ async function proveLoans(page, fixtureData) {
       try {
         const code = (value) => typeof value === "string" && /^[A-Z]{3,12}$/u.test(value) ? value : null;
         const money = (value) => typeof value === "string" && /^(0|[1-9][0-9]{0,39})\.[0-9]{2}$/u.test(value) ? value : null;
+        const currencies = new Set(projection.groups.flatMap((row) => code(row.currencyCode) && money(row.outstanding) ? [row.currencyCode] : []));
         const lines = summary.split("\n").map((line) => line.trim()).slice(0, 256);
         const metrics = lines.flatMap((label, i) => ["Available credit", "Outstanding", "Next payment"].includes(label)
           ? [{ label, value: /^(?:[A-Z]{3,12} (?:[0-9]{1,3}(?:,[0-9]{3}){0,13}\.[0-9]{2}|Unavailable)|Unavailable|None scheduled|Currency unavailable)$/u.test(lines[i + 1] || "") ? lines[i + 1] : null }] : []).slice(0, 24);
         const diagnostic = { payloadObservedAt, metricReadAt, version: Number.isSafeInteger(projection.version) ? projection.version : null,
           complete: projection.complete === true, unknownCurrencyRows: Number.isSafeInteger(projection.unknownCurrencyRows) && projection.unknownCurrencyRows >= 0 ? projection.unknownCurrencyRows : null,
           groups: projection.groups.slice(0, 8).map((row) => ({ currencyCode: code(row.currencyCode), outstanding: money(row.outstanding) })),
+          failedComparison: { currencyCode: code(group.currencyCode), outstanding: money(group.outstanding),
+            expected: code(group.currencyCode) && money(group.outstanding) ? expected : null },
+          renderedSummary: captureLoanTotalsSummary(summary, currencies),
           truncated: projection.groups.length > 8 || summary.split("\n").length > 256 || lines.filter((line) => ["Available credit", "Outstanding", "Next payment"].includes(line)).length > 24, metrics, readiness: null };
         diagnostic.readiness = await Promise.race([page.evaluate(() => ({
           loansRoute: location.hash === "#loans", pageVisible: Boolean(document.querySelector(".player-terminal-loans-page")?.getClientRects().length),

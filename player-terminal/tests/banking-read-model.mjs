@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import test from "node:test";
+import { captureLoanTotalsSummary } from "../tools/loan-totals-diagnostic.mjs";
 
 import { resolvePlayerBackendRequest } from "../src/api/backend-routes.js";
 import {
@@ -251,3 +253,106 @@ assert.equal(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 assert.equal(serialized.includes('"accountType":"cash"'), false);
 
 console.log("Banking read model passed: checking terminology, capability-gated transfers, legacy alias translation, pagination, freshness, empty state, and UUID privacy are valid.");
+
+test("Loans diagnostic preserves allowed labels, states and exact monetary formatting", () => {
+  const lines = ["\tOUTSTANDING\u00a0", "\u00a0ELD\u00a0500.00\u00a0", "Available CREDIT", "DRV 1,234.56",
+    "Next payment", "ELD 1.234,56", "On-time RATE", "Currency unavailable", "None scheduled", "Unavailable",
+    "ELD Unavailable", "No currency obligations or offers", "Currency totals incomplete", "Currency totals unavailable"];
+  const summary = lines.join("\n");
+  const capture = captureLoanTotalsSummary(summary, new Set(["ELD", "DRV"]));
+  assert.deepEqual(capture.lines, lines.map((text, lineIndex) => ({ lineIndex, text })));
+  assert.equal(capture.originalUtf8Bytes, Buffer.byteLength(summary, "utf8"));
+  assert.equal(capture.originalLineCount, lines.length);
+  assert.equal(capture.maskedLineCount, 0);
+  assert.equal(capture.omittedLineCount, 0);
+  assert.equal(capture.truncated, false);
+});
+
+test("Loans diagnostic masks whole unknown lines, identifiers, credentials and free text", () => {
+  const lines = ["Authorization: Bearer synthetic-token", "Student Example", "student@example.test",
+    "123e4567-e89b-42d3-a456-426614174000", "BROWSER-SYNTHETIC-PLAYER", "2026-11-01",
+    "ELD 500.00 private note", "Outstanding: Student Example", "ELD 2026-11-01", "\u001b[31mOutstanding",
+    "eyJsynthetic.eyJsynthetic.synthetic", "Cookie: private=value", "USD 500.00", "Active obligations"];
+  const capture = captureLoanTotalsSummary(lines.join("\n"), new Set(["ELD"]));
+  assert.deepEqual(capture.lines, lines.map((_, lineIndex) => ({ lineIndex, text: "[masked]" })));
+  assert.equal(capture.maskedLineCount, lines.length);
+  for (const line of lines) assert.equal(JSON.stringify(capture).includes(line), false);
+});
+
+test("Loans diagnostic admits only validated currencies without correcting numeric punctuation", () => {
+  const lines = ["ELD500.00", "ELD\t500.00", "ELD 5 000,00", "ELD -500.00", "ELD +500.00",
+    "DRV 500.00", "ELD 500.00 token", "ELD 500.00?key=private"];
+  const capture = captureLoanTotalsSummary(lines.join("\n"), new Set(["ELD"]));
+  assert.deepEqual(capture.lines, lines.map((text, lineIndex) => ({ lineIndex, text: lineIndex < 5 ? text : "[masked]" })));
+  assert.equal(capture.maskedLineCount, 3);
+});
+
+test("Loans diagnostic preserves original currency case after case-insensitive validation", () => {
+  const lines = ["eld 500.00", "\tElD\u00a0500.00\u00a0", "drv 500.00", "eld 500.00 private note"];
+  const capture = captureLoanTotalsSummary(lines.join("\n"), new Set(["ELD"]));
+  assert.deepEqual(capture.lines, lines.map((text, lineIndex) => ({ lineIndex, text: lineIndex < 2 ? text : "[masked]" })));
+  assert.equal(capture.maskedLineCount, 2);
+});
+
+test("Loans diagnostic preserves amount-first formatting without admitting unknown currencies or text", () => {
+  const lines = ["500.00 ELD", "500,00\u00a0eld", "1,234.56ELD", "500.00 USD", "500.00 ELD private", "2026-11-01 ELD"];
+  const capture = captureLoanTotalsSummary(lines.join("\n"), new Set(["ELD"]));
+  assert.deepEqual(capture.lines, lines.map((text, lineIndex) => ({ lineIndex, text: lineIndex < 3 ? text : "[masked]" })));
+  assert.equal(capture.maskedLineCount, 3);
+});
+
+test("Loans diagnostic retains Unicode whitespace and whole CRLF lines as data", () => {
+  const lines = ["oUtStAnDiNg\r", "\u00a0ELD\u202f500,00\u00a0\r", "ELD 500.00"];
+  const capture = captureLoanTotalsSummary(lines.join("\n"), new Set(["ELD"]));
+  assert.deepEqual(capture.lines, lines.map((text, lineIndex) => ({ lineIndex, text })));
+  assert.equal(JSON.parse(JSON.stringify(capture)).lines[1].text, lines[1]);
+});
+
+test("Loans diagnostic caps inspected lines and serialized bytes with accurate omission counts", () => {
+  const summary = Array.from({ length: 10000 }, () => "private free text").join("\n");
+  const capture = captureLoanTotalsSummary(summary, new Set(["ELD"]));
+  assert.equal(capture.originalLineCount, 10000);
+  assert.equal(capture.originalUtf8Bytes, Buffer.byteLength(summary, "utf8"));
+  assert.equal(capture.inspectedLineCount, 64);
+  assert.equal(capture.maskedLineCount, 64);
+  assert.equal(capture.omittedLineCount, 10000 - capture.lines.length);
+  assert.equal(capture.truncated, true);
+  assert.ok(capture.lines.every(({ lineIndex, text }) => lineIndex < 64 && text === "[masked]"));
+  assert.ok(Buffer.byteLength(JSON.stringify(capture), "utf8") <= 2048);
+});
+
+test("Loans diagnostic omits over-budget whole Unicode lines rather than splitting them", () => {
+  const summary = `${"\u00a0".repeat(1000)}ELD 500.00\nELD 500.00`;
+  const capture = captureLoanTotalsSummary(summary, new Set(["ELD"]));
+  assert.deepEqual(capture.lines, [{ lineIndex: 1, text: "ELD 500.00" }]);
+  assert.equal(capture.omittedLineCount, 1);
+  assert.equal(capture.truncated, true);
+  assert.ok(Buffer.byteLength(JSON.stringify(capture), "utf8") <= 2048);
+  const oversized = captureLoanTotalsSummary(`${"secret".repeat(1000)}\nOutstanding`, new Set());
+  assert.deepEqual(oversized.lines, [{ lineIndex: 1, text: "Outstanding" }]);
+  assert.equal(oversized.omittedLineCount, 1);
+  assert.equal(oversized.truncated, true);
+});
+
+test("Loans diagnostic handles empty and control-only lines without disclosing them", () => {
+  for (const summary of ["", "\u0000", "\u001b[31m", "Outstanding\u0000", "ELD 500.00\u0000"]) {
+    const capture = captureLoanTotalsSummary(summary, new Set(["ELD"]));
+    assert.deepEqual(capture.lines, [{ lineIndex: 0, text: "[masked]" }]);
+    assert.equal(capture.originalLineCount, 1);
+    assert.equal(capture.maskedLineCount, 1);
+    assert.equal(capture.truncated, false);
+  }
+});
+
+test("Loans diagnostic preserves the original comparison, throw, single summary read and final guard", () => {
+  const runner = fs.readFileSync(new URL("../tools/connected-banking-loans-mutation-runner.mjs", import.meta.url), "utf8");
+  for (const original of [
+    '  const summary = await page.locator(".player-terminal-loan-metrics").innerText();',
+    '    if (!summary.includes(expected)) {',
+    '      throw new Error("Connected Loans did not render authoritative exact totals.");',
+    '        evidence.loanTotalsDiagnostic = Buffer.byteLength(JSON.stringify(diagnostic), "utf8") <= 8192 ? diagnostic : { truncated: true };',
+  ]) assert.equal(runner.split(original).length - 1, 1);
+  assert.ok(runner.includes('expected: code(group.currencyCode) && money(group.outstanding) ? expected : null'));
+  assert.ok(runner.includes('renderedSummary: captureLoanTotalsSummary(summary, currencies)'));
+  assert.ok(runner.includes('code(row.currencyCode) && money(row.outstanding) ? [row.currencyCode] : []'));
+});

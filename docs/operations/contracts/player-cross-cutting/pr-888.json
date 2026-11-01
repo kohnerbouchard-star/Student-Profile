@@ -20,7 +20,18 @@
     "backend/src/domains/contracts/index.ts",
     "scripts/apply-configurable-stock-market-timezone-v1.mjs",
     "backend/src/domains/store/dashboardReadModel.ts",
-    "backend/src/domains/store/infrastructure/supabaseDashboardStoreListingsReadQuery.ts"
+    "backend/src/domains/store/infrastructure/supabaseDashboardStoreListingsReadQuery.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.test.ts",
+    "backend/src/domains/storylines/server/playerContextReadQuery.test.ts",
+    "backend/src/domains/storylines/server/playerContextReadQuery.ts",
+    "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
+    "backend/supabase/functions/stock-market-orchestrator/storylineWiringContract.test.ts",
+    "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts",
+    "player-terminal/tests/banking-read-model.mjs",
+    "player-terminal/tools/connected-banking-loans-mutation-runner.mjs",
+    "player-terminal/tools/loan-totals-diagnostic.mjs"
   ],
   "requiredFiles": [
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
@@ -34,7 +45,18 @@
     "backend/src/domains/contracts/index.ts",
     "scripts/apply-configurable-stock-market-timezone-v1.mjs",
     "backend/src/domains/store/dashboardReadModel.ts",
-    "backend/src/domains/store/infrastructure/supabaseDashboardStoreListingsReadQuery.ts"
+    "backend/src/domains/store/infrastructure/supabaseDashboardStoreListingsReadQuery.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.test.ts",
+    "backend/src/domains/storylines/server/playerContextReadQuery.test.ts",
+    "backend/src/domains/storylines/server/playerContextReadQuery.ts",
+    "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
+    "backend/supabase/functions/stock-market-orchestrator/storylineWiringContract.test.ts",
+    "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts",
+    "player-terminal/tests/banking-read-model.mjs",
+    "player-terminal/tools/connected-banking-loans-mutation-runner.mjs",
+    "player-terminal/tools/loan-totals-diagnostic.mjs"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -77,5 +99,21 @@
     "scope": "Store owns the exact existing visible/active game-scoped store_items query and row-to-StoreItemDto projection through a narrow read-only public entry. Dashboard removes58 lines net of Store-specific persistence/projection logic. The broad Store index, generic catalog query/mapper, purchases, Inventory, checkout, mutations, response contracts, SDK/lock, SQL, workflows and other callers remain unchanged. Original authority fields, required checks and read-only verifier/test locks remain unchanged.",
     "validation": "45 typechecked Deno2.9.3 tests pass with original config/lock and frozen cached-only network-denied flags; original response snapshots and complete query digests are unchanged. Existing Local Currency contract passes1/1 on Node22.23.1. The exact six-helper timezone chain passes twice on an owned copy of this source union without whole-tree drift; fixture removed. Source parity confirms selected columns, row schema, DTO projection and numeric normalization. Deterministic inventory and unchanged ratchet measure164 deep imports/6 foreign infrastructure imports; no exemption or ceiling change.",
     "historyAndLimits": "Published96d95b qualification remains27 success/5 failure/1 skip across33 runs: Timezone/Sales/Cutover checksum failures, Multiplayer local runtime readiness failure and Marketplace browser503 errors. Bounded retained-log diagnosis distinguishes failed Multiplayer readiness from passed Marketplace readiness; underlying stopped-container/503 causes remain unknown and no application regression or checksum cause is inferred for them. New source must qualify independently. No retry for lucky green, source gate waiver, SDK/lock/workflow change, merge/PR approval, production or hosted SQL/Edge/Auth/settings write, credentials/permissions, feature activation or release-hold change is authorized. Separate885/887 and736 runtime stay unchanged."
+  },
+  "storyReadBoundaryAndLoansDiagnosticApproval": {
+    "approvalMessageId": "Sentinel_4953a90634d4819193c7fe355d6ec1da",
+    "publishedBaseline": "3fb684a72c86b7936bd9594f8f3118330837eb2e",
+    "reviewedStoryPatch": {
+      "bytes": 18709,
+      "sha256": "090882a446746532a891e7e1d90f9708b3e6177339341cca2f986c67d9f6c89a"
+    },
+    "reviewedLoansDiagnosticPatch": {
+      "bytes": 13202,
+      "sha256": "e6812bc8ef87219aeb1e551f223dfd0504a187a173ecb288bb910162547b63bd"
+    },
+    "authorization": "The user explicitly approved one ordinary fast-forward successor to existing draft PR888 containing these two independently accepted patches, the eleven exact required source/test registrations, controller-regenerated actual union inventory, automatic staging-bound Preview and normal exact-head CI/artifacts. This records that bounded publication only, not approval to merge, release or publish further successors.",
+    "scope": "Story owns a server-only context read factory; both Stocks hooks retain their original client, fresh game-scoped reads after tick persistence and before effects, queries, valuations and errors. The Loans failure diagnostic reuses the already-read summary, masks unknown whole lines and captures only fixed labels/states and validated-currency monetary lines with original case/whitespace/punctuation, bounded to64 inspected lines and2048 serialized UTF-8 bytes. The exact monetary assertion, throw, requests, reads, waits, retries and existing8192-byte artifact guard remain unchanged. No application Loans fix is claimed.",
+    "validation": "Accepted unchanged Story source passed75 frozen cached-only network-denied Deno2.9.3 tests and5 Node22.23.1 scheduler contracts; six source helpers replayed twice on an owned disposable copy. The final Loans diagnostic passed10 focused Node22.23.1 tests plus existing Banking assertions. Inventory must be generated from this actual source union, with164 deep imports and5 foreign infrastructure imports and no ceiling change. Local evidence is not fresh CI or hosted qualification.",
+    "historyAndLimits": "Published3fb684a7 remains32 successful/2 failed/2 skipped workflows: Loans exact-rendered-totals and FX gateway readiness failures remain unresolved. Earlier checksum/startup failures and inaccessible historical transfers are preserved, not declared fixed. No manual retry/dispatch, check waiver, workflow/SDK/lock/assertion/threshold change, merge/PR approval, production deployment, hosted SQL/Edge/Auth/settings write, credentials/permissions change, feature activation or release-hold change. PR885 adjacent runner deno.json remains absent and untouched; other owner branches and paused gates are unchanged."
   }
 }
