@@ -3,6 +3,7 @@ import { createPrimaryIpoFixture, closeIpoOperatingHistory } from './business-pr
 import { verifyPrimaryIpoPurge } from './business-primary-ipo-purge.mjs';
 import { expectSqlError, snapshot, openPsqlSession, pollForDatabaseWait } from './business-phase10-atomic-settlement-database-support.mjs';
 import { marketFixture, marketState, positions, runSql, runJson, q, json, jsonService, service } from './business-financial-market-fixture.mjs';
+import { observeFinancialMarketReentryQuote } from './business-financial-market-fx-diagnostic.mjs';
 for (const kind of ['registry','fk_graph','delete_order']) console.log(`Phase 14D observed purge ${kind}: ${runSql(`select row_to_json(d)::text from public.get_game_data_purge_${kind}_digest_v1() d;`).output}`);
 const {one,two}=createPrimaryIpoFixture();
 const otherBefore=snapshot(two.id);
@@ -107,7 +108,7 @@ assert.equal(gov.managementAuthority,true);assert.equal(gov.currentPosition,null
 assert.equal(service(`public.resolve_player_business_v2(${q(one.id)},${q(one.ownerId)})`).business_key,one.businessKey);
 expectSqlError(asService(`public.resolve_player_business_v2(${q(one.id)},${q(one.buyerOneId)})`),/BUSINESS_NOT_FOUND/);
 assert.equal(json(`select public.read_business_balance_v2(${q(one.id)},${q(one.businessId)},'NRC')::text`),issuerCash,'secondary trades never change issuer cash');
-const reentry=json(`select ${market.quoteSql(one.ownerId,asset,1,'phase14d-reenter-quote')}`);
+const reentry=observeFinancialMarketReentryQuote(()=>json(`select ${market.quoteSql(one.ownerId,asset,1,'phase14d-reenter-quote')}`), {gameId:one.id,runSql});
 json(`select ${market.buySql(one.ownerId,reentry.quote_key,'phase14d-reenter-buy')}`);
 assert.equal(positions(one,one.ownerId).find(p=>p.ticker===asset.ticker).quantity,1);
 assert.equal(Number(positions(one,one.ownerId).find(p=>p.ticker===asset.ticker).average_cost),2.5);

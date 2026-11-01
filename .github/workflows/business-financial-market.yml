@@ -85,6 +85,7 @@ jobs:
           npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta
           for PASS in 1 2; do
             npx supabase db reset --workdir backend --local
+            psql -X --no-psqlrc -v ON_ERROR_STOP=1 "$DATABASE_URL" -f backend/src/domains/fx/tests/fxUtcBoundaryCharacterization.sql
             node scripts/business-financial-market-database.mjs
           done
       - name: Check rebuilt database advisors
