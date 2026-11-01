@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -162,6 +162,10 @@ const materializedDirectory = await mkdtemp(
 const materializedPath = join(materializedDirectory, "connected-banking-loans-mutation-runner.mjs");
 try {
   await writeFile(materializedPath, source, "utf8");
+  await copyFile(
+    new URL("./loan-totals-diagnostic.mjs", import.meta.url),
+    join(materializedDirectory, "loan-totals-diagnostic.mjs"),
+  );
   await import(pathToFileURL(materializedPath).href);
 } finally {
   await rm(materializedDirectory, { recursive: true, force: true });

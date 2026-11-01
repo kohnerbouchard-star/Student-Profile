@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
+import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { captureLoanTotalsSummary } from "../tools/loan-totals-diagnostic.mjs";
 
 import { resolvePlayerBackendRequest } from "../src/api/backend-routes.js";
@@ -355,4 +359,86 @@ test("Loans diagnostic preserves the original comparison, throw, single summary 
   assert.ok(runner.includes('expected: code(group.currencyCode) && money(group.outstanding) ? expected : null'));
   assert.ok(runner.includes('renderedSummary: captureLoanTotalsSummary(summary, currencies)'));
   assert.ok(runner.includes('code(row.currencyCode) && money(row.outstanding) ? [row.currencyCode] : []'));
+});
+
+test("Banking BFF materialization preserves its local dependency and owns success/failure cleanup", async () => {
+  const adapterName = "connected-banking-loans-bff-adapter.mjs";
+  const runnerName = "connected-banking-loans-mutation-runner.mjs";
+  const helperName = "loan-totals-diagnostic.mjs";
+  const adapter = fs.readFileSync(new URL(`../tools/${adapterName}`, import.meta.url), "utf8");
+  const runner = fs.readFileSync(new URL(`../tools/${runnerName}`, import.meta.url), "utf8");
+  const helper = fs.readFileSync(new URL(`../tools/${helperName}`, import.meta.url));
+  const consumer = "  await import(pathToFileURL(materializedPath).href);";
+  const copyOperation = String.raw`  await copyFile(
+    new URL("./loan-totals-diagnostic.mjs", import.meta.url),
+    join(materializedDirectory, "loan-totals-diagnostic.mjs"),
+  );
+`;
+  assert.equal(adapter.split(consumer).length - 1, 1);
+  assert.equal([...adapter.matchAll(/\bimport\s*\(/gu)].length, 1);
+  const probe = String.raw`  const generated = await readFile(materializedPath, "utf8");
+  const relativeImports = [...generated.matchAll(/\b(?:from\s*|import\s*)["'](\.[^"']+)["']/gu)].map((match) => match[1]);
+  const browserImports = [...generated.matchAll(/\bimport\s*\(\s*["'](\.[^"']+)["']/gu)].map((match) => match[1]);
+  if (JSON.stringify(relativeImports) !== '["./loan-totals-diagnostic.mjs"]' || JSON.stringify(browserImports) !== '["./src/pages/loans-page.js","./src/api/response-normalizer.js","./src/data/preview-data.js"]' || [...generated.matchAll(/\bimport\s*\(/gu)].length !== browserImports.length) throw new Error("Review the runner's changed relative import set.");
+  const record = { directory: materializedDirectory, source: generated, relativeImports, browserImports };
+  const probePath = join(dirname(entryPath), "probe.json");
+  await writeFile(probePath, JSON.stringify(record), "utf8");
+  const helperUrl = new URL(relativeImports[0], pathToFileURL(materializedPath));
+  if (helperUrl.protocol !== "file:" || fileURLToPath(helperUrl) !== join(materializedDirectory, "loan-totals-diagnostic.mjs")) throw new Error("Probe must stay inside its owned directory.");
+  const canonical = await readFile(new URL("./loan-totals-diagnostic.mjs", import.meta.url));
+  const copied = await readFile(helperUrl).catch((error) => { if (error.code === "ENOENT") return null; throw error; });
+  if (copied && !copied.equals(canonical)) throw new Error("Diagnostic helper bytes changed.");
+  const diagnostic = await import(helperUrl.href);
+  record.helperBytesMatch = Boolean(copied);
+  record.result = diagnostic.captureLoanTotalsSummary("500.00 eld", new Set(["ELD"]));
+  await writeFile(probePath, JSON.stringify(record), "utf8");`;
+  const protectedLoansBlock = runner.slice(runner.indexOf("  const projection = (loanPayload.data || loanPayload).currencyProjection;"), runner.indexOf("  const repayForm = page.locator("));
+  assert.ok(protectedLoansBlock.includes("if (!summary.includes(expected)) {"));
+  const generatedHashes = [];
+  for (const mode of ["success", "old-without-copy", "failure-after-load"]) {
+    const directory = await fs.promises.mkdtemp(join(tmpdir(), "econovaria-banking-materialization-"));
+    try {
+      let fixtureAdapter = adapter;
+      if (mode === "old-without-copy") {
+        assert.equal(adapter.split(copyOperation).length - 1, 1);
+        fixtureAdapter = fixtureAdapter.replace(copyOperation, "");
+      }
+      // Intercept only browser/SQL entry evaluation in this disposable copy.
+      fixtureAdapter = fixtureAdapter.replace(consumer, probe + (mode === "failure-after-load" ? '\n  throw new Error("intentional probe failure");' : ""));
+      await Promise.all([
+        fs.promises.writeFile(join(directory, adapterName), fixtureAdapter),
+        fs.promises.writeFile(join(directory, runnerName), runner),
+        fs.promises.writeFile(join(directory, helperName), helper),
+        fs.promises.writeFile(join(directory, "keep.txt"), "owned fixture sentinel"),
+      ]);
+      let failure;
+      try { await import(pathToFileURL(join(directory, adapterName)).href); } catch (error) { failure = error; }
+      if (!fs.existsSync(join(directory, "probe.json")) && failure) throw failure;
+      const record = JSON.parse(await fs.promises.readFile(join(directory, "probe.json"), "utf8"));
+      assert.equal(dirname(record.directory), directory);
+      assert.equal(fs.existsSync(record.directory), false);
+      assert.equal(await fs.promises.readFile(join(directory, "keep.txt"), "utf8"), "owned fixture sentinel");
+      assert.deepEqual((await fs.promises.readdir(directory)).sort(), [adapterName, runnerName, helperName, "keep.txt", "probe.json"].sort());
+      assert.deepEqual(record.relativeImports, ["./loan-totals-diagnostic.mjs"]);
+      assert.deepEqual(record.browserImports, ["./src/pages/loans-page.js", "./src/api/response-normalizer.js", "./src/data/preview-data.js"]);
+      assert.ok(record.source.includes(protectedLoansBlock));
+      assert.ok(record.source.includes("/functions/v1/player-web-session-api/login"));
+      assert.ok(record.source.includes('credentials: "include"'));
+      generatedHashes.push(createHash("sha256").update(record.source).digest("hex"));
+      if (mode === "old-without-copy") {
+        assert.equal(failure?.code, "ERR_MODULE_NOT_FOUND");
+        assert.equal(record.result, undefined);
+      } else {
+        if (mode === "success" && failure) throw failure;
+        assert.equal(record.helperBytesMatch, true);
+        assert.deepEqual(record.result.lines, [{ lineIndex: 0, text: "500.00 eld" }]);
+        if (mode === "failure-after-load") assert.equal(failure?.message, "intentional probe failure");
+      }
+    } finally {
+      await fs.promises.rm(directory, { recursive: true });
+      assert.equal(fs.existsSync(directory), false);
+    }
+  }
+  assert.equal(generatedHashes[1], generatedHashes[0]);
+  assert.equal(generatedHashes[2], generatedHashes[0]);
 });

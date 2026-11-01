@@ -31,7 +31,8 @@
     "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts",
     "player-terminal/tests/banking-read-model.mjs",
     "player-terminal/tools/connected-banking-loans-mutation-runner.mjs",
-    "player-terminal/tools/loan-totals-diagnostic.mjs"
+    "player-terminal/tools/loan-totals-diagnostic.mjs",
+    "player-terminal/tools/connected-banking-loans-bff-adapter.mjs"
   ],
   "requiredFiles": [
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
@@ -56,7 +57,8 @@
     "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts",
     "player-terminal/tests/banking-read-model.mjs",
     "player-terminal/tools/connected-banking-loans-mutation-runner.mjs",
-    "player-terminal/tools/loan-totals-diagnostic.mjs"
+    "player-terminal/tools/loan-totals-diagnostic.mjs",
+    "player-terminal/tools/connected-banking-loans-bff-adapter.mjs"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -115,5 +117,17 @@
     "scope": "Story owns a server-only context read factory; both Stocks hooks retain their original client, fresh game-scoped reads after tick persistence and before effects, queries, valuations and errors. The Loans failure diagnostic reuses the already-read summary, masks unknown whole lines and captures only fixed labels/states and validated-currency monetary lines with original case/whitespace/punctuation, bounded to64 inspected lines and2048 serialized UTF-8 bytes. The exact monetary assertion, throw, requests, reads, waits, retries and existing8192-byte artifact guard remain unchanged. No application Loans fix is claimed.",
     "validation": "Accepted unchanged Story source passed75 frozen cached-only network-denied Deno2.9.3 tests and5 Node22.23.1 scheduler contracts; six source helpers replayed twice on an owned disposable copy. The final Loans diagnostic passed10 focused Node22.23.1 tests plus existing Banking assertions. Inventory must be generated from this actual source union, with164 deep imports and5 foreign infrastructure imports and no ceiling change. Local evidence is not fresh CI or hosted qualification.",
     "historyAndLimits": "Published3fb684a7 remains32 successful/2 failed/2 skipped workflows: Loans exact-rendered-totals and FX gateway readiness failures remain unresolved. Earlier checksum/startup failures and inaccessible historical transfers are preserved, not declared fixed. No manual retry/dispatch, check waiver, workflow/SDK/lock/assertion/threshold change, merge/PR approval, production deployment, hosted SQL/Edge/Auth/settings write, credentials/permissions change, feature activation or release-hold change. PR885 adjacent runner deno.json remains absent and untouched; other owner branches and paused gates are unchanged."
+  },
+  "loansMaterializationRepairApproval": {
+    "approvalMessageId": "Sentinel_ca77fb41681c8191aea25a17950ab219",
+    "publishedBaseline": "b4775463b3d0be3ff56aa3d441a4c33ef5e233e6",
+    "reviewedTwoFilePatch": {
+      "bytes": 8140,
+      "sha256": "56809558954f3527887001d10b66a15a55c231394ce9ae512fa31473d793d5ed"
+    },
+    "authorization": "The user explicitly approved one ordinary fast-forward successor to existing draft PR888 containing this reviewed two-file materialization repair, this single exact adapter registration, automatic staging-bound Preview and normal exact-head CI/artifacts. This records only that bounded publication, not approval to merge, release, retry for green or publish further successors.",
+    "scope": "Copy the canonical diagnostic helper from the static import.meta.url-relative source to the same fixed filename beside the relocated runner before import. Preserve all runner replacements, authentication, timeouts, assertions, diagnostic privacy and existing cleanup of the owned directory. Register only player-terminal/tools/connected-banking-loans-bff-adapter.mjs; original authority fields, required checks and read-only locks are unchanged. No absolute checkout fallback, sanitizer inlining, tools-tree copying, test-only production bypass or generic bundler.",
+    "validation": "All 11 focused Node22.23.1 tests and existing Banking assertions pass. The offline probe exercises real adapter transformations/materialization while intercepting only core browser/SQL entry evaluation in disposable copies. It verifies canonical helper bytes, current static/browser relative-import sets, identical generated runner bytes and sentinel-preserving owned cleanup on success, old missing-helper failure and failure after module load. The original published adapter reproduces ERR_MODULE_NOT_FOUND. No browser, SQL, network, CI or hosted acceptance is inferred from this local test.",
+    "historyAndLimits": "Published b477 qualification remains 36 successful, 4 failed and 2 skipped workflows. Core and Manufacturing checksum failures, Multiplayer materialization failure and Cutover readiness failure remain preserved. Adapter-dependent Savings, Loans and browser currency diagnostics were NOT RUN on b477 because static module resolution failed before top-level fixture/browser flow; the old Loans rendering assertion remains unresolved. Fresh exact-head CI must establish what executes. No workflow, SDK/lock, threshold/assertion change, manual retry/dispatch, merge/PR approval, production deployment, hosted SQL/Edge/Auth/settings write, credential/permission change, feature activation or release-hold change is authorized. Counts remain 164 deep imports and 5 foreign infrastructure imports; other owners stay separate."
   }
 }
