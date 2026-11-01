@@ -1,12 +1,118 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { CLASSROOM, NEUTRAL, LOCK, SUITES, TSLIB_URL, TSLIB_FILE, TSLIB_SHA256, tslibImports, trustedTslibConfigs, verifyTrustedTslibGraphs, validateConfigs, validateScripts, commandArgs, withConfig, junitCases, runParity } from "./verifyNeutralDenoTestConfig.mjs";
 import { inspectSdkGraph, expectedLocalFailure, failureExcerpt, selectOwnedStackImage, inspectRuntimeCliVersion, preserveDenoInfoStderr, qualificationReceiptJson } from "../../scripts/verify-edge-tslib-bundle-closure.mjs";
+import { SDK, inspectClosureUrl, appendOnlyLock, inspectClosureGraph, collectModuleData, inspectResolverVersion } from "../../scripts/collect-sdk2454-runtime-closure.mjs";
+
+const closureLock = () => ({ version: "5", specifiers: { "npm:existing@1.0.0": "1.0.0" }, npm: { "existing@1.0.0": { integrity: "unchanged" } }, redirects: {}, remote: { [SDK]: "1108d69216995335d057dbd15907caaf514a4d1ef082f097050573b9d589a57c", [TSLIB_URL]: TSLIB_SHA256 } });
+const closureFixture = () => {
+  const alias = "https://esm.sh/@supabase/node-fetch@^2.6.14?target=denonext", selected = "https://esm.sh/@supabase/node-fetch@2.6.15?target=denonext";
+  const vendor = "file:///owned/functions/_shared/vendor/tslib-2.8.1/tslib.mjs";
+  const before = closureLock(), after = structuredClone(before);
+  after.redirects[alias] = selected; after.remote[selected] = "a".repeat(64);
+  const graph = { version: 1, roots: [SDK], redirects: { [alias]: selected }, modules: [
+    { kind: "esm", specifier: SDK, dependencies: [{ specifier: alias, code: { specifier: selected } }, { specifier: TSLIB_URL, code: { specifier: vendor } }, { specifier: "node:fs", code: { specifier: "node:fs" } }] },
+    { kind: "esm", specifier: selected }, { kind: "esm", specifier: vendor }, { kind: "node", specifier: "node:fs" },
+  ] };
+  return { alias, selected, vendor, before, after, graph };
+};
+
+test("SDK2454 collection preserves exact query and range identities without broadening destinations", () => {
+  const value = "https://esm.sh/utf-8-validate@%3E=5.0.2?target=denonext";
+  assert.equal(inspectClosureUrl(value).url, value);
+  assert.equal(inspectClosureUrl(value).selectedVersion, "6.0.6");
+  for (const url of [value + "&extra=1", value + "#fragment", value.replace("https:", "http:"), value.replace("esm.sh", "other.invalid"), value.replace("esm.sh", "name:password@esm.sh"), value.replace("%3E=5.0.2", "7.0.0"), "https://esm.sh/unreviewed@1.0.0"]) assert.throws(() => inspectClosureUrl(url));
+  assert.throws(() => inspectClosureUrl("https://esm.sh/unreviewed@1.0.0?target=denonext"), (error) => error.reviewIdentity?.url === "https://esm.sh/unreviewed@1.0.0?target=denonext");
+});
+
+test("SDK2454 proposal is semantic append-only across every original section/key/value", () => {
+  const { before, after, alias, selected } = closureFixture(), original = structuredClone(before);
+  assert.deepEqual(appendOnlyLock(before, after), { redirects: { [alias]: selected }, remote: { [selected]: "a".repeat(64) } });
+  assert.deepEqual(before, original);
+  for (const change of [
+    (lock) => { lock.remote[TSLIB_URL] = "b".repeat(64); }, (lock) => { delete lock.remote[SDK]; },
+    (lock) => { lock.npm["existing@1.0.0"].integrity = "changed"; }, (lock) => { lock.specifiers.other = "2.0.0"; },
+    (lock) => { lock.version = "6"; }, (lock) => { lock.newSection = {}; },
+    (lock) => { lock.redirects[alias] = selected.replace("2.6.15", "2.6.16"); },
+  ]) { const changed = structuredClone(after); change(changed); assert.throws(() => appendOnlyLock(before, changed)); }
+});
+
+test("SDK2454 graph accounts for every literal parent, import, redirect and exact local remap", () => {
+  const { before, after, graph, vendor, alias, selected } = closureFixture();
+  const result = inspectClosureGraph(graph, after, appendOnlyLock(before, after), vendor);
+  assert.equal(result.modules.length, 4);
+  assert(result.edges.some((edge) => edge.originalUrl === alias && edge.resolvedUrl === selected));
+  assert.deepEqual(result.redirects, { [alias]: selected });
+  assert(result.edges.some((edge) => edge.originalUrl === TSLIB_URL && edge.resolvedUrl === vendor));
+  assert.deepEqual(result.tslib, { edges: 1, status: "mapped-local" });
+  const relativeImport = "/@supabase/node-fetch@^2.6.14?target=denonext";
+  graph.modules[0].dependencies[0].specifier = relativeImport;
+  const relativeResult = inspectClosureGraph(graph, after, appendOnlyLock(before, after), vendor);
+  assert.equal(relativeResult.redirects[alias], selected);
+  assert(relativeResult.edges.some((edge) => edge.import === relativeImport && edge.resolvedUrl === selected));
+});
+
+test("SDK2454 closure without an original tslib edge reports no mapping proof", () => {
+  const { before, after, graph, vendor } = closureFixture();
+  graph.modules[0].dependencies = graph.modules[0].dependencies.filter((dependency) => dependency.specifier !== TSLIB_URL);
+  graph.modules = graph.modules.filter((module) => module.specifier !== vendor);
+  const result = inspectClosureGraph(graph, after, appendOnlyLock(before, after), vendor);
+  assert.deepEqual(result.tslib, { edges: 0, status: "not-in-this-sdk" });
+  assert.equal(result.modules.length, 3);
+  assert(!result.edges.some((edge) => edge.originalUrl === TSLIB_URL || edge.resolvedUrl === vendor));
+  assert.equal(after.remote[TSLIB_URL], TSLIB_SHA256);
+});
+
+test("SDK2454 collection rejects unresolved graphs, unused new pins and unexpected runtime mapping", () => {
+  for (const change of [
+    ({ graph }) => { graph.modules.pop(); },
+    ({ graph }) => { graph.modules[1].error = "unresolved"; },
+    ({ graph }) => { graph.modules[0].dependencies[1].code.specifier = TSLIB_URL; },
+    ({ graph, vendor }) => { graph.modules[0].dependencies[0].code.specifier = vendor; },
+    ({ after }) => { after.remote["https://esm.sh/ws@8.22.1"] = "b".repeat(64); },
+    ({ graph }) => { graph.modules.push({ kind: "esm", specifier: "https://esm.sh/ws@8.22.1" }); },
+  ]) { const fixture = closureFixture(); change(fixture); assert.throws(() => inspectClosureGraph(fixture.graph, fixture.after, appendOnlyLock(fixture.before, fixture.after), fixture.vendor)); }
+});
+
+test("SDK2454 type edges retain the resolver's distinct declaration target", () => {
+  const { before, after, graph, vendor } = closureFixture(), declaration = SDK + "/dist/module/index.d.ts";
+  graph.modules[0].dependencies[0].type = { specifier: declaration };
+  graph.modules.push({ kind: "esm", specifier: declaration });
+  assert(inspectClosureGraph(graph, after, appendOnlyLock(before, after), vendor).edges.some((edge) => edge.kind === "type" && edge.resolvedUrl === declaration));
+});
+
+test("SDK2454 data copy rejects escaped/symlinked caches and altered existing bytes", () => {
+  const root = mkdtempSync(join(tmpdir(), "sdk2454-data-test-"));
+  try {
+    const cache = join(root, "cache"), vendor = join(root, "vendor.mjs"), outside = join(root, "outside.bin");
+    mkdirSync(cache); writeFileSync(vendor, "not executed"); writeFileSync(outside, "not executed");
+    const linked = join(cache, "link"); symlinkSync(outside, linked);
+    for (const [number, local] of [outside, linked, join(cache, "altered")].entries()) {
+      if (number === 2) writeFileSync(local, "not the locked wrapper");
+      const output = join(root, `output-${number}`); mkdirSync(output);
+      assert.throws(() => collectModuleData([{ kind: "esm", specifier: SDK, local }], cache, vendor, closureLock(), output));
+    }
+  } finally { rmSync(root, { recursive: true }); }
+});
+
+test("SDK2454 resolver version follows the pinned named three-line display", () => {
+  const output = "deno 2.9.3 (stable, release, x86_64-unknown-linux-gnu)\nv8 14.9.1.0-rusty\ntypescript 6.0.3\n";
+  assert.deepEqual(inspectResolverVersion(output), { deno: "2.9.3", target: "x86_64-unknown-linux-gnu", v8: "14.9.1.0-rusty", typescript: "6.0.3" });
+  for (const value of ["", '{"deno":"2.9.3"}\n', output.replace("2.9.3", "2.9.4"), output.replace("stable", "canary"), output.replace("release", "debug"), output.slice(0, -1), output + "\n", output + "extra\n", output.replaceAll("\n", "\r\n")]) assert.throws(() => inspectResolverVersion(value));
+});
+
+test("SDK2454 acquisition venue has no installation/handler/deploy commands and preserves ordinary checks", () => {
+  const workflow = readFileSync(new URL("../../.github/workflows/backend-typecheck.yml", import.meta.url), "utf8");
+  const job = workflow.split("  sdk2454-runtime-closure:\n")[1].split("  backend-typecheck:\n")[0];
+  for (const guard of ["github.event.action == 'synchronize'", "github.event.pull_request.number == 885", "github.event.pull_request.head.repo.full_name == github.repository", "github.run_attempt == 1", "persist-credentials: false", 'node-version: "22.23.1"', "deno-version: v2.9.3", "timeout-minutes: 7", "retention-days: 7"]) assert(job.includes(guard));
+  assert(!/npm (?:ci|install)|deno (?:run|serve|test)|supabase|docker|secrets\.|continue-on-error|exit 0/u.test(job));
+  assert(workflow.includes("npm run typecheck:all")); assert(workflow.includes("Enforce backend typecheck")); assert(workflow.includes("npm run smoke"));
+});
 
 const neutralConfig = () => ({ compilerOptions: { strict: true }, imports: tslibImports() });
 const classroomConfig = () => ({ ...neutralConfig(), imports: tslibImports(true), tasks: { check: "deno check index.ts" } });
