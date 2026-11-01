@@ -245,16 +245,29 @@ const MARKET_NEWS_SELECT = [
   "created_at",
 ].join(",");
 
+export interface PlayerGameDashboardReadDependencies {
+  readonly stockMarketReadRepository: StockMarketReadRepository;
+  readonly stockMarketOpenStateReadRepository: StockMarketOpenStateReadRepository;
+  readonly playerContractsReadQuery: PlayerContractsReadQuery;
+  readonly storeListingsReadQuery: DashboardStoreListingsReadQuery;
+}
+
 export class SupabasePlayerGameDashboardRepository
   implements PlayerGameDashboardRepository {
+  private readonly dependencies: PlayerGameDashboardReadDependencies;
+
   constructor(
     private readonly client: SupabasePlayerGameDashboardClient,
-    private readonly stockMarketReadRepository: StockMarketReadRepository,
-    private readonly stockMarketOpenStateReadRepository: StockMarketOpenStateReadRepository,
-    private readonly playerContractsReadQuery: PlayerContractsReadQuery,
-    private readonly storeListingsReadQuery: DashboardStoreListingsReadQuery,
+    dependencies: PlayerGameDashboardReadDependencies,
     private readonly now: () => Date = () => new Date(),
-  ) {}
+  ) {
+    this.dependencies = {
+      stockMarketReadRepository: dependencies.stockMarketReadRepository,
+      stockMarketOpenStateReadRepository: dependencies.stockMarketOpenStateReadRepository,
+      playerContractsReadQuery: dependencies.playerContractsReadQuery,
+      storeListingsReadQuery: dependencies.storeListingsReadQuery,
+    };
+  }
 
   async read(
     input: PlayerGameDashboardReadInput,
@@ -276,7 +289,7 @@ export class SupabasePlayerGameDashboardRepository
       playerContracts,
     ] = await Promise.all([
       this.readGameSession(input.gameSessionId),
-      this.stockMarketOpenStateReadRepository.read(input.gameSessionId, this.now()),
+      this.dependencies.stockMarketOpenStateReadRepository.read(input.gameSessionId, this.now()),
       this.readPublicStockMarket(input.gameSessionId),
       this.readActivePlayers(input.gameSessionId),
       this.readCountryAssignments(input.gameSessionId),
@@ -288,7 +301,7 @@ export class SupabasePlayerGameDashboardRepository
       this.readInventory(input),
       this.readRecentPurchases(input),
       this.readMarketNews(input.gameSessionId),
-      this.playerContractsReadQuery.read({
+      this.dependencies.playerContractsReadQuery.read({
         gameSessionId: input.gameSessionId,
         playerId: input.playerId,
       }),
@@ -447,7 +460,7 @@ export class SupabasePlayerGameDashboardRepository
     readonly stocks: readonly StockMarketBoardStockDto[];
   }> {
     try {
-      const result = await this.stockMarketReadRepository.read({
+      const result = await this.dependencies.stockMarketReadRepository.read({
         gameSessionId,
         includeHistory: false,
         historyLimit: 1,
@@ -617,7 +630,7 @@ export class SupabasePlayerGameDashboardRepository
     gameSessionId: string,
   ): Promise<readonly StoreItemDto[]> {
     try {
-      return await this.storeListingsReadQuery.read(gameSessionId);
+      return await this.dependencies.storeListingsReadQuery.read(gameSessionId);
     } catch (error) {
       if (error instanceof DashboardStoreListingsReadError) throw readFailed();
       throw error;

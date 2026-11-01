@@ -788,10 +788,12 @@ Deno.test("dashboard financial extraction preserves snapshots and scoped query t
     );
     const repository = new SupabasePlayerGameDashboardRepository(
       client as any,
-      createStockMarketReadRepository(client as any),
-      createStockMarketOpenStateReadRepository(client as any),
-      createPlayerContractsReadQuery(client as any),
-      createDashboardStoreListingsReadQuery(client as any),
+      {
+        stockMarketReadRepository: createStockMarketReadRepository(client as any),
+        stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+        playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+        storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+      },
       () => new Date("2026-06-24T00:00:00Z"),
     );
     let result: unknown;
@@ -856,10 +858,12 @@ Deno.test("dashboard preserves public stock-read error codes, messages and statu
     const client = new FakeClient(tables());
     const repository = new SupabasePlayerGameDashboardRepository(
       client as any,
-      { read: () => Promise.reject(error) },
-      createStockMarketOpenStateReadRepository(client as any),
-      createPlayerContractsReadQuery(client as any),
-      createDashboardStoreListingsReadQuery(client as any),
+      {
+        stockMarketReadRepository: { read: () => Promise.reject(error) },
+        stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+        playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+        storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+      },
     );
     let caught: unknown;
     try {
@@ -887,10 +891,12 @@ Deno.test("dashboard rethrows unknown stock-read failures unchanged", async () =
   const client = new FakeClient(tables());
   const repository = new SupabasePlayerGameDashboardRepository(
     client as any,
-    { read: () => Promise.reject(failure) },
-    createStockMarketOpenStateReadRepository(client as any),
-    createPlayerContractsReadQuery(client as any),
-    createDashboardStoreListingsReadQuery(client as any),
+    {
+      stockMarketReadRepository: { read: () => Promise.reject(failure) },
+      stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+      playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+      storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+    },
   );
   let caught: unknown;
   try {
@@ -922,10 +928,12 @@ Deno.test("dashboard consumes its injected stock port with fresh game-scoped rea
   };
   const repository = new SupabasePlayerGameDashboardRepository(
     client as any,
-    stockMarket,
-    createStockMarketOpenStateReadRepository(client as any),
-    createPlayerContractsReadQuery(client as any),
-    createDashboardStoreListingsReadQuery(client as any),
+    {
+      stockMarketReadRepository: stockMarket,
+      stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+      playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+      storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+    },
     () => new Date("2026-06-24T00:00:00Z"),
   );
   const games = [GAME_SESSION_ID, OTHER_GAME_SESSION_ID, GAME_SESSION_ID];
@@ -967,15 +975,17 @@ Deno.test("dashboard market-open port preserves game, caller time and one clock 
     let clockCalls = 0;
     const repository = new SupabasePlayerGameDashboardRepository(
       client as any,
-      createStockMarketReadRepository(client as any),
       {
-        read: (gameId, receivedAt) => {
-          if (receivedAt !== at) throw new Error("Caller Date was replaced");
-          return marketOpen.read(gameId, receivedAt);
+        stockMarketReadRepository: createStockMarketReadRepository(client as any),
+        stockMarketOpenStateReadRepository: {
+          read: (gameId, receivedAt) => {
+            if (receivedAt !== at) throw new Error("Caller Date was replaced");
+            return marketOpen.read(gameId, receivedAt);
+          },
         },
+        playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+        storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
       },
-      createPlayerContractsReadQuery(client as any),
-      createDashboardStoreListingsReadQuery(client as any),
       () => {
         clockCalls += 1;
         return at;
@@ -1047,12 +1057,14 @@ Deno.test("dashboard preserves market-open RPC rejection identity", async () => 
   const client = new FakeClient(tables());
   const repository = new SupabasePlayerGameDashboardRepository(
     client as any,
-    createStockMarketReadRepository(client as any),
-    createStockMarketOpenStateReadRepository({
-      rpc: () => Promise.reject(failure),
-    }),
-    createPlayerContractsReadQuery(client as any),
-    createDashboardStoreListingsReadQuery(client as any),
+    {
+      stockMarketReadRepository: createStockMarketReadRepository(client as any),
+      stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository({
+        rpc: () => Promise.reject(failure),
+      }),
+      playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+      storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+    },
     () => new Date("2026-07-20T00:00:00Z"),
   );
   let caught: unknown;
@@ -1323,10 +1335,12 @@ Deno.test("dashboard uses injected Contracts DTOs in both response locations on 
   const client = new FakeClient(tables(), "game_session_contracts");
   const repository = new SupabasePlayerGameDashboardRepository(
     client as any,
-    createStockMarketReadRepository(client as any),
-    createStockMarketOpenStateReadRepository(client as any),
-    { read: (input) => { calls.push(input); return Promise.resolve(result); } },
-    createDashboardStoreListingsReadQuery(client as any),
+    {
+      stockMarketReadRepository: createStockMarketReadRepository(client as any),
+      stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+      playerContractsReadQuery: { read: (input) => { calls.push(input); return Promise.resolve(result); } },
+      storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+    },
     () => new Date("2026-06-24T00:00:00Z"),
   );
   const input = {
@@ -1358,10 +1372,12 @@ Deno.test("dashboard preserves an injected Contracts query rejection unchanged",
   const failure = new Error("Synthetic Contracts query failure");
   const repository = new SupabasePlayerGameDashboardRepository(
     client as any,
-    createStockMarketReadRepository(client as any),
-    createStockMarketOpenStateReadRepository(client as any),
-    { read: () => Promise.reject(failure) },
-    createDashboardStoreListingsReadQuery(client as any),
+    {
+      stockMarketReadRepository: createStockMarketReadRepository(client as any),
+      stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+      playerContractsReadQuery: { read: () => Promise.reject(failure) },
+      storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+    },
   );
   let caught: unknown;
   try {
@@ -1472,10 +1488,12 @@ Deno.test("Dashboard uses fresh injected Store listings without hidden catalog r
   const client = new FakeClient(tables(), "store_items");
   const repository = new SupabasePlayerGameDashboardRepository(
     client as any,
-    createStockMarketReadRepository(client as any),
-    createStockMarketOpenStateReadRepository(client as any),
-    createPlayerContractsReadQuery(client as any),
-    { read: (gameId) => { calls.push(gameId); return Promise.resolve(listings); } },
+    {
+      stockMarketReadRepository: createStockMarketReadRepository(client as any),
+      stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+      playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+      storeListingsReadQuery: { read: (gameId) => { calls.push(gameId); return Promise.resolve(listings); } },
+    },
     () => new Date("2026-06-24T00:00:00Z"),
   );
   const input = {
@@ -1499,10 +1517,12 @@ Deno.test("Dashboard retains its Store error contract and unknown rejection iden
     const client = new FakeClient(tables());
     const repository = new SupabasePlayerGameDashboardRepository(
       client as any,
-      createStockMarketReadRepository(client as any),
-      createStockMarketOpenStateReadRepository(client as any),
-      createPlayerContractsReadQuery(client as any),
-      { read: () => Promise.reject(failure) },
+      {
+        stockMarketReadRepository: createStockMarketReadRepository(client as any),
+        stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+        playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+        storeListingsReadQuery: { read: () => Promise.reject(failure) },
+      },
     );
     let caught: unknown;
     try {
@@ -1522,6 +1542,45 @@ Deno.test("Dashboard retains its Store error contract and unknown rejection iden
       throw new Error("Injected Store rejection was replaced");
     }
   }
+});
+
+Deno.test("Dashboard captures port references without retaining or freezing the caller record", async () => {
+  const client = new FakeClient(tables());
+  const original = {
+    stockMarketReadRepository: createStockMarketReadRepository(client as any),
+    stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+    playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+    storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+  };
+  const callerRecord = { ...original };
+  const repository = new SupabasePlayerGameDashboardRepository(
+    client as any,
+    callerRecord,
+    () => new Date("2026-06-24T00:00:00Z"),
+  );
+  const replaced = () => Promise.reject(new Error("Caller replacement must not run"));
+  callerRecord.stockMarketReadRepository = { read: replaced };
+  callerRecord.stockMarketOpenStateReadRepository = { read: replaced };
+  callerRecord.playerContractsReadQuery = { read: replaced };
+  callerRecord.storeListingsReadQuery = { read: replaced };
+  const input = {
+    gameSessionId: GAME_SESSION_ID, playerId: PLAYER_ID,
+    playerSessionId: PLAYER_SESSION_ID, playerDisplayName: "Avery", playerRosterLabel: "A-1",
+  };
+  const first = await repository.read(input);
+  assertEquals(first.me.store.listings.map((row) => row.id), [STORE_ITEM_ID]);
+  assertEquals(Object.isFrozen(callerRecord), false);
+  for (const port of Object.values(original)) assertEquals(Object.isFrozen(port), false);
+  const readStore = original.storeListingsReadQuery.read;
+  original.storeListingsReadQuery.read = async (gameId) =>
+    (await readStore(gameId)).map((row) => ({ ...row, name: "Fresh original port" }));
+  const second = await repository.read(input);
+  assertEquals(second.me.store.listings.map((row) => row.name), ["Fresh original port"]);
+  for (const name of ["game_session_contracts", "player_contract_progress", "store_items"]) {
+    assertEquals(client.trace.filter((entry) => (entry as { table?: string }).table === name).length, 2);
+  }
+  assertEquals(client.trace.filter((entry) => (entry as { rpc?: string }).rpc === "is_stock_market_open_at").length, 2);
+  assertEquals(client.forbiddenCalls, []);
 });
 
 function request(options: {

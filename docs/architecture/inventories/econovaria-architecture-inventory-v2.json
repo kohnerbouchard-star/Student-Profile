@@ -3167,7 +3167,7 @@
     "oversizedFiles": [
       {
         "file": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
-        "lines": 2426
+        "lines": 2485
       },
       {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
@@ -3222,16 +3222,16 @@
         "lines": 908
       },
       {
+        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+        "lines": 895
+      },
+      {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
         "lines": 895
       },
       {
         "file": "backend/supabase/functions/classroom-api/index.ts",
         "lines": 888
-      },
-      {
-        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "lines": 882
       },
       {
         "file": "backend/supabase/functions/player-web-session-api/runtime.ts",

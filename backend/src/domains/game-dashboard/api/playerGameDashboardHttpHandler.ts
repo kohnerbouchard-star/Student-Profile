@@ -163,10 +163,12 @@ export async function handlePlayerGameDashboardRequest(
       ? dependencies.createRepository(serviceClient)
       : new SupabasePlayerGameDashboardRepository(
         serviceClient as any,
-        createStockMarketReadRepository(serviceClient),
-        createStockMarketOpenStateReadRepository(serviceClient),
-        createPlayerContractsReadQuery(serviceClient),
-        createDashboardStoreListingsReadQuery(serviceClient),
+        {
+          stockMarketReadRepository: createStockMarketReadRepository(serviceClient),
+          stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(serviceClient),
+          playerContractsReadQuery: createPlayerContractsReadQuery(serviceClient),
+          storeListingsReadQuery: createDashboardStoreListingsReadQuery(serviceClient),
+        },
       );
     const snapshot = await withPlayerGameDashboardReadPermit(() =>
       repository.read({
