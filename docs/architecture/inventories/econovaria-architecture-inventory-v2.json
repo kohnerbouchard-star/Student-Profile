@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1282,
+    "sourceFiles": 1284,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 162,
+    "crossDomainDeepImports": 164,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -359,7 +359,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 60,
+      "sourceFiles": 62,
       "publicBoundaryFiles": [
         "backend/src/domains/store/index.ts"
       ]
@@ -895,6 +895,12 @@
       {
         "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
         "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/dashboardReadModel.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
+        "ownerDomain": "game-dashboard",
         "importedDomain": "storylines",
         "target": "../../storylines/contracts/storyNotificationContracts.ts"
       },
@@ -903,6 +909,12 @@
         "ownerDomain": "game-dashboard",
         "importedDomain": "players",
         "target": "../../players/api/playerSessionHttpHelpers.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/dashboardReadModel.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
@@ -968,7 +980,7 @@
         "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "store",
-        "target": "../../store/contracts/storeCatalogContracts.ts"
+        "target": "../../store/dashboardReadModel.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
@@ -3155,7 +3167,7 @@
     "oversizedFiles": [
       {
         "file": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
-        "lines": 2268
+        "lines": 2426
       },
       {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
@@ -3194,10 +3206,6 @@
         "lines": 998
       },
       {
-        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "lines": 940
-      },
-      {
         "file": "admin/v2/src/routes/world-management/WorldManagementRoute.js",
         "lines": 935
       },
@@ -3220,6 +3228,10 @@
       {
         "file": "backend/supabase/functions/classroom-api/index.ts",
         "lines": 888
+      },
+      {
+        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+        "lines": 882
       },
       {
         "file": "backend/supabase/functions/player-web-session-api/runtime.ts",

@@ -18,7 +18,9 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "backend/src/domains/contracts/index.ts",
-    "scripts/apply-configurable-stock-market-timezone-v1.mjs"
+    "scripts/apply-configurable-stock-market-timezone-v1.mjs",
+    "backend/src/domains/store/dashboardReadModel.ts",
+    "backend/src/domains/store/infrastructure/supabaseDashboardStoreListingsReadQuery.ts"
   ],
   "requiredFiles": [
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
@@ -30,7 +32,9 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "backend/src/domains/contracts/index.ts",
-    "scripts/apply-configurable-stock-market-timezone-v1.mjs"
+    "scripts/apply-configurable-stock-market-timezone-v1.mjs",
+    "backend/src/domains/store/dashboardReadModel.ts",
+    "backend/src/domains/store/infrastructure/supabaseDashboardStoreListingsReadQuery.ts"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -63,5 +67,15 @@
     "scope": "Register only backend/src/domains/contracts/index.ts and scripts/apply-configurable-stock-market-timezone-v1.mjs in the existing exact allowed/required paths. Original authority fields, required checks and read-only verifier/test locks remain unchanged. Contracts owns read-only query composition and original DTO projection; the transform validates the public Stocks seam while retaining legacy conversion and original result/status gates.",
     "validation": "40 Contracts/Dashboard frozen cached-only network-denied tests and67 existing calendar tests pass on Deno2.9.3;10 owned-copy transform cases pass on Node22.23.1, including exact six-helper replay and malformed-wiring rejection. Original snapshots/query traces, immutable SQL and lock bytes remain unchanged. Deterministic inventory and unchanged ratchet measure162 deep imports/6 foreign infrastructure imports; no ceiling changes.",
     "historyAndLimits": "Published b29 qualification remains26 success/5 failure/1 skip across32 runs: two obsolete transform assumptions, two gateway-startup failures of unknown cause and one rejected dependency checksum. Local evidence is not fresh CI qualification. No retry for lucky green, check waiver, SDK/lock/workflow change, merge/PR approval, production, hosted SQL/Edge/Auth/settings write, credentials/permissions change, feature activation or release-hold change is authorized. Separate885/887 and736 runtime stay unchanged."
+  },
+  "storeReadModelAmendmentApproval": {
+    "approvedAtUtc": "2026-11-01T04:44:04Z",
+    "publishedBaseline": "96d95b3438f64c84ad77a43ff15b73384aeb2de5",
+    "reviewedSixPathPatchBytes": 24875,
+    "reviewedSixPathPatchSha256": "0ee0c385c4381d2909f6fc3c9905a2b18c37bd871defa7637af2bbcb984d6212",
+    "authorization": "The user explicitly approved one ordinary fast-forward update to existing draft PR888 with the reviewed Store Dashboard read-model cleanup, these two minimal exact-path registrations, automatic staging-bound Preview and normal exact-head CI. This records that bounded publication only, not blanket authority for later successors.",
+    "scope": "Store owns the exact existing visible/active game-scoped store_items query and row-to-StoreItemDto projection through a narrow read-only public entry. Dashboard removes58 lines net of Store-specific persistence/projection logic. The broad Store index, generic catalog query/mapper, purchases, Inventory, checkout, mutations, response contracts, SDK/lock, SQL, workflows and other callers remain unchanged. Original authority fields, required checks and read-only verifier/test locks remain unchanged.",
+    "validation": "45 typechecked Deno2.9.3 tests pass with original config/lock and frozen cached-only network-denied flags; original response snapshots and complete query digests are unchanged. Existing Local Currency contract passes1/1 on Node22.23.1. The exact six-helper timezone chain passes twice on an owned copy of this source union without whole-tree drift; fixture removed. Source parity confirms selected columns, row schema, DTO projection and numeric normalization. Deterministic inventory and unchanged ratchet measure164 deep imports/6 foreign infrastructure imports; no exemption or ceiling change.",
+    "historyAndLimits": "Published96d95b qualification remains27 success/5 failure/1 skip across33 runs: Timezone/Sales/Cutover checksum failures, Multiplayer local runtime readiness failure and Marketplace browser503 errors. Bounded retained-log diagnosis distinguishes failed Multiplayer readiness from passed Marketplace readiness; underlying stopped-container/503 causes remain unknown and no application regression or checksum cause is inferred for them. New source must qualify independently. No retry for lucky green, source gate waiver, SDK/lock/workflow change, merge/PR approval, production or hosted SQL/Edge/Auth/settings write, credentials/permissions, feature activation or release-hold change is authorized. Separate885/887 and736 runtime stay unchanged."
   }
 }

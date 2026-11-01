@@ -35,9 +35,11 @@ import type {
   StockMarketPlayerOrderStatus,
   StockMarketPlayerTradeDto,
 } from "../../stocks/contracts/stockMarketPlayerReadContracts.ts";
-import type {
-  StoreItemDto,
-} from "../../store/contracts/storeCatalogContracts.ts";
+import {
+  DashboardStoreListingsReadError,
+  type DashboardStoreListingsReadQuery,
+  type StoreItemDto,
+} from "../../store/dashboardReadModel.ts";
 import type { PlayerContractsReadQuery } from "../../contracts/index.ts";
 import type {
   StorePurchaseHistoryItemDto,
@@ -68,7 +70,6 @@ type DashboardTableName =
   | "stock_price_ticks"
   | "stock_orders"
   | "stock_trades"
-  | "store_items"
   | "store_purchases";
 
 interface SupabasePlayerGameDashboardClient {
@@ -154,23 +155,6 @@ interface StockTradeRow {
   readonly created_at: string;
 }
 
-interface StoreItemRow {
-  readonly id: string;
-  readonly game_session_id: string;
-  readonly item_key: string;
-  readonly name: string;
-  readonly description?: string | null;
-  readonly category: string;
-  readonly price: number | string;
-  readonly currency_code: string;
-  readonly stock_quantity: number | string;
-  readonly status: StoreItemDto["status"];
-  readonly visibility: StoreItemDto["visibility"];
-  readonly sort_order: number | string;
-  readonly created_at: string;
-  readonly updated_at: string;
-}
-
 interface InventoryHoldingRow {
   readonly id: string;
   readonly store_item_id: string;
@@ -241,22 +225,6 @@ const TRADE_SELECT = [
   "gross_value",
   "created_at",
 ].join(",");
-const STORE_ITEM_SELECT = [
-  "id",
-  "game_session_id",
-  "item_key",
-  "name",
-  "description",
-  "category",
-  "price",
-  "currency_code",
-  "stock_quantity",
-  "status",
-  "visibility",
-  "sort_order",
-  "created_at",
-  "updated_at",
-].join(",");
 const INVENTORY_SELECT =
   "id,store_item_id,quantity_owned,quantity_reserved,updated_at";
 const STORE_PURCHASE_SELECT =
@@ -284,6 +252,7 @@ export class SupabasePlayerGameDashboardRepository
     private readonly stockMarketReadRepository: StockMarketReadRepository,
     private readonly stockMarketOpenStateReadRepository: StockMarketOpenStateReadRepository,
     private readonly playerContractsReadQuery: PlayerContractsReadQuery,
+    private readonly storeListingsReadQuery: DashboardStoreListingsReadQuery,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -647,20 +616,12 @@ export class SupabasePlayerGameDashboardRepository
   private async readStoreListings(
     gameSessionId: string,
   ): Promise<readonly StoreItemDto[]> {
-    const response = await this.client
-      .from("store_items")
-      .select(STORE_ITEM_SELECT)
-      .eq("game_session_id", gameSessionId)
-      .eq("status", "active")
-      .eq("visibility", "visible")
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true });
-
-    if (response.error) {
-      throw readFailed();
+    try {
+      return await this.storeListingsReadQuery.read(gameSessionId);
+    } catch (error) {
+      if (error instanceof DashboardStoreListingsReadError) throw readFailed();
+      throw error;
     }
-
-    return ((response.data ?? []) as StoreItemRow[]).map(toStoreItemDto);
   }
 
   private async readInventory(
@@ -745,25 +706,6 @@ function toTradeDto(row: StockTradeRow): StockMarketPlayerTradeDto {
     executionPrice: toNumber(row.execution_price),
     grossValue: toNumber(row.gross_value),
     createdAt: row.created_at,
-  };
-}
-
-function toStoreItemDto(row: StoreItemRow): StoreItemDto {
-  return {
-    id: row.id,
-    gameSessionId: row.game_session_id,
-    itemKey: row.item_key,
-    name: row.name,
-    description: row.description ?? null,
-    category: row.category,
-    price: toNumber(row.price),
-    currencyCode: row.currency_code,
-    stockQuantity: Math.trunc(toNumber(row.stock_quantity)),
-    status: row.status,
-    visibility: row.visibility,
-    sortOrder: Math.trunc(toNumber(row.sort_order)),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
   };
 }
 
