@@ -12,7 +12,7 @@
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 164,
+    "crossDomainDeepImports": 162,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -938,18 +938,6 @@
       {
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
         "ownerDomain": "game-dashboard",
-        "importedDomain": "contracts",
-        "target": "../../contracts/contracts/contractHttpContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketReadContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
-        "ownerDomain": "game-dashboard",
         "importedDomain": "stocks",
         "target": "../../stocks/contracts/stockMarketPlayerReadContracts.ts"
       },
@@ -957,7 +945,7 @@
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "store",
-        "target": "../../store/contracts/storeCatalogContracts.ts"
+        "target": "../../store/dashboardReadModel.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",

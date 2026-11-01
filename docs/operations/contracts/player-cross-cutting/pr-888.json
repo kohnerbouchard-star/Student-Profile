@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
     "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
@@ -35,6 +36,7 @@
     "player-terminal/tools/connected-banking-loans-bff-adapter.mjs"
   ],
   "requiredFiles": [
+    "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
     "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
@@ -129,5 +131,17 @@
     "scope": "Copy the canonical diagnostic helper from the static import.meta.url-relative source to the same fixed filename beside the relocated runner before import. Preserve all runner replacements, authentication, timeouts, assertions, diagnostic privacy and existing cleanup of the owned directory. Register only player-terminal/tools/connected-banking-loans-bff-adapter.mjs; original authority fields, required checks and read-only locks are unchanged. No absolute checkout fallback, sanitizer inlining, tools-tree copying, test-only production bypass or generic bundler.",
     "validation": "All 11 focused Node22.23.1 tests and existing Banking assertions pass. The offline probe exercises real adapter transformations/materialization while intercepting only core browser/SQL entry evaluation in disposable copies. It verifies canonical helper bytes, current static/browser relative-import sets, identical generated runner bytes and sentinel-preserving owned cleanup on success, old missing-helper failure and failure after module load. The original published adapter reproduces ERR_MODULE_NOT_FOUND. No browser, SQL, network, CI or hosted acceptance is inferred from this local test.",
     "historyAndLimits": "Published b477 qualification remains 36 successful, 4 failed and 2 skipped workflows. Core and Manufacturing checksum failures, Multiplayer materialization failure and Cutover readiness failure remain preserved. Adapter-dependent Savings, Loans and browser currency diagnostics were NOT RUN on b477 because static module resolution failed before top-level fixture/browser flow; the old Loans rendering assertion remains unresolved. Fresh exact-head CI must establish what executes. No workflow, SDK/lock, threshold/assertion change, manual retry/dispatch, merge/PR approval, production deployment, hosted SQL/Edge/Auth/settings write, credential/permission change, feature activation or release-hold change is authorized. Counts remain 164 deep imports and 5 foreign infrastructure imports; other owners stay separate."
+  },
+  "publicDtoBoundaryApproval": {
+    "approvalMessageId": "Sentinel_5641864e563081919bc1b1cbb313b007",
+    "publishedBaseline": "3a1edbe92c416e65ac0706a8e3e07f89b3efdc98",
+    "reviewedTwoFilePatch": {
+      "bytes": 3040,
+      "sha256": "06679f265de07ba0539238afb632877486f42ed0e6c5ce0bb51ec0342aa575af"
+    },
+    "authorization": "User explicitly approved one ordinary fast-forward update to existing draft PR888 with the reviewed type-only DTO public-boundary change, this exact contract path registration, automatic staging-bound Preview and normal exact-head CI. No further successor publication authority is implied.",
+    "scope": "Only three import-type module specifiers redirect to existing exact public DTO exports; DTO definitions, aliases, runtime behavior, assertions, SDK/locks, workflows, thresholds and other metadata remain unchanged.",
+    "validation": "Reuse accepted46 frozen cached-only offline tests and deterministic inventory/ratchet evidence. Actual inventory162 deep imports/5 foreign infrastructure imports, no exemption or ceiling change. Local evidence is not exact-head CI qualification.",
+    "limits": "No merge, PR approval, production or hosted SQL/Edge/Auth/settings writes, permissions, holds, manual dispatch or retries authorized. Earlier CI failures remain preserved."
   }
 }
