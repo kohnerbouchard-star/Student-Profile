@@ -16,7 +16,9 @@
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-888.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "backend/src/domains/contracts/index.ts",
+    "scripts/apply-configurable-stock-market-timezone-v1.mjs"
   ],
   "requiredFiles": [
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
@@ -26,7 +28,9 @@
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-888.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "backend/src/domains/contracts/index.ts",
+    "scripts/apply-configurable-stock-market-timezone-v1.mjs"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -49,5 +53,15 @@
     "authorization": "The user explicitly approved one ordinary fast-forward update of existing draft PR888 with this reviewed window-port amendment, its automatic staging-bound Preview and normal exact-head CI. This record documents that approval only, not blanket authority for later successors.",
     "validation": "35 frozen cached-only offline tests and unchanged architecture ratchet pass; measured164 deep/7 foreign infrastructure imports. Existing RPC adapter, other callers, game/time forwarding, one clock evaluation, strict boolean validation and error identity are preserved.",
     "historyAndLimits": "Baseline66b qualification remains25 successful/6 failed/1 skipped across32 runs; checksum failures and skipped acceptance stages are not waived. No merge, PR approval, production, hosted SQL/Edge/Auth/settings, SDK/lock/workflow changes, credentials/permissions, feature activation, hold change, independent retry or further source publication is authorized."
+  },
+  "contractsAndTimezoneAmendmentApproval": {
+    "approvedAtUtc": "2026-11-01T04:16:36Z",
+    "publishedBaseline": "b29bcc7b86dfa3b9fe13ecb36df3ba02e0aa749c",
+    "reviewedSixPathPatchBytes": 23048,
+    "reviewedSixPathPatchSha256": "91a6eb6c886fdedcdd357865d04334d826894575a1b07470e4aa677c4ba69ed4",
+    "authorization": "The user explicitly approved one ordinary fast-forward update to existing draft PR888 with the reviewed Contracts read-model cleanup and timezone source-transform repair, this minimal existing authority registration, automatic staging-bound Preview and normal exact-head CI. This records only that publication approval, not blanket authority for successors.",
+    "scope": "Register only backend/src/domains/contracts/index.ts and scripts/apply-configurable-stock-market-timezone-v1.mjs in the existing exact allowed/required paths. Original authority fields, required checks and read-only verifier/test locks remain unchanged. Contracts owns read-only query composition and original DTO projection; the transform validates the public Stocks seam while retaining legacy conversion and original result/status gates.",
+    "validation": "40 Contracts/Dashboard frozen cached-only network-denied tests and67 existing calendar tests pass on Deno2.9.3;10 owned-copy transform cases pass on Node22.23.1, including exact six-helper replay and malformed-wiring rejection. Original snapshots/query traces, immutable SQL and lock bytes remain unchanged. Deterministic inventory and unchanged ratchet measure162 deep imports/6 foreign infrastructure imports; no ceiling changes.",
+    "historyAndLimits": "Published b29 qualification remains26 success/5 failure/1 skip across32 runs: two obsolete transform assumptions, two gateway-startup failures of unknown cause and one rejected dependency checksum. Local evidence is not fresh CI qualification. No retry for lucky green, check waiver, SDK/lock/workflow change, merge/PR approval, production, hosted SQL/Edge/Auth/settings write, credentials/permissions change, feature activation or release-hold change is authorized. Separate885/887 and736 runtime stay unchanged."
   }
 }

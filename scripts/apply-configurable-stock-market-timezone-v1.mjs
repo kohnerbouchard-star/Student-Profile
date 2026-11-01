@@ -598,12 +598,40 @@ await patch(
   },
 );
 
+const dashboardMarketStateSource = await read(
+  "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+);
+const usesPublicMarketStatePort =
+  /[Ss]tockMarketOpenStateReadRepository/.test(dashboardMarketStateSource);
+if (usesPublicMarketStatePort) {
+  const [stocksPublicSource, dashboardHttpSource] = await Promise.all([
+    read("backend/src/domains/stocks/index.ts"),
+    read("backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts"),
+  ]);
+  const compact = (source) => source.replace(/\s+/g, "");
+  const repository = compact(dashboardMarketStateSource);
+  const stocks = compact(stocksPublicSource);
+  const http = compact(dashboardHttpSource);
+  if (
+    !/import\s*\{[^}]*\btype\s+StockMarketOpenStateReadRepository\b[^}]*\}\s*from\s*"\.\.\/\.\.\/stocks\/index\.ts"/.test(dashboardMarketStateSource) ||
+    !repository.includes("privatereadonlystockMarketOpenStateReadRepository:StockMarketOpenStateReadRepository,") ||
+    !repository.includes("this.stockMarketOpenStateReadRepository.read(input.gameSessionId,this.now()),") ||
+    repository.includes("supabaseStockMarketWindowRepository.ts") ||
+    !/import\{readStockMarketOpenState,?\}from"\.\/infrastructure\/supabaseStockMarketWindowRepository\.ts";/.test(stocks) ||
+    !/exportfunctioncreateStockMarketOpenStateReadRepository\(client:Pick<EdgeSupabaseClient,"rpc">,?\):StockMarketOpenStateReadRepository\{return\{read:\(gameSessionId,at\)=>readStockMarketOpenState\(client,gameSessionId,at\),?\};?\}/.test(stocks) ||
+    !/import\{[^}]*createStockMarketOpenStateReadRepository[,}][^;]*from"\.\.\/\.\.\/stocks\/index\.ts";/.test(http) ||
+    !http.includes("newSupabasePlayerGameDashboardRepository(serviceClientasany,createStockMarketReadRepository(serviceClient),createStockMarketOpenStateReadRepository(serviceClient),")
+  ) {
+    throw new Error("Unsupported Dashboard public market-state wiring.");
+  }
+}
+
 await patch(
   "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
   (source) => {
     let expected = source;
 
-    if (!expected.includes("supabaseStockMarketWindowRepository.ts")) {
+    if (!usesPublicMarketStatePort && !expected.includes("supabaseStockMarketWindowRepository.ts")) {
       expected = replaceRegexRequired(
         expected,
         /import \{\n  DEFAULT_STOCK_EXCHANGE_CODE,\n  evaluateStockMarketSession,\n\} from "\.\.\/\.\.\/stocks\/calendars\/stockMarketExchangeCalendar\.ts";/,
@@ -621,7 +649,7 @@ await patch(
       );
     }
 
-    if (!expected.includes("readStockMarketOpenState(this.client")) {
+    if (!usesPublicMarketStatePort && !expected.includes("readStockMarketOpenState(this.client")) {
       expected = replaceRequired(
         expected,
         `      this.readGameSession(input.gameSessionId),\n      this.readPublicStockMarket(input.gameSessionId),`,

@@ -38,13 +38,7 @@ import type {
 import type {
   StoreItemDto,
 } from "../../store/contracts/storeCatalogContracts.ts";
-import {
-  SupabaseContractRepository,
-} from "../../contracts/infrastructure/supabaseContractRepository.ts";
-import {
-  toPlayerContractDto,
-  toPlayerContractProgressDto,
-} from "../../contracts/contracts/contractHttpContracts.ts";
+import type { PlayerContractsReadQuery } from "../../contracts/index.ts";
 import type {
   StorePurchaseHistoryItemDto,
   StorePurchaseStatus,
@@ -289,15 +283,13 @@ export class SupabasePlayerGameDashboardRepository
     private readonly client: SupabasePlayerGameDashboardClient,
     private readonly stockMarketReadRepository: StockMarketReadRepository,
     private readonly stockMarketOpenStateReadRepository: StockMarketOpenStateReadRepository,
+    private readonly playerContractsReadQuery: PlayerContractsReadQuery,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
   async read(
     input: PlayerGameDashboardReadInput,
   ): Promise<PlayerGameDashboardSnapshot> {
-    const contractRepository = new SupabaseContractRepository(
-      this.client as any,
-    );
     const [
       gameSession,
       marketOpen,
@@ -312,8 +304,7 @@ export class SupabasePlayerGameDashboardRepository
       inventory,
       purchases,
       marketNews,
-      availableContracts,
-      contractProgress,
+      playerContracts,
     ] = await Promise.all([
       this.readGameSession(input.gameSessionId),
       this.stockMarketOpenStateReadRepository.read(input.gameSessionId, this.now()),
@@ -328,11 +319,7 @@ export class SupabasePlayerGameDashboardRepository
       this.readInventory(input),
       this.readRecentPurchases(input),
       this.readMarketNews(input.gameSessionId),
-      contractRepository.listPlayerAvailableContracts({
-        gameSessionId: input.gameSessionId,
-        playerId: input.playerId,
-      }),
-      contractRepository.listPlayerContractProgress({
+      this.playerContractsReadQuery.read({
         gameSessionId: input.gameSessionId,
         playerId: input.playerId,
       }),
@@ -438,8 +425,8 @@ export class SupabasePlayerGameDashboardRepository
           ),
         },
         contracts: {
-          available: availableContracts.map(toPlayerContractDto),
-          progress: contractProgress.map(toPlayerContractProgressDto),
+          available: playerContracts.available,
+          progress: playerContracts.progress,
         },
       },
       public: {
@@ -451,7 +438,7 @@ export class SupabasePlayerGameDashboardRepository
           stocks: publicMarket.stocks,
           news: marketNews.map(toMarketNewsDto),
         },
-        contracts: availableContracts.map(toPlayerContractDto),
+        contracts: playerContracts.available,
         storeListings: storeListings.map(toPublicStoreListingDto),
       },
       unseenCutscenes: [],
