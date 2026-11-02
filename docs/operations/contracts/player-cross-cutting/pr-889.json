@@ -22,7 +22,16 @@
     "docs/operations/evidence/player-public-imports-main-v1/scope.json",
     "docs/operations/contracts/player-cross-cutting/pr-889.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/business-player-store-cutover-v2.yml",
+    "backend/scripts/typecheck-only/import-map.json",
+    "backend/scripts/typecheck-only/vendor/tslib-2.8.1/LICENSE",
+    "backend/scripts/typecheck-only/vendor/tslib-2.8.1/README.md",
+    "backend/scripts/typecheck-only/vendor/tslib-2.8.1/tslib.mjs",
+    "backend/scripts/verifyTypecheckOnlyImports.mjs",
+    "backend/scripts/verifyTypecheckOnlyImports.test.mjs",
+    "scripts/local-edge-runtime-isolation.mjs",
+    "scripts/local-edge-runtime-isolation.test.mjs"
   ],
   "requiredFiles": [
     "backend/src/domains/notifications/api/playerNotificationHttpHandler.ts",
@@ -38,7 +47,16 @@
     "docs/operations/evidence/player-public-imports-main-v1/scope.json",
     "docs/operations/contracts/player-cross-cutting/pr-889.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/business-player-store-cutover-v2.yml",
+    "backend/scripts/typecheck-only/import-map.json",
+    "backend/scripts/typecheck-only/vendor/tslib-2.8.1/LICENSE",
+    "backend/scripts/typecheck-only/vendor/tslib-2.8.1/README.md",
+    "backend/scripts/typecheck-only/vendor/tslib-2.8.1/tslib.mjs",
+    "backend/scripts/verifyTypecheckOnlyImports.mjs",
+    "backend/scripts/verifyTypecheckOnlyImports.test.mjs",
+    "scripts/local-edge-runtime-isolation.mjs",
+    "scripts/local-edge-runtime-isolation.test.mjs"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -56,5 +74,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "The user authorized this focused main-convergence draft PR publication, normal CI and staging-bound Preview; parent permits only the real PR-number authority binding and truthful existing scope update after allocation. This manifest binds PR889/main and the exact nine-source-file import union, generated main inventory and minimal ownership metadata. All existing Players exports, canonical identities, other source bytes/auth/ack behavior, shared dependency and verifier/test locks, original requested checks and release holds are preserved. No broader PR888 or PR885 source, authority or inventory is imported. Local48Deno/54Node tests and ratchet157deep/9foreign do not establish actual final-head CI, required-review approval or merge readiness. Branch-protection visibility remains unknown after the prior403, with no retry or bypass. No PR approval, merge, production deployment, hosted SQL/Edge/Auth/settings or credentials/permissions change, dependency/scaffolding change, feature activation or release-hold change is authorized."
+  "authorizationNote": "The user authorized this focused main-convergence draft PR publication, normal CI and staging-bound Preview; parent permits only the real PR-number authority binding and truthful existing scope update after allocation. This manifest binds PR889/main and the exact nine-source-file import union, generated main inventory and minimal ownership metadata. All existing Players exports, canonical identities, other source bytes/auth/ack behavior, shared dependency and verifier/test locks, original requested checks and release holds are preserved. No broader PR888 or PR885 source, authority or inventory is imported. Local48Deno/54Node tests and ratchet157deep/9foreign do not establish actual final-head CI, required-review approval or merge readiness. Branch-protection visibility remains unknown after the prior403, with no retry or bypass. No PR approval, merge, production deployment, hosted SQL/Edge/Auth/settings or credentials/permissions change, dependency/scaffolding change, feature activation or release-hold change is authorized. Subsequent explicit user approval permits only bounded PR889 CI stabilization: the two existing Cutover strict/Admin checks use the accepted original11226byte tslib through a CI-only exact URL map plus mandatory original-lock/local-digest guard; local readiness failures emit only bounded owned Edge/Kong state and fixed classifications, with no free-text State.Error. Original roots/config/lock/SDK/compiler flags, probes, two recoveries, three stable waves, errors and cleanup remain unchanged. The same executor reuses selected paused888 source without changing that branch; no other owner acceptance is asserted. Ordinary fast-forward publication, normal CI and staging Preview are authorized for this scoped wave. No runtime resolution, security/network setting, dependency pin, hosted write, PR approval, merge, production or release-hold change is authorized."
 }
