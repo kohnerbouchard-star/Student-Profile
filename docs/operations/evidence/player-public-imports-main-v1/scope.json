@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PLAYER-PUBLIC-IMPORTS-MAIN-001",
+  "status": "IN_PROGRESS",
+  "phase": "LOCAL_PREPARATION",
+  "baseMainSha": "a4dd2651d0ba964cce0cf28bf35f76975f35fd13",
+  "localBranch": "refactor/player-public-imports-main-v1",
+  "scopeLock": "exact-path-allowlist",
+  "reviewedSourceUnionSha256": "4281e2460f10cc4a6501ad6db838f90c576aa7e89e96bb20d165cd7cf6bc60a7",
+  "allowedPaths": [
+    "backend/src/domains/notifications/api/playerNotificationHttpHandler.ts",
+    "backend/src/domains/notifications/api/playerNotificationRequestParser.ts",
+    "backend/src/domains/notifications/api/playerStoryDeliveryHttpHandler.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.test.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts",
+    "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/player-public-imports-main-v1/scope.json"
+  ],
+  "readOnlyLocks": [
+    "backend/src/domains/players/index.ts",
+    "backend/supabase/functions/deno.lock",
+    "backend/package.json",
+    "package.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "change": "Eleven import-specifier substitutions across nine World/Notifications files to existing Players public exports; preserve all remaining source bytes and type-only semantics. Regenerate inventory from this exact main-based union. No new exports, wrappers, function bodies, queries, auth/ack behavior, SQL, dependencies or release controls.",
+  "ownership": {
+    "activeHeadsChecked": 21,
+    "sourceOverlaps": [],
+    "scopeRecordOverlaps": [],
+    "sharedInventoryPullRequests": [
+      888,
+      885,
+      884,
+      736,
+      668
+    ],
+    "inventoryController": "Parent-assigned executor for this isolated main-based branch only. Other owner branches remain unchanged; no other owner acknowledgement is asserted. Later integrations regenerate their actual source union."
+  },
+  "authority": {
+    "pullRequestNumber": null,
+    "status": "PENDING_REAL_PR_BINDING",
+    "note": "Preparation scope evidence only, not a PR-bound verification grant. The unchanged verifier requires a real PR number; prepare the exact authority template outside source and bind it after allocation. Do not copy PR888 authority or claim required branch checks were verified.",
+    "branchProtectionVisibility": "UNKNOWN; prior connector GET403 remains a blocker to visibility, with no retry or bypass. Empty rulesets are not proof of absent requirements."
+  },
+  "metrics": {
+    "mainBefore": {
+      "crossDomainDeepImports": 168,
+      "crossDomainInfrastructureImports": 9
+    },
+    "expectedCandidate": {
+      "crossDomainDeepImports": 157,
+      "crossDomainInfrastructureImports": 9
+    }
+  },
+  "authorization": "Parent authorizes local main-convergence preparation of the two independently reviewed import batches, scoped ownership evidence and generated inventory. Publication, PR creation, commit, push, CI, merge and deployment are not performed or implied by this preparation.",
+  "releaseLimits": {
+    "productionDeploymentAllowed": false,
+    "productionMutationAllowed": false,
+    "secretValuesAllowed": false,
+    "releaseHoldsChanged": false
+  },
+  "verification": "Fresh focused frozen cached-only tests, Edge-adapter no-run typecheck, canonical function-identity probes, reconstruction, architecture and authority unit contracts are required. Local checks do not establish exact-head CI, hosted runtime qualification, merge readiness or production deployment.",
+  "localVerification": {
+    "denoVersion": "2.9.3",
+    "dependencyMode": "frozen cached-only, no acquisition",
+    "focusedTests": {
+      "passed": 48,
+      "failed": 0
+    },
+    "edgeAdapter": "PASS via deno test --no-run",
+    "canonicalFunctionIdentities": "PASS for resolveActivePlayerSession, resolvePlayerRequestScope and rejectClientSuppliedBodyIdentity",
+    "architectureRatchet": "PASS with157 deep imports and9 foreign implementation imports; no ceilings changed",
+    "authorityAndSeamUnitContracts": {
+      "passed": 54,
+      "failed": 0
+    },
+    "actualPrBoundAuthority": "NOT_RUN_PENDING_REAL_PR_NUMBER",
+    "exactHeadCi": "NOT_RUN",
+    "hostedRuntime": "NOT_RUN"
+  }
+}
