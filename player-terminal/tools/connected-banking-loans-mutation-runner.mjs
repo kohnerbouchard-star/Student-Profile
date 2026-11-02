@@ -222,7 +222,7 @@ async function reloadLoansSnapshot(page, pathSuffix = "/banking/loans") {
     .then(() => page.waitForResponse((response) => response.request().method() === "GET" &&
       new URL(response.url()).pathname.endsWith(pathSuffix)))
     .then((response) => response.json());
-  await reloadRoute(page, "loans", ".player-terminal-loans-page");
+  await reloadRoute(page, "loans", '.player-terminal-loans-page:not([data-skeleton-route="loans"])');
   return await payload;
 }
 

@@ -14,6 +14,8 @@ import {
 } from "../src/features/banking/banking-read-flow.js";
 import { renderBankingPage } from "../src/pages/banking-page.js";
 import { previewData } from "../src/data/preview-data.js";
+import { renderLoansPage } from "../src/pages/loans-page.js";
+import { renderRouteSkeleton } from "../src/components/route-skeletons.js";
 
 function formMarkup(source, endpoint) {
   const match = source.match(new RegExp(`<form[^>]*data-endpoint="${endpoint}"[^>]*>[\\s\\S]*?<\\/form>`, "u"));
@@ -359,6 +361,104 @@ test("Loans diagnostic preserves the original comparison, throw, single summary 
   assert.ok(runner.includes('expected: code(group.currencyCode) && money(group.outstanding) ? expected : null'));
   assert.ok(runner.includes('renderedSummary: captureLoanTotalsSummary(summary, currencies)'));
   assert.ok(runner.includes('code(row.currencyCode) && money(row.outstanding) ? [row.currencyCode] : []'));
+});
+
+function loansReloadFixture(source = fs.readFileSync(new URL("../tools/connected-banking-loans-mutation-runner.mjs", import.meta.url), "utf8")) {
+  const reloadSource = source.slice(source.indexOf("async function openRoute("), source.indexOf("async function openDisclosureForm("));
+  const comparison = source.slice(source.indexOf("  const projection = (loanPayload.data || loanPayload).currencyProjection;"), source.indexOf("  const repayForm = "));
+  const location = { hash: "#loans" }, frame = {}, foreignFrame = {};
+  const state = { phase: "loading", payloadRead: false, summaryReads: 0, waitTimeout: null, summary: "SYN 500.00", responseArmedAfterNavigation: false };
+  let navigate, settle, expire, navigated = false;
+  const loaded = structuredClone(previewData);
+  loaded.loans.currencyProjection = { version: 1, complete: true, groups: [{ currencyCode: "SYN", availableCredit: "2000.00", outstanding: "500.00", nextPayment: null }] };
+  const markup = () => state.phase === "loading" ? renderRouteSkeleton("loans") : state.phase === "error"
+    ? '<section class="player-terminal-page player-terminal-route-error">Unavailable</section>' : renderLoansPage(loaded, {});
+  const visible = (selector) => {
+    const tag = markup().match(/<section class="[^"]*\bplayer-terminal-loans-page\b[^"]*"[^>]*>/u)?.[0];
+    return Boolean(tag) && (!selector.includes(':not([data-skeleton-route="loans"])') || !tag.includes('data-skeleton-route="loans"'));
+  };
+  const payload = { document: "current", data: { currencyProjection: loaded.loans.currencyProjection } };
+  const page = {
+    mainFrame: () => frame,
+    waitForEvent: (name, options) => {
+      assert.equal(name, "framenavigated"); assert.equal(options.predicate(foreignFrame), false); assert.equal(options.predicate(frame), true);
+      return new Promise((resolve) => { navigate = resolve; });
+    },
+    waitForResponse: (predicate) => {
+      assert.equal(navigated, true, "The old document must not arm the response observer."); state.responseArmedAfterNavigation = true;
+      assert.equal(predicate({ request: () => ({ method: () => "POST" }), url: () => "http://fixture/banking/loans" }), false);
+      assert.equal(predicate({ request: () => ({ method: () => "GET" }), url: () => "http://fixture/other" }), false);
+      assert.equal(predicate({ request: () => ({ method: () => "GET" }), url: () => "http://fixture/banking/loans" }), true);
+      return Promise.resolve({ json: async () => { state.payloadRead = true; return payload; } });
+    },
+    reload: async (options) => {
+      assert.deepEqual(options, { waitUntil: "domcontentloaded", timeout: 120_000 });
+      assert.equal(state.responseArmedAfterNavigation, false); // Old-document response precedes the main-frame navigation.
+      navigated = true; navigate(frame);
+    },
+    waitForFunction: async (predicate, route, options) => { assert.equal(route, "loans"); assert.equal(predicate(route), true); assert.deepEqual(options, { timeout: 30_000 }); },
+    locator: (selector) => {
+      if (selector === '[data-route="loans"]:visible') return { first: () => ({ waitFor: async (options) => assert.deepEqual(options, { state: "visible", timeout: 30_000 }), click: async () => { location.hash = "#loans"; } }) };
+      if (selector === ".player-terminal-app-root") return { waitFor: async (options) => assert.deepEqual(options, { state: "visible", timeout: 120_000 }) };
+      if (selector === ".player-terminal-loan-metrics") return { innerText: async () => { state.summaryReads += 1; return state.phase === "loaded" ? state.summary : ""; } };
+      assert.match(selector, /^\.player-terminal-loans-page/u);
+      return { waitFor: (options) => {
+        assert.deepEqual(options, { state: "visible", timeout: 60_000 }); state.waitTimeout = options.timeout;
+        if (visible(selector)) return Promise.resolve();
+        return new Promise((resolve, reject) => { settle = () => { if (visible(selector)) resolve(); }; expire = () => reject(new Error("Loaded Loans page wait timed out")); });
+      } };
+    },
+    evaluate: async () => ({ loansRoute: true, pageVisible: state.phase === "loaded", metricsVisible: state.phase === "loaded", skeleton: state.phase === "loading", routeError: state.phase === "error", busy: state.phase === "loading" }),
+  };
+  const reload = new Function("location", `${reloadSource}; return reloadLoansSnapshot;`)(location);
+  const compare = new Function("page", "loanPayload", "captureLoanTotalsSummary", "evidence", "payloadObservedAt", `return (async () => { ${comparison} })();`);
+  return { state, markup, start: () => reload(page), commit: (phase) => { state.phase = phase; settle?.(); }, expire: () => expire?.(), compare: (value, evidence = {}) => compare(page, value, captureLoanTotalsSummary, evidence, 0) };
+}
+
+test("The prior Loans selector reproduces empty skeleton sampling in the same fixture", async () => {
+  const current = fs.readFileSync(new URL("../tools/connected-banking-loans-mutation-runner.mjs", import.meta.url), "utf8");
+  const prior = current.replace(`'.player-terminal-loans-page:not([data-skeleton-route="loans"])'`, '".player-terminal-loans-page"');
+  assert.notEqual(prior, current);
+  const fixture = loansReloadFixture(prior), evidence = {};
+  const payload = await fixture.start(); assert.equal(fixture.state.phase, "loading");
+  await assert.rejects(fixture.compare(payload, evidence), { message: "Connected Loans did not render authoritative exact totals." });
+  assert.equal(evidence.loanTotalsDiagnostic.renderedSummary.originalUtf8Bytes, 0);
+  assert.equal(evidence.loanTotalsDiagnostic.readiness.skeleton, true);
+});
+
+test("Loans snapshot consumes the new payload while waiting for delayed loaded rendering", async () => {
+  const fixture = loansReloadFixture();
+  assert.match(fixture.markup(), /class="[^"]*player-terminal-loans-page[^"]*player-terminal-route-skeleton/u);
+  assert.match(fixture.markup(), /class="player-terminal-loan-metrics"/u);
+  let completed = false;
+  const snapshot = fixture.start().then((value) => { completed = true; return value; });
+  await new Promise(setImmediate);
+  assert.equal(fixture.state.payloadRead, true); assert.equal(fixture.state.responseArmedAfterNavigation, true);
+  assert.equal(completed, false, "Visible skeletons cannot satisfy loaded-page readiness.");
+  assert.equal(fixture.state.summaryReads, 0); assert.equal(fixture.state.waitTimeout, 60_000);
+  fixture.commit("loaded");
+  const payload = await snapshot; assert.equal(payload.document, "current");
+  await fixture.compare(payload); assert.equal(fixture.state.summaryReads, 1);
+});
+
+test("Loans snapshots fail at the existing deadline for permanent loading and route errors", async () => {
+  for (const phase of ["loading", "error"]) {
+    const fixture = loansReloadFixture(); let completed = false;
+    const snapshot = fixture.start().then((value) => { completed = true; return value; });
+    await new Promise(setImmediate); fixture.commit(phase);
+    assert.equal(completed, false); assert.equal(fixture.state.summaryReads, 0); assert.equal(fixture.state.waitTimeout, 60_000);
+    const rejection = assert.rejects(snapshot, /Loaded Loans page wait timed out/u); fixture.expire(); await rejection;
+  }
+});
+
+test("Loaded Loans pages still reject incorrect totals with the original exact assertion", async () => {
+  for (const summary of ["SYN 499.99", "SYN 500.0", "SYN\u00a0500.00", ""]) {
+    const fixture = loansReloadFixture(), evidence = {};
+    const snapshot = fixture.start(); await new Promise(setImmediate); fixture.state.summary = summary; fixture.commit("loaded");
+    await assert.rejects(fixture.compare(await snapshot, evidence), { message: "Connected Loans did not render authoritative exact totals." });
+    assert.equal(fixture.state.summaryReads, 1);
+    assert.equal(evidence.loanTotalsDiagnostic.failedComparison.expected, "SYN 500.00");
+  }
 });
 
 test("Banking BFF materialization preserves its local dependency and owns success/failure cleanup", async () => {
