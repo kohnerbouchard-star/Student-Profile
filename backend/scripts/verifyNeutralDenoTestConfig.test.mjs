@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { edgeRootTypecheckPlan, runEdgeRootTypechecks, validateEdgeRootTypecheckPlan, verifyTypecheckOnlyImports } from "./typecheckAllEdgeRoots.mjs";
 import { CLASSROOM, NEUTRAL, LOCK, SUITES, validateConfigs, validateScripts, commandArgs, withConfig, junitCases, runParity } from "./verifyNeutralDenoTestConfig.mjs";
 
 const scripts = () => ({ ...Object.fromEntries(SUITES.map((key) => [key, `deno test --allow-read=fixtures/data.json --config ${NEUTRAL} --lock=${LOCK} --frozen fixtures/example.test.ts`])), "typecheck:edge": `deno check --config ${CLASSROOM} --lock=${LOCK} --frozen supabase/functions/classroom-api/index.ts` });
@@ -90,4 +92,142 @@ test("parity runs both configs for nineteen suites without a shell", () => {
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+const backendRoot = fileURLToPath(new URL("../", import.meta.url));
+const tslibUrl = "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs";
+const mapName = "scripts/typecheck-only/import-map.json";
+const vendorName = "scripts/typecheck-only/vendor/tslib-2.8.1/tslib.mjs";
+function typecheckFixture() {
+  const root = mkdtempSync(join(tmpdir(), "edge-typecheck-import-"));
+  for (const name of [LOCK, NEUTRAL, CLASSROOM, "supabase/functions/admin-api/deno.json", mapName, vendorName]) {
+    mkdirSync(dirname(join(root, name)), { recursive: true });
+    copyFileSync(join(backendRoot, name), join(root, name));
+  }
+  for (const slug of ["admin-api", "classroom-api", "player-api", "stock-market-runner"]) {
+    mkdirSync(join(root, "supabase/functions", slug), { recursive: true });
+    writeFileSync(join(root, "supabase/functions", slug, "index.ts"), "export {};\n");
+  }
+  return root;
+}
+function withTypecheckFixture(check) {
+  const root = typecheckFixture();
+  try { check(root); } finally { rmSync(root, { recursive: true, force: true }); }
+}
+function rejectBeforeDeno(root) {
+  let calls = 0;
+  assert.throws(() => runEdgeRootTypechecks(root, () => { calls++; return { status: 0 }; }));
+  assert.equal(calls, 0, "Rejected trusted-source input must never reach Deno");
+}
+
+test("typecheck plan preserves all 28 real roots and their three existing config groups", () => {
+  const plan = edgeRootTypecheckPlan(backendRoot);
+  validateEdgeRootTypecheckPlan(plan, backendRoot);
+  const expected = readdirSync(join(backendRoot, "supabase/functions"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && readdirSync(join(backendRoot, "supabase/functions", entry.name)).includes("index.ts"))
+    .map((entry) => join(backendRoot, "supabase/functions", entry.name, "index.ts")).sort();
+  assert.equal(expected.length, 28);
+  assert.equal(plan.length, 3);
+  assert.deepEqual(plan.flatMap((args) => args.slice(5)).sort(), expected);
+  assert.equal(plan[0][1], `--config=${join(backendRoot, "supabase/functions/admin-api/deno.json")}`);
+  assert.equal(plan[1][1], `--config=${join(backendRoot, NEUTRAL)}`);
+  assert.equal(plan[2][1], `--config=${join(backendRoot, CLASSROOM)}`);
+});
+
+test("trusted typecheck source keeps the original remote digest and verifies local bytes independently", () => {
+  withTypecheckFixture((root) => {
+    assert.equal(JSON.parse(readFileSync(join(root, LOCK))).remote[tslibUrl], "c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9");
+    assert.equal(verifyTypecheckOnlyImports(root), join(root, mapName));
+    const calls = [];
+    assert.equal(runEdgeRootTypechecks(root, (exe, args, options) => {
+      calls.push(args); assert.equal(exe, "deno"); assert.deepEqual(options, { stdio: "inherit" });
+      return { status: 0 };
+    }), 0);
+    assert.equal(calls.length, 3);
+    for (const args of calls) assert.equal(args[4], `--import-map=${join(root, mapName)}`);
+  });
+});
+
+test("missing, truncated and same-length modified local module are rejected before Deno", () => {
+  for (const change of [
+    (path) => rmSync(path),
+    (path) => writeFileSync(path, readFileSync(path).subarray(1)),
+    (path) => { const bytes = readFileSync(path); bytes[0] ^= 1; writeFileSync(path, bytes); },
+  ]) withTypecheckFixture((root) => { change(join(root, vendorName)); rejectBeforeDeno(root); });
+});
+
+test("missing or replaced original remote pin is rejected even when local module is accepted", () => {
+  for (const change of [
+    (lock) => { delete lock.remote[tslibUrl]; },
+    (lock) => { lock.remote[tslibUrl] = "a".repeat(64); },
+  ]) withTypecheckFixture((root) => {
+    const lock = JSON.parse(readFileSync(join(root, LOCK))); change(lock);
+    writeFileSync(join(root, LOCK), JSON.stringify(lock)); rejectBeforeDeno(root);
+  });
+});
+
+test("typecheck map rejects wrong targets, extra URLs, prefixes, queries and scopes", () => {
+  const target = "./vendor/tslib-2.8.1/tslib.mjs";
+  for (const map of [
+    { imports: {} },
+    { imports: { [tslibUrl]: "./other.mjs" } },
+    { imports: { [tslibUrl]: target, "https://esm.sh/tslib@2.8.2/denonext/tslib.mjs": target } },
+    { imports: { "https://esm.sh/tslib@2.8.1/": "./vendor/tslib-2.8.1/" } },
+    { imports: { [`${tslibUrl}?target=deno`]: target } },
+    { imports: { [tslibUrl]: target }, scopes: {} },
+  ]) withTypecheckFixture((root) => {
+    writeFileSync(join(root, mapName), JSON.stringify(map)); rejectBeforeDeno(root);
+  });
+});
+
+test("typecheck config shapes reject compiler or resolution changes in every retained config", () => {
+  for (const name of [NEUTRAL, CLASSROOM, "supabase/functions/admin-api/deno.json"]) {
+    for (const change of [
+      (config) => { config.imports = { [tslibUrl]: "./other.mjs" }; },
+      (config) => { config.compilerOptions.strict = !config.compilerOptions.strict; },
+    ]) withTypecheckFixture((root) => {
+        const config = JSON.parse(readFileSync(join(root, name))); change(config);
+        writeFileSync(join(root, name), JSON.stringify(config)); rejectBeforeDeno(root);
+      });
+  }
+});
+
+test("typecheck plan rejects omitted roots/groups and missing or replaced config, lock, frozen or map operands", () => {
+  const changes = [
+    (plan) => plan.pop(),
+    (plan) => plan[1].pop(),
+    (plan) => plan[0].splice(1, 1),
+    (plan) => { plan[0][1] = plan[1][1]; },
+    (plan) => plan[0].splice(2, 1),
+    (plan) => plan[0].splice(3, 1),
+    (plan) => { plan[0][3] = "--frozen=false"; },
+    (plan) => plan[0].splice(4, 1),
+  ];
+  withTypecheckFixture((root) => {
+    for (const change of changes) {
+      const plan = edgeRootTypecheckPlan(root); change(plan);
+      assert.throws(() => validateEdgeRootTypecheckPlan(plan, root));
+    }
+  });
+});
+
+test("local integrity is rechecked before each Deno invocation and child failures do not fall back", () => {
+  withTypecheckFixture((root) => {
+    let calls = 0;
+    assert.throws(() => runEdgeRootTypechecks(root, () => {
+      calls++; writeFileSync(join(root, vendorName), "changed"); return { status: 0 };
+    }));
+    assert.equal(calls, 1);
+  });
+  for (const result of [{ status: 10 }, { status: null, signal: "SIGTERM" }]) {
+    withTypecheckFixture((root) => {
+      let calls = 0;
+      assert.equal(runEdgeRootTypechecks(root, () => { calls++; return result; }), result.status ?? 1);
+      assert.equal(calls, 1);
+    });
+  }
+  withTypecheckFixture((root) => {
+    const error = new Error("Deno unavailable");
+    assert.throws(() => runEdgeRootTypechecks(root, () => ({ error, status: null })), (value) => value === error);
+  });
 });

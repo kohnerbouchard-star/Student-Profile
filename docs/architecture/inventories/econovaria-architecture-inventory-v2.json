@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1280,
+    "sourceFiles": 1286,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 168,
+    "crossDomainDeepImports": 162,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -141,8 +141,10 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 46,
-      "publicBoundaryFiles": []
+      "sourceFiles": 47,
+      "publicBoundaryFiles": [
+        "backend/src/domains/contracts/index.ts"
+      ]
     },
     {
       "name": "countries",
@@ -342,8 +344,10 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 96,
-      "publicBoundaryFiles": []
+      "sourceFiles": 97,
+      "publicBoundaryFiles": [
+        "backend/src/domains/stocks/index.ts"
+      ]
     },
     {
       "name": "store",
@@ -355,7 +359,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 60,
+      "sourceFiles": 62,
       "publicBoundaryFiles": [
         "backend/src/domains/store/index.ts"
       ]
@@ -366,10 +370,11 @@
         "api",
         "contracts",
         "infrastructure",
+        "server",
         "services",
         "tests"
       ],
-      "sourceFiles": 74,
+      "sourceFiles": 76,
       "publicBoundaryFiles": []
     },
     {
@@ -891,6 +896,12 @@
       {
         "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
         "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/dashboardReadModel.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
+        "ownerDomain": "game-dashboard",
         "importedDomain": "storylines",
         "target": "../../storylines/contracts/storyNotificationContracts.ts"
       },
@@ -899,6 +910,12 @@
         "ownerDomain": "game-dashboard",
         "importedDomain": "players",
         "target": "../../players/api/playerSessionHttpHelpers.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/dashboardReadModel.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
@@ -921,18 +938,6 @@
       {
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
         "ownerDomain": "game-dashboard",
-        "importedDomain": "contracts",
-        "target": "../../contracts/contracts/contractHttpContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketReadContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
-        "ownerDomain": "game-dashboard",
         "importedDomain": "stocks",
         "target": "../../stocks/contracts/stockMarketPlayerReadContracts.ts"
       },
@@ -940,7 +945,7 @@
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "store",
-        "target": "../../store/contracts/storeCatalogContracts.ts"
+        "target": "../../store/dashboardReadModel.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
@@ -958,49 +963,13 @@
         "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "stocks",
-        "target": "../../stocks/infrastructure/supabaseStockMarketWindowRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketReadContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketReadContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
         "target": "../../stocks/contracts/stockMarketPlayerReadContracts.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
         "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/infrastructure/supabaseStockMarketReadRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
         "importedDomain": "store",
-        "target": "../../store/contracts/storeCatalogContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "contracts",
-        "target": "../../contracts/infrastructure/supabaseContractRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "contracts",
-        "target": "../../contracts/contracts/contractHttpContracts.ts"
+        "target": "../../store/dashboardReadModel.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
@@ -1474,7 +1443,7 @@
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
         "ownerDomain": "stocks",
         "importedDomain": "storylines",
-        "target": "../../storylines/infrastructure/supabasePlayerStoryContextRepository.ts"
+        "target": "../../storylines/server/playerContextReadQuery.ts"
       },
       {
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
@@ -3187,7 +3156,7 @@
     "oversizedFiles": [
       {
         "file": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
-        "lines": 1811
+        "lines": 2485
       },
       {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
@@ -3195,7 +3164,7 @@
       },
       {
         "file": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
-        "lines": 1194
+        "lines": 1196
       },
       {
         "file": "player-terminal/src/app.js",
@@ -3226,10 +3195,6 @@
         "lines": 998
       },
       {
-        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "lines": 960
-      },
-      {
         "file": "admin/v2/src/routes/world-management/WorldManagementRoute.js",
         "lines": 935
       },
@@ -3244,6 +3209,10 @@
       {
         "file": "admin/v2/src/api/admin-api-client.js",
         "lines": 908
+      },
+      {
+        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+        "lines": 895
       },
       {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
@@ -3290,6 +3259,10 @@
         "lines": 809
       },
       {
+        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+        "lines": 787
+      },
+      {
         "file": "backend/src/domains/storylines/services/storyEffectEngine.ts",
         "lines": 778
       },
@@ -3304,10 +3277,6 @@
       {
         "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.test.ts",
         "lines": 767
-      },
-      {
-        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
-        "lines": 749
       },
       {
         "file": "backend/src/simulations/economy/deterministicEconomicSimulation.ts",

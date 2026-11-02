@@ -98,6 +98,8 @@ Deno.test("econovaria demo storyline loop resolves cutscene ledger and contract 
         },
       }),
       readRunnerSecret: () => SECRET,
+      now: () => new Date(FIRST_TICK_AT),
+      readMarketOpenState: async () => true,
       createRepository: () => stockRepository,
       calculateNextTick: calculateDeterministicTick,
       createPublicRealtimePublisher: () => new NoopPublicRealtimePublisher(),

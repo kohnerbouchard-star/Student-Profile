@@ -1,9 +1,134 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import test from "node:test";
+import { observeOnboardingEdgeFailure, sanitizeOnboardingRuntimeLog } from "./onboarding-edge-failure-receipt.mjs";
 
 const ROOT = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, ROOT), "utf8");
+
+test("Onboarding observation preserves requests and failures without exposing response data", async () => {
+  const workflow = await read(".github/workflows/runtime-stabilization-onboarding.yml");
+  const block = workflow.split("      - name: Prove publishable-key functions are reachable\n")[1].split("      - name: Observe owned Edge runtime after failed OPTIONS\n")[0];
+  const source = block.split("        run: |\n")[1].split("\n").map((line) => line.slice(10)).join("\n");
+  assert.equal(spawnSync("bash", ["-n"], { input: source }).status, 0);
+  const root = await mkdtemp(join(tmpdir(), "onboarding-observation-"));
+  const functions = ["player-api", "bootstrap-api", "stock-market-runner", "stock-market-read", "stock-market-seed-copy", "stock-market-player-read", "stock-market-trading"];
+  try {
+    const bin = join(root, "bin"); await mkdir(bin);
+    await writeFile(join(bin, "npx"), '#!/bin/bash\n[ "$*" = "supabase status --workdir backend -o env" ] || exit 99\nprintf "API_URL=%q\\nPUBLISHABLE_KEY=%q\\n" "$STUB_API" "$STUB_KEY"\n', { mode: 0o700 });
+    await writeFile(join(bin, "curl"), [
+      "#!/bin/bash", 'printf "%s\\0" "$@" >>"$STUB_CALLS"', 'printf "\\n" >>"$STUB_CALLS"',
+      'NAME="${!#}"; NAME="${NAME##*/}"', 'HTTP=204; CODE=0; TEXT=""',
+      'if [ "$NAME" = "$STUB_FAIL" ]; then HTTP="$STUB_HTTP"; CODE="$STUB_EXIT"; TEXT="$STUB_BODY"; fi',
+      'printf "%s" "$TEXT" >"$4"', 'printf "%s" "$HTTP"', 'printf "%s" "PRIVATE_CURL_STDERR" >&2', 'exit "$CODE"', "",
+    ].join("\n"), { mode: 0o700 });
+    const cases = [
+      { code: 0, count: 7, error: "none" },
+      { api: "", code: 1, count: 0, error: "api_url_missing" },
+      { key: "", code: 1, count: 0, error: "publishable_key_missing" },
+      { key: "PRIVATE_INVALID_KEY", code: 1, count: 0, error: "publishable_key_shape" },
+      { exit: "7", http: "000", code: 7, count: 3, error: "connection_error" },
+      { http: "503", code: 1, count: 3, error: "unexpected_http_status" },
+      { http: '204"::error::PRIVATE_STATUS', code: 1, count: 3, error: "unexpected_http_status" },
+      ...["name resolution failed", "connection refused", "upstream unavailable"].map((body) => ({ body: `${body} PRIVATE_BODY`, code: 1, count: 3, error: "response_transport_error" })),
+    ];
+    for (const scenario of cases) {
+      const callsPath = join(root, "calls"); await writeFile(callsPath, "");
+      const api = scenario.api ?? "http://127.0.0.1:54321", key = scenario.key ?? "sb_publishable_offline_fixture";
+      const result = spawnSync("bash", ["--noprofile", "--norc", "-s"], {
+        input: source.replaceAll("/tmp/", `${root}/`), cwd: root, encoding: "utf8", timeout: 5000,
+        env: { PATH: `${bin}:${process.env.PATH}`, STUB_CALLS: callsPath, STUB_API: api, STUB_KEY: key, STUB_FAIL: "stock-market-runner", STUB_HTTP: scenario.http ?? "204", STUB_EXIT: scenario.exit ?? "0", STUB_BODY: scenario.body ?? "" },
+      });
+      assert(!result.error); assert.equal(result.status, scenario.code);
+      const calls = (await readFile(callsPath, "utf8")).split("\n").filter(Boolean).map((line) => line.split("\0").slice(0, -1));
+      assert.equal(calls.length, scenario.count);
+      calls.forEach((args, index) => assert.deepEqual(args, ["--silent", "--show-error", "--output", `${root}/${functions[index]}-options.body`, "--write-out", "%{http_code}", "--request", "OPTIONS", "--header", `apikey: ${key}`, `${api}/functions/v1/${functions[index]}`]));
+      const records = result.stdout.split("\n").filter((line) => line.startsWith("ONBOARDING_OPTIONS ")).map((line) => JSON.parse(line.slice("ONBOARDING_OPTIONS ".length)));
+      assert.equal(records.length, scenario.count + 1);
+      assert.equal(records[0].apiUrlPresent, Boolean(api)); assert.equal(records[0].publishableKeyPresent, Boolean(key));
+      assert.equal(records.at(-1).errorClass, scenario.error);
+      if (scenario.count) {
+        assert.equal(records.at(-1).function, functions[scenario.count - 1]);
+        assert.equal(records.at(-1).curlExit, Number(scenario.exit ?? "0"));
+        assert.equal(records.at(-1).httpStatus, scenario.http?.length === 3 ? scenario.http : scenario.http ? "invalid" : "204");
+      }
+      assert(!`${result.stdout}${result.stderr}`.includes("PRIVATE"));
+      assert(!result.stdout.includes("sb_publishable_offline_fixture") && !result.stdout.includes(api || "http://127.0.0.1:54321"));
+    }
+  } finally { await rm(root, { recursive: true }); }
+});
+
+test("Onboarding runtime capture is failure-only, read-only and separately bounded", async () => {
+  const workflow = await read(".github/workflows/runtime-stabilization-onboarding.yml");
+  const capture = workflow.split("      - name: Observe owned Edge runtime after failed OPTIONS\n")[1].split("      - name: Stop local Supabase\n")[0];
+  assert.match(capture, /failure\(\) && !cancelled\(\) && steps\.local-options\.outcome == 'failure'/u);
+  assert.match(capture, /timeout-minutes: 1/u);
+  assert.match(capture, /run: node scripts\/onboarding-edge-failure-receipt\.mjs capture/u);
+  assert.match(workflow, /node scripts\/onboarding-edge-failure-receipt\.mjs prepare\n\s+EXCLUDED=/u);
+  assert.match(workflow, /- name: Prove publishable-key functions are reachable\n\s+id: local-options/u);
+});
+
+test("Onboarding reads logs only after exact same-job container ownership is established", async () => {
+  const root = await mkdtemp(join(tmpdir(), "onboarding-container-"));
+  const head = "a".repeat(40), id = "b".repeat(64), now = Date.parse("2026-11-01T00:00:00Z");
+  try {
+    for (const scenario of ["valid", "preexisting", "wrong-label", "wrong-name", "wrong-id", "old-container", "wrong-run", "wrong-attempt", "wrong-head", "remote-context", "remote-host", "timeout", "signal", "logs-failed", "unknown-absence"]) {
+      const dir = join(root, scenario); await mkdir(dir);
+      const calls = [];
+      const env = { PATH: process.env.PATH, RUNNER_TEMP: dir, GITHUB_RUN_ID: "123", GITHUB_RUN_ATTEMPT: "1", GITHUB_JOB: "local-functions", RELEASE_COMMIT: head, PRIVATE_TOKEN: "PRIVATE_INHERITED_TOKEN" };
+      const run = (tool, args, options) => {
+        calls.push([tool, ...args]);
+        assert.equal(options.timeout, 5000); assert.equal(options.maxBuffer, 131072);
+        assert(!("PRIVATE_TOKEN" in options.env));
+        const result = { status: 0, signal: null, stdout: "", stderr: "" };
+        if (tool === "git") { assert.deepEqual(args, ["rev-parse", "HEAD"]); return { ...result, stdout: head + "\n" }; }
+        assert.equal(tool, "docker");
+        if (args[0] === "context") return { ...result, stdout: JSON.stringify(scenario === "remote-context" ? "tcp://remote:2375" : "unix:///var/run/docker.sock") };
+        if (args[0] === "container") {
+          assert.equal(args.at(-1), "supabase_edge_runtime_econovaria");
+          if (args[3] === "{{.Id}}") return scenario === "preexisting" ? { ...result, stdout: id } : { ...result, status: 1, stderr: scenario === "unknown-absence" ? "daemon unavailable" : "Error: No such container: supabase_edge_runtime_econovaria\n" };
+          return { ...result, stdout: JSON.stringify({ id: scenario === "wrong-id" ? "bad-id" : id, name: scenario === "wrong-name" ? "/foreign" : "/supabase_edge_runtime_econovaria", project: scenario === "wrong-label" ? "foreign" : "econovaria", created: new Date(now + (scenario === "old-container" ? -1000 : 1000)).toISOString() }) };
+        }
+        assert.deepEqual(args, ["logs", "--since", new Date(now).toISOString(), "--tail", "80", "--timestamps", id]);
+        if (scenario === "timeout") return { ...result, error: Object.assign(new Error("PRIVATE_PROCESS_ERROR"), { code: "ETIMEDOUT" }) };
+        if (scenario === "signal") return { ...result, signal: "SIGTERM", status: null };
+        if (scenario === "logs-failed") return { ...result, status: 1, stderr: "PRIVATE_DOCKER_ERROR" };
+        return { ...result, stdout: "worker boot error: module not found", stderr: "token=PRIVATE_CONTAINER_TOKEN" };
+      };
+      const options = { env, run, now: () => now };
+      observeOnboardingEdgeFailure("prepare", options);
+      if (scenario === "wrong-run") env.GITHUB_RUN_ID = "456";
+      if (scenario === "wrong-attempt") env.GITHUB_RUN_ATTEMPT = "2";
+      if (scenario === "wrong-head") env.RELEASE_COMMIT = "c".repeat(40);
+      if (scenario === "remote-host") env.DOCKER_HOST = "tcp://remote:2375";
+      const result = observeOnboardingEdgeFailure("capture", options);
+      assert.equal(result.available, scenario === "valid");
+      assert.equal(calls.filter((args) => args[1] === "logs").length, ["valid", "timeout", "signal", "logs-failed"].includes(scenario) ? 1 : 0);
+      assert(!JSON.stringify(result).includes("PRIVATE"));
+      if (scenario === "valid") assert(result.log.lines.join("\n").includes("module not found"));
+    }
+  } finally { await rm(root, { recursive: true }); }
+});
+
+test("Onboarding runtime data preserves errors while redacting credentials and bounding JSON", () => {
+  const raw = [
+    "worker boot error: UnfamiliarModuleFailure at https://user:PRIVATE_USER@esm.sh/tslib.mjs?token=PRIVATE_QUERY#PRIVATE_FRAGMENT",
+    'Authorization: Bearer PRIVATE_BEARER', '"token":"PRIVATE_JSON_TOKEN"', '"access_token":"PRIVATE_ACCESS_TOKEN"', "sb_secret_PRIVATE_SUPABASE_KEY",
+    "https://proxy:PRIVATE_PROXY@example.com:8080", "PRIVATE_ENV_VALUE", "person@example.com",
+    "d9428888-122b-4aa9-8e2f-00c0655adcf2", "\u001b[31m::error::untrusted command\u001b[0m",
+    ...Array.from({ length: 200 }, () => "界".repeat(100)),
+  ].join("\n");
+  const receipt = sanitizeOnboardingRuntimeLog(raw, { HTTPS_PROXY: "https://proxy:PRIVATE_PROXY@example.com:8080", PRIVATE_TOKEN: "PRIVATE_ENV_VALUE" });
+  const serialized = JSON.stringify(receipt);
+  assert(!serialized.includes("PRIVATE") && !serialized.includes("person@example.com") && !serialized.includes("d9428888"));
+  assert(serialized.includes("UnfamiliarModuleFailure") && serialized.includes("https://esm.sh/tslib.mjs"));
+  assert(!serialized.includes("\u001b") && !serialized.includes("\n"));
+  assert.equal(receipt.originalBytes, Buffer.byteLength(raw)); assert.match(receipt.sha256, /^[a-f0-9]{64}$/u);
+  assert(receipt.truncated); assert(Buffer.byteLength(serialized) <= 8192);
+});
 
 const browserSources = [
   "frontend/src/core/runtime-config.js",

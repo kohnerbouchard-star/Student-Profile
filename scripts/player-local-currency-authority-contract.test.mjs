@@ -1,6 +1,21 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
+const workflow = fs.readFileSync(".github/workflows/player-local-currency-authority.yml", "utf8");
+const focusedChecks = workflow.split("      - name: Check focused TypeScript formatting and types\n")[1];
+const guard = 'node --input-type=module -e \'import { resolve } from "node:path"; import { verifyTypecheckOnlyImports } from "./backend/scripts/typecheckAllEdgeRoots.mjs"; verifyTypecheckOnlyImports(resolve("backend"));\'';
+assert.equal(focusedChecks.split(guard).length - 1, 2);
+const typechecks = focusedChecks.split(guard).slice(1).map((block) => block.replace(/\\\n\s*/gu, " ").trim().split(/\s+/u));
+const operand = "--import-map=backend/scripts/typecheck-only/import-map.json";
+assert.deepEqual(typechecks, [
+  ["deno", "check", "--config", "backend/supabase/functions/classroom-api/deno.json", "--lock=backend/supabase/functions/deno.lock", "--frozen", operand,
+    "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts", "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+    "backend/src/domains/players/api/playerSessionBootstrapCurrencyHttpHandler.test.ts", "backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts", "backend/src/domains/players/contracts/playerBrowserSessionContracts.ts"],
+  ["deno", "check", "--config", "backend/supabase/functions/admin-api/deno.json", "--lock=backend/supabase/functions/deno.lock", "--frozen", operand,
+    "backend/src/domains/contracts/application/adminContractMutation.ts", "backend/src/platform/supabase/adminMutation.ts", "backend/supabase/functions/admin-api/attendanceOperations.ts",
+    "backend/supabase/functions/admin-api/idempotentLedgerOperations.ts", "backend/supabase/functions/admin-api/readExtensions.ts", "backend/supabase/functions/admin-api/gameRoutes.ts"],
+]);
+
 const adminWiring = fs.readFileSync("admin/ledger-adjustment-wiring.js", "utf8");
 const adminWriteLifecycle = fs.readFileSync(
   "admin/classroom-write-fallback.js",

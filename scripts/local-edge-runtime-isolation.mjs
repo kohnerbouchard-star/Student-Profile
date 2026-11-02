@@ -2,6 +2,8 @@
 
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
+import { sanitizeOnboardingRuntimeLog } from "./onboarding-edge-failure-receipt.mjs";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:4173";
 const DEFAULT_POLL_MS = 500;
@@ -17,6 +19,9 @@ const PROBE_TIMEOUT_GRACE_MS = 5_000;
 const STATIC_PROBE_TIMEOUT_MS = 5_000;
 const RECOVERY_TIMEOUT_GRACE_MS = 30_000;
 const DOCKER_COMMAND_TIMEOUT_MS = 30_000;
+const DIAGNOSTIC_TIMEOUT_MS = 1_000;
+const DIAGNOSTIC_MAX_BYTES = 4_096;
+const STATE_FORMAT = '{"id":{{json .Id}},"name":{{json .Name}},"project":{{json (index .Config.Labels "com.supabase.cli.project")}},"running":{{json .State.Running}},"status":{{json .State.Status}},"exitCode":{{json .State.ExitCode}},"oomKilled":{{json .State.OOMKilled}},"startedAt":{{json .State.StartedAt}},"finishedAt":{{json .State.FinishedAt}},"error":{{json .State.Error}}}';
 const EDGE_CONTAINER_PATTERN = /^supabase_edge_runtime_[A-Za-z0-9_.-]+$/u;
 const KONG_CONTAINER_PATTERN = /^supabase_kong_[A-Za-z0-9_.-]+$/u;
 const READY_TARGETS = Object.freeze([
@@ -99,6 +104,10 @@ export async function restartLocalEdgeRuntime({
   let lastFailure = "not_started";
 
   for (let recoveryAttempt = 1; recoveryAttempt <= recoveryAttempts; recoveryAttempt += 1) {
+    const running = (phase) => runtimeContainersAreRunning(execFile, containers, (role, cause) => {
+      try { observeRunningFailure({ execFile, containers, role, cause, recoveryAttempt, phase, log }); }
+      catch { /* Diagnostics cannot replace the original running-check result. */ }
+    });
     try {
       restartExactRuntimeContainers(execFile, containers);
     } catch {
@@ -114,7 +123,7 @@ export async function restartLocalEdgeRuntime({
       recoveryReadinessWaves < MAX_READINESS_WAVES_PER_RECOVERY &&
       now() - recoveryStartedAt <= recoveryTimeoutMs
     ) {
-      if (!runtimeContainersAreRunning(execFile, containers)) {
+      if (!running("before_probe")) {
         lastFailure = "container_not_running";
         break;
       }
@@ -154,7 +163,7 @@ export async function restartLocalEdgeRuntime({
         lastReadyWaves = consecutiveReadyWaves;
         if (consecutiveReadyWaves >= stableWaves) {
           if (settleMs > 0) await sleep(settleMs);
-          if (!runtimeContainersAreRunning(execFile, containers)) {
+          if (!running("after_settle")) {
             lastFailure = "container_not_running_after_settle";
             break;
           }
@@ -174,7 +183,7 @@ export async function restartLocalEdgeRuntime({
       } else {
         consecutiveReadyWaves = 0;
         lastReadyWaves = 0;
-        if (!runtimeContainersAreRunning(execFile, containers)) {
+        if (!running("after_probe_failure")) {
           lastFailure = "container_not_running";
           break;
         }
@@ -251,8 +260,8 @@ function isAcceptedReadinessStatus(target, status) {
     : status === 200;
 }
 
-function runtimeContainersAreRunning(execFile, containers) {
-  return [containers.edge, containers.kong].every((containerName) => {
+function runtimeContainersAreRunning(execFile, containers, observeFailure) {
+  return [["edge", containers.edge], ["kong", containers.kong]].every(([role, containerName]) => {
     try {
       const output = String(execFile(
         "docker",
@@ -263,11 +272,69 @@ function runtimeContainersAreRunning(execFile, containers) {
           timeout: DOCKER_COMMAND_TIMEOUT_MS,
         },
       ) || "").trim();
+      if (output !== "true") observeFailure(role, { type: output === "false" ? "reported_not_running" : "unrecognized_running_state" });
       return output === "true";
-    } catch {
+    } catch (error) {
+      observeFailure(role, { type: "inspect_failure", error });
       return false;
     }
   });
+}
+
+function safeProcessFailure(error) {
+  return {
+    code: ["ENOENT", "EACCES", "EPERM", "ETIMEDOUT", "ENOBUFS"].includes(error?.code) ? error.code : "other",
+    status: Number.isInteger(error?.status) && error.status >= 0 && error.status <= 255 ? error.status : null,
+    signal: ["SIGTERM", "SIGKILL", "SIGABRT"].includes(error?.signal) ? error.signal : null,
+  };
+}
+
+// Additional read-only snapshot, never a replacement for the original boolean gate.
+function observeRunningFailure({ execFile, containers, role, cause, recoveryAttempt, phase, log }) {
+  const receipt = { event: "local_edge_runtime_running_check_failed", role, recoveryAttempt, phase,
+    condition: cause.type, available: false, errorClass: "diagnostic_unavailable" };
+  try {
+    if (cause.error) receipt.inspectFailure = safeProcessFailure(cause.error);
+    const project = readFileSync(new URL("../backend/supabase/config.toml", import.meta.url), "utf8")
+      .match(/^\s*project_id\s*=\s*"([A-Za-z0-9_.-]+)"\s*$/mu)?.[1];
+    const name = containers[role];
+    if (!project || containers.edge !== `supabase_edge_runtime_${project}` || containers.kong !== `supabase_kong_${project}`) {
+      receipt.errorClass = "ownership_unverified"; return;
+    }
+    if (process.env.DOCKER_HOST && process.env.DOCKER_HOST !== "unix:///var/run/docker.sock") {
+      receipt.errorClass = "local_docker_unverified"; return;
+    }
+    const options = { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: DIAGNOSTIC_TIMEOUT_MS, maxBuffer: DIAGNOSTIC_MAX_BYTES };
+    const context = String(execFile("docker", ["context", "inspect", "--format", "{{json .Endpoints.docker.Host}}"], options));
+    if (Buffer.byteLength(context) > DIAGNOSTIC_MAX_BYTES || JSON.parse(context) !== "unix:///var/run/docker.sock") {
+      receipt.errorClass = "local_docker_unverified"; return;
+    }
+    const raw = String(execFile("docker", ["inspect", "--format", STATE_FORMAT, name], options));
+    if (Buffer.byteLength(raw) > DIAGNOSTIC_MAX_BYTES) { receipt.errorClass = "diagnostic_oversized"; return; }
+    const state = JSON.parse(raw);
+    if (state.name !== `/${name}` || state.project !== project || !/^[a-f0-9]{64}$/u.test(state.id)) {
+      receipt.errorClass = "ownership_unverified"; return;
+    }
+    const safeTime = (value) => typeof value === "string" && value.length <= 40 && /^\d{4}-\d\d-\d\dT[\d:.]+Z$/u.test(value) ? value : null;
+    const sanitized = typeof state.error === "string" ? sanitizeOnboardingRuntimeLog(state.error, process.env).lines.join("\n") : "";
+    let error = "";
+    for (const point of sanitized) { if (Buffer.byteLength(error + point) > 512) break; error += point; }
+    receipt.available = true; receipt.errorClass = "none";
+    receipt.postCheckState = {
+      running: typeof state.running === "boolean" ? state.running : null,
+      status: ["created", "running", "paused", "restarting", "removing", "exited", "dead"].includes(state.status) ? state.status : null,
+      exitCode: Number.isInteger(state.exitCode) && state.exitCode >= 0 && state.exitCode <= 255 ? state.exitCode : null,
+      oomKilled: typeof state.oomKilled === "boolean" ? state.oomKilled : null,
+      startedAt: safeTime(state.startedAt), finishedAt: safeTime(state.finishedAt), error,
+      errorTruncated: error.length !== sanitized.length,
+    };
+    if (Buffer.byteLength(JSON.stringify(receipt)) > DIAGNOSTIC_MAX_BYTES) throw new Error("Diagnostic size limit");
+  } catch (error) {
+    delete receipt.postCheckState; receipt.available = false; receipt.errorClass = "diagnostic_inspect_failed";
+    receipt.diagnosticFailure = safeProcessFailure(error);
+  } finally {
+    try { log(JSON.stringify(receipt)); } catch { /* The original readiness failure remains primary. */ }
+  }
 }
 
 async function probeReadinessTarget({

@@ -55,8 +55,8 @@ import {
   SupabaseContractRepository,
 } from "../../contracts/infrastructure/supabaseContractRepository.ts";
 import {
-  SupabasePlayerStoryContextRepository,
-} from "../../storylines/infrastructure/supabasePlayerStoryContextRepository.ts";
+  createPlayerStoryContextReadQuery,
+} from "../../storylines/server/playerContextReadQuery.ts";
 import {
   createStoryNotificationPublisher,
 } from "../../notifications/public/storyNotifications.ts";
@@ -401,14 +401,14 @@ function createDefaultStorylineRunnerAfterTick(
   const notificationRepository = createStoryNotificationPublisher(
     client as any,
   );
-  const playerContextRepository = new SupabasePlayerStoryContextRepository(
+  const playerContextReadQuery = createPlayerStoryContextReadQuery(
     client as any,
   );
   const contractRepository = new SupabaseContractRepository(client as any);
   const ledger = new SupabaseStoryEffectLedgerWriter(client as any);
 
   return async (input) => {
-    const playerContexts = await playerContextRepository
+    const playerContexts = await playerContextReadQuery
       .listPlayerStoryContexts(
         input.gameSessionId,
       );

@@ -98,16 +98,29 @@ jobs:
 
       - name: Start local Supabase with Edge Functions
         shell: bash
+        env:
+          RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
+          node scripts/onboarding-edge-failure-receipt.mjs prepare
           EXCLUDED="studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit"
           npx supabase start --workdir backend --exclude "$EXCLUDED"
 
       - name: Prove publishable-key functions are reachable
+        id: local-options
         shell: bash
         run: |
           set -euo pipefail
           eval "$(npx supabase status --workdir backend -o env)"
+          API_PRESENT=false; KEY_PRESENT=false; KEY_SHAPE=false
+          if test -n "${API_URL:-}"; then API_PRESENT=true; fi
+          if test -n "${PUBLISHABLE_KEY:-}"; then KEY_PRESENT=true; fi
+          case "${PUBLISHABLE_KEY:-}" in sb_publishable_*) KEY_SHAPE=true ;; esac
+          ERROR_CLASS=none
+          if [ "$API_PRESENT" = false ]; then ERROR_CLASS=api_url_missing
+          elif [ "$KEY_PRESENT" = false ]; then ERROR_CLASS=publishable_key_missing
+          elif [ "$KEY_SHAPE" = false ]; then ERROR_CLASS=publishable_key_shape; fi
+          printf 'ONBOARDING_OPTIONS {"condition":"configuration","function":null,"curlExit":null,"httpStatus":null,"apiUrlPresent":%s,"publishableKeyPresent":%s,"errorClass":"%s"}\n' "$API_PRESENT" "$KEY_PRESENT" "$ERROR_CLASS"
           test -n "${API_URL:-}"
           test -n "${PUBLISHABLE_KEY:-}"
           case "$PUBLISHABLE_KEY" in
@@ -116,16 +129,41 @@ jobs:
           esac
           for FUNCTION_NAME in player-api bootstrap-api stock-market-runner stock-market-read stock-market-seed-copy stock-market-player-read stock-market-trading; do
             BODY="/tmp/${FUNCTION_NAME}-options.body"
+            CURL_EXIT=0
             STATUS="$(curl --silent --show-error --output "$BODY" --write-out '%{http_code}' \
               --request OPTIONS \
               --header "apikey: ${PUBLISHABLE_KEY}" \
-              "${API_URL}/functions/v1/${FUNCTION_NAME}")"
+              "${API_URL}/functions/v1/${FUNCTION_NAME}" 2>/dev/null)" || CURL_EXIT=$?
+            HTTP_STATUS=invalid
+            case "$STATUS" in [0-9][0-9][0-9]) HTTP_STATUS="$STATUS" ;; esac
+            ERROR_CLASS=none; BODY_ERROR=false
+            case "$CURL_EXIT" in
+              0) ;;
+              6) ERROR_CLASS=dns_error ;;
+              7) ERROR_CLASS=connection_error ;;
+              28) ERROR_CLASS=timeout ;;
+              35|51|60) ERROR_CLASS=tls_error ;;
+              *) ERROR_CLASS=curl_error ;;
+            esac
+            if [ "$CURL_EXIT" -eq 0 ]; then
+              if grep -Eqi 'name resolution failed|connection refused|upstream unavailable' "$BODY" 2>/dev/null; then
+                BODY_ERROR=true; ERROR_CLASS=response_transport_error
+              elif [ "$STATUS" != "204" ]; then ERROR_CLASS=unexpected_http_status; fi
+            fi
+            printf 'ONBOARDING_OPTIONS {"condition":"options","function":"%s","curlExit":%d,"httpStatus":"%s","errorClass":"%s"}\n' "$FUNCTION_NAME" "$CURL_EXIT" "$HTTP_STATUS" "$ERROR_CLASS"
+            if [ "$CURL_EXIT" -ne 0 ]; then exit "$CURL_EXIT"; fi
             test "$STATUS" = "204"
-            if grep -Eqi 'name resolution failed|connection refused|upstream unavailable' "$BODY"; then
-              cat "$BODY"
+            if [ "$BODY_ERROR" = true ]; then
               exit 1
             fi
           done
+
+      - name: Observe owned Edge runtime after failed OPTIONS
+        if: ${{ failure() && !cancelled() && steps.local-options.outcome == 'failure' }}
+        timeout-minutes: 1
+        env:
+          RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/onboarding-edge-failure-receipt.mjs capture
 
       - name: Stop local Supabase
         if: always()

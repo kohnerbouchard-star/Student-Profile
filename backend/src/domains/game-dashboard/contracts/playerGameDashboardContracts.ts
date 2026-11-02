@@ -1,10 +1,10 @@
 import type {
   PlayerContractDto,
   PlayerContractProgressDto,
-} from "../../contracts/contracts/contractHttpContracts.ts";
+} from "../../contracts/index.ts";
 import type {
   StockMarketBoardStockDto,
-} from "../../stocks/contracts/stockMarketReadContracts.ts";
+} from "../../stocks/index.ts";
 import type {
   StockMarketPlayerHoldingDto,
   StockMarketPlayerOrderDto,
@@ -13,7 +13,7 @@ import type {
 } from "../../stocks/contracts/stockMarketPlayerReadContracts.ts";
 import type {
   StoreItemDto,
-} from "../../store/contracts/storeCatalogContracts.ts";
+} from "../../store/dashboardReadModel.ts";
 import type {
   StorePurchaseHistoryItemDto,
 } from "../../store/contracts/storePurchaseContracts.ts";
