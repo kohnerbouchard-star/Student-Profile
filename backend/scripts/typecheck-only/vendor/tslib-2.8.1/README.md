@@ -1,4 +1,4 @@
-# Accepted tslib copy for Cutover CI typechecks only
+# Accepted tslib copy for Edge typechecks only
 
 This is the byte-identical 11,226-byte module matching the original repository
 lock entry for `https://esm.sh/tslib@2.8.1/denonext/tslib.mjs`:
@@ -26,16 +26,19 @@ Official tagged source: https://github.com/microsoft/tslib/tree/v2.8.1 .
 The CDN module includes a default aggregate export; its original sourceMappingURL
 comment remains untouched. No source map is fetched.
 
-Only the two existing explicit strict-root and Admin checks in
-`.github/workflows/business-player-store-cutover-v2.yml` consume
+The two existing explicit strict-root and Admin checks in
+`.github/workflows/business-player-store-cutover-v2.yml` and the three config
+groups of `backend/scripts/typecheckAllEdgeRoots.mjs` consume
 `backend/scripts/typecheck-only/import-map.json`. Each invokes
 `backend/scripts/verifyTypecheckOnlyImports.mjs` immediately before Deno to
 verify the original remote lock entry, local module length/SHA256, exact-one-URL
-map and unchanged strict/Admin config shapes. The existing root lists, compiler
-settings, lock, frozen flags and qualification failures remain enforced.
+map and unchanged effective config shapes. The existing root lists, compiler
+settings, lock, frozen flags, config grouping and qualification failures remain
+enforced.
 
-This does not change `typecheckAllEdgeRoots.mjs`, package commands, runtime
-configuration, deployment resolution, Edge startup or other Deno invocations.
-It establishes no runtime bundle or SDK2.45.4 closure qualification. The original
-full Cutover workflow and connected Multiplayer acceptance still require actual
-exact-head CI evidence; local guard and mapped-import fixtures are not substitutes.
+All callers of the every-root checker, in CI or locally, use this typecheck-only
+map. Package commands, runtime configuration, deployment resolution, Edge
+startup and other Deno invocations remain unchanged. It establishes no runtime
+bundle or SDK2.45.4 closure qualification. The original full Exchange Calendar,
+Cutover and connected Multiplayer workflows still require actual exact-head CI
+evidence; local guard and mapped-import fixtures are not substitutes.

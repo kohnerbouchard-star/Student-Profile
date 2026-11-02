@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "taskId": "PLAYER-PUBLIC-IMPORTS-MAIN-001",
   "status": "IN_PROGRESS",
-  "phase": "CI_STABILIZATION_REVIEWED",
+  "phase": "EVERY_ROOT_TYPECHECK_STABILIZATION_REVIEWED",
   "baseMainSha": "a4dd2651d0ba964cce0cf28bf35f76975f35fd13",
   "localBranch": "refactor/player-public-imports-main-v1",
   "scopeLock": "exact-path-allowlist",
@@ -28,7 +28,8 @@
     "backend/scripts/verifyTypecheckOnlyImports.mjs",
     "backend/scripts/verifyTypecheckOnlyImports.test.mjs",
     "scripts/local-edge-runtime-isolation.mjs",
-    "scripts/local-edge-runtime-isolation.test.mjs"
+    "scripts/local-edge-runtime-isolation.test.mjs",
+    "backend/scripts/typecheckAllEdgeRoots.mjs"
   ],
   "readOnlyLocks": [
     "backend/src/domains/players/index.ts",
@@ -68,7 +69,7 @@
       "crossDomainInfrastructureImports": 9
     }
   },
-  "authorization": "User authorized this focused draft PR publication, automatic staging-bound Preview and normal CI; parent authorizes only the actual PR-number binding and this truthful existing scope update. Provisional source commit88323b632f65a0ded4401fffeb617e5f758932ec contains the reviewed eleven-file preparation. No PR approval, merge, production or hosted mutation, dependency/config/scaffolding/security change or release-hold change is granted. The user subsequently approved preparation, tests and ordinary successor publication of the bounded Cutover trusted-source map/guard and allowlisted owned-container readiness observer. It does not authorize runtime config, SDK/pin, hosted or production changes, review approval, merge, manual retries or hold changes.",
+  "authorization": "User authorized this focused draft PR publication, automatic staging-bound Preview and normal CI; parent authorizes only the actual PR-number binding and this truthful existing scope update. Provisional source commit88323b632f65a0ded4401fffeb617e5f758932ec contains the reviewed eleven-file preparation. No PR approval, merge, production or hosted mutation, dependency/config/scaffolding/security change or release-hold change is granted. The user subsequently approved preparation, tests and ordinary successor publication of the bounded Cutover trusted-source map/guard and allowlisted owned-container readiness observer. It does not authorize runtime config, SDK/pin, hosted or production changes, review approval, merge, manual retries or hold changes. The user subsequently approved extending the existing CI-only map and guard to the every-root typecheck checker, plus focused tests and ordinary successor publication. Existing dependency bytes/pins, runtime config/security, hosted and production writes, review approval, merge and holds remain outside authorization.",
   "releaseLimits": {
     "productionDeploymentAllowed": false,
     "productionMutationAllowed": false,
@@ -90,8 +91,8 @@
       "passed": 54,
       "failed": 0
     },
-    "actualPrBoundAuthority": "PASS_PR889_21_CHANGED_PATHS_23_EXACT_ALLOWED_PATHS",
-    "exactHeadCi": "PRIOR_HEAD_31_PASS_2_FAIL; SUCCESSOR_PENDING",
+    "actualPrBoundAuthority": "PASS_PR889_22_CHANGED_PATHS_24_EXACT_ALLOWED_PATHS",
+    "exactHeadCi": "PRIOR_HEAD_32_PASS_1_FAIL; SUCCESSOR_PENDING",
     "hostedRuntime": "NOT_RUN"
   },
   "priorPublishedQualification": {
@@ -139,5 +140,24 @@
       }
     },
     "qualification": "Require original complete Cutover frozen checks and actual Multiplayer connected mutation/load results on final head; skipped stages are not passes."
+  },
+  "everyRootTypecheckStabilization": {
+    "parentHead": "a643560826cb7936ef70dfe4bbb4f090e10d1053",
+    "priorHeadQualification": "32 workflows passed, Exchange Calendar failed because typecheckAllEdgeRoots remained unmapped; staging Preview READY",
+    "change": "Guard the existing map and local/original-lock bytes immediately before each of three existing Deno config groups. Preserve all28roots, order, configs, lock and --frozen. Guard Classroom config shape only when the every-root checker invokes it.",
+    "ownership": "Paused888 checker branch is unchanged; shared work coordinated by same executor. No other owner acceptance asserted.",
+    "localVerification": {
+      "node": "22.23.1",
+      "focusedTests": {
+        "passed": 95,
+        "failed": 0,
+        "skipped": 0
+      },
+      "scope": "actual checker CLI with owned synthetic Deno stub; all28 real root identities and config grouping/order reconstructed, guard revalidation and child failures exercised",
+      "nativeDeno": "Prior a643 passing no-remote local-map/missing-file controls reused; module/map bytes unchanged",
+      "fullRemoteGraph": "NOT_RUN locally; existing SDK2.108.2 is absent from offline cache and network acquisition is not authorized",
+      "independentReview": "ACCEPTED staged source patch44d031d460dd7f19f6bb4893b7f3f291316a9e67eb658f5e957d0cf8878e68c8; only truthful verification metadata updated afterward"
+    },
+    "qualification": "Full Exchange Calendar typecheck and original Cutover/Multiplayer CI on successor head required; skipped jobs are not passes."
   }
 }

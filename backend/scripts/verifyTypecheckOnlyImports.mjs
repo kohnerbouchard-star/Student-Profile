@@ -6,7 +6,7 @@ import { lstatSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-export function verifyTypecheckOnlyImports(backendRoot) {
+export function verifyTypecheckOnlyImports(backendRoot, { includeClassroom = false } = {}) {
   const url = "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs";
   const hash = "c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9";
   const read = (path) => JSON.parse(readFileSync(join(backendRoot, path), "utf8"));
@@ -26,6 +26,11 @@ export function verifyTypecheckOnlyImports(backendRoot) {
   assert.deepEqual(read("supabase/functions/admin-api/deno.json"), {
     compilerOptions: { strict: false, noImplicitAny: false, useUnknownInCatchVariables: false },
   });
+  if (includeClassroom) {
+    assert.deepEqual(read("supabase/functions/classroom-api/deno.json"), {
+      tasks: { check: "deno check index.ts" }, compilerOptions: { strict: true },
+    });
+  }
   return mapPath;
 }
 
