@@ -104,6 +104,7 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
           npm --prefix backend ci
+          node backend/scripts/verifyNeutralDenoTestConfig.mjs --static
           deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-018-attendance-acceptance.ts
           deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-022-ledger-adjustment-acceptance.ts
           deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-023-reservation-acceptance.ts

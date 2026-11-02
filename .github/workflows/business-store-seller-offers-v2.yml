@@ -118,6 +118,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node backend/scripts/verifyNeutralDenoTestConfig.mjs --static
           node --experimental-strip-types --test scripts/business-banking-economic-simulation.test.mjs
           node scripts/business-formation-authority-contract.mjs
           node scripts/business-banking-runtime-contract.mjs

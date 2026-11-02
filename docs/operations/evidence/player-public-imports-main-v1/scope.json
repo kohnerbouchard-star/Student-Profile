@@ -2,11 +2,12 @@
   "schemaVersion": 1,
   "taskId": "PLAYER-PUBLIC-IMPORTS-MAIN-001",
   "status": "IN_PROGRESS",
-  "phase": "EVERY_ROOT_TYPECHECK_STABILIZATION_REVIEWED",
+  "phase": "DRAFT_CI_QUALIFICATION",
   "baseMainSha": "a4dd2651d0ba964cce0cf28bf35f76975f35fd13",
   "localBranch": "refactor/player-public-imports-main-v1",
   "scopeLock": "exact-path-allowlist",
   "reviewedSourceUnionSha256": "4281e2460f10cc4a6501ad6db838f90c576aa7e89e96bb20d165cd7cf6bc60a7",
+  "reviewedSourceUnionScope": "Historical original Player import tranche only; not a hash of the later complete local stabilization and Campaign SDK candidate.",
   "allowedPaths": [
     "backend/src/domains/notifications/api/playerNotificationHttpHandler.ts",
     "backend/src/domains/notifications/api/playerNotificationRequestParser.ts",
@@ -29,7 +30,51 @@
     "backend/scripts/verifyTypecheckOnlyImports.test.mjs",
     "scripts/local-edge-runtime-isolation.mjs",
     "scripts/local-edge-runtime-isolation.test.mjs",
-    "backend/scripts/typecheckAllEdgeRoots.mjs"
+    "backend/scripts/typecheckAllEdgeRoots.mjs",
+    ".github/workflows/player-multiplayer-load-e2e.yml",
+    ".github/workflows/ref-009-contract-reward-qualification.yml",
+    ".github/workflows/ref-018-attendance-qualification.yml",
+    ".github/workflows/runtime-stabilization-onboarding.yml",
+    ".github/workflows/business-store-seller-offers-v2.yml",
+    "backend/scripts/verifyNeutralDenoTestConfig.mjs",
+    "backend/scripts/verifyNeutralDenoTestConfig.test.mjs",
+    "backend/supabase/functions/_shared/vendor/tslib-2.8.1/LICENSE",
+    "backend/supabase/functions/_shared/vendor/tslib-2.8.1/README.md",
+    "backend/supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs",
+    "backend/supabase/functions/deno.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
+    "scripts/release-build-determinism.test.mjs",
+    "backend/supabase/functions/admin-api/deno.json",
+    "backend/supabase/functions/admin-email-verification/deno.json",
+    "backend/supabase/functions/admin-password-recovery/deno.json",
+    "backend/supabase/functions/banking-fx-orchestrator/deno.json",
+    "backend/supabase/functions/bootstrap-api/deno.json",
+    "backend/supabase/functions/business-operations-worker/deno.json",
+    "backend/supabase/functions/campaign-orchestrator/deno.json",
+    "backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.test.ts",
+    "backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.ts",
+    "backend/supabase/functions/campaign-orchestrator/infrastructure/client.ts",
+    "backend/supabase/functions/classroom-api/deno.json",
+    "backend/supabase/functions/fx-orchestrator/deno.json",
+    "backend/supabase/functions/game-data-purger/deno.json",
+    "backend/supabase/functions/license-email-worker/deno.json",
+    "backend/supabase/functions/license-issuance-worker/deno.json",
+    "backend/supabase/functions/license-payment-webhook/deno.json",
+    "backend/supabase/functions/password-reset-api/deno.json",
+    "backend/supabase/functions/player-api/deno.json",
+    "backend/supabase/functions/player-web-session-api/deno.json",
+    "backend/supabase/functions/staff-api/deno.json",
+    "backend/supabase/functions/staff-mfa-api/deno.json",
+    "backend/supabase/functions/stock-market-orchestrator/deno.json",
+    "backend/supabase/functions/stock-market-player-read/deno.json",
+    "backend/supabase/functions/stock-market-read/deno.json",
+    "backend/supabase/functions/stock-market-runner/deno.json",
+    "backend/supabase/functions/stock-market-seed-copy/deno.json",
+    "backend/supabase/functions/stock-market-trading/deno.json",
+    "backend/supabase/functions/stock-tick-archiver/deno.json",
+    "backend/supabase/functions/stripe-checkout-session/deno.json",
+    "backend/supabase/functions/stripe-license-webhook/deno.json",
+    "backend/supabase/functions/web-session-api/deno.json"
   ],
   "readOnlyLocks": [
     "backend/src/domains/players/index.ts",
@@ -39,7 +84,7 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "change": "Eleven import-specifier substitutions across nine World/Notifications files to existing Players public exports; preserve all remaining source bytes and type-only semantics. Regenerate inventory from this exact main-based union. No new exports, wrappers, function bodies, queries, auth/ack behavior, SQL, dependencies or release controls.",
+  "change": "Original Player import tranche: eleven import-specifier substitutions across nine World/Notifications files to existing Players public exports, preserving its remaining source bytes and type-only semantics. Later local stabilization and the approved Campaign SDK alignment are described separately below; this original-tranche description does not characterize the full candidate.",
   "ownership": {
     "activeHeadsChecked": 21,
     "sourceOverlaps": [],
@@ -55,8 +100,8 @@
   },
   "authority": {
     "pullRequestNumber": 889,
-    "status": "BOUND_AND_LOCALLY_VALIDATED",
-    "note": "The actual PR889 manifest is registered for this exact source union. Preserve all original checks and read-only locks. Local authority validation is distinct from final-head CI and unknown required branch protections; no merge or review approval is claimed.",
+    "status": "CORRECTED_AND_LOCALLY_VALIDATED",
+    "note": "After the initial candidate failed on three missing Campaign paths, the actual PR889 manifest accepted all63 changed paths under68 exact locked paths. Preserve all original checks and read-only locks. Local authority validation is distinct from final-head CI and unknown required branch protections; no merge or review approval is claimed.",
     "branchProtectionVisibility": "UNKNOWN; prior connector GET403 remains a blocker to visibility, with no retry or bypass. Empty rulesets are not proof of absent requirements."
   },
   "metrics": {
@@ -69,7 +114,7 @@
       "crossDomainInfrastructureImports": 9
     }
   },
-  "authorization": "User authorized this focused draft PR publication, automatic staging-bound Preview and normal CI; parent authorizes only the actual PR-number binding and this truthful existing scope update. Provisional source commit88323b632f65a0ded4401fffeb617e5f758932ec contains the reviewed eleven-file preparation. No PR approval, merge, production or hosted mutation, dependency/config/scaffolding/security change or release-hold change is granted. The user subsequently approved preparation, tests and ordinary successor publication of the bounded Cutover trusted-source map/guard and allowlisted owned-container readiness observer. It does not authorize runtime config, SDK/pin, hosted or production changes, review approval, merge, manual retries or hold changes. The user subsequently approved extending the existing CI-only map and guard to the every-root typecheck checker, plus focused tests and ordinary successor publication. Existing dependency bytes/pins, runtime config/security, hosted and production writes, review approval, merge and holds remain outside authorization.",
+  "authorization": "User authorized this focused draft PR publication, automatic staging-bound Preview and normal CI; parent authorizes only the actual PR-number binding and this truthful existing scope update. Provisional source commit88323b632f65a0ded4401fffeb617e5f758932ec contains the reviewed eleven-file preparation. No PR approval, merge, production or hosted mutation, dependency/config/scaffolding/security change or release-hold change is granted. The user subsequently approved preparation, tests and ordinary successor publication of the bounded Cutover trusted-source map/guard and allowlisted owned-container readiness observer. It does not authorize runtime config, SDK/pin, hosted or production changes, review approval, merge, manual retries or hold changes. The user subsequently approved extending the existing CI-only map and guard to the every-root typecheck checker, plus focused tests and ordinary successor publication. Existing dependency bytes/pins, runtime config/security, hosted and production writes, review approval, merge and holds remain outside authorization. The user asked to fix and merge; the earlier parent scope authorized local preparation only at that checkpoint. On 2026-11-02 the user approved publishing the reviewed canonical tslib and Campaign SDK candidate to existing draft PR889 for original CI. No manual CI dispatch or retry, PR approval, merge, deployment, hosted database change or release-hold change is authorized by that publication approval.",
   "releaseLimits": {
     "productionDeploymentAllowed": false,
     "productionMutationAllowed": false,
@@ -79,7 +124,8 @@
   "verification": "Fresh focused frozen cached-only tests, Edge-adapter no-run typecheck, canonical function-identity probes, reconstruction, architecture and authority unit contracts are required. Local checks do not establish exact-head CI, hosted runtime qualification, merge readiness or production deployment.",
   "localVerification": {
     "denoVersion": "2.9.3",
-    "dependencyMode": "frozen cached-only, no acquisition",
+    "scope": "Historical initial Player source run, not the complete later local candidate.",
+    "dependencyMode": "Historical initial Player source run: frozen cached-only, no acquisition; later local candidate qualification is recorded separately below.",
     "focusedTests": {
       "passed": 48,
       "failed": 0
@@ -91,8 +137,8 @@
       "passed": 54,
       "failed": 0
     },
-    "actualPrBoundAuthority": "PASS_PR889_22_CHANGED_PATHS_24_EXACT_ALLOWED_PATHS",
-    "exactHeadCi": "PRIOR_HEAD_32_PASS_1_FAIL; SUCCESSOR_PENDING",
+    "actualPrBoundAuthority": "Current corrected local manifest PASS:63 changed paths under68 locked paths; initial candidate failure retained below.",
+    "exactHeadCi": "ab100_PREDECESSOR_31PASS_2FAIL; LOCAL_CANDIDATE_NOT_RUN",
     "hostedRuntime": "NOT_RUN"
   },
   "priorPublishedQualification": {
@@ -131,7 +177,7 @@
       },
       "pinnedDeno": "2.9.3",
       "nativeMappedImport": "PASS --no-remote; accepted local helper resolves; missing helper fails at exact local path; lock unchanged; owned fixtures cleaned",
-      "strictRootGraph": "BLOCKED cached-only: existing https://esm.sh/@supabase/supabase-js@2.108.2 absent from cache;27roots retained",
+      "strictRootGraph": "Historical earlier run BLOCKED cached-only: existing https://esm.sh/@supabase/supabase-js@2.108.2 absent from cache;27roots retained; later current-candidate results are recorded below.",
       "adminRootGraph": "NOT_RUN after strict cached-only blocker",
       "independentReview": "ACCEPTED scoped source patch8cfc71cf8efaab5ef26c53d00dd12dcd502a165de36273f716f9c0b7e2070f1c; truthful verification metadata update only afterward",
       "adjacentContracts": {
@@ -155,9 +201,51 @@
       },
       "scope": "actual checker CLI with owned synthetic Deno stub; all28 real root identities and config grouping/order reconstructed, guard revalidation and child failures exercised",
       "nativeDeno": "Prior a643 passing no-remote local-map/missing-file controls reused; module/map bytes unchanged",
-      "fullRemoteGraph": "NOT_RUN locally; existing SDK2.108.2 is absent from offline cache and network acquisition is not authorized",
+      "fullRemoteGraph": "NOT_RUN in that earlier offline preparation; later current-candidate results are recorded below.",
       "independentReview": "ACCEPTED staged source patch44d031d460dd7f19f6bb4893b7f3f291316a9e67eb658f5e957d0cf8878e68c8; only truthful verification metadata updated afterward"
     },
     "qualification": "Full Exchange Calendar typecheck and original Cutover/Multiplayer CI on successor head required; skipped jobs are not passes."
+  },
+  "canonicalRuntimePreparation": {
+    "parentHead": "ab10027632b45218cd31cf86641bb45b69f6fa1c",
+    "status": "IN_PROGRESS_DRAFT_CI_QUALIFICATION",
+    "change": "Reuse byte-identical accepted tslib through one shared runtime source; exact import map in root plus28 adjacent configs. Retain CI compatibility map, existing guard API and original package commands. Separately approved Campaign SDK alignment changes its import from2.45.4 to already-locked2.108.2 and uses an adapter that disables read retries while forwarding RPC calls.",
+    "ownership": "PR885 and this candidate insert different guard/stack-baseline commands at the same multiplayer startup location: a real shared hunk requiring later reconciliation preserving both behaviors. PR885/888 remain paused and unchanged, coordinated by this executor with no owner acknowledgment asserted. Other shared locations include PR861 REF003 register (different reviewed entries), PR731 release workflow changes and PR620 action pin updates; preserve their actual deltas during integration.",
+    "blockingEvidence": "The earlier blocked ECR blob redirect was resolved by the published restricted allowlist. All28 pinned Edge Runtime bundles and three missing-local controls subsequently passed locally. Local disposable database startup failed while registering the pinned Postgres image because the Docker vfs filesystem ran out of space; proof of the changed adapter with actual PostgREST scoped reads/RPC and successful scheduler-token authorization remains pending. Broader Campaign replay, competing claims and lease obligations stay with their original REF046 lanes.",
+    "qualification": "Require independent source review; verified complete runtime SDK closure; original exact-head workflows including REF009, Exchange, Cutover connected Store, Marketplace and Multiplayer; previously required actual54 graphs,28 pinned-runtime bundles,3 runtime missing-local controls and owned-resource cleanup evidence. The28 bundles and3 controls are recorded below; Deno typechecks and synthetic tests do not substitute for the pending candidate-specific PostgREST/token proof, deployment or exact-head CI. No new pins, broad retries or skipped-gate waiver."
+  },
+  "campaignSdkAlignment": {
+    "authorization": "The user approved local preparation and testing of this bounded Campaign SDK alignment, then on 2026-11-02 approved its publication as part of the reviewed candidate to existing draft PR889 for original CI. No manual CI dispatch or retry, PR approval, merge, deployment, hosted database or release-hold change is authorized.",
+    "sdk": "Campaign import2.45.4 ->2.108.2, already present in the unchanged shared Deno lock; no new lock pin adopted.",
+    "adapter": "Disable SDK retries on Campaign select reads; forward RPC calls and arguments. The scheduler-token verifier still calls the underlying SDK RPC directly.",
+    "actualSdkTests": "PASS 5 synthetic fake-fetch tests under frozen lock: default SDK 503 retry positive control; adapter one attempt on503,520 and network failure; RPC method, body, apikey and Authorization. PASS 3 actual SDK maybeSingle tests for zero, one and multiple synthetic rows with game filter preserved. PASS 1 actual scheduler-token verifier test for validation, RPC body/auth and true/false/error outcomes. No hosted credentials or runtime network permission used.",
+    "candidateAdapterTests": "PASS 5 existing candidate tests under frozen lock; mocks cover scheduler/program/effect reads, scoped RPC forwarding and fail-closed retry control."
+  },
+  "currentLocalQualification": {
+    "baseHead": "ab10027632b45218cd31cf86641bb45b69f6fa1c",
+    "candidatePatchSha256": "df68a80751a65ce6ce13cea20279f0a8da3858672adbe3655becec8cd4cd2f25",
+    "denoTypechecks": "PASS28 roots using retained CI map and frozen lock; PASS28 separate actual adjacent-config checks with --deny-import and the unchanged frozen lock. These typechecks alone are not runtime bundles or proof of complete runtime closure; subsequent actual Runtime bundle evidence is recorded below.",
+    "neutralParity": "PASS19 suites with747 test cases per configuration and0 skips per configuration, frozen lock unchanged.",
+    "nodeGuards": "PASS30 focused guard/import-map/release-builder tests; static neutral guard and git diff --check passed.",
+    "localMissingControl": "PASS one Deno cached-only real-SDK missing-tslib negative control and static guard ENOENT; original c38 bytes restored. This is not an Edge Runtime negative control.",
+    "priorAuthorityFailure": "The first actual PR889 authority check failed for the three Campaign files missing from its exact allowlist; the scoped correction and its final check are reported separately, without weakening the guard.",
+    "correctedAuthority": "PASS actual PR889 verifier on63 changed paths under68 exact locked paths after adding only the three intended Campaign files. Required files exist; original required checks and read-only paths remain unchanged.",
+    "metadataChecks": "PASS4 focused metadata tests including exact three-file additions, no unreviewed path or wrong PR/base, retained required checks/read-only locks and original lock/tslib hashes; PASS16 existing authority regression tests; neutral/typecheck static guards and diff whitespace check passed.",
+    "unqualifiedBundleAttempt": "A standalone Deno bundle completed after automatically downloading esbuild0.25.5 outside the repository lock. Its npm registry SHA512 and installed bytes matched only after execution; it was not preverified against a repository lock and is not counted as runtime qualification or adopted as a repository pin.",
+    "bundleCommand": "From backend with checksum-verified Deno2.9.3 and isolated DENO_DIR: deno bundle --deny-import --check --config=supabase/functions/campaign-orchestrator/deno.json --lock=supabase/functions/deno.lock --frozen --output=/tmp/student-profile-pr889-ONDsaP/campaign-deno.bundle.mjs supabase/functions/campaign-orchestrator/index.ts. Deno automatically obtained @esbuild/linux-x64@0.25.5 from https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.25.5.tgz; this helper was absent from the repository lock.",
+    "bundleOrderAndIntegrity": "The bundle command followed the five actual-SDK retry/RPC tests and preceded the real scheduler-token and maybeSingle tests. After execution, registry SHA512 matched the tarball and its binary matched Deno's cache, but this does not satisfy a pre-execution toolchain gate; no compromise is asserted. Subsequent rechecks matched candidate gzip f31688343defd77578f0165e514a30ab3e613e5c36bc3e3bea2399ab0edb91b3, original candidate patch df68a80751a65ce6ce13cea20279f0a8da3858672adbe3655becec8cd4cd2f25, lock66b40862285f9bd9a7426a48671427cde664f17043f02ad88ba4eef85979423b, tslib c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9 and license0e8d2550baea17eb3072c4f919b36fbf9852bb49dba948549872e713863c0834.",
+    "notRun": "Changed-adapter proof against actual PostgREST scoped reads/RPC and successful scheduler-token authorization; candidate exact-head CI, branch-protection visibility, staging Preview, hosted/production verification, full root tests and full backend smoke remain NOT_RUN or UNKNOWN as applicable. Broader Campaign persisted replay, competing claims and lease obligations remain with their original REF046 lanes.",
+    "integrity": "Shared Deno lock SHA256 66b40862285f9bd9a7426a48671427cde664f17043f02ad88ba4eef85979423b unchanged; 11226-byte tslib SHA256 c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9; rejected ebce content was not adopted."
+  },
+  "freshCloudRuntimeQualification": {
+    "environment": "Saved cloud config cecfgver_6ae9126ad428819d81d6242f96ad8546; restricted network policy enforced. The required esm.sh, public.ecr.aws and d2glxqk2uabbnd.cloudfront.net hosts were effective.",
+    "runtime": "PASS official public.ecr.aws/supabase/edge-runtime:v1.74.2 manifest sha256:a82676277615aee03c4f288cbbbf68dedb5ba8693073e567ab8dbfdd11ba5d45, image sha256:72d69a90c0d4e46dcf93197dc5a6cc2d16483c7148c637ccf3d58db04943e077; binary reports edge-runtime0.1.0 and embedded Deno2.1.4.",
+    "bundles": "PASS28 actual pinned Runtime bundles using adjacent configs. Graph byte inspection found the exact accepted tslib in25 bundles; three do not contain that dependency. Campaign bundle contains its wrapper and SDK2.108.2, with SHA256 58ea21eb3312882c4219cc476ef28974c5805f10548576eae2eaed8d89911f4b. The graph evidence manifest SHA256 is 7e90c95dd94932598c55ab79ceb81e1239b2bc620f6e02ff71e55de703e9d615. No SDK2.45.4 string was found in these bundles; this observation alone does not prove every remote module matches a frozen lock.",
+    "missingLocalControls": "PASS actual Runtime admin-api, classroom-api and player-api controls using empty read-only local helper overlays, fresh cache and --disable-module-cache; each failed at the exact missing local tslib path.",
+    "campaignDenialPaths": "PASS actual bundled Runtime: GET returned405; POST with missing or malformed scheduler token returned401; a correctly shaped token returned401 when its verification backend was unavailable. Successful token authorization was not established.",
+    "regressions": "PASS repository world-runtime50+15, Campaign adapter5, auth-boundary18+8, Node scope/guard46 and actual-SDK simulated transport5 tests. Mocked responses and in-memory tests do not prove persisted replay or leases.",
+    "database": "BLOCKED local disposable database startup: Docker vfs failed to register the pinned supabase/postgres:17.6.1.143 image with no space left on device. The CLI automatic retry was stopped. No database container, volume or migration execution resulted; no hosted database was touched.",
+    "unresolved": "Original candidate exact-head CI and retained checks; candidate-specific proof of actual PostgREST scoped reads/RPC and successful scheduler-token authorization; staging or hosted evidence as applicable. Broader Campaign persisted replay/rollback, overlapping claims and lease expiry/reclaim stay with the original REF046 lanes. Existing original-head World Runtime tests use synthetic repositories, and Database Replay validates migration replay rather than these Campaign behaviors. Skipped work is not a pass.",
+    "integrity": "Reviewed pre-metadata candidate tree 6a894824464a8706e8959a71233b51c712a1a689; original patch df68a80751a65ce6ce13cea20279f0a8da3858672adbe3655becec8cd4cd2f25; supplemental patch bfc40bd7ce83c4ef3599923afc544199f7272631ca3c7411526d7e8c316dfe26. Original lock66b40862285f9bd9a7426a48671427cde664f17043f02ad88ba4eef85979423b and trusted tslib c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9 remain unchanged."
   }
 }

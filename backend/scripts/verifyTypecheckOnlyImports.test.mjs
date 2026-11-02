@@ -12,7 +12,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const url = "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs";
 const lock = "supabase/functions/deno.lock";
 const map = "scripts/typecheck-only/import-map.json";
-const vendor = "scripts/typecheck-only/vendor/tslib-2.8.1/tslib.mjs";
+const vendor = "supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs";
 const configs = ["supabase/functions/deno.json", "supabase/functions/admin-api/deno.json"];
 const classroom = "supabase/functions/classroom-api/deno.json";
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
@@ -34,13 +34,13 @@ test("CI typecheck copy independently matches the unchanged original remote pin"
   assert.equal(bytes.length, 11226);
   assert.equal(hash(bytes), "c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9");
   assert(lstatSync(join(root, vendor)).isFile());
-  const license = readFileSync(join(root, "scripts/typecheck-only/vendor/tslib-2.8.1/LICENSE"));
+  const license = readFileSync(join(root, "supabase/functions/_shared/vendor/tslib-2.8.1/LICENSE"));
   assert.equal(license.length, 644);
   assert.equal(hash(license), "0e8d2550baea17eb3072c4f919b36fbf9852bb49dba948549872e713863c0834");
 });
 
 function checkerFixture(target) {
-  for (const name of ["scripts/typecheckAllEdgeRoots.mjs", "scripts/verifyTypecheckOnlyImports.mjs"]) {
+  for (const name of ["scripts/typecheckAllEdgeRoots.mjs", "scripts/verifyTypecheckOnlyImports.mjs", "scripts/verifyNeutralDenoTestConfig.mjs"]) {
     mkdirSync(dirname(join(target, name)), { recursive: true });
     copyFileSync(join(root, name), join(target, name));
   }
@@ -52,6 +52,7 @@ function checkerFixture(target) {
     const path = join(target, "supabase/functions", slug, "index.ts");
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, "export {};\n");
+    copyFileSync(join(functions, slug, "deno.json"), join(target, "supabase/functions", slug, "deno.json"));
   }
   const bin = join(target, "bin"), log = join(target, "deno-arguments.log");
   mkdirSync(bin);
@@ -114,6 +115,28 @@ test("every-root checker rejects missing or corrupt map, module, lock and Classr
   });
 });
 
+test("every-root checker rejects adjacent config omissions and resolution exceptions", () => {
+  for (const change of [
+    (target) => rmSync(join(target, "supabase/functions/player-api/deno.json")),
+    (target) => {
+      const path = join(target, "supabase/functions/player-api/deno.json"), value = JSON.parse(readFileSync(path));
+      value.scopes = {}; writeFileSync(path, JSON.stringify(value));
+    },
+    (target) => {
+      const path = join(target, "supabase/functions/player-api/deno.json"), value = JSON.parse(readFileSync(path));
+      value.imports[`${url}?target=deno`] = value.imports[url]; writeFileSync(path, JSON.stringify(value));
+    },
+    (target) => {
+      const path = join(target, "supabase/functions/player-api/deno.json"), value = JSON.parse(readFileSync(path));
+      value.imports["https://esm.sh/tslib@2.8.1/"] = "../_shared/vendor/tslib-2.8.1/"; writeFileSync(path, JSON.stringify(value));
+    },
+  ]) fixture((target) => {
+    const check = checkerFixture(target); change(target);
+    const result = check.run(); assert.ifError(result.error); assert.notEqual(result.status, 0);
+    assert.deepEqual(check.calls(), [], "Changed resolution must not launch Deno");
+  });
+});
+
 test("every-root checker revalidates map, module and lock before each config group", () => {
   for (const path of [map, vendor, lock]) fixture((target) => {
     const check = checkerFixture(target), result = check.run({ TEST_CORRUPT_PATH: join(target, path) });
@@ -159,7 +182,7 @@ test("missing or changed original remote pin fails despite accepted local bytes"
 });
 
 test("CI map rejects omitted, wrong, extra, prefix, query and scoped mappings", () => {
-  const local = "./vendor/tslib-2.8.1/tslib.mjs";
+  const local = "../../supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs";
   for (const value of [
     { imports: {} }, { imports: { [url]: "./other.mjs" } },
     { imports: { [url]: local, "https://esm.sh/other": local } },
