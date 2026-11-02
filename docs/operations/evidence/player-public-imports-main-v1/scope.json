@@ -74,7 +74,8 @@
     "backend/supabase/functions/stock-tick-archiver/deno.json",
     "backend/supabase/functions/stripe-checkout-session/deno.json",
     "backend/supabase/functions/stripe-license-webhook/deno.json",
-    "backend/supabase/functions/web-session-api/deno.json"
+    "backend/supabase/functions/web-session-api/deno.json",
+    "scripts/pr-889-campaign-postgrest-acceptance.ts"
   ],
   "readOnlyLocks": [
     "backend/src/domains/players/index.ts",
@@ -247,5 +248,19 @@
     "database": "BLOCKED local disposable database startup: Docker vfs failed to register the pinned supabase/postgres:17.6.1.143 image with no space left on device. The CLI automatic retry was stopped. No database container, volume or migration execution resulted; no hosted database was touched.",
     "unresolved": "Original candidate exact-head CI and retained checks; candidate-specific proof of actual PostgREST scoped reads/RPC and successful scheduler-token authorization; staging or hosted evidence as applicable. Broader Campaign persisted replay/rollback, overlapping claims and lease expiry/reclaim stay with the original REF046 lanes. Existing original-head World Runtime tests use synthetic repositories, and Database Replay validates migration replay rather than these Campaign behaviors. Skipped work is not a pass.",
     "integrity": "Reviewed pre-metadata candidate tree 6a894824464a8706e8959a71233b51c712a1a689; original patch df68a80751a65ce6ce13cea20279f0a8da3858672adbe3655becec8cd4cd2f25; supplemental patch bfc40bd7ce83c4ef3599923afc544199f7272631ca3c7411526d7e8c316dfe26. Original lock66b40862285f9bd9a7426a48671427cde664f17043f02ad88ba4eef85979423b and trusted tslib c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9 remain unchanged."
+  },
+  "campaignPostgrestProofPreparation": {
+    "status": "TEST_PREPARED_RUNTIME_NOT_RUN",
+    "baseHead": "2de8720480b1603e832d2e9f1e6cde6efd41e63b",
+    "scope": [
+      "scripts/pr-889-campaign-postgrest-acceptance.ts",
+      ".github/workflows/ref-018-attendance-qualification.yml",
+      "docs/operations/contracts/player-cross-cutting/pr-889.json",
+      "docs/operations/evidence/player-public-imports-main-v1/scope.json"
+    ],
+    "purpose": "Use the existing REF018 disposable database, Kong and PostgREST to test the actual Campaign SDK adapter scoped filters, maybeSingle zero/one/multiple behavior, RPC forwarding and authentication headers, and positive/negative Campaign scheduler-token verification. Only the local synthetic fixture uses SQL; no application or migration changes.",
+    "safety": "Exact loopback database and API, explicit disposable flag, original frozen lock, one test invocation, exact workflow trigger paths, synthetic fixture ownership and cleanup, no hosted data or broad wildcard. REF018 startup and replay output pass through the existing repository log redactor before artifact storage; status output is captured, not printed. No manual CI dispatch or rerun.",
+    "evidence": "Prepared locally and accepted by independent source review; actual PostgREST/database execution is NOT_RUN because the local Docker vfs image pull exhausted disk. Earlier exact-head2de8720 CI results remain historical and do not qualify this test successor.",
+    "next": "Require the original REF018 job on the successor head to execute the test. Do not mark proof passed from synthetic transport, source review or typechecks."
   }
 }
