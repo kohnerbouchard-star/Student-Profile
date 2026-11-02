@@ -43,6 +43,118 @@ function readyResponse(url) {
   });
 }
 
+function diagnosticExecutable({ role = "edge", inspectThrows = false, targetProject = "econovaria", snapshot = {}, diagnosticFailure = "", events = [] } = {}) {
+  const edge = `supabase_edge_runtime_${targetProject}`, kong = `supabase_kong_${targetProject}`;
+  const failed = role === "edge" ? edge : kong;
+  const base = executable({ names: `${edge}\n${kong}\n`, running: ({ containerName }) => containerName !== failed,
+    onRestart: (_attempt, name) => events.push(`restart:${name}`) });
+  const diagnosticCalls = [];
+  let attempts = 0;
+  const execFile = (command, args, options) => {
+    const diagnostic = args[0] === "context" || (args[0] === "inspect" && args[2] !== "{{.State.Running}}");
+    if (diagnostic) {
+      diagnosticCalls.push([command, ...args]);
+      assert.equal(options.timeout, 1_000); assert.equal(options.maxBuffer, 4_096);
+      assert.deepEqual(options.stdio, ["ignore", "pipe", "pipe"]);
+      if (diagnosticFailure === "timeout") throw Object.assign(new Error("PRIVATE_DIAGNOSTIC_ERROR"), { code: "ETIMEDOUT", stderr: "PRIVATE_STDERR" });
+      if (diagnosticFailure === "hostile-error") throw Object.defineProperty({}, "code", { get() { throw new Error("PRIVATE_ERROR_GETTER"); } });
+      if (args[0] === "context") return JSON.stringify(diagnosticFailure === "remote" ? "tcp://foreign:2375" : "unix:///var/run/docker.sock");
+      assert.equal(args.at(-1), failed); assert(!args[2].includes("json .Config.Env")); assert(!args[2].includes("json .State}"));
+      if (diagnosticFailure === "malformed") return "PRIVATE_INVALID_JSON";
+      if (diagnosticFailure === "oversized") return "PRIVATE_".repeat(1_000);
+      return JSON.stringify({ id: "a".repeat(64), name: `/${failed}`, project: "econovaria", running: false, status: "exited", exitCode: 137, oomKilled: true,
+        startedAt: "2026-11-02T00:00:00Z", finishedAt: "2026-11-02T00:00:01.123456789Z", error: "", ...snapshot });
+    }
+    if (args[0] === "restart" && args[1] === edge) attempts += 1;
+    if (args[0] === "inspect") {
+      assert.equal(options.timeout, 30_000, "Original running-check timeout must remain unchanged.");
+      if (inspectThrows && args.at(-1) === failed) {
+        base.calls.push([command, ...args]);
+        throw Object.assign(new Error("PRIVATE_INSPECT_ERROR"), { code: "ETIMEDOUT", status: 1, signal: "SIGTERM", stdout: "PRIVATE_STDOUT" });
+      }
+    }
+    return base.execFile(command, args, options);
+  };
+  return { ...base, execFile, diagnosticCalls, events, restartCount: () => attempts };
+}
+
+async function runFailedGate(fixture, { log = () => {} } = {}) {
+  let requests = 0;
+  await assert.rejects(restartLocalEdgeRuntime({ execFile: fixture.execFile, readFileImpl: async () => CONFIG,
+    fetchImpl: async () => { requests += 1; return new Response(null, { status: 200 }); }, sleep: async () => {}, log }),
+  { message: "Local Edge runtime did not become stable after 2 bounded recovery attempts; reason=container_not_running; statuses=; readyWaves=0/3." });
+  assert.equal(requests, 0); assert.equal(fixture.restartCount(), 2);
+  assert.equal(fixture.calls.filter((call) => call[1] === "restart").length, 4);
+}
+
+test("failed running checks identify Edge or Kong state before the next bounded recovery", async () => {
+  for (const role of ["edge", "kong"]) {
+    const records = [], events = [];
+    const fixture = diagnosticExecutable({ role, events });
+    await runFailedGate(fixture, { log: (text) => { const record = JSON.parse(text); records.push(record); events.push(`receipt:${record.recoveryAttempt}`); } });
+    assert.equal(records.length, 2);
+    assert.deepEqual(records.map((record) => record.recoveryAttempt), [1, 2]);
+    for (const record of records) {
+      assert.equal(record.role, role); assert.equal(record.phase, "before_probe"); assert.equal(record.condition, "reported_not_running");
+      assert.equal(record.available, true); assert.equal(record.errorClass, "none");
+      assert.equal(record.postCheckState.exitCode, 137); assert.equal(record.postCheckState.oomKilled, true);
+      assert.equal(record.postCheckState.status, "exited"); assert.equal(record.postCheckState.running, false);
+      assert(Buffer.byteLength(JSON.stringify(record)) <= 4_096);
+    }
+    const edgeRestart = "restart:supabase_edge_runtime_econovaria";
+    assert(events.indexOf("receipt:1") < events.lastIndexOf(edgeRestart));
+    assert.equal(events.at(-1), "receipt:2");
+    assert.equal(fixture.diagnosticCalls.length, 4);
+  }
+});
+
+test("inspect exceptions stay distinct and a later running snapshot cannot admit the failed gate", async () => {
+  const records = [], fixture = diagnosticExecutable({ inspectThrows: true, snapshot: { running: true, status: "running", exitCode: 0, oomKilled: false } });
+  await runFailedGate(fixture, { log: (text) => records.push(JSON.parse(text)) });
+  assert.equal(records.length, 2);
+  for (const record of records) {
+    assert.equal(record.condition, "inspect_failure"); assert.equal(record.postCheckState.running, true);
+    assert.deepEqual(record.inspectFailure, { code: "ETIMEDOUT", status: 1, signal: "SIGTERM" });
+    assert(!JSON.stringify(record).includes("PRIVATE"));
+  }
+});
+
+test("foreign targets and unverified ownership never expose state or error text", async () => {
+  for (const scenario of [{ targetProject: "foreign" }, { snapshot: { project: "foreign", error: "PRIVATE_OWNER_ERROR" } }, { snapshot: { name: "/foreign", error: "PRIVATE_OWNER_ERROR" } }, { snapshot: { id: "invalid", error: "PRIVATE_OWNER_ERROR" } }]) {
+    const records = [], fixture = diagnosticExecutable(scenario);
+    await runFailedGate(fixture, { log: (text) => records.push(JSON.parse(text)) });
+    assert.equal(records.length, 2);
+    records.forEach((record) => { assert.equal(record.errorClass, "ownership_unverified"); assert.equal(record.available, false); assert.equal(record.postCheckState, undefined); assert(!JSON.stringify(record).includes("PRIVATE")); });
+    if (scenario.targetProject) assert.equal(fixture.diagnosticCalls.length, 0);
+  }
+});
+
+test("diagnostic failures and logger exceptions preserve the exact primary readiness error", async () => {
+  for (const diagnosticFailure of ["timeout", "hostile-error", "malformed", "oversized", "remote"]) {
+    const records = [], fixture = diagnosticExecutable({ diagnosticFailure });
+    await runFailedGate(fixture, { log: (text) => records.push(JSON.parse(text)) });
+    assert.equal(records.length, 2);
+    records.forEach((record) => { assert.equal(record.available, false); assert.equal(record.postCheckState, undefined); assert(!JSON.stringify(record).includes("PRIVATE")); });
+  }
+  await runFailedGate(diagnosticExecutable(), { log: () => { throw new Error("PRIVATE_LOGGER_ERROR"); } });
+});
+
+test("state Error is redacted and UTF-8 bounded without printing unexpected snapshot fields", async () => {
+  const records = [], fixture = diagnosticExecutable({ snapshot: {
+    error: 'worker boot error https://user:PRIVATE_USER@esm.sh/module?token=PRIVATE_QUERY#PRIVATE_FRAGMENT\nAuthorization: Bearer PRIVATE_BEARER\n"access_token":"PRIVATE_TOKEN"\n' + "界".repeat(500),
+    status: "PRIVATE_STATUS", startedAt: "PRIVATE_DATE", unexpected: "PRIVATE_FIELD", Config: { Env: ["PRIVATE_ENV"] },
+  } });
+  await runFailedGate(fixture, { log: (text) => records.push(JSON.parse(text)) });
+  for (const record of records) {
+    const json = JSON.stringify(record), state = record.postCheckState;
+    assert.equal(record.available, true); assert(!json.includes("PRIVATE")); assert(!json.includes("\ufffd"));
+    assert.equal(state.status, null); assert.equal(state.startedAt, null); assert.equal(state.errorTruncated, true);
+    assert(state.error.includes("worker boot error") && state.error.includes("https://esm.sh/module"));
+    assert(Buffer.byteLength(state.error) <= 512); assert(Buffer.byteLength(json) <= 4_096);
+    assert.equal(state.unexpected, undefined); assert.equal(state.Config, undefined);
+  }
+});
+
 test("restarts the exact Edge and Kong containers and proves three stable gateway waves", async () => {
   const { execFile, calls } = executable();
   const requests = [];
