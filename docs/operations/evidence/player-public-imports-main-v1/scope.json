@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "taskId": "PLAYER-PUBLIC-IMPORTS-MAIN-001",
   "status": "IN_PROGRESS",
-  "phase": "LOCAL_PREPARATION",
+  "phase": "DRAFT_PR_PUBLISHED",
   "baseMainSha": "a4dd2651d0ba964cce0cf28bf35f76975f35fd13",
   "localBranch": "refactor/player-public-imports-main-v1",
   "scopeLock": "exact-path-allowlist",
@@ -18,7 +18,8 @@
     "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
     "backend/src/domains/world/services/playerWorldRuntimeService.ts",
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
-    "docs/operations/evidence/player-public-imports-main-v1/scope.json"
+    "docs/operations/evidence/player-public-imports-main-v1/scope.json",
+    "docs/operations/contracts/player-cross-cutting/pr-889.json"
   ],
   "readOnlyLocks": [
     "backend/src/domains/players/index.ts",
@@ -43,9 +44,9 @@
     "inventoryController": "Parent-assigned executor for this isolated main-based branch only. Other owner branches remain unchanged; no other owner acknowledgement is asserted. Later integrations regenerate their actual source union."
   },
   "authority": {
-    "pullRequestNumber": null,
-    "status": "PENDING_REAL_PR_BINDING",
-    "note": "Preparation scope evidence only, not a PR-bound verification grant. The unchanged verifier requires a real PR number; prepare the exact authority template outside source and bind it after allocation. Do not copy PR888 authority or claim required branch checks were verified.",
+    "pullRequestNumber": 889,
+    "status": "BOUND_AND_LOCALLY_VALIDATED",
+    "note": "The actual PR889 manifest is registered for this exact source union. Preserve all original checks and read-only locks. Local authority validation is distinct from final-head CI and unknown required branch protections; no merge or review approval is claimed.",
     "branchProtectionVisibility": "UNKNOWN; prior connector GET403 remains a blocker to visibility, with no retry or bypass. Empty rulesets are not proof of absent requirements."
   },
   "metrics": {
@@ -58,7 +59,7 @@
       "crossDomainInfrastructureImports": 9
     }
   },
-  "authorization": "Parent authorizes local main-convergence preparation of the two independently reviewed import batches, scoped ownership evidence and generated inventory. Publication, PR creation, commit, push, CI, merge and deployment are not performed or implied by this preparation.",
+  "authorization": "User authorized this focused draft PR publication, automatic staging-bound Preview and normal CI; parent authorizes only the actual PR-number binding and this truthful existing scope update. Provisional source commit88323b632f65a0ded4401fffeb617e5f758932ec contains the reviewed eleven-file preparation. No PR approval, merge, production or hosted mutation, dependency/config/scaffolding/security change or release-hold change is granted.",
   "releaseLimits": {
     "productionDeploymentAllowed": false,
     "productionMutationAllowed": false,
@@ -80,7 +81,7 @@
       "passed": 54,
       "failed": 0
     },
-    "actualPrBoundAuthority": "NOT_RUN_PENDING_REAL_PR_NUMBER",
+    "actualPrBoundAuthority": "PASS_PR889_12_CHANGED_PATHS_14_EXACT_ALLOWED_PATHS",
     "exactHeadCi": "NOT_RUN",
     "hostedRuntime": "NOT_RUN"
   }

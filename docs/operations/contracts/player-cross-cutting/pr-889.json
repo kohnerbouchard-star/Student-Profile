@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.player-public-imports-main-pr-889.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 889,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/notifications/api/playerNotificationHttpHandler.ts",
+    "backend/src/domains/notifications/api/playerNotificationRequestParser.ts",
+    "backend/src/domains/notifications/api/playerStoryDeliveryHttpHandler.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.test.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts",
+    "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/player-public-imports-main-v1/scope.json",
+    "docs/operations/contracts/player-cross-cutting/pr-889.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/notifications/api/playerNotificationHttpHandler.ts",
+    "backend/src/domains/notifications/api/playerNotificationRequestParser.ts",
+    "backend/src/domains/notifications/api/playerStoryDeliveryHttpHandler.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.test.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts",
+    "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/player-public-imports-main-v1/scope.json",
+    "docs/operations/contracts/player-cross-cutting/pr-889.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "criticalJobChecks": [
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "readOnlyPaths": [
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "authorizationNote": "The user authorized this focused main-convergence draft PR publication, normal CI and staging-bound Preview; parent permits only the real PR-number authority binding and truthful existing scope update after allocation. This manifest binds PR889/main and the exact nine-source-file import union, generated main inventory and minimal ownership metadata. All existing Players exports, canonical identities, other source bytes/auth/ack behavior, shared dependency and verifier/test locks, original requested checks and release holds are preserved. No broader PR888 or PR885 source, authority or inventory is imported. Local48Deno/54Node tests and ratchet157deep/9foreign do not establish actual final-head CI, required-review approval or merge readiness. Branch-protection visibility remains unknown after the prior403, with no retry or bypass. No PR approval, merge, production deployment, hosted SQL/Edge/Auth/settings or credentials/permissions change, dependency/scaffolding change, feature activation or release-hold change is authorized."
+}
