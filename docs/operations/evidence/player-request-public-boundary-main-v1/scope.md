@@ -1,6 +1,6 @@
 # Player request public boundary: bounded cleanup
 
-**Later integration result:** PR #892 merged into main as `f94550551fa47f87398a0dd8455d3d4d576ab783` at accepted head `c593989763fdd357fa6efe7a51f5b72c68ab2604`. Exact-head PR CI had 43 successful workflows plus CodeQL, two skipped workflows, and 86 successful jobs with seven skipped; Vercel Preview was ready. The merge-triggered checks are still running. The dated preparation record below is retained as historical evidence and its earlier pending/unmerged language is superseded by this integration result. The unchanged-base Contract route test failure described below remains unresolved.
+**Later integration result:** PR #892 merged into main as `f94550551fa47f87398a0dd8455d3d4d576ab783` at accepted head `c593989763fdd357fa6efe7a51f5b72c68ab2604`. Exact-head PR CI had 43 successful workflows plus CodeQL, two skipped workflows, and 86 successful jobs with seven skipped; Vercel Preview was ready. All 18 main-push workflows succeeded and one was skipped; the dynamic CodeQL run succeeded. The dated preparation record below is retained as historical evidence and its earlier pending/unmerged language is superseded by this integration result. The unchanged-base Contract route test failure described below remains unresolved.
 
 Status: `IMPLEMENTED_NOT_MERGED` for draft PR #892. Exact-head CI and Preview are pending; this preparation record does not claim merge or deployment.
 

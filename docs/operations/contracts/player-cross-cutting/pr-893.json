@@ -9,7 +9,6 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
-    "backend/package.json",
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
     "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
@@ -27,7 +26,6 @@
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
   "requiredFiles": [
-    "backend/package.json",
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
     "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
@@ -63,5 +61,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "The user requested larger coherent import-boundary cleanups. This draft binds PR893/main to the existing Story notification repository behind bounded two-method publisher and three-method Dashboard delivery-state capabilities, focused tests, regenerated inventory, additive roadmap/evidence and the PR892 merge-status correction. Preserve authorization, privacy, query scope, replay and error semantics, locked dependencies and release holds. Source 32e8249dacf4997a39231c59ff255c0eb595d526 was independently reviewed; local and bundle evidence and open-PR overlaps are recorded in the scope. Original exact-head CI, Preview and final review remain pending. No production deployment, hosted mutation, PR review approval, force operation, secret handling or release-hold change is authorized by this manifest."
+  "authorizationNote": "The user requested larger coherent import-boundary cleanups. This draft binds PR893/main to the existing Story notification repository behind bounded two-method publisher and three-method Dashboard delivery-state capabilities, focused tests, regenerated inventory, additive roadmap/evidence and the PR892 merge-status correction. Preserve authorization, privacy, query scope, replay and error semantics, locked dependencies and release holds. Source 32e8249dacf4997a39231c59ff255c0eb595d526 was independently reviewed; local and bundle evidence and open-PR overlaps are recorded in the scope. Original exact-head CI, Preview and final review remain pending. No production deployment, hosted mutation, PR review approval, force operation, secret handling or release-hold change is authorized by this manifest. Initial PR head 28ac16bcfd008b406462119879e57c173f4bea52 failed REF-003 source-blob checks because its test registration changed backend/package.json. The corrective successor restores that exact base file and runs the same Story capability tests through the existing Notifications test entrypoint; no evidence hash, guard or assertion is weakened."
 }

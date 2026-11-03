@@ -1,6 +1,8 @@
 import { createStoryNotificationPublisher } from "./storyNotifications.ts";
 import type { StoryNotificationPublisher } from "./storyNotifications.ts";
 import { createStoryCutsceneNotificationForPlayers } from "../../storylines/services/storyNotificationService.ts";
+// Run the Story-owned capability checks through the existing Notifications suite.
+import "../../storylines/server/notificationCapabilities.test.ts";
 
 declare const Deno: {
   test(name: string, run: () => Promise<void>): void;
