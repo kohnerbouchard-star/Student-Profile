@@ -239,14 +239,120 @@ begin
   -- c2-0: real legacy review/authority behaviour; undo this probe before c1 checks.
   declare manager uuid:=gen_random_uuid(); proposal uuid; key text; reviewed record; again record;
   begin
-    select public_key into key from public.loan_applications where id=application;
+    -- A distinct legacy pending application has no pre-existing loan. Never
+    -- reuse the repayment fixture or manually mark an application approved.
+    declare approval_product uuid; fresh_application uuid; before_balance numeric;
+      before_entries bigint; before_audits bigint; disbursement uuid;
+      negative_state text; failed_application uuid; failed_key text; declined_application uuid; declined_key text;
     begin
-      perform * from public.review_player_loan_application_v1(g,staff,key,'approve','Characterize','ref025-review-first');
-      raise exception 'REF025 expected inherited review ambiguity';
-    exception when ambiguous_column then
-      if sqlerrm <> 'column reference "status" is ambiguous' then raise; end if;
+      insert into public.loan_products(game_session_id,name,borrower_type,currency_code,minimum_amount,
+        maximum_amount,annual_rate,term_cycles,origination_fee_rate,disclosure_text)
+        values(g,'Retained review correction','business','QREFLOAN',1,1000,0.05,12,0.02,
+          'Synthetic legacy review correction only.') returning id into approval_product;
+      insert into public.loan_applications(game_session_id,player_id,business_id,loan_product_id,amount,
+        purpose,repayment_source,credit_score,projected_payment,affordability_ratio,idempotency_key,request_hash)
+        values(g,actor,business,approval_product,200,'Fresh retained review fixture',account,650,20,0.1,
+          'review-correction-fresh',repeat('7',64)) returning id,public_key into fresh_application,key;
+      if exists(select 1 from public.player_loans where application_id=fresh_application) then
+        raise exception 'Review fixture already has a loan';
+      end if;
+      select balance into strict before_balance from public.account_balances
+        where game_session_id=g and account_type=account and currency_code='QREFLOAN';
+      select count(*) into before_entries from public.ledger_entries where game_session_id=g;
+      select count(*) into before_audits from public.audit_log where game_session_id=g and action='loan.application.approve';
+      if has_function_privilege('anon','public.review_player_loan_application_v1(uuid,uuid,text,text,text,text)','EXECUTE')
+        or has_function_privilege('authenticated','public.review_player_loan_application_v1(uuid,uuid,text,text,text,text)','EXECUTE')
+        or not has_function_privilege('service_role','public.review_player_loan_application_v1(uuid,uuid,text,text,text,text)','EXECUTE') then
+        raise exception 'Loan review exposed to browser roles';
+      end if;
+      begin
+        perform * from public.review_player_loan_application_v1(g,gen_random_uuid(),key,'approve','Wrong owner','review-wrong-owner');
+        raise exception 'Review accepted wrong Staff owner';
+      exception when raise_exception then
+        if sqlerrm<>'STAFF_GAME_ACCESS_DENIED' then raise; end if;
+      end;
+      begin
+        perform * from public.review_player_loan_application_v1(other_game,staff,key,'approve','Wrong game','review-wrong-game');
+        raise exception 'Review accepted wrong game';
+      exception when raise_exception then
+        if sqlerrm<>'LOAN_APPLICATION_NOT_FOUND' then raise; end if;
+      end;
+      foreach negative_state in array array['distressed','closed'] loop
+        begin
+          update public.business_entities set status=negative_state where id=business;
+          begin
+            perform * from public.review_player_loan_application_v1(g,staff,key,'approve','Wrong business state','review-wrong-state');
+            raise exception 'Review accepted inactive business';
+          exception when raise_exception then
+            if sqlerrm<>'AUTHORITATIVE_BUSINESS_BORROWER_REQUIRED' then raise; end if;
+          end;
+          raise exception using errcode='Z0092',message='Rollback synthetic business state';
+        exception when sqlstate 'Z0092' then null; end;
+      end loop;
+      select * into reviewed from public.review_player_loan_application_v1(g,staff,key,'approve','Actual approval','review-correction-first');
+      if reviewed.replayed is distinct from false or reviewed.status is distinct from 'approved'
+        or reviewed.application_key is distinct from key or reviewed.principal is distinct from 200::numeric
+        or reviewed.scheduled_payment is distinct from 20::numeric then
+        raise exception 'Fresh review did not approve the actual application';
+      end if;
+      select disbursement_ledger_entry_id into strict disbursement from public.player_loans
+        where application_id=fresh_application and game_session_id=g and player_id=actor and business_id=business
+          and currency_code='QREFLOAN' and original_principal=200 and principal_balance=200 and origination_fee=4
+          and coalesce(to_jsonb(player_loans)->>'liability_kind','legacy_v1')='legacy_v1';
+      if (select count(*) from public.player_loans where application_id=fresh_application)<>1
+        or (select balance from public.account_balances where game_session_id=g and account_type=account and currency_code='QREFLOAN') is distinct from before_balance+196
+        or (select count(*) from public.ledger_entries where game_session_id=g)<>before_entries+2
+        or not exists(select 1 from public.ledger_entries where id=disbursement and game_session_id=g
+          and player_id=actor and account_type=account and currency_code='QREFLOAN' and amount=196)
+        or (select count(*) from public.audit_log where game_session_id=g and action='loan.application.approve')<>before_audits+1 then
+        raise exception 'Fresh review balances, ledger, currency, loan or audit mismatch';
+      end if;
+      select * into again from public.review_player_loan_application_v1(g,staff,key,'approve','Duplicate','review-correction-duplicate');
+      if again.replayed is distinct from true or again.loan_key is distinct from reviewed.loan_key
+        or (select count(*) from public.player_loans where application_id=fresh_application)<>1
+        or (select count(*) from public.ledger_entries where game_session_id=g)<>before_entries+2
+        or (select count(*) from public.audit_log where game_session_id=g and action='loan.application.approve')<>before_audits+1 then
+        raise exception 'Duplicate approval posted a second economic effect';
+      end if;
+      insert into public.loan_applications(game_session_id,player_id,business_id,loan_product_id,amount,
+        purpose,repayment_source,credit_score,projected_payment,affordability_ratio,idempotency_key,request_hash)
+        values(g,actor,business,approval_product,200,'Synthetic failure fixture',account,650,20,0.1,
+          'review-correction-failure',repeat('8',64)) returning id,public_key into failed_application,failed_key;
+      execute $ddl$create function pg_temp.fail_review_audit() returns trigger language plpgsql as $body$
+      begin
+        if new.action='loan.application.approve' and new.metadata->>'application_key'=TG_ARGV[0] then
+          raise exception using errcode='Z0091',message='Synthetic review audit failure';
+        end if;
+        return new;
+      end $body$$ddl$;
+      execute format('create trigger synthetic_review_failure before insert on public.audit_log for each row execute function pg_temp.fail_review_audit(%L)',failed_key);
+      begin
+        perform * from public.review_player_loan_application_v1(g,staff,failed_key,'approve','Rollback','review-correction-failure');
+        raise exception 'Injected review failure did not fire';
+      exception when sqlstate 'Z0091' then null; end;
+      drop trigger synthetic_review_failure on public.audit_log;
+      if exists(select 1 from public.player_loans where application_id=failed_application)
+        or (select status from public.loan_applications where id=failed_application) is distinct from 'pending_review'
+        or (select count(*) from public.ledger_entries where game_session_id=g)<>before_entries+2
+        or (select balance from public.account_balances where game_session_id=g and account_type=account and currency_code='QREFLOAN') is distinct from before_balance+196
+        or (select count(*) from public.audit_log where game_session_id=g and action='loan.application.approve')<>before_audits+1 then
+        raise exception 'Failed approval retained a partial economic mutation';
+      end if;
+      insert into public.loan_applications(game_session_id,player_id,business_id,loan_product_id,amount,
+        purpose,repayment_source,credit_score,projected_payment,affordability_ratio,idempotency_key,request_hash)
+        values(g,actor,business,approval_product,200,'Synthetic decline fixture',account,650,20,0.1,
+          'review-correction-decline',repeat('9',64)) returning id,public_key into declined_application,declined_key;
+      select * into again from public.review_player_loan_application_v1(g,staff,declined_key,'decline','Decline','review-correction-decline');
+      if again.replayed is distinct from false or again.status is distinct from 'declined'
+        or again.application_key is distinct from declined_key or again.loan_key is not null
+        or exists(select 1 from public.player_loans where application_id=declined_application)
+        or (select count(*) from public.ledger_entries where game_session_id=g)<>before_entries+2 then
+        raise exception 'Decline created an economic effect';
+      end if;
+      select * into again from public.review_player_loan_application_v1(g,staff,declined_key,'approve','Changed decision','review-correction-decline-replay');
+      if again.replayed is distinct from true or again.status is distinct from 'declined'
+        or again.application_key is distinct from declined_key then raise exception 'Decline replay changed terminal decision'; end if;
     end;
-    update public.loan_applications set status='approved' where id=application;
     select * into reviewed from public.review_player_loan_application_v1(g,staff,key,'decline','Changed decision','ref025-review-first');
     select * into again from public.review_player_loan_application_v1(g,staff,key,'invalid','Changed payload','ref025-review-other');
     if reviewed.replayed is distinct from true or reviewed.status is distinct from 'approved'

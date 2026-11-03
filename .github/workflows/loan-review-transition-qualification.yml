@@ -1,0 +1,84 @@
+name: Loan Review Transition Qualification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/loan-review-transition-qualification.yml'
+      - 'backend/supabase/config.toml'
+      - 'backend/supabase/migrations/**'
+      - 'scripts/loan-review-transition-*.mjs'
+      - 'scripts/banking-fx-database-acceptance.*'
+      - 'scripts/business-banking-runtime-contract.mjs'
+      - 'scripts/operations/live-migration-reconciliation/**'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: loan-review-transition-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  loan-review:
+    name: Loan Review Transition Qualification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      LOAN_REVIEW_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Check out exact proposed source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - name: Set up pinned Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - name: Install pinned tooling and verify source
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$LOAN_REVIEW_SOURCE_SHA"
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          test "$(npx supabase --version)" = '2.109.1'
+          node --test scripts/loan-review-transition-qualification.test.mjs
+          node scripts/business-banking-runtime-contract.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
+      - name: Start disposable full-schema PostgreSQL
+        run: |
+          set -euo pipefail
+          npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta
+      - name: Replay full schema from zero
+        run: npx supabase db reset --workdir backend --local
+      - name: Reproduce actual baseline ambiguity on migrated schema
+        env:
+          LOAN_REVIEW_FULL_SCHEMA: '1'
+        run: node --test scripts/loan-review-transition-database.test.mjs
+      - name: Exercise effective migrated approval and denial/rollback paths
+        env:
+          LOAN_REVIEW_FULL_SCHEMA: '1'
+        run: node --test scripts/loan-review-transition-full-schema.test.mjs
+      - name: Prove two-connection approval races
+        env:
+          LOAN_REVIEW_FULL_SCHEMA: '1'
+        run: node --test --test-concurrency=1 scripts/loan-review-transition-race.test.mjs
+      - name: Preserve Banking FX full and pre-liability upgrade acceptance
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          node scripts/banking-fx-database-acceptance.mjs
+      - name: Lint rebuilt schema
+        run: npx supabase db lint --workdir backend --local --level warning
+      - name: Stop only this disposable Supabase stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup

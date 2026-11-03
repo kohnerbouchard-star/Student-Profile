@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 
 const files = {
   core: "backend/supabase/migrations/20260721120000_add_business_banking_credit_runtime_v1.sql",
@@ -305,7 +305,15 @@ for (const name of ["normalize_loan_application_repayment_account_v1", "bind_pla
   assert.match(binding, /v_product\.borrower_type <> 'business' and balance_row\.player_id is not distinct from new\.player_id/u);
 }
 const applyLoan = loanRoutine(source.operability, "apply_player_loan_v1");
-const reviewLoan = loanRoutine(source.core, "review_player_loan_application_v1");
+// Characterize the effective forward-migrated review routine, not obsolete July SQL.
+let reviewLoan = loanRoutine(source.core, "review_player_loan_application_v1");
+for (const file of (await readdir("backend/supabase/migrations")).filter((file) => file.endsWith(".sql")).sort()) {
+  const migration = await readFile(`backend/supabase/migrations/${file}`, "utf8");
+  if (migration.includes("create or replace function public.review_player_loan_application_v1(")) {
+    reviewLoan = loanRoutine(migration, "review_player_loan_application_v1");
+  }
+}
+assert.match(reviewLoan, /business_entities as business_row where[\s\S]*business_row\.status in \('active','restructuring'\)/u);
 const repayLoan = effectiveLoanRoutine("repay_player_loan_v1");
 const serviceLoan = loanRoutine(source.core, "service_player_loan_status_v1");
 const recoverLoan = loanRoutine(source.fixes, "restructure_player_loan_v1");
