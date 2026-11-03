@@ -1,6 +1,7 @@
 # Player route-prefix transport transfer
 
-Status: preparation only. Base: `07dc68a8361570155a75ec965fe54bbe4d19377f`.
+Scope: PR #895, based on `07dc68a8361570155a75ec965fe54bbe4d19377f`.
+Its PR-specific authority manifest binds the permitted paths.
 
 Transfer A moves the existing Player HTTP route-prefix parser from the Players
 API directory to the platform Supabase transport directory. The implementation
@@ -16,9 +17,8 @@ change. The existing capability-route test also checks function identity.
 Local qualification on the stated base covered capability and logout routes
 and the REF-005 seam tests. A combined Route, Crafting and Stocks scratch also
 passed affected player-domain suites, the architecture ratchet, backend
-typechecking, and all Edge-root typechecks. Independent final-source review, a
-PR-specific authority record, exact-head CI and any applicable merge requirements
-remain pending.
+typechecking, and all Edge-root typechecks. Independent final-source review,
+exact-head CI and any applicable merge requirements are required before merge.
 
 Later caller migrations and eventual removal of the old forwarding path require
 separate scope and the existing compatibility and retirement gates. This record

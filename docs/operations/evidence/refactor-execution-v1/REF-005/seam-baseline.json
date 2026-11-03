@@ -286,7 +286,8 @@
   "siteTransfers": [
     {
       "task": "ARCH-402-ROUTE-TRANSFER-A",
-      "status": "PREPARATION_ONLY",
+      "status": "SCOPED_TRANSFER",
+      "pullRequest": 895,
       "reviewedBaseSha": "07dc68a8361570155a75ec965fe54bbe4d19377f",
       "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-005/route-prefix-transfer-plan.md",
       "removedSite": {
@@ -303,7 +304,7 @@
         "maximum": 1,
         "sourceBlobSha": "ce9f92f39ce1af9a37170ea5b80ae7e7fe749c5d"
       },
-      "review": "Proposed explicit one-for-one transport ownership transfer; original implementation bytes are unchanged and the old path remains a named forwarding export. Independent final-source review, PR identity and exact-head evidence remain pending. No removal or retirement approval is asserted.",
+      "review": "Explicit one-for-one transport ownership transfer scoped to PR 895; original implementation bytes are unchanged and the old path remains a named forwarding export. Independent final-source review and exact-head evidence are required before merge. No removal or retirement approval is asserted.",
       "requiredVerification": "Unchanged exact-site checker and adversarial controls, exact route/function-identity parity, affected existing tests, fresh integrated inventory and release/collision audit. Retain the old path until its separately scoped retirement gate is satisfied."
     },
     {
