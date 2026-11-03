@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1293,
+    "sourceFiles": 1294,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 110,
+    "crossDomainDeepImports": 101,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -734,52 +734,16 @@
         "target": "../../players/domain/playerAccessCodes.ts"
       },
       {
-        "consumer": "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
-        "ownerDomain": "business-banking",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractPublicListRoutePaths.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
         "consumer": "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
         "ownerDomain": "contracts",
         "importedDomain": "storylines",
         "target": "../../storylines/services/storyDecisionRoleplayService.ts"
       },
       {
-        "consumer": "backend/src/domains/contracts/api/playerContractPublicSubmitRoutePaths.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/countries/api/playerWorldRoutePaths.ts",
-        "ownerDomain": "countries",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
         "consumer": "backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts",
         "ownerDomain": "crafting",
         "importedDomain": "inventory",
         "target": "../../inventory/api/playerInventoryRoutePaths.ts"
-      },
-      {
-        "consumer": "backend/src/domains/crafting/api/playerCraftingRoutePaths.ts",
-        "ownerDomain": "crafting",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
       },
       {
         "consumer": "backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.test.ts",
@@ -792,12 +756,6 @@
         "ownerDomain": "crafting",
         "importedDomain": "players",
         "target": "../../players/contracts/playerCapabilityManifestContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/economy/api/playerBankingPublicRoutePaths.ts",
-        "ownerDomain": "economy",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
       },
       {
         "consumer": "backend/src/domains/economy/tests/economicMutationLedgerInvariant.test.ts",
@@ -896,22 +854,10 @@
         "target": "../../crafting/contracts/playerCraftingContracts.ts"
       },
       {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryRedemptionRoutePaths.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
         "consumer": "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts",
         "ownerDomain": "inventory",
         "importedDomain": "crafting",
         "target": "../../crafting/api/playerCraftingRoutePaths.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
       },
       {
         "consumer": "backend/src/domains/inventory/contracts/playerInventoryReadContracts.ts",

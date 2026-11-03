@@ -17,6 +17,7 @@ import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockA
 import { readPlayerStorePublicRoutePath } from "../../store/api/playerStorePublicRoutePaths.ts";
 import { parsePlayerWorldRuntimeRoute } from "../../world/api/playerWorldRuntimeRoutePaths.ts";
 import { readPlayerApiRouteSegments } from "./playerApiRouteSegments.ts";
+import { readPlayerApiRouteSegments as readTransportRouteSegments } from "../../../platform/supabase/playerApiRouteSegments.ts";
 import { readPlayerCapabilityManifestRoutePath } from "./playerCapabilityManifestRoutePaths.ts";
 import { readPlayerSessionLogoutRoutePath } from "./playerSessionLogoutRoutePaths.ts";
 
@@ -92,6 +93,7 @@ Deno.test("player capability manifest route accepts only exact direct and Edge p
 });
 
 Deno.test("shared Player route prefix parser accepts bounded services and rejects spoofing", () => {
+  assertEquals(readPlayerApiRouteSegments === readTransportRouteSegments, true);
   assertEquals(readPlayerApiRouteSegments("/players/me/inventory"), [
     "players",
     "me",
