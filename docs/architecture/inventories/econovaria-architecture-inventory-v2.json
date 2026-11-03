@@ -8,16 +8,16 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1299,
+    "sourceFiles": 1301,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 92,
+    "crossDomainDeepImports": 90,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 100,
-    "capabilityStrings": 137
+    "capabilityStrings": 139
   },
   "domains": [
     {
@@ -380,7 +380,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 78,
+      "sourceFiles": 80,
       "publicBoundaryFiles": []
     },
     {
@@ -1149,25 +1149,7 @@
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
         "ownerDomain": "stocks",
         "importedDomain": "storylines",
-        "target": "../../storylines/server/playerContextReadQuery.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "notifications",
-        "target": "../../notifications/public/storyNotifications.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "storylines",
-        "target": "../../storylines/infrastructure/supabaseStorylineRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "storylines",
-        "target": "../../storylines/infrastructure/supabaseStoryEffectLedgerWriter.ts"
+        "target": "../../storylines/server/stockTickStorylineRunner.ts"
       },
       {
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
@@ -1228,6 +1210,12 @@
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
         "target": "../../stocks/contracts/stockMarketNewsContracts.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/server/stockTickStorylineRunner.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "notifications",
+        "target": "../../notifications/public/storyNotifications.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
@@ -2833,6 +2821,10 @@
         "lines": 834
       },
       {
+        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+        "lines": 833
+      },
+      {
         "file": "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
         "lines": 821
       },
@@ -2843,10 +2835,6 @@
       {
         "file": "admin/world-runtime-console.js",
         "lines": 809
-      },
-      {
-        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
-        "lines": 787
       },
       {
         "file": "backend/src/domains/storylines/services/storyEffectEngine.ts",
@@ -2981,10 +2969,6 @@
         "lines": 603
       },
       {
-        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "lines": 601
-      },
-      {
         "file": "backend/src/domains/contracts/contracts/contractContracts.ts",
         "lines": 600
       },
@@ -3031,6 +3015,10 @@
       {
         "file": "backend/src/domains/contracts/tests/playerContractFullLifecycleIntegration.test.ts",
         "lines": 567
+      },
+      {
+        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+        "lines": 565
       },
       {
         "file": "admin/game-code-wiring.js",
@@ -3442,6 +3430,12 @@
         ]
       },
       {
+        "capability": "contract.story-test",
+        "locations": [
+          "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts"
+        ]
+      },
+      {
         "capability": "contract.title",
         "locations": [
           "backend/src/domains/contracts/contracts/contractContracts.ts"
@@ -3584,6 +3578,12 @@
         "capability": "effect.value",
         "locations": [
           "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "event.contract",
+        "locations": [
+          "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts"
         ]
       },
       {

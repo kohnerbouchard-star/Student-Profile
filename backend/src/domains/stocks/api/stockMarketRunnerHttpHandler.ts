@@ -55,17 +55,8 @@ import {
   SupabaseContractRepository,
 } from "../../contracts/infrastructure/supabaseContractRepository.ts";
 import {
-  createPlayerStoryContextReadQuery,
-} from "../../storylines/server/playerContextReadQuery.ts";
-import {
-  createStoryNotificationPublisher,
-} from "../../notifications/public/storyNotifications.ts";
-import {
-  SupabaseStorylineRepository,
-} from "../../storylines/infrastructure/supabaseStorylineRepository.ts";
-import {
-  SupabaseStoryEffectLedgerWriter,
-} from "../../storylines/infrastructure/supabaseStoryEffectLedgerWriter.ts";
+  createStockTickStorylineRunner,
+} from "../../storylines/server/stockTickStorylineRunner.ts";
 import {
   runDueStorylineEvents,
 } from "../../storylines/services/storylineRunner.ts";
@@ -397,38 +388,11 @@ function buildStockMarketNewsShockId(
 function createDefaultStorylineRunnerAfterTick(
   client: EdgeSupabaseClient,
 ): StockMarketRunnerStorylineTickHook {
-  const storylineRepository = new SupabaseStorylineRepository(client as any);
-  const notificationRepository = createStoryNotificationPublisher(
-    client as any,
+  return createStockTickStorylineRunner(
+    client,
+    (serviceClient) => new SupabaseContractRepository(serviceClient as any),
+    runDueStorylineEvents,
   );
-  const playerContextReadQuery = createPlayerStoryContextReadQuery(
-    client as any,
-  );
-  const contractRepository = new SupabaseContractRepository(client as any);
-  const ledger = new SupabaseStoryEffectLedgerWriter(client as any);
-
-  return async (input) => {
-    const playerContexts = await playerContextReadQuery
-      .listPlayerStoryContexts(
-        input.gameSessionId,
-      );
-
-    await runDueStorylineEvents({
-      gameSessionId: input.gameSessionId,
-      now: input.generatedAt,
-      currentMarketTick: input.currentMarketTick,
-      playerContexts,
-      repository: storylineRepository,
-      notificationRepository,
-      effectDependencies: {
-        ledger,
-        policies: storylineRepository,
-        flags: storylineRepository,
-        impacts: storylineRepository,
-        contracts: contractRepository,
-      },
-    });
-  };
 }
 
 async function runStorylineEventsAfterStockTickBestEffort(args: {

@@ -390,6 +390,52 @@ Deno.test("default Story hook reads only after tick persistence and stops effect
   }]);
 });
 
+Deno.test("default Story hook reads scoped contexts before Story work after the tick", async () => {
+  const repository = new MockRunnerRepository();
+  const reads: { table: string; applied: number; filters: [string, unknown][] }[] = [];
+  const failures: unknown[] = [];
+  const client = {
+    from(table: string) {
+      const read = { table, applied: repository.applyCalls, filters: [] as [string, unknown][] };
+      reads.push(read);
+      const query = {
+        select(_columns: string) { return query; },
+        eq(column: string, value: unknown) { read.filters.push([column, value]); return query; },
+        order(_column: string, _options?: unknown) { return query; },
+        then(resolve: (result: { data: never[]; error: null }) => unknown) {
+          return Promise.resolve({ data: [], error: null }).then(resolve);
+        },
+      };
+      return query;
+    },
+    rpc() { throw new Error("No Story effect should be written without an event."); },
+  };
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    {
+      ...dependencies({
+        repository,
+        createServiceClient: () => client,
+        logStorylineRunnerFailure: (entry) => failures.push(entry),
+      }),
+      createStorylineRunnerAfterTick: undefined,
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(repository.applyCalls, 1);
+  assertEquals(failures, []);
+  assertEquals(reads.map(({ table }) => table), [
+    "players", "player_country_assignments", "account_balances",
+    "game_session_stock_assets", "stock_holdings", "game_session_contracts",
+    "player_contract_progress", "player_story_relationships", "game_session_story_flags",
+    "game_session_storylines", "game_session_story_flags",
+  ]);
+  for (const read of reads) {
+    assertEquals(read.applied, 1);
+    assertEquals(read.filters.some(([key, value]) => key === "game_session_id" && value === GAME_SESSION_ID), true);
+  }
+});
+
 Deno.test("stock market runner derives the default seed from one game session", async () => {
   const engineInputs: StockMarketEngineInput[] = [];
   const repository = new MockRunnerRepository();
