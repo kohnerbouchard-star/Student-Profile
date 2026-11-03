@@ -45,7 +45,7 @@
     {"file":"admin/scanner-auto-refresh.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"542c0f9472a3cd441107438a89ead0a0aff200c5"},
     {"file":"admin/scanner-reward-localization.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"977d19d17e596387d0969c550b5bd270f6b7445a"},
     {"file":"backend/src/domains/business/api/playerBusinessRoutePaths.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"bc8856d482bcd67a84bbfb85db8cd08f1aadb257"},
-    {"file":"backend/src/domains/players/api/playerApiRouteSegments.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"ce9f92f39ce1af9a37170ea5b80ae7e7fe749c5d"},
+    {"file":"backend/src/platform/supabase/playerApiRouteSegments.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"ce9f92f39ce1af9a37170ea5b80ae7e7fe749c5d"},
     {"file":"backend/src/domains/players/api/playerCapabilityManifestRoutePaths.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":2,"sourceBlobSha":"e79e5acaa69a8fb148202b91378a715d8528312c"},
     {"file":"backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":2,"sourceBlobSha":"f910cf5cf66edd54aa93a757edff513c105b7096"},
     {"file":"backend/supabase/functions/admin-api/common.ts","kind":"classroom_call","signature":"fetchClassroom ( request , context , path , \"POST\" , body , )","maximum":1,"sourceBlobSha":"91a3b1381403dc5604e8bbef784be8367593e3f6"},
@@ -284,6 +284,28 @@
     "limits": "Lexical pattern and structural-evidence checks are not exhaustive module/dataflow reachability, proof of human approval or live external-retirement evidence. Existing inherited guards and 14/7/30-day retirement rules remain binding. No application debt is removed and no production/database/cloud action is authorized."
   },
   "siteTransfers": [
+    {
+      "task": "ARCH-402-ROUTE-TRANSFER-A",
+      "status": "PREPARATION_ONLY",
+      "reviewedBaseSha": "07dc68a8361570155a75ec965fe54bbe4d19377f",
+      "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-005/route-prefix-transfer-plan.md",
+      "removedSite": {
+        "file": "backend/src/domains/players/api/playerApiRouteSegments.ts",
+        "kind": "classroom_literal",
+        "signature": "\"classroom-api\"",
+        "maximum": 1,
+        "sourceBlobSha": "ce9f92f39ce1af9a37170ea5b80ae7e7fe749c5d"
+      },
+      "addedSite": {
+        "file": "backend/src/platform/supabase/playerApiRouteSegments.ts",
+        "kind": "classroom_literal",
+        "signature": "\"classroom-api\"",
+        "maximum": 1,
+        "sourceBlobSha": "ce9f92f39ce1af9a37170ea5b80ae7e7fe749c5d"
+      },
+      "review": "Proposed explicit one-for-one transport ownership transfer; original implementation bytes are unchanged and the old path remains a named forwarding export. Independent final-source review, PR identity and exact-head evidence remain pending. No removal or retirement approval is asserted.",
+      "requiredVerification": "Unchanged exact-site checker and adversarial controls, exact route/function-identity parity, affected existing tests, fresh integrated inventory and release/collision audit. Retain the old path until its separately scoped retirement gate is satisfied."
+    },
     {
       "task": "REF-007c",
       "pullRequest": 748,
