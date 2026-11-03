@@ -1,4 +1,4 @@
-import type { PlayerRequestScope } from "../../players/api/playerRequestScope.ts";
+import type { PlayerRequestScope } from "../../players/index.ts";
 import { ArrivalClassError } from "../../arrival/contracts/arrivalClassContracts.ts";
 import { WorldRuntimeError } from "../contracts/worldRuntimeContracts.ts";
 import type {
