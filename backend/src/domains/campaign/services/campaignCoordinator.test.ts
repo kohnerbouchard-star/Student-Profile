@@ -235,6 +235,28 @@ Deno.test("purpose-built command dispatch and Player context expose no ownership
   assertEquals("gameId" in context, false);
 });
 
+Deno.test("Player Campaign context accepts only its four-field read projection", () => {
+  const context = buildPlayerCampaignContext({
+    instance: {
+      status: "paused",
+      currentPhase: "shortage",
+      outcome: null,
+      eventSequence: 4,
+    },
+    history: [],
+    playerLocationId: "loc_home",
+    affectedLocationIds: ["loc_home"],
+  });
+  assertEquals(context, {
+    status: "paused",
+    phase: "shortage",
+    outcome: null,
+    sequence: 4,
+    currentLocationAffected: true,
+    history: [],
+  });
+});
+
 Deno.test("Player Campaign context bounds and orders history without changing its input", () => {
   const campaign = {
     ...instance("private-campaign-instance", NOW),

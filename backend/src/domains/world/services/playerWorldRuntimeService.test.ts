@@ -1,6 +1,6 @@
 import "../infrastructure/supabasePlayerWorldRuntimeRepository.test.ts";
 import type { PlayerRequestScope } from "../../players/index.ts";
-import { ArrivalClassError, type ArrivalClassAssignment } from "../../arrival/contracts/arrivalClassContracts.ts";
+import { ArrivalClassError, type ArrivalClassAssignment } from "../../arrival/index.ts";
 import type {
   PlayerWorldRuntimeRepository,
   PlayerWorldRuntimeServiceDependencies,
@@ -54,30 +54,31 @@ Deno.test("Campaign context requires travel state and remains scoped to public f
   const repository = memoryRepository();
   const snapshot = await repository.readSnapshot(SCOPE);
   const privateCampaignId = "00000000-0000-4000-8000-000000000099";
-  const campaign: NonNullable<PlayerWorldRuntimeSnapshot["campaign"]> = {
-    instance: {
-      campaignInstanceId: privateCampaignId,
-      gameId: SCOPE.gameId,
-      definition: {
-        packId: "test-pack",
-        packVersion: "1",
-        definitionId: "campaign.test",
-        definitionDigest: "sha256:test",
-      },
-      status: "active",
-      currentPhase: "arrival",
-      revision: 1,
-      eventSequence: 1,
-      executedEventKeys: [],
-      completedEffectKeys: [],
-      outcome: null,
-      scheduledAt: null,
-      pausedAt: null,
-      disabledAt: null,
-      completedAt: null,
-      createdAt: NOW,
-      updatedAt: NOW,
+  const campaignInstance = {
+    campaignInstanceId: privateCampaignId,
+    gameId: SCOPE.gameId,
+    definition: {
+      packId: "test-pack",
+      packVersion: "1",
+      definitionId: "campaign.test",
+      definitionDigest: "sha256:test",
     },
+    status: "active",
+    currentPhase: "arrival",
+    revision: 1,
+    eventSequence: 1,
+    executedEventKeys: [],
+    completedEffectKeys: [],
+    outcome: null,
+    scheduledAt: null,
+    pausedAt: null,
+    disabledAt: null,
+    completedAt: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+  } as const;
+  const campaign: NonNullable<PlayerWorldRuntimeSnapshot["campaign"]> = {
+    instance: campaignInstance,
     history: [{
       publicEventId: "evt_public",
       eventKey: "arrival",

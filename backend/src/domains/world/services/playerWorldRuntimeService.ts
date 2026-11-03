@@ -8,9 +8,9 @@ import {
 import type {
   CampaignHistoryEntry,
   PlayerCampaignContext,
+  PlayerCampaignProjectionSource,
 } from "../../campaign/index.ts";
 import { buildPlayerCampaignContext } from "../../campaign/index.ts";
-import type { CampaignInstance } from "../../campaign/contracts/campaignRuntimeContracts.ts";
 import type {
   CreateTravelQuoteResponse,
   ExecuteTravelResponse,
@@ -33,7 +33,7 @@ import { prepareStoredTravelQuote } from "./playerTravelService.ts";
 
 export interface PlayerWorldRuntimeSnapshot {
   readonly campaign: {
-    readonly instance: CampaignInstance;
+    readonly instance: PlayerCampaignProjectionSource;
     readonly history: readonly CampaignHistoryEntry[];
     readonly affectedLocationIds: readonly string[];
   } | null;
