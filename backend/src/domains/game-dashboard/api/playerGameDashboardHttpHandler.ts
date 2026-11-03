@@ -32,6 +32,12 @@ import {
   SupabasePlayerGameDashboardRepository,
 } from "../infrastructure/supabasePlayerGameDashboardRepository.ts";
 import {
+  createStockMarketOpenStateReadRepository,
+  createStockMarketReadRepository,
+} from "../../stocks/index.ts";
+import { createPlayerContractsReadQuery } from "../../contracts/index.ts";
+import { createDashboardStoreListingsReadQuery } from "../../store/dashboardReadModel.ts";
+import {
   SupabaseStoryNotificationRepository,
 } from "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts";
 import type {
@@ -155,7 +161,15 @@ export async function handlePlayerGameDashboardRequest(
 
     const repository = dependencies.createRepository
       ? dependencies.createRepository(serviceClient)
-      : new SupabasePlayerGameDashboardRepository(serviceClient as any);
+      : new SupabasePlayerGameDashboardRepository(
+        serviceClient as any,
+        {
+          stockMarketReadRepository: createStockMarketReadRepository(serviceClient),
+          stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(serviceClient),
+          playerContractsReadQuery: createPlayerContractsReadQuery(serviceClient),
+          storeListingsReadQuery: createDashboardStoreListingsReadQuery(serviceClient),
+        },
+      );
     const snapshot = await withPlayerGameDashboardReadPermit(() =>
       repository.read({
         gameSessionId,
