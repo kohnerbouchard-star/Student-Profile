@@ -4,6 +4,24 @@ import {
   toHoldingDto,
 } from "../infrastructure/dashboardFinancialProjection.ts";
 import { SupabasePlayerGameDashboardRepository } from "../infrastructure/supabasePlayerGameDashboardRepository.ts";
+import { PlayerGameDashboardError } from "../contracts/playerGameDashboardContracts.ts";
+import {
+  createDashboardStoreListingsReadQuery,
+  DashboardStoreListingsReadError,
+} from "../../store/dashboardReadModel.ts";
+import {
+  ContractRepositoryError,
+  createPlayerContractsReadQuery,
+  type PlayerContractsReadInput,
+} from "../../contracts/index.ts";
+import {
+  createStockMarketOpenStateReadRepository,
+  createStockMarketReadRepository,
+  StockMarketOpenStateReadError,
+  StockMarketReadError,
+  type StockMarketReadInput,
+  type StockMarketReadRepository,
+} from "../../stocks/index.ts";
 import {
   handlePlayerGameDashboardRequest,
 } from "./playerGameDashboardHttpHandler.ts";
@@ -770,6 +788,12 @@ Deno.test("dashboard financial extraction preserves snapshots and scoped query t
     );
     const repository = new SupabasePlayerGameDashboardRepository(
       client as any,
+      {
+        stockMarketReadRepository: createStockMarketReadRepository(client as any),
+        stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+        playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+        storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+      },
       () => new Date("2026-06-24T00:00:00Z"),
     );
     let result: unknown;
@@ -810,6 +834,269 @@ Deno.test("dashboard financial extraction preserves snapshots and scoped query t
     assertEquals(client.forbiddenCalls, []);
   }
 });
+
+Deno.test("dashboard preserves public stock-read error codes, messages and statuses", async () => {
+  const cases = [
+    {
+      error: new StockMarketReadError("game_session_not_found", "Missing game", 404),
+      code: "game_dashboard_game_session_not_found",
+    },
+    {
+      error: new StockMarketReadError("stock_market_schema_not_applied", "Schema unavailable", 503),
+      code: "game_dashboard_read_failed",
+    },
+    {
+      error: new StockMarketReadError("invalid_stock_market_read_request", "Invalid read", 400),
+      code: "game_dashboard_read_failed",
+    },
+    {
+      error: new StockMarketReadError("stock_market_read_failed", "Read unavailable", 500),
+      code: "game_dashboard_read_failed",
+    },
+  ];
+  for (const { error, code } of cases) {
+    const client = new FakeClient(tables());
+    const repository = new SupabasePlayerGameDashboardRepository(
+      client as any,
+      {
+        stockMarketReadRepository: { read: () => Promise.reject(error) },
+        stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+        playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+        storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+      },
+    );
+    let caught: unknown;
+    try {
+      await repository.read({
+        gameSessionId: GAME_SESSION_ID,
+        playerId: PLAYER_ID,
+        playerSessionId: PLAYER_SESSION_ID,
+        playerDisplayName: "Avery",
+        playerRosterLabel: "A-1",
+      });
+    } catch (failure) {
+      caught = failure;
+    }
+    if (!(caught instanceof PlayerGameDashboardError)) {
+      throw new Error("Expected the public Dashboard error type");
+    }
+    assertEquals([caught.code, caught.message, caught.status], [
+      code, error.message, error.status,
+    ]);
+  }
+});
+
+Deno.test("dashboard rethrows unknown stock-read failures unchanged", async () => {
+  const failure = new Error("Synthetic provider failure");
+  const client = new FakeClient(tables());
+  const repository = new SupabasePlayerGameDashboardRepository(
+    client as any,
+    {
+      stockMarketReadRepository: { read: () => Promise.reject(failure) },
+      stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+      playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+      storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+    },
+  );
+  let caught: unknown;
+  try {
+    await repository.read({
+      gameSessionId: GAME_SESSION_ID,
+      playerId: PLAYER_ID,
+      playerSessionId: PLAYER_SESSION_ID,
+      playerDisplayName: "Avery",
+      playerRosterLabel: "A-1",
+    });
+  } catch (error) {
+    caught = error;
+  }
+  if (caught !== failure) throw new Error("Unknown stock failure was replaced");
+});
+
+Deno.test("dashboard consumes its injected stock port with fresh game-scoped reads", async () => {
+  const client = new FakeClient(tables());
+  const calls: StockMarketReadInput[] = [];
+  const stockMarket: StockMarketReadRepository = {
+    read: (input) => {
+      calls.push(input);
+      return Promise.resolve({
+        gameSessionId: input.gameSessionId,
+        tickIndex: calls.length,
+        stocks: [],
+      });
+    },
+  };
+  const repository = new SupabasePlayerGameDashboardRepository(
+    client as any,
+    {
+      stockMarketReadRepository: stockMarket,
+      stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+      playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+      storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+    },
+    () => new Date("2026-06-24T00:00:00Z"),
+  );
+  const games = [GAME_SESSION_ID, OTHER_GAME_SESSION_ID, GAME_SESSION_ID];
+  for (const [index, gameSessionId] of games.entries()) {
+    const snapshot = await repository.read({
+      gameSessionId,
+      playerId: gameSessionId === GAME_SESSION_ID ? PLAYER_ID : OTHER_GAME_PLAYER_ID,
+      playerSessionId: PLAYER_SESSION_ID,
+      playerDisplayName: "Synthetic player",
+      playerRosterLabel: "A-1",
+    });
+    assertEquals(snapshot.gameSession.currentTick, index + 1);
+    assertEquals(snapshot.public.market.stocks, []);
+  }
+  assertEquals(calls, games.map((gameSessionId) => ({
+    gameSessionId,
+    includeHistory: false,
+    historyLimit: 1,
+  })));
+  assertEquals(client.trace.filter((entry) =>
+    (entry as { rpc?: string }).rpc === "read_latest_stock_market_ticks_for_game"
+  ), []);
+});
+
+Deno.test("dashboard market-open port preserves game, caller time and one clock evaluation", async () => {
+  for (const [gameSessionId, open, expectedStatus] of [
+    [GAME_SESSION_ID, true, "open"],
+    [OTHER_GAME_SESSION_ID, false, "closed"],
+  ] as const) {
+    const client = new FakeClient(tables());
+    const at = new Date("2026-07-20T12:34:56.789Z");
+    const calls: unknown[] = [];
+    const marketOpen = createStockMarketOpenStateReadRepository({
+      rpc: <T>(functionName: string, args?: unknown) => {
+        calls.push({ functionName, args });
+        return Promise.resolve({ data: open as T, error: null });
+      },
+    });
+    let clockCalls = 0;
+    const repository = new SupabasePlayerGameDashboardRepository(
+      client as any,
+      {
+        stockMarketReadRepository: createStockMarketReadRepository(client as any),
+        stockMarketOpenStateReadRepository: {
+          read: (gameId, receivedAt) => {
+            if (receivedAt !== at) throw new Error("Caller Date was replaced");
+            return marketOpen.read(gameId, receivedAt);
+          },
+        },
+        playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+        storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+      },
+      () => {
+        clockCalls += 1;
+        return at;
+      },
+    );
+    const snapshot = await repository.read({
+      gameSessionId,
+      playerId: gameSessionId === GAME_SESSION_ID ? PLAYER_ID : OTHER_GAME_PLAYER_ID,
+      playerSessionId: PLAYER_SESSION_ID,
+      playerDisplayName: "Synthetic player",
+      playerRosterLabel: "A-1",
+    });
+    assertEquals(snapshot.gameSession.marketStatus, expectedStatus);
+    assertEquals(clockCalls, 1);
+    assertEquals(calls, [{
+      functionName: "is_stock_market_open_at",
+      args: { p_game_session_id: gameSessionId, p_at: at.toISOString() },
+    }]);
+    assertEquals(client.trace.filter((entry) =>
+      (entry as { rpc?: string }).rpc === "is_stock_market_open_at"
+    ), []);
+  }
+});
+
+Deno.test("public market-open port rejects invalid dates before any RPC", async () => {
+  let calls = 0;
+  const repository = createStockMarketOpenStateReadRepository({
+    rpc: <T>() => {
+      calls += 1;
+      return Promise.resolve({ data: true as T, error: null });
+    },
+  });
+  for (const at of [new Date(NaN), "2026-07-20" as unknown as Date]) {
+    await assertMarketOpenReadError(
+      () => repository.read(GAME_SESSION_ID, at),
+      "A valid server market-evaluation time is required.",
+    );
+    assertEquals(calls, 0);
+  }
+});
+
+Deno.test("public market-open port rejects RPC errors and non-boolean data", async () => {
+  for (const response of [
+    { data: null, error: null },
+    { data: 1, error: null },
+    { data: "false", error: null },
+    { data: true, error: { message: "Synthetic RPC failure" } },
+  ]) {
+    let calls = 0;
+    const repository = createStockMarketOpenStateReadRepository({
+      rpc: <T>() => {
+        calls += 1;
+        return Promise.resolve({
+          data: response.data as T | null,
+          error: response.error,
+        });
+      },
+    });
+    await assertMarketOpenReadError(
+      () => repository.read(GAME_SESSION_ID, new Date("2026-07-20T00:00:00Z")),
+      "Authoritative game market-session state could not be read.",
+    );
+    assertEquals(calls, 1);
+  }
+});
+
+Deno.test("dashboard preserves market-open RPC rejection identity", async () => {
+  const failure = new Error("Synthetic provider rejection");
+  const client = new FakeClient(tables());
+  const repository = new SupabasePlayerGameDashboardRepository(
+    client as any,
+    {
+      stockMarketReadRepository: createStockMarketReadRepository(client as any),
+      stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository({
+        rpc: () => Promise.reject(failure),
+      }),
+      playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+      storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+    },
+    () => new Date("2026-07-20T00:00:00Z"),
+  );
+  let caught: unknown;
+  try {
+    await repository.read({
+      gameSessionId: GAME_SESSION_ID,
+      playerId: PLAYER_ID,
+      playerSessionId: PLAYER_SESSION_ID,
+      playerDisplayName: "Avery",
+      playerRosterLabel: "A-1",
+    });
+  } catch (error) {
+    caught = error;
+  }
+  if (caught !== failure) throw new Error("Market-open failure was replaced");
+});
+
+async function assertMarketOpenReadError(
+  action: () => Promise<unknown>,
+  message: string,
+): Promise<void> {
+  let caught: unknown;
+  try {
+    await action();
+  } catch (error) {
+    caught = error;
+  }
+  if (!(caught instanceof StockMarketOpenStateReadError)) {
+    throw new Error("Expected the existing market-open error type");
+  }
+  assertEquals(caught.message, message);
+}
 
 function dependencies(options: {
   readonly client?: FakeClient;
@@ -907,6 +1194,393 @@ Deno.test("player dashboard populates contracts for authenticated player only", 
   assertEquals(serialized.includes(OTHER_GAME_CONTRACT_ID), false);
   assertEquals(serialized.includes(OTHER_PLAYER_CONTRACT_PROGRESS_ID), false);
   assertEquals(serialized.includes(OTHER_GAME_CONTRACT_PROGRESS_ID), false);
+});
+
+Deno.test("public Contracts query exposes reads and returns scoped player DTOs", async () => {
+  const data = tables();
+  data.game_session_contracts = [
+    gameSessionContract({
+      metadata: { quiz: { prompt: "Visible question", correctAnswer: "Hidden answer" } },
+      requirements_payload: { quiz: { expectedAnswer: "Hidden requirement" } },
+    }),
+    gameSessionContract({
+      id: DRAFT_CONTRACT_ID,
+      visibility: "targeted",
+      targeting_payload: { playerIds: [OTHER_PLAYER_ID], countryCodes: ["SOLVEND"] },
+    }),
+    gameSessionContract({ id: OTHER_GAME_CONTRACT_ID, game_session_id: OTHER_GAME_SESSION_ID }),
+  ];
+  data.player_contract_progress = [
+    playerContractProgress(),
+    playerContractProgress({ id: OTHER_PLAYER_CONTRACT_PROGRESS_ID, player_id: OTHER_PLAYER_ID }),
+    playerContractProgress({
+      id: OTHER_GAME_CONTRACT_PROGRESS_ID,
+      game_session_id: OTHER_GAME_SESSION_ID,
+      contract_id: OTHER_GAME_CONTRACT_ID,
+      player_id: OTHER_GAME_PLAYER_ID,
+    }),
+  ];
+  const client = new FakeClient(data);
+  const query = createPlayerContractsReadQuery(client as any);
+  assertEquals(Object.keys(query), ["read"]);
+  for (const method of [
+    "createContractTemplate", "createGameSessionContract",
+    "updateGameSessionContractStatus", "upsertPlayerContractProgress",
+    "reviewPlayerContractProgress", "markContractRewardIssued",
+  ]) {
+    assertEquals((query as unknown as Record<string, unknown>)[method], undefined);
+  }
+  const result = await query.read({
+    gameSessionId: GAME_SESSION_ID,
+    playerId: PLAYER_ID,
+    countryCode: "SOLVEND",
+    rosterLabel: "A-1",
+  } as PlayerContractsReadInput);
+  assertEquals(result.available.map((row) => row.contractId), [CONTRACT_ID]);
+  assertEquals(result.progress.map((row) => row.progressId), [CONTRACT_PROGRESS_ID]);
+  assertEquals(result.available[0].metadata, { quiz: { prompt: "Visible question" } });
+  assertEquals(result.available[0].requirementsPayload, { quiz: {} });
+  assertEquals("createdByStaffId" in result.available[0], false);
+  assertEquals("contractTemplateId" in result.available[0], false);
+  assertEquals(data.game_session_contracts[0].metadata, {
+    quiz: { prompt: "Visible question", correctAnswer: "Hidden answer" },
+  });
+  const other = await query.read({
+    gameSessionId: OTHER_GAME_SESSION_ID,
+    playerId: OTHER_GAME_PLAYER_ID,
+  });
+  assertEquals(other.available.map((row) => row.contractId), [OTHER_GAME_CONTRACT_ID]);
+  assertEquals(other.progress.map((row) => row.progressId), [OTHER_GAME_CONTRACT_PROGRESS_ID]);
+  assertEquals(client.forbiddenCalls, []);
+});
+
+Deno.test("public Contracts query starts both reads before either completes", async () => {
+  const client = new FakeClient(tables());
+  const from = client.from.bind(client);
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => release = resolve);
+  const started: string[] = [];
+  client.from = (table) => {
+    const builder = from(table);
+    return new Proxy(builder, {
+      get(target, key, receiver) {
+        if (key !== "then") return Reflect.get(target, key, receiver);
+        return (
+          resolve: Parameters<typeof target.then>[0],
+          reject: Parameters<typeof target.then>[1],
+        ) => {
+          started.push(table);
+          return gate.then(() => target.then(resolve, reject));
+        };
+      },
+    });
+  };
+  const pending = createPlayerContractsReadQuery(client as any).read({
+    gameSessionId: GAME_SESSION_ID,
+    playerId: PLAYER_ID,
+  });
+  try {
+    await Promise.resolve();
+    assertEquals(started, ["game_session_contracts", "player_contract_progress"]);
+  } finally {
+    release();
+  }
+  await pending;
+});
+
+Deno.test("public Contracts query preserves persistence errors and unknown rejection identity", async () => {
+  for (const table of ["game_session_contracts", "player_contract_progress"]) {
+    const client = new FakeClient(tables(), table);
+    let caught: unknown;
+    try {
+      await createPlayerContractsReadQuery(client as any).read({
+        gameSessionId: GAME_SESSION_ID,
+        playerId: PLAYER_ID,
+      });
+    } catch (error) {
+      caught = error;
+    }
+    if (!(caught instanceof ContractRepositoryError)) {
+      throw new Error("Expected the existing Contracts persistence error");
+    }
+    assertEquals([caught.code, caught.message, caught.tableName, caught.operation], [
+      "contract_repository_query_failed", "synthetic dependency failure", table, "select",
+    ]);
+    const failure = new Error("Synthetic Contracts provider failure");
+    const unknownClient = new FakeClient(tables());
+    const from = unknownClient.from.bind(unknownClient);
+    unknownClient.from = (name) => {
+      if (name === table) throw failure;
+      return from(name);
+    };
+    let unknown: unknown;
+    try {
+      await createPlayerContractsReadQuery(unknownClient as any).read({
+        gameSessionId: GAME_SESSION_ID,
+        playerId: PLAYER_ID,
+      });
+    } catch (error) {
+      unknown = error;
+    }
+    if (unknown !== failure) throw new Error("Contracts rejection was replaced");
+  }
+});
+
+Deno.test("dashboard uses injected Contracts DTOs in both response locations on fresh reads", async () => {
+  let result = await createPlayerContractsReadQuery(new FakeClient(tables()) as any).read({
+    gameSessionId: GAME_SESSION_ID,
+    playerId: PLAYER_ID,
+  });
+  const calls: PlayerContractsReadInput[] = [];
+  const client = new FakeClient(tables(), "game_session_contracts");
+  const repository = new SupabasePlayerGameDashboardRepository(
+    client as any,
+    {
+      stockMarketReadRepository: createStockMarketReadRepository(client as any),
+      stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+      playerContractsReadQuery: { read: (input) => { calls.push(input); return Promise.resolve(result); } },
+      storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+    },
+    () => new Date("2026-06-24T00:00:00Z"),
+  );
+  const input = {
+    gameSessionId: GAME_SESSION_ID,
+    playerId: PLAYER_ID,
+    playerSessionId: PLAYER_SESSION_ID,
+    playerDisplayName: "Avery",
+    playerRosterLabel: "A-1",
+  };
+  const first = await repository.read(input);
+  if (first.me.contracts.available !== result.available || first.public.contracts !== result.available || first.me.contracts.progress !== result.progress) {
+    throw new Error("Dashboard replaced the owned Contracts DTO arrays");
+  }
+  result = { available: [], progress: [] };
+  const second = await repository.read(input);
+  assertEquals(second.me.contracts, result);
+  assertEquals(second.public.contracts, []);
+  assertEquals(calls, [
+    { gameSessionId: GAME_SESSION_ID, playerId: PLAYER_ID },
+    { gameSessionId: GAME_SESSION_ID, playerId: PLAYER_ID },
+  ]);
+  assertEquals(client.trace.filter((entry) =>
+    ["game_session_contracts", "player_contract_progress"].includes((entry as { table?: string }).table ?? "")
+  ), []);
+});
+
+Deno.test("dashboard preserves an injected Contracts query rejection unchanged", async () => {
+  const client = new FakeClient(tables());
+  const failure = new Error("Synthetic Contracts query failure");
+  const repository = new SupabasePlayerGameDashboardRepository(
+    client as any,
+    {
+      stockMarketReadRepository: createStockMarketReadRepository(client as any),
+      stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+      playerContractsReadQuery: { read: () => Promise.reject(failure) },
+      storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+    },
+  );
+  let caught: unknown;
+  try {
+    await repository.read({
+      gameSessionId: GAME_SESSION_ID,
+      playerId: PLAYER_ID,
+      playerSessionId: PLAYER_SESSION_ID,
+      playerDisplayName: "Avery",
+      playerRosterLabel: "A-1",
+    });
+  } catch (error) {
+    caught = error;
+  }
+  if (caught !== failure) throw new Error("Contracts query failure was replaced");
+});
+
+Deno.test("Store Dashboard query exposes only reads with exact scope, visibility and ordering", async () => {
+  const data = tables();
+  data.store_items = [
+    storeItem({ id: "later", name: "Alpha", sort_order: 2 }),
+    storeItem({ id: "zulu", name: "Zulu", sort_order: 1 }),
+    storeItem({ id: "alpha", name: "Alpha", sort_order: 1 }),
+    storeItem({ id: "hidden", visibility: "hidden" }),
+    storeItem({ id: "disabled", status: "disabled" }),
+    storeItem({ id: "archived", status: "archived" }),
+    storeItem({ id: "other", game_session_id: OTHER_GAME_SESSION_ID }),
+  ];
+  const client = new FakeClient(data);
+  const query = createDashboardStoreListingsReadQuery(client as any);
+  assertEquals(Object.keys(query), ["read"]);
+  for (const method of ["from", "client", "createStoreItem", "updateStoreItem", "listPurchases", "purchase"]) {
+    assertEquals((query as unknown as Record<string, unknown>)[method], undefined);
+  }
+  assertEquals((await query.read(GAME_SESSION_ID)).map((row) => row.id), ["alpha", "zulu", "later"]);
+  assertEquals((await query.read(OTHER_GAME_SESSION_ID)).map((row) => row.id), ["other"]);
+  data.store_items = [];
+  assertEquals(await query.read(GAME_SESSION_ID), []);
+  assertEquals(client.trace, [GAME_SESSION_ID, OTHER_GAME_SESSION_ID, GAME_SESSION_ID].map((gameId) => ({
+    table: "store_items",
+    columns: "id,game_session_id,item_key,name,description,category,price,currency_code,stock_quantity,status,visibility,sort_order,created_at,updated_at",
+    filters: [
+      { column: "game_session_id", value: gameId },
+      { column: "status", value: "active" },
+      { column: "visibility", value: "visible" },
+    ],
+    inFilters: [],
+    orderings: [{ column: "sort_order", ascending: true }, { column: "name", ascending: true }],
+    limit: null,
+  })));
+  assertEquals(client.forbiddenCalls, []);
+});
+
+Deno.test("Store Dashboard projection preserves numeric defaults, truncation and exact DTO fields", async () => {
+  for (const [value, expected] of [
+    [1.75, 1.75], [-2.5, -2.5], ["3.75", 3.75], ["-4.5", -4.5],
+    ["0x10", 16], ["", 0], ["bad", 0], ["Infinity", 0],
+    [Number.NaN, 0], [Number.POSITIVE_INFINITY, 0], [null, 0], [undefined, 0],
+  ] as const) {
+    const row = storeItem({
+      price: value, stock_quantity: value, sort_order: value,
+      description: undefined, game_item: { source_kind: "system" },
+    });
+    const client = new FakeClient({ store_items: [row] });
+    const result = await createDashboardStoreListingsReadQuery(client as any).read(GAME_SESSION_ID);
+    assertEquals(result, [{
+      id: row.id, gameSessionId: row.game_session_id, itemKey: row.item_key,
+      name: row.name, description: null, category: row.category,
+      price: expected, currencyCode: row.currency_code,
+      stockQuantity: Math.trunc(expected), status: row.status,
+      visibility: row.visibility, sortOrder: Math.trunc(expected),
+      createdAt: row.created_at, updatedAt: row.updated_at,
+    }]);
+    assertEquals(Object.hasOwn(result[0], "sourceType"), false);
+    assertEquals(Object.hasOwn(result[0], "game_item"), false);
+  }
+});
+
+Deno.test("Store Dashboard query preserves response failure and unknown provider or projection rejection", async () => {
+  let caught: unknown;
+  try {
+    await createDashboardStoreListingsReadQuery(new FakeClient(tables(), "store_items") as any).read(GAME_SESSION_ID);
+  } catch (error) {
+    caught = error;
+  }
+  if (!(caught instanceof DashboardStoreListingsReadError)) throw new Error("Expected Store read failure");
+  for (const scenario of ["provider", "projection"]) {
+    const failure = new Error(`Synthetic Store ${scenario} failure`);
+    const row = storeItem();
+    const client = new FakeClient({ store_items: [row] });
+    if (scenario === "provider") {
+      client.from = () => { throw failure; };
+    } else {
+      Object.defineProperty(row, "price", { get: () => { throw failure; } });
+    }
+    caught = undefined;
+    try {
+      await createDashboardStoreListingsReadQuery(client as any).read(GAME_SESSION_ID);
+    } catch (error) {
+      caught = error;
+    }
+    if (caught !== failure) throw new Error(`Store ${scenario} rejection was replaced`);
+  }
+});
+
+Deno.test("Dashboard uses fresh injected Store listings without hidden catalog reads", async () => {
+  let listings = await createDashboardStoreListingsReadQuery(new FakeClient(tables()) as any).read(GAME_SESSION_ID);
+  const calls: string[] = [];
+  const client = new FakeClient(tables(), "store_items");
+  const repository = new SupabasePlayerGameDashboardRepository(
+    client as any,
+    {
+      stockMarketReadRepository: createStockMarketReadRepository(client as any),
+      stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+      playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+      storeListingsReadQuery: { read: (gameId) => { calls.push(gameId); return Promise.resolve(listings); } },
+    },
+    () => new Date("2026-06-24T00:00:00Z"),
+  );
+  const input = {
+    gameSessionId: GAME_SESSION_ID, playerId: PLAYER_ID,
+    playerSessionId: PLAYER_SESSION_ID, playerDisplayName: "Avery", playerRosterLabel: "A-1",
+  };
+  const first = await repository.read(input);
+  if (first.me.store.listings !== listings) throw new Error("Dashboard replaced Store DTO array");
+  assertEquals(first.public.storeListings.map((row) => row.itemId), [STORE_ITEM_ID]);
+  assertEquals("price" in first.public.storeListings[0], false);
+  listings = [];
+  assertEquals((await repository.read(input)).me.store.listings, []);
+  assertEquals(calls, [GAME_SESSION_ID, GAME_SESSION_ID]);
+  assertEquals(client.trace.filter((entry) => (entry as { table?: string }).table === "store_items"), []);
+  assertEquals(client.forbiddenCalls, []);
+});
+
+Deno.test("Dashboard retains its Store error contract and unknown rejection identity", async () => {
+  for (const known of [true, false]) {
+    const failure = known ? new DashboardStoreListingsReadError() : new Error("Synthetic injected Store failure");
+    const client = new FakeClient(tables());
+    const repository = new SupabasePlayerGameDashboardRepository(
+      client as any,
+      {
+        stockMarketReadRepository: createStockMarketReadRepository(client as any),
+        stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+        playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+        storeListingsReadQuery: { read: () => Promise.reject(failure) },
+      },
+    );
+    let caught: unknown;
+    try {
+      await repository.read({
+        gameSessionId: GAME_SESSION_ID, playerId: PLAYER_ID,
+        playerSessionId: PLAYER_SESSION_ID, playerDisplayName: "Avery", playerRosterLabel: "A-1",
+      });
+    } catch (error) {
+      caught = error;
+    }
+    if (known) {
+      if (!(caught instanceof PlayerGameDashboardError)) throw new Error("Expected original Dashboard error");
+      assertEquals([caught.code, caught.message, caught.status], [
+        "game_dashboard_read_failed", "Player game dashboard could not be loaded.", 500,
+      ]);
+    } else if (caught !== failure) {
+      throw new Error("Injected Store rejection was replaced");
+    }
+  }
+});
+
+Deno.test("Dashboard captures port references without retaining or freezing the caller record", async () => {
+  const client = new FakeClient(tables());
+  const original = {
+    stockMarketReadRepository: createStockMarketReadRepository(client as any),
+    stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(client as any),
+    playerContractsReadQuery: createPlayerContractsReadQuery(client as any),
+    storeListingsReadQuery: createDashboardStoreListingsReadQuery(client as any),
+  };
+  const callerRecord = { ...original };
+  const repository = new SupabasePlayerGameDashboardRepository(
+    client as any,
+    callerRecord,
+    () => new Date("2026-06-24T00:00:00Z"),
+  );
+  const replaced = () => Promise.reject(new Error("Caller replacement must not run"));
+  callerRecord.stockMarketReadRepository = { read: replaced };
+  callerRecord.stockMarketOpenStateReadRepository = { read: replaced };
+  callerRecord.playerContractsReadQuery = { read: replaced };
+  callerRecord.storeListingsReadQuery = { read: replaced };
+  const input = {
+    gameSessionId: GAME_SESSION_ID, playerId: PLAYER_ID,
+    playerSessionId: PLAYER_SESSION_ID, playerDisplayName: "Avery", playerRosterLabel: "A-1",
+  };
+  const first = await repository.read(input);
+  assertEquals(first.me.store.listings.map((row) => row.id), [STORE_ITEM_ID]);
+  assertEquals(Object.isFrozen(callerRecord), false);
+  for (const port of Object.values(original)) assertEquals(Object.isFrozen(port), false);
+  const readStore = original.storeListingsReadQuery.read;
+  original.storeListingsReadQuery.read = async (gameId) =>
+    (await readStore(gameId)).map((row) => ({ ...row, name: "Fresh original port" }));
+  const second = await repository.read(input);
+  assertEquals(second.me.store.listings.map((row) => row.name), ["Fresh original port"]);
+  for (const name of ["game_session_contracts", "player_contract_progress", "store_items"]) {
+    assertEquals(client.trace.filter((entry) => (entry as { table?: string }).table === name).length, 2);
+  }
+  assertEquals(client.trace.filter((entry) => (entry as { rpc?: string }).rpc === "is_stock_market_open_at").length, 2);
+  assertEquals(client.forbiddenCalls, []);
 });
 
 function request(options: {

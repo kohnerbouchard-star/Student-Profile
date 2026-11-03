@@ -598,12 +598,72 @@ await patch(
   },
 );
 
+const dashboardMarketStateSource = await read(
+  "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+);
+const usesPublicMarketStatePort =
+  /[Ss]tockMarketOpenStateReadRepository/.test(dashboardMarketStateSource);
+if (usesPublicMarketStatePort) {
+  const [stocksPublicSource, dashboardHttpSource] = await Promise.all([
+    read("backend/src/domains/stocks/index.ts"),
+    read("backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts"),
+  ]);
+  const compact = (source) => source.replace(/\s+/g, "");
+  const repository = compact(dashboardMarketStateSource);
+  const stocks = compact(stocksPublicSource);
+  const http = compact(dashboardHttpSource);
+  const positionalWiring =
+    repository.includes("privatereadonlystockMarketOpenStateReadRepository:StockMarketOpenStateReadRepository,") &&
+    repository.includes("this.stockMarketOpenStateReadRepository.read(input.gameSessionId,this.now()),") &&
+    http.includes("newSupabasePlayerGameDashboardRepository(serviceClientasany,createStockMarketReadRepository(serviceClient),createStockMarketOpenStateReadRepository(serviceClient),");
+  const namedWiring =
+    repository.includes(compact(`export interface PlayerGameDashboardReadDependencies {
+      readonly stockMarketReadRepository: StockMarketReadRepository;
+      readonly stockMarketOpenStateReadRepository: StockMarketOpenStateReadRepository;
+      readonly playerContractsReadQuery: PlayerContractsReadQuery;
+      readonly storeListingsReadQuery: DashboardStoreListingsReadQuery;
+    }`)) &&
+    repository.includes(compact(`private readonly dependencies: PlayerGameDashboardReadDependencies;
+    constructor(
+      private readonly client: SupabasePlayerGameDashboardClient,
+      dependencies: PlayerGameDashboardReadDependencies,
+      private readonly now: () => Date = () => new Date(),
+    ) {
+      this.dependencies = {
+        stockMarketReadRepository: dependencies.stockMarketReadRepository,
+        stockMarketOpenStateReadRepository: dependencies.stockMarketOpenStateReadRepository,
+        playerContractsReadQuery: dependencies.playerContractsReadQuery,
+        storeListingsReadQuery: dependencies.storeListingsReadQuery,
+      };
+    }`)) &&
+    repository.includes("this.dependencies.stockMarketOpenStateReadRepository.read(input.gameSessionId,this.now()),") &&
+    http.includes(compact(`new SupabasePlayerGameDashboardRepository(
+      serviceClient as any,
+      {
+        stockMarketReadRepository: createStockMarketReadRepository(serviceClient),
+        stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(serviceClient),
+        playerContractsReadQuery: createPlayerContractsReadQuery(serviceClient),
+        storeListingsReadQuery: createDashboardStoreListingsReadQuery(serviceClient),
+      },
+    )`));
+  if (
+    !/import\s*\{[^}]*\btype\s+StockMarketOpenStateReadRepository\b[^}]*\}\s*from\s*"\.\.\/\.\.\/stocks\/index\.ts"/.test(dashboardMarketStateSource) ||
+    !(positionalWiring || namedWiring) ||
+    repository.includes("supabaseStockMarketWindowRepository.ts") ||
+    !/import\{readStockMarketOpenState,?\}from"\.\/infrastructure\/supabaseStockMarketWindowRepository\.ts";/.test(stocks) ||
+    !/exportfunctioncreateStockMarketOpenStateReadRepository\(client:Pick<EdgeSupabaseClient,"rpc">,?\):StockMarketOpenStateReadRepository\{return\{read:\(gameSessionId,at\)=>readStockMarketOpenState\(client,gameSessionId,at\),?\};?\}/.test(stocks) ||
+    !/import\{[^}]*createStockMarketOpenStateReadRepository[,}][^;]*from"\.\.\/\.\.\/stocks\/index\.ts";/.test(http)
+  ) {
+    throw new Error("Unsupported Dashboard public market-state wiring.");
+  }
+}
+
 await patch(
   "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
   (source) => {
     let expected = source;
 
-    if (!expected.includes("supabaseStockMarketWindowRepository.ts")) {
+    if (!usesPublicMarketStatePort && !expected.includes("supabaseStockMarketWindowRepository.ts")) {
       expected = replaceRegexRequired(
         expected,
         /import \{\n  DEFAULT_STOCK_EXCHANGE_CODE,\n  evaluateStockMarketSession,\n\} from "\.\.\/\.\.\/stocks\/calendars\/stockMarketExchangeCalendar\.ts";/,
@@ -621,7 +681,7 @@ await patch(
       );
     }
 
-    if (!expected.includes("readStockMarketOpenState(this.client")) {
+    if (!usesPublicMarketStatePort && !expected.includes("readStockMarketOpenState(this.client")) {
       expected = replaceRequired(
         expected,
         `      this.readGameSession(input.gameSessionId),\n      this.readPublicStockMarket(input.gameSessionId),`,
