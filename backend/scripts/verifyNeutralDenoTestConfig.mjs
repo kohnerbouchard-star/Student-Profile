@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // REF-011: only the config operand changes between each compatibility/parity run.
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { dirname, join, posix } from "node:path";
@@ -10,6 +10,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 export const NEUTRAL = "supabase/functions/deno.json";
 export const CLASSROOM = "supabase/functions/classroom-api/deno.json";
 export const LOCK = "supabase/functions/deno.lock";
+export const TSLIB_URL = "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs";
+export const TSLIB_FILE = "supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs";
+export const TSLIB_SHA256 = "c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9";
+export const TYPECHECK_MAP = "scripts/typecheck-only/import-map.json";
+export const tslibImports = (functionConfig = false) => ({
+  [TSLIB_URL]: `${functionConfig ? ".." : "."}/_shared/vendor/tslib-2.8.1/tslib.mjs`,
+});
 export const GROUPS = Object.freeze({
   "REF-011a": ["test:player-request-scope", "test:player-security", "test:player-capabilities", "test:player-logout"],
   "REF-011b": ["test:player-world", "test:player-notifications", "test:player-messaging", "test:player-progression"],
@@ -19,10 +26,48 @@ export const SUITES = Object.values(GROUPS).flat();
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 
 export function validateConfigs(neutral, classroom) {
-  assert.deepEqual(neutral, { compilerOptions: { strict: true } }, "Neutral effective settings changed; review resolution before migration");
+  assert.deepEqual(neutral, { compilerOptions: { strict: true }, imports: tslibImports() }, "Neutral settings changed beyond the exact accepted tslib mapping");
   const { tasks, ...effective } = classroom;
-  assert.deepEqual(effective, neutral, "Classroom/neutral effective settings differ");
+  assert.deepEqual(effective, { compilerOptions: neutral.compilerOptions, imports: tslibImports(true) }, "Classroom/neutral effective settings differ");
   assert.deepEqual(tasks, { check: "deno check index.ts" }, "Unexpected Classroom task configuration");
+}
+
+// Shared by CI checks/tests and the adjacent configurations selected by the CLI.
+// Local files are not covered by remote lock hashes: verify them independently.
+export function trustedTslibConfigs(backendRoot) {
+  const read = (path) => JSON.parse(readFileSync(join(backendRoot, path), "utf8"));
+  validateConfigs(read(NEUTRAL), read(CLASSROOM));
+  const modulePath = join(backendRoot, TSLIB_FILE);
+  assert(lstatSync(modulePath).isFile(), "Pinned tslib must be a regular repository file");
+  const bytes = readFileSync(modulePath);
+  assert.equal(bytes.length, 11226, "Pinned tslib length changed");
+  assert.equal(digest(bytes), TSLIB_SHA256, "Pinned tslib no longer matches the ORIGINAL accepted lock identity");
+  assert.equal(read(LOCK).remote?.[TSLIB_URL], TSLIB_SHA256, "Original tslib lock entry changed");
+  assert.deepEqual(read(TYPECHECK_MAP), { imports: {
+    [TSLIB_URL]: "../../supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs",
+  } }, "Typecheck map must contain only the exact accepted URL and local target");
+  assert.deepEqual(read("supabase/functions/admin-api/deno.json"), {
+    compilerOptions: { strict: false, noImplicitAny: false, useUnknownInCatchVariables: false },
+    imports: tslibImports(true),
+  }, "Admin settings changed beyond the exact accepted tslib mapping");
+  const functionsRoot = join(backendRoot, "supabase/functions");
+  const slugs = readdirSync(functionsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(join(functionsRoot, entry.name, "index.ts")))
+    .map((entry) => entry.name).sort();
+  const configs = [join(backendRoot, NEUTRAL)];
+  for (const slug of slugs) {
+    const configPath = join(functionsRoot, slug, "deno.json");
+    const config = JSON.parse(readFileSync(configPath, "utf8"));
+    const compilerOptions = slug === "admin-api"
+      ? { strict: false, noImplicitAny: false, useUnknownInCatchVariables: false }
+      : { strict: true };
+    const expected = { compilerOptions, imports: tslibImports(true) };
+    if (slug === "classroom-api") expected.tasks = { check: "deno check index.ts" };
+    assert.deepEqual(config, expected, `${slug}: preserve compiler/task settings and only the exact tslib mapping`);
+    assert.equal(new URL(config.imports[TSLIB_URL], pathToFileURL(configPath)).href, pathToFileURL(modulePath).href);
+    configs.push(configPath);
+  }
+  return configs;
 }
 
 // Restricted to the existing literal command grammar; never execute shell input.
@@ -111,6 +156,7 @@ function main() {
   validateConfigs(read(NEUTRAL), read(CLASSROOM));
   const { scripts } = read("package.json");
   validateScripts(scripts, options.includes("--preflight"));
+  trustedTslibConfigs(root);
   if (!options.includes("--static")) runParity(scripts, root);
   console.log(`REF-011 ${options.includes("--static") ? "static" : "parity"} verification passed for ${SUITES.length} suites`);
 }

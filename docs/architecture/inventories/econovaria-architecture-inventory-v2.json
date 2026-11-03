@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1280,
+    "sourceFiles": 1283,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 168,
+    "crossDomainDeepImports": 157,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -1105,40 +1105,10 @@
         "target": "../../players/api/playerApiRouteSegments.ts"
       },
       {
-        "consumer": "backend/src/domains/notifications/api/playerNotificationHttpHandler.ts",
-        "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/notifications/api/playerNotificationHttpHandler.ts",
-        "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/notifications/api/playerNotificationRequestParser.ts",
-        "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
         "consumer": "backend/src/domains/notifications/api/playerNotificationRoutePaths.ts",
         "ownerDomain": "notifications",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/notifications/api/playerStoryDeliveryHttpHandler.ts",
-        "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/notifications/api/playerStoryDeliveryHttpHandler.ts",
-        "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
       },
       {
         "consumer": "backend/src/domains/notifications/api/playerStoryDeliveryRoutePaths.ts",
@@ -1618,25 +1588,7 @@
         "consumer": "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts",
         "ownerDomain": "world",
         "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
         "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.test.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
       },
       {
         "consumer": "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts",
@@ -1649,12 +1601,6 @@
         "ownerDomain": "world",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
       },
       {
         "consumer": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
@@ -1677,20 +1623,8 @@
       {
         "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
         "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
-        "ownerDomain": "world",
         "importedDomain": "arrival",
         "target": "../../arrival/contracts/arrivalClassContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
       },
       {
         "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
