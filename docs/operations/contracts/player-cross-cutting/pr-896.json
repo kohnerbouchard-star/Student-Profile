@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.password-reset-return-pr-896.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 896,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/password-reset-transition-qualification.yml",
+    "backend/supabase/migrations/20261103082647_cast_staff_password_reset_permission_version_v2.sql",
+    "scripts/password-reset-transition-database.test.mjs",
+    "scripts/password-reset-transition-regression.mjs",
+    "scripts/password-reset-transition-full-schema.test.mjs",
+    "scripts/password-reset-transition-qualification.test.mjs",
+    "scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+    "docs/operations/evidence/password-reset-return-qualification-v1/scope.md",
+    "docs/operations/contracts/player-cross-cutting/pr-896.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    ".github/workflows/password-reset-transition-qualification.yml",
+    "backend/supabase/migrations/20261103082647_cast_staff_password_reset_permission_version_v2.sql",
+    "scripts/password-reset-transition-database.test.mjs",
+    "scripts/password-reset-transition-regression.mjs",
+    "scripts/password-reset-transition-full-schema.test.mjs",
+    "scripts/password-reset-transition-qualification.test.mjs",
+    "scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+    "docs/operations/evidence/password-reset-return-qualification-v1/scope.md",
+    "docs/operations/contracts/player-cross-cutting/pr-896.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Database Replay",
+    "Password Reset Transition Qualification"
+  ],
+  "criticalJobChecks": [
+    "Backend Typecheck",
+    "Repository Quality",
+    "Password Reset Transition Qualification"
+  ],
+  "readOnlyPaths": [
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "authorizationNote": "Bounded password-reset return-type correction, actual disposable PostgreSQL qualification, exact ninth migration suffix registration and secret-free PR-only CI. Preserve original eight suffix identities, immutable bundles and reject controls, existing recovery ownership, authorization, all live/release holds and production separation. No roadmap, lending implementation, deployment, hosted mutation, secret handling, PR review approval or release-hold change is included."
+}
