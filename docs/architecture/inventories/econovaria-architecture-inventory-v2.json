@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1294,
+    "sourceFiles": 1297,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 101,
+    "crossDomainDeepImports": 97,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -167,8 +167,10 @@
         "domain",
         "infrastructure"
       ],
-      "sourceFiles": 14,
-      "publicBoundaryFiles": []
+      "sourceFiles": 17,
+      "publicBoundaryFiles": [
+        "backend/src/domains/crafting/index.ts"
+      ]
     },
     {
       "name": "economy",
@@ -743,16 +745,16 @@
         "consumer": "backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts",
         "ownerDomain": "crafting",
         "importedDomain": "inventory",
+        "target": "../../inventory/api/playerInventoryReadHttpHandler.ts"
+      },
+      {
+        "consumer": "backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts",
+        "ownerDomain": "crafting",
+        "importedDomain": "inventory",
         "target": "../../inventory/api/playerInventoryRoutePaths.ts"
       },
       {
         "consumer": "backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.test.ts",
-        "ownerDomain": "crafting",
-        "importedDomain": "players",
-        "target": "../../players/contracts/playerCapabilityManifestContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.ts",
         "ownerDomain": "crafting",
         "importedDomain": "players",
         "target": "../../players/contracts/playerCapabilityManifestContracts.ts"
@@ -845,25 +847,7 @@
         "consumer": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
         "ownerDomain": "inventory",
         "importedDomain": "crafting",
-        "target": "../../crafting/api/playerCraftingHttpHandler.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "crafting",
-        "target": "../../crafting/contracts/playerCraftingContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "crafting",
-        "target": "../../crafting/api/playerCraftingRoutePaths.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/contracts/playerInventoryReadContracts.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "crafting",
-        "target": "../../crafting/contracts/playerCraftingContracts.ts"
+        "target": "../../crafting/server.ts"
       },
       {
         "consumer": "backend/src/domains/licensing/contracts/activationRequestParser.ts",
@@ -906,12 +890,6 @@
         "ownerDomain": "notifications",
         "importedDomain": "storylines",
         "target": "../../storylines/server/notificationCapabilities.ts"
-      },
-      {
-        "consumer": "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts",
-        "ownerDomain": "players",
-        "importedDomain": "crafting",
-        "target": "../../crafting/contracts/playerCraftingCapabilityManifest.ts"
       },
       {
         "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",

@@ -1,4 +1,4 @@
-import { readPlayerCraftingRoutePath } from "../../crafting/api/playerCraftingRoutePaths.ts";
+import { readPlayerCraftingRoutePath } from "../../crafting/index.ts";
 import { readPlayerApiRouteSegments } from "../../../platform/supabase/playerApiRouteSegments.ts";
 import type { PlayerInventoryRoute } from "../contracts/playerInventoryReadContracts.ts";
 
