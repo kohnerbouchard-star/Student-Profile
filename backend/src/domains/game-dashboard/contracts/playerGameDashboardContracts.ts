@@ -20,7 +20,7 @@ import type {
 import type {
   MarkNotificationDeliveryInput,
   StoryNotificationDeliveryRecord,
-} from "../../storylines/contracts/storyNotificationContracts.ts";
+} from "../../storylines/server/notificationCapabilities.ts";
 
 export const GAME_PUBLIC_REALTIME_EVENTS = [
   "stock_tick",

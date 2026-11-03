@@ -38,14 +38,10 @@ import {
 import { createPlayerContractsReadQuery } from "../../contracts/index.ts";
 import { createDashboardStoreListingsReadQuery } from "../../store/dashboardReadModel.ts";
 import {
-  SupabaseStoryNotificationRepository,
-} from "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts";
-import type {
-  StoryNotificationDeliveryRecord,
-} from "../../storylines/contracts/storyNotificationContracts.ts";
-import {
+  createStoryNotificationDeliveryState,
+  type StoryNotificationDeliveryRecord,
   StoryNotificationRepositoryError,
-} from "../../storylines/contracts/storyNotificationContracts.ts";
+} from "../../storylines/server/notificationCapabilities.ts";
 import {
   withPlayerGameDashboardReadPermit,
 } from "./playerGameDashboardReadLimiter.ts";
@@ -145,7 +141,7 @@ export async function handlePlayerGameDashboardRequest(
         dependencies.createStoryNotificationRepository;
       const storyNotificationRepository = createStoryNotificationRepository
         ? createStoryNotificationRepository(serviceClient)
-        : new SupabaseStoryNotificationRepository(serviceClient as any);
+        : createStoryNotificationDeliveryState(serviceClient as any);
       const delivery = await markCutsceneDelivery({
         input: actionRequest,
         playerId: sessionResult.player.id,
