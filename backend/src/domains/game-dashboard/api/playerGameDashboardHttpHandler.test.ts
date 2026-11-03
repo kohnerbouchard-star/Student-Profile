@@ -34,7 +34,7 @@ import type {
 import type {
   MarkNotificationDeliveryInput,
   StoryNotificationDeliveryRecord,
-} from "../../storylines/contracts/storyNotificationContracts.ts";
+} from "../../storylines/server/notificationCapabilities.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -639,6 +639,57 @@ Deno.test("player dashboard cutscene actions cannot mark another player's delive
     "game_dashboard_cutscene_delivery_not_found",
   );
   assertEquals(seededTables.notification_deliveries[0]?.seen_at, null);
+});
+
+Deno.test("player dashboard cutscene actions cannot mark another game's delivery or a missing delivery", async () => {
+  for (
+    const deliveries of [[], [
+      storyDeliveryRow({ game_session_id: OTHER_GAME_SESSION_ID }),
+    ]]
+  ) {
+    const seededTables = tables();
+    seededTables.notification_deliveries = deliveries;
+    const response = await handlePlayerGameDashboardRequest(
+      cutsceneActionRequest(),
+      dependencies({ client: new FakeClient(seededTables) }),
+    );
+    await assertErrorResponse(
+      response,
+      404,
+      "game_dashboard_cutscene_delivery_not_found",
+    );
+    assertEquals(
+      deliveries.map((row) => row.seen_at),
+      deliveries.map(() => null),
+    );
+  }
+});
+
+Deno.test("player dashboard constructs Story capability only for authorized delivery actions", async () => {
+  let constructions = 0;
+  const deps = dependencies({ repository: new CapturingRepository() });
+  deps.createStoryNotificationRepository = () => {
+    constructions += 1;
+    return new CapturingStoryNotificationReader();
+  };
+  const get = await handlePlayerGameDashboardRequest(request(), deps);
+  assertEquals(get.status, 200);
+  assertEquals(constructions, 0);
+  await handlePlayerGameDashboardRequest(
+    cutsceneActionRequest({ gameSessionId: OTHER_GAME_SESSION_ID }),
+    deps,
+  );
+  await handlePlayerGameDashboardRequest(
+    cutsceneActionRequest({ bodyOverrides: { playerId: OTHER_PLAYER_ID } }),
+    deps,
+  );
+  assertEquals(constructions, 0);
+  const post = await handlePlayerGameDashboardRequest(
+    cutsceneActionRequest(),
+    deps,
+  );
+  assertEquals(post.status, 200);
+  assertEquals(constructions, 1);
 });
 
 Deno.test("dashboard financial helpers preserve currency ambiguity and invalid numeric defaults without I/O", () => {

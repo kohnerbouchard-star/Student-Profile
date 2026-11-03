@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1289,
+    "sourceFiles": 1291,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 116,
+    "crossDomainDeepImports": 114,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -374,7 +374,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 76,
+      "sourceFiles": 78,
       "publicBoundaryFiles": []
     },
     {
@@ -813,7 +813,7 @@
         "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "storylines",
-        "target": "../../storylines/contracts/storyNotificationContracts.ts"
+        "target": "../../storylines/server/notificationCapabilities.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
@@ -825,19 +825,7 @@
         "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "storylines",
-        "target": "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "storylines",
-        "target": "../../storylines/contracts/storyNotificationContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "storylines",
-        "target": "../../storylines/contracts/storyNotificationContracts.ts"
+        "target": "../../storylines/server/notificationCapabilities.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
@@ -861,7 +849,7 @@
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "storylines",
-        "target": "../../storylines/contracts/storyNotificationContracts.ts"
+        "target": "../../storylines/server/notificationCapabilities.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
@@ -963,13 +951,13 @@
         "consumer": "backend/src/domains/notifications/public/storyNotifications.ts",
         "ownerDomain": "notifications",
         "importedDomain": "storylines",
-        "target": "../../storylines/contracts/storyNotificationContracts.ts"
+        "target": "../../storylines/server/notificationCapabilities.ts"
       },
       {
         "consumer": "backend/src/domains/notifications/public/storyNotifications.ts",
         "ownerDomain": "notifications",
         "importedDomain": "storylines",
-        "target": "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts"
+        "target": "../../storylines/server/notificationCapabilities.ts"
       },
       {
         "consumer": "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts",
@@ -2880,7 +2868,7 @@
     "oversizedFiles": [
       {
         "file": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
-        "lines": 2485
+        "lines": 2536
       },
       {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
