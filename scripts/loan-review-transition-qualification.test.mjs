@@ -63,6 +63,19 @@ test("qualification workflow is PR-only, secret-free and runs focused/full-schem
   }
   assert(workflow.indexOf("supabase db reset") < workflow.indexOf("node --test scripts/loan-review-transition-database.test.mjs"));
   assert(workflow.includes("node --test --test-concurrency=1 scripts/loan-review-transition-race.test.mjs"));
+  const race = workflow.indexOf("node --test --test-concurrency=1 scripts/loan-review-transition-race.test.mjs");
+  const reset = workflow.indexOf("Reset only this disposable schema after committed race fixtures");
+  const banking = workflow.indexOf("node scripts/banking-fx-database-acceptance.mjs");
+  assert(race < reset && reset < banking, "Committed race fixtures must be reset before global FX acceptance");
+  const isolation = workflow.slice(reset, banking);
+  assert(isolation.includes("npx supabase db reset --workdir backend --local"));
+  assert.equal(isolation.split("bindLoanDatabase()").length-1, 2);
+  assert(isolation.indexOf("bindLoanDatabase()") < isolation.indexOf("npx supabase db reset"));
+  assert(isolation.lastIndexOf("bindLoanDatabase()") > isolation.indexOf("npx supabase db reset"));
+  assert(isolation.includes("assert.equal(after.containerId, before.containerId)"));
+  assert(isolation.includes("assert.equal(after.identity.system, before.identity.system)"));
+  assert(isolation.includes("Synthetic loan qualification"));
+
   assert.match(workflow, /LOAN_REVIEW_FULL_SCHEMA: '1'/);
   assert.match(workflow, /node-version: '22\.23\.1'/);
   assert.match(workflow, /npm@10\.9\.8/);
