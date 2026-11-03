@@ -443,7 +443,7 @@ test("application restore normalization preserves exact application schema autho
 });
 
 test("REF025c2-1 is an independently registered fourth suffix without rewriting prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 8);
+  assert.equal(APPROVED_SUFFIXES.length, 9);
   assert.equal(APPROVED_SUFFIXES[3].filename, "20261004221307_prepare_business_loan_bindings_v1.sql");
   assert.equal(APPROVED_SUFFIXES[3].order, 4);
   assert.equal(APPROVED_SUFFIXES[3].statementCount, 1);
@@ -463,7 +463,7 @@ test("REF025c2-2b registers the gated submission sixth suffix", () => {
 
 
 test("system recovery is the sole seventh suffix and preserves all six prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 8);
+  assert.equal(APPROVED_SUFFIXES.length, 9);
   assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 6))).digest("hex"),
     "cb7f435ac309f834abfeace4193b9165c8e843a538a01ca02a1cbaf2fde3780f");
   assert.deepEqual(APPROVED_SUFFIXES[6], {
@@ -487,4 +487,24 @@ test("individual recovery registers eighth suffix without rewriting prior seven 
   "rawSha256": "3f2fab06e884df2b463809f1e953f6d9926cd07314a108c52cfc74830284b474",
   "statementCount": 1
 });
+});
+
+
+test("password return correction is the ninth exact suffix and preserves all original eight", async () => {
+  assert.equal(APPROVED_SUFFIXES.length, 9);
+  assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 8))).digest("hex"),
+    "c7a9f4db5d67f975dcb67926d5168abeab8ed31304211b4bd6a94324465c2d39");
+  assert.deepEqual(APPROVED_SUFFIXES[8], {
+    order: 9,
+    filename: "20261103082647_cast_staff_password_reset_permission_version_v2.sql",
+    version: "20261103082647",
+    name: "cast_staff_password_reset_permission_version_v2",
+    sourceSha256: "cac8792d89e8de56effd83b0d6609d87ab6f7b0f57b898808c05d2bbbdb4ddb3",
+    rawSha256: "27378476156232b0afa270f705195c4bc64613d874fb7f70301d3f06a882b708",
+    statementCount: 1,
+  });
+  const sql = await readFile(`backend/supabase/migrations/${APPROVED_SUFFIXES[8].filename}`, "utf8");
+  const historical = await readFile("backend/supabase/migrations/20260726096000_add_staff_password_reset_security_transition_v2.sql", "utf8");
+  assert.equal(sql.slice(sql.indexOf("\n") + 1), historical.replace(
+    "staff_users.permission_version,", "staff_users.permission_version::bigint,"));
 });
