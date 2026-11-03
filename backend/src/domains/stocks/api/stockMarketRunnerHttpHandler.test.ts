@@ -352,6 +352,44 @@ Deno.test("stock market runner keeps successful tick response when storyline hoo
   }]);
 });
 
+Deno.test("default Story hook reads only after tick persistence and stops effects on context failure", async () => {
+  const repository = new MockRunnerRepository();
+  const reads: { table: string; applied: number }[] = [];
+  const failures: unknown[] = [];
+  const failure = new Error("context transport unavailable");
+  const client = {
+    from(table: string) {
+      reads.push({ table, applied: repository.applyCalls });
+      throw failure;
+    },
+    rpc() { throw new Error("Story effects must not start after a failed context read."); },
+  };
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    {
+      ...dependencies({
+        repository,
+        createServiceClient: () => client,
+        logStorylineRunnerFailure: (entry) => failures.push(entry),
+      }),
+      createStorylineRunnerAfterTick: undefined,
+    },
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(repository.applyCalls, 1);
+  assertEquals(reads, [
+    "players", "player_country_assignments", "account_balances",
+    "game_session_stock_assets", "stock_holdings", "game_session_contracts",
+    "player_contract_progress", "player_story_relationships", "game_session_story_flags",
+  ].map((table) => ({ table, applied: 1 })));
+  assertEquals(failures, [{
+    code: "storyline_runner_after_stock_tick_failed",
+    message: failure.message,
+    retryable: true,
+  }]);
+});
+
 Deno.test("stock market runner derives the default seed from one game session", async () => {
   const engineInputs: StockMarketEngineInput[] = [];
   const repository = new MockRunnerRepository();
