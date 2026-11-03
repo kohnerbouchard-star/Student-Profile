@@ -13,8 +13,8 @@ import {
 import {
   type PlayerRequestScope,
   resolvePlayerRequestScope,
-} from "../../players/api/playerRequestScope.ts";
-import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
+} from "../../players/index.ts";
+import { resolveActivePlayerSession } from "../../players/index.ts";
 import type { PlayerStoreFundingPublicRepository } from "../contracts/playerStoreFundingPublicContracts.ts";
 import type { PlayerStoreOfferProductPublicRepository } from "../contracts/playerStoreOfferPublicContracts.ts";
 import {

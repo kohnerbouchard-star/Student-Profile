@@ -17,13 +17,13 @@ import {
   dispatchRateLimitedPlayerCraftingRequest,
   type PlayerCraftingRateLimitEndpointKey,
 } from "../../../security/playerCraftingRateLimitDispatch.ts";
-import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
+import { resolveActivePlayerSession } from "../../players/index.ts";
 import {
   createPlayerRequestApplicationContext,
   type PlayerRequestApplicationContext,
   rejectClientSuppliedPlayerIdentity,
   resolvePlayerRequestScope,
-} from "../../players/api/playerRequestScope.ts";
+} from "../../players/index.ts";
 import {
   type PlayerInventoryReadRepository,
   type PlayerInventoryReadResponseBody,

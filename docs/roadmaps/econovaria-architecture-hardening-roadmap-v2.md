@@ -513,6 +513,8 @@ Do not build one enormous “generic repository.” Domain repositories should e
 
 Status: `PLANNED`
 
+**Bounded Player request/session tranche:** `IMPLEMENTED_NOT_MERGED` in draft [PR #892](https://github.com/kohnerbouchard-star/Student-Profile/pull/892), source `23000607efd09bef630e27e7c0e9e57e4d4a2c20`, based on main `afebe89b7787ffd40ea67ed2bd68973fceba8f49`. The existing narrow Player public boundary replaces 35 private request/session import edges across 23 adapters, directly exposing the existing 401 builder without changing handler behavior. Candidate inventory moves 151 to 116 deep imports (non-test 103 to 68; 48 test edges unchanged); foreign infrastructure remains five. Local focused, typecheck, actual pinned Edge bundle and ratchet evidence, the unchanged-base Contract route-test failure, ownership overlaps and next exact-head CI/Preview gate are recorded in the [scope evidence](../operations/evidence/player-request-public-boundary-main-v1/scope.md). This tranche does not complete ARCH-402 or transfer ARCH-100F/global-ledger ownership.
+
 Create or consolidate a minimal public boundary for cross-domain use. Ban random deep imports after consumers migrate.
 
 Avoid barrel files that expose entire domains merely for convenience.

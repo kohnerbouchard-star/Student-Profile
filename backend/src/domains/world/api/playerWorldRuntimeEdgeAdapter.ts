@@ -6,7 +6,7 @@ import {
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import { resolvePlayerRequestScope } from "../../players/index.ts";
-import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
+import { resolveActivePlayerSession } from "../../players/index.ts";
 import {
   createSupabasePlayerWorldRuntimeRepository,
   type PlayerWorldRuntimeSupabaseClient,
