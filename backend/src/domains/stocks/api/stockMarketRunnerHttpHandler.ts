@@ -52,8 +52,8 @@ import {
   SupabaseStockMarketNewsRepository,
 } from "../infrastructure/supabaseStockMarketNewsRepository.ts";
 import {
-  SupabaseContractRepository,
-} from "../../contracts/infrastructure/supabaseContractRepository.ts";
+  createGameSessionContractWriter,
+} from "../../contracts/index.ts";
 import {
   createStockTickStorylineRunner,
 } from "../../storylines/server/stockTickStorylineRunner.ts";
@@ -390,7 +390,7 @@ function createDefaultStorylineRunnerAfterTick(
 ): StockMarketRunnerStorylineTickHook {
   return createStockTickStorylineRunner(
     client,
-    (serviceClient) => new SupabaseContractRepository(serviceClient as any),
+    createGameSessionContractWriter,
     runDueStorylineEvents,
   );
 }

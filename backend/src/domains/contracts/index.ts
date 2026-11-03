@@ -1,4 +1,5 @@
 import type { EdgeSupabaseClient } from "../../platform/supabase/edgeStaffSession.ts";
+import type { ContractRepository } from "./contracts/contractRepositoryContracts.ts";
 import {
   type PlayerContractDto,
   type PlayerContractProgressDto,
@@ -11,7 +12,23 @@ export type {
   PlayerContractDto,
   PlayerContractProgressDto,
 } from "./contracts/contractHttpContracts.ts";
+export type { CreateGameSessionContractInput } from "./contracts/contractRepositoryContracts.ts";
 export { ContractRepositoryError } from "./contracts/contractRepositoryContracts.ts";
+
+export type GameSessionContractWriter = Pick<
+  ContractRepository,
+  "createGameSessionContract"
+>;
+
+export function createGameSessionContractWriter(
+  client: Pick<EdgeSupabaseClient, "from">,
+): GameSessionContractWriter {
+  const repository = new SupabaseContractRepository(client);
+  return {
+    createGameSessionContract: (input) =>
+      repository.createGameSessionContract(input),
+  };
+}
 
 export interface PlayerContractsReadInput {
   readonly gameSessionId: string;
