@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1297,
+    "sourceFiles": 1299,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 97,
+    "crossDomainDeepImports": 92,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -39,8 +39,10 @@
         "contracts",
         "services"
       ],
-      "sourceFiles": 3,
-      "publicBoundaryFiles": []
+      "sourceFiles": 5,
+      "publicBoundaryFiles": [
+        "backend/src/domains/arrival/index.ts"
+      ]
     },
     {
       "name": "attendance",
@@ -1252,28 +1254,10 @@
         "target": "../../stocks/contracts/stockMarketRunnerContracts.ts"
       },
       {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeContracts.ts",
-        "ownerDomain": "world",
-        "importedDomain": "arrival",
-        "target": "../../arrival/contracts/arrivalClassContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts",
-        "ownerDomain": "world",
-        "importedDomain": "arrival",
-        "target": "../../arrival/contracts/arrivalClassContracts.ts"
-      },
-      {
         "consumer": "backend/src/domains/world/api/playerWorldRuntimeRoutePaths.ts",
         "ownerDomain": "world",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
-        "ownerDomain": "world",
-        "importedDomain": "arrival",
-        "target": "../../arrival/contracts/arrivalClassContracts.ts"
       },
       {
         "consumer": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
@@ -1283,18 +1267,6 @@
       },
       {
         "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
-        "ownerDomain": "world",
-        "importedDomain": "arrival",
-        "target": "../../arrival/contracts/arrivalClassContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
-        "ownerDomain": "world",
-        "importedDomain": "arrival",
-        "target": "../../arrival/services/arrivalClassScoring.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
         "ownerDomain": "world",
         "importedDomain": "arrival",
         "target": "../../arrival/contracts/arrivalClassContracts.ts"

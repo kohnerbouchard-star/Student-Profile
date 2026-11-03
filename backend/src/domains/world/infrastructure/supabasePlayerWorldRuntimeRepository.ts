@@ -3,7 +3,7 @@ import type {
   ArrivalClassAssignment,
   ArrivalClassId,
   ArrivalClassScoreResult,
-} from "../../arrival/contracts/arrivalClassContracts.ts";
+} from "../../arrival/index.ts";
 import type {
   CampaignInstance,
   CampaignPhase,

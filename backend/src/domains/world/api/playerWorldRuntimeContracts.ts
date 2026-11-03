@@ -2,7 +2,7 @@ import type {
   ArrivalClassId,
   ArrivalClassScore,
   ArrivalQuestionAnswer,
-} from "../../arrival/contracts/arrivalClassContracts.ts";
+} from "../../arrival/index.ts";
 import type { PlayerCampaignContext } from "../../campaign/index.ts";
 import type {
   PlayerResidencyState,
