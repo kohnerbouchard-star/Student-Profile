@@ -1,7 +1,7 @@
 import "../infrastructure/supabasePlayerWorldRuntimeRepository.test.ts";
 import type { PlayerRequestScope } from "../../players/index.ts";
 import type { ArrivalClassAssignment } from "../../arrival/contracts/arrivalClassContracts.ts";
-import type { PlayerWorldRuntimeRepository } from "./playerWorldRuntimeService.ts";
+import type { PlayerWorldRuntimeRepository, PlayerWorldRuntimeSnapshot } from "./playerWorldRuntimeService.ts";
 import { createPlayerWorldRuntimeService } from "./playerWorldRuntimeService.ts";
 import type {
   PlayerResidencyState,
@@ -37,10 +37,68 @@ Deno.test("runtime context exposes questionnaire before assignment and strips ow
   const repository = memoryRepository();
   const service = createService(repository);
   const context = await service.readContext(SCOPE);
+  assertEquals(context.campaign, null);
   assertEquals(context.arrival.required, true);
   assertEquals(context.arrival.questionnaire?.questions.length, 8);
   const serialized = JSON.stringify(context);
   for (const privateValue of [SCOPE.gameId, SCOPE.playerUuid, SCOPE.activeSessionId]) {
+    assertEquals(serialized.includes(privateValue), false);
+  }
+});
+
+Deno.test("Campaign context requires travel state and remains scoped to public fields", async () => {
+  const repository = memoryRepository();
+  const snapshot = await repository.readSnapshot(SCOPE);
+  const privateCampaignId = "00000000-0000-4000-8000-000000000099";
+  const campaign: NonNullable<PlayerWorldRuntimeSnapshot["campaign"]> = {
+    instance: {
+      campaignInstanceId: privateCampaignId,
+      gameId: SCOPE.gameId,
+      definition: {
+        packId: "test-pack",
+        packVersion: "1",
+        definitionId: "campaign.test",
+        definitionDigest: "sha256:test",
+      },
+      status: "active",
+      currentPhase: "arrival",
+      revision: 1,
+      eventSequence: 1,
+      executedEventKeys: [],
+      completedEffectKeys: [],
+      outcome: null,
+      scheduledAt: null,
+      pausedAt: null,
+      disabledAt: null,
+      completedAt: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    },
+    history: [{
+      publicEventId: "evt_public",
+      eventKey: "arrival",
+      phase: "arrival",
+      sequence: 1,
+      occurredAt: NOW,
+      summaryDefinitionId: "summary.arrival",
+    }],
+    affectedLocationIds: ["loc_origin"],
+  };
+  const withoutTravel = createService({
+    ...repository,
+    readSnapshot: async () => ({ ...snapshot, campaign, travelState: null }),
+  });
+  assertEquals((await withoutTravel.readContext(SCOPE)).campaign, null);
+
+  const withTravel = createService({
+    ...repository,
+    readSnapshot: async () => ({ ...snapshot, campaign }),
+  });
+  const context = await withTravel.readContext(SCOPE);
+  assertEquals(context.campaign?.currentLocationAffected, true);
+  assertEquals(context.campaign?.history.map((entry) => entry.publicEventId), ["evt_public"]);
+  const serialized = JSON.stringify(context.campaign);
+  for (const privateValue of [SCOPE.gameId, SCOPE.playerUuid, SCOPE.activeSessionId, privateCampaignId]) {
     assertEquals(serialized.includes(privateValue), false);
   }
 });

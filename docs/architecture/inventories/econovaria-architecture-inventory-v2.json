@@ -8,16 +8,16 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1291,
+    "sourceFiles": 1293,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 114,
+    "crossDomainDeepImports": 110,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 100,
-    "capabilityStrings": 136
+    "capabilityStrings": 137
   },
   "domains": [
     {
@@ -128,8 +128,10 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 13,
-      "publicBoundaryFiles": []
+      "sourceFiles": 15,
+      "publicBoundaryFiles": [
+        "backend/src/domains/campaign/index.ts"
+      ]
     },
     {
       "name": "contracts",
@@ -1332,12 +1334,6 @@
         "target": "../../arrival/contracts/arrivalClassContracts.ts"
       },
       {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeContracts.ts",
-        "ownerDomain": "world",
-        "importedDomain": "campaign",
-        "target": "../../campaign/services/campaignCoordinator.ts"
-      },
-      {
         "consumer": "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts",
         "ownerDomain": "world",
         "importedDomain": "arrival",
@@ -1362,12 +1358,6 @@
         "target": "../../campaign/contracts/campaignRuntimeContracts.ts"
       },
       {
-        "consumer": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
-        "ownerDomain": "world",
-        "importedDomain": "campaign",
-        "target": "../../campaign/services/campaignCoordinator.ts"
-      },
-      {
         "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
         "ownerDomain": "world",
         "importedDomain": "arrival",
@@ -1384,18 +1374,6 @@
         "ownerDomain": "world",
         "importedDomain": "arrival",
         "target": "../../arrival/contracts/arrivalClassContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
-        "ownerDomain": "world",
-        "importedDomain": "campaign",
-        "target": "../../campaign/services/campaignCoordinator.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
-        "ownerDomain": "world",
-        "importedDomain": "campaign",
-        "target": "../../campaign/services/campaignCoordinator.ts"
       },
       {
         "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
@@ -3440,6 +3418,12 @@
         ]
       },
       {
+        "capability": "campaign.test",
+        "locations": [
+          "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
+        ]
+      },
+      {
         "capability": "checkout.session",
         "locations": [
           "backend/supabase/functions/stripe-checkout-session/index.ts",
@@ -4224,7 +4208,8 @@
       {
         "capability": "summary.arrival",
         "locations": [
-          "backend/src/domains/campaign/services/campaignCoordinator.test.ts"
+          "backend/src/domains/campaign/services/campaignCoordinator.test.ts",
+          "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
         ]
       },
       {

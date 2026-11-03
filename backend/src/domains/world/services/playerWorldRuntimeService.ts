@@ -12,8 +12,8 @@ import type {
 import type {
   CampaignHistoryEntry,
   PlayerCampaignContext,
-} from "../../campaign/services/campaignCoordinator.ts";
-import { buildPlayerCampaignContext } from "../../campaign/services/campaignCoordinator.ts";
+} from "../../campaign/index.ts";
+import { buildPlayerCampaignContext } from "../../campaign/index.ts";
 import type { CampaignInstance } from "../../campaign/contracts/campaignRuntimeContracts.ts";
 import type {
   CreateTravelQuoteResponse,

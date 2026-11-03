@@ -11,7 +11,7 @@ import type {
 } from "../../campaign/contracts/campaignRuntimeContracts.ts";
 import type {
   CampaignHistoryEntry,
-} from "../../campaign/services/campaignCoordinator.ts";
+} from "../../campaign/index.ts";
 import type {
   RequestResidencyChangeRequest,
 } from "../api/playerWorldRuntimeContracts.ts";
