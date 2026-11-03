@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1301,
+    "sourceFiles": 1302,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 90,
+    "crossDomainDeepImports": 88,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -145,7 +145,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 47,
+      "sourceFiles": 48,
       "publicBoundaryFiles": [
         "backend/src/domains/contracts/index.ts"
       ]
@@ -1142,12 +1142,6 @@
       {
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
         "ownerDomain": "stocks",
-        "importedDomain": "contracts",
-        "target": "../../contracts/infrastructure/supabaseContractRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "ownerDomain": "stocks",
         "importedDomain": "storylines",
         "target": "../../storylines/server/stockTickStorylineRunner.ts"
       },
@@ -1174,12 +1168,6 @@
         "ownerDomain": "store",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/storylines/contracts/storyEffectExecutionContracts.ts",
-        "ownerDomain": "storylines",
-        "importedDomain": "contracts",
-        "target": "../../contracts/contracts/contractRepositoryContracts.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/contracts/storyNotificationContracts.ts",
@@ -3014,7 +3002,7 @@
       },
       {
         "file": "backend/src/domains/contracts/tests/playerContractFullLifecycleIntegration.test.ts",
-        "lines": 567
+        "lines": 569
       },
       {
         "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",

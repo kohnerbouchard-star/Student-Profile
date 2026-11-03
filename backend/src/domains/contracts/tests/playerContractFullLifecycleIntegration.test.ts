@@ -1,3 +1,5 @@
+import "../infrastructure/supabaseContractRepository.test.ts";
+import "./gameSessionContractWriter.test.ts";
 import { handlePlayerContractAcceptanceRequest } from "../api/playerContractAcceptanceHttpHandler.ts";
 import { handlePlayerContractPublicListRequest } from "../api/playerContractPublicListHttpHandler.ts";
 import { handlePlayerContractPublicSubmitRequest } from "../api/playerContractPublicSubmitHttpHandler.ts";

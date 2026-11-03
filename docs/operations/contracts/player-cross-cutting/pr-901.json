@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.contract-stock-writer-boundary-pr-901.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 901,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/contracts/index.ts",
+    "backend/src/domains/contracts/tests/gameSessionContractWriter.test.ts",
+    "backend/src/domains/contracts/tests/playerContractFullLifecycleIntegration.test.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/src/domains/storylines/contracts/storyEffectExecutionContracts.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-901.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/contracts/index.ts",
+    "backend/src/domains/contracts/tests/gameSessionContractWriter.test.ts",
+    "backend/src/domains/contracts/tests/playerContractFullLifecycleIntegration.test.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/src/domains/storylines/contracts/storyEffectExecutionContracts.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-901.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Story Replay Safety",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Player Multiplayer and Load E2E",
+    "REF-018 and REF-022 Staff Mutation Qualification"
+  ],
+  "criticalJobChecks": [
+    "Story Replay Safety",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Player Multiplayer and Load E2E"
+  ],
+  "readOnlyPaths": [
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "authorizationNote": "This manifest binds the reviewed Contracts–Stocks source, tests, test registration, generated inventory and this PR-specific verification manifest to the draft for normal CI and Preview. Preserve the existing Contract repository, validation, construction timing, scoped inputs, results, 23505 and other error semantics, Story tick ordering, dependency locks and release holds. Both roadmaps remain excluded. This draft does not authorize production deployment, hosted mutations, secrets, review approval, force operations or release-hold changes. Exact-head CI and Preview remain pending."
+}
