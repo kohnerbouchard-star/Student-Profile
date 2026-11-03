@@ -1,7 +1,6 @@
 /// <reference lib="dom" />
 
-import { handlePlayerCraftingRequest } from "../../crafting/api/playerCraftingHttpHandler.ts";
-import type { PlayerCraftingRoute } from "../../crafting/contracts/playerCraftingContracts.ts";
+import { handleCraftingBridgeRequest } from "../../crafting/server.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import {
   EdgeActivationError,
@@ -13,10 +12,6 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import {
-  dispatchRateLimitedPlayerCraftingRequest,
-  type PlayerCraftingRateLimitEndpointKey,
-} from "../../../security/playerCraftingRateLimitDispatch.ts";
 import { resolveActivePlayerSession } from "../../players/index.ts";
 import {
   createPlayerRequestApplicationContext,
@@ -130,50 +125,6 @@ export async function handlePlayerInventoryReadRequest(
       message: "Player inventory could not be loaded.",
       retryable: false,
     });
-  }
-}
-
-function handleCraftingBridgeRequest(
-  request: Request,
-  route: PlayerCraftingRoute,
-  dependencies: PlayerInventoryReadHttpHandlerDependencies,
-): Promise<Response> {
-  const endpointKey = craftingEndpointKey(route);
-  return dispatchRateLimitedPlayerCraftingRequest(
-    request,
-    endpointKey,
-    () => handlePlayerCraftingRequest(request, route, {
-      createServiceClient: dependencies.createServiceClient,
-      readSupabaseEnv: dependencies.readSupabaseEnv,
-      hashSessionToken: dependencies.hashSessionToken,
-      resolvePlayerSession: dependencies.resolvePlayerSession,
-      now: dependencies.now,
-    }),
-    {
-      createServiceClient: dependencies.createServiceClient,
-      readEnvironment: dependencies.readSupabaseEnv,
-    },
-  );
-}
-
-function craftingEndpointKey(
-  route: PlayerCraftingRoute,
-): PlayerCraftingRateLimitEndpointKey {
-  switch (route.kind) {
-    case "read":
-    case "startJob":
-    case "malformed":
-      return "crafting";
-    case "cancelJob":
-      return "craftingJobCancel";
-    case "claimJob":
-      return "craftingJobClaim";
-    case "useItem":
-      return "itemEffectUse";
-    case "equip":
-      return "equipmentEquip";
-    case "salvage":
-      return "equipmentSalvage";
   }
 }
 
