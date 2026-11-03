@@ -1,4 +1,4 @@
-import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+import { readPlayerApiRouteSegments } from "../../../platform/supabase/playerApiRouteSegments.ts";
 import {
   PROGRESSION_REWARD_ID_PATTERN,
   PROGRESSION_SKILL_ID_PATTERN,

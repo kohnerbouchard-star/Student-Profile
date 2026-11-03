@@ -1,5 +1,10 @@
 import type { CampaignInstance, CampaignPhase } from "./contracts/campaignRuntimeContracts.ts";
 
+export type PlayerCampaignProjectionSource = Pick<
+  CampaignInstance,
+  "status" | "currentPhase" | "outcome" | "eventSequence"
+>;
+
 export interface CampaignHistoryEntry {
   readonly publicEventId: string;
   readonly eventKey: string;
@@ -19,7 +24,7 @@ export interface PlayerCampaignContext {
 }
 
 export function buildPlayerCampaignContext(input: {
-  readonly instance: CampaignInstance;
+  readonly instance: PlayerCampaignProjectionSource;
   readonly history: readonly CampaignHistoryEntry[];
   readonly playerLocationId: string;
   readonly affectedLocationIds: readonly string[];

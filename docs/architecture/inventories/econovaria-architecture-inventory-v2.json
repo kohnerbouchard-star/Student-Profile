@@ -12,7 +12,7 @@
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 88,
+    "crossDomainDeepImports": 77,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -858,24 +858,6 @@
         "target": "../../stocks/calendars/stockMarketWindowConfig.ts"
       },
       {
-        "consumer": "backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts",
-        "ownerDomain": "marketplace",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/notifications/api/playerNotificationRoutePaths.ts",
-        "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/notifications/api/playerStoryDeliveryRoutePaths.ts",
-        "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
         "consumer": "backend/src/domains/notifications/public/storyNotifications.test.ts",
         "ownerDomain": "notifications",
         "importedDomain": "storylines",
@@ -1110,24 +1092,6 @@
         "target": "../../progression/api/playerProgressionRoutePaths.ts"
       },
       {
-        "consumer": "backend/src/domains/progression/api/playerProgressionRoutePaths.ts",
-        "ownerDomain": "progression",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockAssetListRoutePaths.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockWatchlistRoutePaths.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
         "ownerDomain": "stocks",
         "importedDomain": "game-dashboard",
@@ -1162,12 +1126,6 @@
         "ownerDomain": "stocks",
         "importedDomain": "game-dashboard",
         "target": "../../game-dashboard/realtime/gamePublicRealtimeStockTick.ts"
-      },
-      {
-        "consumer": "backend/src/domains/store/api/playerStorePublicRoutePaths.ts",
-        "ownerDomain": "store",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/contracts/storyNotificationContracts.ts",
@@ -1228,30 +1186,6 @@
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
         "target": "../../stocks/contracts/stockMarketRunnerContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeRoutePaths.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
-        "ownerDomain": "world",
-        "importedDomain": "campaign",
-        "target": "../../campaign/contracts/campaignRuntimeContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
-        "ownerDomain": "world",
-        "importedDomain": "arrival",
-        "target": "../../arrival/contracts/arrivalClassContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
-        "ownerDomain": "world",
-        "importedDomain": "campaign",
-        "target": "../../campaign/contracts/campaignRuntimeContracts.ts"
       }
     ],
     "browserTransportShims": [
@@ -2754,7 +2688,7 @@
       },
       {
         "file": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
-        "lines": 998
+        "lines": 997
       },
       {
         "file": "admin/v2/src/routes/world-management/WorldManagementRoute.js",
