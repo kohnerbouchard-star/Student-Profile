@@ -1,4 +1,4 @@
-import type { PlayerCraftingRoute } from "../../crafting/contracts/playerCraftingContracts.ts";
+import type { PlayerCraftingRoute } from "../../crafting/index.ts";
 import type { PlayerInventoryApplicationContext } from "./playerInventoryApplicationContext.ts";
 
 export type PlayerInventoryRoute =

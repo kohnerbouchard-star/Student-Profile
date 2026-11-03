@@ -21,4 +21,8 @@ export {
   readPlayerSessionTokenFromRequest,
   resolveActivePlayerSession,
 } from "./api/playerSessionHttpHelpers.ts";
-export type { PlayerCapabilityEndpointKey } from "./contracts/playerCapabilityManifestContracts.ts";
+export type {
+  PlayerCapabilityEndpointKey,
+  PlayerCapabilityManifest,
+  PlayerCapabilityManifestResponseBody,
+} from "./contracts/playerCapabilityManifestContracts.ts";

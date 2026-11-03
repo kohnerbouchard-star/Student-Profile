@@ -127,6 +127,9 @@ jobs:
             false
           fi
 
+      - name: Verify Crafting Inventory bridge
+        run: deno test --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/crafting/api/playerCraftingInventoryBridge.test.ts
+
       - name: Run backend smoke tests
         if: ${{ !cancelled() && steps.tooling.outcome == 'success' }}
         shell: bash
