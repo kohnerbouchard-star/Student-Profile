@@ -3,7 +3,7 @@ import type {
   ArrivalClassScore,
   ArrivalQuestionAnswer,
 } from "../../arrival/contracts/arrivalClassContracts.ts";
-import type { PlayerCampaignContext } from "../../campaign/services/campaignCoordinator.ts";
+import type { PlayerCampaignContext } from "../../campaign/index.ts";
 import type {
   PlayerResidencyState,
   PlayerTravelJourney,

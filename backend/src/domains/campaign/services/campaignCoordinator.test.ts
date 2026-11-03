@@ -4,9 +4,9 @@ import type {
   CampaignInstance,
 } from "../contracts/campaignRuntimeContracts.ts";
 import { createCampaignInstance } from "./campaignStateMachine.ts";
+import { buildPlayerCampaignContext } from "../index.ts";
 import {
   applyCampaignControl,
-  buildPlayerCampaignContext,
   type CampaignAuditEntry,
   type CampaignGameLifecycleState,
   type CampaignRepository,
@@ -233,6 +233,55 @@ Deno.test("purpose-built command dispatch and Player context expose no ownership
   assertEquals(context.history.map((item) => item.publicEventId), ["evt_1", "evt_2"]);
   assertEquals("campaignInstanceId" in context, false);
   assertEquals("gameId" in context, false);
+});
+
+Deno.test("Player Campaign context bounds and orders history without changing its input", () => {
+  const campaign = {
+    ...instance("private-campaign-instance", NOW),
+    status: "completed" as const,
+    currentPhase: "reconstruction" as const,
+    outcome: "reconstruction" as const,
+    eventSequence: 55,
+  };
+  const history = Array.from({ length: 58 }, (_, index) => {
+    const sequence = 58 - index;
+    return {
+      publicEventId: `evt_${sequence}`,
+      eventKey: `event.${sequence}`,
+      phase: "arrival" as const,
+      sequence,
+      occurredAt: NOW,
+      summaryDefinitionId: `summary.${sequence}`,
+    };
+  });
+  const originalOrder = history.map((entry) => entry.sequence);
+  const context = buildPlayerCampaignContext({
+    instance: campaign,
+    history,
+    playerLocationId: "loc_home",
+    affectedLocationIds: ["loc_home"],
+  });
+
+  assertEquals(context.status, "completed");
+  assertEquals(context.phase, "reconstruction");
+  assertEquals(context.outcome, "reconstruction");
+  assertEquals(context.sequence, 55);
+  assertEquals(context.currentLocationAffected, true);
+  assertEquals(context.history.map((entry) => entry.sequence), Array.from({ length: 50 }, (_, index) => index + 6));
+  assertEquals(history.map((entry) => entry.sequence), originalOrder);
+  assertEquals(context.history[0] === history.find((entry) => entry.sequence === 6), true);
+  assertEquals(Object.isFrozen(context), true);
+  assertEquals(Object.isFrozen(context.history), true);
+  assertEquals("campaignInstanceId" in context, false);
+  assertEquals("gameId" in context, false);
+
+  const differentLocation = buildPlayerCampaignContext({
+    instance: campaign,
+    history: [],
+    playerLocationId: "loc_home",
+    affectedLocationIds: ["LOC_HOME", "loc_home_suffix"],
+  });
+  assertEquals(differentLocation.currentLocationAffected, false);
 });
 
 function instance(id: string, scheduledAt: string | null): CampaignInstance {
