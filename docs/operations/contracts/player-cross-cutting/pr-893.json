@@ -23,7 +23,9 @@
     "docs/roadmaps/econovaria-architecture-hardening-roadmap-v2.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/ref-018-attendance-qualification.yml",
+    "scripts/story-notification-postgrest-acceptance.ts"
   ],
   "requiredFiles": [
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
@@ -40,7 +42,9 @@
     "docs/roadmaps/econovaria-architecture-hardening-roadmap-v2.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/ref-018-attendance-qualification.yml",
+    "scripts/story-notification-postgrest-acceptance.ts"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -51,7 +55,8 @@
     "Repository Quality",
     "Player Terminal Verify",
     "Player Response Privacy",
-    "Story Replay Safety"
+    "Story Replay Safety",
+    "Staff Attendance and ledger adjustment database/race qualification"
   ],
   "criticalJobChecks": [
     "Backend Typecheck",
@@ -61,5 +66,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "The user requested larger coherent import-boundary cleanups. This draft binds PR893/main to the existing Story notification repository behind bounded two-method publisher and three-method Dashboard delivery-state capabilities, focused tests, regenerated inventory, additive roadmap/evidence and the PR892 merge-status correction. Preserve authorization, privacy, query scope, replay and error semantics, locked dependencies and release holds. Source 32e8249dacf4997a39231c59ff255c0eb595d526 was independently reviewed; local and bundle evidence and open-PR overlaps are recorded in the scope. Original exact-head CI, Preview and final review remain pending. No production deployment, hosted mutation, PR review approval, force operation, secret handling or release-hold change is authorized by this manifest. Initial PR head 28ac16bcfd008b406462119879e57c173f4bea52 failed REF-003 source-blob checks because its test registration changed backend/package.json. The corrective successor restores that exact base file and runs the same Story capability tests through the existing Notifications test entrypoint; no evidence hash, guard or assertion is weakened."
+  "authorizationNote": "The user requested larger coherent import-boundary cleanups. This draft binds PR893/main to the existing Story notification repository behind bounded two-method publisher and three-method Dashboard delivery-state capabilities, focused tests, regenerated inventory, additive roadmap/evidence and the PR892 merge-status correction. Preserve authorization, privacy, query scope, replay and error semantics, locked dependencies and release holds. Source 32e8249dacf4997a39231c59ff255c0eb595d526 was independently reviewed; local and bundle evidence and open-PR overlaps are recorded in the scope. Original exact-head CI, Preview and final review remain pending. No production deployment, hosted mutation, PR review approval, force operation, secret handling or release-hold change is authorized by this manifest. Initial PR head 28ac16bcfd008b406462119879e57c173f4bea52 failed REF-003 source-blob checks because its test registration changed backend/package.json. The corrective successor restores that exact base file and runs the same Story capability tests through the existing Notifications test entrypoint; no evidence hash, guard or assertion is weakened. Proposed direct Story notification disposable DB acceptance is NOT RUN locally and remains required for this candidate."
 }

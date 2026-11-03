@@ -21,6 +21,11 @@ on:
       - 'scripts/ref-039-stock-runner-acceptance.ts'
       - 'scripts/ref-045-license-issuance-acceptance.ts'
       - 'scripts/pr-889-campaign-postgrest-acceptance.ts'
+      - 'scripts/story-notification-postgrest-acceptance.ts'
+      - 'backend/src/domains/storylines/server/notificationCapabilities.ts'
+      - 'backend/src/domains/storylines/infrastructure/supabaseStoryNotificationRepository.ts'
+      - 'backend/src/domains/storylines/contracts/storyNotificationContracts.ts'
+      - 'backend/src/domains/notifications/public/storyNotifications.ts'
       - 'backend/supabase/functions/campaign-orchestrator/infrastructure/client.ts'
       - 'backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.ts'
       - 'backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.test.ts'
@@ -59,6 +64,11 @@ on:
       - 'scripts/ref-039-stock-runner-acceptance.ts'
       - 'scripts/ref-045-license-issuance-acceptance.ts'
       - 'scripts/pr-889-campaign-postgrest-acceptance.ts'
+      - 'scripts/story-notification-postgrest-acceptance.ts'
+      - 'backend/src/domains/storylines/server/notificationCapabilities.ts'
+      - 'backend/src/domains/storylines/infrastructure/supabaseStoryNotificationRepository.ts'
+      - 'backend/src/domains/storylines/contracts/storyNotificationContracts.ts'
+      - 'backend/src/domains/notifications/public/storyNotifications.ts'
       - 'backend/supabase/functions/campaign-orchestrator/infrastructure/client.ts'
       - 'backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.ts'
       - 'backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.test.ts'
@@ -130,6 +140,8 @@ jobs:
           deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-039-stock-runner-acceptance.ts
           deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-045-license-issuance-acceptance.ts
           deno check --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/pr-889-campaign-postgrest-acceptance.ts
+          deno check --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/story-notification-postgrest-acceptance.ts
+          deno cache --allow-import=esm.sh --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/story-notification-postgrest-acceptance.ts
           npx supabase --version
           npx supabase start --help > /tmp/ref018/start-help.log
           npx supabase db reset --help > /tmp/ref018/reset-help.log
@@ -165,6 +177,27 @@ jobs:
           set -euo pipefail
           npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit,edge-runtime 2>&1 | node scripts/redact-econovaria-ci-log.mjs > /tmp/ref018/database-start.log
           npx supabase db reset --workdir backend --local 2>&1 | node scripts/redact-econovaria-ci-log.mjs > /tmp/ref018/database-replay.log
+      - name: Prove Story notification capabilities through local PostgREST
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test "$DATABASE_URL" = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+          story_status="$(npx supabase status --workdir backend -o env 2>&1)"
+          story_api='' story_service='' story_secret=''
+          while IFS='=' read -r story_name story_value; do
+            story_value="${story_value#\"}"; story_value="${story_value%\"}"
+            case "$story_name" in
+              API_URL) story_api="$story_value" ;;
+              SERVICE_ROLE_KEY) story_service="$story_value" ;;
+              SECRET_KEY) story_secret="$story_value" ;;
+            esac
+          done <<< "$story_status"
+          test "$story_api" = 'http://127.0.0.1:54321'
+          export SUPABASE_URL="$story_api" SUPABASE_SERVICE_ROLE_KEY="${story_service:-$story_secret}"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "notify pgrst, 'reload schema';"
+          deno run --cached-only --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF018_DISPOSABLE_DATABASE,RELEASE_COMMIT,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY --allow-read --allow-run=psql,git --allow-net=127.0.0.1:54321 scripts/story-notification-postgrest-acceptance.ts
       - name: Capture unchanged-schema lint baseline
         shell: bash
         run: |
