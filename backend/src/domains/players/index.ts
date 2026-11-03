@@ -17,6 +17,7 @@ export type {
 } from "./api/playerRequestScope.ts";
 export { readPlayerApiRouteSegments } from "./api/playerApiRouteSegments.ts";
 export {
+  invalidPlayerSessionResponse,
   readPlayerSessionTokenFromRequest,
   resolveActivePlayerSession,
 } from "./api/playerSessionHttpHelpers.ts";

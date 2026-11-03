@@ -12,7 +12,7 @@
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 151,
+    "crossDomainDeepImports": 116,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -720,12 +720,6 @@
     ],
     "crossDomainDeepImports": [
       {
-        "consumer": "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts",
-        "ownerDomain": "attendance",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
         "consumer": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
         "ownerDomain": "attendance",
         "importedDomain": "players",
@@ -738,52 +732,16 @@
         "target": "../../players/domain/playerAccessCodes.ts"
       },
       {
-        "consumer": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts",
-        "ownerDomain": "business-banking",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts",
-        "ownerDomain": "business-banking",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
         "consumer": "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
         "ownerDomain": "business-banking",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
       },
       {
-        "consumer": "backend/src/domains/contracts/api/playerContractAcceptanceHttpHandler.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractAcceptanceHttpHandler.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
         "consumer": "backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts",
         "ownerDomain": "contracts",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractHttpHandler.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractPublicListHttpHandler.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
       },
       {
         "consumer": "backend/src/domains/contracts/api/playerContractPublicListRoutePaths.ts",
@@ -798,46 +756,16 @@
         "target": "../../storylines/services/storyDecisionRoleplayService.ts"
       },
       {
-        "consumer": "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
         "consumer": "backend/src/domains/contracts/api/playerContractPublicSubmitRoutePaths.ts",
         "ownerDomain": "contracts",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
       },
       {
-        "consumer": "backend/src/domains/countries/api/playerWorldReadHttpHandler.ts",
-        "ownerDomain": "countries",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/countries/api/playerWorldReadHttpHandler.ts",
-        "ownerDomain": "countries",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
         "consumer": "backend/src/domains/countries/api/playerWorldRoutePaths.ts",
         "ownerDomain": "countries",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/crafting/api/playerCraftingHttpHandler.ts",
-        "ownerDomain": "crafting",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/crafting/api/playerCraftingHttpHandler.ts",
-        "ownerDomain": "crafting",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
       },
       {
         "consumer": "backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts",
@@ -864,28 +792,10 @@
         "target": "../../players/contracts/playerCapabilityManifestContracts.ts"
       },
       {
-        "consumer": "backend/src/domains/economy/api/playerBankingPublicHttpHandler.ts",
-        "ownerDomain": "economy",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/economy/api/playerBankingPublicHttpHandler.ts",
-        "ownerDomain": "economy",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
         "consumer": "backend/src/domains/economy/api/playerBankingPublicRoutePaths.ts",
         "ownerDomain": "economy",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/economy/api/playerLedgerHistoryHttpHandler.ts",
-        "ownerDomain": "economy",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
       },
       {
         "consumer": "backend/src/domains/economy/tests/economicMutationLedgerInvariant.test.ts",
@@ -904,12 +814,6 @@
         "ownerDomain": "game-dashboard",
         "importedDomain": "storylines",
         "target": "../../storylines/contracts/storyNotificationContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
@@ -1002,30 +906,6 @@
         "target": "../../crafting/contracts/playerCraftingContracts.ts"
       },
       {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryRedemptionHttpHandler.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryRedemptionHttpHandler.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
         "consumer": "backend/src/domains/inventory/api/playerInventoryRedemptionRoutePaths.ts",
         "ownerDomain": "inventory",
         "importedDomain": "players",
@@ -1054,18 +934,6 @@
         "ownerDomain": "licensing",
         "importedDomain": "stocks",
         "target": "../../stocks/calendars/stockMarketWindowConfig.ts"
-      },
-      {
-        "consumer": "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts",
-        "ownerDomain": "marketplace",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts",
-        "ownerDomain": "marketplace",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
       },
       {
         "consumer": "backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts",
@@ -1326,64 +1194,16 @@
         "target": "../../progression/api/playerProgressionRoutePaths.ts"
       },
       {
-        "consumer": "backend/src/domains/progression/api/playerProgressionHttpHandler.ts",
-        "ownerDomain": "progression",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/progression/api/playerProgressionHttpHandler.ts",
-        "ownerDomain": "progression",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
         "consumer": "backend/src/domains/progression/api/playerProgressionRoutePaths.ts",
         "ownerDomain": "progression",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
       },
       {
-        "consumer": "backend/src/domains/stocks/api/playerStockAssetListHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockAssetListHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
         "consumer": "backend/src/domains/stocks/api/playerStockAssetListRoutePaths.ts",
         "ownerDomain": "stocks",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockMarketTradingHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockWatchlistHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockWatchlistHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
       },
       {
         "consumer": "backend/src/domains/stocks/api/playerStockWatchlistRoutePaths.ts",
@@ -1452,34 +1272,10 @@
         "target": "../../game-dashboard/realtime/gamePublicRealtimeStockTick.ts"
       },
       {
-        "consumer": "backend/src/domains/store/api/playerStoreCatalogHttpHandler.ts",
-        "ownerDomain": "store",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/store/api/playerStorePublicHttpHandler.ts",
-        "ownerDomain": "store",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/store/api/playerStorePublicHttpHandler.ts",
-        "ownerDomain": "store",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
         "consumer": "backend/src/domains/store/api/playerStorePublicRoutePaths.ts",
         "ownerDomain": "store",
         "importedDomain": "players",
         "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/store/api/playerStorePurchaseHttpHandler.ts",
-        "ownerDomain": "store",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/contracts/storyEffectExecutionContracts.ts",
@@ -1552,12 +1348,6 @@
         "ownerDomain": "world",
         "importedDomain": "campaign",
         "target": "../../campaign/services/campaignCoordinator.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
       },
       {
         "consumer": "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts",

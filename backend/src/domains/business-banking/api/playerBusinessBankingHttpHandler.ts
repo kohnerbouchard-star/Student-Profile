@@ -8,8 +8,8 @@ import {
   handlePlayerBusinessRequest,
   isPlayerBusinessRoute,
 } from "../../business/index.ts";
-import { type PlayerRequestScope, resolvePlayerRequestScope } from "../../players/api/playerRequestScope.ts";
-import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
+import { type PlayerRequestScope, resolvePlayerRequestScope } from "../../players/index.ts";
+import { resolveActivePlayerSession } from "../../players/index.ts";
 import {
   PlayerBusinessBankingError,
   type PlayerBankingRoute,

@@ -13,7 +13,7 @@ import {
   invalidPlayerSessionResponse,
   readPlayerSessionTokenFromRequest,
   resolveActivePlayerSession,
-} from "../../players/api/playerSessionHttpHelpers.ts";
+} from "../../players/index.ts";
 import {
   GAME_PUBLIC_REALTIME_EVENTS,
   PLAYER_GAME_DASHBOARD_CUTSCENE_ACTIONS,
