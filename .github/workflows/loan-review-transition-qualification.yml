@@ -78,32 +78,50 @@ jobs:
           set -euo pipefail
           node --input-type=module - <<'NODE'
           import { writeFileSync } from 'node:fs';
-          import { bindLoanDatabase } from './scripts/loan-review-transition-binding.mjs';
-          const { containerId, image, identity } = bindLoanDatabase();
-          writeFileSync(`${process.env.RUNNER_TEMP}/loan-review-reset-binding.json`, JSON.stringify({ containerId, image, identity }));
+          import assert from 'node:assert/strict';
+          import { bindLoanDatabase, captureLoanResetBoundary } from './scripts/loan-review-transition-binding.mjs';
+          const bound = bindLoanDatabase();
+          const before = captureLoanResetBoundary();
+          assert.equal(before.containerId, bound.containerId);
+          writeFileSync(`${process.env.RUNNER_TEMP}/loan-review-reset-binding.json`, JSON.stringify(before));
           NODE
           npx supabase db reset --workdir backend --local
           node --input-type=module - <<'NODE'
           import assert from 'node:assert/strict';
-          import { readFileSync } from 'node:fs';
-          import { bindLoanDatabase } from './scripts/loan-review-transition-binding.mjs';
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import { bindLoanDatabase, verifyLoanResetTransition, assertLoanResetFixturesCleared } from './scripts/loan-review-transition-binding.mjs';
           const before = JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/loan-review-reset-binding.json`, 'utf8'));
+          const replacement = verifyLoanResetTransition(before, 0);
           const after = bindLoanDatabase();
-          assert.equal(after.containerId, before.containerId);
-          assert.equal(after.image, before.image);
-          assert.equal(after.identity.system, before.identity.system);
-          const { sql } = after;
-          assert.equal(sql("select count(*) from public.currencies where name='Synthetic loan qualification';"), '0');
-          assert.equal(sql("select count(*) from public.game_sessions where name in ('Synthetic loan qualification','Synthetic isolation game');"), '0');
+          assert.equal(after.containerId, replacement.containerId);
+          assertLoanResetFixturesCleared(after.sql);
+          writeFileSync(`${process.env.RUNNER_TEMP}/loan-review-post-reset-binding.json`, JSON.stringify({ containerId: after.containerId, image: after.image, identity: after.identity }));
           NODE
       - name: Preserve Banking FX full and pre-liability upgrade acceptance
+        env:
+          LOAN_REVIEW_FULL_SCHEMA: '1'
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y postgresql-client
-          node scripts/banking-fx-database-acceptance.mjs
+          node --input-type=module - <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          import { runInLoanDatabasePhase } from './scripts/loan-review-transition-binding.mjs';
+          const expected = JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/loan-review-post-reset-binding.json`, 'utf8'));
+          runInLoanDatabasePhase(expected, () => execFileSync(process.execPath, ['scripts/banking-fx-database-acceptance.mjs'], { stdio: 'inherit' }));
+          NODE
       - name: Lint rebuilt schema
-        run: npx supabase db lint --workdir backend --local --level warning
+        env:
+          LOAN_REVIEW_FULL_SCHEMA: '1'
+        run: |
+          node --input-type=module - <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          import { runInLoanDatabasePhase } from './scripts/loan-review-transition-binding.mjs';
+          const expected = JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/loan-review-post-reset-binding.json`, 'utf8'));
+          runInLoanDatabasePhase(expected, () => execFileSync('npx', ['supabase', 'db', 'lint', '--workdir', 'backend', '--local', '--level', 'warning'], { stdio: 'inherit' }));
+          NODE
       - name: Stop only this disposable Supabase stack
         if: always()
         run: npx supabase stop --workdir backend --no-backup
