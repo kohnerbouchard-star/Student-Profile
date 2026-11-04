@@ -4,13 +4,11 @@ import type {
 } from "../../contracts/index.ts";
 import type {
   StockMarketBoardStockDto,
-} from "../../stocks/index.ts";
-import type {
   StockMarketPlayerHoldingDto,
   StockMarketPlayerOrderDto,
   StockMarketPlayerPortfolioSummaryDto,
   StockMarketPlayerTradeDto,
-} from "../../stocks/contracts/stockMarketPlayerReadContracts.ts";
+} from "../../stocks/index.ts";
 import type {
   StoreItemDto,
 } from "../../store/dashboardReadModel.ts";
