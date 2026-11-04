@@ -10,7 +10,7 @@ import {
   type StockMarketNewsScope,
   type StockMarketNewsSentiment,
   type StockMarketNewsSource,
-} from "../../stocks/contracts/stockMarketNewsContracts.ts";
+} from "../../stocks/news.ts";
 import {
   type StoryCondition,
   parseStoryCondition,

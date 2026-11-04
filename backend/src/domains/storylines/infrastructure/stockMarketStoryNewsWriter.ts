@@ -8,7 +8,7 @@ import type {
 import {
   parseStockMarketNewsCreateRequest,
   type StockMarketNewsRepository,
-} from "../../stocks/contracts/stockMarketNewsContracts.ts";
+} from "../../stocks/news.ts";
 
 export class StockMarketStoryNewsWriter implements StoryEffectMarketNewsWriter {
   constructor(private readonly repository: StockMarketNewsRepository) {}

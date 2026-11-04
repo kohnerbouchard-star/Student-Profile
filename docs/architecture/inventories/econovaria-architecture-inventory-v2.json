@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1307,
+    "sourceFiles": 1309,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
@@ -352,7 +352,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 98,
+      "sourceFiles": 100,
       "publicBoundaryFiles": [
         "backend/src/domains/stocks/index.ts"
       ]
@@ -1111,19 +1111,19 @@
         "consumer": "backend/src/domains/storylines/contracts/storylineContracts.ts",
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketNewsContracts.ts"
+        "target": "../../stocks/news.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts",
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketNewsContracts.ts"
+        "target": "../../stocks/news.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts",
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketNewsContracts.ts"
+        "target": "../../stocks/news.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/server/stockTickStorylineRunner.ts",
