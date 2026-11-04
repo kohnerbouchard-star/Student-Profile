@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - "backend/src/domains/storylines/**"
+      - "backend/src/domains/stocks/news.ts"
+      - "backend/src/domains/stocks/news.test.ts"
+      - "backend/src/domains/stocks/contracts/stockMarketNewsContracts.ts"
+      - "backend/src/domains/stocks/contracts/stockMarketNewsContracts.test.ts"
       - "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts"
       - "backend/supabase/functions/stock-market-orchestrator/index.ts"
       - "backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql"
@@ -21,6 +25,10 @@ on:
       - main
     paths:
       - "backend/src/domains/storylines/**"
+      - "backend/src/domains/stocks/news.ts"
+      - "backend/src/domains/stocks/news.test.ts"
+      - "backend/src/domains/stocks/contracts/stockMarketNewsContracts.ts"
+      - "backend/src/domains/stocks/contracts/stockMarketNewsContracts.test.ts"
       - "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts"
       - "backend/supabase/functions/stock-market-orchestrator/index.ts"
       - "backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql"
@@ -82,6 +90,10 @@ jobs:
             --config supabase/functions/deno.json \
             --lock=supabase/functions/deno.lock \
             --frozen \
+            src/domains/stocks/news.test.ts \
+            src/domains/stocks/contracts/stockMarketNewsContracts.test.ts \
+            src/domains/storylines/contracts/storylineContracts.test.ts \
+            src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts \
             src/domains/storylines/infrastructure/supabaseStoryEffectLedgerWriter.test.ts \
             src/domains/storylines/infrastructure/supabaseStoryImpactWriter.test.ts \
             src/domains/storylines/infrastructure/supabaseStoryContractWriter.test.ts \
