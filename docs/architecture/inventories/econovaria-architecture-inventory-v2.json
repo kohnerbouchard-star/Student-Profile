@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1306,
+    "sourceFiles": 1307,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 72,
+    "crossDomainDeepImports": 71,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -382,8 +382,10 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 80,
-      "publicBoundaryFiles": []
+      "sourceFiles": 81,
+      "publicBoundaryFiles": [
+        "backend/src/domains/storylines/index.ts"
+      ]
     },
     {
       "name": "world",
@@ -738,12 +740,6 @@
         "ownerDomain": "attendance",
         "importedDomain": "players",
         "target": "../../players/identifiers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "storylines",
-        "target": "../../storylines/services/storyDecisionRoleplayService.ts"
       },
       {
         "consumer": "backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts",
