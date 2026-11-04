@@ -6,7 +6,7 @@ import {
 import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
 import { PLAYER_CREDENTIAL_VERSION } from "../../../security/playerCredentialHashing.ts";
-import { normalizeStudentCode } from "../../players/domain/playerAccessCodes.ts";
+import { normalizeStudentCode } from "../../players/identifiers.ts";
 import type {
   AttendanceMutationCommand,
   AttendanceMutationReceipt,

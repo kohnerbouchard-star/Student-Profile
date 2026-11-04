@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1305,
+    "sourceFiles": 1306,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 73,
+    "crossDomainDeepImports": 72,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -225,7 +225,9 @@
         "tests"
       ],
       "sourceFiles": 34,
-      "publicBoundaryFiles": []
+      "publicBoundaryFiles": [
+        "backend/src/domains/game-sessions/index.ts"
+      ]
     },
     {
       "name": "games",
@@ -321,7 +323,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 37,
+      "sourceFiles": 38,
       "publicBoundaryFiles": [
         "backend/src/domains/players/index.ts"
       ]
@@ -729,13 +731,13 @@
         "consumer": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
         "ownerDomain": "attendance",
         "importedDomain": "players",
-        "target": "../../players/domain/playerIdentifiers.ts"
+        "target": "../../players/identifiers.ts"
       },
       {
         "consumer": "backend/src/domains/attendance/infrastructure/supabaseAttendanceRecordRepository.ts",
         "ownerDomain": "attendance",
         "importedDomain": "players",
-        "target": "../../players/domain/playerAccessCodes.ts"
+        "target": "../../players/identifiers.ts"
       },
       {
         "consumer": "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
@@ -964,12 +966,6 @@
         "ownerDomain": "players",
         "importedDomain": "world",
         "target": "../../world/api/playerWorldRuntimeRoutePaths.ts"
-      },
-      {
-        "consumer": "backend/src/domains/players/api/playerLoginHttpHandler.ts",
-        "ownerDomain": "players",
-        "importedDomain": "game-sessions",
-        "target": "../../game-sessions/api/gameJoinCodeHttpHelpers.ts"
       },
       {
         "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
@@ -1832,7 +1828,8 @@
         "markers": [
           "legacy",
           "legacydigest",
-          "legacyhashcalls"
+          "legacyhashcalls",
+          "legacyhashinputs"
         ]
       },
       {
@@ -2792,7 +2789,7 @@
       },
       {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
-        "lines": 649
+        "lines": 656
       },
       {
         "file": "admin/settings-simplified.js",
