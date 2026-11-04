@@ -1,4 +1,3 @@
-import type { StoryNotificationPublisher } from "../../notifications/public/storyNotifications.ts";
 import type { JsonObject } from "../../../supabase/tableTypes.ts";
 import type { StoryRevealPayload } from "./storyEffectContracts.ts";
 
@@ -53,6 +52,11 @@ export interface StoryNotificationRepository {
     input: MarkNotificationDeliveryInput,
   ): Promise<StoryNotificationDeliveryRecord>;
 }
+
+export type StoryNotificationPublisher = Pick<
+  StoryNotificationRepository,
+  "createStoryNotification" | "createNotificationDeliveries"
+>;
 
 export interface CreateStoryNotificationInput {
   readonly gameSessionId: string;

@@ -1,16 +1,16 @@
-import type { StoryNotificationRepository } from "../contracts/storyNotificationContracts.ts";
+import type {
+  StoryNotificationPublisher,
+  StoryNotificationRepository,
+} from "../contracts/storyNotificationContracts.ts";
 import { SupabaseStoryNotificationRepository } from "../infrastructure/supabaseStoryNotificationRepository.ts";
 
 export { StoryNotificationRepositoryError } from "../contracts/storyNotificationContracts.ts";
 export type {
   MarkNotificationDeliveryInput,
   StoryNotificationDeliveryRecord,
+  StoryNotificationPublisher,
 } from "../contracts/storyNotificationContracts.ts";
 
-export type StoryNotificationPublisher = Pick<
-  StoryNotificationRepository,
-  "createStoryNotification" | "createNotificationDeliveries"
->;
 export type StoryNotificationDeliveryState = Pick<
   StoryNotificationRepository,
   | "markNotificationDeliverySeen"
