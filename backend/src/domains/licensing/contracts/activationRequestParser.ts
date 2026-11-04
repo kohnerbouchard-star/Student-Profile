@@ -2,7 +2,7 @@ import type { JsonObject } from "../../../supabase/tableTypes.ts";
 import {
   normalizeRequiredStockMarketWindowSetting,
   StockMarketWindowConfigError,
-} from "../../stocks/calendars/stockMarketWindowConfig.ts";
+} from "../../stocks/index.ts";
 import type { LicensingActivationRequestBody } from "./activationContract.ts";
 
 export type LicensingActivationRequestParseErrorCode =

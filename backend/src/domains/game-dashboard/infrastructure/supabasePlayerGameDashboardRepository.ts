@@ -27,14 +27,12 @@ import {
 import {
   type StockMarketBoardStockDto,
   type StockMarketOpenStateReadRepository,
+  type StockMarketPlayerOrderDto,
+  type StockMarketPlayerOrderStatus,
+  type StockMarketPlayerTradeDto,
   type StockMarketReadRepository,
   StockMarketReadError,
 } from "../../stocks/index.ts";
-import type {
-  StockMarketPlayerOrderDto,
-  StockMarketPlayerOrderStatus,
-  StockMarketPlayerTradeDto,
-} from "../../stocks/contracts/stockMarketPlayerReadContracts.ts";
 import {
   DashboardStoreListingsReadError,
   type DashboardStoreListingsReadQuery,
