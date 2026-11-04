@@ -3,6 +3,13 @@ import {
   createStoryNotificationPublisher,
   StoryNotificationRepositoryError,
 } from "./notificationCapabilities.ts";
+import type {
+  StoryNotificationPublisher as ServerPublisher,
+} from "./notificationCapabilities.ts";
+import type {
+  StoryNotificationPublisher as ContractPublisher,
+} from "../contracts/storyNotificationContracts.ts";
+import type { RunDueStorylineEventsInput } from "../contracts/storylineRunnerContracts.ts";
 import { StoryNotificationRepositoryError as CanonicalError } from "../contracts/storyNotificationContracts.ts";
 
 declare const Deno: {
@@ -13,6 +20,24 @@ function equal(actual: unknown, expected: unknown) {
     throw new Error(`${JSON.stringify(actual)} != ${JSON.stringify(expected)}`);
   }
 }
+
+type Equivalent<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false)
+  : false;
+type PublisherKeys =
+  | "createStoryNotification"
+  | "createNotificationDeliveries";
+const publisherContractChecks: [
+  Equivalent<keyof ContractPublisher, PublisherKeys>,
+  Equivalent<ServerPublisher, ContractPublisher>,
+  Equivalent<
+    NonNullable<RunDueStorylineEventsInput["notificationRepository"]>,
+    ContractPublisher
+  >,
+] = [true, true, true];
+
+Deno.test("Story publisher types retain the two-operation contract", () => {
+  equal(publisherContractChecks, [true, true, true]);
+});
 
 Deno.test("Story capabilities are lazy and expose only explicit runtime methods", () => {
   const client = {

@@ -12,7 +12,7 @@
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 75,
+    "crossDomainDeepImports": 73,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -1116,22 +1116,10 @@
         "target": "../../game-dashboard/realtime/gamePublicRealtimeStockTick.ts"
       },
       {
-        "consumer": "backend/src/domains/storylines/contracts/storyNotificationContracts.ts",
-        "ownerDomain": "storylines",
-        "importedDomain": "notifications",
-        "target": "../../notifications/public/storyNotifications.ts"
-      },
-      {
         "consumer": "backend/src/domains/storylines/contracts/storylineContracts.ts",
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
         "target": "../../stocks/contracts/stockMarketNewsContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/storylines/contracts/storylineRunnerContracts.ts",
-        "ownerDomain": "storylines",
-        "importedDomain": "notifications",
-        "target": "../../notifications/public/storyNotifications.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts",
