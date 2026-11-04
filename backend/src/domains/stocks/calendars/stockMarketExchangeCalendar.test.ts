@@ -12,7 +12,7 @@ import {
 import {
   normalizeRequiredStockMarketWindowSetting as publicNormalizeRequiredStockMarketWindowSetting,
   StockMarketWindowConfigError as PublicStockMarketWindowConfigError,
-} from "../index.ts";
+} from "../marketWindow.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;

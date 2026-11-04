@@ -9,7 +9,7 @@ import type { GameSessionsStaffApplicationContext } from "../contracts/gameSessi
 import {
   normalizeRequiredStockMarketWindowSetting,
   StockMarketWindowConfigError,
-} from "../../stocks/index.ts";
+} from "../../stocks/marketWindow.ts";
 
 export interface UpdateGameSettingsInput {
   readonly applicationContext: GameSessionsStaffApplicationContext;

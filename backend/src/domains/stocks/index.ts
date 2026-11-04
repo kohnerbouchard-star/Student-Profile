@@ -23,10 +23,6 @@ export type {
 } from "./contracts/stockMarketPlayerReadContracts.ts";
 export { StockMarketReadError } from "./contracts/stockMarketReadContracts.ts";
 export {
-  normalizeRequiredStockMarketWindowSetting,
-  StockMarketWindowConfigError,
-} from "./calendars/stockMarketWindowConfig.ts";
-export {
   StockMarketOpenStateReadError,
 } from "./infrastructure/supabaseStockMarketWindowRepository.ts";
 

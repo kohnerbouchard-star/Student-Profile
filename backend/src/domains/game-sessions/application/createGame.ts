@@ -2,7 +2,7 @@ import type { GameSessionRecord, UUID } from "../../../auth/types";
 import {
   normalizeRequiredStockMarketWindowSetting,
   StockMarketWindowConfigError,
-} from "../../stocks/index.ts";
+} from "../../stocks/marketWindow.ts";
 import type { AuditRepository } from "../../../supabase/auditRepository";
 import type { GameCreationRepository } from "../infrastructure/gameRepository";
 import type {

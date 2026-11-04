@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1304,
+    "sourceFiles": 1305,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 72,
+    "crossDomainDeepImports": 75,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -350,7 +350,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 97,
+      "sourceFiles": 98,
       "publicBoundaryFiles": [
         "backend/src/domains/stocks/index.ts"
       ]
@@ -822,10 +822,28 @@
         "target": "../../store/contracts/storePurchaseContracts.ts"
       },
       {
+        "consumer": "backend/src/domains/game-sessions/application/createGame.ts",
+        "ownerDomain": "game-sessions",
+        "importedDomain": "stocks",
+        "target": "../../stocks/marketWindow.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-sessions/application/updateGameSettings.ts",
+        "ownerDomain": "game-sessions",
+        "importedDomain": "stocks",
+        "target": "../../stocks/marketWindow.ts"
+      },
+      {
         "consumer": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
         "ownerDomain": "inventory",
         "importedDomain": "crafting",
         "target": "../../crafting/server.ts"
+      },
+      {
+        "consumer": "backend/src/domains/licensing/contracts/activationRequestParser.ts",
+        "ownerDomain": "licensing",
+        "importedDomain": "stocks",
+        "target": "../../stocks/marketWindow.ts"
       },
       {
         "consumer": "backend/src/domains/notifications/public/storyNotifications.test.ts",
