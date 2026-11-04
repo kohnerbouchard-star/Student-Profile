@@ -15,7 +15,7 @@ import {
   renderStoryDecisionRoleplay,
   type StoryDecisionRoleplayClient,
   type StoryDecisionRoleplayResult,
-} from "../../storylines/services/storyDecisionRoleplayService.ts";
+} from "../../storylines/index.ts";
 import {
   invalidPlayerSessionResponse,
   readPlayerSessionTokenFromRequest,
