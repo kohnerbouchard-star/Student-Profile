@@ -4,6 +4,8 @@ Date: 2026-11-05. Roadmap child: `ARCH-501/502-PLAYER-BANKING-FRESHNESS-001`.
 Local branch: `fix/player-banking-freshness-ownership-v1`.
 Source baseline: `45715997599942fccc3af0fa592ffa4a3a66a37d` (merged #911).
 Status: `IMPLEMENTED_NOT_MERGED`. No PR or publication authority.
+Implementation commit: `a7279798893cff7d4f86d6c0b562991578fc9e88`.
+Final main re-fetch remains the identical baseline; the local worktree is isolated.
 
 ## Reproduced problem and correction
 
@@ -108,6 +110,27 @@ The bundled Chromium 147 download returned HTTP 403 `Domain forbidden`; local
 native runs use available `/usr/bin/chromium` version `151.0.7922.173` with
 repository Playwright `1.59.1`. This is successful local Chromium evidence, not
 qualification of the CI browser binary or hosted runtime.
+
+## Raw evidence identity
+
+All files below are in `/tmp/player-banking-evidence/`; hashes identify the
+retained bytes, including the unchanged-main failures.
+
+| File | SHA-256 |
+| --- | --- |
+| `baseline-expanded-node.tap` | `634f8101cc09f3ba0889dc9259c2c478a96873f20f972862f632c17474ff7f38` |
+| `baseline-browser.log` | `9bb4a5d89ddbd52ce07a8024c257b5355c3d45a69cf932ae9382bc8c8577cdf2` |
+| `expanded-node.tap` | `c835bb8b4c186beb9528b92ecdf580c9dd2481f489566fce80c66d57b43d2f91` |
+| `banking-read-final.log` | `598eb0426f8f9735674087ebcd0d984d8b13b120bbcde6471f7fab14208b6d3f` |
+| `browser-final.log` | `81f4075bdd6e4a2c53285276623a3bf0e095e7a0369710b339a8bc9edbd28f8b` |
+| `player-verify-final.log` | `e7ffcbf028aeb2b8eec30c4730f738dc825612208bc98ced2f59f02e934b2c8b` |
+| `root-test.log` | `3e9b5e2fcbd3243443d51701e9676c587d170ff13a5a42311edf0670b2f8fb33` |
+| `backend-typecheck.log` | `0cc57fbbdfa5d57e4da048a003e7e9a674b68d90e18e83f437f47da5d1215942` |
+| `backend-smoke.log` | `e34e2dbade8e20f10c668a6fcb04e67796f9445da9ebbb433973c5f45ef48ead` |
+
+The final `banking-read` command reran the strengthened suite after the full
+Player verification run; the additional nested-resource/DOM assertions pass.
+All 29 identical strengthened tests fail on the exact baseline.
 
 ## Review, limits and next action
 
