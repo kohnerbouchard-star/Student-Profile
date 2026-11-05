@@ -128,7 +128,8 @@ Qualification limits, kept visible:
 
 Raw commands, logs, JUnit reports, identity comparison and preservation results
 are retained outside the commit under the isolated task's `verification/`
-directory. Publication, hosted checks and live qualification were not run.
+directory. The initial local qualification did not include publication, hosted
+checks or live qualification.
 
 ## Metrics and completion boundary
 
