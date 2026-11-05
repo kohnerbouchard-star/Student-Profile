@@ -193,6 +193,16 @@ test("REF-014 offline rejection never acknowledges success", async () => {
   await until(() => h.errors.length === 1); assert.equal(h.saved().length, 0); assert.equal(h.writes().length, 1);
 });
 
+for (const name of ["TimeoutError", "AbortError"]) {
+  test(`REF015 ${name} preserves the failed draft and payload-bound retry`, async () => {
+    const h = fixture(); h.state.reply = () => { throw Object.assign(new Error("synthetic request interruption"), { name }); };
+    h.click(); await until(() => h.errors.length === 1);
+    assert.equal(h.saved().length, 0); assert.equal(h.writes().length, 1); assert.equal(h.page.fields.presentRewardAmount.value, "7.25");
+    const key = h.writes()[0].body.idempotencyKey; h.state.reply = () => json(); h.click();
+    await until(() => h.saved().length === 1); assert.equal(h.writes().length, 2); assert.equal(h.writes()[1].body.idempotencyKey, key);
+  });
+}
+
 test("REF-014 no-op and invalid settings do not write and invalid input keeps focus", async () => {
   const h = fixture(); h.state.dirty = false; h.click(); await tick(); assert.equal(h.calls.length, 0);
   h.state.dirty = true; h.page.fields.presentRewardAmount.value = "1001"; h.click(); await tick();
