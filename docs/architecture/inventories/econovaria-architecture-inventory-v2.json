@@ -12,7 +12,7 @@
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
-    "crossDomainDeepImports": 71,
+    "crossDomainDeepImports": 70,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -1088,12 +1088,6 @@
         "ownerDomain": "stocks",
         "importedDomain": "storylines",
         "target": "../../storylines/server/stockTickStorylineRunner.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "storylines",
-        "target": "../../storylines/services/storylineRunner.ts"
       },
       {
         "consumer": "backend/src/domains/stocks/application/runStockMarketRunner.ts",
@@ -2908,12 +2902,12 @@
         "lines": 569
       },
       {
-        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "lines": 565
-      },
-      {
         "file": "admin/game-code-wiring.js",
         "lines": 563
+      },
+      {
+        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+        "lines": 561
       },
       {
         "file": "player-terminal/src/recovery/player-recovery-controller.js",

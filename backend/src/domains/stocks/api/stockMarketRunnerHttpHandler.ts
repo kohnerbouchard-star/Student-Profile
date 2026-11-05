@@ -57,9 +57,6 @@ import {
 import {
   createStockTickStorylineRunner,
 } from "../../storylines/server/stockTickStorylineRunner.ts";
-import {
-  runDueStorylineEvents,
-} from "../../storylines/services/storylineRunner.ts";
 
 declare const Deno: {
   readonly env: {
@@ -391,7 +388,6 @@ function createDefaultStorylineRunnerAfterTick(
   return createStockTickStorylineRunner(
     client,
     createGameSessionContractWriter,
-    runDueStorylineEvents,
   );
 }
 
