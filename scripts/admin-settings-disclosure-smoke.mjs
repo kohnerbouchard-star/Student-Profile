@@ -3,6 +3,8 @@ import { createQualityHarness, BASE_URL } from "./admin-quality-smoke-fixture.mj
 const harness = await createQualityHarness("settings-disclosure");
 const { page, errors, capture, finish } = harness;
 const styleMeasurements = [];
+const styleFailures = [];
+const targetStyle = /\/(?:attendance-reward-settings|settings-simplified|settings-final-polish)\.css(?:\?|$)/;
 async function measureStyles(target, label) {
   if (label !== "after-save-remount") await target.waitForLoadState("networkidle");
   const cdp = await target.context().newCDPSession(target);
@@ -18,8 +20,20 @@ async function measureStyles(target, label) {
     order: [...document.querySelectorAll('link[rel="stylesheet"]')].map((link) => link.getAttribute("href")),
     count: document.querySelectorAll("#econovaria-settings-final-polish-style").length,
     requests: performance.getEntriesByType("resource").filter((entry) => /\/settings-save-error-bridge\.js(?:\?|$)|\/settings-final-polish\.css(?:\?|$)/.test(entry.name)).map((entry) => new URL(entry.name).pathname),
+    stylesheetRequests: performance.getEntriesByType("resource").filter((entry) => /\.css(?:\?|$)/.test(entry.name)).map((entry) => new URL(entry.name).pathname).sort(),
+    visuals: [...document.querySelectorAll('.admin-terminal-settings-page, .admin-terminal-settings-tuning-grid, [data-settings-custom-toggle], [data-attendance-reward-field="presentRewardAmount"], .admin-terminal-settings-save-bar')].map((node) => ({
+      tag: node.tagName, bounds: node.getBoundingClientRect().toJSON(),
+      computed: Object.fromEntries([...getComputedStyle(node)].map((name) => [name, getComputedStyle(node).getPropertyValue(name)])),
+    })),
   }));
   if (styles.count !== 1) throw new Error(`${label}: final-polish stylesheet is not unique.`);
+  if (!label.startsWith("standalone")) {
+    const expected = label === "off-page-bootstrap" ? ["settings-simplified.css", "settings-final-polish.css"] : ["attendance-reward-settings.css", "settings-simplified.css", "settings-final-polish.css"];
+    if (JSON.stringify(styles.order.filter((href) => targetStyle.test(href)).map((href) => href.split("/").at(-1))) !== JSON.stringify(expected)) styleFailures.push(`${label}: target stylesheet precedence changed`);
+    const reference = styleMeasurements.find((sample) => sample.label === "canonical-settings");
+    if (reference && JSON.stringify(styles.order.filter((href) => !targetStyle.test(href))) !== JSON.stringify(reference.order.filter((href) => !targetStyle.test(href)))) styleFailures.push(`${label}: unrelated stylesheet order changed`);
+    if (reference && JSON.stringify(styles.stylesheetRequests.filter((href) => !targetStyle.test(href))) !== JSON.stringify(reference.stylesheetRequests.filter((href) => !targetStyle.test(href)))) styleFailures.push(`${label}: unrelated stylesheet requests changed`);
+  }
   styleMeasurements.push({ label, listeners, listenerSignatures, ...styles });
 }
 page.setDefaultTimeout(10_000);
@@ -230,9 +244,13 @@ try {
   enterPhase("fresh save lifecycle page");
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
+  await page.waitForFunction(() => window.__ref015BootstrapComplete);
+  await measureStyles(page, "off-page-bootstrap");
+  if (await page.evaluate(() => document.getElementById("econovaria-attendance-reward-settings-style") || performance.getEntriesByType("resource").some((entry) => entry.name.includes("/attendance-reward-settings.css")))) throw new Error("Off-page bootstrap eagerly installed Attendance CSS.");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.waitForFunction(() => document.querySelector(".admin-terminal-settings-page")
     ?.getAttribute("data-settings-ux-baseline-ready") === "true", null, { timeout: 10_000 });
+  await measureStyles(page, "late-first-settings-mount");
   await page.locator("[data-settings-custom-toggle]").click();
   const saveControl = page.locator('[data-admin-terminal-action="save-settings"]');
   const amountControl = page.locator('[data-attendance-reward-field="presentRewardAmount"]');
@@ -356,7 +374,16 @@ try {
   }
   enterPhase("final diagnostics");
   await measureStyles(page, "after-save-remount");
+  const sameIdentity = await page.evaluate(async () => {
+    const before = [...document.querySelectorAll('link[rel="stylesheet"]')];
+    await import("./settings-simplified.js"); await import("./attendance-reward-settings-v4.js"); await import("./settings-save-error-bridge.js"); await import("./settings-save-error-bridge.js?ref015-repeat");
+    const after = [...document.querySelectorAll('link[rel="stylesheet"]')];
+    return before.length === after.length && before.every((node, index) => node === after[index]);
+  });
+  const repeated = await page.evaluate(() => ({ unique: document.querySelectorAll("#econovaria-settings-final-polish-style").length, order: [...document.querySelectorAll('link[rel="stylesheet"]')].map((node) => node.getAttribute("href")) }));
+  if (!sameIdentity || repeated.unique !== 1 || JSON.stringify(repeated.order) !== JSON.stringify(styleMeasurements.at(-1).order)) throw new Error("Repeated owner/bridge/query load changed stylesheet identity/order.");
   await capture("settings-disclosure-persistence");
+  if (styleFailures.length) throw new Error(styleFailures.join("; "));
   if (errors.length) throw new Error(errors[0]);
   console.log("Shared Settings preserves native events, focus, save state, disclosure, and domain boundaries.");
   await finish({ afterOption, duringNumericEdit, ref014Writes, styleMeasurements, errors });
@@ -366,6 +393,6 @@ try {
   for (const release of [...releases]) release();
   const bounded = (operation) => Promise.race([operation, new Promise((resolve) => setTimeout(resolve, 5000))]);
   await bounded(capture("settings-disclosure-failure").catch(() => {}));
-  await bounded(finish({ phase, failure: error.stack || error.message || String(error) }).catch(() => {}));
+  await bounded(finish({ phase, styleMeasurements, styleFailures, failure: error.stack || error.message || String(error) }).catch(() => {}));
   process.exitCode = 1;
 }

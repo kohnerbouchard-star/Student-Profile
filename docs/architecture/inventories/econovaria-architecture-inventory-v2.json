@@ -2783,7 +2783,7 @@
       },
       {
         "file": "admin/settings-simplified.js",
-        "lines": 643
+        "lines": 650
       },
       {
         "file": "backend/src/security/adminBffRequestAuth.ts",

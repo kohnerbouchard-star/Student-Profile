@@ -30,7 +30,7 @@
     link.id = id;
     link.rel = "stylesheet";
     link.href = href;
-    document.head.append(link);
+    insertSettingsStylesheet(link, id);
   }
 
   function settingsPage() {
@@ -639,4 +639,11 @@
       return Boolean(page && state.baselineValues.size && (changedCount(page) > 0 || attendanceDirty()));
     },
   };
+
+  function insertSettingsStylesheet(link, id) {
+    const anchor = id === STYLE_ID
+      ? document.getElementById("econovaria-settings-final-polish-style") : null;
+    if (anchor?.parentNode === document.head) document.head.insertBefore(link, anchor);
+    else document.head.append(link);
+  }
 })();

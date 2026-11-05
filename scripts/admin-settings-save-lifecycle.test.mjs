@@ -71,7 +71,7 @@ function fixture() {
     removeEventListener(type, fn) { listeners.get(type)?.delete(fn); },
     dispatchEvent(event) { events.push(event); for (const fn of [...(listeners.get(event.type)?.keys() || [])]) { fn(event); if (event.stopped) break; } return true; },
     getElementById: (id) => links.find((link) => link.id === id), createElement: () => new Element(),
-    head: { append(link) { links.push(link); } },
+    head: { append(link) { link.parentNode = document.head; links.push(link); }, insertBefore(link, anchor) { const i = links.indexOf(anchor); assert.ok(i >= 0); link.parentNode = document.head; links.splice(i, 0, link); } },
   };
   function mount() {
     if (mounted) mounted.connected = false;
@@ -290,3 +290,76 @@ for (const mode of ["present", "older", "missing", "throws"]) {
     }
   });
 }
+
+const styleIds = { A: "econovaria-attendance-reward-settings-style", S: "econovaria-settings-simplified-style", F: "econovaria-settings-final-polish-style" };
+function ownerFunction(source, name) {
+  const start = source.indexOf(`  function ${name}(`);
+  assert.ok(start >= 0, `Missing actual owner function ${name}`);
+  return source.slice(start, source.indexOf("\n  }", start) + 4);
+}
+function styleFixture() {
+  const nodes = [], frames = [], effects = [];
+  const head = { append(node) { node.parentNode = head; nodes.push(node); }, insertBefore(node, anchor) { assert.equal(anchor.parentNode, head); node.parentNode = head; nodes.splice(nodes.indexOf(anchor), 0, node); } };
+  const document = { head, getElementById: (id) => nodes.find((node) => node.id === id), createElement: () => ({}), querySelector: () => null };
+  const window = { requestAnimationFrame: (fn) => frames.push(fn) };
+  const attendance = readFileSync("admin/attendance-reward-settings-v4.js", "utf8");
+  function install(source, id, helper, schedule, reconcileName) {
+    const context = vm.createContext({ document, window, state: {}, selectedGameId: () => "synthetic", prepareGameState() {},
+      loadSettings: () => effects.push("read"), [reconcileName]: () => { context.ensureStylesheet(); effects.push("render"); } });
+    vm.runInContext(`const STYLE_ID = ${JSON.stringify(id)}; ${ownerFunction(source, "ensureStylesheet")}\n${source.includes(`function ${helper}(`) ? ownerFunction(source, helper) : ""}\n${ownerFunction(source, schedule)}`, context);
+    return context;
+  }
+  const a = install(attendance, styleIds.A, "insertAttendanceStylesheet", "scheduleRender", "ensureCard");
+  const s = install(presenterSource, styleIds.S, "insertSettingsStylesheet", "scheduleStructure", "reconcileStructure");
+  const run = { A: () => a.ensureStylesheet(), S: () => s.ensureStylesheet(), F: () => s.ensureStylesheet(styleIds.F, "./css/settings-final-polish.css") };
+  return { nodes, frames, effects, head, document, a, s, run, targets: () => nodes.filter((n) => Object.values(styleIds).includes(n.id)).map((n) => n.id) };
+}
+for (const order of ["ASF", "AFS", "SAF", "SFA", "FAS", "FSA"]) {
+  test(`REF015 actual stylesheet owners converge for ${order} without moving existing nodes`, () => {
+    const h = styleFixture(), sentinels = [];
+    for (const key of order) { const sentinel = { id: `sentinel-${key}` }; sentinels.push(sentinel); h.head.append(sentinel); h.run[key](); }
+    assert.deepEqual(h.targets(), Object.values(styleIds));
+    assert.deepEqual(h.nodes.filter((n) => sentinels.includes(n)), sentinels);
+    const before = [...h.nodes]; for (const key of "ASFFSA") h.run[key]();
+    vm.runInNewContext(bridgeSource, { document: h.document, window: {} });
+    assert.deepEqual(h.nodes, before); assert.equal(h.frames.length, 0); assert.deepEqual(h.effects, []);
+  });
+}
+for (const order of ["AS", "SA"]) {
+  test(`REF015 actual queued owner callbacks preserve precedence in ${order} order`, () => {
+    const h = styleFixture(); h.document.querySelector = () => ({});
+    for (const key of order) (key === "A" ? h.a.scheduleRender : h.s.scheduleStructure)();
+    h.run.F(); while (h.frames.length) h.frames.shift()();
+    assert.deepEqual(h.targets(), Object.values(styleIds)); assert.deepEqual(h.effects, order === "AS" ? ["render", "read", "render"] : ["render", "render", "read"]);
+  });
+}
+test("REF015 skipped off-page Attendance pass stays lazy through first mount and remount", () => {
+  const h = styleFixture(); h.a.scheduleRender(); h.s.scheduleStructure(); h.run.F();
+  while (h.frames.length) h.frames.shift()();
+  assert.deepEqual(h.targets(), [styleIds.S, styleIds.F]); assert.deepEqual(h.effects, ["render"]);
+  h.document.querySelector = () => ({}); h.a.scheduleRender(); h.frames.shift()();
+  const before = [...h.nodes]; h.a.scheduleRender(); h.frames.shift()();
+  assert.deepEqual(h.targets(), Object.values(styleIds)); assert.deepEqual(h.nodes, before);
+});
+for (const location of ["head", "body"]) for (const key of "ASF") {
+  test(`REF015 existing own-ID nonlink ${key} in ${location} remains untouched`, () => {
+    const h = styleFixture(), node = { id: styleIds[key], parentNode: location === "head" ? h.head : {} };
+    h.nodes.push(node); h.run[key](); assert.deepEqual(h.nodes, [node]); assert.equal(h.nodes[0], node);
+  });
+}
+test("REF015 ignores outside-head dependency anchors and tries the next valid nonlink", () => {
+  const h = styleFixture(), outside = { id: styleIds.S, parentNode: {} }, final = { id: styleIds.F };
+  h.nodes.push(outside); h.head.append(final); h.run.A();
+  assert.equal(h.nodes.indexOf(h.document.getElementById(styleIds.A)), h.nodes.indexOf(final) - 1);
+  const s = styleFixture(); s.nodes.push({ id: styleIds.F, parentNode: {} }); s.run.S();
+  assert.equal(s.nodes.at(-1).id, styleIds.S);
+  const a = styleFixture(); a.nodes.push({ id: styleIds.S, parentNode: {} }, { id: styleIds.F, parentNode: {} }); a.run.A();
+  assert.equal(a.nodes.at(-1).id, styleIds.A);
+});
+test("REF015 uses valid head nonlinks as anchors and preserves preexisting reversed targets", () => {
+  const h = styleFixture(); h.head.append({ id: styleIds.S }); h.run.A(); h.run.F();
+  assert.deepEqual(h.targets(), Object.values(styleIds));
+  const s = styleFixture(); s.head.append({ id: styleIds.F }); s.run.S(); assert.deepEqual(s.targets(), [styleIds.S, styleIds.F]);
+  const reversed = styleFixture(); for (const key of "FSA") reversed.head.append({ id: styleIds[key] });
+  const before = [...reversed.nodes]; for (const key of "ASF") reversed.run[key](); assert.deepEqual(reversed.nodes, before);
+});
