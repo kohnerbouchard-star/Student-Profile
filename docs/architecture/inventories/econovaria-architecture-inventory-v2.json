@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1310,
+    "sourceFiles": 1311,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
@@ -211,7 +211,7 @@
         "infrastructure",
         "realtime"
       ],
-      "sourceFiles": 10,
+      "sourceFiles": 11,
       "publicBoundaryFiles": []
     },
     {
@@ -1075,13 +1075,13 @@
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
         "ownerDomain": "stocks",
         "importedDomain": "game-dashboard",
-        "target": "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts"
+        "target": "../../game-dashboard/publicRealtime.ts"
       },
       {
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
         "ownerDomain": "stocks",
         "importedDomain": "game-dashboard",
-        "target": "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts"
+        "target": "../../game-dashboard/publicRealtime.ts"
       },
       {
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
@@ -1099,13 +1099,13 @@
         "consumer": "backend/src/domains/stocks/application/runStockMarketRunner.ts",
         "ownerDomain": "stocks",
         "importedDomain": "game-dashboard",
-        "target": "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts"
+        "target": "../../game-dashboard/publicRealtime.ts"
       },
       {
         "consumer": "backend/src/domains/stocks/application/runStockMarketRunner.ts",
         "ownerDomain": "stocks",
         "importedDomain": "game-dashboard",
-        "target": "../../game-dashboard/realtime/gamePublicRealtimeStockTick.ts"
+        "target": "../../game-dashboard/publicRealtime.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/contracts/storylineContracts.ts",
@@ -2676,6 +2676,10 @@
         "lines": 908
       },
       {
+        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+        "lines": 897
+      },
+      {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
         "lines": 895
       },
@@ -2710,10 +2714,6 @@
       {
         "file": "backend/src/domains/contracts/api/staffContractHttpHandler.test.ts",
         "lines": 834
-      },
-      {
-        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
-        "lines": 833
       },
       {
         "file": "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
