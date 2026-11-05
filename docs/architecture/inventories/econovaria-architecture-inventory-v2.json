@@ -2677,7 +2677,7 @@
       },
       {
         "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
-        "lines": 897
+        "lines": 907
       },
       {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
