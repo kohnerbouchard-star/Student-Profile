@@ -3,7 +3,7 @@ import { createStoryNotificationPublisher } from "../../notifications/public/sto
 import type { StoryEffectContractWriter } from "../contracts/storyEffectExecutionContracts.ts";
 import { SupabaseStoryEffectLedgerWriter } from "../infrastructure/supabaseStoryEffectLedgerWriter.ts";
 import { SupabaseStorylineRepository } from "../infrastructure/supabaseStorylineRepository.ts";
-import type { runDueStorylineEvents as RunDueStorylineEvents } from "../services/storylineRunner.ts";
+import { runDueStorylineEvents as executeDueStorylineEvents } from "../services/storylineRunner.ts";
 import { createPlayerStoryContextReadQuery } from "./playerContextReadQuery.ts";
 
 export interface StorylineAfterStockTickInput {
@@ -18,7 +18,8 @@ export function createStockTickStorylineRunner(
   createContractWriter: (
     client: EdgeSupabaseClient,
   ) => StoryEffectContractWriter,
-  runDueStorylineEvents: typeof RunDueStorylineEvents,
+  runDueStorylineEvents: typeof executeDueStorylineEvents =
+    executeDueStorylineEvents,
 ): (input: StorylineAfterStockTickInput) => Promise<void> {
   const storylineRepository = new SupabaseStorylineRepository(
     client as unknown as ConstructorParameters<
