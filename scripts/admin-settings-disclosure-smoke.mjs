@@ -91,7 +91,9 @@ await harness.context.addInitScript(() => {
   diagnostic.state = () => safe(state);
   diagnostic.ready = () => Boolean(safe(() => {
     const value = state(), root = document.querySelector(selectors[0]);
-    return Boolean(value.complete && value.terminalSettingsRead && !value.pendingSettingsReads && mounted.get(root)?.signature === signature(value));
+    const display = value.complete ? getComputedStyle(root.querySelector(selectors[1])).display !== "none" : null;
+    const mount = mounted.get(root), terminal = value.terminalSettingsRead;
+    return Boolean(value.complete && terminal && !value.pendingSettingsReads && mount?.signature === signature(value) && mount.terminal === terminal.request && mount.seq > terminal.seq && display === value.open);
   }));
   diagnostic.begin = (event, target) => safe(() => {
     const before = state(), detail = event.detail || {}, path = typeof detail.pathname === "string" ? detail.pathname : "";
@@ -102,7 +104,7 @@ await harness.context.addInitScript(() => {
     if (event.type === "econovaria:admin-request-lifecycle" && request && context.resource === "settings" && ["GET", "HEAD"].includes(context.method)) {
       const read = reads.get(context.requestGame) || { pending: new Set(), terminal: null }; reads.set(context.requestGame, read);
       if (detail.phase === "started") read.pending.add(request);
-      else if (["committed", "failed", "cancelled"].includes(detail.phase)) { read.pending.delete(request); read.terminal = { request, phase: detail.phase }; }
+      else if (["committed", "failed", "cancelled"].includes(detail.phase)) { read.pending.delete(request); read.terminal = { request, phase: detail.phase, seq: diagnostic.records.length }; }
     }
     const value = { kind: "dispatch", event: event.type, phase: detail.phase || null, reason: ["navigation", "request-complete", "game-context", "attendance-saved", "window-load", "module-load", "explicit"].includes(detail.reason) ? detail.reason : null,
       ...context, targetPage: target?.matches?.(selectors[0]) ? token(pages, target, "p") : null, before };
@@ -111,7 +113,7 @@ await harness.context.addInitScript(() => {
   diagnostic.end = (value, event, target) => safe(() => {
     if (!value) return;
     value.after = state();
-    if (event.type === "econovaria:admin-settings-mounted" && target === document.querySelector(selectors[0]) && value.after.complete) mounted.set(target, { signature: signature(value.after) });
+    if (event.type === "econovaria:admin-settings-mounted" && target === document.querySelector(selectors[0]) && value.after.complete) mounted.set(target, { signature: signature(value.after), terminal: value.after.terminalSettingsRead?.request, seq: value.seq });
   });
   diagnostic.observe = (before, mutations, observer) => safe(() => {
     const after = state(), changes = [];
