@@ -3,7 +3,7 @@
   "authorityId": "econovaria.stocks-public-realtime-pr-909.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 909,
-  "baseRef": "refactor/dashboard-store-purchase-types-f59-v1",
+  "baseRef": "main",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
@@ -70,5 +70,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "User approved this exact bounded Batch 2 as a public draft with PR-number authority, roadmap and inventory. Base is refactor/dashboard-store-purchase-types-f59-v1 at 37d7f2ef276adb0de26a662bead40259c4f3cf99; reviewed source is c36d7ffc0a8e1683e7654b4c6035d9f63a83c5a4. Preserve predecessor dependencies, existing required/critical checks and both read-only verifier files. Hosted CI and disposable database qualification are authorized. No merge, production deployment, live hosted database mutation, permission change, dependency-hash change, secrets or unrelated scope expansion is authorized. Existing PR888 is unchanged."
+  "authorizationNote": "User approved this exact bounded Batch 2 as a public draft with PR-number authority, roadmap and inventory, then necessary bounded repairs and safe sequential merges of PR908/909/910. This is local main-target reconciliation preparation using anticipated predecessor source 4354bc1737e0f57e08a944d66fde93c5d068ba53; the actual merged-main SHA remains pending and must be verified and bound before publication. Reviewed realtime source is c36d7ffc0a8e1683e7654b4c6035d9f63a83c5a4, published dependent head720f6978745fb5365210f653f1f850d5adaa2803. Preserve predecessor diagnostic/authority changes, existing required/critical checks and both read-only verifier files. Renew exact-head main-target CI and disposable database/load qualification before any merge. No production deployment, live hosted database mutation, permission change, dependency-hash change, secrets or unrelated scope expansion is authorized. Existing PR888 is unchanged."
 }
