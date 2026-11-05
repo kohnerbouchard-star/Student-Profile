@@ -3,7 +3,9 @@
 Date: 2026-11-05. Roadmap child: `ARCH-501/502-PLAYER-BANKING-FRESHNESS-001`.
 Local branch: `fix/player-banking-freshness-ownership-v1`.
 Source baseline: `45715997599942fccc3af0fa592ffa4a3a66a37d` (merged #911).
-Status: `IMPLEMENTED_NOT_MERGED`. No PR or publication authority.
+Status: `IMPLEMENTED_NOT_MERGED`. Draft [PR #912](https://github.com/kohnerbouchard-star/Student-Profile/pull/912), targeting `main`.
+The owner authorized publication of the reviewed nine files plus the actual-numbered
+verification manifest and hosted test qualification. Merge and deployment remain unauthorized.
 Implementation commit: `a7279798893cff7d4f86d6c0b562991578fc9e88`.
 Final main re-fetch remains the identical baseline; the local worktree is isolated.
 
@@ -60,7 +62,7 @@ transaction semantics remain unchanged.
   roadmap were read. No Settings/#861, Store action ownership, backend, SQL,
   dependency/lock, hosted state, release hold or singleton authority change.
 
-## Exact file scope
+## Exact publication file scope
 
 1. `player-terminal/src/features/banking/banking-read-flow.js`
 2. `player-terminal/src/features/banking/banking-read-owner.js`
@@ -71,6 +73,7 @@ transaction semantics remain unchanged.
 7. `docs/architecture/inventories/econovaria-architecture-inventory-v2.json`
 8. `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`
 9. This scope/evidence record.
+10. `docs/operations/contracts/player-cross-cutting/pr-912.json` (publication-only authority).
 
 No route, RPC, migration, dependency or deployment change. All original
 verification commands and browser registrations remain; `verify` invokes the
@@ -132,6 +135,41 @@ The final `banking-read` command reran the strengthened suite after the full
 Player verification run; the additional nested-resource/DOM assertions pass.
 All 29 identical strengthened tests fail on the exact baseline.
 
+## Authorized draft publication
+
+The owner answered “Publish” to the explicit public-repository draft request for
+nine reviewed files plus the required verification manifest, with no merge or
+deployment. PR912 initially publishes reviewed head
+`68453aa3dbc46a4421e3d0c0f486c4597904d2d0`; the final publication commit adds only
+its actual-numbered manifest and truthful metadata in this record and the
+existing beta ledger. Reviewed implementation, tests, script registration and
+inventory bytes remain unchanged from that head.
+
+`docs/operations/contracts/player-cross-cutting/pr-912.json` binds exactly ten
+edited paths and two read-only verifier/test locks (twelve total). It retains all
+94 predecessor required checks and all 72 critical checks, adding the applicable
+Banking/FX, financial, Player, Admin and browser obligations for totals 117 and 86.
+No existing authority, verifier, workflow or test gate is weakened or replaced.
+Independent read-only publication review found no actionable source finding.
+The reviewer independently verified the exact ten-path/twelve-lock scope,
+unchanged reviewed code/tests/registration/inventory, complete predecessor
+94/72 check preservation, applicable workflow/job coverage, actual-PR authority
+and all 16 authority tests. The temporary expected-run census was corrected to
+exclude Branch Hygiene, which triggers only when a PR closes; no source change
+was needed. Preservation, secret and whitespace checks pass.
+
+Initial source head `68453aa3` ran Player Terminal Verify `42001356944` / job `127157096373`
+and failed at Authorize pull-request scope with “Player authority identifier is
+not bound to this pull request” before the actual PR912 manifest was added.
+This initial failure is retained and is not evidence against the later final head.
+
+The initial exact-head PR census contains 35 pull-request workflows plus dynamic
+CodeQL; existing path filters select Player Multiplayer/Load automatically.
+No duplicate dispatch is required if that final-head run exists. Guarded
+release/staging/historical jobs must remain reported as skips rather than passes.
+The shell CLI workflow-catalogue GET returned `Forbidden`; it was not retried.
+Connected GitHub run/job/check reads support an explicit paginated census.
+
 ## Review, limits and next action
 
 Independent read-only review by `/root/review_banking_ownership` examined the
@@ -142,12 +180,16 @@ the native browser and exact-baseline logs. No review edits were made. Review
 limits: no hosted runtime review, full browser-suite run or independent rerun
 of backend gates; CI bundled-browser qualification remains outstanding.
 
-No hosted CI, authenticated staging/database exercise, full cross-domain
-browser suite or release qualification was run. No SQL changed, so database
-replay was not required for this slice. Nothing is pushed, merged or deployed.
+The evidence above is local qualification. Hosted qualification runs against the
+exact final remote head in PR912, including the existing full browser, disposable
+DB and Multiplayer/Load jobs selected by `player-terminal/**`. This source
+checkpoint claims no terminal hosted outcome. Final run/job/check identities and
+limits belong in the PR qualification result and parent handoff without changing
+the qualified source tree. No authenticated live staging/database exercise or
+release qualification is authorized. Source is published only as a draft; no
+merge, auto-merge, manual deployment or hosted application-state mutation.
 Parent ARCH-501/502 completion and Settings rollback remain separate.
 
-Next exact action: parent review of the local candidate. Publication requires
-separate authorization and an actual-numbered PR authority record; preserve
-#624/#888 work when reconciling. Store action ownership is the next separately
-bounded architecture slice after this candidate is accepted.
+Next exact action: finish exact-final-head hosted qualification and parent review
+of draft PR912. Preserve #624/#888 work and all release holds. Store action
+ownership remains the next separately bounded architecture slice.
