@@ -31,7 +31,7 @@ async function measureStyles(target, label) {
       computed: Object.fromEntries([...getComputedStyle(node)].map((name) => [name, getComputedStyle(node).getPropertyValue(name)])),
     })),
     observerRegistrations: window.__ref015Observers, events: window.__ref015Events,
-    diagnostic: { state: window.__ref015D1.state(), ready: window.__ref015D1.ready(), records: window.__ref015D1.records, errors: window.__ref015D1.errors, overflow: window.__ref015D1.overflow },
+    diagnostic: { originalSignal: window.__ref015D1.originalSignal || null, state: window.__ref015D1.state(), ready: window.__ref015D1.ready(), records: window.__ref015D1.records, errors: window.__ref015D1.errors, overflow: window.__ref015D1.overflow },
     selectorVisuals: Object.fromEntries(window.__ref015D1.selectors.map((selector) => {
       const root = document.querySelector(window.__ref015D1.selectors[0]);
       const node = selector === window.__ref015D1.selectors[0] ? root : root?.querySelector(selector);
@@ -348,8 +348,11 @@ try {
   await measureStyles(page, "off-page-bootstrap");
   if (await page.evaluate(() => document.getElementById("econovaria-attendance-reward-settings-style") || performance.getEntriesByType("resource").some((entry) => entry.name.includes("/attendance-reward-settings.css")))) throw new Error("Off-page bootstrap eagerly installed Attendance CSS.");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.waitForFunction(() => document.querySelector(".admin-terminal-settings-page")
-    ?.getAttribute("data-settings-ux-baseline-ready") === "true", null, { timeout: 10_000 });
+  await page.waitForFunction(() => {
+    const passed = document.querySelector(".admin-terminal-settings-page")?.getAttribute("data-settings-ux-baseline-ready") === "true";
+    if (passed) window.__ref015D1.originalSignal = window.__ref015D1.state();
+    return passed;
+  }, null, { timeout: 10_000 });
   await measureStyles(page, "late-first-settings-mount");
   try {
     await page.waitForFunction(() => window.__ref015D1.ready(), null, { timeout: 10_000 });
