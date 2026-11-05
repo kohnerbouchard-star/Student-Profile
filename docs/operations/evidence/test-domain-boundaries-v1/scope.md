@@ -10,8 +10,13 @@
 - Base tree: `5309e07916de5a62a3dab0d5e74e5f96aa25dc1e`.
 - Implementation head: `e500ea6091ef83c53240db427e8644e270c045c4` (tree
   `b882bbe33dd6f7f8076cbe55498458211b3b496a`). Subsequent qualification records
-  are documentation-only. Final delivery commit/tree are recorded in the
-  accompanying local patch/handoff artifact; no PR, push, merge or deployment.
+  through the first local delivery are documentation-only; publication adds the
+  verification manifest below. Reviewed local delivery head is
+  `9ba0b80f3faf3629c0cc6c7845e1c7a5053d4ad3`, tree
+  `18b5634f7b9b7697aa54e2a24055f9861502facd`. Draft
+  [PR #911](https://github.com/kohnerbouchard-star/Student-Profile/pull/911) now
+  owns publication and exact-final-head hosted qualification; no merge or manual
+  deployment is authorized.
 - Tooling: Node `22.23.1`, npm `10.9.8`, Deno `2.9.3`; frozen root/backend
   installs with lifecycle scripts disabled. Tests run with hosted
   database/service credentials removed from the child environment.
@@ -139,8 +144,40 @@ the scanner and ratchet source/baseline remain byte-identical. The nine
 unchanged inventoried suites and the loop's entire executable body/assertions
 remain byte-identical to base.
 
-No hosted CI, database replay, browser journey, deployment or live qualification
-is claimed. There is no runtime, UI or database change requiring a new local
-hosted-service qualification. Publication and its exact-head CI/authority checks
-remain a separate next step after local qualification and parent review. Do not
-mark this item or parent ARCH-402 `VERIFIED_COMPLETE` while unmerged.
+## Draft publication and final-head gates
+
+Publication of the six reviewed files plus the actual-PR-numbered manifest is
+now authorized.
+[Draft PR #911](https://github.com/kohnerbouchard-star/Student-Profile/pull/911)
+targets refreshed main `d3ed3208518c813d041813a42cc85993d5b8d66a`; no base
+change or legacy-worker code/inventory was acquired. The seventh edited file is
+`docs/operations/contracts/player-cross-cutting/pr-911.json`. Its exact-path
+allowlist has only the seven edited files plus the two established verifier/test
+files locked read-only. Existing authority records are unchanged. The three
+production/secret flags remain false.
+
+The new manifest preserves every predecessor core, required and critical check,
+adds all applicable existing PR workflow names and non-guarded critical jobs,
+and retains Player Multiplayer and Load E2E as explicit final-head
+qualification. The latter has no matching automatic path for this test-only
+diff; its existing dispatch runs only disposable CI services on this branch. No
+workflow, job, permission, retry budget or test assertion is altered to obtain
+qualification.
+
+Static selection identifies 29 workflows on opened/synchronize PR events, plus
+the retained explicit Player Multiplayer/Load dispatch. GitHub's dynamic CodeQL
+checks are also tracked. Branch Hygiene is closed-event-only and is not run.
+Expected guarded job skips are the manual release authorization, manual live
+parity, manual staging preflight and PR657-only inventory materialization; these
+do not qualify any hosted runtime or release. Repository Quality must execute
+the previously skipped GNU-tar deterministic-release test on Linux.
+
+Initial runs for the reviewed local head are historical diagnostics, not final
+qualification. Final head/tree, complete workflow/job/check identities and
+terminal outcomes are retained in the PR qualification record outside the code
+diff and reflected in the PR description. At this source checkpoint those hosted
+results are pending; no Linux, database/load, live or merged-main qualification
+is inferred. Keep this item `IMPLEMENTED_NOT_MERGED` and parent ARCH-402 open.
+Next: independently review the bounded publication metadata and manifest, pass
+actual-PR authority and focused preservation checks, then finish all applicable
+final-head hosted checks. No merge or deployment is authorized.
