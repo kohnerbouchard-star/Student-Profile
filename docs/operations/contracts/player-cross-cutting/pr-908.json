@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.dashboard-store-purchase-types-pr-908.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 908,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
+    "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+    "backend/src/domains/store/purchaseHistoryTypes.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "docs/operations/contracts/player-cross-cutting/pr-908.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
+    "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+    "backend/src/domains/store/purchaseHistoryTypes.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "docs/operations/contracts/player-cross-cutting/pr-908.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Story Replay Safety",
+    "REF-018 and REF-022 Staff Mutation Qualification",
+    "multicurrency-store-funding-v1",
+    "multicurrency-marketplace-funding-v1",
+    "multicurrency-stock-funding-v1",
+    "business-multicurrency-treasury-v1",
+    "business-player-store-fx-final-v2",
+    "business-store-sales-convergence-v2",
+    "Business Timed Manufacturing V2",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Required Game Market Timezone",
+    "Runtime Interaction Wiring",
+    "REF-009 Contract Reward Qualification",
+    "Player Multiplayer and Load E2E"
+  ],
+  "criticalJobChecks": [
+    "Story Replay Safety",
+    "REF-018 and REF-022 Staff Mutation Qualification",
+    "multicurrency-store-funding-v1",
+    "multicurrency-marketplace-funding-v1",
+    "multicurrency-stock-funding-v1",
+    "business-multicurrency-treasury-v1",
+    "business-player-store-fx-final-v2",
+    "business-store-sales-convergence-v2",
+    "Business Timed Manufacturing V2",
+    "Backend Typecheck",
+    "Repository Quality",
+    "REF-009 Contract Reward Qualification",
+    "Player Multiplayer and Load E2E"
+  ],
+  "readOnlyPaths": [
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "authorizationNote": "User approved this exact bounded Batch 1 as a public draft with PR-number authority, roadmap and inventory. Base is main at f59c9740b5ef3f2fd73c6393355ca0d7cd827433; reviewed source is 10a8a8c815d62c3cc745031c2335e388a42e4da1. Preserve predecessor dependencies, existing required/critical checks and both read-only verifier files. Hosted CI and disposable database qualification are authorized. No merge, production deployment, live hosted database mutation, permission change, dependency-hash change, secrets or unrelated scope expansion is authorized. Existing PR888 is unchanged."
+}
