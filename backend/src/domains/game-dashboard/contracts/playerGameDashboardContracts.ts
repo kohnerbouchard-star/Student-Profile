@@ -14,7 +14,7 @@ import type {
 } from "../../store/dashboardReadModel.ts";
 import type {
   StorePurchaseHistoryItemDto,
-} from "../../store/contracts/storePurchaseContracts.ts";
+} from "../../store/purchaseHistoryTypes.ts";
 import type {
   MarkNotificationDeliveryInput,
   StoryNotificationDeliveryRecord,

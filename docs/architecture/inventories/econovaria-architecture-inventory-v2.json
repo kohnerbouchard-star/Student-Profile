@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1309,
+    "sourceFiles": 1310,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 54,
@@ -367,7 +367,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 62,
+      "sourceFiles": 63,
       "publicBoundaryFiles": [
         "backend/src/domains/store/index.ts"
       ]
@@ -799,7 +799,7 @@
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "store",
-        "target": "../../store/contracts/storePurchaseContracts.ts"
+        "target": "../../store/purchaseHistoryTypes.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
@@ -817,7 +817,7 @@
         "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "store",
-        "target": "../../store/contracts/storePurchaseContracts.ts"
+        "target": "../../store/purchaseHistoryTypes.ts"
       },
       {
         "consumer": "backend/src/domains/game-sessions/application/createGame.ts",

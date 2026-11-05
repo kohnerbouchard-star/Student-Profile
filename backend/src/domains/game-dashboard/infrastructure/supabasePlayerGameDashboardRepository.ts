@@ -42,7 +42,7 @@ import type { PlayerContractsReadQuery } from "../../contracts/index.ts";
 import type {
   StorePurchaseHistoryItemDto,
   StorePurchaseStatus,
-} from "../../store/contracts/storePurchaseContracts.ts";
+} from "../../store/purchaseHistoryTypes.ts";
 
 interface DashboardQueryError {
   readonly message: string;
