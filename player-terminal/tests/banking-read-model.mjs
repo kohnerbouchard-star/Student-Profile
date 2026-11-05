@@ -244,7 +244,11 @@ const controllerSource = fs.readFileSync(
 assert.doesNotMatch(controllerSource, /\bfetch\s*\(/);
 assert.match(controllerSource, /api\.request\("banking"/);
 assert.match(controllerSource, /payload:\s*\{[\s\S]*cursor/);
-assert.match(controllerSource, /state\.data\.banking = banking/);
+// Snapshot publication is now exercised through the real store/API/coordinator
+// in the registered banking-freshness-ownership suite. Direct assignment would
+// bypass subscribers and can overwrite an already accepted newer refresh.
+assert.doesNotMatch(controllerSource, /state\.data\.banking\s*=/);
+assert.match(controllerSource, /owner\.publish\(/);
 
 const serialized = JSON.stringify({ data, ledgerRoute, nextPageRoute, merged });
 assert.equal(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(serialized), false);
