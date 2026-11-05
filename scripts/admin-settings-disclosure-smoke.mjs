@@ -4,6 +4,7 @@ const harness = await createQualityHarness("settings-disclosure");
 const { page, errors, capture, finish } = harness;
 const styleMeasurements = [];
 const styleFailures = [];
+const readyDiagnostics = [];
 const targetStyle = /\/(?:attendance-reward-settings|settings-simplified|settings-final-polish)\.css(?:\?|$)/;
 async function measureStyles(target, label) {
   if (label !== "after-save-remount") await target.waitForLoadState("networkidle");
@@ -30,6 +31,12 @@ async function measureStyles(target, label) {
       computed: Object.fromEntries([...getComputedStyle(node)].map((name) => [name, getComputedStyle(node).getPropertyValue(name)])),
     })),
     observerRegistrations: window.__ref015Observers, events: window.__ref015Events,
+    diagnostic: { state: window.__ref015D1.state(), ready: window.__ref015D1.ready(), records: window.__ref015D1.records, errors: window.__ref015D1.errors, overflow: window.__ref015D1.overflow },
+    selectorVisuals: Object.fromEntries(window.__ref015D1.selectors.map((selector) => {
+      const root = document.querySelector(window.__ref015D1.selectors[0]);
+      const node = selector === window.__ref015D1.selectors[0] ? root : root?.querySelector(selector);
+      return [selector, node ? { tag: node.tagName, bounds: node.getBoundingClientRect().toJSON(), computed: Object.fromEntries([...getComputedStyle(node)].map((name) => [name, getComputedStyle(node).getPropertyValue(name)])) } : null];
+    })),
   }));
   if (styles.count !== 1) throw new Error(`${label}: final-polish stylesheet is not unique.`);
   if (!label.startsWith("standalone")) {
@@ -55,8 +62,74 @@ deadline.unref();
 await page.addInitScript(() => window.addEventListener("econovaria:admin-bootstrap-complete", () => { window.__ref015BootstrapComplete = true; }, { once: true }));
 await harness.context.addInitScript(() => {
   window.__ref015Observers = []; window.__ref015Events = [];
-  window.MutationObserver = new Proxy(window.MutationObserver, { construct(Type, args) {
-    const observer = Reflect.construct(Type, args), observe = observer.observe;
+  const selectors = [".admin-terminal-settings-page", ".admin-terminal-settings-tuning-grid", "[data-settings-custom-toggle]", '[data-attendance-reward-field="presentRewardAmount"]', ".admin-terminal-settings-save-bar"];
+  const pages = new WeakMap(), nodes = new WeakMap(), games = new Map(), requests = new Map(), contexts = new Map(), reads = new Map(), mounted = new WeakMap();
+  let identity = 0;
+  const token = (map, value, prefix) => { if (!value) return null; if (!map.has(value)) map.set(value, `${prefix}${++identity}`); return map.get(value); };
+  const flag = (node, name) => { const value = node?.getAttribute(name) ?? null; return [null, "true", "false"].includes(value) ? value : "other"; };
+  const diagnostic = window.__ref015D1 = { selectors, records: [], errors: [], overflow: false };
+  function state() {
+    const root = document.querySelector(selectors[0]), elements = selectors.map((selector, index) => index ? root?.querySelector(selector) : root);
+    const rawGame = window.Econovaria?.features?.adminOverviewTerminal?.currentModel?.gameId || window.EconovariaAdminGameSelection?.read?.();
+    const game = token(games, rawGame, "g"), card = root?.querySelector("[data-admin-attendance-reward-settings]"), save = root?.querySelector('[data-admin-terminal-action="save-settings"]');
+    const [page, grid, toggle] = elements;
+    const value = { page: token(pages, root, "p"), game, connected: Boolean(root?.isConnected), ids: elements.map((node) => token(nodes, node, "n")), counts: selectors.map((selector, index) => (index ? root : document)?.querySelectorAll(selector).length || 0),
+      structural: flag(root, "data-settings-ux-ready"), baseline: flag(root, "data-settings-ux-baseline-ready"), disclosure: flag(root, "data-settings-disclosure-initialized"),
+      attendanceLoaded: flag(card, "data-attendance-reward-loaded"), attendanceError: flag(card, "data-attendance-reward-load-error"), attendanceGameMatches: Boolean(rawGame && window.EconovariaAttendanceRewardSettings?.getGameId?.() === rawGame),
+      busy: flag(save, "aria-busy"), saveDisabled: save?.disabled ?? null, expanded: flag(toggle, "aria-expanded"), open: Boolean(page?.classList.contains("is-custom-settings-open")), controlsMatch: Boolean(toggle && grid && toggle.getAttribute("aria-controls") === grid.id),
+      pendingSettingsReads: reads.get(game)?.pending.size ?? 0, terminalSettingsRead: reads.get(game)?.terminal ?? null };
+    value.complete = value.connected && value.counts.every((count) => count === 1) && [value.structural, value.baseline, value.disclosure, value.attendanceLoaded].every((v) => v === "true") && value.attendanceGameMatches && value.busy !== "true" && value.controlsMatch && value.expanded === String(value.open);
+    return value;
+  }
+  const signature = (value) => JSON.stringify([value.page, value.game, value.ids]);
+  function record(value) {
+    if (diagnostic.records.length >= 2000) { diagnostic.overflow = true; return; }
+    const entry = { seq: diagnostic.records.length, timeMs: performance.now(), ...value };
+    diagnostic.records.push(entry); return entry;
+  }
+  const safe = (operation) => { try { return operation(); } catch { diagnostic.errors.push("diagnostic instrumentation error"); return null; } };
+  diagnostic.state = () => safe(state);
+  diagnostic.ready = () => Boolean(safe(() => {
+    const value = state(), root = document.querySelector(selectors[0]);
+    return Boolean(value.complete && value.terminalSettingsRead && !value.pendingSettingsReads && mounted.get(root)?.signature === signature(value));
+  }));
+  diagnostic.begin = (event, target) => safe(() => {
+    const before = state(), detail = event.detail || {}, path = typeof detail.pathname === "string" ? detail.pathname : "";
+    const request = token(requests, detail.requestId, "r"), resource = /\/games\/[^/]+\/([^/]+)/.exec(path)?.[1];
+    const context = contexts.get(request) || { request, resource: ["settings", "overview", "players", "attendance", "contracts", "economy", "store", "inventory"].includes(resource) ? resource : "other", method: ["GET", "HEAD", "PATCH", "POST", "DELETE"].includes(detail.method) ? detail.method : null,
+      requestGame: token(games, /\/games\/([^/]+)/.exec(path)?.[1], "g"), pageAtStart: before.page };
+    if (request && detail.phase === "started") contexts.set(request, context);
+    if (event.type === "econovaria:admin-request-lifecycle" && request && context.resource === "settings" && ["GET", "HEAD"].includes(context.method)) {
+      const read = reads.get(context.requestGame) || { pending: new Set(), terminal: null }; reads.set(context.requestGame, read);
+      if (detail.phase === "started") read.pending.add(request);
+      else if (["committed", "failed", "cancelled"].includes(detail.phase)) { read.pending.delete(request); read.terminal = { request, phase: detail.phase }; }
+    }
+    const value = { kind: "dispatch", event: event.type, phase: detail.phase || null, reason: ["navigation", "request-complete", "game-context", "attendance-saved", "window-load", "module-load", "explicit"].includes(detail.reason) ? detail.reason : null,
+      ...context, targetPage: target?.matches?.(selectors[0]) ? token(pages, target, "p") : null, before };
+    return record(value);
+  });
+  diagnostic.end = (value, event, target) => safe(() => {
+    if (!value) return;
+    value.after = state();
+    if (event.type === "econovaria:admin-settings-mounted" && target === document.querySelector(selectors[0]) && value.after.complete) mounted.set(target, { signature: signature(value.after) });
+  });
+  diagnostic.observe = (before, mutations, observer) => safe(() => {
+    const after = state(), changes = [];
+    for (const mutation of mutations) if (mutation.type === "childList") for (const action of ["addedNodes", "removedNodes"]) for (const node of mutation[action]) {
+      if (!(node instanceof Element)) continue;
+      const affected = selectors.filter((selector) => node.matches(selector) || node.querySelector(selector));
+      if (affected.length) changes.push({ action, node: token(nodes, node, "n"), tag: node.tagName, affected });
+    }
+    if (changes.length || JSON.stringify(before) !== JSON.stringify(after)) record({ kind: "observer", observer: token(nodes, observer, "o"), before, after, changes });
+  });
+  window.MutationObserver = new Proxy(window.MutationObserver, { construct(Type, args, newTarget) {
+    const [callback, ...rest] = args;
+    function track(...values) {
+      const before = diagnostic.state();
+      try { return Reflect.apply(callback, this, values); }
+      finally { diagnostic.observe(before, values[0], values[1]); }
+    }
+    const observer = Reflect.construct(Type, [track, ...rest], newTarget), observe = observer.observe;
     observer.observe = function (target, options) {
       const result = Reflect.apply(observe, this, [target, options]);
       window.__ref015Observers.push({ target: target === document.body ? "body" : target === document.documentElement ? "html" : target.nodeName, options });
@@ -67,7 +140,9 @@ await harness.context.addInitScript(() => {
   const dispatch = EventTarget.prototype.dispatchEvent;
   EventTarget.prototype.dispatchEvent = function (event) {
     if (event.type.startsWith("econovaria:")) window.__ref015Events.push({ type: event.type, phase: event.detail?.phase || null, target: this === window ? "window" : this === document ? "document" : this.nodeName });
-    return Reflect.apply(dispatch, this, [event]);
+    const value = event.type.startsWith("econovaria:") ? diagnostic.begin(event, this) : null;
+    try { return Reflect.apply(dispatch, this, [event]); }
+    finally { diagnostic.end(value, event, this); }
   };
 });
 
@@ -273,6 +348,15 @@ try {
   await page.waitForFunction(() => document.querySelector(".admin-terminal-settings-page")
     ?.getAttribute("data-settings-ux-baseline-ready") === "true", null, { timeout: 10_000 });
   await measureStyles(page, "late-first-settings-mount");
+  try {
+    await page.waitForFunction(() => window.__ref015D1.ready(), null, { timeout: 10_000 });
+    await measureStyles(page, "late-first-settings-mount-ready");
+    readyDiagnostics.push({ status: styleMeasurements.at(-1).diagnostic.ready ? "passed" : "incomplete", state: styleMeasurements.at(-1).diagnostic.state });
+    if (!styleMeasurements.at(-1).diagnostic.ready) styleFailures.push("Ready capture lost its qualifying page/state");
+  } catch (error) {
+    styleFailures.push(`Ready-state diagnostic failed: ${error.message}`);
+    readyDiagnostics.push({ status: "failed", state: await page.evaluate(() => window.__ref015D1.state()), message: error.message });
+  }
   await page.locator("[data-settings-custom-toggle]").click();
   const saveControl = page.locator('[data-admin-terminal-action="save-settings"]');
   const amountControl = page.locator('[data-attendance-reward-field="presentRewardAmount"]');
@@ -405,16 +489,17 @@ try {
   const repeated = await page.evaluate(() => ({ unique: document.querySelectorAll("#econovaria-settings-final-polish-style").length, order: [...document.querySelectorAll('link[rel="stylesheet"]')].map((node) => node.getAttribute("href")) }));
   if (!sameIdentity || repeated.unique !== 1 || JSON.stringify(repeated.order) !== JSON.stringify(styleMeasurements.at(-1).order)) throw new Error("Repeated owner/bridge/query load changed stylesheet identity/order.");
   await capture("settings-disclosure-persistence");
+  if (styleMeasurements.some((sample) => sample.diagnostic.overflow || sample.diagnostic.errors.length)) styleFailures.push("Diagnostic evidence is incomplete");
   if (styleFailures.length) throw new Error(styleFailures.join("; "));
   if (errors.length) throw new Error(errors[0]);
   console.log("Shared Settings preserves native events, focus, save state, disclosure, and domain boundaries.");
-  await finish({ afterOption, duringNumericEdit, ref014Writes, styleMeasurements, errors });
+  await finish({ afterOption, duringNumericEdit, ref014Writes, styleMeasurements, readyDiagnostics, errors });
   clearTimeout(deadline);
 } catch (error) {
   console.error(`Settings browser failure during ${phase}:`, error.stack || error.message || String(error));
   for (const release of [...releases]) release();
   const bounded = (operation) => Promise.race([operation, new Promise((resolve) => setTimeout(resolve, 5000))]);
   await bounded(capture("settings-disclosure-failure").catch(() => {}));
-  await bounded(finish({ phase, styleMeasurements, styleFailures, failure: error.stack || error.message || String(error) }).catch(() => {}));
+  await bounded(finish({ phase, styleMeasurements, styleFailures, readyDiagnostics, failure: error.stack || error.message || String(error) }).catch(() => {}));
   process.exitCode = 1;
 }
