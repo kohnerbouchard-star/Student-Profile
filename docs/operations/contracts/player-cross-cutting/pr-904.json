@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.story-notification-types-pr-904.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 904,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/storylines/contracts/storyNotificationContracts.ts",
+    "backend/src/domains/storylines/contracts/storylineRunnerContracts.ts",
+    "backend/src/domains/storylines/server/notificationCapabilities.test.ts",
+    "backend/src/domains/storylines/server/notificationCapabilities.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-904.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/storylines/contracts/storyNotificationContracts.ts",
+    "backend/src/domains/storylines/contracts/storylineRunnerContracts.ts",
+    "backend/src/domains/storylines/server/notificationCapabilities.test.ts",
+    "backend/src/domains/storylines/server/notificationCapabilities.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-904.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Story Replay Safety",
+    "REF-018 and REF-022 Staff Mutation Qualification",
+    "multicurrency-store-funding-v1",
+    "multicurrency-marketplace-funding-v1",
+    "multicurrency-stock-funding-v1",
+    "business-multicurrency-treasury-v1",
+    "business-player-store-fx-final-v2",
+    "business-store-sales-convergence-v2",
+    "Business Timed Manufacturing V2",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Required Game Market Timezone",
+    "Runtime Interaction Wiring"
+  ],
+  "criticalJobChecks": [
+    "Story Replay Safety",
+    "REF-018 and REF-022 Staff Mutation Qualification",
+    "multicurrency-store-funding-v1",
+    "multicurrency-marketplace-funding-v1",
+    "multicurrency-stock-funding-v1",
+    "business-multicurrency-treasury-v1",
+    "business-player-store-fx-final-v2",
+    "business-store-sales-convergence-v2",
+    "Business Timed Manufacturing V2",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "readOnlyPaths": [
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "authorizationNote": "Binds the Story notification publisher type boundary, its test and generated inventory to this PR. Preserve the existing public re-export, runtime capability, repository behavior and release holds. The verifier and its regression test are read-only. No roadmaps, production deployment, hosted mutation or secrets are included."
+}

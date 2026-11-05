@@ -577,16 +577,16 @@
       "id": "REF-034",
       "title": "Converge Story notification delivery through the existing transaction boundary",
       "file": "tasks/REF-034.md",
-      "status": "PLANNED",
+      "status": "VERIFIED_COMPLETE",
       "dependsOn": [
         "REF-033"
       ],
       "risk": "R3",
       "architectureMapping": "ARCH-402/ARCH-602",
       "recheckOpenPrs": [],
-      "implementationSha": null,
-      "mergeSha": null,
-      "evidence": null
+      "implementationSha": "ed50321de47c5088932fb0b08b122ceb0db4ee71",
+      "mergeSha": "f984f73fa7f1307fbe3fd5019836876a24f82ca4",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-034/preflight.md"
     },
     {
       "id": "REF-035",

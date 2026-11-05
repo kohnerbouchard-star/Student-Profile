@@ -37,6 +37,19 @@ function assert(condition, message) {
 
 async function createPage(viewport, label) {
   const harness = await createQualityHarness(`mounted-keyboard-${label}`);
+  await harness.page.addInitScript(() => {
+    window.__ref015FocusTrace = [];
+    const nativeFocus = HTMLElement.prototype.focus;
+    HTMLElement.prototype.focus = function (...args) {
+      window.__ref015FocusTrace.push({ type: "focus-call", tag: this.tagName, action: this.getAttribute("data-admin-terminal-action"), section: this.getAttribute("data-admin-section"), stack: new Error().stack?.split("\n").slice(1, 5) });
+      window.__ref015FocusTrace.splice(0, Math.max(0, window.__ref015FocusTrace.length - 24));
+      return Reflect.apply(nativeFocus, this, args);
+    };
+    for (const type of ["focusin", "keydown"]) window.addEventListener(type, (event) => {
+      window.__ref015FocusTrace.push({ type, time: event.timeStamp, key: event.key || "", tag: event.target?.tagName, name: event.target?.getAttribute?.("name"), className: event.target?.className, section: event.target?.getAttribute?.("data-admin-section"), action: event.target?.getAttribute?.("data-admin-terminal-action") });
+      window.__ref015FocusTrace.splice(0, Math.max(0, window.__ref015FocusTrace.length - 24));
+    }, true);
+  });
   harness.state.delayReads = false;
   harness.state.writeDelay = 0;
   await harness.page.setViewportSize(viewport);
@@ -171,6 +184,16 @@ async function exerciseNavigation(viewport) {
 
     assert(errors.length === 0, `Mounted Admin navigation emitted browser errors: ${errors[0]}`);
     return { viewport, sections, errors };
+  } catch (error) {
+    const diagnostic = await page.evaluate(() => {
+      const describe = (node) => node instanceof HTMLElement ? { tag: node.tagName, name: node.getAttribute("name"), className: node.className, section: node.getAttribute("data-admin-section"), action: node.getAttribute("data-admin-terminal-action"), connected: node.isConnected, disabled: node.matches(":disabled,[aria-disabled='true']"), excluded: Boolean(node.closest("[inert],[hidden],[aria-hidden='true'],[data-admin-stale='true'],[data-admin-shape-skeleton-stage],.admin-shape-surface-overlay")), display: getComputedStyle(node).display, visibility: getComputedStyle(node).visibility, width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height, selected: node.getAttribute("aria-current"), busy: node.getAttribute("aria-busy") } : null;
+      const owner = window.EconovariaAdminModalAccessibility;
+      return { active: describe(document.activeElement), navigation: [...document.querySelectorAll("[data-admin-section]")].map(describe), modal: describe(owner?.getActiveController?.()?.dialog), stack: owner?.getStackDepth?.(), trace: window.__ref015FocusTrace };
+    }).catch((failure) => ({ captureError: String(failure) }));
+    const record = { failure: String(error), viewport, completedSections: sections.map(({ section }) => section), diagnostic };
+    writeFileSync(`${ARTIFACT_DIR}/navigation-focus-failure.json`, JSON.stringify(record, null, 2));
+    console.error("REF015_NAV_FOCUS " + JSON.stringify(record));
+    throw error;
   } finally {
     await harness.finish({ viewport, sections });
   }
@@ -251,9 +274,59 @@ async function exerciseQuickActions() {
   return { viewport, results };
 }
 
+async function exerciseReadCompletionFocus() {
+  const fields = { location: '[data-marketplace-filter="location"]', search: "[data-marketplace-search]", type: '[data-marketplace-filter="type"]', sector: '[data-marketplace-filter="sector"]', price: '[data-marketplace-filter="price"]', sort: "[data-marketplace-sort]", bell: "[data-admin-terminal-bell]", profile: "[data-admin-terminal-user]", share: '[data-admin-terminal-action="share-game-code"]' };
+  for (const mode of ["navigation", "outside", "hidden-replacement", ...Object.keys(fields)]) {
+    const harness = await createPage(fields[mode] ? VIEWPORTS[1] : VIEWPORTS[0], `read-focus-${mode}`);
+    const { page } = harness;
+    let release, sawRead = false;
+    const gate = new Promise(resolve => { release = resolve; });
+    try {
+      await loadAdmin(page);
+      await page.waitForFunction(() => !window.Econovaria.features.adminOverviewTerminal.sessionBootstrapPromise, null, { timeout: 5000 });
+      const section = fields[mode] ? "Market" : "Assignments";
+      const nav = page.locator(`[data-admin-section="${section}"]`).first();
+      await nav.focus(); await page.keyboard.press("Enter");
+      await page.evaluate(section => { window.Econovaria.features.adminOverviewTerminal.loadAdminTerminalPageData(section, { noLoadingRender: true }).then(() => { window.__ref015InitialReadDone = true; }); }, section);
+      await page.waitForFunction(() => window.__ref015InitialReadDone, null, { timeout: 5000 });
+      await page.route("**/*", async route => {
+        if (route.request().method() === "GET" && /\/(?:contracts(?:\?|$)|market\/)/.test(route.request().url())) { sawRead = true; await gate; }
+        await route.fallback();
+      });
+      await page.evaluate(section => {
+        window.__ref015Read = window.Econovaria.features.adminOverviewTerminal.loadAdminTerminalPageData(section, { force: true, noLoadingRender: true });
+      }, section);
+      const deadline = Date.now() + 5000;
+      while (!sawRead && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
+      assert(sawRead, `${mode}: controlled read did not start.`);
+      if (mode === "outside") await page.evaluate(() => { const button = document.createElement("button"); button.id = "ref015Outside"; button.textContent = "Outside render scope"; document.body.append(button); });
+      const target = fields[mode] ? page.locator(fields[mode]).first() : mode === "outside" ? page.locator("#ref015Outside") : nav;
+      await target.focus();
+      if (mode === "hidden-replacement") {
+        await nav.evaluate(node => { node.dataset.ref015Original = "true"; });
+        await page.addStyleTag({ content: '[data-admin-section="Assignments"]:not([data-ref015-original]) { visibility: hidden !important; }' });
+      }
+      await page.evaluate(({ mode, selector }) => {
+        const original = document.activeElement;
+        const snapshot = () => ({ tag: document.activeElement.tagName, section: document.activeElement.getAttribute("data-admin-section"), original: document.activeElement === original, matches: Boolean(selector && document.activeElement.matches(selector)) });
+        window.__ref015Read.then(async () => { const immediate = snapshot(); await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); window.__ref015ReadResult = { immediate, settled: snapshot(), mode }; }, error => { window.__ref015ReadResult = { error: String(error) }; });
+      }, { mode, selector: fields[mode] });
+      release(); await page.waitForFunction(() => window.__ref015ReadResult, null, { timeout: 5000 });
+      const result = await page.evaluate(() => window.__ref015ReadResult);
+      assert(!result.error, `${mode}: ${result.error}`);
+      for (const state of [result.immediate, result.settled]) assert(fields[mode] ? state.matches : mode === "navigation" ? state.section === "Assignments" : mode === "outside" ? state.original : state.tag === "BODY", `${mode}: read completion lost or stole focus: ${JSON.stringify(result)}`);
+      if (mode === "navigation") { await page.keyboard.press("Shift+Tab"); assert((await activeElementDetail(page)).eligible, "Read completion Shift+Tab lost focus."); await page.keyboard.press("Tab"); assert((await activeElementDetail(page)).section === "Assignments", "Read completion Tab did not return."); }
+      if (mode === "location") { for (let i = 0; i < 8; i++) { await page.keyboard.press("Shift+Tab"); assert((await activeElementDetail(page)).eligible, "Market interleaved read reverse traversal lost focus."); } assert((await activeElementDetail(page)).section === "Market", "Market interleaved read did not return to navigation."); }
+      assert(harness.errors.length === 0, `Read focus browser errors: ${harness.errors[0]}`);
+      console.log("REF015_READ_FOCUS " + JSON.stringify(result));
+    } finally { release(); await harness.finish({ mode }); }
+  }
+}
+
 const report = { navigation: [], quickActions: null };
 
 try {
+  await exerciseReadCompletionFocus();
   for (const viewport of VIEWPORTS) {
     report.navigation.push(await exerciseNavigation(viewport));
   }

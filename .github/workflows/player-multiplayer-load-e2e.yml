@@ -147,6 +147,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node backend/scripts/verifyNeutralDenoTestConfig.mjs --static
           LOG=/tmp/player-runtime-supabase-startup.log
           : > "$LOG"
           mkdir -p backend/supabase/functions
@@ -364,6 +365,13 @@ jobs:
             for CONTAINER in $(docker ps --format '{{.Names}}' | grep -E 'edge_runtime|auth|rest|kong' || true); do
               echo "-- ${CONTAINER} --"
               docker logs --since 20m "$CONTAINER" 2>&1 | tail -n 900
+            done
+            echo "== disposable database errors =="
+            for CONTAINER in $(docker ps --format '{{.Names}}' | grep -E '^supabase_db_' || true); do
+              echo "-- ${CONTAINER} --"
+              # Exclude SQL statements, DETAIL and CONTEXT; retain bounded error messages only.
+              docker logs --since 20m "$CONTAINER" 2>&1 \
+                | grep -E ' (ERROR|FATAL|PANIC):' | tail -n 100
             done
           } \
             | sed -E 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[uuid-redacted]/gi; s/ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/[game-code-redacted]/g; s/(BROWSER|LOAD)-(PLAYER|ACCESS)-[A-Z0-9-]+/[credential-redacted]/g' \

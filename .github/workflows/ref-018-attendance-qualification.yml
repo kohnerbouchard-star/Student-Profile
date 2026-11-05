@@ -20,6 +20,19 @@ on:
       - 'scripts/ref-036-progression-acceptance.ts'
       - 'scripts/ref-039-stock-runner-acceptance.ts'
       - 'scripts/ref-045-license-issuance-acceptance.ts'
+      - 'scripts/pr-889-campaign-postgrest-acceptance.ts'
+      - 'scripts/story-notification-postgrest-acceptance.ts'
+      - 'backend/src/domains/storylines/server/notificationCapabilities.ts'
+      - 'backend/src/domains/storylines/infrastructure/supabaseStoryNotificationRepository.ts'
+      - 'backend/src/domains/storylines/contracts/storyNotificationContracts.ts'
+      - 'backend/src/domains/notifications/public/storyNotifications.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/infrastructure/client.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.test.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/deno.json'
+      - 'backend/supabase/functions/deno.lock'
+      - 'backend/supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs'
+      - 'scripts/redact-econovaria-ci-log.mjs'
       - 'backend/supabase/functions/license-issuance-worker/**'
       - 'backend/supabase/functions/_shared/licenseCode.ts'
       - 'backend/src/domains/licensing/**'
@@ -50,6 +63,19 @@ on:
       - 'scripts/ref-036-progression-acceptance.ts'
       - 'scripts/ref-039-stock-runner-acceptance.ts'
       - 'scripts/ref-045-license-issuance-acceptance.ts'
+      - 'scripts/pr-889-campaign-postgrest-acceptance.ts'
+      - 'scripts/story-notification-postgrest-acceptance.ts'
+      - 'backend/src/domains/storylines/server/notificationCapabilities.ts'
+      - 'backend/src/domains/storylines/infrastructure/supabaseStoryNotificationRepository.ts'
+      - 'backend/src/domains/storylines/contracts/storyNotificationContracts.ts'
+      - 'backend/src/domains/notifications/public/storyNotifications.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/infrastructure/client.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.test.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/deno.json'
+      - 'backend/supabase/functions/deno.lock'
+      - 'backend/supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs'
+      - 'scripts/redact-econovaria-ci-log.mjs'
       - 'backend/supabase/functions/license-issuance-worker/**'
       - 'backend/supabase/functions/_shared/licenseCode.ts'
       - 'backend/src/domains/licensing/**'
@@ -104,6 +130,7 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
           npm --prefix backend ci
+          node backend/scripts/verifyNeutralDenoTestConfig.mjs --static
           deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-018-attendance-acceptance.ts
           deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-022-ledger-adjustment-acceptance.ts
           deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-023-reservation-acceptance.ts
@@ -112,6 +139,9 @@ jobs:
           deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-036-progression-acceptance.ts
           deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-039-stock-runner-acceptance.ts
           deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-045-license-issuance-acceptance.ts
+          deno check --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/pr-889-campaign-postgrest-acceptance.ts
+          deno check --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/story-notification-postgrest-acceptance.ts
+          deno cache --allow-import=esm.sh --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/story-notification-postgrest-acceptance.ts
           npx supabase --version
           npx supabase start --help > /tmp/ref018/start-help.log
           npx supabase db reset --help > /tmp/ref018/reset-help.log
@@ -145,8 +175,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit,edge-runtime > /tmp/ref018/database-start.log 2>&1
-          npx supabase db reset --workdir backend --local > /tmp/ref018/database-replay.log 2>&1
+          npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit,edge-runtime 2>&1 | node scripts/redact-econovaria-ci-log.mjs > /tmp/ref018/database-start.log
+          npx supabase db reset --workdir backend --local 2>&1 | node scripts/redact-econovaria-ci-log.mjs > /tmp/ref018/database-replay.log
+      - name: Prove Story notification capabilities through local PostgREST
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test "$DATABASE_URL" = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+          story_status="$(npx supabase status --workdir backend -o env 2>&1)"
+          story_api='' story_service='' story_secret=''
+          while IFS='=' read -r story_name story_value; do
+            story_value="${story_value#\"}"; story_value="${story_value%\"}"
+            case "$story_name" in
+              API_URL) story_api="$story_value" ;;
+              SERVICE_ROLE_KEY) story_service="$story_value" ;;
+              SECRET_KEY) story_secret="$story_value" ;;
+            esac
+          done <<< "$story_status"
+          test "$story_api" = 'http://127.0.0.1:54321'
+          export SUPABASE_URL="$story_api" SUPABASE_SERVICE_ROLE_KEY="${story_service:-$story_secret}"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "notify pgrst, 'reload schema';"
+          deno run --cached-only --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF018_DISPOSABLE_DATABASE,RELEASE_COMMIT,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY --allow-read --allow-run=psql,git --allow-net=127.0.0.1:54321 scripts/story-notification-postgrest-acceptance.ts
       - name: Capture unchanged-schema lint baseline
         shell: bash
         run: |
@@ -195,6 +246,28 @@ jobs:
           set -euo pipefail
           node --experimental-strip-types --test scripts/license-issuance-queue-contract.test.mjs scripts/license-issuance-hardening-contract.test.mjs scripts/license-email-outbox-contract.test.mjs scripts/stripe-license-adapter-contract.test.mjs 2>&1 | tee /tmp/ref018/ref045-contracts.log
           deno run --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF045_DISPOSABLE_DATABASE,RELEASE_COMMIT,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,ECONOVARIA_LICENSE_CODE_DERIVATION_SECRET,ECONOVARIA_PURCHASE_CODE_HMAC_SECRET --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-045-license-issuance-acceptance.ts 2>&1 | tee /tmp/ref018/ref045-database-qualification.log
+      - name: Prove Campaign SDK reads and scheduler authorization through local PostgREST
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test "$DATABASE_URL" = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+          pr889_status="$(npx supabase status --workdir backend -o env 2>&1)"
+          pr889_api='' pr889_service='' pr889_secret=''
+          while IFS='=' read -r pr889_name pr889_value; do
+            pr889_value="${pr889_value#\"}"; pr889_value="${pr889_value%\"}"
+            case "$pr889_name" in
+              API_URL) pr889_api="$pr889_value" ;;
+              SERVICE_ROLE_KEY) pr889_service="$pr889_value" ;;
+              SECRET_KEY) pr889_secret="$pr889_value" ;;
+            esac
+          done <<< "$pr889_status"
+          test "$pr889_api" = 'http://127.0.0.1:54321'
+          export SUPABASE_URL="$pr889_api"
+          export SUPABASE_SERVICE_ROLE_KEY="${pr889_service:-$pr889_secret}"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "notify pgrst, 'reload schema';"
+          PR889_DISPOSABLE_DATABASE=1 deno run --cached-only --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,PR889_DISPOSABLE_DATABASE,RELEASE_COMMIT,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY --allow-read --allow-run=psql --allow-net=127.0.0.1:54321 --allow-write=/tmp/ref018 scripts/pr-889-campaign-postgrest-acceptance.ts 2>&1 | tee /tmp/ref018/pr889-campaign-postgrest.log
       - name: Preserve baseline lint findings without introducing new diagnostics
         shell: bash
         run: |

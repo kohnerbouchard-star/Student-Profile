@@ -53,6 +53,11 @@ export interface StoryNotificationRepository {
   ): Promise<StoryNotificationDeliveryRecord>;
 }
 
+export type StoryNotificationPublisher = Pick<
+  StoryNotificationRepository,
+  "createStoryNotification" | "createNotificationDeliveries"
+>;
+
 export interface CreateStoryNotificationInput {
   readonly gameSessionId: string;
   readonly sourceType: string;
@@ -135,7 +140,7 @@ export interface CreateStoryCutsceneNotificationForPlayersInput {
   readonly reveal: StoryRevealPayload;
   readonly priority: StoryNotificationPriority;
   readonly now: string;
-  readonly repository: StoryNotificationRepository;
+  readonly repository: StoryNotificationPublisher;
 }
 
 export interface CreateStoryCutsceneNotificationForPlayersResult {

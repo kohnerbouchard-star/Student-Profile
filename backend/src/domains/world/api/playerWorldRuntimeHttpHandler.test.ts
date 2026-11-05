@@ -1,4 +1,5 @@
-import type { PlayerRequestScope } from "../../players/api/playerRequestScope.ts";
+import type { PlayerRequestScope } from "../../players/index.ts";
+import { ArrivalClassError } from "../../arrival/index.ts";
 import {
   handlePlayerWorldRuntimeRequest,
   type PlayerWorldRuntimeService,
@@ -59,6 +60,31 @@ Deno.test("arrival assignment accepts exact answers and server-derived scope", a
   assertEquals((captured as { idempotencyKey: string }).idempotencyKey, "arrival-class-0001");
   assertEquals(JSON.stringify(captured).includes("gameId"), true);
   assertEquals(JSON.stringify(await response.json()).includes(SCOPE.gameId), false);
+});
+
+Deno.test("Arrival errors retain their HTTP status, response, and privacy", async () => {
+  const answers = Array.from({ length: 6 }, (_, index) => ({
+    questionId: `question-${index}`,
+    optionId: `option-${index}`,
+  }));
+  for (const [error, expectedStatus] of [
+    [new ArrivalClassError("arrival_answers_incomplete", "Answers incomplete.", false), 400],
+    [new ArrivalClassError("arrival_assignment_revision_conflict", "Assignment changed.", true), 409],
+  ] as const) {
+    const response = await request("POST", "/players/me/arrival-class", { answers }, service({
+      assignArrivalClass: async () => { throw error; },
+    }), { "idempotency-key": "arrival-class-0001" });
+    assertEquals(response.status, expectedStatus);
+    assertEquals(response.headers.get("cache-control"), "no-store, private");
+    assertEquals(await response.json(), { error: { code: error.code, message: error.message, retryable: error.retryable } });
+  }
+  const response = await request("POST", "/players/me/arrival-class", { answers }, service({
+    assignArrivalClass: async () => { throw new Error(`private ${SCOPE.playerUuid}`); },
+  }), { "idempotency-key": "arrival-class-0001" });
+  assertEquals(response.status, 500);
+  const body = await response.json();
+  assertEquals(body, { error: { code: "world_runtime_unavailable", message: "World runtime is temporarily unavailable.", retryable: true } });
+  assertEquals(JSON.stringify(body).includes(SCOPE.playerUuid), false);
 });
 
 Deno.test("travel quote, execution, completion, and residency use public IDs", async () => {

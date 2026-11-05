@@ -11,11 +11,11 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
+import { resolveActivePlayerSession } from "../../players/index.ts";
 import {
   type PlayerRequestScope,
   resolvePlayerRequestScope,
-} from "../../players/api/playerRequestScope.ts";
+} from "../../players/index.ts";
 import type { PlayerMarketplaceFundingRepository } from "../contracts/playerMarketplaceFundingContracts.ts";
 import {
   MARKETPLACE_IDEMPOTENCY_KEY_PATTERN,

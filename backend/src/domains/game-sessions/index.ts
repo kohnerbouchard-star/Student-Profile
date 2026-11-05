@@ -1,4 +1,4 @@
-import { EdgeActivationError } from "../../../platform/supabase/edgeResponse.ts";
+import { EdgeActivationError } from "../../platform/supabase/edgeResponse.ts";
 
 export function normalizeJoinCode(value: string): string {
   const normalizedValue = value

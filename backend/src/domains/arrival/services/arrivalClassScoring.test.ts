@@ -1,8 +1,10 @@
 import {
   ARRIVAL_CLASS_IDS,
+  ArrivalClassError,
   type ArrivalClassId,
   type ArrivalQuestionAnswer,
 } from "../contracts/arrivalClassContracts.ts";
+import * as arrivalPublic from "../index.ts";
 import {
   buildArrivalGrantCommand,
   createArrivalClassAssignment,
@@ -141,6 +143,93 @@ Deno.test("scoring rejects incomplete, duplicate, and foreign answers", () => {
     ]),
     "arrival_answer_invalid",
   );
+});
+
+Deno.test("Arrival exposes only the intended server capability and canonical identities", () => {
+  assertEquals(Object.keys(arrivalPublic).sort(), [
+    "ArrivalClassError", "DEFAULT_ARRIVAL_QUESTIONNAIRE", "preparePlayerArrivalAssignment",
+  ]);
+  if (arrivalPublic.ArrivalClassError !== ArrivalClassError) throw new Error("Arrival error identity changed");
+  if (arrivalPublic.DEFAULT_ARRIVAL_QUESTIONNAIRE !== DEFAULT_ARRIVAL_QUESTIONNAIRE) {
+    throw new Error("Arrival questionnaire identity changed");
+  }
+});
+
+Deno.test("Arrival preparation matches scoring, scoped assignment and grant composition", () => {
+  for (const classId of ARRIVAL_CLASS_IDS) {
+    for (const countryId of COUNTRIES) {
+      const answers = answersFor(classId);
+      const score = scoreArrivalQuestionnaire(DEFAULT_ARRIVAL_QUESTIONNAIRE, answers);
+      const assignment = createArrivalClassAssignment({
+        assignmentId: `assignment-${classId}-${countryId}`,
+        gameId: "game-1",
+        gameSessionId: "game-1",
+        playerUuid: `player-${classId}`,
+        countryId,
+        scoreResult: score,
+        assignedAt: "2026-07-21T00:00:00.000Z",
+      });
+      const grant = buildArrivalGrantCommand({
+        assignment,
+        arrivalPackageDefinitionId: `arrival.${countryId}.v1`,
+        grantDefinitionId: `class.${classId}.starter.v1`,
+      });
+      const calls: string[] = [];
+      const runtimeInput = {
+        countryId,
+        arrivalPackageDefinitionId: `arrival.${countryId}.v1`,
+        classGrantDefinitionId(selected: string) {
+          if (this !== runtimeInput) throw new Error("Grant lookup receiver changed");
+          calls.push("grant-definition");
+          return `class.${selected}.starter.v1`;
+        },
+      };
+      const prepared = arrivalPublic.preparePlayerArrivalAssignment({
+        subject: { scope: { gameId: "game-1", playerUuid: `player-${classId}` }, request: { answers } },
+        runtimeInput,
+        now: () => { calls.push("clock"); return "2026-07-21T00:00:00.000Z"; },
+        createAssignmentId: () => { calls.push("assignment-id"); return `assignment-${classId}-${countryId}`; },
+      });
+      assertEquals(prepared, { assignment, scoreResult: score, grant });
+      assertEquals(calls, ["clock", "assignment-id", "grant-definition"]);
+      if (prepared.assignment.scoreResult !== prepared.scoreResult) {
+        throw new Error("Prepared assignment lost its score result identity");
+      }
+      assertEquals(Object.isFrozen(prepared.assignment), true);
+      assertEquals(Object.isFrozen(prepared.scoreResult), true);
+      assertEquals(Object.isFrozen(prepared.grant), true);
+    }
+  }
+});
+
+Deno.test("Arrival preparation rejects invalid answers before callbacks and preserves callback errors", () => {
+  const calls: string[] = [];
+  const clockFailure = new Error("clock failure");
+  const input = {
+    subject: { scope: { gameId: "game-1", playerUuid: "player-1" }, request: { answers: answersFor("analyst") } },
+    runtimeInput: {
+      countryId: "eldoran",
+      arrivalPackageDefinitionId: "arrival.eldoran.v1",
+      classGrantDefinitionId: () => { calls.push("grant-definition"); return "class.analyst.starter.v1"; },
+    },
+    now: () => { calls.push("clock"); throw clockFailure; },
+    createAssignmentId: () => { calls.push("assignment-id"); return "assignment-1"; },
+  };
+  let invalid: unknown;
+  try {
+    arrivalPublic.preparePlayerArrivalAssignment({
+      ...input,
+      subject: { ...input.subject, request: { answers: input.subject.request.answers.slice(0, 7) } },
+    });
+  } catch (error) { invalid = error; }
+  if (!(invalid instanceof ArrivalClassError)) throw new Error("Expected canonical Arrival error");
+  assertEquals(invalid.code, "arrival_answers_incomplete");
+  assertEquals(calls, []);
+
+  let caught: unknown;
+  try { arrivalPublic.preparePlayerArrivalAssignment(input); } catch (error) { caught = error; }
+  if (caught !== clockFailure) throw new Error("Clock error identity changed");
+  assertEquals(calls, ["clock"]);
 });
 
 function answersFor(classId: ArrivalClassId): readonly ArrivalQuestionAnswer[] {

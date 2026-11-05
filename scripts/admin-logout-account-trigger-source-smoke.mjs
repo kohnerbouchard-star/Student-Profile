@@ -85,3 +85,29 @@ for (const mode of ["present", "older", "missing"]) {
   check.deepEqual(invoke("click", control), [0, 0, 0]);
 }
 console.log("Logout trigger owner, older-owner and missing-owner behavior/order passed.");
+
+for (const fallbackFirst of [false, true]) {
+  const listeners = [], window = { addEventListener(type, fn, capture) { listeners.push({ type, fn, capture }); } };
+  const context = { window, Element, HTMLButtonElement };
+  if (fallbackFirst) runInNewContext(source, context);
+  runInNewContext(ownerSource, context);
+  const owner = window.EconovariaAdminLogoutConfirmation;
+  runInNewContext(ownerSource, context);
+  check.equal(window.EconovariaAdminLogoutConfirmation, owner);
+  owner.installAccountTriggerBridge();
+  const api = window.EconovariaAdminLogoutAccountTriggerBridge, installed = [...listeners];
+  check.equal(installed.length, 4);
+  for (const step of [() => owner.installAccountTriggerBridge(), () => runInNewContext(source, context), () => runInNewContext(ownerSource, context)]) {
+    step(); check.deepEqual(listeners, installed); check.equal(window.EconovariaAdminLogoutAccountTriggerBridge, api);
+    check.equal(window.EconovariaAdminLogoutConfirmation, owner);
+  }
+  let opens = 0;
+  window.EconovariaAdminLogoutConfirmation = { open: () => opens++ };
+  installed[fallbackFirst ? 0 : 2].fn({ target: new Element({ text: "Logout" }), preventDefault() {}, stopImmediatePropagation() {} });
+  check.equal(opens, 1);
+}
+// Legacy fallback-only repeats stay unchanged and outside the owner guard contract.
+const legacyListeners = [], legacy = { window: { addEventListener: (...args) => legacyListeners.push(args) } };
+runInNewContext(source, legacy); runInNewContext(source, legacy);
+check.equal(legacyListeners.length, 4);
+console.log("Repeated owner/direct/retained-bridge initialization preserves APIs and listeners.");

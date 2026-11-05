@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.staff-recovery-mfa-pr-862.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 862,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/auth-browser-review-contract.yml",
+    "api/password-reset.js",
+    "auth/reset-password.css",
+    "auth/reset-password.html",
+    "auth/reset-password.js",
+    "docs/operations/evidence/password-recovery-mfa/implementation.md",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/password-recovery-mfa-browser.test.mjs",
+    "scripts/vercel-auth-proxy-contract.test.mjs",
+    "docs/operations/contracts/player-cross-cutting/pr-862.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-862.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Auth Browser Review Contract"
+  ],
+  "scopeRecord": "docs/operations/evidence/password-recovery-mfa/implementation.md",
+  "authorizationNote": "Parent-approved mandatory PR-specific registration under the existing user-approved bounded recovery MFA repair, synthetic tests and draft PR. Verifier/regression paths are unchanged locks only, not edit permission. No Player code, Edge deployment, production deployment/mutation, factor/settings change, session revocation, live auth request or secret-value handling. Preserve REF-019/020 pauses and parent review/merge gates."
+}

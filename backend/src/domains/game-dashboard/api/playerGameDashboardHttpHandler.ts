@@ -13,7 +13,7 @@ import {
   invalidPlayerSessionResponse,
   readPlayerSessionTokenFromRequest,
   resolveActivePlayerSession,
-} from "../../players/api/playerSessionHttpHelpers.ts";
+} from "../../players/index.ts";
 import {
   GAME_PUBLIC_REALTIME_EVENTS,
   PLAYER_GAME_DASHBOARD_CUTSCENE_ACTIONS,
@@ -32,14 +32,16 @@ import {
   SupabasePlayerGameDashboardRepository,
 } from "../infrastructure/supabasePlayerGameDashboardRepository.ts";
 import {
-  SupabaseStoryNotificationRepository,
-} from "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts";
-import type {
-  StoryNotificationDeliveryRecord,
-} from "../../storylines/contracts/storyNotificationContracts.ts";
+  createStockMarketOpenStateReadRepository,
+  createStockMarketReadRepository,
+} from "../../stocks/index.ts";
+import { createPlayerContractsReadQuery } from "../../contracts/index.ts";
+import { createDashboardStoreListingsReadQuery } from "../../store/dashboardReadModel.ts";
 import {
+  createStoryNotificationDeliveryState,
+  type StoryNotificationDeliveryRecord,
   StoryNotificationRepositoryError,
-} from "../../storylines/contracts/storyNotificationContracts.ts";
+} from "../../storylines/server/notificationCapabilities.ts";
 import {
   withPlayerGameDashboardReadPermit,
 } from "./playerGameDashboardReadLimiter.ts";
@@ -139,7 +141,7 @@ export async function handlePlayerGameDashboardRequest(
         dependencies.createStoryNotificationRepository;
       const storyNotificationRepository = createStoryNotificationRepository
         ? createStoryNotificationRepository(serviceClient)
-        : new SupabaseStoryNotificationRepository(serviceClient as any);
+        : createStoryNotificationDeliveryState(serviceClient as any);
       const delivery = await markCutsceneDelivery({
         input: actionRequest,
         playerId: sessionResult.player.id,
@@ -155,7 +157,15 @@ export async function handlePlayerGameDashboardRequest(
 
     const repository = dependencies.createRepository
       ? dependencies.createRepository(serviceClient)
-      : new SupabasePlayerGameDashboardRepository(serviceClient as any);
+      : new SupabasePlayerGameDashboardRepository(
+        serviceClient as any,
+        {
+          stockMarketReadRepository: createStockMarketReadRepository(serviceClient),
+          stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(serviceClient),
+          playerContractsReadQuery: createPlayerContractsReadQuery(serviceClient),
+          storeListingsReadQuery: createDashboardStoreListingsReadQuery(serviceClient),
+        },
+      );
     const snapshot = await withPlayerGameDashboardReadPermit(() =>
       repository.read({
         gameSessionId,
