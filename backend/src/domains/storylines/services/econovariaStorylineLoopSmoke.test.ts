@@ -2,7 +2,7 @@ import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import type {
   GamePublicRealtimeEnvelope,
   GamePublicRealtimePublishResult,
-} from "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts";
+} from "../../game-dashboard/publicRealtime.ts";
 import {
   handleStockMarketRunnerRequest,
 } from "../../stocks/api/stockMarketRunnerHttpHandler.ts";

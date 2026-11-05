@@ -1129,7 +1129,7 @@
         "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
         "ownerDomain": "storylines",
         "importedDomain": "game-dashboard",
-        "target": "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts"
+        "target": "../../game-dashboard/publicRealtime.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
