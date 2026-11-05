@@ -93,18 +93,18 @@ await harness.context.addInitScript(() => {
     const value = state(), root = document.querySelector(selectors[0]);
     const display = value.complete ? getComputedStyle(root.querySelector(selectors[1])).display !== "none" : null;
     const mount = mounted.get(root), terminal = value.terminalSettingsRead;
-    return Boolean(value.complete && terminal && !value.pendingSettingsReads && mount?.signature === signature(value) && mount.terminal === terminal.request && mount.seq > terminal.seq && display === value.open);
+    return Boolean(!diagnostic.overflow && !diagnostic.errors.length && value.complete && terminal?.startObserved && !value.pendingSettingsReads && mount?.signature === signature(value) && mount.terminal === terminal.request && mount.seq > terminal.seq && display === value.open);
   }));
   diagnostic.begin = (event, target) => safe(() => {
     const before = state(), detail = event.detail || {}, path = typeof detail.pathname === "string" ? detail.pathname : "";
     const request = token(requests, detail.requestId, "r"), resource = /\/games\/[^/]+\/([^/]+)/.exec(path)?.[1];
     const context = contexts.get(request) || { request, resource: ["settings", "overview", "players", "attendance", "contracts", "economy", "store", "inventory"].includes(resource) ? resource : "other", method: ["GET", "HEAD", "PATCH", "POST", "DELETE"].includes(detail.method) ? detail.method : null,
-      requestGame: token(games, /\/games\/([^/]+)/.exec(path)?.[1], "g"), pageAtStart: before.page };
+      requestGame: token(games, /\/games\/([^/]+)/.exec(path)?.[1], "g"), pageAtStart: detail.phase === "started" ? before.page : null, startObserved: detail.phase === "started" };
     if (request && detail.phase === "started") contexts.set(request, context);
     if (event.type === "econovaria:admin-request-lifecycle" && request && context.resource === "settings" && ["GET", "HEAD"].includes(context.method)) {
       const read = reads.get(context.requestGame) || { pending: new Set(), terminal: null }; reads.set(context.requestGame, read);
       if (detail.phase === "started") read.pending.add(request);
-      else if (["committed", "failed", "cancelled"].includes(detail.phase)) { read.pending.delete(request); read.terminal = { request, phase: detail.phase, seq: diagnostic.records.length }; }
+      else if (["committed", "failed", "cancelled"].includes(detail.phase)) { read.pending.delete(request); read.terminal = { request, phase: detail.phase, seq: diagnostic.records.length, startObserved: context.startObserved }; }
     }
     const value = { kind: "dispatch", event: event.type, phase: detail.phase || null, reason: ["navigation", "request-complete", "game-context", "attendance-saved", "window-load", "module-load", "explicit"].includes(detail.reason) ? detail.reason : null,
       ...context, targetPage: target?.matches?.(selectors[0]) ? token(pages, target, "p") : null, before };
@@ -126,6 +126,7 @@ await harness.context.addInitScript(() => {
   });
   window.MutationObserver = new Proxy(window.MutationObserver, { construct(Type, args, newTarget) {
     const [callback, ...rest] = args;
+    if (typeof callback !== "function") return Reflect.construct(Type, args, newTarget);
     function track(...values) {
       const before = diagnostic.state();
       try { return Reflect.apply(callback, this, values); }
