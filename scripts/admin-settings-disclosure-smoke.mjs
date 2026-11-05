@@ -8,11 +8,12 @@ const targetStyle = /\/(?:attendance-reward-settings|settings-simplified|setting
 async function measureStyles(target, label) {
   if (label !== "after-save-remount") await target.waitForLoadState("networkidle");
   const cdp = await target.context().newCDPSession(target);
-  const listeners = [], listenerSignatures = [];
+  const listeners = [], listenerSignatures = [], listenerOrder = [];
   for (const expression of ["window", "document"]) {
     const { result } = await cdp.send("Runtime.evaluate", { expression });
     const entries = (await cdp.send("DOMDebugger.getEventListeners", { objectId: result.objectId })).listeners;
     listeners.push(entries.length);
+    listenerOrder.push(entries.map((entry) => `${entry.type}:${entry.useCapture}:${entry.lineNumber}:${entry.columnNumber}`));
     listenerSignatures.push(entries.map((entry) => `${entry.type}:${entry.useCapture}:${entry.lineNumber}:${entry.columnNumber}`).sort());
   }
   await cdp.detach();
@@ -25,6 +26,7 @@ async function measureStyles(target, label) {
       tag: node.tagName, bounds: node.getBoundingClientRect().toJSON(),
       computed: Object.fromEntries([...getComputedStyle(node)].map((name) => [name, getComputedStyle(node).getPropertyValue(name)])),
     })),
+    observers: window.__ref015Observers || [], events: window.__ref015Events || [],
   }));
   if (styles.count !== 1) throw new Error(`${label}: final-polish stylesheet is not unique.`);
   if (!label.startsWith("standalone")) {
@@ -34,7 +36,7 @@ async function measureStyles(target, label) {
     if (reference && JSON.stringify(styles.order.filter((href) => !targetStyle.test(href))) !== JSON.stringify(reference.order.filter((href) => !targetStyle.test(href)))) styleFailures.push(`${label}: unrelated stylesheet order changed`);
     if (reference && JSON.stringify(styles.stylesheetRequests.filter((href) => !targetStyle.test(href))) !== JSON.stringify(reference.stylesheetRequests.filter((href) => !targetStyle.test(href)))) styleFailures.push(`${label}: unrelated stylesheet requests changed`);
   }
-  styleMeasurements.push({ label, listeners, listenerSignatures, ...styles });
+  styleMeasurements.push({ label, listeners, listenerSignatures, listenerOrder, ...styles });
 }
 page.setDefaultTimeout(10_000);
 page.setDefaultNavigationTimeout(30_000);
@@ -48,6 +50,23 @@ const deadline = setTimeout(() => {
 deadline.unref();
 
 await page.addInitScript(() => window.addEventListener("econovaria:admin-bootstrap-complete", () => { window.__ref015BootstrapComplete = true; }, { once: true }));
+await page.addInitScript(() => {
+  window.__ref015Observers = []; window.__ref015Events = [];
+  window.MutationObserver = new Proxy(window.MutationObserver, { construct(Type, args) {
+    const observer = Reflect.construct(Type, args), observe = observer.observe;
+    observer.observe = function (target, options) {
+      const result = Reflect.apply(observe, this, [target, options]);
+      window.__ref015Observers.push({ target: target === document.body ? "body" : target === document.documentElement ? "html" : target.nodeName, options });
+      return result;
+    };
+    return observer;
+  } });
+  const dispatch = EventTarget.prototype.dispatchEvent;
+  EventTarget.prototype.dispatchEvent = function (event) {
+    if (event.type.startsWith("econovaria:")) window.__ref015Events.push({ type: event.type, phase: event.detail?.phase || null, target: this === window ? "window" : this === document ? "document" : this.nodeName });
+    return Reflect.apply(dispatch, this, [event]);
+  };
+});
 
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });

@@ -58,7 +58,7 @@
     },
     {
       "path": "admin/admin-bootstrap.js",
-      "blobSha": "3a5078b7ade8949c0b3d8eae1742935a666ce712",
+      "blobSha": "677933300249725e146cf7d79a5b44d0e35f60e6",
       "disposition": "compatibility_required",
       "owner": "Retained Admin bootstrap",
       "symbols": ["bootstrapAdminCompatibilityModules"],
@@ -479,6 +479,16 @@
       },
       "evidence": "docs/operations/evidence/refactor-execution-v1/REF-014/preflight.md",
       "review": "Rebind only the Settings error bootstrap and direct save-controller primary/supporting identities after full source review. The old filename remains loaded for its stylesheet; redundant document observation is removed. Direct promise callbacks retain requests, defaults, validation, retry and CSRF ownership while adding page/route lifetime rejection and named listener disposal. The Settings presenter reads the explicit error marker and never styles failure as success. Preserve all unrelated reviews, historical measurements, safeToDelete=false decisions and retirement guards. Baseline pinned CI passed; changed-source acceptance remains dependent on final exact-head qualification. No quiet-window or live deployment claim."
+    },
+    {
+      "task": "REF-015",
+      "pullRequest": 861,
+      "sourcePath": "admin/admin-bootstrap.js",
+      "previousBlobSha": "3a5078b7ade8949c0b3d8eae1742935a666ce712",
+      "reviewedBlobSha": "677933300249725e146cf7d79a5b44d0e35f60e6",
+      "sourceInspectionSha": "854f2d896d276fdc84f59fb17ac1e808e289d40f",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-015/reversible-retirement-amendment.md",
+      "review": "Parent-approved current primary binding refresh after independent exact old/new verification. The original seven-line PR861 caller diff invokes the existing Settings style owner at the serial bridge slot and retains missing/older-owner import plus error reporting. Preserve historical inspection/base/archive measurements, every other review/disposition, safeToDelete=false and all removal gates. This source-evidence maintenance is not runtime qualification or a verifier exemption."
     }
   ]
 }
