@@ -4,8 +4,9 @@ Date: 2026-11-05. Roadmap child: `ARCH-501/502-PLAYER-BANKING-FRESHNESS-001`.
 Local branch: `fix/player-banking-freshness-ownership-v1`.
 Source baseline: `45715997599942fccc3af0fa592ffa4a3a66a37d` (merged #911).
 Status: `IMPLEMENTED_NOT_MERGED`. Draft [PR #912](https://github.com/kohnerbouchard-star/Student-Profile/pull/912), targeting `main`.
-The owner authorized publication of the reviewed nine files plus the actual-numbered
-verification manifest and hosted test qualification. Merge and deployment remain unauthorized.
+The owner authorized the reviewed nine files plus the actual-numbered manifest,
+then approved the retained FX fixture as the eleventh path, existing scope-record
+updates and renewed hosted qualification. Merge, auto-merge and deployment remain unauthorized.
 Implementation commit: `a7279798893cff7d4f86d6c0b562991578fc9e88`.
 Final main re-fetch remains the identical baseline; the local worktree is isolated.
 
@@ -74,6 +75,7 @@ transaction semantics remain unchanged.
 8. `docs/roadmaps/econovaria-beta-completion-roadmap-v1.md`
 9. This scope/evidence record.
 10. `docs/operations/contracts/player-cross-cutting/pr-912.json` (publication-only authority).
+11. `player-terminal/tests/browser/player-banking-fx.spec.mjs` (approved fixture setup only).
 
 No route, RPC, migration, dependency or deployment change. All original
 verification commands and browser registrations remain; `verify` invokes the
@@ -105,8 +107,12 @@ normal history/order merging, rejected publisher admission, independent adapter
 abort and confirmed-command refresh failures. Native tests additionally use the
 real terminal renderer and draft preserver on desktop/mobile.
 
-Raw logs, the failed-baseline screenshot and trace, and a temporary local
-browser configuration are retained under `/tmp/player-banking-evidence/`.
+Original local raw logs, the failed-baseline screenshot/trace and browser
+configuration were retained under `/tmp/player-banking-evidence/` during the
+initial tranche. A later environment restart cleared temporary storage; the
+recorded identities below remain historical provenance, not a claim that those
+old bytes are still locally available. The approved fixture correction has fresh
+logs in that directory, and the prior hosted failure identities remain below.
 The browser configuration changes only local executable/output/video settings;
 the repository configuration, projects, assertions and CI gates are unchanged.
 The bundled Chromium 147 download returned HTTP 403 `Domain forbidden`; local
@@ -116,8 +122,9 @@ qualification of the CI browser binary or hosted runtime.
 
 ## Raw evidence identity
 
-All files below are in `/tmp/player-banking-evidence/`; hashes identify the
-retained bytes, including the unchanged-main failures.
+These historical hashes identify the original tranche bytes, including
+unchanged-main failures. Temporary files were cleared on environment restart;
+these checksums are preserved rather than substituted with new run output.
 
 | File | SHA-256 |
 | --- | --- |
@@ -145,8 +152,9 @@ its actual-numbered manifest and truthful metadata in this record and the
 existing beta ledger. Reviewed implementation, tests, script registration and
 inventory bytes remain unchanged from that head.
 
-`docs/operations/contracts/player-cross-cutting/pr-912.json` binds exactly ten
-edited paths and two read-only verifier/test locks (twelve total). It retains all
+The initial publication authority bound exactly ten edited paths and two
+read-only verifier/test locks (twelve total). The approved correction below
+extends the existing actual-numbered manifest to eleven paths/thirteen locks. It retains all
 94 predecessor required checks and all 72 critical checks, adding the applicable
 Banking/FX, financial, Player, Admin and browser obligations for totals 117 and 86.
 No existing authority, verifier, workflow or test gate is weakened or replaced.
@@ -170,6 +178,91 @@ release/staging/historical jobs must remain reported as skips rather than passes
 The shell CLI workflow-catalogue GET returned `Forbidden`; it was not retried.
 Connected GitHub run/job/check reads support an explicit paginated census.
 
+## Approved retained FX fixture correction
+
+The owner answered “approve” to the explicit request to add the Banking FX
+fixture to public draft PR912, update the existing scope records and rerun
+checks. This tranche covers only Banking; the separately approved Settings #861
+workflow correction is excluded.
+
+Prior published head `e47c2cf354216a412c9c8373ef04b07c4b4f7926` reached terminal
+qualification: 36 workflow runs (35 PR plus dynamic CodeQL), 29 success/7 failure;
+81 jobs, 70 success/4 guarded skips/7 failure; 84 checks, 72 success/5 skips/7 failure.
+All seven failed job logs independently show only the retained FX test at
+`player-terminal/tests/browser/player-banking-fx.spec.mjs:138`, expecting
+“Selections changed” on desktop/mobile: 163 passed, 11 skipped, 2 failed per run.
+The generic Player Verify job also passed actual-PR scope authorization and all
+29 Node regressions before failing these same browser assertions. No unchanged
+retry was used to conceal the deterministic failure.
+
+| Workflow | Run | Failed job |
+| --- | --- | --- |
+| Store Listing Inventory | 42002108707 | 127159631581 |
+| Store Seller Offers | 42002108642 | 127160168171 |
+| Store Withdrawal Safety | 42002108581 | 127160163904 |
+| Store Atomic Settlement | 42002108582 | 127160144276 |
+| Player Terminal Verify | 42002108660 | 127159625225 |
+| Banking FX Chromium | 42002108598 | 127160166316 |
+| Store Cutover Chromium | 42002108465 | 127160254512 |
+
+Multiplayer/Load `42002108400` / job `127160189048` passed the connected journey, secure
+mutations, 30/40-player profiles, result enforcement and cleanup with zero server
+errors. CodeQL's three language analyses and final summary succeeded; its early
+configuration notice cleared. All other final-head checks were terminal; no
+additional distinct CI failure was found.
+
+The retained fixture returned a fresh unregistered `{ route, data }` snapshot
+on each getState call, without ready state, coordinator or render subscription.
+The production installer in `src/main.js:48` uses `createPlayerTerminal` from
+app.js, whose store-backed getState/subscribe and coordinator already satisfy
+the intentionally enforced ownership boundary. Repository-wide caller audit
+found no other production installer; no external-caller compatibility claim is
+made. The local focused browser selection had omitted this retained FX spec;
+the hosted full suite exposed the missing fixture migration.
+
+The approved correction imports the existing store/coordinator, initializes
+`{ status: "ready", route: "banking", data }`, supplies real getState/subscribe,
+and renders from a store subscriber. Every test body and assertion is preserved.
+Complete unchanged test-body SHA256:
+`18da4754ed59e2c78eacde7e84d8e6ec05ec27271d43a40ac7d100eadd1a50e7`.
+Previously independently reviewed exact fixture patch SHA256:
+`e5aa8fc7d481ec7d75da2d683a7dc903a9e3bc8545c96e5bb7139a10c348572e`.
+Both identities were rechecked before applying it to the unchanged branch.
+The prior baseline/candidate comparison passed 2/2 on unchanged main, failed 2/2
+on the published head, and passed 16/16 with the isolated fixture correction.
+The fresh approved-correction rerun passes all 16 Banking browser cases on
+desktop/mobile with Node 22.23.1, npm 10.9.8 and system Chromium 151.0.7922.173.
+Complete Player verification (including all 29 Node regressions), root npm test,
+actual-PR scope verification and all 16 authority tests also pass with zero
+regression-suite skips. Exact assertions/check-array preservation, secrets and
+whitespace checks pass. Backend runtime/typecheck source is byte-identical to
+the prior published head; this fixture-only amendment does not rerun the local
+backend typecheck/smoke suites, whose prior local/hosted evidence is retained.
+The existing hosted qualification workflows will rerun on the new final head.
+
+Fresh correction log identities (`/tmp/player-banking-evidence/`):
+
+| File | SHA-256 |
+| --- | --- |
+| `fixture-correction-browser.log` | `3d994214d59086d29fa05f0970565def89fb8f32f1e7e557d81499db026fb408` |
+| `fixture-correction-player-verify.log` | `71883a1635ebabcc1c7a15d84c95805f6da8657d94588f29582f8d2490ae47a6` |
+| `fixture-correction-root-test.log` | `5d4c8be77ec7f79594131730c4b1796cd39d7a5b5a5b8961ba38d14b0e9965b6` |
+| `fixture-correction-authority-test.log` | `b6b644c5dee64b75eaa6225246b04bb04021cf6db0cb1dc6cd7a4fa711695eb5` |
+
+Only this fixture, the existing pr-912 authority arrays/note, this scope record
+and the existing beta ledger change in the correction. Exactly eleven total PR
+paths and thirteen locks; all 117 required/86 critical check obligations and both
+verifier/test read-only locks are preserved. Production implementation, every
+other test, package registration and shared inventory remain byte-identical to
+e47c2cf3. Fresh local results and independent actual-diff review are complete: no
+actionable finding. The reviewer independently ran actual-PR verification and
+all 16 authority tests, checked the exact fixture/test-body hashes, unchanged
+117/86 arrays, thirteen locks and four-file amendment, and matched the fresh
+log hashes in this record. Browser/Player/root outcomes were inspected from
+logs; historical hosted provenance was not independently re-fetched. New exact-
+head hosted results remain pending and must be distinguished from failed
+e47c2cf3 evidence.
+
 ## Review, limits and next action
 
 Independent read-only review by `/root/review_banking_ownership` examined the
@@ -190,6 +283,6 @@ release qualification is authorized. Source is published only as a draft; no
 merge, auto-merge, manual deployment or hosted application-state mutation.
 Parent ARCH-501/502 completion and Settings rollback remain separate.
 
-Next exact action: finish exact-final-head hosted qualification and parent review
-of draft PR912. Preserve #624/#888 work and all release holds. Store action
-ownership remains the next separately bounded architecture slice.
+Next exact action: publish the locally qualified and independently reviewed
+four-path fixture amendment and qualify the new exact remote head of draft PR912. Preserve the seven old-head failure diagnostics, #624/#888
+ownership and every release hold. Store action ownership remains separate.

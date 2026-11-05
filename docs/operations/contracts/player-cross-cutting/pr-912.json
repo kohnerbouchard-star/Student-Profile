@@ -19,6 +19,7 @@
     "player-terminal/tests/banking-read-model.mjs",
     "player-terminal/tests/browser/player-banking-freshness.spec.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-912.json",
+    "player-terminal/tests/browser/player-banking-fx.spec.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
@@ -33,6 +34,7 @@
     "player-terminal/tests/banking-read-model.mjs",
     "player-terminal/tests/browser/player-banking-freshness.spec.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-912.json",
+    "player-terminal/tests/browser/player-banking-fx.spec.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
@@ -247,5 +249,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "User authorized publication of the nine reviewed Banking freshness files at local head 68453aa3dbc46a4421e3d0c0f486c4597904d2d0 plus this actual-PR-numbered verification manifest as draft PR912, targeting refreshed unchanged main 45715997599942fccc3af0fa592ffa4a3a66a37d. Preserve all 94 predecessor required checks and 72 critical checks; additionally bind the applicable existing Player/Banking/FX/financial/runtime/browser workflows and non-guarded jobs. Exactly ten edited paths under twelve locks; the verifier and its regression test are read-only. Existing player-terminal path filters select Player Multiplayer/Load automatically; a duplicate dispatch is not needed when its exact-head PR run exists. Hosted test qualification is authorized; source repairs beyond the reviewed candidate require an explicit bounded scope decision. Keep draft. No merge, auto-merge, manual deployment, production or staging application-state mutation, permissions, credentials, dependency-hash/lock change, Settings861, Store implementation, donor import or unrelated expansion is authorized."
+  "authorizationNote": "Owner authorized public draft publication of the nine reviewed Banking freshness files at 68453aa3dbc46a4421e3d0c0f486c4597904d2d0 plus this actual-numbered authority as PR912 on main 45715997599942fccc3af0fa592ffa4a3a66a37d, then explicitly approved adding player-terminal/tests/browser/player-banking-fx.spec.mjs, updating existing scope records and rerunning checks. Exactly eleven edited paths under thirteen locks. This correction changes only the retained FX fixture setup to the existing real store/coordinator/render subscriber; every existing complete test body and assertion remains byte-identical. Production implementation, existing test bodies, package registration, inventory, workflow and dependency/lock files remain unchanged from prior published e47c2cf354216a412c9c8373ef04b07c4b4f7926. Preserve all 117 required and 86 critical checks, including all 94/72 predecessor obligations; both verifier/test scripts remain read-only. Existing player-terminal path filters automatically select the hosted qualification including Multiplayer/Load; avoid duplicate dispatch when its exact-head PR run exists. Hosted test qualification is authorized. Settings #861 and its separate workflow correction, Store implementation, merge, auto-merge, deployment, live application-state mutation, permissions, credentials, SQL and unrelated scope expansion are excluded."
 }
