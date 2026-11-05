@@ -13,6 +13,7 @@ on:
       - backend/supabase/**
       - docs/operations/contracts/player-cross-cutting/pr-672.json
       - docs/operations/contracts/player-cross-cutting/pr-673.json
+      - docs/operations/contracts/player-cross-cutting/pr-861.json
       - docs/roadmaps/banking-fx-clearing-scope-v1.md
       - docs/roadmaps/multicurrency-funding-core-scope-v1.md
       - player-terminal/**
