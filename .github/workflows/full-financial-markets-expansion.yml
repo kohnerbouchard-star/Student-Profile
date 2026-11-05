@@ -160,7 +160,7 @@ jobs:
 
       - name: Upload deterministic validation evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: full-financial-markets-validation-${{ github.event.pull_request.head.sha || github.sha }}
           path: |

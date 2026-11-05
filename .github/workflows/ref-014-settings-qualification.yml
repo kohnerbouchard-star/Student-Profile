@@ -38,7 +38,7 @@ jobs:
           git rev-parse 'HEAD^{tree}' > "$RUNNER_TEMP/ref014-source/source-tree.txt"
           git archive --format=tar.gz --output="$RUNNER_TEMP/ref014-source/source.tar.gz" HEAD
       - name: Upload tracked source review input
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ref014-source-${{ github.event.pull_request.head.sha || github.sha }}
           path: ${{ runner.temp }}/ref014-source/
@@ -94,7 +94,7 @@ jobs:
           node scripts/admin-settings-disclosure-smoke.mjs 2>&1 | tee admin-browser-smoke-artifacts/ref014/settings-browser.log
       - name: Upload qualification evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ref014-settings-${{ github.event.pull_request.head.sha || github.sha }}
           path: admin-browser-smoke-artifacts/
