@@ -1,6 +1,7 @@
 import { runStockMarketRunner } from "../application/runStockMarketRunner.ts";
 import "../infrastructure/runtimeCursorStockMarketRepositories.test.ts";
 import "../calculations/stockMarketEngine.test.ts";
+import "../../storylines/server/stockTickStorylineRunner.test.ts";
 import {
   handleStockMarketRunnerRequest,
 } from "./stockMarketRunnerHttpHandler.ts";
