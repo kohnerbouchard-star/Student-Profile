@@ -3,7 +3,7 @@
   "authorityId": "econovaria.story-after-tick-default-pr-910.v1",
   "purpose": "authorize-cross-cutting-player-verification",
   "pullRequestNumber": 910,
-  "baseRef": "refactor/stocks-public-realtime-f59-v1",
+  "baseRef": "main",
   "scopeLock": "exact-path-allowlist",
   "productionDeploymentAllowed": false,
   "productionMutationAllowed": false,
@@ -68,5 +68,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "User approved this exact bounded Batch 3 as a public draft with PR-number authority, roadmap and inventory. Base is refactor/stocks-public-realtime-f59-v1 at 720f6978745fb5365210f653f1f850d5adaa2803; reviewed source is ac516f37a00c80a7a53f12ee0471a07e9c689c2d. Preserve predecessor dependencies, existing required/critical checks and both read-only verifier files. Hosted CI and disposable database qualification are authorized. No merge, production deployment, live hosted database mutation, permission change, dependency-hash change, secrets or unrelated scope expansion is authorized. Existing PR888 is unchanged."
+  "authorizationNote": "User authorized necessary bounded repairs and safe sequential merges of PR908, PR909 and PR910. This is local main-target preparation only, based on anticipated PR909 preparation 7e156f6ccdf3d58948a8433f9218f3cc1c0a0560; actual PR909 merged-main SHA is pending and must be verified and bound before publication. Reviewed Story source remains ac516f37a00c80a7a53f12ee0471a07e9c689c2d. Preserve predecessor diagnostics and authority records, existing required/critical checks and both read-only verifier files. Renew exact final-head main-target CI and disposable database/load qualification before any merge. No production deployment, live hosted database mutation, permission change, dependency-hash change, secrets or unrelated scope expansion is authorized. Existing PR888 is unchanged."
 }
