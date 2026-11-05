@@ -455,6 +455,7 @@
   function resetForPage(page) {
     const gameId = selectedGameId();
     if (state.page === page && state.gameId === gameId) return;
+    const pageChanged = state.page !== page;
     const previousGameId = state.gameId;
     const gameChanged = previousGameId && previousGameId !== gameId;
     state.page = page;
@@ -471,6 +472,9 @@
     }
     page.removeAttribute("data-settings-ux-baseline-ready");
     window.clearTimeout(state.savedTimer);
+    if (pageChanged && !gameChanged && page.isConnected && page === settingsPage()) {
+      window.EconovariaSettingsLifecycleBridge?.reconcile?.("page-replacement");
+    }
   }
 
   function cardsForPage(page) {

@@ -106,7 +106,7 @@ await harness.context.addInitScript(() => {
       if (detail.phase === "started") read.pending.add(request);
       else if (["committed", "failed", "cancelled"].includes(detail.phase)) { read.pending.delete(request); read.terminal = { request, phase: detail.phase, seq: diagnostic.records.length, startObserved: context.startObserved }; }
     }
-    const value = { kind: "dispatch", event: event.type, phase: detail.phase || null, reason: ["navigation", "request-complete", "game-context", "attendance-saved", "window-load", "module-load", "explicit"].includes(detail.reason) ? detail.reason : null,
+    const value = { kind: "dispatch", event: event.type, phase: detail.phase || null, reason: ["navigation", "request-complete", "game-context", "attendance-saved", "window-load", "module-load", "explicit", "page-replacement"].includes(detail.reason) ? detail.reason : null,
       ...context, targetPage: target?.matches?.(selectors[0]) ? token(pages, target, "p") : null, before };
     return record(value);
   });

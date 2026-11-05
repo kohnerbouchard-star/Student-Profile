@@ -373,3 +373,117 @@ test("REF015 uses valid head nonlinks as anchors and preserves preexisting rever
   const reversed = styleFixture(); for (const key of "FSA") reversed.head.append({ id: styleIds[key] });
   const before = [...reversed.nodes]; for (const key of "ASF") reversed.run[key](); assert.deepEqual(reversed.nodes, before);
 });
+
+// Exercise the real reset body and complete retained bridge under controlled frame interleavings.
+const lifecycleSource = readFileSync("admin/settings-lifecycle-bridge.js", "utf8");
+function replacementFixture({ offPage = false, owner = "current" } = {}) {
+  const frames = [], microtasks = [], events = [], clears = [], listeners = new Map();
+  let current, game = "game-one", reconciles = 0, refreshes = 0, batches = 0;
+  class Element {
+    constructor(id) { this.id = id; this.isConnected = true; this.loaded = true; this.attrs = new Map([["data-settings-ux-baseline-ready", "true"]]); }
+    querySelector() { return this.loaded ? this : null; }
+    removeAttribute(name) { this.attrs.delete(name); }
+    dispatchEvent(event) { event.target = this; return document.dispatchEvent(event); }
+  }
+  class CustomEvent { constructor(type, options = {}) { this.type = type; Object.assign(this, options); } }
+  current = offPage ? null : new Element("old");
+  const state = { page: current, gameId: offPage ? null : game, baselineValues: new Map([["draft", "kept"]]), savedUntil: 99, savedTimer: 7, disclosureOpen: true };
+  const document = {
+    querySelector: () => current,
+    addEventListener(type, fn) { const entries = listeners.get(type) || []; entries.push(fn); listeners.set(type, entries); },
+    dispatchEvent(event) { events.push(event); for (const fn of listeners.get(event.type) || []) fn(event); return true; },
+  };
+  const window = {
+    requestAnimationFrame: (fn) => frames.push(fn), queueMicrotask: (fn) => microtasks.push(fn),
+    clearTimeout: (id) => clears.push(id), addEventListener() {},
+    EconovariaSimplifiedSettings: { reconcile() { reconciles++; context.resetForPage(current); }, refresh() { refreshes++; } },
+  };
+  const context = vm.createContext({ window, document, state, selectedGameId: () => game, settingsPage: () => current, Element, HTMLElement: Element, CustomEvent });
+  vm.runInContext(ownerFunction(presenterSource, "resetForPage"), context);
+  vm.runInContext(lifecycleSource, context);
+  const frame = () => { assert.ok(frames.length); batches++; for (const fn of frames.splice(0)) fn(); while (microtasks.length) microtasks.shift()(); };
+  const drain = () => { let count = 0; while (frames.length) { assert.ok(++count <= 122, "Lifecycle queue must remain bounded"); frame(); } };
+  drain();
+  if (owner === "absent") delete window.EconovariaSettingsLifecycleBridge;
+  if (owner === "older") window.EconovariaSettingsLifecycleBridge = {};
+  const emit = (type, detail = {}) => document.dispatchEvent(new CustomEvent(type, { detail }));
+  const reset = (page = current) => context.resetForPage(page);
+  const replace = (notify = true) => { if (current) current.isConnected = false; current = new Element("new"); if (notify) reset(); };
+  return { frames, events, clears, listeners, state, window, frame, drain, emit, reset, replace,
+    setGame: (value) => { game = value; }, flushMicrotasks: () => { while (microtasks.length) microtasks.shift()(); },
+    get page() { return current; }, get reconciles() { return reconciles; }, get refreshes() { return refreshes; }, get batches() { return batches; },
+    mounted: () => events.filter((event) => event.type === "econovaria:admin-settings-mounted" && event.target === current) };
+}
+for (const phase of ["committed", "failed", "cancelled"]) for (const timing of ["between", "after"]) {
+  test(`L1 same-game replacement ${timing} old publication after ${phase} read`, () => {
+    const h = replacementFixture(), registrations = h.listeners.size;
+    h.emit("econovaria:admin-request-lifecycle", { pageRead: true, pathname: "/api/admin/games/synthetic/settings", phase });
+    h.frame(); if (timing === "after") h.frame();
+    h.replace(); h.drain();
+    assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "page-replacement");
+    assert.equal(h.listeners.size, registrations); assert.equal(h.frames.length, 0);
+    assert.equal(h.clears.length, 1); assert.equal(h.state.savedUntil, 0); assert.equal(h.state.baselineValues.size, 0);
+    assert.equal(h.state.disclosureOpen, true); // Same-game reset never clears disclosure or dispatches game context.
+    assert.equal(h.events.filter((event) => event.type === "econovaria:settings-context-changed").length, 0);
+  });
+}
+test("L1 replacement before original settle has one surviving new-root publication", () => {
+  const h = replacementFixture(); h.emit("econovaria:attendance-reward-saved"); h.replace(); h.drain();
+  assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "page-replacement");
+});
+test("L1 bridge-discovered reset supersedes once without a notification cycle", () => {
+  const h = replacementFixture(), reconciles = h.reconciles, batches = h.batches, refreshes = h.refreshes;
+  h.replace(false); h.emit("econovaria:attendance-reward-saved"); h.drain();
+  assert.equal(h.reconciles - reconciles, 2); assert.equal(h.batches - batches, 3); assert.equal(h.refreshes - refreshes, 1);
+  assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "page-replacement");
+  for (let i = 0; i < 4; i++) h.reset();
+  assert.equal(h.frames.length, 0); assert.equal(h.clears.length, 1);
+});
+test("L1 null-to-first root rearms an exhausted off-page generation", () => {
+  const h = replacementFixture({ offPage: true }); assert.equal(h.batches, 120);
+  h.replace(); h.drain(); assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "page-replacement");
+});
+for (const owner of ["absent", "older"]) test(`L1 ${owner} optional bridge preserves original reset`, () => {
+  const h = replacementFixture({ owner }); h.replace(); h.drain();
+  assert.equal(h.frames.length, 0); assert.equal(h.mounted().length, 0); assert.equal(h.clears.length, 1);
+  assert.equal(h.state.page, h.page); assert.equal(h.state.baselineValues.size, 0);
+});
+test("L1 game switch retains the original context event and reason", () => {
+  const h = replacementFixture(); h.setGame("game-two"); h.replace(); assert.equal(h.frames.length, 0);
+  h.flushMicrotasks(); h.drain(); assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "game-context");
+  const contexts = h.events.filter((event) => event.type === "econovaria:settings-context-changed");
+  assert.equal(contexts.length, 1); assert.equal(contexts[0].detail.previousGameId, "game-one"); assert.equal(contexts[0].detail.gameId, "game-two");
+  assert.equal(h.state.disclosureOpen, false);
+});
+test("L1 dirty remount needs no baseline-ready flag and preserves later save notification", () => {
+  const h = replacementFixture(); h.replace(); assert.equal(h.page.attrs.has("data-settings-ux-baseline-ready"), false);
+  h.drain(); assert.equal(h.mounted().length, 1);
+  h.emit("econovaria:attendance-reward-saved"); h.drain();
+  assert.equal(h.mounted().length, 2); assert.equal(h.mounted()[1].detail.reason, "attendance-saved");
+});
+test("L1 partial Attendance readiness can settle inside the retained 120-frame window", () => {
+  const h = replacementFixture(); h.replace(); h.page.loaded = false;
+  for (let i = 0; i < 119; i++) h.frame();
+  assert.equal(h.mounted().length, 0); h.page.loaded = true; h.drain(); assert.equal(h.mounted().length, 1);
+});
+test("L1 retains exhaustion beyond 120 frames without a later existing trigger", () => {
+  const h = replacementFixture(); h.replace(); h.page.loaded = false; const before = h.batches; h.drain();
+  assert.equal(h.batches - before, 120); h.page.loaded = true; h.reset(); assert.equal(h.frames.length, 0); assert.equal(h.mounted().length, 0);
+  h.emit("econovaria:attendance-reward-saved"); h.drain(); assert.equal(h.mounted().length, 1);
+});
+test("L1 disconnected/non-current roots do not schedule and same-node reattach is not an epoch", () => {
+  const h = replacementFixture(), old = h.page; h.replace(false);
+  old.isConnected = true; h.state.page = null; h.reset(old); assert.equal(h.frames.length, 0);
+  h.page.isConnected = false; h.reset(); assert.equal(h.frames.length, 0);
+  h.page.isConnected = true; h.reset(); assert.equal(h.frames.length, 0); assert.equal(h.mounted().length, 0);
+});
+test("L1 reset hands off only after original reset work and adds no transport or registration", () => {
+  const h = replacementFixture(), bridge = h.window.EconovariaSettingsLifecycleBridge; let calls = 0;
+  h.window.EconovariaSettingsLifecycleBridge = { reconcile(reason) {
+    calls++; assert.equal(reason, "page-replacement"); assert.equal(h.state.page, h.page); assert.equal(h.state.gameId, "game-one");
+    assert.equal(h.state.savedUntil, 0); assert.equal(h.state.baselineValues.size, 0); assert.equal(h.page.attrs.size, 0);
+    assert.deepEqual(h.clears, [13]); return bridge.reconcile(reason);
+  } };
+  h.state.savedTimer = 13; h.replace(); h.drain();
+  assert.equal(calls, 1); assert.equal(h.mounted().length, 1); assert.deepEqual(h.clears, [13]);
+});
