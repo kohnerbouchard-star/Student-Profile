@@ -113,4 +113,5 @@ jobs:
             src/domains/storylines/services/storyMeridianCampaignContinuationReleaseSafety.test.ts \
             src/domains/storylines/services/storylineRunnerLease.test.ts \
             src/domains/storylines/tests/storyEffectReplaySafetyMigration.test.ts \
-            src/domains/storylines/tests/storyEventExecutionLeaseMigration.test.ts
+            src/domains/storylines/tests/storyEventExecutionLeaseMigration.test.ts \
+            src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts
