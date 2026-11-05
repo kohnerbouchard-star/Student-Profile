@@ -8,12 +8,15 @@ const targetStyle = /\/(?:attendance-reward-settings|settings-simplified|setting
 async function measureStyles(target, label) {
   if (label !== "after-save-remount") await target.waitForLoadState("networkidle");
   const cdp = await target.context().newCDPSession(target);
+  const scriptUrls = new Map();
+  cdp.on("Debugger.scriptParsed", ({ scriptId, url }) => scriptUrls.set(scriptId, url ? new URL(url, BASE_URL).pathname : "inline"));
+  await cdp.send("Debugger.enable");
   const listeners = [], listenerSignatures = [], listenerOrder = [];
   for (const expression of ["window", "document"]) {
     const { result } = await cdp.send("Runtime.evaluate", { expression });
     const entries = (await cdp.send("DOMDebugger.getEventListeners", { objectId: result.objectId })).listeners;
     listeners.push(entries.length);
-    listenerOrder.push(entries.map((entry) => `${entry.type}:${entry.useCapture}:${entry.lineNumber}:${entry.columnNumber}`));
+    listenerOrder.push(entries.map((entry) => `${entry.type}:${entry.useCapture}:${scriptUrls.get(entry.scriptId)}:${entry.lineNumber}:${entry.columnNumber}`));
     listenerSignatures.push(entries.map((entry) => `${entry.type}:${entry.useCapture}:${entry.lineNumber}:${entry.columnNumber}`).sort());
   }
   await cdp.detach();
@@ -26,7 +29,7 @@ async function measureStyles(target, label) {
       tag: node.tagName, bounds: node.getBoundingClientRect().toJSON(),
       computed: Object.fromEntries([...getComputedStyle(node)].map((name) => [name, getComputedStyle(node).getPropertyValue(name)])),
     })),
-    observers: window.__ref015Observers || [], events: window.__ref015Events || [],
+    observerRegistrations: window.__ref015Observers, events: window.__ref015Events,
   }));
   if (styles.count !== 1) throw new Error(`${label}: final-polish stylesheet is not unique.`);
   if (!label.startsWith("standalone")) {
@@ -50,7 +53,7 @@ const deadline = setTimeout(() => {
 deadline.unref();
 
 await page.addInitScript(() => window.addEventListener("econovaria:admin-bootstrap-complete", () => { window.__ref015BootstrapComplete = true; }, { once: true }));
-await page.addInitScript(() => {
+await harness.context.addInitScript(() => {
   window.__ref015Observers = []; window.__ref015Events = [];
   window.MutationObserver = new Proxy(window.MutationObserver, { construct(Type, args) {
     const observer = Reflect.construct(Type, args), observe = observer.observe;
