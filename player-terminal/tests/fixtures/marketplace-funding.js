@@ -115,5 +115,3 @@ export const orderFixture = Object.freeze({
     distributionBankTransactionKey: TRANSACTION,
   },
 });
-
-

@@ -320,6 +320,7 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
           ?.focus?.({ preventScroll: true });
       });
     } catch (error) {
+      if (!destroyed && originalSession !== null && sessionIdentity() !== originalSession) invalidateSession();
       if (!request.current()) return;
       if (error?.code === "REQUEST_ABORTED") { invalidateSession(); return; }
       if (Number(error?.status) === 401) invalidateSession();
@@ -392,6 +393,7 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
         if (request.current()) terminal.showToast?.("Purchase settled. Refresh Marketplace to update balances and inventory.", "cyan");
       }
     } catch (error) {
+      if (!destroyed && originalSession !== null && sessionIdentity() !== originalSession) invalidateSession();
       if (!request.current()) return;
       if (error?.code === "REQUEST_ABORTED") { invalidateSession(); return; }
       if (Number(error?.status) === 401) invalidateSession();
