@@ -20,7 +20,7 @@
     "runtime-integration": "node tests/student-profile-runtime-integration.mjs",
     "connected-reads": "node tests/connected-read-surface-gating.mjs",
     "logout": "node tests/player-logout-revocation.mjs",
-    "store-flow": "node tests/store-purchase-flow.mjs",
+    "store-flow": "node tests/store-purchase-flow.mjs && node --test tests/store-purchase-ownership.mjs",
     "store-connected": "node tests/store-connected-purchase.mjs",
     "store-negative": "node tests/store-negative-state-matrix.mjs",
     "business-workspace": "node tests/business-workspace-resources.mjs",
