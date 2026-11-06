@@ -14,6 +14,7 @@ on:
       - "docs/roadmaps/business-v2-current-checkpoint-v1.json"
       - "docs/roadmaps/business-v2-development-execution-log-v1.md"
       - "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   workflow_dispatch:
 permissions:
   contents: read

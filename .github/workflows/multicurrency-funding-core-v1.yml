@@ -15,6 +15,7 @@ on:
       - scripts/multicurrency-funding-core-simulation.mjs
       - scripts/multicurrency-funding-database.mjs
       - scripts/multicurrency-funding-concurrency.mjs
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches:
       - feat/multicurrency-funding-core-v1

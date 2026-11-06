@@ -14,6 +14,7 @@ on:
       - "scripts/business-phase8-store-listing-inventory-*.mjs"
       - "scripts/business-phase7-store-seller-offers-*.mjs"
       - ".github/workflows/business-store-withdrawal-safety-v2.yml"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches: [main]
     paths:

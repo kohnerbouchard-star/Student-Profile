@@ -18,6 +18,7 @@ on:
       - "scripts/business-phase7-store-seller-offers-simulation.mjs"
       - "scripts/business-phase7-store-seller-offers-types.mjs"
       - ".github/workflows/business-store-seller-offers-v2.yml"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches: [main]
     paths:

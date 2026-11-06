@@ -29,6 +29,7 @@ on:
       - scripts/multicurrency-stock-buy-quote-*.mjs
       - scripts/multicurrency-stock-buy-settlement-*.mjs
       - scripts/multicurrency-stock-sell-settlement-*.mjs
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches:
       - feat/multicurrency-stock-funding-v1
