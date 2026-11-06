@@ -35,6 +35,11 @@ async function fixture(page, mode = "business_offer") {
         if (globalThis.storeFixture?.failRefresh && ["store", "inventory", "banking", "bankingFx", "dashboard"].includes(context.endpointKey)) {
           throw { status: 400, code: "FIXTURE_REFRESH_FAILURE" };
         }
+        if (globalThis.storeFixture?.losePurchaseResponse && ["storePurchase", "storeOfferPurchase"].includes(context.endpointKey)) {
+          globalThis.storeFixture.losePurchaseResponse = false;
+          await next(); // The synthetic server commits before the response is lost.
+          throw { code: "REQUEST_TIMEOUT", status: 0 };
+        }
         return next();
       },
     });
@@ -257,4 +262,34 @@ test("a quote made stale by newer funding evidence cannot be confirmed", async (
   await page.locator("[data-player-store-confirm]").click();
   await expect(page.locator("[data-player-store-review]")).toBeEnabled();
   expect(await page.evaluate(() => storeFixture.calls.filter((call) => call.key === "storeOfferPurchase").length)).toBe(0);
+});
+
+for (const mode of ["business_offer", "system_offer"]) test(`${mode}: lost committed response retries the original command and idempotency key`, async ({ page }) => {
+  await fixture(page, mode); await review(page);
+  const before = await page.evaluate((mode) => {
+    storeFixture.losePurchaseResponse = true;
+    const offerKey = storeFixture.calls.find((call) => call.key === (mode === "business_offer" ? "storeOfferQuote" : "storeQuote")).payload.offerKey;
+    storeFixture.selectedOffer = offerKey;
+    return storeFixture.terminal.getState().data.store.items.flatMap((item) => item.offers).find((offer) => offer.offerKey === offerKey).availableQuantity;
+  }, mode);
+  await page.locator("[data-player-store-confirm]").click();
+  await expect(page.locator("[data-player-store-confirm]")).toBeEnabled();
+  // New aggregate evidence and local quote expiry must not turn an ambiguous
+  // confirmed command into a different purchase. Its original replay key owns it.
+  await page.evaluate(async () => {
+    await storeFixture.terminal.refreshResources(["store", "bankingFx"]);
+    const now = Date.now(); Date.now = () => now + 180_000;
+  });
+  await page.locator("[data-player-store-confirm]").click();
+  await expect(page.getByText("PURCHASE RECEIPT", { exact: true })).toBeVisible();
+  const calls = await page.evaluate((mode) => ({
+    quotes: storeFixture.calls.filter((call) => call.key === (mode === "business_offer" ? "storeOfferQuote" : "storeQuote")),
+    purchases: storeFixture.calls.filter((call) => call.key === (mode === "business_offer" ? "storeOfferPurchase" : "storePurchase")),
+  }), mode);
+  expect(calls.quotes).toHaveLength(1); expect(calls.purchases).toHaveLength(2);
+  expect(calls.purchases[1].payload).toEqual(calls.purchases[0].payload);
+  expect(calls.purchases[1].idempotencyKey).toBe(calls.purchases[0].idempotencyKey);
+  expect(calls.purchases[0].idempotencyKey).toBeTruthy();
+  await expect.poll(() => page.evaluate(() => storeFixture.terminal.getState().data.store.items.flatMap((item) => item.offers).find((offer) => offer.offerKey === storeFixture.selectedOffer).availableQuantity)).toBe(before - 1);
+  await expect(page.locator("[data-player-store-review]")).toHaveCount(0);
 });

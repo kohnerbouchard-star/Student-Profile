@@ -223,6 +223,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
         allocationDraft: request.allocationDraft,
         fundingIntent: request.intent,
         quoteRequest: requestGeneration,
+        commandRequest: null,
       };
       renderTransaction();
     } catch (error) {
@@ -244,14 +245,14 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     const current = currentTransaction();
     const quote = current?.quote;
     if (current?.processing === true) return;
-    if (!current || !quote?.quoteKey || !requestIsCurrent(current.quoteRequest)) {
+    if (!current || !quote?.quoteKey || !requestIsCurrent(current.commandRequest || current.quoteRequest)) {
       if (current) {
         transaction = { ...current, stage: "select", error: "Request a current Store quote before confirming the purchase." };
         renderTransaction();
       }
       return;
     }
-    if (quoteExpired(quote)) {
+    if (!current.commandRequest && quoteExpired(quote)) {
       transaction = { ...current, stage: "select", quote: null, error: "This quote expired. Request a new authoritative quote." };
       renderTransaction();
       return;
@@ -315,9 +316,12 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
             : "",
           processing: false,
           fundingIntent: null,
+          commandRequest: null,
         };
       } else {
-        transaction = { ...current, error: failure.message, processing: false };
+        // A failed response may follow a server commit. Keep this command; the
+        // existing API retains its replay key for ambiguous failures.
+        transaction = { ...current, commandRequest: requestGeneration, error: failure.message, processing: false };
       }
       renderTransaction();
       return;
@@ -407,7 +411,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   function editQuantity() {
     if (!transaction) return;
     cancelActiveRequest();
-    transaction = { ...transaction, stage: "select", quote: null, receipt: null, fundingIntent: null, error: "", refreshState: "idle", refreshWarning: "", invalidatedResources: [], processing: false };
+    transaction = { ...transaction, stage: "select", quote: null, receipt: null, fundingIntent: null, commandRequest: null, error: "", refreshState: "idle", refreshWarning: "", invalidatedResources: [], processing: false };
     renderTransaction();
   }
 
@@ -421,7 +425,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       targetPrecision: transaction.targetPrecision,
     });
     const quantity = Number(modal.querySelector("[data-player-store-quantity]")?.value);
-    transaction = { ...transaction, quantity, allocationDraft: funding.allocationDraft, quote: null, receipt: null, fundingIntent: null, error: "" };
+    transaction = { ...transaction, quantity, allocationDraft: funding.allocationDraft, quote: null, receipt: null, fundingIntent: null, commandRequest: null, error: "" };
     modal.querySelector(".player-terminal-form-error")?.remove();
   }
 
