@@ -8,10 +8,10 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1312,
+    "sourceFiles": 1315,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
-    "persistenceOutsideInfrastructure": 54,
+    "persistenceOutsideInfrastructure": 53,
     "crossDomainDeepImports": 70,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
@@ -54,7 +54,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 12,
+      "sourceFiles": 15,
       "publicBoundaryFiles": []
     },
     {
@@ -517,10 +517,6 @@
       },
       {
         "file": "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts",
-        "layer": "api"
-      },
-      {
-        "file": "backend/src/domains/attendance/api/staffAttendanceDailyHttpHandler.ts",
         "layer": "api"
       },
       {
