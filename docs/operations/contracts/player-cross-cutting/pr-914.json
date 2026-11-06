@@ -17,6 +17,7 @@
     "player-terminal/tests/fixtures/marketplace-funding.js",
     "player-terminal/tests/marketplace-funding-flow.mjs",
     "player-terminal/tests/marketplace-funding-ownership.mjs",
+    "scripts/business-multicurrency-treasury-contract.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
@@ -29,6 +30,7 @@
     "player-terminal/tests/fixtures/marketplace-funding.js",
     "player-terminal/tests/marketplace-funding-flow.mjs",
     "player-terminal/tests/marketplace-funding-ownership.mjs",
+    "scripts/business-multicurrency-treasury-contract.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
