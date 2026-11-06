@@ -1,0 +1,38 @@
+name: Phase 15 Exact Main Load Dispatch
+
+on:
+  push:
+    branches: [fix/phase15-certification-controls-v1]
+    paths: [.github/workflows/phase15-exact-load-dispatch.yml]
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch-existing-acceptance:
+    if: github.repository == 'kohnerbouchard-star/Student-Profile'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      EXPECTED_SOURCE: 5b11f344bc0e725cf7028c3f7c4a2a890e9972e3
+    steps:
+      - name: Request the existing isolated 30 and 40 player gate without changing it
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/fix/phase15-certification-controls-v1
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$EXPECTED_SOURCE"
+          mkdir -p "$RUNNER_TEMP/load-dispatch"
+          date -u '+%Y-%m-%dT%H:%M:%SZ' > "$RUNNER_TEMP/load-dispatch/requested-at.txt"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/player-multiplayer-load-e2e.yml/dispatches" -f ref=main
+          printf '%s\n' "$EXPECTED_SOURCE" > "$RUNNER_TEMP/load-dispatch/expected-source.txt"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$EXPECTED_SOURCE"
+      - name: Retain dispatch identity only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phase15-load-dispatch-${{ github.sha }}
+          path: ${{ runner.temp }}/load-dispatch/
+          retention-days: 1
+          if-no-files-found: error
