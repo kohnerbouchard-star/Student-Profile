@@ -71,7 +71,7 @@ function fixture() {
     removeEventListener(type, fn) { listeners.get(type)?.delete(fn); },
     dispatchEvent(event) { events.push(event); for (const fn of [...(listeners.get(event.type)?.keys() || [])]) { fn(event); if (event.stopped) break; } return true; },
     getElementById: (id) => links.find((link) => link.id === id), createElement: () => new Element(),
-    head: { append(link) { links.push(link); } },
+    head: { append(link) { link.parentNode = document.head; links.push(link); }, insertBefore(link, anchor) { const i = links.indexOf(anchor); assert.ok(i >= 0); link.parentNode = document.head; links.splice(i, 0, link); } },
   };
   function mount() {
     if (mounted) mounted.connected = false;
@@ -193,6 +193,16 @@ test("REF-014 offline rejection never acknowledges success", async () => {
   await until(() => h.errors.length === 1); assert.equal(h.saved().length, 0); assert.equal(h.writes().length, 1);
 });
 
+for (const name of ["TimeoutError", "AbortError"]) {
+  test(`REF015 ${name} preserves the failed draft and payload-bound retry`, async () => {
+    const h = fixture(); h.state.reply = () => { throw Object.assign(new Error("synthetic request interruption"), { name }); };
+    h.click(); await until(() => h.errors.length === 1);
+    assert.equal(h.saved().length, 0); assert.equal(h.writes().length, 1); assert.equal(h.page.fields.presentRewardAmount.value, "7.25");
+    const key = h.writes()[0].body.idempotencyKey; h.state.reply = () => json(); h.click();
+    await until(() => h.saved().length === 1); assert.equal(h.writes().length, 2); assert.equal(h.writes()[1].body.idempotencyKey, key);
+  });
+}
+
 test("REF-014 no-op and invalid settings do not write and invalid input keeps focus", async () => {
   const h = fixture(); h.state.dirty = false; h.click(); await tick(); assert.equal(h.calls.length, 0);
   h.state.dirty = true; h.page.fields.presentRewardAmount.value = "1001"; h.click(); await tick();
@@ -258,4 +268,222 @@ test("REF-014 an old same-game completion cannot discard a newer payload retry i
 test("REF-014 selector mismatch prevents a direct write", async () => {
   const h = fixture(); h.state.selected = "other-game"; h.click(); await tick();
   assert.equal(h.calls.length, 0); assert.equal(h.saved().length, 0);
+});
+
+for (const mode of ["present", "older", "missing", "throws"]) {
+  test(`REF015 Settings bootstrap preserves serial slot and ${mode} owner behavior`, async () => {
+    const calls = [], events = [], attributes = [];
+    const owner = mode === "missing" ? undefined : {};
+    if (["present", "throws"].includes(mode)) owner.ensureFinalPolishStylesheet = () => {
+      calls.push("owner"); if (mode === "throws") throw new Error("synthetic style error");
+    };
+    const context = {
+      window: { EconovariaSimplifiedSettings: owner, dispatchEvent: (event) => events.push(event) },
+      document: { readyState: "loading", addEventListener() {}, getElementById: () => ({ setAttribute: (...args) => attributes.push(args), querySelector: () => null }) },
+      console: { error() {} }, CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
+      load: async (path) => { calls.push(path); },
+    };
+    // Keep the real serial loop/error handler; replace only the VM import boundary.
+    const bootstrap = readFileSync("admin/admin-bootstrap.js", "utf8");
+    vm.runInNewContext(bootstrap.replaceAll("import(modulePath)", "load(modulePath)"), context);
+    await until(() => events.some((event) => event.type === "econovaria:admin-bootstrap-complete"));
+    const position = calls.indexOf("./settings-lifecycle-bridge.js") + 1;
+    assert.equal(calls[position], ["present", "throws"].includes(mode) ? "owner" : "./settings-save-error-bridge.js");
+    assert.equal(calls[position + 1], "./inventory-redemption-queue-loader.js");
+    assert.equal(calls.filter((x) => x === "./settings-save-error-bridge.js").length, ["present", "throws"].includes(mode) ? 0 : 1);
+    const failures = events.filter((event) => event.type === "econovaria:admin-bootstrap-error");
+    assert.equal(failures.length, mode === "throws" ? 1 : 0);
+    if (mode === "throws") {
+      assert.equal(failures[0].detail.phase, "attendance-settings");
+      assert.equal(failures[0].detail.modulePath, "./settings-save-error-bridge.js");
+      assert.equal(attributes[0][0], "data-admin-bootstrap-error");
+    }
+  });
+}
+
+const styleIds = { A: "econovaria-attendance-reward-settings-style", S: "econovaria-settings-simplified-style", F: "econovaria-settings-final-polish-style" };
+function ownerFunction(source, name) {
+  const start = source.indexOf(`  function ${name}(`);
+  assert.ok(start >= 0, `Missing actual owner function ${name}`);
+  return source.slice(start, source.indexOf("\n  }", start) + 4);
+}
+function styleFixture() {
+  const nodes = [], frames = [], effects = [];
+  const head = { append(node) { node.parentNode = head; nodes.push(node); }, insertBefore(node, anchor) { assert.equal(anchor.parentNode, head); node.parentNode = head; nodes.splice(nodes.indexOf(anchor), 0, node); } };
+  const document = { head, getElementById: (id) => nodes.find((node) => node.id === id), createElement: () => ({}), querySelector: () => null };
+  const window = { requestAnimationFrame: (fn) => frames.push(fn) };
+  const attendance = readFileSync("admin/attendance-reward-settings-v4.js", "utf8");
+  function install(source, id, helper, schedule, reconcileName) {
+    const context = vm.createContext({ document, window, state: {}, selectedGameId: () => "synthetic", prepareGameState() {},
+      loadSettings: () => effects.push("read"), [reconcileName]: () => { context.ensureStylesheet(); effects.push("render"); } });
+    vm.runInContext(`const STYLE_ID = ${JSON.stringify(id)}; ${ownerFunction(source, "ensureStylesheet")}\n${source.includes(`function ${helper}(`) ? ownerFunction(source, helper) : ""}\n${ownerFunction(source, schedule)}`, context);
+    return context;
+  }
+  const a = install(attendance, styleIds.A, "insertAttendanceStylesheet", "scheduleRender", "ensureCard");
+  const s = install(presenterSource, styleIds.S, "insertSettingsStylesheet", "scheduleStructure", "reconcileStructure");
+  const run = { A: () => a.ensureStylesheet(), S: () => s.ensureStylesheet(), F: () => s.ensureStylesheet(styleIds.F, "./css/settings-final-polish.css") };
+  return { nodes, frames, effects, head, document, a, s, run, targets: () => nodes.filter((n) => Object.values(styleIds).includes(n.id)).map((n) => n.id) };
+}
+for (const order of ["ASF", "AFS", "SAF", "SFA", "FAS", "FSA"]) {
+  test(`REF015 actual stylesheet owners converge for ${order} without moving existing nodes`, () => {
+    const h = styleFixture(), sentinels = [];
+    for (const key of order) { const sentinel = { id: `sentinel-${key}` }; sentinels.push(sentinel); h.head.append(sentinel); h.run[key](); }
+    assert.deepEqual(h.targets(), Object.values(styleIds));
+    assert.deepEqual(h.nodes.filter((n) => sentinels.includes(n)), sentinels);
+    const before = [...h.nodes]; for (const key of "ASFFSA") h.run[key]();
+    vm.runInNewContext(bridgeSource, { document: h.document, window: {} });
+    assert.deepEqual(h.nodes, before); assert.equal(h.frames.length, 0); assert.deepEqual(h.effects, []);
+  });
+}
+for (const order of ["AS", "SA"]) {
+  test(`REF015 actual queued owner callbacks preserve precedence in ${order} order`, () => {
+    const h = styleFixture(); h.document.querySelector = () => ({});
+    for (const key of order) (key === "A" ? h.a.scheduleRender : h.s.scheduleStructure)();
+    h.run.F(); while (h.frames.length) h.frames.shift()();
+    assert.deepEqual(h.targets(), Object.values(styleIds)); assert.deepEqual(h.effects, order === "AS" ? ["render", "read", "render"] : ["render", "render", "read"]);
+  });
+}
+test("REF015 skipped off-page Attendance pass stays lazy through first mount and remount", () => {
+  const h = styleFixture(); h.a.scheduleRender(); h.s.scheduleStructure(); h.run.F();
+  while (h.frames.length) h.frames.shift()();
+  assert.deepEqual(h.targets(), [styleIds.S, styleIds.F]); assert.deepEqual(h.effects, ["render"]);
+  h.document.querySelector = () => ({}); h.a.scheduleRender(); h.frames.shift()();
+  const before = [...h.nodes]; h.a.scheduleRender(); h.frames.shift()();
+  assert.deepEqual(h.targets(), Object.values(styleIds)); assert.deepEqual(h.nodes, before);
+});
+for (const location of ["head", "body"]) for (const key of "ASF") {
+  test(`REF015 existing own-ID nonlink ${key} in ${location} remains untouched`, () => {
+    const h = styleFixture(), node = { id: styleIds[key], parentNode: location === "head" ? h.head : {} };
+    h.nodes.push(node); h.run[key](); assert.deepEqual(h.nodes, [node]); assert.equal(h.nodes[0], node);
+  });
+}
+test("REF015 ignores outside-head dependency anchors and tries the next valid nonlink", () => {
+  const h = styleFixture(), outside = { id: styleIds.S, parentNode: {} }, final = { id: styleIds.F };
+  h.nodes.push(outside); h.head.append(final); h.run.A();
+  assert.equal(h.nodes.indexOf(h.document.getElementById(styleIds.A)), h.nodes.indexOf(final) - 1);
+  const s = styleFixture(); s.nodes.push({ id: styleIds.F, parentNode: {} }); s.run.S();
+  assert.equal(s.nodes.at(-1).id, styleIds.S);
+  const a = styleFixture(); a.nodes.push({ id: styleIds.S, parentNode: {} }, { id: styleIds.F, parentNode: {} }); a.run.A();
+  assert.equal(a.nodes.at(-1).id, styleIds.A);
+});
+test("REF015 uses valid head nonlinks as anchors and preserves preexisting reversed targets", () => {
+  const h = styleFixture(); h.head.append({ id: styleIds.S }); h.run.A(); h.run.F();
+  assert.deepEqual(h.targets(), Object.values(styleIds));
+  const s = styleFixture(); s.head.append({ id: styleIds.F }); s.run.S(); assert.deepEqual(s.targets(), [styleIds.S, styleIds.F]);
+  const reversed = styleFixture(); for (const key of "FSA") reversed.head.append({ id: styleIds[key] });
+  const before = [...reversed.nodes]; for (const key of "ASF") reversed.run[key](); assert.deepEqual(reversed.nodes, before);
+});
+
+// Exercise the real reset body and complete retained bridge under controlled frame interleavings.
+const lifecycleSource = readFileSync("admin/settings-lifecycle-bridge.js", "utf8");
+function replacementFixture({ offPage = false, owner = "current" } = {}) {
+  const frames = [], microtasks = [], events = [], clears = [], listeners = new Map();
+  let current, game = "game-one", reconciles = 0, refreshes = 0, batches = 0;
+  class Element {
+    constructor(id) { this.id = id; this.isConnected = true; this.loaded = true; this.attrs = new Map([["data-settings-ux-baseline-ready", "true"]]); }
+    querySelector() { return this.loaded ? this : null; }
+    removeAttribute(name) { this.attrs.delete(name); }
+    dispatchEvent(event) { event.target = this; return document.dispatchEvent(event); }
+  }
+  class CustomEvent { constructor(type, options = {}) { this.type = type; Object.assign(this, options); } }
+  current = offPage ? null : new Element("old");
+  const state = { page: current, gameId: offPage ? null : game, baselineValues: new Map([["draft", "kept"]]), savedUntil: 99, savedTimer: 7, disclosureOpen: true };
+  const document = {
+    querySelector: () => current,
+    addEventListener(type, fn) { const entries = listeners.get(type) || []; entries.push(fn); listeners.set(type, entries); },
+    dispatchEvent(event) { events.push(event); for (const fn of listeners.get(event.type) || []) fn(event); return true; },
+  };
+  const window = {
+    requestAnimationFrame: (fn) => frames.push(fn), queueMicrotask: (fn) => microtasks.push(fn),
+    clearTimeout: (id) => clears.push(id), addEventListener() {},
+    EconovariaSimplifiedSettings: { reconcile() { reconciles++; context.resetForPage(current); }, refresh() { refreshes++; } },
+  };
+  const context = vm.createContext({ window, document, state, selectedGameId: () => game, settingsPage: () => current, Element, HTMLElement: Element, CustomEvent });
+  vm.runInContext(ownerFunction(presenterSource, "resetForPage"), context);
+  vm.runInContext(lifecycleSource, context);
+  const frame = () => { assert.ok(frames.length); batches++; for (const fn of frames.splice(0)) fn(); while (microtasks.length) microtasks.shift()(); };
+  const drain = () => { let count = 0; while (frames.length) { assert.ok(++count <= 122, "Lifecycle queue must remain bounded"); frame(); } };
+  drain();
+  if (owner === "absent") delete window.EconovariaSettingsLifecycleBridge;
+  if (owner === "older") window.EconovariaSettingsLifecycleBridge = {};
+  const emit = (type, detail = {}) => document.dispatchEvent(new CustomEvent(type, { detail }));
+  const reset = (page = current) => context.resetForPage(page);
+  const replace = (notify = true) => { if (current) current.isConnected = false; current = new Element("new"); if (notify) reset(); };
+  return { frames, events, clears, listeners, state, window, frame, drain, emit, reset, replace,
+    setGame: (value) => { game = value; }, flushMicrotasks: () => { while (microtasks.length) microtasks.shift()(); },
+    get page() { return current; }, get reconciles() { return reconciles; }, get refreshes() { return refreshes; }, get batches() { return batches; },
+    mounted: () => events.filter((event) => event.type === "econovaria:admin-settings-mounted" && event.target === current) };
+}
+for (const phase of ["committed", "failed", "cancelled"]) for (const timing of ["between", "after"]) {
+  test(`L1 same-game replacement ${timing} old publication after ${phase} read`, () => {
+    const h = replacementFixture(), registrations = h.listeners.size;
+    h.emit("econovaria:admin-request-lifecycle", { pageRead: true, pathname: "/api/admin/games/synthetic/settings", phase });
+    h.frame(); if (timing === "after") h.frame();
+    h.replace(); h.drain();
+    assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "page-replacement");
+    assert.equal(h.listeners.size, registrations); assert.equal(h.frames.length, 0);
+    assert.equal(h.clears.length, 1); assert.equal(h.state.savedUntil, 0); assert.equal(h.state.baselineValues.size, 0);
+    assert.equal(h.state.disclosureOpen, true); // Same-game reset never clears disclosure or dispatches game context.
+    assert.equal(h.events.filter((event) => event.type === "econovaria:settings-context-changed").length, 0);
+  });
+}
+test("L1 replacement before original settle has one surviving new-root publication", () => {
+  const h = replacementFixture(); h.emit("econovaria:attendance-reward-saved"); h.replace(); h.drain();
+  assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "page-replacement");
+});
+test("L1 bridge-discovered reset supersedes once without a notification cycle", () => {
+  const h = replacementFixture(), reconciles = h.reconciles, batches = h.batches, refreshes = h.refreshes;
+  h.replace(false); h.emit("econovaria:attendance-reward-saved"); h.drain();
+  assert.equal(h.reconciles - reconciles, 2); assert.equal(h.batches - batches, 3); assert.equal(h.refreshes - refreshes, 1);
+  assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "page-replacement");
+  for (let i = 0; i < 4; i++) h.reset();
+  assert.equal(h.frames.length, 0); assert.equal(h.clears.length, 1);
+});
+test("L1 null-to-first root rearms an exhausted off-page generation", () => {
+  const h = replacementFixture({ offPage: true }); assert.equal(h.batches, 120);
+  h.replace(); h.drain(); assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "page-replacement");
+});
+for (const owner of ["absent", "older"]) test(`L1 ${owner} optional bridge preserves original reset`, () => {
+  const h = replacementFixture({ owner }); h.replace(); h.drain();
+  assert.equal(h.frames.length, 0); assert.equal(h.mounted().length, 0); assert.equal(h.clears.length, 1);
+  assert.equal(h.state.page, h.page); assert.equal(h.state.baselineValues.size, 0);
+});
+test("L1 game switch retains the original context event and reason", () => {
+  const h = replacementFixture(); h.setGame("game-two"); h.replace(); assert.equal(h.frames.length, 0);
+  h.flushMicrotasks(); h.drain(); assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "game-context");
+  const contexts = h.events.filter((event) => event.type === "econovaria:settings-context-changed");
+  assert.equal(contexts.length, 1); assert.equal(contexts[0].detail.previousGameId, "game-one"); assert.equal(contexts[0].detail.gameId, "game-two");
+  assert.equal(h.state.disclosureOpen, false);
+});
+test("L1 dirty remount needs no baseline-ready flag and preserves later save notification", () => {
+  const h = replacementFixture(); h.replace(); assert.equal(h.page.attrs.has("data-settings-ux-baseline-ready"), false);
+  h.drain(); assert.equal(h.mounted().length, 1);
+  h.emit("econovaria:attendance-reward-saved"); h.drain();
+  assert.equal(h.mounted().length, 2); assert.equal(h.mounted()[1].detail.reason, "attendance-saved");
+});
+test("L1 partial Attendance readiness can settle inside the retained 120-frame window", () => {
+  const h = replacementFixture(); h.replace(); h.page.loaded = false;
+  for (let i = 0; i < 119; i++) h.frame();
+  assert.equal(h.mounted().length, 0); h.page.loaded = true; h.drain(); assert.equal(h.mounted().length, 1);
+});
+test("L1 retains exhaustion beyond 120 frames without a later existing trigger", () => {
+  const h = replacementFixture(); h.replace(); h.page.loaded = false; const before = h.batches; h.drain();
+  assert.equal(h.batches - before, 120); h.page.loaded = true; h.reset(); assert.equal(h.frames.length, 0); assert.equal(h.mounted().length, 0);
+  h.emit("econovaria:attendance-reward-saved"); h.drain(); assert.equal(h.mounted().length, 1);
+});
+test("L1 disconnected/non-current roots do not schedule and same-node reattach is not an epoch", () => {
+  const h = replacementFixture(), old = h.page; h.replace(false);
+  old.isConnected = true; h.state.page = null; h.reset(old); assert.equal(h.frames.length, 0);
+  h.page.isConnected = false; h.reset(); assert.equal(h.frames.length, 0);
+  h.page.isConnected = true; h.reset(); assert.equal(h.frames.length, 0); assert.equal(h.mounted().length, 0);
+});
+test("L1 reset hands off only after original reset work and adds no transport or registration", () => {
+  const h = replacementFixture(), bridge = h.window.EconovariaSettingsLifecycleBridge; let calls = 0;
+  h.window.EconovariaSettingsLifecycleBridge = { reconcile(reason) {
+    calls++; assert.equal(reason, "page-replacement"); assert.equal(h.state.page, h.page); assert.equal(h.state.gameId, "game-one");
+    assert.equal(h.state.savedUntil, 0); assert.equal(h.state.baselineValues.size, 0); assert.equal(h.page.attrs.size, 0);
+    assert.deepEqual(h.clears, [13]); return bridge.reconcile(reason);
+  } };
+  h.state.savedTimer = 13; h.replace(); h.drain();
+  assert.equal(calls, 1); assert.equal(h.mounted().length, 1); assert.deepEqual(h.clears, [13]);
 });
