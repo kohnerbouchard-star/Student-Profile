@@ -87,3 +87,33 @@ Exact source patch SHA256 (Attendance runtime/contract/repository/tests):
 9b4dfae0ac29d6ee66556efc4c9c1dbf0c04e6db56eaa215f076e743f4d54b77.
 No remaining local implementation blocker; hosted CI and parent publication
 review remain outstanding. No merge/deployment or live certification is claimed.
+
+## Parent-approved hosted qualification amendment
+
+Initial draft PR916 source987a2453 remains preserved with its failing hosted
+results: Banking source127768463541 rejected missing actual-PR authority;
+Repository Quality127768462757 rejected stale supporting package identity.
+This amendment extends the seven-path scope to nine paths only: actual
+ docs/operations/contracts/player-cross-cutting/pr-916.json and three package
+sourceEvidenceBlobs values in REF003/candidates.json. No runtime/test/package or
+inventory bytes change. PR912's117 required/86 critical entries, two read-only
+locks and all false safety flags are copied verbatim; nine actual paths stay
+under eleven exact locks. No workflow/verifier/policy changes or waived gates.
+
+Before edits main767bc0e8, draft916/987a2453, #668/faaf908b and
+#885/8530faae8813200dce8b037946519dc8c29ac297 were reverified. Fresh23-open-PR
+full-path census finds only #885 overlapping the added receipt path, no new
+manifest owner. Current-main receipt blob4589dc191d138fbe242ba51c006e481588643c94
+and #885 receipt blobc12ba0e141c5c7e84d6c02ebf876f2ee3f868db8 were compared.
+#885's reviewed hunks rebind compiler-config identities; current main already
+contains those target identities. Its main-relative stale Settings differences
+must not be imported. Only three existing package references change from
+8f8fe07cb0e446a121fcbc519cb692447c2e1b68 to actual unchanged final package blob
+01e8517103cdd62ca3ba6a7bc5046189ac2a97b3. Every compiler/Settings identity, review,
+disposition and unrelated field stays current-main identical. This preserves
+#885 intent without copying its file or claiming consent. Later integration
+must preserve these package receipts while reconciling actual combined source.
+
+Original required workflows not triggered remain unqualified, not waived.
+No duplicate dispatch, rerun, filter change, merge, ready transition, auto-merge,
+deployment, hosted mutation or release-hold change is authorized.
