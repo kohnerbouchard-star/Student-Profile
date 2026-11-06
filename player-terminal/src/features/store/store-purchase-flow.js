@@ -1,4 +1,3 @@
-import { PlayerApi } from "../../api/player-api.js";
 import { isEndpointEnabled } from "../../api/capabilities.js";
 import { renderModal } from "../../components/modal.js";
 import { focusFirstInteractive, setButtonProcessing } from "../../core/dom.js";
@@ -11,7 +10,7 @@ import {
   validateSystemOfferQuote,
   validateSystemOfferReceipt,
 } from "./store-purchase-contract.js";
-import { convergeCommittedStorePurchase, refreshStaleStoreOffer } from "./store-purchase-convergence.js";
+import { createStorePurchaseOwner, convergeCommittedStorePurchase, refreshStaleStoreOffer } from "./store-purchase-convergence.js";
 import {
   handleStoreFundingModalKeyDown,
   storeFundingAvailability,
@@ -35,7 +34,8 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     throw new TypeError("The Store purchase flow requires an active player terminal with bounded resource refresh.");
   }
 
-  const api = new PlayerApi(config);
+  const owner = createStorePurchaseOwner({ terminal, config, retire: () => closeModal({ restoreFocus: false, force: true }) });
+  const api = owner.api;
   const overlayHost = document.createElement("div");
   overlayHost.className = "player-terminal-transaction-overlay-host";
   overlayHost.dataset.playerTerminalTransactionOverlayHost = "true";
@@ -46,8 +46,6 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   let openerOfferKey = "";
   let transaction = null;
   let destroyed = false;
-  let generation = 0;
-  let activeController = null;
 
   function applicationRoot() {
     return mount.querySelector(".player-terminal-app-root");
@@ -80,11 +78,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     current?.focus?.({ preventScroll: true });
   }
 
-  function cancelActiveRequest() {
-    generation += 1;
-    activeController?.abort();
-    activeController = null;
-  }
+  const cancelActiveRequest = () => owner.cancel();
 
   function closeModal({ restoreFocus = true, force = false } = {}) {
     if (transaction?.processing === true && !force) return false;
@@ -125,21 +119,18 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     } else focusFirstInteractive(modal);
   }
 
-  function beginRequest() {
-    activeController?.abort();
-    activeController = new AbortController();
-    return { requestGeneration: generation, signal: activeController.signal };
-  }
+  const beginRequest = (options) => owner.begin(options);
+  const requestIsCurrent = (request) => Boolean(transaction) && owner.current(request);
+  const convergenceRequestIsCurrent = (request) => owner.sessionCurrent(request);
 
-  function requestIsCurrent(requestGeneration) {
-    return !destroyed && transaction && requestGeneration === generation;
-  }
-
-  function convergenceRequestIsCurrent() {
-    return !destroyed;
+  function currentTransaction() {
+    if (transaction && owner.sessionCurrent(transaction.sessionOwner)) return transaction;
+    closeModal({ restoreFocus: false, force: true });
+    return null;
   }
 
   function openPurchase(button) {
+    if (!owner.available() || transaction?.processing === true) return;
     const state = terminal.getState();
     if (!isEndpointEnabled(state.data?.capabilities, "storeQuote")) return;
     const itemId = button.dataset.playerPurchase;
@@ -161,6 +152,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     openerOfferKey = offerKey;
     transaction = {
       stage: "select",
+      sessionOwner: owner.captureSession(),
       item,
       offer,
       purchaseMode: purchasability,
@@ -183,7 +175,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   }
 
   async function requestQuote(button) {
-    const current = transaction;
+    const current = currentTransaction();
     if (!current) return;
     const request = storeFundingRequestFromModal(storeModalElement(overlayHost), current);
     const quantity = request.quantity;
@@ -199,7 +191,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     }
 
     const restoreButton = setButtonProcessing(button, "Requesting quote");
-    const { requestGeneration, signal } = beginRequest();
+    const { requestGeneration, signal } = beginRequest({ quote: true, restore: restoreButton });
     try {
       api.setSession(config);
       const businessOffer = current.purchaseMode === "business_offer";
@@ -230,10 +222,10 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
         refreshState: "idle",
         allocationDraft: request.allocationDraft,
         fundingIntent: request.intent,
+        quoteRequest: requestGeneration,
       };
       renderTransaction();
     } catch (error) {
-      restoreButton();
       if (!requestIsCurrent(requestGeneration)) return;
       const failure = resolveStorePurchaseFailure(error, "The Store quote could not be created.");
       if (failure.sessionInvalid) {
@@ -243,14 +235,16 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       }
       transaction = { ...current, quantity, allocationDraft: request.allocationDraft, error: failure.message };
       renderTransaction();
+    } finally {
+      owner.finish(requestGeneration);
     }
   }
 
   async function confirmPurchase(button) {
-    const current = transaction;
+    const current = currentTransaction();
     const quote = current?.quote;
     if (current?.processing === true) return;
-    if (!current || !quote?.quoteKey) {
+    if (!current || !quote?.quoteKey || !requestIsCurrent(current.quoteRequest)) {
       if (current) {
         transaction = { ...current, stage: "select", error: "Request a current Store quote before confirming the purchase." };
         renderTransaction();
@@ -266,7 +260,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
     void button;
     transaction = { ...current, processing: true, error: "" };
     renderTransaction();
-    const { requestGeneration, signal } = beginRequest();
+    const { requestGeneration, signal } = beginRequest({ settlement: true });
     let operation;
     let receipt;
     try {
@@ -275,7 +269,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
         operation = await api.execute("storeOfferPurchase", {
           quoteKey: quote.quoteKey,
         }, {}, { signal });
-        if (!requestIsCurrent(requestGeneration)) return;
+        if (!owner.sessionCurrent(requestGeneration)) return;
         receipt = validateBusinessOfferReceipt(operation.result, {
           item: current.item,
           offer: current.offer,
@@ -285,7 +279,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
         operation = await api.execute("storePurchase", {
           quoteKey: quote.quoteKey,
         }, {}, { signal });
-        if (!requestIsCurrent(requestGeneration)) return;
+        if (!owner.sessionCurrent(requestGeneration)) return;
         receipt = validateSystemOfferReceipt(operation.result, { item: current.item, offer: current.offer, quote });
       }
     } catch (error) {
@@ -329,7 +323,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       return;
     }
 
-    transaction = {
+    const committed = {
       ...current,
       stage: "receipt",
       receipt,
@@ -343,12 +337,12 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
           : ["dashboard", "store", "inventory", "banking", "bankingFx"]),
       ]),
     };
-    renderTransaction();
+    if (requestIsCurrent(requestGeneration)) { transaction = committed; renderTransaction(); }
 
     let warnings;
     try {
       warnings = await convergeCommittedStorePurchase({
-        current: transaction,
+        current: committed,
         api,
         config,
         terminal,
@@ -357,8 +351,8 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
         signal: null,
       });
     } catch (error) {
-      if (destroyed) return;
-      if (requestIsCurrent(requestGeneration)) closeModal({ restoreFocus: false });
+      if (!requestIsCurrent(requestGeneration)) return;
+      closeModal({ restoreFocus: false });
       dispatchStoreSessionInvalid(error, config);
       return;
     }
@@ -372,7 +366,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   }
 
   async function retryCommittedRefresh() {
-    const current = transaction;
+    const current = currentTransaction();
     if (
       !current || current.stage !== "receipt" || !current.receipt ||
       current.refreshState !== "pending"
@@ -396,8 +390,8 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
         signal: null,
       });
     } catch (error) {
-      if (destroyed) return;
-      if (requestIsCurrent(requestGeneration)) closeModal({ restoreFocus: false });
+      if (!requestIsCurrent(requestGeneration)) return;
+      closeModal({ restoreFocus: false });
       dispatchStoreSessionInvalid(error, config);
       return;
     }
@@ -420,6 +414,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   function handleFundingEdit(event) {
     const modal = storeModalElement(overlayHost);
     if (!modal || transaction?.stage !== "select" || !event.target.matches?.("[data-player-store-quantity], [data-player-store-funding-account], [data-player-store-funding-amount]")) return;
+    cancelActiveRequest();
     const funding = syncStoreFundingForm(modal, {
       accounts: transaction.fundingAccounts,
       targetCurrencyCode: transaction.currencyCode,
@@ -458,7 +453,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       return;
     }
     const review = event.target.closest("[data-player-store-review]");
-    if (review) {
+    if (review && !review.disabled) {
       void requestQuote(review);
       return;
     }
@@ -485,6 +480,7 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   return {
     destroy() {
       destroyed = true;
+      owner.destroy();
       mount.removeEventListener("click", handleClick, true);
       overlayHost.removeEventListener("click", handleClick, true);
       overlayHost.removeEventListener("keydown", handleKeyDown, true);
