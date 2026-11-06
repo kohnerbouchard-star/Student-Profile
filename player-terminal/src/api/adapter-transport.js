@@ -60,43 +60,49 @@ export class AdapterTransport {
       void resolve;
     });
 
-    const providedSession = typeof this.config.sessionProvider === "function"
-      ? await this.config.sessionProvider()
-      : null;
-    const currentSession = providedSession && typeof providedSession === "object"
-      ? providedSession
-      : this.config.authenticated === true
-        ? this.config
+    const adapterPromise = Promise.resolve().then(async () => {
+      controller.signal.throwIfAborted();
+      const providedSession = typeof this.config.sessionProvider === "function"
+        ? await this.config.sessionProvider()
         : null;
-    const adapterContext = {
-      ...context,
-      signal: controller.signal,
-      session: {
-        authenticated: currentSession?.authenticated === true,
-        csrfToken: String(currentSession?.csrfToken || this.config.csrfToken || ""),
-        gameSessionId: String(currentSession?.gameSessionId || this.config.gameSessionId || "")
-      },
-      config: this.config
-    };
-    const invokeAdapter = () => Promise.resolve()
-      .then(() => this.requestAdapter(adapterContext))
-      .then((result) => {
-        if (result?.ok === false && Number(result?.status) >= 400) throw result;
-        return result;
+      const currentSession = providedSession && typeof providedSession === "object"
+        ? providedSession
+        : this.config.authenticated === true
+          ? this.config
+          : null;
+      const adapterContext = {
+        ...context,
+        signal: controller.signal,
+        session: {
+          authenticated: currentSession?.authenticated === true,
+          csrfToken: String(currentSession?.csrfToken || this.config.csrfToken || ""),
+          gameSessionId: String(currentSession?.gameSessionId || this.config.gameSessionId || "")
+        },
+        config: this.config
+      };
+      const invokeAdapter = () => Promise.resolve()
+        .then(() => {
+          controller.signal.throwIfAborted();
+          return this.requestAdapter(adapterContext);
+        })
+        .then((result) => {
+          if (result?.ok === false && Number(result?.status) >= 400) throw result;
+          return result;
+        });
+      return invokeAdapter().catch(async (error) => {
+        const method = String(context.method || "GET").toUpperCase();
+        const status = Number(error?.status || 0);
+        if (
+          !SAFE_READ_METHODS.has(method) ||
+          !RETRYABLE_READ_STATUSES.has(status) ||
+          controller.signal.aborted
+        ) {
+          throw error;
+        }
+        await new Promise((resolve) => globalThis.setTimeout(resolve, SAFE_READ_RETRY_DELAY_MS));
+        if (controller.signal.aborted) throw error;
+        return invokeAdapter();
       });
-    const adapterPromise = invokeAdapter().catch(async (error) => {
-      const method = String(context.method || "GET").toUpperCase();
-      const status = Number(error?.status || 0);
-      if (
-        !SAFE_READ_METHODS.has(method) ||
-        !RETRYABLE_READ_STATUSES.has(status) ||
-        controller.signal.aborted
-      ) {
-        throw error;
-      }
-      await new Promise((resolve) => globalThis.setTimeout(resolve, SAFE_READ_RETRY_DELAY_MS));
-      if (controller.signal.aborted) throw error;
-      return invokeAdapter();
     });
 
     try {

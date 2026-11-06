@@ -10,7 +10,7 @@
     "read-ordering": "node tests/read-invalidation-ordering.mjs",
     "correctness": "node tests/v751-correctness.mjs",
     "adapter": "node tests/student-profile-adapter.mjs",
-    "transport-retry": "node tests/adapter-transport-retry.mjs",
+    "transport-retry": "node tests/adapter-transport-retry.mjs && node tests/adapter-session-provider-timeout.mjs",
     "idempotency-header-parity": "node tests/idempotency-header-parity.mjs",
     "session-browser-safe": "node tests/browser-safe-session-bootstrap.mjs",
     "capability-manifest-current": "node --experimental-strip-types tests/current-capability-manifest.mjs",
