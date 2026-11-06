@@ -1,13 +1,13 @@
 import { test, expect } from "@playwright/test";
 
-async function install(page, settlementFailure = null) {
+async function install(page, settlementFailure = null, holdSettlement = false) {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.route("**/favicon.ico", (route) => route.fulfill({ status: 204 }));
   await page.goto("/tests/fixtures/");
   await page.setContent('<base href="/"><main id="marketplace"></main>');
-  await page.evaluate(async (settlementFailure) => {
+  await page.evaluate(async ({ settlementFailure, holdSettlement }) => {
     const { installMarketplaceFundingFlow } = await import("/src/features/marketplace/marketplace-funding-flow.js");
     const { renderMarketplacePage } = await import("/src/pages/marketplace-page.js");
     const fixtures = await import("/tests/fixtures/marketplace-funding.js");
@@ -23,12 +23,14 @@ async function install(page, settlementFailure = null) {
       inventory: { items: [] }, bankingFx: { balances: [{ accountKey: ACCOUNT, accountKind: "checking", currencyCode: "LUM", availableAmount: 100 }] },
     } };
     const calls = [], toasts = [], subscribers = new Set();
-    let resolveQuote, effects = 0, original = null;
+    let resolveQuote, resolveSettlement, effects = 0, original = null;
+    const refreshes = [];
     const config = { authenticated: true, gameSessionId: "game-a", csrfToken: "csrf-a", requestTimeoutMs: 10000, writeCooldownMs: 0,
       apiCall: async (context) => {
         calls.push({ endpoint: context.endpointKey, payload: structuredClone(context.payload), key: context.idempotencyKey });
         if (context.endpointKey === "marketplacePurchase") return new Promise((resolve) => { resolveQuote = resolve; });
         if (settlementFailure) throw settlementFailure;
+        if (holdSettlement) return new Promise((resolve) => { resolveSettlement = resolve; });
         if (!original) {
           original = calls.at(-1); effects++;
           throw { code: "REQUEST_TIMEOUT", message: "Committed response lost" };
@@ -39,17 +41,29 @@ async function install(page, settlementFailure = null) {
         }
         return { ...orderFixture, order: { ...orderFixture.order, replayed: true } };
       } };
-    function render() { mount.innerHTML = renderMarketplacePage(state.data, state.ui); }
-    const terminal = { getState: () => state, requestRender: render, showToast: (...args) => toasts.push(args), refreshResources: async () => {},
+    function render() {
+      if (state.route === "banking") {
+        mount.innerHTML = `<section data-banking-view><button>Banking</button><output data-banking-balance>${state.data.banking?.available}</output><output data-fx-balance>${state.data.bankingFx.available}</output></section>`;
+      } else mount.innerHTML = renderMarketplacePage(state.data, state.ui);
+    }
+    async function refreshResources(resources) {
+      refreshes.push(resources);
+      if (!holdSettlement) return;
+      if (resources.includes("banking")) state.data.banking = { available: effects ? 84.47 : 100 };
+      if (resources.includes("bankingFx")) state.data.bankingFx.available = effects ? 84.47 : 100;
+      render();
+    }
+    const terminal = { getState: () => state, requestRender: render, showToast: (...args) => toasts.push(args), refreshResources,
       subscribe(fn) { subscribers.add(fn); return () => subscribers.delete(fn); } };
     render();
     const flow = installMarketplaceFundingFlow({ mount, terminal, config });
-    window.marketplaceHarness = { state, calls, toasts, flow, quote, render,
+    window.marketplaceHarness = { state, calls, toasts, flow, quote, render, refreshes, refreshResources,
+      commitSettlement() { effects++; resolveSettlement(orderFixture); },
       resolveQuote() { resolveQuote(quote); },
       effects: () => effects,
       notify() { render(); for (const fn of subscribers) fn(state); },
     };
-  }, settlementFailure);
+  }, { settlementFailure, holdSettlement });
   return errors;
 }
 
@@ -125,3 +139,29 @@ for (const code of ["MARKETPLACE_QUOTE_EXPIRED", "MARKETPLACE_INSUFFICIENT_FUNDS
     expect(errors).toEqual([]);
   });
 }
+
+test("held settlement refreshes Banking and FX after navigation without Marketplace publication", async ({ page }) => {
+  const errors = await install(page, null, true);
+  await page.getByRole("button", { name: "Review exact funding quote" }).click();
+  await expect.poll(() => page.evaluate(() => window.marketplaceHarness.calls.length)).toBe(1);
+  await page.evaluate(() => window.marketplaceHarness.resolveQuote());
+  await page.getByRole("button", { name: "Confirm quoted purchase" }).click();
+  await expect.poll(() => page.evaluate(() => window.marketplaceHarness.calls.length)).toBe(2);
+  await page.evaluate(async () => {
+    const h = window.marketplaceHarness;
+    h.state.route = "banking"; h.notify();
+    h.toasts.length = 0;
+    await h.refreshResources(["banking", "bankingFx"]);
+  });
+  await expect(page.locator("[data-banking-balance]")).toHaveText("100");
+  await expect(page.locator("[data-fx-balance]")).toHaveText("100");
+  await page.evaluate(() => window.marketplaceHarness.commitSettlement());
+  await expect(page.locator("[data-banking-balance]")).toHaveText("84.47");
+  await expect(page.locator("[data-fx-balance]")).toHaveText("84.47");
+  expect(await page.evaluate(() => window.marketplaceHarness.refreshes[1])).toEqual(["dashboard", "marketplace", "inventory", "banking", "bankingFx"]);
+  expect(await page.evaluate(() => window.marketplaceHarness.toasts)).toEqual([]);
+  expect(await page.evaluate(() => window.marketplaceHarness.state.data.marketplace.lastFundingOrder ?? null)).toBeNull();
+  await expect(page.locator("[data-player-marketplace-funding-quote]")).toHaveCount(0);
+  await expect(page.locator("[data-banking-view]")).toBeVisible();
+  expect(errors).toEqual([]);
+});

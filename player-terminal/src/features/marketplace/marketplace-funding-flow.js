@@ -191,9 +191,10 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
   const selection = () => String(terminal.getState()?.ui?.marketplaceListingId || "");
   let lastSelection = selection();
   let lastRoute = terminal.getState()?.route;
-  const active = () => !destroyed && !retired && (originalSession === null || sessionIdentity() === originalSession) &&
-    (!sessionTicket || terminal.freshness.isCurrent(sessionTicket)) &&
-    terminal.getState()?.route === "marketplace" &&
+  const currentSession = () => !destroyed && !retired &&
+    (originalSession === null || sessionIdentity() === originalSession) &&
+    (!sessionTicket || terminal.freshness.isCurrent(sessionTicket));
+  const active = () => currentSession() && terminal.getState()?.route === "marketplace" &&
     (!terminal.getState()?.status || terminal.getState().status === "ready");
   function retire() {
     generation++;
@@ -363,23 +364,28 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
         command,
         { reservationId },
       );
-      if (!request.current()) return;
+      if (!currentSession()) return;
       const order = normalizeMarketplaceFundingOrder(operation.result);
       if (order.reservationKey !== reservationId || order.listingKey !== quote.listingKey ||
           order.quantity !== quote.quantity || order.fundingReceipt.quoteKey !== quote.fundingQuote.quoteKey) {
         throw new Error("Marketplace receipt does not match the confirmed quote.");
       }
-      confirmedQuote = null;
-      updateMarketplace(terminal, {
-        currentFundingQuote: null,
-        lastFundingOrder: order,
-      });
-      terminal.showToast?.(
-        order.replayed
-          ? "Marketplace purchase replayed from the committed receipt."
-          : "Marketplace purchase settled and inventory delivered.",
-        "green",
-      );
+      commands.delete(reservationId);
+      if (request.current()) {
+        confirmedQuote = null;
+        updateMarketplace(terminal, {
+          currentFundingQuote: null,
+          lastFundingOrder: order,
+        });
+        terminal.showToast?.(
+          order.replayed
+            ? "Marketplace purchase replayed from the committed receipt."
+            : "Marketplace purchase settled and inventory delivered.",
+          "green",
+        );
+      }
+      // A retired view cannot publish UI, but a validated success still needs
+      // read-only convergence in its current session, including Banking FX.
       // Receipt acceptance is final; refresh failure cannot turn it into failure.
       try {
         await terminal.refreshResources?.([

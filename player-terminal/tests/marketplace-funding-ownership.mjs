@@ -133,7 +133,8 @@ for (const outcome of ["success", "error"]) {
       assert.equal(h.state.data.marketplace.lastFundingOrder ?? null, null);
       assert.equal(h.mount.error.textContent, "");
       assert.equal(h.toasts.length, 0);
-      assert.equal(refreshed, 0);
+      assert.equal(refreshed,
+        outcome === "success" && ["navigation", "selection", "input"].includes(interruption) ? 1 : 0);
       h.flow.destroy();
     });
   }
@@ -306,5 +307,65 @@ test("authoritative rejection after an uncertain attempt restores fresh quote re
   // A newly received expired quote must not inherit the retired command's
   // expiry bypass, even if the reservation key is returned again.
   assert.equal(h.calls.length, 3);
+  h.flow.destroy();
+});
+
+test("held settlement converges current-session Banking and FX after navigation without stale UI", async () => {
+  const response = deferred();
+  const h = setup(() => response.promise);
+  let committed = false;
+  const refreshes = [];
+  h.state.data.banking = { available: 100 };
+  h.state.data.bankingFx = { available: 100 };
+  h.terminal.refreshResources = async (resources) => {
+    refreshes.push(resources);
+    if (resources.includes("banking")) h.state.data.banking.available = committed ? 84.47 : 100;
+    if (resources.includes("bankingFx")) h.state.data.bankingFx.available = committed ? 84.47 : 100;
+  };
+  h.state.data.marketplace.currentFundingQuote = normalizeMarketplaceFundingQuote(h.quote);
+  h.emit("submit", h.settlement); await tick();
+  h.state.route = "banking"; h.notify();
+  await h.terminal.refreshResources(["banking", "bankingFx"]);
+  assert.equal(h.state.data.bankingFx.available, 100);
+  committed = true;
+  response.resolve(orderFixture); await tick();
+  assert.deepEqual(refreshes[1], ["dashboard", "marketplace", "inventory", "banking", "bankingFx"]);
+  assert.equal(h.state.data.banking.available, 84.47);
+  assert.equal(h.state.data.bankingFx.available, 84.47);
+  assert.equal(h.state.data.marketplace.currentFundingQuote, null);
+  assert.equal(h.state.data.marketplace.lastFundingOrder ?? null, null);
+  assert.equal(h.mount.error.textContent, "");
+  assert.equal(h.toasts.length, 0);
+  h.flow.destroy();
+});
+
+test("retired view cannot converge an invalid settlement receipt", async () => {
+  const response = deferred();
+  const h = setup(() => response.promise);
+  let refreshes = 0;
+  h.terminal.refreshResources = async () => { refreshes++; };
+  h.state.data.marketplace.currentFundingQuote = normalizeMarketplaceFundingQuote(h.quote);
+  h.emit("submit", h.settlement); await tick();
+  h.state.route = "banking"; h.notify();
+  response.resolve({ ...orderFixture, order: { ...orderFixture.order, quantity: 2 } }); await tick();
+  assert.equal(refreshes, 0);
+  assert.equal(h.toasts.length, 0);
+  assert.equal(h.mount.error.textContent, "");
+  h.flow.destroy();
+});
+
+test("freshness session retirement suppresses held settlement convergence", async () => {
+  const response = deferred();
+  const h = setup(() => response.promise);
+  let epoch = 0, refreshes = 0;
+  h.terminal.freshness = { capture: () => ({ epoch }), isCurrent: (ticket) => ticket.epoch === epoch };
+  h.terminal.refreshResources = async () => { refreshes++; };
+  h.state.data.marketplace.currentFundingQuote = normalizeMarketplaceFundingQuote(h.quote);
+  h.emit("submit", h.settlement); await tick();
+  h.state.route = "banking"; h.notify();
+  epoch++;
+  response.resolve(orderFixture); await tick();
+  assert.equal(refreshes, 0);
+  assert.equal(h.toasts.length, 0);
   h.flow.destroy();
 });
