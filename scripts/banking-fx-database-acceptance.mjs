@@ -32,6 +32,14 @@ if (
   );
 }
 
+const { bankingJob } = await import("./ref025-disposable-database.mjs");
+if (bankingJob(process.env)) {
+  const qualification = spawnSync(process.execPath, ["--test", fileURLToPath(new URL("./ref025-disposable-database.test.mjs", import.meta.url))], {
+    env: { ...process.env, REF025_ISOLATION_QUALIFY: "1" }, stdio: "inherit", timeout: 180000,
+  });
+  if (qualification.error || qualification.status !== 0) throw new Error("REF025 disposable isolation qualification failed", { cause: qualification.error });
+}
+
 const fixture = Object.freeze({
   staffId: randomUUID(),
   staffAuthId: randomUUID(),
