@@ -176,11 +176,82 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
     throw new TypeError("The Marketplace funding flow requires an active Player terminal.");
   }
   const api = new PlayerApi(config);
-  let pending = false;
+  let pending = null;
   let destroyed = false;
+  let retired = false;
+  let generation = 0;
+  const commands = new Map();
+  let confirmedQuote = null;
+  const sessionIdentity = () => JSON.stringify([
+    config.authenticated, config.csrfToken, config.gameSessionId, config.sessionExpiresAt,
+    terminal.getState()?.data?.session?.gameSessionId, api.sessionVersion,
+  ]);
+  let originalSession = null;
+  let sessionTicket = null;
+  const selection = () => String(terminal.getState()?.ui?.marketplaceListingId || "");
+  let lastSelection = selection();
+  let lastRoute = terminal.getState()?.route;
+  const active = () => !destroyed && !retired && (originalSession === null || sessionIdentity() === originalSession) &&
+    (!sessionTicket || terminal.freshness.isCurrent(sessionTicket)) &&
+    terminal.getState()?.route === "marketplace" &&
+    (!terminal.getState()?.status || terminal.getState().status === "ready");
+  function retire() {
+    generation++;
+    confirmedQuote = null;
+    pending?.release();
+    invalidateQuote(mount, terminal);
+  }
+  const unsubscribe = terminal.subscribe?.((state) => {
+    if (destroyed) return;
+    if (originalSession !== null && (sessionIdentity() !== originalSession ||
+        (sessionTicket && !terminal.freshness.isCurrent(sessionTicket)) || state.status === "waiting")) {
+      retired = true;
+      commands.clear();
+    }
+    if (!active() || lastRoute !== state.route || lastSelection !== selection()) retire();
+    lastRoute = state.route;
+    lastSelection = selection();
+    if (confirmedQuote && active() && currentMarketplace(terminal).currentFundingQuote !== confirmedQuote) {
+      updateMarketplace(terminal, { currentFundingQuote: confirmedQuote });
+    }
+  });
+  function invalidateSession() {
+    retired = true;
+    commands.clear();
+    retire();
+  }
+  const invalidEvent = String(config.sessionInvalidEvent || "econovaria:player-session-invalid");
+  globalThis.addEventListener?.(invalidEvent, invalidateSession);
+  function begin(form, label, intent = null) {
+    originalSession ??= sessionIdentity();
+    sessionTicket ??= terminal.freshness?.capture();
+    const restore = setButtonProcessing(form.querySelector('button[type="submit"]'), label);
+    const started = generation;
+    const selected = selection();
+    const ticket = terminal.freshness?.capture();
+    const operation = {
+      current: (checkIntent = true) => active() && started === generation && selected === selection() &&
+        (!ticket || terminal.freshness.isCurrent(ticket)) &&
+        (!checkIntent || !intent || (mount.contains(form) && intent === quoteIntent(form))),
+      release() {
+        if (pending !== operation) return;
+        restore();
+        pending = null;
+        setBusy(mount, false);
+      },
+    };
+    pending = operation;
+    setBusy(mount, true);
+    clearError(mount);
+    return operation;
+  }
+  function quoteIntent(form) {
+    return JSON.stringify([form.dataset.listingId, form.elements.namedItem("quantity")?.value,
+      readAllocations(form), selectedListing(terminal, form)?.version]);
+  }
 
   async function createQuote(form) {
-    if (destroyed || pending) return;
+    if (!active() || pending) return;
     const state = terminal.getState();
     if (
       state?.route !== "marketplace" ||
@@ -215,21 +286,11 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
     showError(mount, "Funding allocations must pay the exact listing-currency bill.");
     return;
   }
-    const button = form.querySelector('button[type="submit"]');
-    const restore = setButtonProcessing(button, "Pricing quote");
-    pending = true;
-    let ownsQuotePending = true;
-    const releaseQuotePending = () => {
-      if (!ownsQuotePending) return;
-      ownsQuotePending = false;
-      restore();
-      pending = false;
-      setBusy(mount, false);
-    };
-    setBusy(mount, true);
-    clearError(mount);
+    retire();
+    const intent = quoteIntent(form);
+    api.setSession(config);
+    const request = begin(form, "Pricing quote", intent);
     try {
-      api.setSession(config);
       const operation = await api.execute(
         "marketplacePurchase",
         {
@@ -239,81 +300,106 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
         },
         { listingId: listing.id },
       );
+      if (!request.current()) return;
       const quote = normalizeMarketplaceFundingQuote(operation.result);
+      if (quote.listingKey !== listing.id || quote.quantity !== quantity) {
+        throw new Error("Marketplace quote does not match the requested selections.");
+      }
       // Release the quote operation before rendering its settlement form. This
       // prevents an immediate confirmation from being discarded as "pending"
       // while ensuring the quote's finally block cannot release a newer action.
-      releaseQuotePending();
+      request.release();
       updateMarketplace(terminal, {
         currentFundingQuote: quote,
         lastFundingOrder: null,
       });
       terminal.showToast?.("Exact Marketplace funding quote ready for review.", "cyan");
       requestAnimationFrame(() => {
+        if (!request.current(false) || currentMarketplace(terminal).currentFundingQuote !== quote) return;
         mount.querySelector('[data-player-marketplace-funding-form="settlement"] button[type="submit"]')
           ?.focus?.({ preventScroll: true });
       });
     } catch (error) {
+      if (!request.current()) return;
+      if (error?.code === "REQUEST_ABORTED") { invalidateSession(); return; }
+      if (Number(error?.status) === 401) invalidateSession();
       if (dispatchInvalidSession(error, config)) return;
       showError(mount, resolveMarketplaceFundingFailure(error));
     } finally {
-      releaseQuotePending();
+      request.release();
     }
   }
 
   async function settleQuote(form) {
-    if (destroyed || pending) return;
+    if (!active() || pending) return;
     const state = terminal.getState();
     if (!isEndpointEnabled(state?.data?.capabilities, "marketplaceSettlement")) return;
     const quote = currentMarketplace(terminal).currentFundingQuote;
     const reservationId = String(
       form.dataset.reservationId || quote?.reservationKey || "",
     ).trim().toLowerCase();
-    if (!/^mpr_[0-9a-f]{32}$/u.test(reservationId)) {
+    if (!quote || quote.reservationKey !== reservationId || !/^mpr_[0-9a-f]{32}$/u.test(reservationId)) {
       showError(mount, "Create a current Marketplace quote before confirming settlement.");
       return;
     }
-    if (Number.isFinite(Date.parse(quote?.expiresAt)) && Date.parse(quote.expiresAt) <= Date.now()) {
+    // Expiry is a pre-confirmation check. An uncertain confirmed command must
+    // reach the server replay guard even after expiry or fresh balance reads.
+    let command = commands.get(reservationId);
+    if (!command && Number.isFinite(Date.parse(quote?.expiresAt)) && Date.parse(quote.expiresAt) <= Date.now()) {
       showError(mount, "The Marketplace quote expired. Create a new quote.");
       return;
     }
-    const button = form.querySelector('button[type="submit"]');
-    const restore = setButtonProcessing(button, "Settling purchase");
-    pending = true;
-    setBusy(mount, true);
-    clearError(mount);
+    if (!command) {
+      command = Object.freeze({ reservationId, clientSubmittedAt: new Date().toISOString() });
+      commands.set(reservationId, command);
+    }
+    confirmedQuote = Object.freeze({ ...quote, settlementRetry: true });
+    api.setSession(config);
+    const request = begin(form, "Settling purchase");
     try {
-      api.setSession(config);
       const operation = await api.execute(
         "marketplaceSettlement",
-        { reservationId, clientSubmittedAt: new Date().toISOString() },
+        command,
         { reservationId },
       );
+      if (!request.current()) return;
       const order = normalizeMarketplaceFundingOrder(operation.result);
+      if (order.reservationKey !== reservationId || order.listingKey !== quote.listingKey ||
+          order.quantity !== quote.quantity || order.fundingReceipt.quoteKey !== quote.fundingQuote.quoteKey) {
+        throw new Error("Marketplace receipt does not match the confirmed quote.");
+      }
+      confirmedQuote = null;
       updateMarketplace(terminal, {
         currentFundingQuote: null,
         lastFundingOrder: order,
       });
-      await terminal.refreshResources?.([
-        "dashboard",
-        "marketplace",
-        "inventory",
-        "banking",
-        "bankingFx",
-      ]);
       terminal.showToast?.(
         order.replayed
           ? "Marketplace purchase replayed from the committed receipt."
           : "Marketplace purchase settled and inventory delivered.",
         "green",
       );
+      // Receipt acceptance is final; refresh failure cannot turn it into failure.
+      try {
+        await terminal.refreshResources?.([
+          "dashboard",
+          "marketplace",
+          "inventory",
+          "banking",
+          "bankingFx",
+        ]);
+      } catch {
+        if (request.current()) terminal.showToast?.("Purchase settled. Refresh Marketplace to update balances and inventory.", "cyan");
+      }
     } catch (error) {
+      if (!request.current()) return;
+      if (error?.code === "REQUEST_ABORTED") { invalidateSession(); return; }
+      if (Number(error?.status) === 401) invalidateSession();
       if (dispatchInvalidSession(error, config)) return;
+      updateMarketplace(terminal, { currentFundingQuote: confirmedQuote });
       showError(mount, resolveMarketplaceFundingFailure(error));
     } finally {
-      restore();
-      pending = false;
-      setBusy(mount, false);
+      request.release();
     }
   }
 
@@ -332,14 +418,14 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
   function handleInput(event) {
     const form = event.target.closest?.('[data-player-marketplace-funding-form="quote"]');
     if (!form) return;
-    invalidateQuote(mount, terminal);
+    retire();
     updateAllocationSummary(mount, terminal, form);
   }
 
   function handleChange(event) {
     const form = event.target.closest?.('[data-player-marketplace-funding-form="quote"]');
     if (!form) return;
-    invalidateQuote(mount, terminal);
+    retire();
     updateAllocationSummary(mount, terminal, form);
   }
 
@@ -348,7 +434,11 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
   mount.addEventListener("change", handleChange, true);
   return {
     destroy() {
+      retire();
       destroyed = true;
+      commands.clear();
+      unsubscribe?.();
+      globalThis.removeEventListener?.(invalidEvent, invalidateSession);
       mount.removeEventListener("submit", handleSubmit, true);
       mount.removeEventListener("input", handleInput, true);
       mount.removeEventListener("change", handleChange, true);
