@@ -354,7 +354,7 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
       command = Object.freeze({ reservationId, clientSubmittedAt: new Date().toISOString() });
       commands.set(reservationId, command);
     }
-    confirmedQuote = Object.freeze({ ...quote, settlementRetry: true });
+    confirmedQuote = quote;
     api.setSession(config);
     const request = begin(form, "Settling purchase");
     try {
@@ -398,6 +398,16 @@ export function installMarketplaceFundingFlow({ mount, terminal, config }) {
       if (error?.code === "REQUEST_ABORTED") { invalidateSession(); return; }
       if (Number(error?.status) === 401) invalidateSession();
       if (dispatchInvalidSession(error, config)) return;
+      // Match PlayerApi's existing uncertain-write retry policy. Definitive
+      // rejections retire this command so the player can change funding or quote
+      // again; only uncertain outcomes retain the original settlement identity.
+      const uncertain = ["NETWORK_ERROR", "OFFLINE", "REQUEST_ABORTED", "REQUEST_TIMEOUT"]
+        .includes(error?.code) || Number(error?.status || 0) >= 500;
+      if (uncertain) confirmedQuote = Object.freeze({ ...quote, settlementRetry: true });
+      else {
+        commands.delete(reservationId);
+        confirmedQuote = null;
+      }
       updateMarketplace(terminal, { currentFundingQuote: confirmedQuote });
       showError(mount, resolveMarketplaceFundingFailure(error));
     } finally {

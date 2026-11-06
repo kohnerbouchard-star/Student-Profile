@@ -1,13 +1,13 @@
 import { test, expect } from "@playwright/test";
 
-async function install(page) {
+async function install(page, settlementFailure = null) {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.route("**/favicon.ico", (route) => route.fulfill({ status: 204 }));
   await page.goto("/tests/fixtures/");
   await page.setContent('<base href="/"><main id="marketplace"></main>');
-  await page.evaluate(async () => {
+  await page.evaluate(async (settlementFailure) => {
     const { installMarketplaceFundingFlow } = await import("/src/features/marketplace/marketplace-funding-flow.js");
     const { renderMarketplacePage } = await import("/src/pages/marketplace-page.js");
     const fixtures = await import("/tests/fixtures/marketplace-funding.js");
@@ -28,6 +28,7 @@ async function install(page) {
       apiCall: async (context) => {
         calls.push({ endpoint: context.endpointKey, payload: structuredClone(context.payload), key: context.idempotencyKey });
         if (context.endpointKey === "marketplacePurchase") return new Promise((resolve) => { resolveQuote = resolve; });
+        if (settlementFailure) throw settlementFailure;
         if (!original) {
           original = calls.at(-1); effects++;
           throw { code: "REQUEST_TIMEOUT", message: "Committed response lost" };
@@ -48,7 +49,7 @@ async function install(page) {
       effects: () => effects,
       notify() { render(); for (const fn of subscribers) fn(state); },
     };
-  });
+  }, settlementFailure);
   return errors;
 }
 
@@ -91,3 +92,36 @@ test("lost committed response remains explicitly retryable after expiry and fres
   expect(await page.evaluate(() => window.marketplaceHarness.calls.length)).toBe(3);
   expect(errors).toEqual([]);
 });
+
+for (const code of ["MARKETPLACE_QUOTE_EXPIRED", "MARKETPLACE_INSUFFICIENT_FUNDS"]) {
+  test(`authoritative ${code} allows new account selection and exact quote`, async ({ page }) => {
+    const errors = await install(page, { status: 409, code });
+    await page.evaluate(() => {
+      const h = window.marketplaceHarness;
+      h.state.data.bankingFx.balances.push({ accountKey: "bac_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", accountKind: "checking", currencyCode: "LUM", availableAmount: 100 });
+      h.notify();
+    });
+    await page.getByRole("button", { name: "Review exact funding quote" }).click();
+    await expect.poll(() => page.evaluate(() => window.marketplaceHarness.calls.length)).toBe(1);
+    await page.evaluate(() => window.marketplaceHarness.resolveQuote());
+    await page.getByRole("button", { name: "Confirm quoted purchase" }).click();
+    await expect(page.locator("[data-player-marketplace-funding-error]")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Retry confirmed purchase" })).toHaveCount(0);
+    const quoteForm = page.locator('[data-player-marketplace-funding-form="quote"]');
+    await expect(quoteForm).toBeVisible();
+    await quoteForm.locator('[name="sourceAccountKey"]').first().selectOption("bac_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    await quoteForm.locator('[name="targetAmount"]').first().fill("15.53");
+    await page.getByRole("button", { name: "Review exact funding quote" }).click();
+    await expect.poll(() => page.evaluate(() => window.marketplaceHarness.calls.length)).toBe(3);
+    expect(await page.evaluate(() => window.marketplaceHarness.calls[2].endpoint)).toBe("marketplacePurchase");
+    expect(await page.evaluate(() => window.marketplaceHarness.calls[2].payload.allocations[0].sourceAccountKey)).toBe("bac_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    await page.evaluate(() => {
+      const h = window.marketplaceHarness;
+      h.quote.reservation.fundingQuote.lines[0].sourceAccountKey = "bac_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+      h.resolveQuote();
+    });
+    await expect(page.getByRole("button", { name: "Confirm quoted purchase" })).toBeEnabled();
+    await expect(page.locator("[data-player-marketplace-funding-error]")).toBeHidden();
+    expect(errors).toEqual([]);
+  });
+}

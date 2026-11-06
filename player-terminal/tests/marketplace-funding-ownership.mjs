@@ -245,3 +245,66 @@ test("session retirement between uncertain attempts cannot mint a new retry iden
   assert.equal(h.state.data.marketplace.currentFundingQuote, null);
   h.flow.destroy();
 });
+
+for (const code of ["MARKETPLACE_QUOTE_EXPIRED", "MARKETPLACE_FIXING_STALE", "MARKETPLACE_INSUFFICIENT_FUNDS", "MARKETPLACE_RESERVATION_INVALID"]) {
+  test(`authoritative ${code} restores quote and allocation recovery`, async () => {
+    const h = setup((context, quote) => {
+      if (context.endpointKey === "marketplaceSettlement") throw { code, status: 409 };
+      return quote;
+    });
+    h.state.data.marketplace.currentFundingQuote = normalizeMarketplaceFundingQuote(h.quote);
+    h.emit("submit", h.settlement); await tick();
+    assert.equal(h.state.data.marketplace.currentFundingQuote, null);
+    // Reselecting the same listing is not required. Inputs and quote submission
+    // belong to the still-active listing and must immediately work again.
+    h.amount.value = "15.53"; h.emit("change");
+    h.emit("submit"); await tick();
+    assert.equal(h.calls.length, 2);
+    assert.equal(h.calls[1].endpointKey, "marketplacePurchase");
+    assert.equal(h.state.data.marketplace.currentFundingQuote.reservationKey, RESERVATION);
+    assert.equal(h.state.data.marketplace.currentFundingQuote.settlementRetry, undefined);
+    assert.equal(h.mount.error.textContent, "");
+    h.flow.destroy();
+  });
+}
+
+for (const failure of [
+  { code: "NETWORK_ERROR" },
+  { code: "OFFLINE" },
+  { code: "REQUEST_TIMEOUT" },
+  { code: "SERVICE_UNAVAILABLE", status: 503 },
+]) {
+  test(`uncertain ${failure.code} still preserves the confirmed command`, async () => {
+    const h = setup(() => { throw failure; });
+    h.state.data.marketplace.currentFundingQuote = normalizeMarketplaceFundingQuote(h.quote);
+    h.emit("submit", h.settlement); await tick();
+    assert.equal(h.state.data.marketplace.currentFundingQuote.settlementRetry, true);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    h.emit("submit", h.settlement); await tick();
+    assert.equal(h.calls.length, 2);
+    assert.deepEqual(h.calls[0].payload, h.calls[1].payload);
+    assert.equal(h.calls[0].idempotencyKey, h.calls[1].idempotencyKey);
+    h.flow.destroy();
+  });
+}
+
+test("authoritative rejection after an uncertain attempt restores fresh quote recovery", async () => {
+  const h = setup((context, quote) => {
+    if (context.endpointKey === "marketplacePurchase") return quote;
+    if (h.calls.length === 1) throw { code: "REQUEST_TIMEOUT" };
+    throw { code: "MARKETPLACE_QUOTE_EXPIRED", status: 409 };
+  });
+  h.state.data.marketplace.currentFundingQuote = normalizeMarketplaceFundingQuote(h.quote);
+  h.emit("submit", h.settlement); await tick();
+  assert.equal(h.state.data.marketplace.currentFundingQuote.settlementRetry, true);
+  h.emit("submit", h.settlement); await tick();
+  assert.equal(h.state.data.marketplace.currentFundingQuote, null);
+  h.quote.reservation.expiresAt = h.quote.reservation.fundingQuote.expiresAt = "2000-01-01T00:00:00Z";
+  h.emit("submit"); await tick();
+  assert.equal(h.calls[2].endpointKey, "marketplacePurchase");
+  h.emit("submit", h.settlement); await tick();
+  // A newly received expired quote must not inherit the retired command's
+  // expiry bypass, even if the reservation key is returned again.
+  assert.equal(h.calls.length, 3);
+  h.flow.destroy();
+});
