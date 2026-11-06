@@ -10,7 +10,7 @@ authorized or performed. Parent ARCH-501/502 and live capability are not complet
 
 ## Reproduction and correction
 
-The final 32-case native ownership suite on a detached, unchanged-main checkout
+The original 32-case native ownership suite on a detached, unchanged-main checkout
 fails 22 cases and passes ten. Its synthetic adapter holds responses while using
 the real terminal renderer, store, freshness coordinator, PlayerApi, funding form
 and quote/receipt validators. The reproduced defects are:
@@ -98,7 +98,9 @@ next action without overwriting the shared ledger owner's work.
 
 ## Qualification and review
 
-Final-source local results (raw logs under `/tmp/player-store-evidence/`):
+Initial local qualification at `5ce9d32f646b0015ee302383a5e0af07fbf72bfe`
+(raw logs under `/tmp/player-store-evidence/`). The independent-review amendment
+below supersedes this source qualification for the corrected candidate:
 
 | Check | Result |
 | --- | --- |
@@ -144,3 +146,64 @@ baseline screenshots/traces, original regression evidence and this exact reviewe
 error for external independent review. Next: obtain that review, resolve findings
 and return the concrete local candidate for parent review. Publication requires
 separate approval; hosted qualification follows only after authorized publication.
+
+
+## Independent-review amendment: ambiguous settlement retry
+
+Independent review of `5ce9d32f646b0015ee302383a5e0af07fbf72bfe` found a P1
+regression: beginning settlement advances modal generation, but a failed response
+restored the preceding quote owner. Confirm then rejected the original quote and
+forced a new one. Readiness was not granted; the original logs and source remain
+preserved as historical evidence.
+
+A new real-terminal regression for each offer kind commits in the synthetic
+server and loses the response with `REQUEST_TIMEOUT`. On the reviewed candidate,
+both desktop cases fail: a second Confirm cannot reach the receipt. The test
+also refreshes Store/BankingFX evidence and advances local quote expiry before
+retry, so a committed command cannot accidentally become a newly quoted purchase.
+
+The correction retains a separate `commandRequest` after a non-reset settlement
+failure. Confirmation retries that same session/view-owned command rather than
+reapplying resource freshness or local expiry checks intended for an unconfirmed
+quote. The existing PlayerApi alone retains/reuses the ambiguous command's
+idempotency key; neither payload construction nor API retry-key policy changes.
+Fresh quote acceptance, funding/quantity edits and authoritative quote-reset
+failures explicitly clear the command owner. Session/route retirement, explicit
+confirmation, stale-quote protection before first settlement, immutable receipt
+validation and read-only convergence remain intact.
+
+Focused before/after evidence: two new cases fail on the reviewed candidate;
+all four desktop/mobile cases pass after correction, with zero skips. They assert
+one quote, two identical purchase payloads with the same nonempty idempotency key,
+and one stock decrement after a lost committed response. `review-regression-before`
+and `review-regression-after` JSON/log/trace artifacts retain this comparison.
+Correction implementation commit: `62b0ec6f7ddbe187f9d00da6ab4d9121441cc848`.
+Full corrected-candidate results follow in the final qualification record. No API, coordinator, backend, lock, dependency,
+existing test, scope verifier, manifest, inventory or shared-roadmap change.
+Previous Chromium download denial and system-browser qualification limits remain.
+This amendment needs independent re-review; no publication is authorized.
+
+
+### Corrected-candidate final qualification
+
+| Check | Result |
+| --- | --- |
+| P1 reproduction on reviewed `5ce9d32f` | Both new desktop offer-kind cases fail |
+| Focused corrected desktop/mobile regressions | Four passed; zero failures/skips |
+| Full corrected ownership + retained Store browser suites | 80 passed; two existing mobile duplicate-layout skips; zero failures/flaky |
+| Complete Player `verify`, including seven Node ownership tests | Passed |
+| Root `npm test` | Passed |
+| Unchanged authority regression suite | 16 passed |
+| Entire six-file isolated scope, secret scan, whitespace | Passed |
+| Actual-checkout architecture inventory regeneration | Byte-identical; no debt/count/ceiling change |
+
+Only Store flow, its new browser suite and this existing scoped evidence document
+change relative to the reviewed candidate. Existing tests and all protected scopes
+remain byte-identical. Backend source and contracts are unchanged; backend suites
+were not rerun for this frontend-only amendment, and the initial TypeScript/28 Edge
+root and 1,422 Deno/18 Node qualification remains historical evidence, not a new
+execution claim. Prior native reviewer initialization error, download denial,
+original review finding and original test artifacts are retained. No independent
+re-review success or hosted qualification is claimed. Next: independently re-review
+correction `62b0ec6f7ddbe187f9d00da6ab4d9121441cc848` and its amended evidence;
+publication still requires separate authorization.
