@@ -466,7 +466,7 @@ jobs:
 
   verify-player-terminal-and-chromium:
     name: Verify retained Player Terminal and Chromium
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - name: Check out exact workflow head
