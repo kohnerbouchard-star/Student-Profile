@@ -20,6 +20,7 @@ on:
       - ".github/workflows/phase15-controlled-staging.yml"
       - ".github/workflows/phase15-controlled-production.yml"
       - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches:
       - main
