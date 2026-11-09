@@ -45,3 +45,12 @@ Raw synthetic evidence is in `/tmp/teacher-lifecycle-*` logs and final browser a
 Actual-number `pr-927.json` registration locks15 changed paths plus2 read-only verifier/test paths; it retains all118/87 predecessor checks and adds lifecycle checks for120 required/88 critical. Draft publication is confirmed. Exact final-head hosted CI is not yet qualified. Fixture coverage does not certify live persistence. Keep draft; no merge, release, production action or broad completion claim.
 
 Next: publish/register this bounded draft, independently review metadata, qualify its final head, and reconcile shared intake/inventory additions before any separately authorized merge. Teacher/Settings retirement and backend context propagation remain with existing owners.
+
+
+## Current-main integration, 9 November 2026
+
+Merge exact main `0d314bbe53832afcdc94b9dab8d3e09515f2762f` into existing PR #927 head `9795d7cb9711226be95031566d80f0b46824bf56` with both parents retained. Only the additive Scope Intake section conflicted; both complete prior records are preserved, with a source-integration note. Every shared #928 implementation, workflow, authority and evidence file is byte-identical to main, and this feature's implementation/inventory/tests are byte-identical to its previous head. No feature or security behavior changes.
+
+The feature authority keeps its exact path locks, false production/mutation/secret flags and all 120 required/88 critical prior entries. It inherits the new Shell/Scroll gates for 124 required/90 critical checks. Read-only validators and production holds are unchanged.
+
+Cloud qualification uses Node22.23.1 and the locked dependencies. The full root suite, 12 focused feature tests, 107 retained Admin tests, backend TypeScript, 16 authority regressions, exact-scope validation, secret and whitespace checks pass on this integrated source. Every inherited shared-repair file and feature runtime/inventory/test file is byte-verified against its respective parent. Full backend smoke and Edge qualification are not claimed from this cloud: the unchanged external esm.sh dependency was unavailable during the shared-fix continuation. Full browser verification will run on the exact hosted merged head: this cloud cannot launch the pinned browser or reach the loopback fixture through its supported browser. Prior PR or #928 results do not qualify this new feature head. Keep draft pending independent integration review and fresh exact-head CI; no merge or production deployment is performed in this integration tranche.

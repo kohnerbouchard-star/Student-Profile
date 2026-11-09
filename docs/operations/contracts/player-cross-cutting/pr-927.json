@@ -166,7 +166,11 @@
     "runtime-config-contract",
     "Loans Lifecycle Read",
     "Admin Game Lifecycle Controls",
-    "Game lifecycle V2 contracts and browser acceptance"
+    "Game lifecycle V2 contracts and browser acceptance",
+    "Admin Shell Smoke",
+    "admin-shell-smoke",
+    "Admin Scroll Integrity",
+    "Rendered viewport and drawer scrolling"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -256,7 +260,9 @@
     "Rendered Admin browser and secure mutation journey",
     "runtime-config-contract",
     "Loans Lifecycle Read",
-    "Game lifecycle V2 contracts and browser acceptance"
+    "Game lifecycle V2 contracts and browser acceptance",
+    "admin-shell-smoke",
+    "Rendered viewport and drawer scrolling"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
