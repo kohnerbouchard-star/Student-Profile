@@ -1,7 +1,7 @@
 # Unused Admin Classroom declarations
 
 - Roadmap ID: `ARCH-700-CLASSROOM-UNUSED-HELPERS-001`.
-- Status: `IMPLEMENTED_NOT_MERGED`; local branch `refactor/classroom-unused-helpers`. PR/merge/hosted checks: none. No publication or deployment.
+- Status: `IMPLEMENTED_NOT_MERGED`; branch `refactor/classroom-unused-helpers`, draft [PR #920](https://github.com/kohnerbouchard-star/Student-Profile/pull/920). Initial published head: `9f580a818f3a3ce245f3287fb29bd8bd9f5ff717`. No merge, ready-for-review, auto-merge or deployment.
 - Audited main: `4226ca9391df4cafa2c3c3004abd5c5ba552c48d`; tree `33c7cef8f667b0805c090d01e77c2b8e5ae51dc3`.
 - Implementation commit: `aa1127af8f1cc8f6c29c254e70c176f99af4beef`.
 - Original `gameRoutes.ts` blob: `99a444185ca9407adf68da6eba528f4253b0b590`; candidate: `89a255762af220998f63b848f75713221680b6cf`.
@@ -42,10 +42,16 @@ Node 22.23.1, npm 10.9.8 and existing CI-pinned Deno 2.9.3; system CA trust. Bot
 - `audit:architecture`, `audit:high-priority-boundaries`, `audit:legacy-runtime`, REF-005 seam and REF-003 candidate audits.
 - Full tracked-file secret scan, deterministic inventory regeneration and staged/unstaged diff checks.
 
-Local logs and three source/bundle captures are retained at `/tmp/econovaria-classroom-unused-helpers-v1/`; successful baseline bundle log is `baseline-bundle-network.log`. Ordered test identities and result counts match across the three stages. This source-only child needs no new UI/database/runtime acceptance; none is claimed. Hosted CI/staging/production were not run.
+Local logs and three source/bundle captures are retained at `/tmp/econovaria-classroom-unused-helpers-v1/`; successful baseline bundle log is `baseline-bundle-network.log`. Ordered test identities and result counts match across the three stages. This source-only child changes no UI/database/runtime contract; no new capability acceptance is claimed. Normal exact-head hosted CI is pending under the publication registration below; staging/production were not run.
+
+## Draft publication registration
+
+The user explicitly approved pushing this reviewed cleanup and opening a separate draft PR. Fresh main remained `4226ca9391df4cafa2c3c3004abd5c5ba552c48d`; remote preflight confirmed no existing cleanup branch/PR, then ordinary push and draft creation succeeded. Player #919 and Loans #918 remain separate. Initial-head CI is interim evidence, not final qualification.
+
+Actual-numbered `docs/operations/contracts/player-cross-cutting/pr-920.json` is the only fifth edited path. It locks exactly the five edited paths plus the unchanged authority verifier and regression suite: seven paths, no wildcard. Its 117 required and 86 critical checks are byte-identical to current-main PR916's arrays; both verifier/test paths remain read-only. The reviewed implementation source and generated inventory are unchanged. No runtime, test, workflow, dependency or release-policy expansion is registered. The exact five-path authority check, all 16 authority regressions, full root tests and full secret/diff checks pass. Independent registration review found no actionable findings and separately passed 16 retained authority cases plus nine PR920-specific binding/scope/negative cases. Initial-head source-job failures and queued work remain interim; job logs were not yet available while their workflows were running. Fresh final-head hosted results remain required.
 
 ## Review, rollback and next action
 
 Independent read-only source and metadata review found no actionable findings. The reviewer independently checked all three ordered 332/46/10 test sets, exact bundle equality, the 1,429-test backend summary and all 28 Edge roots; eight retained source/authority tests, lifecycle and candidate seam checks were independently rerun successfully. If a source rollback is needed, revert the bounded implementation commit and regenerate the existing inventory; preserve the retained tests, this evidence and truthful status. Do not re-enable or redeploy a hosted runtime.
 
-Next exact item: return the reviewed local `ARCH-700-CLASSROOM-UNUSED-HELPERS-001` candidate for a separate publication decision. REF-015 remains `BLOCKED`, REF-048 remains `PLANNED`, neither parent is complete, and all existing security/release holds remain. Existing Settings and remaining-caller work continues only under its own scope; unknown external consumers and traffic observation remain retirement gates.
+Next exact item: independently review and publish only this actual-PR registration, then qualify its exact final head and return draft PR920 for parent review. REF-015 remains `BLOCKED`, REF-048 remains `PLANNED`, neither parent is complete, and all existing security/release holds remain. Existing Settings and remaining-caller work continues only under its own scope; unknown external consumers and traffic observation remain retirement gates.
