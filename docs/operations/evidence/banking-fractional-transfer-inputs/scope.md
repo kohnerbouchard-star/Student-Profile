@@ -4,6 +4,7 @@
 - Branch: `fix/banking-fractional-transfer-inputs`.
 - Baseline: `08134650d1e0c8cfebb811a5d97331196ebe08e3`.
 - Local implementation: `b79e8114cb66a4d99a024e8bd2904d4bc0830c12`.
+- Draft PR: [#923](https://github.com/kohnerbouchard-star/Student-Profile/pull/923). Published implementation `d953c3d6154fde9a97681d1fac8eeccc7f7fffee` has tree `09053e59e94ce3d7397bc57bf9e80001d5e0cc26`, identical to the tested local tree.
 - Status: `IMPLEMENTED_NOT_MERGED`. Keep the PR draft. No merge or deployment.
 
 ## Contract review
@@ -33,3 +34,5 @@ This is source-contract review plus adapter/HTTP unit evidence, not a new live s
 - No staging, production or disposable database was mutated locally.
 
 Files: the Banking renderer, existing Player read-model test, new browser test, existing handler test, this evidence, additive roadmap intake and actual-numbered PR authority. Independent review and exact-head CI remain required before merge consideration.
+
+Actual-PR registration `pr-923.json` locks the seven edited paths and two unchanged verifier/test paths. It preserves all 118 required and 87 critical checks from current-main PR921, with production and secret handling denied.

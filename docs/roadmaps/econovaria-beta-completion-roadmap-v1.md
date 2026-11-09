@@ -22,10 +22,10 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 ## Scope Intake
 
 - **`PLAYER-BANKING-FRACTIONAL-TRANSFERS-001` — Accept supported fractional transfer inputs (2026-11-09)**
-  - Status: `IMPLEMENTED_NOT_MERGED`; isolated branch `fix/banking-fractional-transfer-inputs` from main `08134650d1e0c8cfebb811a5d97331196ebe08e3`, local implementation `b79e8114cb66a4d99a024e8bd2904d4bc0830c12`. The owner requested separate branches and PRs for these integration fixes. No competing active PR owns this bounded input correction; merged Banking freshness ownership is preserved, and Crafting remains separate PR922.
+  - Status: `IMPLEMENTED_NOT_MERGED`; draft [PR #923](https://github.com/kohnerbouchard-star/Student-Profile/pull/923), isolated branch `fix/banking-fractional-transfer-inputs` from main `08134650d1e0c8cfebb811a5d97331196ebe08e3`, local implementation `b79e8114cb66a4d99a024e8bd2904d4bc0830c12`. The owner requested separate branches and PRs for these integration fixes. No competing active PR owns this bounded input correction; merged Banking freshness ownership is preserved, and Crafting remains separate PR922.
   - Scope: permit cents in peer and checking/savings transfer inputs, capped by any coarser published local-currency precision. Full source trace confirms numeric amounts through serializer, adapter, authenticated handler, atomic RPCs and ledger. Preserve server-derived scope/currency, permissions, available-balance and transfer limits. No backend runtime, migration, route, RPC, dependency, stylesheet or multi-currency transfer expansion.
   - Evidence: [contract trace and validation](../operations/evidence/banking-fractional-transfer-inputs/scope.md). Baseline input regression fails and candidate passes. Full Player verify, root tests, backend TypeScript and 12 focused handler tests pass. Exact-head hosted browser/Edge checks and independent review remain required; local browser/dependency limits are explicit, with no database/runtime certification claimed.
-  - Next exact item: publish the separate draft and actual-number authority, qualify hosted checks and return for review. No merge, deployment or broader Banking completion claim.
+  - Next exact item: qualify draft #923 with its actual-number authority (118 required/87 critical checks unchanged) and hosted checks and return for review. No merge, deployment or broader Banking completion claim.
 
 
 - **`MAINT-ADMIN-SHARE-SMOKE-READINESS` — Synchronize Share smoke with existing normalization (2026-11-09)**
