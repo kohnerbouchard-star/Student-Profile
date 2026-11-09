@@ -1,18 +1,21 @@
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
   type LoansSnapshotDto,
+  type LoanLifecycleDto,
+  LOAN_LIFECYCLE_LIMIT,
+  LOAN_LIFECYCLE_SCOPE,
   PlayerBusinessBankingError,
   type PlayerBusinessBankingRepository,
   type PlayerEconomicContext,
 } from "../contracts/playerBusinessBankingContracts.ts";
 
-import { projectLoanCurrencies, type LoanCurrencyScheduleInput } from "../domain/loanCurrencyProjection.ts";
+import { projectLoanCurrencies, projectLoanLifecycle, type LoanCurrencyScheduleInput } from "../domain/loanCurrencyProjection.ts";
 
 type Row = Record<string, unknown>;
 
 export class SupabasePlayerBusinessBankingRepository
   implements PlayerBusinessBankingRepository {
-  constructor(private readonly client: EdgeSupabaseClient) {}
+  constructor(private readonly client: EdgeSupabaseClient, private readonly lifecycleTimeoutMs = 2000) {}
 
   async readEconomicContext(input: {
     readonly gameSessionId: string;
@@ -62,6 +65,7 @@ export class SupabasePlayerBusinessBankingRepository
       rows(this.client.from("business_entities").select("id,public_key,status")
         .eq("game_session_id", input.gameSessionId).eq("owner_player_id", input.playerId)),
     ]);
+    const lifecycle = this.readLoanLifecycle(input);
     const businessKeys = new Map(businesses.map((row) => [text(row.id), text(row.public_key)]));
     const productById = new Map(products.map((row) => [text(row.id), row]));
     const profile = profileRows[0] ?? {};
@@ -154,7 +158,82 @@ export class SupabasePlayerBusinessBankingRepository
         });
       }),
     };
-    return { ...snapshot, currencyProjection: projectLoanCurrencies(eligibleProducts, active, exactSchedule) };
+    return { ...snapshot, currencyProjection: projectLoanCurrencies(eligibleProducts, active, exactSchedule), lifecycle: await lifecycle };
+  }
+
+  private async readLoanLifecycle(input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+  }): Promise<LoanLifecycleDto> {
+    const controller = new AbortController();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const deadline = new Promise<LoanLifecycleDto>((resolve) => {
+        timeout = setTimeout(() => {
+          controller.abort();
+          resolve({ version: 1, state: "unavailable" });
+        }, this.lifecycleTimeoutMs);
+      });
+      return await Promise.race([this.queryLoanLifecycle(input, controller.signal), deadline]);
+    } finally {
+      clearTimeout(timeout);
+      controller.abort();
+    }
+  }
+
+  private async queryLoanLifecycle(input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+  }, signal: AbortSignal): Promise<LoanLifecycleDto> {
+    try {
+      type Query = ReturnType<ReturnType<EdgeSupabaseClient["from"]>["select"]>;
+      // Supabase supports exact counts; keep this addition local to the new read.
+      type CountedSelect = { select(columns: string, options: { count: "exact" }): Query };
+      const abortable = (query: Query) =>
+        (query as Query & { abortSignal(value: AbortSignal): Query }).abortSignal(signal);
+      const scoped = (table: string, columns: string) => abortable((this.client.from(table) as CountedSelect)
+        .select(columns, { count: "exact" })).eq("game_session_id", input.gameSessionId)
+        .eq("player_id", input.playerId);
+      const window = async (query: Query) => {
+        const response = await query.order("created_at", { ascending: false })
+          .order("public_key", { ascending: false }).limit(LOAN_LIFECYCLE_LIMIT + 1);
+        if (response.error) throw mapDatabaseError(response.error.message);
+        const data = Array.isArray(response.data) ? response.data.filter(
+          (value): value is Row => Boolean(value && typeof value === "object" && !Array.isArray(value)),
+        ) : [];
+        return { rows: data, count: Array.isArray(response.data) &&
+          Number.isSafeInteger(response.count) && Number(response.count) >= 0 ? Number(response.count) : null };
+      };
+      const [applicationWindow, facilityWindow, paymentWindow] = await Promise.all([
+        window(scoped("loan_applications", "public_key,loan_product_id,liability_kind,status,amount_exact:amount::text,projected_payment_exact:projected_payment::text,created_at,updated_at,reviewed_at")
+          .eq("liability_kind", LOAN_LIFECYCLE_SCOPE)),
+        window(scoped("player_loans", "id,public_key,loan_product_id,liability_kind,status,currency_code,original_principal_exact:original_principal::text,principal_balance_exact:principal_balance::text,accrued_interest_exact:accrued_interest::text,last_accrued_at,created_at,updated_at,defaulted_at,closed_at")
+          .eq("liability_kind", LOAN_LIFECYCLE_SCOPE)),
+        window(scoped("loan_payments", "public_key,loan_id,status,amount_exact:amount::text,principal_amount_exact:principal_amount::text,interest_amount_exact:interest_amount::text,created_at,applied_due_at")),
+      ]);
+      if (signal.aborted) return { version: 1, state: "unavailable" };
+      const applications = applicationWindow.rows;
+      const facilities = facilityWindow.rows;
+      const payments = paymentWindow.rows;
+      const productIds = [...new Set([...applications, ...facilities]
+        .map((row) => text(row.loan_product_id)).filter(Boolean))];
+      const loanIds = [...new Set(payments.slice(0, LOAN_LIFECYCLE_LIMIT)
+        .map((row) => text(row.loan_id)).filter(Boolean))];
+      const [products, paymentLoans] = await Promise.all([
+        productIds.length ? rows(abortable(this.client.from("loan_products")
+          .select("id,public_key,name,currency_code")).eq("game_session_id", input.gameSessionId)
+          .in("id", productIds)) : [],
+        loanIds.length ? rows(scoped("player_loans", "id,public_key,liability_kind,currency_code")
+          .eq("liability_kind", LOAN_LIFECYCLE_SCOPE).in("id", loanIds)) : [],
+      ]);
+      if (signal.aborted) return { version: 1, state: "unavailable" };
+      return projectLoanLifecycle({ applications, facilities, payments, products, paymentLoans,
+        applicationCount: applicationWindow.count, facilityCount: facilityWindow.count,
+        paymentCount: paymentWindow.count });
+    } catch {
+      // Added history cannot turn an otherwise valid existing read into a failure.
+      return { version: 1, state: "unavailable" };
+    }
   }
 
   async execute(

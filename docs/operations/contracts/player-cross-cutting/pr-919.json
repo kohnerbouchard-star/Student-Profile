@@ -146,7 +146,8 @@
     "Admin Browser E2E",
     "Rendered Admin browser and secure mutation journey",
     "Environment Neutral Browser",
-    "runtime-config-contract"
+    "runtime-config-contract",
+    "Loans Lifecycle Read"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -234,11 +235,12 @@
     "business-primary-ipo-database",
     "business-primary-ipo-browser",
     "Rendered Admin browser and secure mutation journey",
-    "runtime-config-contract"
+    "runtime-config-contract",
+    "Loans Lifecycle Read"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "Owner explicitly approved publishing the reviewed Countries/News refactor and opening draft PR919 so automatic checks can run. Retain all 117 required and 86 critical checks from merged PR916, with both verifier/test files read-only. No merge, ready-for-review, deployment, production mutation, check waiver or other owner transfer."
+  "authorizationNote": "Owner approved publishing the reviewed Countries/News refactor and opening PR919, then explicitly requested fixing its conflict after merging PR918. Preserve merged Loans source/workflow/evidence and both intake entries. Retain all 118 required and 87 critical checks from merged PR918, with both verifier/test files read-only. This repair does not merge to main, deploy, mutate production, waive checks or transfer another owner."
 }

@@ -1,12 +1,12 @@
 # Player Countries/News projection extraction
 
 Roadmap item: `ARCH-501/502-PLAYER-COUNTRY-NEWS-PROJECTIONS-001`.
-Status: `IMPLEMENTED_NOT_MERGED`; published draft candidate, final-head CI pending. Parent ARCH-501/502 remain open.
+Status: `IMPLEMENTED_NOT_MERGED`; main-reconciled candidate, new-head CI pending. Parent ARCH-501/502 remain open.
 Owner branch: `refactor/player-country-news-projections-v1`.
 Baseline: `4226ca9391df4cafa2c3c3004abd5c5ba552c48d` (merged PR916).
 Implementation commit: `9aecc7f47ee7a45797d2267766c1bf92b5fe59f3`.
 Independent final source review: no actionable findings.
-Draft [PR #919](https://github.com/kohnerbouchard-star/Student-Profile/pull/919) targets main.
+[PR #919](https://github.com/kohnerbouchard-star/Student-Profile/pull/919) targets main.
 Reviewed local head `147943a0f06d0e19fd8949433f1dcf25d960712b` was pushed after
 explicit owner approval; this actual-number publication amendment adds no runtime change.
 
@@ -99,10 +99,43 @@ bound to this pull request.` The inspected log stops at authority validation
 before its tests. This precedes the actual-PR919 manifest and remains historical
 failure evidence; it does not qualify the final amended head.
 
+## Main reconciliation after PR918 merge — 2026-11-09
+
+The owner merged PR918 as `dff6a05f7475e3e546ca3abcbac17473719e61f7`,
+then explicitly requested repair of PR919's conflict. A normal forward merge
+preserves both parents. The sole actual conflict is the two distinct Scope Intake
+insertions in the shared roadmap; both entries and all prior main content remain.
+Merged Loans source, its new workflow, tests, authority and evidence are inherited
+verbatim. Every Player runtime/test/package path stays byte-identical to reviewed
+head `0c502ebc5d27631c2641d04a2d656e99a4415ca8`.
+
+PR919's authority adds only merged main's new `Loans Lifecycle Read` gate. Its
+118 required and 87 critical checks match PR918 exactly; the nine-path allowlist,
+two unchanged read-only verifier/test locks and false production/secret flags stay
+fixed. No runtime or workflow logic is changed by the resolution. The combined
+inventory is regenerated, not resolved by discarding either feature's state.
+
+The preceding exact head `0c502ebc` passed all 38 automatic workflows, with
+81 successful check records and five skipped. Hosted projection tests passed
+16/16, Chromium passed 243 with 11 unchanged project-scope skips, and the 30/40
+Player load passed. These results are historical and do not qualify the new merge
+candidate. The four earlier path-filtered families and the new Loans workflow are
+not silently counted as executed on the new head. Automatic CI will restart when
+the conflict repair is pushed; no manual full-suite rerun is requested.
+
+Combined focused checks pass on Node 22.23.1 and Deno 2.9.3: projection 16/16,
+merged Loans 80/80, authority 16/16, retained Loans runtime/surface and World
+route/runtime contracts. The regenerated inventory is byte-identical to the
+reviewed pilot inventory (1,317 source files; all debt counts and ceilings flat),
+and the unchanged architecture/seam ratchets pass. Main's Loans bytes and the
+previously reviewed Player bytes are separately verified unchanged. Independent
+integration review precedes publication. No manual full-suite rerun, merge to main
+or deployment is performed; the user retains the intended merge decision.
+
 ## Next action and rollback
 
-The reviewed implementation is committed at the SHA above. Independently review
-the actual-PR metadata amendment, publish it and qualify its exact final head.
-Return draft PR919 for parent review; do not merge, mark ready or deploy. Broader Player coordinator extraction is a separate
+The original reviewed implementation is committed at the SHA above. Independently
+review the main-reconciled conflict repair, push it normally and qualify the new
+exact head. Do not merge to main or deploy. Broader Player coordinator extraction is a separate
 tranche, not part of this pilot. Rollback is to revert this bounded source/test
 change and its registration; no data or environment rollback is involved.
