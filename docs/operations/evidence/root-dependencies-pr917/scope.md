@@ -22,8 +22,8 @@ Repository-pinned Node 22.23.1 and npm 10.9.8. Exact locked npm install passes w
 - Supply-chain tests: 5/5; secret scan and whitespace checks passed.
 - Independent read-only review reran all 10 focused cases under Node 22.23.1 and found no actionable issue or weakening of the original security boundary. No runtime, workflow, nested package or deployment source differs from current main.
 
-Exact-head hosted CI is pending publication. These local results do not certify live Supabase behavior or supersede Linux/browser qualification.
+Initial reviewed head `9e78e656678e6290fda9cef66f1e9bf961c6009a` was published normally, but main advanced to `2e7623a69fc962d844817b118a533c3e4453b9ec` by merging #920 before CI could run. The only conflict was concurrent additive Scope Intake entries; both are retained, and all #920 source, inventory, authority and evidence remain identical to current main. The dependency implementation remains identical to reviewed `ee937eb84d8085941fad8b3de7c74eac5b5479b9`. New-head local/hosted qualification follows this reconciliation. These local results do not certify live Supabase behavior or supersede Linux/browser qualification.
 
 ## Boundaries
 
-No merge, ready-for-review transition, auto-merge, deployment, real Auth/SQL request, data mutation, credential change or production authorization. Existing #920 remains separate. Source status does not certify live or staging behavior.
+No merge, ready-for-review transition, auto-merge, deployment, real Auth/SQL request, data mutation, credential change or production authorization. Merged #920 work is preserved without modification; its broader retirement and live qualification remain separate. Source status does not certify live or staging behavior.
