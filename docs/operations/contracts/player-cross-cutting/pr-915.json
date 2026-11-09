@@ -17,7 +17,8 @@
     "player-terminal/tests/store-purchase-ownership.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-915.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/business-store-atomic-settlement-v2.yml"
   ],
   "requiredFiles": [
     "player-terminal/docs/store-purchase-ownership-v1.md",
@@ -28,7 +29,8 @@
     "player-terminal/tests/store-purchase-ownership.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-915.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/business-store-atomic-settlement-v2.yml"
   ],
   "requiredChecks": [
     "player-terminal-verify",
