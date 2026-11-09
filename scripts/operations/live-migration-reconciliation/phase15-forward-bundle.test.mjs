@@ -443,7 +443,7 @@ test("application restore normalization preserves exact application schema autho
 });
 
 test("REF025c2-1 is an independently registered fourth suffix without rewriting prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 12);
+  assert.equal(APPROVED_SUFFIXES.length, 14);
   assert.equal(APPROVED_SUFFIXES[3].filename, "20261004221307_prepare_business_loan_bindings_v1.sql");
   assert.equal(APPROVED_SUFFIXES[3].order, 4);
   assert.equal(APPROVED_SUFFIXES[3].statementCount, 1);
@@ -463,7 +463,7 @@ test("REF025c2-2b registers the gated submission sixth suffix", () => {
 
 
 test("system recovery is the sole seventh suffix and preserves all six prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 12);
+  assert.equal(APPROVED_SUFFIXES.length, 14);
   assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 6))).digest("hex"),
     "cb7f435ac309f834abfeace4193b9165c8e843a538a01ca02a1cbaf2fde3780f");
   assert.deepEqual(APPROVED_SUFFIXES[6], {
@@ -490,12 +490,42 @@ test("individual recovery registers eighth suffix without rewriting prior seven 
 });
 
 
-test("password return correction is the ninth exact suffix and preserves all original eight", async () => {
-  assert.equal(APPROVED_SUFFIXES.length, 12);
+test("REF046c registers ninth suffix and preserves all eight prior identities", () => {
+  assert.equal(APPROVED_SUFFIXES.length, 14);
   assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 8))).digest("hex"),
     "c7a9f4db5d67f975dcb67926d5168abeab8ed31304211b4bd6a94324465c2d39");
   assert.deepEqual(APPROVED_SUFFIXES[8], {
-    order: 9,
+    "order": 9,
+    "filename": "20261009000000_fence_campaign_effect_acknowledgements_v2.sql",
+    "version": "20261009000000",
+    "name": "fence_campaign_effect_acknowledgements_v2",
+    "sourceSha256": "d011ef91c21d9f8ce4ae93364c332e368a9f1101fb2decb74e91a8e368f7db7b",
+    "rawSha256": "adc44f3ca4def361179c6610c0b952c200b26c697f0025aaf3724022ae1c27b7",
+    "statementCount": 1
+});
+});
+
+test("PR885 registers tenth suffix after Campaign and preserves all eight prior identities", () => {
+  assert.equal(APPROVED_SUFFIXES.length, 14);
+  assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 8))).digest("hex"),
+    "c7a9f4db5d67f975dcb67926d5168abeab8ed31304211b4bd6a94324465c2d39");
+  assert.deepEqual(APPROVED_SUFFIXES[9], {
+    "order": 10,
+    "filename": "20261010040738_economic_core_request_claims_v1.sql",
+    "version": "20261010040738",
+    "name": "economic_core_request_claims_v1",
+    "sourceSha256": "2b6e4533392550f497db25d3ffdd0cfe9a50bbfb91b335d6971c967d6ef30ada",
+    "rawSha256": "4a324bd5d4395fe05a40347492f5c80f11cb9d701e509f1b0e67cb51edbbe5c2",
+    "statementCount": 1
+  });
+});
+
+test("password return correction is the eleventh exact suffix and preserves all original eight", async () => {
+  assert.equal(APPROVED_SUFFIXES.length, 14);
+  assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 8))).digest("hex"),
+    "c7a9f4db5d67f975dcb67926d5168abeab8ed31304211b4bd6a94324465c2d39");
+  assert.deepEqual(APPROVED_SUFFIXES[10], {
+    order: 11,
     filename: "20261103082647_cast_staff_password_reset_permission_version_v2.sql",
     version: "20261103082647",
     name: "cast_staff_password_reset_permission_version_v2",
@@ -503,31 +533,31 @@ test("password return correction is the ninth exact suffix and preserves all ori
     rawSha256: "27378476156232b0afa270f705195c4bc64613d874fb7f70301d3f06a882b708",
     statementCount: 1,
   });
-  const sql = await readFile(`backend/supabase/migrations/${APPROVED_SUFFIXES[8].filename}`, "utf8");
+  const sql = await readFile(`backend/supabase/migrations/${APPROVED_SUFFIXES[10].filename}`, "utf8");
   const historical = await readFile("backend/supabase/migrations/20260726096000_add_staff_password_reset_security_transition_v2.sql", "utf8");
   assert.equal(sql.slice(sql.indexOf("\n") + 1), historical.replace(
     "staff_users.permission_version,", "staff_users.permission_version::bigint,"));
 });
 
-test("loan review is the tenth exact suffix with only the intended predicate correction", async () => {
-  assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 9))).digest("hex"), "79bd9a55a56083f6c755e6a5dd6d45a652cc0028ac851c7b970755ac9afad7a3");
-  assert.deepEqual(APPROVED_SUFFIXES[9], {"order": 10, "filename": "20261103082914_qualify_business_loan_review_status_v1.sql", "version": "20261103082914", "name": "qualify_business_loan_review_status_v1", "sourceSha256": "494723123a23bdbaf246ab67cb9ee99e380912f5f6af7b6f72aa5dd5fdf5f6ec", "rawSha256": "bed861c3953fabe0b3b38863607b9b257e20afc288e7ca3ce660f55323eb2d19", "statementCount": 1});
-  const sql = await readFile(`backend/supabase/migrations/${APPROVED_SUFFIXES[9].filename}`, "utf8");
+test("loan review is the twelfth exact suffix with only the intended predicate correction", async () => {
+  assert.equal(createHash("sha256").update(JSON.stringify([...APPROVED_SUFFIXES.slice(0, 8), { ...APPROVED_SUFFIXES[10], order: 9 }])).digest("hex"), "79bd9a55a56083f6c755e6a5dd6d45a652cc0028ac851c7b970755ac9afad7a3");
+  assert.deepEqual(APPROVED_SUFFIXES[11], {"order": 12, "filename": "20261103082914_qualify_business_loan_review_status_v1.sql", "version": "20261103082914", "name": "qualify_business_loan_review_status_v1", "sourceSha256": "494723123a23bdbaf246ab67cb9ee99e380912f5f6af7b6f72aa5dd5fdf5f6ec", "rawSha256": "bed861c3953fabe0b3b38863607b9b257e20afc288e7ca3ce660f55323eb2d19", "statementCount": 1});
+  const sql = await readFile(`backend/supabase/migrations/${APPROVED_SUFFIXES[11].filename}`, "utf8");
   const historical = await readFile("backend/supabase/migrations/20260721120000_add_business_banking_credit_runtime_v1.sql", "utf8");
   const routine = (value) => value.slice(value.indexOf("create or replace function public.review_player_loan_application_v1("), value.indexOf("\n$$;", value.indexOf("create or replace function public.review_player_loan_application_v1("))+4);
   assert.equal(routine(sql), routine(historical).replace("from public.business_entities where id=v_application.business_id and game_session_id=p_game_session_id and owner_player_id=v_application.player_id and status in", "from public.business_entities as business_row where id=v_application.business_id and game_session_id=p_game_session_id and owner_player_id=v_application.player_id and business_row.status in"));
 });
 
 
-test("Business player loop is the eleventh exact suffix and preserves all ten prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 12);
-  assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 10))).digest("hex"), "ba77a6dd12b03f596693be9194bf5bd7b44eb3f8cdec8b0a1f4548e9e0c4eb21");
-  assert.deepEqual(APPROVED_SUFFIXES[10], {"order":11,"filename":"20261109120000_business_player_loop_commands_v1.sql","version":"20261109120000","name":"business_player_loop_commands_v1","sourceSha256":"8fe5a9af5723340315f01e0fbe844630ea8191c0015efd40deb8c15e5c73bd3d","rawSha256":"92199385e92dfacc6006ef8df21a2d69cb8e67deda538c4182d7f9183818c324","statementCount":1});
+test("Business player loop is the thirteenth exact suffix and preserves all ten original identities", () => {
+  assert.equal(APPROVED_SUFFIXES.length, 14);
+  assert.equal(createHash("sha256").update(JSON.stringify([...APPROVED_SUFFIXES.slice(0, 8), ...APPROVED_SUFFIXES.slice(10, 12).map((suffix) => ({ ...suffix, order: suffix.order - 2 }))])).digest("hex"), "ba77a6dd12b03f596693be9194bf5bd7b44eb3f8cdec8b0a1f4548e9e0c4eb21");
+  assert.deepEqual(APPROVED_SUFFIXES[12], {"order":13,"filename":"20261109120000_business_player_loop_commands_v1.sql","version":"20261109120000","name":"business_player_loop_commands_v1","sourceSha256":"8fe5a9af5723340315f01e0fbe844630ea8191c0015efd40deb8c15e5c73bd3d","rawSha256":"92199385e92dfacc6006ef8df21a2d69cb8e67deda538c4182d7f9183818c324","statementCount":1});
 });
 
 
-test("Business manufacturing repair is the twelfth exact suffix and preserves all eleven prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 12);
-  assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 11))).digest("hex"), "588d34bdbbd1aa1854d44cd894b741d02f5f66edcdd280cb59316284de1d06cc");
-  assert.deepEqual(APPROVED_SUFFIXES[11], {"order":12,"filename":"20261109121000_repair_business_manufacturing_runtime_v2.sql","version":"20261109121000","name":"repair_business_manufacturing_runtime_v2","sourceSha256":"9940b224a8adfff4f88fa1259f9b9cdc10e0eeb19c6e249c25210f3c6aee743d","rawSha256":"c1ab9a4321cdc6e371d083687deb4bdca0339900c7be1090fa6e09adf79c68f0","statementCount":1});
+test("Business manufacturing repair is the fourteenth exact suffix and preserves all eleven original identities", () => {
+  assert.equal(APPROVED_SUFFIXES.length, 14);
+  assert.equal(createHash("sha256").update(JSON.stringify([...APPROVED_SUFFIXES.slice(0, 8), ...APPROVED_SUFFIXES.slice(10, 13).map((suffix) => ({ ...suffix, order: suffix.order - 2 }))])).digest("hex"), "588d34bdbbd1aa1854d44cd894b741d02f5f66edcdd280cb59316284de1d06cc");
+  assert.deepEqual(APPROVED_SUFFIXES[13], {"order":14,"filename":"20261109121000_repair_business_manufacturing_runtime_v2.sql","version":"20261109121000","name":"repair_business_manufacturing_runtime_v2","sourceSha256":"9940b224a8adfff4f88fa1259f9b9cdc10e0eeb19c6e249c25210f3c6aee743d","rawSha256":"c1ab9a4321cdc6e371d083687deb4bdca0339900c7be1090fa6e09adf79c68f0","statementCount":1});
 });

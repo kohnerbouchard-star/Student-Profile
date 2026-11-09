@@ -218,3 +218,32 @@ redirect regressions, 16 authority tests, secret scanning and diff checks. Indep
 read-only review confirms the shared normalizer union and no guard/test loss. The
 previously described cloud Edge/browser/database limits still apply; fresh hosted
 qualification is required.
+
+
+## Main integration after #885
+
+Main `ffd699e5a75cade488ddef0e8ba767cf2a5407b5` contains qualified provisioning claims
+and Campaign worker fencing from #885. Integration preserves both new migrations
+and every existing migration byte-for-byte. The exact suffix registry includes all
+14 chronological entries; the two Business entries move to positions 13/14 without
+changing their names, versions, raw/normalized hashes or statement counts. Regression
+checks preserve both main's Campaign/claims assertions and the original Business
+prefix identity checks with only the inserted positions remapped. Frozen bundles
+remain unchanged. Full intake records and regenerated inventory preserve both owners.
+
+Prior head `71f49d3b205b975f4c9579bd7c9f31e1848d36a1` passed 55 hosted workflows,
+including Database Replay, Admin Browser, Player Terminal and all five Atomic
+Settlement jobs. Logs confirm actual manufactured-output sale, buyer/seller Checking
+settlement and same/distinct start races. Listing Chromium was interrupted once and
+passed its sole job retry. Promotion contract was cancelled before a job existed;
+GitHub rejected a failed-job retry. Seed source qualification ultimately failed its root-test step, but GitHub still
+returned a missing-log error after cleanup, so the cause is unverified. Neither
+workflow is represented as passed. This necessary
+migration integration requires fresh exact-head CI and does not authorize production.
+
+The combined-source local root tests, full Player verify, backend TypeScript, all
+26 suffix/rehearsal tests, 28 authority/provisioning source tests, Campaign unit
+regressions, isolated-harness self-test, 462-migration source audit and secret scan
+pass. Independent review verifies all 14 raw/normalized hashes, unchanged frozen
+identities and full main-source preservation. Cloud browser/database/Edge limits
+remain as documented above.
