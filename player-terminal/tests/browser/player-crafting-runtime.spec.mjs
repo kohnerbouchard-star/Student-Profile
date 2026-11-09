@@ -84,7 +84,7 @@ const fixtureDocument = `<!doctype html>
 </body>
 </html>`;
 
-async function render(page) {
+async function render(page, craftingData = crafting) {
   await page.route("**/__crafting-component-fixture", async (route) => {
     await route.fulfill({
       status: 200,
@@ -103,7 +103,7 @@ async function render(page) {
       { crafting: craftingData },
       { craftingRecipeId: "recipe.field_filter" },
     );
-  }, crafting);
+  }, craftingData);
 }
 
 for (const viewport of [
@@ -140,5 +140,58 @@ for (const viewport of [
       document.documentElement.scrollWidth > document.documentElement.clientWidth
     );
     expect(overflow).toBe(false);
+  });
+}
+
+for (const viewport of [
+  { name: "desktop", width: 1440, height: 1000 },
+  { name: "mobile", width: 390, height: 844 },
+]) {
+  test(`empty recipes retain owned workshop controls on ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    const retained = {
+      ...crafting,
+      recipes: [],
+      equipment: [{ equipmentKey: "eqp_" + "a".repeat(32), name: "Retained Filter", allowedSlot: "utility", slot: "" }],
+      effects: [{ summary: "Retained active effect", status: "active", stackCount: 1 }],
+      effectHistory: [{ summary: "Retained effect history", action: "applied", createdAt: "2026-11-09" }],
+    };
+    await render(page, retained);
+    const surface = page.locator(".player-terminal-crafting-page");
+    await expect(surface.getByText("No recipes available", { exact: true })).toBeVisible();
+    await expect(surface.locator('[data-endpoint="craftItem"]')).toHaveCount(0);
+    await expect(surface.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
+    await expect(surface.getByRole("button", { name: "Claim output" })).toBeVisible();
+    await expect(surface.getByRole("button", { name: "Equip · utility" })).toBeVisible();
+    await expect(surface.getByRole("button", { name: "Salvage", exact: true })).toBeVisible();
+    await expect(surface.getByText("Retained active effect", { exact: true })).toBeVisible();
+    await expect(surface.getByText("Retained effect history", { exact: true })).toBeVisible();
+    // Use native keyboard submission to prove the retained public-key forms are usable.
+    await page.evaluate(() => {
+      window.workshopSubmissions = [];
+      document.addEventListener("submit", (event) => {
+        event.preventDefault();
+        window.workshopSubmissions.push({ endpoint: event.target.dataset.endpoint, fields: Object.fromEntries(new FormData(event.target)) });
+      });
+    });
+    for (const name of ["Cancel", "Claim output", "Equip · utility", "Salvage"]) {
+      await surface.getByRole("button", { name, exact: true }).focus();
+      await page.keyboard.press("Enter");
+    }
+    expect(await page.evaluate(() => window.workshopSubmissions)).toEqual([
+      { endpoint: "craftCancel", fields: { jobKey: crafting.queue[0].jobKey } },
+      { endpoint: "craftClaim", fields: { jobKey: crafting.queue[1].jobKey } },
+      { endpoint: "equipmentEquip", fields: { equipmentKey: retained.equipment[0].equipmentKey, slot: "utility" } },
+      { endpoint: "itemSalvage", fields: { equipmentKey: retained.equipment[0].equipmentKey } },
+    ]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
+    // A later read can restore recipes even when the previously selected ID vanished.
+    await page.evaluate(async (data) => {
+      const { renderCraftingPage } = await import("/src/pages/crafting-page.js");
+      document.getElementById("playerTerminal").innerHTML = renderCraftingPage({ crafting: data }, { craftingRecipeId: "removed.recipe" });
+    }, crafting);
+    await expect(surface.getByRole("button", { name: /Craft item/i })).toBeEnabled();
+    await expect(surface.locator('[data-player-crafting-recipe="recipe.field_filter"]')).toHaveClass(/active/);
+    await expect(surface.getByText("No recipes available", { exact: true })).toHaveCount(0);
   });
 }
