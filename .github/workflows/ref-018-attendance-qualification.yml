@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - '.github/workflows/ref-018-attendance-qualification.yml'
       - 'backend/src/domains/attendance/**'
       - 'backend/src/domains/crafting/**'
