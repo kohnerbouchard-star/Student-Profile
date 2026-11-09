@@ -3,6 +3,7 @@ name: Release Promote Exact Artifacts
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - ".github/workflows/release-promote.yml"
       - ".github/workflows/release-artifact-build.yml"
       - "docs/operations/environments/**"

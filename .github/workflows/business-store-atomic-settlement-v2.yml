@@ -3,6 +3,7 @@ name: Business Store Atomic Settlement V2
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - "package.json"
       - "package-lock.json"
       - "backend/package.json"
