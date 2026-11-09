@@ -3,6 +3,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
+import { marketplaceInventoryFixtureSql } from "./marketplace-inventory-fixture.mjs";
 
 const BASE_URL = process.env.ECONOVARIA_BROWSER_BASE_URL || "http://127.0.0.1:4173";
 const OUTPUT_DIR = process.env.ECONOVARIA_PLAYER_BROWSER_OUTPUT_DIR || "/tmp/econovaria-player-browser";
@@ -148,13 +149,7 @@ function seedMarketplace() {
   const [gameId, sellerId, buyerId, itemId, itemKey, currency] = row;
 
   psql(`
-    insert into public.inventory_holdings (
-      game_session_id, player_id, store_item_id, quantity_owned, quantity_reserved
-    ) values ('${gameId}', '${sellerId}', '${itemId}', 10, 0)
-    on conflict on constraint inventory_holdings_scope_unique
-    do update set
-      quantity_owned = greatest(public.inventory_holdings.quantity_owned, 10),
-      quantity_reserved = 0;
+    ${marketplaceInventoryFixtureSql({ gameId, sellerId, itemId })}
 
     insert into public.marketplace_policies (
       game_session_id,
