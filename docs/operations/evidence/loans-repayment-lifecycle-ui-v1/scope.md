@@ -75,3 +75,12 @@ certification. No ready-for-review, merge, auto-merge or production action is cl
 Revert this isolated read/UI change to remove its optional projection and panels;
 there is no persistent economic state or schema to reverse. Next: bind the actual
 PR authority, qualify the published exact commit, and return the draft for review.
+
+## Publication
+
+Draft PR: https://github.com/kohnerbouchard-star/Student-Profile/pull/925.
+Reviewed implementation: f21a47bd90f34b6732494bccb26636693190222a.
+The actual-number pr-925.json authority preserves every merged PR921 check
+(118 required, 87 critical), denies production actions, and keeps both verifier
+files read-only. No implementation source changes accompany this registration.
+Exact-head hosted CI remains pending.
