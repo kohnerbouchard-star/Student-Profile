@@ -44,6 +44,8 @@
     "player-terminal/tests/current-capability-manifest.mjs",
     "scripts/business-phase10-atomic-settlement-database.mjs",
     "scripts/business-player-loop-database.mjs",
+    "scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
@@ -83,6 +85,8 @@
     "player-terminal/tests/current-capability-manifest.mjs",
     "scripts/business-phase10-atomic-settlement-database.mjs",
     "scripts/business-player-loop-database.mjs",
+    "scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
@@ -299,5 +303,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "Owner explicitly requested completing the Business player journey on its own branch and PR. This PR926 record covers only guarded Business installation, manufacturing-to-Store controls, canonical seller receipts, scoped commands, forward migration, tests and evidence. Preserve all 118 required and 87 critical checks from merged PR921 and every production/secret denial. Verifier and authority regression files remain read-only. No Loans, Crafting, Banking, workflow change, manual dispatch, unrelated cleanup, deployment, merge authorization or check waiver."
+  "authorizationNote": "Owner explicitly requested completing the Business player journey on its own branch and PR. This PR926 record covers only guarded Business installation, manufacturing-to-Store controls, canonical seller receipts, scoped commands, forward migration, tests and evidence. Preserve all 118 required and 87 critical checks from merged PR921 and every production/secret denial. Verifier and authority regression files remain read-only. No Loans, Crafting, Banking, workflow change, manual dispatch, unrelated cleanup, deployment, merge authorization or check waiver. Register only the exact new Business migration raw/source digests in the additive post-bundle suffix registry; preserve all prior suffixes and immutable Phase15 manifests/certificates."
 }

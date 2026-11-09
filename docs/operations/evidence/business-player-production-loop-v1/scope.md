@@ -68,3 +68,19 @@ requires a separate owner decision and the repository's existing release gates.
 
 Next: qualify all exact-head checks, review the draft, and separately authorize merge
 and deployment only after required database/connected evidence is available.
+
+## Hosted CI follow-up
+
+At head `3b51fa1e4f9eff070560081a97f2430277d14d08`, Backend Typecheck
+failed before code execution because the pinned Deno download returned HTTP 504;
+only that failed job was retried. Database Replay correctly rejected the unregistered
+new post-bundle migration before any database was started. The follow-up registers
+its exact raw/source hashes in `build-phase15-rehearsal-plan.mjs`, preserving all
+historical suffixes, immutable certificates and rejection assertions.
+
+The Mac went offline after Docker Desktop started, before any test database reset.
+Existing local data was not touched. Registry correction tests run in an isolated
+cloud checkout. All 23 suffix/rehearsal tests pass under pinned Node 22.23.1,
+11 retained audit/production-workflow tests pass, 435 frozen migration identities
+remain unchanged, and the authority accepts 37 changed paths under 39 locked paths.
+Hosted database/settlement qualification remains pending.
