@@ -1,0 +1,46 @@
+# Native teacher game lifecycle controls
+
+## Scope and ownership
+
+- Roadmap: `BETA-ADMIN-LIFECYCLE-V2-001`, `IMPLEMENTED_NOT_MERGED`.
+- Owner: `feat/teacher-game-lifecycle-v1`, from fetched main `08134650d1e0c8cfebb811a5d97331196ebe08e3`.
+- The owner requested the incomplete teacher management flows in separate branches and PRs. Settings draft-retention PR #924 is independent, with no runtime overlap. PR #668 retains backend context/global-ledger ownership; existing entries and other branches are unchanged.
+- This slice exposes existing read/start/pause/resume/end/archive/revoke-sessions capability in native Overview. Game creation, ownership transfer, data deletion, Settings retirement and new backend lifecycle policy are excluded.
+- Shared intake and generated inventory additions require additive reconciliation before merge. No production deployment or hosted-data action is performed.
+
+## Implementation and safety
+
+The existing Admin API client gains exact lifecycle read and transition calls through its authenticated, game-scoped HttpOnly BFF transport. An allowlisted model drops internal fields. A separate controller binds one selected game, server-derived actions/version, and the exact reviewed idempotency key. Overview uses existing Admin components and styling.
+
+- Read requires `game.read`; prepare and confirm require `game.read` and `game.update`. Server authorization remains authoritative. The UI consumes `allowedActions`, without duplicating the transition graph.
+- Body contains only `idempotencyKey` and `expectedVersion`. Canonical `Idempotency-Key`, CSRF, selected-game and device headers use retained transport; no bearer token is accepted or exposed.
+- Every transition requires review. End, archive and session revocation also require existing explicit phrases and disclose revoked access or irreversibility.
+- One transition can be in flight. Cancel/Escape/unsubmitted departure writes nothing; navigation removes the dialog. Pending operations stay serialized across route returns. Destroyed controllers suppress late publication.
+- Lost acknowledgments permit renewed review of the same action/version/key or authoritative refresh. Conflict clears stale controls and requires refresh plus new review. Failed/malformed reads never retain actionable stale controls.
+- Failures use the existing safe vocabulary. Raw diagnostics, private fields and internal UUIDs are not rendered; absent counts are not shown as zero.
+
+No backend, schema, migration, RPC, auth guard, SQL, economic policy, dependency/lockfile, legacy runtime, application shell or CSS changes. Existing `read_admin_game_lifecycle_v1` and `transition_game_lifecycle_atomic_v1`, ownership, row locks, revocation semantics, rate limiting and audit behavior are unchanged. Existing lifecycle workflow/tests remain; exact V2 paths and a separately named native acceptance job are added.
+
+## Local qualification
+
+Node22.23.1, npm10.9.8, locked Playwright1.65.0 / Chromium158 on macOS. Dependencies match unchanged locks. Local Deno2.8.3 is distinct from hosted pinned-Deno qualification.
+
+Passed:
+
+- 12 native lifecycle model/API/controller regressions, registered in the retained Admin unit entry point.
+- 103 retained Admin unit tests.
+- 11 Chromium desktop/mobile cases: all six transitions, no-write Cancel/Escape, typed phrases, exact CSRF/game/version/key contract, denied permission, malformed state, same-key replay, conflict refresh, repeat-click exclusion, pending/unsubmitted navigation and Back/Forward, keyboard containment and mobile overflow.
+- Unchanged-main browser control fails because native lifecycle controls are absent; the same acceptance passes on this branch.
+- 16 retained backend lifecycle tests, including owner-scoped/idempotent row-lock and terminal-revocation migration contracts.
+- Full root `npm test`, with its inherited macOS GNU-tar deterministic-release skip explicitly not certified.
+- Backend smoke, TypeScript and all28 Supabase Edge roots.
+- Generated inventory:1317 to1320 sources; all debt counts and ceiling files unchanged. Existing API client grows29 lines; no new oversized source.
+- Independent read-only review found no actionable finding and independently reran all12 lifecycle tests; it did not separately certify browser/staging behavior.
+
+Raw synthetic evidence is in `/tmp/teacher-lifecycle-*` logs and final browser artifacts. The first browser run passed six cases then hit a test-only wait expecting an empty read-only-actions container to be visible; the correction checks attachment and independently verifies no controls. The first root invocation stopped at the unstaged generated inventory; staging its exact generated output allowed the full suite to pass. No safety assertion or gate was weakened.
+
+## Remaining gates
+
+Draft publication and actual-number authority registration follow review. Exact final-head hosted CI is not yet qualified. Fixture coverage does not certify live persistence. Keep draft; no merge, release, production action or broad completion claim.
+
+Next: publish/register this bounded draft, independently review metadata, qualify its final head, and reconcile shared intake/inventory additions before any separately authorized merge. Teacher/Settings retirement and backend context propagation remain with existing owners.
