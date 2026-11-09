@@ -315,10 +315,11 @@ const currencyFixture = { ...data.loans, currencyProjection: projection,
 const normalizedLoans = normalizeApiResponse("loans", { ok: true, data: currencyFixture });
 assert.deepEqual(normalizedLoans.currencyProjection, projection);
 const exactMarkup = renderLoansPage({ ...data, loans: normalizedLoans }, { loanOfferId: loanOfferKey });
-for (const value of ["NRC 99,999,999,999,999.99", "NRC 0.00", "LUM 3.00", "LUM 0.01", "LUM 999,999,999,999.99", due]) {
+for (const value of ["NRC 99,999,999,999,999.99", "NRC 0.00", "LUM 3.00", "LUM 999,999,999,999.99"]) {
   assert.ok(exactMarkup.includes(value), `missing exact currency value ${value}`);
 }
-assert.match(exactMarkup, /None scheduled/);
+assert.match(exactMarkup, /Forecast unavailable/);
+assert.doesNotMatch(exactMarkup, /LUM 0\.01/, "Legacy repeated schedule is not shown as a verified forecast");
 for (const invalid of [undefined, null, { ...projection, version: 2 }, { ...projection, complete: "true" },
   { ...projection, unknownCurrencyRows: 1 }, { ...projection, groups: [...projection.groups, projection.groups[0]] },
   { ...projection, groups: Array(1001).fill(projection.groups[0]) },

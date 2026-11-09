@@ -128,7 +128,27 @@ export type LoanLifecycleDto = {
   };
 };
 
+export interface LoanRepaymentForecastDto {
+  readonly version: 1;
+  readonly basis: "recorded_balance";
+  readonly excludesUnrecordedInterest: true;
+  readonly facilities: readonly {
+    readonly id: string;
+    readonly state: "available" | "unavailable";
+    readonly currencyCode: string | null;
+    readonly reason: string | null;
+    readonly recordedOutstanding: string | null;
+    readonly remainingAfterWindow: string | null;
+    readonly installments: readonly {
+      readonly due: string;
+      readonly amount: string;
+      readonly status: "Late" | "Projected";
+    }[];
+  }[];
+}
+
 export interface LoansSnapshotDto {
+  readonly repaymentForecast?: LoanRepaymentForecastDto;
   readonly lifecycle?: LoanLifecycleDto;
   readonly currencyProjection?: LoanCurrencyProjectionDto;
   readonly configured: boolean;

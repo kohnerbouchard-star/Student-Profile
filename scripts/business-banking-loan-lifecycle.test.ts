@@ -653,8 +653,8 @@ Deno.test("repository isolates other games/players, cross-game product joins, mi
 Deno.test("old snapshot and original query shapes unchanged when lifecycle succeeds or fails", async () => {
   const ok = synthetic(database());
   const failed = synthetic(database(), added);
-  const { lifecycle: success, ...before } = await read(ok);
-  const { lifecycle: unavailable, ...after } = await read(failed);
+  const { lifecycle: success, repaymentForecast: _successForecast, ...before } = await read(ok);
+  const { lifecycle: unavailable, repaymentForecast: _unavailableForecast, ...after } = await read(failed);
   assert.equal(success?.state, "available");
   assert.deepEqual(unavailable, { version: 1, state: "unavailable" });
   assert.deepEqual(after, before);
@@ -910,7 +910,7 @@ for (const options of [{ serverCap: 1 }, { omitCount: true }]) {
   });
 }
 Deno.test("legacy snapshot golden fixture retains every original field and value", async () => {
-  const { lifecycle: _lifecycle, ...legacy } = await read(
+  const { lifecycle: _lifecycle, repaymentForecast: _forecast, ...legacy } = await read(
     synthetic(database()),
   );
   assert.deepEqual(legacy, {
@@ -1002,7 +1002,7 @@ for (
 ) {
   Deno.test(`never-settling ${target} is bounded, aborts siblings, and preserves original snapshot`, async () => {
     const baseline = await read(synthetic(database()));
-    const { lifecycle: _baselineLifecycle, ...expected } = baseline;
+    const { lifecycle: _baselineLifecycle, repaymentForecast: _baselineForecast, ...expected } = baseline;
     const fake = synthetic(database(), () => false, {
       neverSettle: (q) =>
         target === "productJoin"
@@ -1011,7 +1011,7 @@ for (
           ? q.table === "player_loans" && q.ins.length > 0
           : q.table === target && q.limit === 101,
     });
-    const { lifecycle, ...original } = await withinDeadline(
+    const { lifecycle, repaymentForecast: _forecast, ...original } = await withinDeadline(
       new SupabasePlayerBusinessBankingRepository(fake.client, 5).readLoans(
         scope,
       ),
