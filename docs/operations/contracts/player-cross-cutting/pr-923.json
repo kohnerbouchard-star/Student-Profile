@@ -10,6 +10,8 @@
   "secretValuesAllowed": false,
   "allowedPaths": [
     "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "player-terminal/src/api/read-model.js",
     "docs/operations/evidence/banking-fractional-transfer-inputs/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "player-terminal/src/pages/banking-page.js",
@@ -21,6 +23,8 @@
   ],
   "requiredFiles": [
     "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "player-terminal/src/api/read-model.js",
     "docs/operations/evidence/banking-fractional-transfer-inputs/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "player-terminal/src/pages/banking-page.js",
@@ -243,5 +247,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "Owner requested separate branches and PRs for smaller integration fixes including fractional Banking transfer review. This PR923 covers the supported fractional-input correction, retained Player/handler tests, browser regression, scoped evidence, additive roadmap intake and this registration. Verifier/test files remain read-only. All 118 required and 87 critical checks and production/secret denials are preserved. No merge, deployment, backend runtime, SQL, route, RPC, workflow or unrelated changes are authorized by this record."
+  "authorizationNote": "The owner requested separate branches and PRs for supported fractional Banking transfers, then explicitly requested the independently reproduced local-currency account-selection correction within PR923. This authority is limited to the declared Banking UI/read-model, regression, generated inventory and evidence paths. No merge, deployment, backend runtime, SQL, workflow or verifier changes are authorized."
 }

@@ -276,12 +276,14 @@ function renderFxPanel(data, checkingBalances) {
 export function renderBankingPage(data) {
   const bank = data.banking;
   const currencyCode = data.session.currencyCode;
+  const checkingConfigured = bank.checking?.configured !== false &&
+    hasNumericValue(bank.checking?.balance);
   const savingsConfigured = bank.savings?.configured !== false &&
     hasNumericValue(bank.savings?.balance);
   const creditConfigured = bank.creditConfigured === true &&
     hasNumericValue(bank.creditScore);
-  const bankTransferConfigured = isEndpointEnabled(data.capabilities, "bankTransfer");
-  const savingsTransferConfigured = savingsConfigured &&
+  const bankTransferConfigured = checkingConfigured && isEndpointEnabled(data.capabilities, "bankTransfer");
+  const savingsTransferConfigured = checkingConfigured && savingsConfigured &&
     isEndpointEnabled(data.capabilities, "savingsTransfer");
   const transferCurrency = Array.isArray(data.bankingFx?.currencies)
     ? data.bankingFx.currencies.find((entry) => entry.currencyCode === currencyCode)

@@ -334,7 +334,7 @@ function transactionDescription(entry) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function normalizeBankingRead(response, currentBanking) {
+function normalizeBankingRead(response, currentBanking, currencyCode) {
   const body = object(response);
   const current = object(currentBanking);
   const balances = list(body.currentBalances);
@@ -345,9 +345,12 @@ function normalizeBankingRead(response, currentBanking) {
     item?.availableAmount ?? item?.available,
     postedAmount(item) - heldAmount(item),
   );
-  const checking = balances.find((item) => accountKind(item) === "checking") || {};
-  const savings = balances.find((item) => accountKind(item) === "savings");
-  const checkingBalance = postedAmount(checking);
+  const localCurrency = text(currencyCode).toUpperCase();
+  const localAccount = (kind) => balances.find((item) =>
+    localCurrency && accountKind(item) === kind && text(item.currencyCode).toUpperCase() === localCurrency);
+  const checking = localAccount("checking");
+  const savings = localAccount("savings");
+  const checkingBalance = checking ? postedAmount(checking) : null;
   const page = object(body.pagination);
   const incoming = list(body.ledgerEntries).map((entry) => {
     const amount = number(entry.amount);
@@ -382,14 +385,15 @@ function normalizeBankingRead(response, currentBanking) {
       currencyCode: text(balance.currencyCode).toUpperCase()
     })),
     checking: {
-      accountId: text(checking.accountKey || checking.accountType, "CHECKING"),
+      configured: Boolean(checking),
+      accountId: checking ? text(checking.accountKey || checking.accountType, "CHECKING") : "NOT CONFIGURED",
       balance: checkingBalance,
       postedAmount: checkingBalance,
-      heldAmount: heldAmount(checking),
-      available: availableAmount(checking),
-      availableAmount: availableAmount(checking),
-      pending: heldAmount(checking),
-      currencyCode: text(checking.currencyCode).toUpperCase()
+      heldAmount: checking ? heldAmount(checking) : null,
+      available: checking ? availableAmount(checking) : null,
+      availableAmount: checking ? availableAmount(checking) : null,
+      pending: checking ? heldAmount(checking) : null,
+      currencyCode: localCurrency
     },
     savings: savings ? {
       configured: true,
@@ -898,7 +902,7 @@ export function mergeTerminalRead(data, endpointKey, response) {
     next.inventory = normalizeInventoryRead(response);
   }
   if (endpointKey === "banking") {
-    next.banking = normalizeBankingRead(response, data.banking);
+    next.banking = normalizeBankingRead(response, data.banking, data.session?.currencyCode);
     next.dashboard = {
       ...data.dashboard,
       liquidBalance: next.banking.checking.balance,

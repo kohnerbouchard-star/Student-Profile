@@ -1,21 +1,26 @@
 import { expect, test } from "@playwright/test";
 
-async function mountTransfers(page) {
+async function mountTransfers(page, missingLocalKind = "") {
   await page.route("**/banking-transfer-fixture", (route) => route.fulfill({
     contentType: "text/html",
     body: '<!doctype html><html><body><main id="transfer-fixture"></main></body></html>',
   }));
   await page.goto("/banking-transfer-fixture#banking");
-  await page.evaluate(async () => {
+  await page.evaluate(async (missingKind) => {
     const { createPlayerTerminal } = await import("/src/app.js");
     const { buildPlayerTerminalConfig } = await import("/src/config/player-terminal.config.js");
     const { resolvePlayerBackendRequest } = await import("/src/api/backend-routes.js");
+    const { mergeTerminalRead } = await import("/src/api/read-model.js");
     const { previewData } = await import("/src/data/preview-data.js");
     const models = structuredClone(previewData);
-    models.session.currencyCode = "ECO";
-    models.banking.checking.available = 12.34;
-    models.banking.checking.balance = 12.34;
-    models.banking.savings = { ...models.banking.savings, configured: true, available: 12.34, balance: 12.34 };
+    models.session.currencyCode = "NRC";
+    const currentBalances = [
+      { accountKey: "bac_11111111111111111111111111111111", accountKind: "checking", currencyCode: "ECO", postedAmount: 0, heldAmount: 0, availableAmount: 0 },
+      { accountKey: "bac_22222222222222222222222222222222", accountKind: "checking", currencyCode: "NRC", postedAmount: 15.34, heldAmount: 3, availableAmount: 12.34 },
+      { accountKey: "bac_33333333333333333333333333333333", accountKind: "savings", currencyCode: "ECO", postedAmount: 999, heldAmount: 0, availableAmount: 999 },
+      { accountKey: "bac_44444444444444444444444444444444", accountKind: "savings", currencyCode: "NRC", postedAmount: 9.50, heldAmount: 2, availableAmount: 7.50 },
+    ].filter((balance) => balance.currencyCode !== "NRC" || (missingKind !== "both" && balance.accountKind !== missingKind));
+    Object.assign(models, mergeTerminalRead(models, "banking", { currentBalances, ledgerEntries: [] }));
     models.banking.transferLimit = 500;
     const writes = [];
     const config = buildPlayerTerminalConfig({
@@ -36,9 +41,40 @@ async function mountTransfers(page) {
     });
     const terminal = createPlayerTerminal({ mount: document.querySelector("#transfer-fixture"), config });
     globalThis.transferFixture = { terminal, writes };
-  });
+  }, missingLocalKind);
   await expect(page.locator('[data-page="banking"]')).toBeVisible();
   await page.locator('[data-player-form="bank-transfer"]').locator("..").evaluate((details) => { details.open = true; });
+}
+
+test("savings withdrawal validates the local available balance after holds", async ({ page }) => {
+  const form = page.locator('[data-player-form="savings-transfer"]');
+  await form.locator('[name="fromAccount"]').selectOption("savings");
+  await form.locator('[name="toAccount"]').selectOption("checking");
+  const amount = form.locator('[name="amount"]');
+  await amount.fill("7.51");
+  await form.locator('button[type="submit"]').click();
+  expect(await amount.evaluate((input) => input.checkValidity())).toBe(false);
+  expect(await page.evaluate(() => transferFixture.writes)).toEqual([]);
+  await amount.fill("7.50");
+  await form.locator('button[type="submit"]').click();
+  await expect.poll(() => page.evaluate(() => transferFixture.writes.length)).toBe(1);
+  const payload = await page.evaluate(() => transferFixture.writes[0].payload);
+  expect(payload).toMatchObject({ amount: 7.50, fromAccount: "savings", toAccount: "checking" });
+  expect(payload).not.toHaveProperty("currencyCode");
+});
+
+for (const missingKind of ["checking", "savings", "both"]) {
+  test(`missing local ${missingKind} never enables transfers from foreign balances`, async ({ page }) => {
+    await page.evaluate(() => transferFixture.terminal.destroy());
+    await mountTransfers(page, missingKind);
+    await expect(page.locator('[data-player-banking-balance="checking:ECO"]')).toBeVisible();
+    await expect(page.locator('[data-player-banking-balance="savings:ECO"]')).toBeVisible();
+    await expect(page.locator('[data-player-form="savings-transfer"] button[type="submit"]')).toBeDisabled();
+    const peerSubmit = page.locator('[data-player-form="bank-transfer"] button[type="submit"]');
+    if (missingKind === "savings") await expect(peerSubmit).toBeEnabled();
+    else await expect(peerSubmit).toBeDisabled();
+    expect(await page.evaluate(() => transferFixture.writes)).toEqual([]);
+  });
 }
 
 test.beforeEach(async ({ page }) => mountTransfers(page));

@@ -2650,12 +2650,12 @@
         "lines": 935
       },
       {
-        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-        "lines": 931
+        "file": "player-terminal/src/api/read-model.js",
+        "lines": 933
       },
       {
-        "file": "player-terminal/src/api/read-model.js",
-        "lines": 929
+        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+        "lines": 931
       },
       {
         "file": "backend/src/domains/contracts/api/staffContractReviewHttpHandler.test.ts",
