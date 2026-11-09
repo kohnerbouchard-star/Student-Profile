@@ -64,3 +64,9 @@ The independently reviewed published candidate `b2d2027682a8e0999f755e589f0f5d24
 The additive integration preserves all PR928 browser/test/workflow/authority bytes and both complete intake entries. Only PR885's manifest, this evidence and its own intake continuation change beyond the normal merge. Required and critical check sets are the full union (125/92), with the same 27 changed paths and 29 path locks against new main. All provisioning/Campaign runtime, migration, suffix, qualification and release/verifier source remains byte-identical to the reviewed candidate.
 
 The Mac is offline; the isolated cloud checkout is reconstructed from the verified published remote, not assumed local-file transfer. New-head independent review and hosted qualification are still required. This adds no production, live-parity, deployment or broad-completion credit.
+
+## Additive Loans main reconciliation
+
+Qualified PR #925 merged as `9fe4a5c2fe145cdaf6c0f9d53e5f99fbe731a375` while the prior PR885 continuation `b454d44b1bba9b3dce21fd98e2c55f643aa2fe3a` was still queued. The owner directed preservation and current-main integration. All Loans source, tests, workflow and authority remain byte-identical to merged main; no provisioning, Campaign, migration, suffix, qualification, verifier or release source changes. Both owners' complete intake records remain, with a bounded PR885 continuation.
+
+The combined generated inventory contains 1,321 sources and unchanged architecture debt measurements/ceilings. PR885's 125/92 check union and 27-path/29-lock authority already cover current main and remain unchanged. New combined-source local checks, independent review and exact-head hosted qualification are required before merge. No production or live-parity action is authorized or claimed.
