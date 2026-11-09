@@ -64,6 +64,10 @@ function endpointKey(
   | "businessTreasuryFxCancel"
   | "businessStoreQuote"
   | "businessStorePurchase"
+  | "businessEquipmentInstall"
+  | "businessStoreOfferCreate"
+  | "businessStoreOfferPublish"
+  | "businessStoreOfferStock"
   | "businessStoreWithdrawal"
   | "businessCreate"
   | "businessFormationPropose"
@@ -124,6 +128,7 @@ function endpointKey(
   }
   if (route.kind === "businessStoreQuote") return "businessStoreQuote";
   if (route.kind === "businessStorePurchase") return "businessStorePurchase";
+  if (route.kind === "businessStoreOfferPublish" || route.kind === "businessEquipmentInstall" || route.kind === "businessStoreOfferCreate" || route.kind === "businessStoreOfferStock") return route.kind;
   if (route.kind === "businessStoreWithdrawal") return "businessStoreWithdrawal";
   return ({
     businessWorkforce: "businessWorkforce",

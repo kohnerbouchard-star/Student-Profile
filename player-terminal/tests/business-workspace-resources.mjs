@@ -132,7 +132,7 @@ for (const endpointKey of ["businessManufacturingStart", "businessManufacturingC
   assert.equal(WRITE_INVALIDATIONS[endpointKey].includes("businessEquipment"), true);
 }
 assert.equal(WRITE_INVALIDATIONS.businessStorePurchase.includes("businessStockroom"), true);
-assert.equal(WRITE_INVALIDATIONS.businessStorePurchase.includes("businessEquipment"), false);
+assert.equal(WRITE_INVALIDATIONS.businessStorePurchase.includes("businessEquipment"), true);
 assert.deepEqual(WRITE_INVALIDATIONS.businessStoreWithdrawal, ["business", "store"]);
 
 const data = structuredClone(previewData);
@@ -435,3 +435,6 @@ assert.match(unavailableHtml, /Canonical Stockroom unavailable/u);
 assert.match(unavailableHtml, /Historical aggregate Business inventory is not substituted/u);
 
 process.stdout.write("Business workspace cutover, canonical projection, and seller withdrawal verification passed.\n");
+
+// Retain Business loop coverage in the established workspace gate.
+await import("./business-production-loop.mjs");

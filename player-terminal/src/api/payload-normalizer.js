@@ -157,6 +157,20 @@ function normalizeMarketOrder(raw, endpointKey) {
 export function normalizeWritePayload(endpointKey, raw = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalidPayload(endpointKey, "request");
   if (endpointKey === "progressionUnlock" || endpointKey === "progressionClaim") return {};
+  if (endpointKey === "businessEquipmentInstall") return {
+    equipmentKey: requirePattern(raw.equipmentKey, /^eqp_[0-9a-f]{32}$/, endpointKey, "equipmentKey"),
+  };
+  if (endpointKey === "businessStoreOfferCreate") return {
+    itemKey: requirePattern(raw.itemKey, /^[a-z0-9_-]{1,64}$/, endpointKey, "itemKey"),
+    unitPrice: positiveNumber(raw.unitPrice, endpointKey, "unitPrice"),
+  };
+  if (endpointKey === "businessStoreOfferStock" || endpointKey === "businessStoreOfferPublish") return {
+    offerKey: requirePattern(raw.offerKey, /^sof_[0-9a-f]{32}$/, endpointKey, "offerKey"),
+    expectedOfferVersion: positiveNumber(raw.expectedOfferVersion, endpointKey, "expectedOfferVersion", { integer: true }),
+    ...(endpointKey === "businessStoreOfferStock" ? {
+      quantity: positiveNumber(raw.quantity, endpointKey, "quantity", { integer: true }),
+    } : {}),
+  };
   if (endpointKey === "marketOrder") return normalizeMarketOrder(raw, endpointKey);
   if (endpointKey === "arrivalClass") return { answers: normalizeArrivalAnswers(raw.answers, endpointKey) };
   if (endpointKey === "travelQuote") {

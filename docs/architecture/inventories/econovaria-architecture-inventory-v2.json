@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1317,
+    "sourceFiles": 1325,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 53,
@@ -17,7 +17,7 @@
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 100,
-    "capabilityStrings": 139
+    "capabilityStrings": 140
   },
   "domains": [
     {
@@ -106,7 +106,7 @@
         "infrastructure",
         "services"
       ],
-      "sourceFiles": 56,
+      "sourceFiles": 59,
       "publicBoundaryFiles": [
         "backend/src/domains/business/index.ts"
       ]
@@ -119,7 +119,7 @@
         "domain",
         "infrastructure"
       ],
-      "sourceFiles": 7,
+      "sourceFiles": 8,
       "publicBoundaryFiles": []
     },
     {
@@ -2646,16 +2646,16 @@
         "lines": 997
       },
       {
+        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+        "lines": 960
+      },
+      {
         "file": "admin/v2/src/routes/world-management/WorldManagementRoute.js",
         "lines": 935
       },
       {
         "file": "player-terminal/src/api/read-model.js",
         "lines": 933
-      },
-      {
-        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-        "lines": 931
       },
       {
         "file": "backend/src/domains/contracts/api/staffContractReviewHttpHandler.test.ts",
@@ -2898,6 +2898,10 @@
         "lines": 569
       },
       {
+        "file": "backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts",
+        "lines": 564
+      },
+      {
         "file": "admin/game-code-wiring.js",
         "lines": 563
       },
@@ -2927,10 +2931,6 @@
       },
       {
         "file": "admin/v2/src/routes/marketplace/MarketplaceController.js",
-        "lines": 554
-      },
-      {
-        "file": "backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts",
         "lines": 554
       },
       {
@@ -3459,6 +3459,12 @@
         "capability": "effect.value",
         "locations": [
           "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "equipment.press",
+        "locations": [
+          "backend/src/domains/business/api/playerBusinessStockroomHttpHandler.test.ts"
         ]
       },
       {

@@ -41,6 +41,11 @@ export const PLAYER_ACTION_CAPABILITY_KEYS = [
   "businessPrice",
   "businessProductCreate",
   "businessProduction",
+  "businessEquipmentInstall",
+  "businessStoreOfferCreate",
+  "businessStoreOfferStock",
+  "businessStoreOfferPublish",
+
   "businessStatus",
   "businessTreasuryAccountOpen",
   "businessTreasuryFxCancel",
@@ -120,6 +125,10 @@ export type PlayerCapabilityEndpointKey =
   | "businessProduction"
   | "businessManufacturingJobs"
   | "businessManufacturingStart"
+  | "businessEquipmentInstall"
+  | "businessStoreOfferCreate"
+  | "businessStoreOfferPublish"
+  | "businessStoreOfferStock"
   | "businessManufacturingCancel"
   | "businessStatus"
   | "businessTerminate"
@@ -500,6 +509,26 @@ const REVIEWED_ENDPOINTS: readonly PlayerCapabilityEndpointDescriptor[] = [
       pathTemplate: "/players/me/businesses/:businessKey/manufacturing/jobs",
     }],
     actionCapabilities: ["businessProduction"],
+  },
+  {
+    key: "businessEquipmentInstall",
+    operations: [{ method: "POST", pathTemplate: "/players/me/business/equipment/install" }],
+    actionCapabilities: ["businessEquipmentInstall"],
+  },
+  {
+    key: "businessStoreOfferCreate",
+    operations: [{ method: "POST", pathTemplate: "/players/me/business/store/offers" }],
+    actionCapabilities: ["businessStoreOfferCreate"],
+  },
+  {
+    key: "businessStoreOfferPublish",
+    operations: [{ method: "POST", pathTemplate: "/players/me/business/store/offers/:offerKey/publish" }],
+    actionCapabilities: ["businessStoreOfferPublish"],
+  },
+  {
+    key: "businessStoreOfferStock",
+    operations: [{ method: "POST", pathTemplate: "/players/me/business/store/offers/:offerKey/stock" }],
+    actionCapabilities: ["businessStoreOfferStock"],
   },
   {
     key: "businessManufacturingCancel",
