@@ -120,3 +120,28 @@ not display the unrelated currency projection next-payment date. Both standalone
 surface and 10 focused tests pass; the retained surface is now included in the
 loans-lifecycle package command so complete Player verification exercises it.
 No runtime or immutable browser runner changes accompany this test correction.
+
+## Integrate qualified shared Admin repair
+
+The owner requested current main integration after #928 merged as
+0d314bbe53832afcdc94b9dab8d3e09515f2762f. Prior Loans head a56acc9c reached
+terminal CI with 41 successful PR workflows, one unchanged Admin redirect
+assertion failure, two staging skips and cancelled promotion. All three CodeQL
+analyses, connected Player/Load, full Player verification, and the complete Store
+Chromium, connected, database replay and race gates passed. #928 addresses that
+shared harness blocker and is preserved verbatim in the forward integration.
+
+The only conflict is additive roadmap intake; both complete records are kept.
+Loans source/tests are unchanged. PR925 authority inherits all current-main
+122 required/89 critical checks without changing path locks or production/secret
+denials. New exact-head local and hosted qualification is required; no prior-head
+result is claimed for the integrated head. No merge-to-main or deployment occurs.
+
+Integrated-tree local validation: full root and Player verification pass; frozen
+Deno Loans/retained tests pass 94/94; UI tests 10/10, shared Admin regressions 9/9
+and authority regressions 16/16 pass. Backend TypeScript passes, but the all-Edge
+and full backend smoke runs stop at an external esm.sh connection refusal; those
+are blocked, not passed. Pinned Chromium is unavailable in this cloud checkout,
+so browser requalification is hosted. Independent review verifies all inherited
+#928 files and all Loans implementation files unchanged, both full intake records
+preserved, and all 122/89 current-main checks retained. No verifier is changed.

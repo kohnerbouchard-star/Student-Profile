@@ -174,7 +174,11 @@
     "Rendered Admin browser and secure mutation journey",
     "Environment Neutral Browser",
     "runtime-config-contract",
-    "Loans Lifecycle Read"
+    "Loans Lifecycle Read",
+    "Admin Shell Smoke",
+    "admin-shell-smoke",
+    "Admin Scroll Integrity",
+    "Rendered viewport and drawer scrolling"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -263,11 +267,13 @@
     "business-primary-ipo-browser",
     "Rendered Admin browser and secure mutation journey",
     "runtime-config-contract",
-    "Loans Lifecycle Read"
+    "Loans Lifecycle Read",
+    "admin-shell-smoke",
+    "Rendered viewport and drawer scrolling"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "User requested Loans repayment forecast accuracy and exposure of merged #918 lifecycle/default data in a separate branch and PR. Draft PR925 binds the isolated implementation f21a47bd90f34b6732494bccb26636693190222a from main 08134650. The scope includes strict read-only projection/normalization, existing Loans panels and mutation-control prefill, retained and new focused/browser tests, additive package test registration, the existing Loans-only verification workflow, generated inventory with unchanged debt ceilings, and bounded roadmap/evidence updates. Retain all 118 required and 87 critical checks from merged PR921, and both verifier/test files read-only. No schema, migration, new route/RPC, economic policy, lending gate, merge, ready transition, deployment, hosted-data or secret change. No other active branch is modified."
+  "authorizationNote": "User requested Loans repayment forecast accuracy and exposure of merged #918 lifecycle/default data in a separate branch and PR. Draft PR925 binds the isolated implementation f21a47bd90f34b6732494bccb26636693190222a from main 08134650. The scope includes strict read-only projection/normalization, existing Loans panels and mutation-control prefill, retained and new focused/browser tests, additive package test registration, the existing Loans-only verification workflow, generated inventory with unchanged debt ceilings, and bounded roadmap/evidence updates. Retain all 118 required and 87 critical checks from merged PR921, and both verifier/test files read-only. No schema, migration, new route/RPC, economic policy, lending gate, merge, ready transition, deployment, hosted-data or secret change. No other active branch is modified. Forward integration of merged main 0d314bbe preserves the shared Admin repair verbatim and all current-main 122 required/89 critical checks. Only additive roadmap/evidence and this authority metadata accompany the merge; Loans runtime is unchanged."
 }

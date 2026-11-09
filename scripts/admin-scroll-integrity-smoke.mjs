@@ -394,7 +394,8 @@ try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
   await page.waitForSelector(".admin-terminal-shell-main", { timeout: 15_000 });
-  await page.waitForSelector(".econovaria-admin-game-session-card, .admin-terminal-side-code", { timeout: 15_000 });
+  // The retained legacy control precedes the current card and is intentionally hidden.
+  await page.locator(".econovaria-admin-game-session-card").waitFor({ state: "visible", timeout: 15_000 });
   await page.waitForTimeout(800);
 
   const before = await shellGeometry();

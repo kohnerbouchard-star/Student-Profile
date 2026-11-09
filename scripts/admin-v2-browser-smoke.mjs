@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "playwright";
+import { verifyDepartingAdminModuleAborts } from "./admin-session-redirect-diagnostics.mjs";
 
 import {
   ADMIN_V2_FIXTURE_ADMIN_ID,
@@ -132,6 +133,7 @@ async function assertNoRawBackendDetails(page, label) {
 async function assertNoRuntimeErrors(runtime, label, {
   allowExpectedHttpConsoleError = false,
   allowExpectedRedirectAborts = false,
+  expectedSessionRedirect = null,
 } = {}) {
   const unexpectedErrors = allowExpectedHttpConsoleError && runtime.httpFailures.length > 0
     ? runtime.errors.filter((entry) => !/^console: Failed to load resource: the server responded with a status of \d+ \(.+\)$/i.test(entry))
@@ -142,9 +144,14 @@ async function assertNoRuntimeErrors(runtime, label, {
     [],
     `${label} emitted CSP or Trusted Types warnings:\n${runtime.securityWarnings.join("\n")}`,
   );
-  const unexpectedFailedRequests = allowExpectedRedirectAborts
-    ? runtime.failedRequests.filter((entry) => !/\?mode=admin&reason=session-expired net::ERR_ABORTED$/i.test(entry))
-    : runtime.failedRequests;
+  const verifiedModuleAborts = expectedSessionRedirect
+    ? await verifyDepartingAdminModuleAborts(runtime.failedRequestDetails, expectedSessionRedirect, runtime.context.request)
+    : new Set();
+  runtime.verifiedRedirectModuleAborts.push(...[...verifiedModuleAborts].map((index) => runtime.failedRequestDetails[index]));
+  const unexpectedFailedRequests = runtime.failedRequests.filter((entry, index) =>
+    !verifiedModuleAborts.has(index)
+      && !(allowExpectedRedirectAborts && /\?mode=admin&reason=session-expired net::ERR_ABORTED$/i.test(entry))
+  );
   assert.deepEqual(
     unexpectedFailedRequests,
     [],
@@ -273,6 +280,9 @@ function browserErrorRecorder(page) {
   const errors = [];
   const securityWarnings = [];
   const failedRequests = [];
+  const failedRequestDetails = [];
+  const requestDocuments = new WeakMap();
+  const verifiedRedirectModuleAborts = [];
   const httpFailures = [];
   const resourceContentTypes = [];
   page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
@@ -282,7 +292,14 @@ function browserErrorRecorder(page) {
       securityWarnings.push(`${message.type()}: ${message.text()}`);
     }
   });
+  page.on("request", (request) => {
+    try { requestDocuments.set(request, { documentUrl: request.frame().url(), mainFrame: request.frame() === page.mainFrame() }); }
+    catch { requestDocuments.set(request, { documentUrl: "", mainFrame: false }); }
+  });
   page.on("requestfailed", (request) => {
+    failedRequestDetails.push({ method: request.method(), url: request.url(),
+      errorText: request.failure()?.errorText || "request failed", resourceType: request.resourceType(),
+      navigation: request.isNavigationRequest(), ...requestDocuments.get(request) });
     failedRequests.push(`${request.method()} ${request.url()} ${request.failure()?.errorText || "request failed"}`);
   });
   page.on("response", (response) => {
@@ -304,7 +321,7 @@ function browserErrorRecorder(page) {
       resourceContentTypes.push({ kind: "css", url, contentType });
     }
   });
-  return { errors, securityWarnings, failedRequests, httpFailures, resourceContentTypes };
+  return { errors, securityWarnings, failedRequests, failedRequestDetails, verifiedRedirectModuleAborts, httpFailures, resourceContentTypes };
 }
 
 async function createScenarioRuntime(
@@ -373,6 +390,7 @@ async function createScenarioRuntime(
     runId,
     scenario,
     selectedGameId,
+    sourceUrl: url,
     async close() {
       runtimeDiagnostics.push({
         scenario,
@@ -380,6 +398,8 @@ async function createScenarioRuntime(
         errors: [...diagnostics.errors],
         securityWarnings: [...diagnostics.securityWarnings],
         failedRequests: [...diagnostics.failedRequests],
+        failedRequestDetails: [...diagnostics.failedRequestDetails],
+        verifiedRedirectModuleAborts: [...diagnostics.verifiedRedirectModuleAborts],
         httpFailures: [...diagnostics.httpFailures],
         resourceContentTypes: [...new Map(diagnostics.resourceContentTypes.map((entry) => [entry.url, entry])).values()],
       });
@@ -901,7 +921,10 @@ async function assertRedirectedSessionBoundary(runtime, fixture, {
     );
   }
   await assertNoRawBackendDetails(runtime.page, label);
-  await assertNoRuntimeErrors(runtime, label, { allowExpectedHttpConsoleError: true });
+  await assertNoRuntimeErrors(runtime, label, {
+    allowExpectedHttpConsoleError: true,
+    expectedSessionRedirect: { sourceUrl: runtime.sourceUrl, destinationUrl: finalUrl.href, expectedReasons },
+  });
   if (requiresBoundaryRequest) {
     assertNoBearerRequests(fixture, runtime.runId, label);
   } else {
