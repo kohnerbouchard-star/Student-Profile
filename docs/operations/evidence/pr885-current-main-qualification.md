@@ -49,3 +49,18 @@ Production remains held. No hosted SQL, credential/permission mutation, deployme
 The worker and fencing migration must be promoted together through the separately authorized staged release process; old v1 acknowledgement calls deliberately fail closed after migration. Do not deploy the worker alone or attempt an old-worker rollback against the fencing schema. A production problem requires a reviewed forward correction and fresh staging evidence. No historical migration is rewritten.
 
 Current source status: IN_PROGRESS. This record makes no deployed, live-parity or broad beta completion claim.
+
+## Qualified main continuation after PR928
+
+The independently reviewed published candidate `b2d2027682a8e0999f755e589f0f5d241ce27204` passed fresh hosted qualification, including:
+
+- [Database Replay](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/42584500087): two complete zero-to-head replays, immutable/suffix contracts, lint and disposable cleanup.
+- [Economic Core Request Claims](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/42584500439): real API authority/provisioning/replay/rollback, two replays, lint and cleanup.
+- [Staff and Campaign qualification](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/42584500128): all retained Staff/Story/economic cases, Campaign SDK/PostgREST authority, exclusive Campaign events and lease-generation assertions, independent owned-resource teardown and only-then certification.
+- CodeQL, full Backend/Player verification, security, repository quality and retained economic workflows passed. The historical Mac Bash/GNU-tar limits do not replace these Linux results.
+
+[Admin Browser E2E](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/42584500019) failed the inherited outgoing-module redirect diagnostic, so that head was not merged. Qualified PR #928 merged into main as `0d314bbe53832afcdc94b9dab8d3e09515f2762f`, from `566a25d965952cd03db52e4873f458b83fdf960c`, after all 15 workflows passed. The owner directed normal forward reconciliation into PR885.
+
+The additive integration preserves all PR928 browser/test/workflow/authority bytes and both complete intake entries. Only PR885's manifest, this evidence and its own intake continuation change beyond the normal merge. Required and critical check sets are the full union (125/92), with the same 27 changed paths and 29 path locks against new main. All provisioning/Campaign runtime, migration, suffix, qualification and release/verifier source remains byte-identical to the reviewed candidate.
+
+The Mac is offline; the isolated cloud checkout is reconstructed from the verified published remote, not assumed local-file transfer. New-head independent review and hosted qualification are still required. This adds no production, live-parity, deployment or broad-completion credit.

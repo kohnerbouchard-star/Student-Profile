@@ -167,7 +167,11 @@
     "Loans Lifecycle Read",
     "Database Replay",
     "Economic Core Request Claims",
-    "REF046 exclusive disposable qualification"
+    "REF046 exclusive disposable qualification",
+    "Admin Shell Smoke",
+    "admin-shell-smoke",
+    "Admin Scroll Integrity",
+    "Rendered viewport and drawer scrolling"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -259,12 +263,14 @@
     "Loans Lifecycle Read",
     "Database Replay",
     "Economic Core Request Claims",
-    "REF046 exclusive disposable qualification"
+    "REF046 exclusive disposable qualification",
+    "admin-shell-smoke",
+    "Rendered viewport and drawer scrolling"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "Owner explicitly authorized repairing needed PRs against current main, pushing and merging after verification on 2026-11-09. This existing PR885 integration retains the provisioning and Campaign generation-fencing corrections, immutable migration bytes, original-eight and November identity checks, current-main security tooling and every predecessor required/critical check. It removes only obsolete branch diagnostics and reconciles source/test/documentation conflicts. Both verifier files remain read-only. All production mutation/deployment, secret handling, manual dispatch, live ledger changes, hold restoration and check waivers remain prohibited. Historical draft-only notes are not current repository-integration restrictions and are not live-release approval.",
+  "authorizationNote": "Owner explicitly authorized repairing needed PRs against current main, pushing and merging after verification on 2026-11-09. This existing PR885 integration retains the provisioning and Campaign generation-fencing corrections, immutable migration bytes, original-eight and November identity checks, current-main security tooling and every predecessor required/critical check. It removes only obsolete branch diagnostics and reconciles source/test/documentation conflicts. Both verifier files remain read-only. All production mutation/deployment, secret handling, manual dispatch, live ledger changes, hold restoration and check waivers remain prohibited. Historical draft-only notes are not current repository-integration restrictions and are not live-release approval. The reviewed #928 main reconciliation preserves its entire source and authority, adds its Shell/Scroll checks without removing any predecessor gate, and updates only this manifest and the existing qualification/intake records beyond the normal merge.",
   "scopeRecord": "docs/operations/evidence/pr885-current-main-qualification.md"
 }

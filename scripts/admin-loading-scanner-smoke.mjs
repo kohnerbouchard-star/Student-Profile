@@ -1,6 +1,7 @@
 import {
   BASE_URL,
   createQualityHarness,
+  observeStartupGameCodeRead,
   GAME_ID,
 } from "./admin-quality-smoke-fixture.mjs";
 
@@ -109,6 +110,7 @@ async function readinessContract() {
 
 async function mountedAdminContract(name, width, height) {
   await page.setViewportSize({ width, height });
+  const finishStartupRead = observeStartupGameCodeRead(page, GAME_ID);
   await page.goto(adminUrlForGame(), {
     waitUntil: "domcontentloaded",
     timeout: 30000,
@@ -146,6 +148,7 @@ async function mountedAdminContract(name, width, height) {
     fail(`${name} mounted Admin shell overflows by ${result.overflow}px.`);
   }
 
+  await finishStartupRead();
   return result;
 }
 
@@ -225,6 +228,7 @@ try {
   }
 
   await page.setViewportSize({ width: 1440, height: 1000 });
+  const finishStartupRead = observeStartupGameCodeRead(page, GAME_ID);
   await page.goto(adminUrlForGame(), {
     waitUntil: "domcontentloaded",
     timeout: 30000,
@@ -234,6 +238,7 @@ try {
     timeout: 15000,
   });
   const scanner = await scannerLifecycleSnapshot();
+  await finishStartupRead();
 
   if (errors.length) fail(errors[0]);
   await finish({ passed: true, readiness, viewports, scanner });
