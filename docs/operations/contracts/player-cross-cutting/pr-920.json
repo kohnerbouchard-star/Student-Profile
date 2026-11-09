@@ -143,7 +143,8 @@
     "Admin Browser E2E",
     "Rendered Admin browser and secure mutation journey",
     "Environment Neutral Browser",
-    "runtime-config-contract"
+    "runtime-config-contract",
+    "Loans Lifecycle Read"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -231,11 +232,12 @@
     "business-primary-ipo-database",
     "business-primary-ipo-browser",
     "Rendered Admin browser and secure mutation journey",
-    "runtime-config-contract"
+    "runtime-config-contract",
+    "Loans Lifecycle Read"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "User-authorized publication of the reviewed seven-line Admin Classroom source cleanup as draft PR920. Register only its actual-PR authority and existing scope/ledger publication metadata. The reviewed source blob and verifier/test files remain unchanged; preserve all 117 required and 86 critical checks, REF-015/048 states, concurrent ownership and release/security holds. No merge, ready-for-review, auto-merge, deployment or production action."
+  "authorizationNote": "Owner explicitly requested fixing PR920's merge conflict after manual #918/#919 merges. Integrate current main while retaining complete Loans/Player intake entries, their source/workflows/evidence and the reviewed seven-line Classroom deletion. Retain all inherited 118 required and 87 critical checks, including Loans Lifecycle Read; the seven exact path locks and both read-only verifier/test files stay unchanged. No new runtime/test/workflow behavior, PR merge, ready transition, auto-merge, dispatch, deployment, production action or check waiver."
 }

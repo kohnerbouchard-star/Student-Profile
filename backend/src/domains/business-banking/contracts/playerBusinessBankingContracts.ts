@@ -57,7 +57,79 @@ export interface LoanCurrencyProjectionDto {
   }[];
 }
 
+export const LOAN_LIFECYCLE_SCOPE = "legacy_v1" as const;
+export const LOAN_LIFECYCLE_LIMIT = 100;
+
+export interface LoanRecordWindowDto<T> {
+  readonly items: readonly T[];
+  readonly hasMore: boolean | null;
+  readonly complete: boolean;
+}
+
+export interface LoanRecordProductDto {
+  readonly id: string;
+  readonly name: string | null;
+  readonly currencyCode: string | null;
+}
+
+export type LoanLifecycleDto = {
+  readonly version: 1;
+  readonly state: "unavailable";
+} | {
+  readonly version: 1;
+  readonly state: "available";
+  readonly liabilityKind: typeof LOAN_LIFECYCLE_SCOPE;
+  readonly applications: LoanRecordWindowDto<{
+    readonly id: string;
+    readonly status: string;
+    readonly amount: string | null;
+    readonly projectedPayment: string | null;
+    readonly currencyCode: null;
+    readonly currentProduct: LoanRecordProductDto | null;
+    readonly createdAt: string | null;
+    readonly updatedAt: string | null;
+    readonly reviewedAt: string | null;
+  }>;
+  readonly facilities: LoanRecordWindowDto<{
+    readonly id: string;
+    readonly status: string;
+    readonly currencyCode: string | null;
+    readonly currentProduct: LoanRecordProductDto | null;
+    readonly originalPrincipal: string | null;
+    readonly principalBalance: string | null;
+    readonly accruedInterest: string | null;
+    readonly recordedOutstanding: string | null;
+    readonly lastAccruedAt: string | null;
+    readonly createdAt: string | null;
+    readonly updatedAt: string | null;
+    readonly defaultedAt: string | null;
+    readonly closedAt: string | null;
+  }>;
+  readonly payments: LoanRecordWindowDto<{
+    readonly id: string;
+    readonly loanId: string;
+    readonly status: string;
+    readonly currencyCode: string | null;
+    readonly amount: string | null;
+    readonly principalAmount: string | null;
+    readonly interestAmount: string | null;
+    readonly createdAt: string | null;
+    readonly appliedDueAt: string | null;
+  }>;
+  readonly recordedDebt: {
+    readonly complete: boolean;
+    readonly unknownCurrencyRows: number;
+    readonly groups: readonly {
+      readonly currencyCode: string;
+      readonly principalBalance: string | null;
+      readonly accruedInterest: string | null;
+      readonly outstanding: string | null;
+    }[];
+  };
+};
+
 export interface LoansSnapshotDto {
+  readonly lifecycle?: LoanLifecycleDto;
   readonly currencyProjection?: LoanCurrencyProjectionDto;
   readonly configured: boolean;
   readonly creditScore: number;
