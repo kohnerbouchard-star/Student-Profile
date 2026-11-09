@@ -5,6 +5,12 @@ import { spawn } from 'node:child_process';
 import { resolve, join } from 'node:path';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
+export function verifyProjectIdentity(project, runId, runAttempt, phase) {
+  assert.equal(typeof project, 'string', 'INVALID_PROJECT_IDENTITY');
+  const match = /^ref046-([0-9]+)-([0-9]+)-(events|leases)-[a-f0-9]{8}$/u.exec(project);
+  assert(match && match[0] === project && match[1] === runId && match[2] === runAttempt && match[3] === phase,
+    'PROJECT_IDENTITY_MISMATCH');
+}
 export function ownedDelta(before, current, project) {
   for (const row of before) assert.deepEqual(current.find(x => x.key === row.key), row, 'FOREIGN_RESOURCE_CHANGED');
   const added = current.filter(row => !before.some(x => x.key === row.key));
@@ -99,7 +105,7 @@ async function main() {
   if (mode !== 'run') {
     assert(existsSync(journal), 'MISSING_OWNERSHIP'); receipt = JSON.parse(readFileSync(journal));
     assert.equal(receipt.sourceSha, sourceSha); assert.equal(receipt.work, work); assert.equal(receipt.runAttempt, env.GITHUB_RUN_ATTEMPT);
-    assert(new RegExp(`^ref046-${env.GITHUB_RUN_ID}-${env.GITHUB_RUN_ATTEMPT}-${phase}-[a-f0-9]{8}$`).test(receipt.project));
+    verifyProjectIdentity(receipt.project, env.GITHUB_RUN_ID, env.GITHUB_RUN_ATTEMPT, phase);
     if (mode === 'cleanup') {
       try { await cleanup(); } catch (error) { receipt.status = 'failed'; receipt.cleanupError = String(error); throw error; }
       finally { receipt.interrupted ||= interrupted; if (interrupted) receipt.status = 'failed'; save(); }
@@ -147,6 +153,16 @@ if (process.argv[2] === '--self-test') {
   const receipt = { status: 'teardown_verified', interrupted: false, sourceSha: 'a'.repeat(40), project, lintUnchanged: true,
     teardownVerifiedAt: new Date().toISOString(), owned, remaining: { container: 0, volume: 0, network: 0 } };
   const assertions = { status: 'assertions_passed', sourceSha: receipt.sourceSha, stackId: project, checks: { foreignFixturesUnchanged: true, foreignSentinelCount: 1 } };
+  await test('project identity uses fixed syntax and exact run, attempt and phase values', () => {
+    verifyProjectIdentity(project, '1', '1', 'events');
+    verifyProjectIdentity('ref046-17-2-leases-abcdef01', '17', '2', 'leases');
+    for (const args of [[project, '2', '1', 'events'], [project, '1', '2', 'events'],
+      [project, '1', '1', 'leases'], [project, '.*', '1', 'events'], [project, '1', '1', 'events|leases'],
+      [project + '\n', '1', '1', 'events'], [null, '1', '1', 'events'],
+      ['ref046-1-1-events-zzzzzzzz', '1', '1', 'events']]) {
+      assert.throws(() => verifyProjectIdentity(...args));
+    }
+  });
   await test('ownership rejects changed foreign rows and unrelated additions', () => {
     assert.throws(() => ownedDelta([{ key: 'foreign' }], [], project));
     assert.throws(() => ownedDelta([], [{ key: 'foreign', name: 'foreign' }], project));

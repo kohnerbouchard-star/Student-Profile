@@ -22,6 +22,8 @@ Addressed capability: `BETA-GAME-PROVISIONING-CLAIMS-001` and the existing REF-0
 
 Preserve current main's Deno configurations, trusted tslib source and integrity guards, backend typechecks, runtime/Staff/Contract workflows and modern SDK handling. Remove the old SDK 2.45.4 closure collection, redundant bundle helper and obsolete workflow diagnostics from the resulting diff. Their history remains in the branch.
 
+The retained CodeQL regular-expression-injection finding is addressed by fixed project-identity regexes followed by exact run/attempt/phase comparisons in the supervisor and acceptance harness. Positive and negative ownership cases cover mismatches, metacharacters, null and trailing-newline input; no alert or assertion is suppressed. Fresh CodeQL CI is still required.
+
 Keep the complete existing Staff/Story qualification workflow. Add only the two Campaign harness and four qualified source/test path selectors and its exclusive disposable qualification job. Independent review identified the source/test trigger gap; both PR and push selectors now retain permanent fencing coverage for source-only changes. Keep the existing provisioning regression and run it for both PR and main changes. No workflow dispatch, secret, environment, permission or release-control modification is included.
 
 Re-register PR885 against its exact reconciled path set with both authority verifier files read-only, all current required/critical checks retained, and explicit new provisioning/database/Campaign checks. No check is waived.
@@ -30,7 +32,7 @@ Re-register PR885 against its exact reconciled path set with both authority veri
 
 Local checks on the reconciled candidate (Node 22.23.1, local Deno 2.8.3):
 
-- PASS: final complete Admin API suite (335 tests); 11 focused Campaign scheduler/effect and acknowledgement tests, including the new scalar/argument, false-completion and false-failure cases; four exclusive-resource supervisor rejection tests; 16 authority verifier regressions.
+- PASS: final complete Admin API suite (335 tests); 11 focused Campaign scheduler/effect and acknowledgement tests, including the new scalar/argument, false-completion and false-failure cases; five exclusive-resource supervisor rejection tests; 16 authority verifier regressions.
 - PASS: all 460 migration identities audit, secret scan, exact PR path authority, generated inventory and architecture/seam ratchets. Source count is 1,318 because of one focused test file; all debt measurements and ceilings remain unchanged.
 - PASS: full root suite, full backend smoke, TypeScript and all 28 Edge roots. Root retains its existing macOS GNU-tar deterministic-archive skip; Linux hosted validation remains required.
 - Claims/suffix source suite: 35 pass; one shell-loop fixture cannot execute under the Mac's Bash 3 because it requires mapfile. The fixture is retained unchanged and must pass under hosted Linux Bash. This is not a full local suffix-suite pass.
