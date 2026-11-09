@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1315,
+    "sourceFiles": 1317,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 53,
@@ -2630,10 +2630,6 @@
         "lines": 1132
       },
       {
-        "file": "player-terminal/src/api/read-model.js",
-        "lines": 1114
-      },
-      {
         "file": "admin/v2/src/routes/crafting/CraftingRoute.js",
         "lines": 1078
       },
@@ -2656,6 +2652,10 @@
       {
         "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
         "lines": 931
+      },
+      {
+        "file": "player-terminal/src/api/read-model.js",
+        "lines": 929
       },
       {
         "file": "backend/src/domains/contracts/api/staffContractReviewHttpHandler.test.ts",
