@@ -2782,6 +2782,10 @@
         "lines": 654
       },
       {
+        "file": "admin/v2/src/app.js",
+        "lines": 647
+      },
+      {
         "file": "backend/src/security/adminBffRequestAuth.ts",
         "lines": 643
       },
@@ -2792,10 +2796,6 @@
       {
         "file": "backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.ts",
         "lines": 639
-      },
-      {
-        "file": "admin/v2/src/app.js",
-        "lines": 638
       },
       {
         "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.ts",
