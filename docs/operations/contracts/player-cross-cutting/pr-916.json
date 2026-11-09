@@ -19,7 +19,8 @@
     "docs/operations/contracts/player-cross-cutting/pr-916.json",
     "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/player-button-click-safety.yml"
   ],
   "requiredFiles": [
     "backend/src/domains/attendance/tests/staffAttendanceDailyRead.test.ts",

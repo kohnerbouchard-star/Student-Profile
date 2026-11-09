@@ -117,3 +117,63 @@ must preserve these package receipts while reconciling actual combined source.
 Original required workflows not triggered remain unqualified, not waived.
 No duplicate dispatch, rerun, filter change, merge, ready transition, auto-merge,
 deployment, hosted mutation or release-hold change is authorized.
+
+## Parent-authorized local Click Safety runner amendment — 2026-11-09
+
+Scope is local preparation/review only; no push, PR metadata change or dispatch.
+Exactly three editable paths: .github/workflows/player-button-click-safety.yml,
+docs/operations/contracts/player-cross-cutting/pr-916.json, and this scoped record.
+No older four-gap workflow proposal is activated. Parent authorizes the same
+supported-runner pin already published in #914; no owner consent is inferred.
+
+Before edits main767bc0e8998d548b2cb0de9e649000fe23f92630 and remote916/head
+0c9bdc2b5294da0ec515b88a3c915376e4ae4a50 are unchanged. #914 is
+5b257c38e7ae6745d114d1255f01455dd787f9fd; #620 is
+ffa650267b6bf20c69d1c6217b31d51616c25363. Workflow blobs: current/main
+b9e8cad0013b787a6933fc219cae55c999ce7cda; #914493e7f62931ee8aa5fbf6c3e6e0c11f16cd174ab;
+#62054f1c143f736f9bacca587f701385ca300c240ed. Existing authority/scope blobs are
+d513cdc424c15ca14afef0b04a65490e3b688697/f0fe4caeade2a9c51bec49cbe629a8472f41ba6e.
+Fresh23-open-PR full-path census: #914/#620 overlap the selected workflow;
+#916 owns its authority/evidence. #914 changes only ubuntu-latest to ubuntu-24.04;
+#620 changes only upload-artifact v4 to v7. Preserve all unrelated action pins,
+selectors/checkout guards, commands, test/browser versions, fixtures and timeouts.
+No #914 file/check or other owner branch is changed. #668/#885 protections hold.
+
+Actual manual runs all use old head0c9bdc2b on this Attendance branch:
+-42535387023 Multiplayer/Load: success; all connected journeys, 30/40-player
+ profiles/enforcement/cleanup pass; final load JSON reports serverErrors0.
+-42535459589 Button Action Coverage: success; wiring and ledger checks pass;
+ connected release-enforcement step stays skipped (release_gate=false).
+-42535550192 Environment Neutral Browser: success; all three source/syntax
+ validations and final enforcement pass.
+-42535503886 Click Safety/job128898804280: failure at Install Chromium before
+ button tests. Exact log: Playwright does not support chromium on ubuntu26.04-x64.
+ Runner ubuntu-latest selected unsupported26.04. No assertion/access failure is
+ inferred; the button-sweep step is skipped. Preserve this failure as history.
+
+Only change runs-on to ubuntu-24.04 and add the existing workflow path to the
+actual PR916 allowlist:10 actual changed paths under12 locks. Preserve117 required,
+86 critical entries, both read-only locks, all false safety flags and every other
+manifest value. The workflow already names its own file in pull_request.paths;
+no selector addition is required. A later approved real patch push should trigger
+the unchanged Click Safety test automatically on its amended SHA. Do not use an
+empty commit or bypass the denied CLI dispatch route. User-run checks do not
+establish our CLI access recovery. All three passing manuals remain old-head
+proof, not automatic qualification for any proposed amended SHA.
+
+Required local verification: YAML/structural equality except runs-on, exact
+one-line workflow diff matching #914, unchanged authority verifier/regressions,
+positive/negative scope/identity/safety cases, and secrets/whitespace checks with
+pinned tooling. Independent review of the complete exact amendment is required.
+Future publication/hosted acceptance remains separately parent-controlled.
+
+Local verification PASS with Node22.23.1/npm10.9.8 and YAML parser2.8.2 installed
+outside the repository: YAML parsed without errors; complete parsed workflow
+compares identical except runs-on; exact one-line diff/result blob matches #914.
+Unchanged CLI authority verifier accepts10 paths/12 locks; all manifest fields
+other than the single appended allowed path compare identical; six negative
+scope/identity/safety mutations reject. Authority/action-pinning regressions17/17,
+secret scan and whitespace PASS. Independent read-only review found no actionable
+finding and independently passed authority16/16, YAML/equality and negative guards.
+No browser, dependency-install or hosted rerun was performed locally; the actual
+supported-runner browser execution remains NOT_RUN pending parent publication.
