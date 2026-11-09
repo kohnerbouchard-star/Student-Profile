@@ -56,12 +56,12 @@ starting metadata lookups. The original reads and mutation commands are untouche
 
 ## Verification
 
-Pinned tools: Node22.23.1, npm10.9.8, Deno2.9.3. Locked dependencies were installed
+Pinned tools: Node 22.23.1, npm 10.9.8, Deno 2.9.3. Locked dependencies were installed
 only in this isolated checkout. Source implementation and synthetic tests are
 not hosted PostgREST, RLS or database/runtime certification.
 
 Initial implementation passed all 57 focused tests, full root npm test, backend
-TypeScript/all 28Edge roots, full backend smoke (1422 Deno and 18 Node cases),
+TypeScript/all 28 Edge roots, full backend smoke (1422 Deno and 18 Node cases),
 complete Player verification and retained Business/Banking runtime/surface checks.
 Root retains one existing GNU-tar platform skip on macOS.
 
@@ -76,12 +76,19 @@ Independent read-only review found a P2 unbounded optional-history
 wait, corrected with the deadline/cancellation above. A further synthetic delayed
 response test reproduced late metadata lookups after timeout (68 passed/1 failed),
 corrected by checking cancellation before each following stage. Failures remain
-historical evidence, not relabelled passes. Final focused and independent re-review results are 80/80 passing with Deno2.9.3:
+historical evidence, not relabelled passes. Final focused and independent re-review results are 80/80 passing with Deno 2.9.3:
 69 new tests and 11 retained route/currency tests. The independent reviewer found
 no remaining actionable issue. No executed reproduction against the original
-unbounded source is claimed. A final full aggregate rerun follows the late-stage
-guard; earlier full passes are not substituted for that rerun. Hosted CI remains
-pending and no merge-ready or completion credit is claimed.
+unbounded source is claimed.
+
+Final source 8e4aee65a1b2199b28bba51cc7d71bff4192fa76 passed a fresh complete
+root npm test, Player verification, backend TypeScript/all 28 Edge roots and
+full backend smoke (1422 Deno plus 18 Node cases) after the cancellation guards.
+The same one GNU-tar platform skip remains. Authority/action-pinning/promotion
+regressions pass 18/18; generated inventory is byte-unchanged, with all debt
+measurements and ceilings unchanged. No package, shared workflow or verifier
+source changed. Hosted CI remains pending; no merge-ready, live or completion
+credit is claimed. Actual PR identity and exact-head results follow publication.
 
 ## Rollback and release
 
