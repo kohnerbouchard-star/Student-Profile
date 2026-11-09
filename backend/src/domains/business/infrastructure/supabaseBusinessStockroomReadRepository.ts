@@ -219,3 +219,25 @@ function nonNegativeIntegerString(value: unknown): string { const result = text(
 function timestamp(value: unknown): string { const result = text(value); if (!result || !Number.isFinite(Date.parse(result))) throw invalidWorkspaceProjection(); return result; }
 function optionalTimestamp(value: unknown): string | null { return value === null ? null : timestamp(value); }
 function boundedInteger(value: unknown, minimum: number, maximum: number, invalid: InvalidFactory = invalidWorkspaceProjection): number { const parsed = Number(value); if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) throw invalid(); return parsed; }
+
+export async function readBusinessPlayerLoopOptions(client: EdgeSupabaseClient, input: BusinessReadScope): Promise<Record<string, unknown>> {
+  const response = await client.rpc<unknown>("read_owned_business_player_loop_options_v1", rpcScope(input));
+  if (response.error) throw mapBusinessPhysicalEconomyReadError(response.error.message, "equipment");
+  const raw = strictRow(response.data);
+  const equipmentKeys = new Set<string>();
+  const availableEquipment = strictArray(raw.availableEquipment).map((entry) => {
+    const row = strictRow(entry);
+    const equipmentKey = publicKey(row.equipmentKey, "eqp");
+    if (equipmentKeys.has(equipmentKey)) throw invalidEquipmentResult();
+    equipmentKeys.add(equipmentKey);
+    return { equipmentKey, itemKey: publicKey(row.itemKey, "itm"), canonicalKey: canonicalKey(row.canonicalKey), name: requiredText(row.name) };
+  });
+  const saleableStoreItems = strictArray(raw.saleableStoreItems).map((entry) => {
+    const row = strictRow(entry);
+    const itemKey = requiredText(row.itemKey);
+    const currencyCode = requiredText(row.currencyCode);
+    if (!/^[a-z0-9_-]{1,64}$/u.test(itemKey) || !/^[A-Z0-9_]{3,16}$/u.test(currencyCode)) throw invalidWorkspaceProjection();
+    return { itemKey, catalogItemKey: publicKey(row.catalogItemKey, "itm"), name: requiredText(row.name), currencyCode };
+  });
+  return { availableEquipment, saleableStoreItems };
+}

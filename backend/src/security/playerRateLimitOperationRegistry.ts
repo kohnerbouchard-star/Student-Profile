@@ -98,6 +98,10 @@ const REVIEWED_PLAYER_RATE_LIMIT_OPERATIONS: Readonly<
   businessStorePurchase: byMethod({
     POST: operation("player.business.store.purchase", "sensitive"),
   }),
+  businessEquipmentInstall: byMethod({ POST: operation("player.business.equipment.install", "sensitive") }),
+  businessStoreOfferCreate: byMethod({ POST: operation("player.business.store.offer.create", "sensitive") }),
+  businessStoreOfferStock: byMethod({ POST: operation("player.business.store.offer.stock", "sensitive") }),
+  businessStoreOfferPublish: byMethod({ POST: operation("player.business.store.offer.publish", "sensitive") }),
   businessStoreWithdrawal: byMethod({
     POST: operation("player.business.store.withdrawal", "write"),
   }),

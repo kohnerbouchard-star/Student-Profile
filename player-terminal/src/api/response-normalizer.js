@@ -3,7 +3,7 @@ import { ApiRequestError } from "./errors.js";
 import { validateStoreResponse } from "./response-store-validator.js";
 import { normalizeBusinessTreasurySnapshot } from "../features/business-treasury/business-treasury-read-model.js";
 const ARRAY_READS = new Set(["countries", "notifications"]);
-const READ_ENDPOINTS = new Set(["session", "dashboard", "countries", "country", "news", "worldRuntime", "market", "portfolio", "business", "businessWorkforce", "businessTreasury", "businessIpos", "businessStockroom", "businessRecipes", "store", "marketplace", "contracts", "inventory", "crafting", "banking", "bankingFx", "bankingFxHistory", "bankingFxOrders", "loans", "messages", "progression", "notifications", "notificationsPage", "storyDeliveries"]);
+const READ_ENDPOINTS = new Set(["session", "dashboard", "countries", "country", "news", "worldRuntime", "market", "portfolio", "business", "businessWorkforce", "businessTreasury", "businessIpos", "businessStockroom", "businessRecipes", "businessEquipment", "store", "marketplace", "contracts", "inventory", "crafting", "banking", "bankingFx", "bankingFxHistory", "bankingFxOrders", "loans", "messages", "progression", "notifications", "notificationsPage", "storyDeliveries"]);
 const REQUIRED_ARRAY_FIELDS = Object.freeze({
   dashboard: Object.freeze(["worldEvents", "marketPulse"]),
   news: Object.freeze(["categories", "items"]),
@@ -13,6 +13,7 @@ const REQUIRED_ARRAY_FIELDS = Object.freeze({
   businessWorkforce: Object.freeze(["candidates"]),
   businessStockroom: Object.freeze(["locations", "items"]),
   businessRecipes: Object.freeze(["recipes"]),
+  businessEquipment: Object.freeze(["equipment"]),
   store: Object.freeze(["categories", "items"]),
   marketplace: Object.freeze(["categories", "listings", "myListings"]),
   contracts: Object.freeze(["tabs", "lifecycle", "items"]),
@@ -354,6 +355,25 @@ function validateEndpointShape(endpointKey, value, context) {
   }
   if (endpointKey === "businessStockroom") validateBusinessStockroom(value, context);
   if (endpointKey === "businessRecipes") validateBusinessRecipes(value, context);
+  if (endpointKey === "businessEquipment") {
+    if (UUID.test(JSON.stringify(value))) throw invalidResponse(endpointKey, context.requestId, context.path);
+    for (const [field, pattern, idField] of [
+      ["availableEquipment", /^eqp_[0-9a-f]{32}$/, "equipmentKey"],
+      ["saleableStoreItems", /^[a-z0-9_-]{1,64}$/, "itemKey"],
+    ]) {
+      if (value[field] === undefined) continue; // Older servers cannot enable the new actions.
+      if (!Array.isArray(value[field])) throw invalidResponse(endpointKey, context.requestId, context.path);
+      const seen = new Set();
+      for (const item of value[field]) {
+        if (!item || !pattern.test(item[idField]) || seen.has(item[idField]) || typeof item.name !== "string" || !item.name.trim() ||
+          !/^itm_[0-9a-f]{32}$/.test(field === "availableEquipment" ? item.itemKey : item.catalogItemKey) ||
+          (field === "saleableStoreItems" && !/^[A-Z0-9_]{3,16}$/.test(item.currencyCode))) {
+          throw invalidResponse(endpointKey, context.requestId, context.path);
+        }
+        seen.add(item[idField]);
+      }
+    }
+  }
   if (endpointKey === "store") validateStoreResponse(value, context);
   if (endpointKey === "businessWorkforce" && UUID.test(JSON.stringify(value))) throw invalidResponse(endpointKey, context.requestId, context.path);
   if (endpointKey === "progression") {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import { verifyBusinessPlayerLoop } from "./business-player-loop-database.mjs";
 import {
   FIXTURE,
   createQuote,
@@ -351,6 +352,7 @@ function assertPublicReceipt(result, game, replayed) {
 }
 
 resetFixture();
+verifyBusinessPlayerLoop();
 logProof("clean two-game PostgreSQL fixture seeded");
 
 const security = runJson(`select jsonb_build_object(
