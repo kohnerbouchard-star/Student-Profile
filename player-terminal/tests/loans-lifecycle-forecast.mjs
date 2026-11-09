@@ -64,3 +64,14 @@ test("display escapes external product text and public IDs never become default 
   const html = render(f); assert.doesNotMatch(html, /<img src=x/); assert.match(html, /&lt;img/);
   assert.doesNotMatch(html, new RegExp(`data-loan-id="${f.lifecycle.facilities.items[1].id}"`));
 });
+
+test("older responses retain exact reported schedule amounts without calling them a balance forecast", () => {
+  const f = loansFixture(); delete f.repaymentForecast;
+  f.schedule = [{ due: "2026-10-05T00:00:00.000001Z", amount: "0.01", currencyCode: "LUM" }, { due: "<img src=x>", amount: "99999999999999.99", currencyCode: "NRC" }];
+  const html = render(f);
+  for (const text of ["Forecast unavailable", "Unverified service schedule", "LUM 0.01", "NRC 99,999,999,999,999.99", "do not account for payments already made", "not the remaining debt"]) assert.ok(html.includes(text), text);
+  assert.doesNotMatch(html, /<img src=x>/); assert.match(html, /&lt;img src=x&gt;/);
+  assert.match(html, /value="3" required/);
+  f.repaymentForecast = loansFixture().repaymentForecast;
+  assert.doesNotMatch(render(f), /Unverified service schedule|LUM 0.01|99,999,999,999,999.99/);
+});

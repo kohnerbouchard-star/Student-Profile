@@ -44,7 +44,7 @@ No schema/migration/RPC, deployment, secret, hosted data or other branch is chan
 Pinned Node 22.23.1, npm 10.9.8 and Deno 2.9.3; repository locked dependencies.
 
 - Focused/retained Deno suites: 94/94 (14 new forecast cases plus 80 retained).
-- New Player lifecycle/forecast normalization/render cases: 9/9.
+- New Player lifecycle/forecast normalization/render cases: 10/10.
 - Retained Business/Banking surface tests pass.
 - Complete Player verification passes.
 - Backend TypeScript and all 28 Edge roots pass.
@@ -84,3 +84,29 @@ The actual-number pr-925.json authority preserves every merged PR921 check
 (118 required, 87 critical), denies production actions, and keeps both verifier
 files read-only. No implementation source changes accompany this registration.
 Exact-head hosted CI remains pending.
+
+## Retained currency display correction
+
+Exact-head CI at 970f2fb8 passed Loans Lifecycle Read and Repository Quality but
+revealed a compatibility regression in the unchanged connected Banking/Loans
+currency-display acceptance: older payloads without repaymentForecast no longer
+showed their reported currency amounts. The exact failure was reproduced locally.
+The UI now shows a bounded, escaped "Unverified service schedule" only when no
+verified forecast is available. It explicitly warns that reported entries can
+repeat the full term, do not account for payments, and are not remaining debt,
+payment advice or a payoff quote. Valid forecasts suppress this fallback. It does
+not feed the debt totals, forecast calculations, or repayment prefill.
+
+The immutable acceptance runner is unchanged. Its exact/legacy/incomplete/empty
+and keyboard scenarios now pass at both desktop and mobile sizes. All 10 focused
+UI tests, all four lifecycle browser cases, full Player verification and full root
+validation pass after the correction. Independent review found no actionable
+issue and independently passed the 10 focused tests. No backend/runtime change
+accompanies this correction.
+
+Other 970f2fb8 CI blockers included repeated HTTP 504 downloads during Deno setup
+before source tests and an unchanged Admin session-redirect assertion observing
+cancelled static requests. One targeted Admin retry reproduced that baseline
+failure; it was also independently reproduced on unchanged main by the Settings
+worker. No check is waived or weakened. The amended exact head requires a fresh
+hosted qualification run and stays draft; no merge or deployment is authorized.
