@@ -2,6 +2,8 @@
 
 ## Ownership and scope
 
+Draft [PR #928](https://github.com/kohnerbouchard-star/Student-Profile/pull/928), reviewed implementation `bfec5a8684990784fc560547c1d0d84a6c025ba2`. Actual-PR authority binds nine changed paths under eleven locks, retaining byte-identical 118 required/87 critical check arrays and unchanged read-only verifier/test files. Production/mutation/secret flags remain false.
+
 Roadmap item `MAINT-ADMIN-BROWSER-READINESS-001`, isolated branch `fix/admin-browser-interruption-checks`, based on freshly fetched main `08134650d1e0c8cfebb811a5d97331196ebe08e3`. The owner directed getting needed changes passing on current main and implementing identified corrections. This is a separate bounded maintenance PR for shared failures across current feature branches, not a replacement feature branch.
 
 Existing PR #668/global-ledger ownership and every existing intake entry are preserved. Active Phase 15 certification PR #731 owns different files; no active PR owns this browser correction. PRs #922–#927 stay separate. The only workflow change adds exact test-file triggers to the existing Admin Browser E2E workflow; no job, step, gate or permission is removed or relaxed.
@@ -37,6 +39,6 @@ Raw synthetic logs/artifacts are under `/tmp/admin-readiness-*`. Baseline/candid
 
 ## Publication and remaining work
 
-Keep the PR draft until exact-final-head hosted checks are qualified. Local evidence does not certify the Linux keyboard path or live application behavior. Actual-number authority registration follows publication, preserving all predecessor checks and read-only verifier locks. Shared intake additions must be reconciled additively.
+Keep the PR draft until exact-final-head hosted checks are qualified. Local evidence does not certify the Linux keyboard path or live application behavior. Actual-number authority registration is validated; independent registration review and exact-final-head hosted qualification remain. Shared intake additions must be reconciled additively.
 
 Next exact item: publish the independently reviewed correction, register its actual number and qualify its final head. Feature branches can consume the merged correction through their own reviewed current-main updates; do not silently copy changes into those branches or claim their old failing heads passed.
