@@ -142,26 +142,45 @@ try {
 
   const shareSurface = page.locator('[data-modal-id="share-game-access"]:visible').last();
   await shareSurface.waitFor({ state: "visible", timeout: 5_000 });
-  const shareState = await shareSurface.evaluate((surface) => {
-    const dialog = surface.querySelector('[role="dialog"]') || surface;
-    const playerLink = dialog.querySelector(
-      "input[id*='share-student-link'], input[id*='share-player-link'], [data-econovaria-player-link]",
-    );
-    const rect = dialog.getBoundingClientRect();
-    return {
-      context: dialog.querySelector("[data-econovaria-share-game-context]")?.textContent?.trim(),
-      code: dialog.querySelector(".admin-terminal-share-modal-code strong")?.textContent?.trim(),
-      playerLink: playerLink?.value || "",
-      adminLinkVisible: [...dialog.querySelectorAll("input[id*='share-admin-link']")]
-        .some((input) => {
-          const field = input.closest("label, .admin-terminal-field, .admin-terminal-share-field");
-          return field && !field.hidden && getComputedStyle(field).display !== "none";
-        }),
-      width: rect.width,
-      viewportWidth: innerWidth,
-      horizontalOverflow: dialog.scrollWidth > dialog.clientWidth + 1,
-    };
-  });
+  // The existing controls normalize the native Share surface after two frames.
+  // Wait for that readiness signal, not for the geometry assertion to pass.
+  const shareSurfaceHandle = await shareSurface.elementHandle();
+  let shareState;
+  try {
+    await page.waitForFunction((surface) => {
+      if (!surface?.isConnected || surface.hidden) return false;
+      const style = getComputedStyle(surface);
+      return surface.classList.contains("econovaria-admin-share-game-access") &&
+        style.display !== "none" && style.visibility !== "hidden" &&
+        surface.getClientRects().length > 0;
+    }, shareSurfaceHandle, { timeout: 5_000 });
+    shareState = await shareSurfaceHandle.evaluate((surface) => {
+      if (!surface.isConnected ||
+        !surface.classList.contains("econovaria-admin-share-game-access")) {
+        throw new Error("Share surface lost normalization before its snapshot.");
+      }
+      const dialog = surface.querySelector('[role="dialog"]') || surface;
+      const playerLink = dialog.querySelector(
+        "input[id*='share-student-link'], input[id*='share-player-link'], [data-econovaria-player-link]",
+      );
+      const rect = dialog.getBoundingClientRect();
+      return {
+        context: dialog.querySelector("[data-econovaria-share-game-context]")?.textContent?.trim(),
+        code: dialog.querySelector(".admin-terminal-share-modal-code strong")?.textContent?.trim(),
+        playerLink: playerLink?.value || "",
+        adminLinkVisible: [...dialog.querySelectorAll("input[id*='share-admin-link']")]
+          .some((input) => {
+            const field = input.closest("label, .admin-terminal-field, .admin-terminal-share-field");
+            return field && !field.hidden && getComputedStyle(field).display !== "none";
+          }),
+        width: rect.width,
+        viewportWidth: innerWidth,
+        horizontalOverflow: dialog.scrollWidth > dialog.clientWidth + 1,
+      };
+    });
+  } finally {
+    await shareSurfaceHandle?.dispose();
+  }
   assert(
     shareState.context?.includes(GAME_CODE) && shareState.context?.includes(GAME_NAME),
     `Share panel omitted the selected game context: ${shareState.context}`,
