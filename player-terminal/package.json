@@ -55,7 +55,7 @@
     "browser": "playwright test",
     "dev": "python3 -m http.server ${PORT:-4173}",
     "story-delivery": "node tests/story-delivery-flow.mjs",
-    "marketplace-connected": "node tests/marketplace-connected-lifecycle.mjs",
+    "marketplace-connected": "node tests/marketplace-connected-lifecycle.mjs && node --test tests/marketplace-funding-ownership.mjs",
     "messaging-connected": "node tests/messaging-connected-lifecycle.mjs"
   },
   "devDependencies": {
