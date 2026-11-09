@@ -23,7 +23,11 @@ async function mountTransfers(page) {
       capabilities: { routes: { banking: true }, actions: { bankTransfer: true, savingsTransfer: true } },
       apiCall: async (context) => {
         if (["bankTransfer", "savingsTransfer"].includes(context.endpointKey)) {
-          const request = resolvePlayerBackendRequest({ ...context, params: {}, session: { playerSessionToken: "fixture" } });
+          // The production adapter copies the transport idempotency key into its body.
+          const request = resolvePlayerBackendRequest({ ...context,
+            payload: { ...context.payload, idempotencyKey: context.idempotencyKey },
+            params: {}, session: { playerSessionToken: "fixture" },
+          });
           writes.push({ endpointKey: context.endpointKey, ...request });
           return { ok: true, result: { status: "posted", amount: request.payload.amount }, refreshRequired: true };
         }
