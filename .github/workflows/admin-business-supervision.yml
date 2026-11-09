@@ -2,6 +2,7 @@ name: Admin Business Supervision
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-916.json"
       - ".github/workflows/admin-business-supervision.yml"
       - "admin/v2/src/routes/business/**"
       - "admin/v2/styles/routes/business.css"
@@ -14,6 +15,7 @@ on:
       - "docs/roadmaps/business-v2-current-checkpoint-v1.json"
       - "docs/roadmaps/business-v2-development-execution-log-v1.md"
       - "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   workflow_dispatch:
 permissions:
   contents: read

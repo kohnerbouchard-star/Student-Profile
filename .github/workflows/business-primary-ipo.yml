@@ -2,6 +2,7 @@ name: Business Primary IPO
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-916.json"
       - ".github/workflows/business-primary-ipo.yml"
       - "backend/supabase/migrations/**"
       - "scripts/business-primary-ipo-*.mjs"

@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - '.github/workflows/ref-009-contract-reward-qualification.yml'
       - 'backend/supabase/functions/admin-api/**'
       - 'backend/supabase/migrations/**'
@@ -11,6 +12,7 @@ on:
       - 'docs/architecture/inventories/econovaria-architecture-inventory-v2.json'
       - 'docs/operations/contracts/player-cross-cutting/pr-752.json'
       - 'docs/roadmaps/refactor-execution-v1/tasks/REF-009.md'
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches: [main]
     paths:

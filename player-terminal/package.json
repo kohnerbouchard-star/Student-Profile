@@ -10,7 +10,7 @@
     "read-ordering": "node tests/read-invalidation-ordering.mjs",
     "correctness": "node tests/v751-correctness.mjs",
     "adapter": "node tests/student-profile-adapter.mjs",
-    "transport-retry": "node tests/adapter-transport-retry.mjs",
+    "transport-retry": "node tests/adapter-transport-retry.mjs && node tests/adapter-session-provider-timeout.mjs",
     "idempotency-header-parity": "node tests/idempotency-header-parity.mjs",
     "session-browser-safe": "node tests/browser-safe-session-bootstrap.mjs",
     "capability-manifest-current": "node --experimental-strip-types tests/current-capability-manifest.mjs",
@@ -20,7 +20,7 @@
     "runtime-integration": "node tests/student-profile-runtime-integration.mjs",
     "connected-reads": "node tests/connected-read-surface-gating.mjs",
     "logout": "node tests/player-logout-revocation.mjs",
-    "store-flow": "node tests/store-purchase-flow.mjs",
+    "store-flow": "node tests/store-purchase-flow.mjs && node --test tests/store-purchase-ownership.mjs",
     "store-connected": "node tests/store-connected-purchase.mjs",
     "store-negative": "node tests/store-negative-state-matrix.mjs",
     "business-workspace": "node tests/business-workspace-resources.mjs",
@@ -51,12 +51,13 @@
     "dashboard-refresh": "node tests/player-terminal-dashboard-refresh.mjs",
     "audit": "node tools/audit.mjs",
     "audit:v75": "node tools/v75-audit.mjs",
-    "verify": "npm run check && npm run smoke && npm run hardening && npm run read-ordering && npm run correctness && npm run adapter && npm run transport-retry && npm run idempotency-header-parity && npm run session-browser-safe && npm run capability-manifest-current && npm run mutation-control-regressions && npm run crafting-controls && npm run dashboard-profile && npm run runtime-integration && npm run connected-reads && npm run logout && npm run store-flow && npm run store-connected && npm run store-negative && npm run business-workspace && npm run business-workspace-boundary && npm run contracts-flow && npm run contracts-public && npm run contracts-connected && npm run contracts-submit && npm run story-decisions && npm run market-flow && npm run market-holdings && npm run marketplace-connected && npm run banking-read && npm run banking-fx && npm run inventory-read && npm run inventory-redemption-connected && npm run notifications-inbox && npm run messaging-connected && npm run story-delivery && npm run world-news-route && npm run world-runtime && npm run realtime && npm run session-timeout && npm run recovery && npm run skeletons && npm run dom-safety && npm run local-controls && npm run css:foundation && npm run map-protection && npm run route-refresh && npm run dashboard-refresh && npm run audit && npm run audit:v75",
+    "verify": "npm run check && npm run smoke && npm run hardening && npm run read-ordering && npm run correctness && npm run adapter && npm run transport-retry && npm run idempotency-header-parity && npm run session-browser-safe && npm run capability-manifest-current && npm run mutation-control-regressions && npm run crafting-controls && npm run dashboard-profile && npm run runtime-integration && npm run connected-reads && npm run logout && npm run store-flow && npm run store-connected && npm run store-negative && npm run business-workspace && npm run business-workspace-boundary && npm run contracts-flow && npm run contracts-public && npm run contracts-connected && npm run contracts-submit && npm run story-decisions && npm run market-flow && npm run market-holdings && npm run marketplace-connected && npm run banking-read && npm run banking-fx && npm run inventory-read && npm run inventory-redemption-connected && npm run notifications-inbox && npm run messaging-connected && npm run story-delivery && npm run world-news-route && npm run country-news-projections && npm run world-runtime && npm run realtime && npm run session-timeout && npm run recovery && npm run skeletons && npm run dom-safety && npm run local-controls && npm run css:foundation && npm run map-protection && npm run route-refresh && npm run dashboard-refresh && npm run audit && npm run audit:v75",
     "browser": "playwright test",
     "dev": "python3 -m http.server ${PORT:-4173}",
     "story-delivery": "node tests/story-delivery-flow.mjs",
-    "marketplace-connected": "node tests/marketplace-connected-lifecycle.mjs",
-    "messaging-connected": "node tests/messaging-connected-lifecycle.mjs"
+    "marketplace-connected": "node tests/marketplace-connected-lifecycle.mjs && node --test tests/marketplace-funding-ownership.mjs",
+    "messaging-connected": "node tests/messaging-connected-lifecycle.mjs",
+    "country-news-projections": "node --test tests/country-news-projection-contract.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.59.1"

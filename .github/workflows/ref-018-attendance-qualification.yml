@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - '.github/workflows/ref-018-attendance-qualification.yml'
       - 'backend/src/domains/attendance/**'
       - 'backend/src/domains/crafting/**'
@@ -44,6 +45,7 @@ on:
       - 'scripts/ref-018-attendance-*'
       - 'docs/architecture/inventories/econovaria-architecture-inventory-v2.json'
       - 'docs/roadmaps/refactor-execution-v1/tasks/REF-018.md'
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches: [main]
     paths:

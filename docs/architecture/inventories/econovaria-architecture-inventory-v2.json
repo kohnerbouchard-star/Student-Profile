@@ -8,10 +8,10 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1312,
+    "sourceFiles": 1317,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
-    "persistenceOutsideInfrastructure": 54,
+    "persistenceOutsideInfrastructure": 53,
     "crossDomainDeepImports": 70,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
@@ -54,7 +54,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 12,
+      "sourceFiles": 15,
       "publicBoundaryFiles": []
     },
     {
@@ -517,10 +517,6 @@
       },
       {
         "file": "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts",
-        "layer": "api"
-      },
-      {
-        "file": "backend/src/domains/attendance/api/staffAttendanceDailyHttpHandler.ts",
         "layer": "api"
       },
       {
@@ -2634,10 +2630,6 @@
         "lines": 1132
       },
       {
-        "file": "player-terminal/src/api/read-model.js",
-        "lines": 1114
-      },
-      {
         "file": "admin/v2/src/routes/crafting/CraftingRoute.js",
         "lines": 1078
       },
@@ -2660,6 +2652,10 @@
       {
         "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
         "lines": 931
+      },
+      {
+        "file": "player-terminal/src/api/read-model.js",
+        "lines": 929
       },
       {
         "file": "backend/src/domains/contracts/api/staffContractReviewHttpHandler.test.ts",

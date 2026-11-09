@@ -3,6 +3,8 @@ name: Story Replay Safety
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-916.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - "backend/src/domains/storylines/**"
       - "backend/src/domains/stocks/news.ts"
       - "backend/src/domains/stocks/news.test.ts"
@@ -20,6 +22,7 @@ on:
       - "backend/supabase/migrations/20260816090600_seed_meridian_local_friend_relationships_v1.sql"
       - "backend/supabase/migrations/20260816090700_harden_meridian_arrival_clock_gate_v1.sql"
       - ".github/workflows/story-replay-safety.yml"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches:
       - main
@@ -61,6 +64,9 @@ jobs:
     steps:
       - name: Check out exact workflow head
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Deno
         uses: denoland/setup-deno@v2
