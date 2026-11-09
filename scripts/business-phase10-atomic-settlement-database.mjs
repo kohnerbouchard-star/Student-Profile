@@ -2,10 +2,14 @@
 
 import assert from "node:assert/strict";
 import { verifyBusinessPlayerLoop } from "./business-player-loop-database.mjs";
+import { verifyBusinessPlayerManufacturing } from "./business-player-manufacturing-database.mjs";
+import { verifyBusinessPlayerManufacturingConcurrency } from "./business-player-manufacturing-concurrency.mjs";
 import {
   FIXTURE,
   createQuote,
   expectSqlError,
+  openPsqlSession,
+  pollForDatabaseWait,
   resetFixture,
   runJson,
   runSql,
@@ -353,6 +357,7 @@ function assertPublicReceipt(result, game, replayed) {
 
 resetFixture();
 verifyBusinessPlayerLoop();
+verifyBusinessPlayerManufacturing({ game: gameOne, runSql });
 logProof("clean two-game PostgreSQL fixture seeded");
 
 const security = runJson(`select jsonb_build_object(
@@ -1186,5 +1191,9 @@ assertNoMutationFailure(
   }),
   /STORE_OFFER_SETTLEMENT_IDEMPOTENCY_CONFLICT/iu,
 );
+
+// Game One deliberately ends restructuring to prove receipt-first replay.
+// Keep that evidence intact and use the still-active second game for start races.
+await verifyBusinessPlayerManufacturingConcurrency({ game: gameTwo, runSql, runJson, openPsqlSession, pollForDatabaseWait });
 
 console.log("PASS business Phase 10A.3 real PostgreSQL serial settlement verification");

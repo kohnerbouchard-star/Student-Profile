@@ -10,7 +10,7 @@ export function verifyBusinessPlayerLoop() {
     insert into public.business_ownership_positions(game_session_id,business_id,player_id,ownership_kind,units,voting_units)
       values (${lit(game.id)},${lit(game.businessId)},${lit(game.ownerId)},'membership_interest',10000,10000)
       on conflict do nothing;
-    update public.store_seller_offers set status = 'paused' where id = ${lit(game.offerId)};`;
+    update public.store_seller_offers set status = 'paused', version = version + 1 where id = ${lit(game.offerId)};`;
   const publish = (overrides = {}) => {
     const { gameId = game.id, playerId = game.ownerId, businessKey = game.businessKey, offerKey = game.offerKey,
       version = `(select version from public.store_seller_offers where id = ${lit(game.offerId)})`, key = "player-loop-publish-001" } = overrides;
@@ -53,7 +53,7 @@ export function verifyBusinessPlayerLoop() {
   fail("stale version rejected", "", publish({ version: "999999" }), "STORE_SELLER_OFFER_VERSION_CONFLICT");
   fail("empty listing rejected", `update public.inventory_holdings set quantity_owned = 0 where game_session_id = ${lit(game.id)} and inventory_account_id = (select inventory_account_id from public.store_seller_offers where id = ${lit(game.offerId)});`, publish(), "BUSINESS_OFFER_PUBLISH_STOCK_UNAVAILABLE");
   fail("inactive player rejected", `update public.players set status = 'archived' where id = ${lit(game.ownerId)};`, publish(), "PLAYER_NOT_FOUND");
-  fail("inactive game rejected", `update public.game_sessions set lifecycle_state = 'paused' where id = ${lit(game.id)};`, publish(), "GAME_SESSION_NOT_ACTIVE");
+  fail("inactive game rejected", `update public.game_sessions set lifecycle_state = 'paused', status = 'disabled' where id = ${lit(game.id)};`, publish(), "GAME_SESSION_NOT_ACTIVE");
   fail("pending withdrawal rejected", `select public.request_business_store_offer_withdrawal_v2(${lit(game.id)},${lit(game.businessKey)},${lit(game.offerKey)},'full',null,(select version from public.store_seller_offers where id = ${lit(game.offerId)}),'player-loop-withdraw-001');`, publish(), "BUSINESS_OFFER_PUBLISH_STATUS_INVALID");
   const privileges = runJson(`select jsonb_build_object('anon',has_function_privilege('anon','public.publish_owned_business_store_offer_v1(uuid,uuid,text,text,bigint,text)','execute'),'authenticated',has_function_privilege('authenticated','public.read_owned_business_player_loop_options_v1(uuid,uuid)','execute'),'service',has_function_privilege('service_role','public.publish_owned_business_store_offer_v1(uuid,uuid,text,text,bigint,text)','execute'))::text;`);
   assert.deepEqual(privileges, { anon: false, authenticated: false, service: true });
@@ -71,7 +71,7 @@ function verifyOwnedCommands(game, setup, fail) {
   for (const [name, command] of Object.entries(commands)) {
     fail(`${name} wrong owner`, "", command(game.buyerOneId), "BUSINESS_NOT_FOUND");
     fail(`${name} inactive actor`, `update public.players set status='archived' where id=${lit(game.ownerId)};`, command(), "PLAYER_NOT_FOUND");
-    fail(`${name} inactive game`, `update public.game_sessions set lifecycle_state='paused' where id=${lit(game.id)};`, command(), "GAME_SESSION_NOT_ACTIVE");
+    fail(`${name} inactive game`, `update public.game_sessions set lifecycle_state='paused',status='disabled' where id=${lit(game.id)};`, command(), "GAME_SESSION_NOT_ACTIVE");
     fail(`${name} cross-game actor`, "", command(FIXTURE.games.two.ownerId), "PLAYER_NOT_FOUND");
   }
   for (const signature of [
@@ -91,7 +91,7 @@ function verifyOwnedCommands(game, setup, fail) {
   // below must preserve that projection and transfer its exact cost basis.
   const result = runJson(`${setup}
     do $test$
-    declare item uuid; machine uuid; definition public.physical_economy_item_definitions%rowtype;
+    declare item uuid; machine uuid; pack uuid; definition public.physical_economy_item_definitions%rowtype;
       warehouse uuid; equipment text; installed jsonb; installed_again jsonb;
       options jsonb; draft jsonb; replay jsonb; stocked jsonb; published jsonb;
       offer text; draft_version bigint; stock_version bigint;
@@ -105,9 +105,10 @@ function verifyOwnedCommands(game, setup, fail) {
       insert into public.business_inventory(game_session_id,business_id,item_key,inventory_kind,quantity,unit_cost,game_item_id)
         values(${lit(game.id)},${lit(game.businessId)},'loop.fixture.widget','finished_good',6,2.50,item);
 
-      select * into definition from public.physical_economy_item_definitions
-        where item_class='equipment' and status='active' order by id limit 1;
-      if not found then raise exception 'LOOP_FIXTURE_EQUIPMENT_DEFINITION_REQUIRED'; end if;
+      insert into public.physical_economy_content_packs(pack_key,schema_version,content_version,content_digest,source_commit,status)
+        values('loop_pr926_fixture','1.0','fixture',repeat('a',64),repeat('b',40),'active') returning id into pack;
+      insert into public.physical_economy_item_definitions(pack_id,item_key,name,item_class,currency_code,stackable,equipment_slot,tool_tags,status)
+        values(pack,'loop_fixture_machine','Loop Fixture Machine','equipment','ECO',false,'operations',array['manufacture'],'active') returning * into definition;
       insert into public.game_items(game_session_id,canonical_key,source_kind,physical_item_definition_id,name,item_class,subtype,stackable,serialized,transferable,status)
         values(${lit(game.id)},'loop.fixture.machine','physical_pack',definition.id,'Loop Fixture Machine','equipment','machine',false,true,true,'active') returning id into machine;
       warehouse := economy_private.ensure_business_inventory_account_v2(${lit(game.id)},${lit(game.businessId)},'warehouse');

@@ -253,6 +253,30 @@
     "travelQuote": {
       "evidence": "connected_browser",
       "domain": "world"
+    },
+    "businessEquipmentInstall": {
+      "evidence": "local_browser",
+      "domain": "business",
+      "evidencePath": "player-terminal/tests/browser/player-business-production-loop.spec.mjs",
+      "evidenceLimit": "Real terminal controls, coordinator, normalization and route mapping with synthetic responses on desktop/mobile. Database authority, inventory and settlement are qualified separately; this is not connected-service evidence."
+    },
+    "businessStoreOfferCreate": {
+      "evidence": "local_browser",
+      "domain": "business",
+      "evidencePath": "player-terminal/tests/browser/player-business-production-loop.spec.mjs",
+      "evidenceLimit": "Real terminal controls, coordinator, normalization and route mapping with synthetic responses on desktop/mobile. Database authority, inventory and settlement are qualified separately; this is not connected-service evidence."
+    },
+    "businessStoreOfferStock": {
+      "evidence": "local_browser",
+      "domain": "business",
+      "evidencePath": "player-terminal/tests/browser/player-business-production-loop.spec.mjs",
+      "evidenceLimit": "Real terminal controls, coordinator, normalization and route mapping with synthetic responses on desktop/mobile. Database authority, inventory and settlement are qualified separately; this is not connected-service evidence."
+    },
+    "businessStoreOfferPublish": {
+      "evidence": "local_browser",
+      "domain": "business",
+      "evidencePath": "player-terminal/tests/browser/player-business-production-loop.spec.mjs",
+      "evidenceLimit": "Real terminal controls, coordinator, normalization and route mapping with synthetic responses on desktop/mobile. Database authority, inventory and settlement are qualified separately; this is not connected-service evidence."
     }
   },
   "adminEvidence": {
