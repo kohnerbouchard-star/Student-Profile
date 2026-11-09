@@ -402,9 +402,8 @@ try {
       await dialog.dismiss();
       resolve();
     }));
-    await Promise.all([cancelledReload, draft.page.reload().catch((error) => {
-      assert.match(error.message, /ERR_ABORTED/);
-    })]);
+    await draft.page.evaluate(() => { setTimeout(() => window.location.reload(), 0); });
+    await cancelledReload;
     assert.equal(await draft.page.getByLabel("Present reward").inputValue(), "7.25");
     pass("browser reload cancellation leaves the original draft mounted");
 

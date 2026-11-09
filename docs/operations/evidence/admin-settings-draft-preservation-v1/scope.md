@@ -15,11 +15,18 @@ PR #668 retains backend context/global-roadmap ownership. Its branch and existin
 
 ## Verification
 
-Local Settings API/controller tests: 9 passing. Source browser regression qualification is in progress; existing checks are retained and extended for route/history preservation, refresh cancel/accept, browser reload cancellation, game-switch cancellation, save-in-flight navigation, and failed-save retry.
+Local qualification at implementation `932fd111` plus the final browser harness correction:
 
-The first browser run found the retained confirmation dialog stayed busy after closing, which prevented retry. Settings now resets that dialog only before a new permitted submission. A second fixture run exposed an incomplete two-game session fixture; status and bootstrap now agree. These failed attempts are not successful qualification.
+- Settings API/controller: 9/9; registered Admin V2 suite: 91/91.
+- Settings browser: 16/16 on pinned Playwright 1.65.0, including actual beforeunload cancellation, both refresh controls, Back/Forward, game-switch cancellation, in-flight navigation, failed-save retry, permission denial and mobile/Korean containment. Main comparison fails the new retention assertion: edited 1.35 reverts to 1.
+- Root `npm test`, backend smoke, TypeScript/all 28 Edge roots, secrets and whitespace pass. Root retains its platform-specific GNU-tar skip. Local Deno is 2.8.3; hosted pinned-runtime checks remain necessary.
+- Independent read-only source review found no actionable regression and independently reran all nine Settings contracts.
+- Additional broad wildcard Admin tests: 164/166 pass. The Inventory wording assertion and World planned-route assertion also fail on untouched main. Those existing assertions are unchanged; the new two Settings unit tests fail on main and pass here.
+- Additional full Admin browser suite reaches an unauthenticated-redirect failed-request assertion: imported modules are aborted by navigation. Untouched-main comparison remains in progress. This suite is not claimed passing.
 
-Backend TypeScript/all Edge roots pass. Full backend smoke and root aggregate are in progress. Root first stopped at the expected regenerated app.js inventory delta; no audit was weakened. Published exact-head CI is pending. These are local synthetic fixtures, not deployed or production qualification.
+The first Settings browser attempt found the retained confirmation dialog stayed busy after closing, preventing retry; fixed locally before qualification. A second fixture attempt exposed inconsistent two-game status/bootstrap data; corrected only the new fixture. Another new reload test wrongly expected Playwright ERR_ABORTED rather than a navigation timeout after cancellation; it now invokes browser reload and checks the actual beforeunload dialog and retained draft. Original failed attempts remain failure evidence, not passes.
+
+Raw local logs and screenshots are retained outside the source diff under the `teacher-settings` prefix in the executor's temporary directory. Published exact-head CI is pending. These are synthetic local fixtures, not deployed or production qualification.
 
 ## Boundary and rollback
 
