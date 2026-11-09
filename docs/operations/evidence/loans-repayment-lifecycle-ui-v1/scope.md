@@ -110,3 +110,13 @@ cancelled static requests. One targeted Admin retry reproduced that baseline
 failure; it was also independently reproduced on unchanged main by the Settings
 worker. No check is waived or weakened. The amended exact head requires a fresh
 hosted qualification run and stays draft; no merge or deployment is authorized.
+
+The next hosted run exposed a stale assertion introduced in the original Loans
+tranche: the standalone Business/Banking surface test still forbade reported
+schedule amounts after the compatibility correction. That assertion now checks
+the original exact currency amounts and the actual reported schedule date, plus
+the explicit unverified/not-remaining-debt warning. The unavailable forecast does
+not display the unrelated currency projection next-payment date. Both standalone
+surface and 10 focused tests pass; the retained surface is now included in the
+loans-lifecycle package command so complete Player verification exercises it.
+No runtime or immutable browser runner changes accompany this test correction.

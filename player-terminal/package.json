@@ -58,7 +58,7 @@
     "marketplace-connected": "node tests/marketplace-connected-lifecycle.mjs && node --test tests/marketplace-funding-ownership.mjs",
     "messaging-connected": "node tests/messaging-connected-lifecycle.mjs",
     "country-news-projections": "node --test tests/country-news-projection-contract.mjs",
-    "loans-lifecycle": "node --test tests/loans-lifecycle-forecast.mjs"
+    "loans-lifecycle": "node tests/business-banking-surface.mjs && node --test tests/loans-lifecycle-forecast.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.59.1"
