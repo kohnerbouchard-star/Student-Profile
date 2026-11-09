@@ -22,10 +22,10 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 ## Scope Intake
 
 - **`PLAYER-CRAFTING-EMPTY-RECIPES-001` — Preserve owned workshop state without recipes (2026-11-09)**
-  - Status: `IMPLEMENTED_NOT_MERGED`; isolated branch `fix/crafting-empty-recipe-state` from main `08134650d1e0c8cfebb811a5d97331196ebe08e3`, implementation `45957af880a2d50284d8a95e3f6907e152b541f3`. The owner requested separate branches and PRs for these smaller integration fixes; current open PR/branch inspection found no competing owner for this correction.
+  - Status: `IMPLEMENTED_NOT_MERGED`; draft [PR #922](https://github.com/kohnerbouchard-star/Student-Profile/pull/922), isolated branch `fix/crafting-empty-recipe-state` from main `08134650d1e0c8cfebb811a5d97331196ebe08e3`, implementation `45957af880a2d50284d8a95e3f6907e152b541f3`. The owner requested separate branches and PRs for these smaller integration fixes; current open PR/branch inspection found no competing owner for this correction.
   - Scope: render recipe emptiness inside the recipe area while retaining the independent queue, equipment, usable effects, active effects and history. Preserve existing action permissions/public keys and recipe restoration. No backend, migration, route, RPC, dependency or CSS change. Earlier source-integration statuses remain historical where main already contains their merges; this entry does not certify their outstanding runtime evidence.
   - Evidence: [bounded scope and validation](../operations/evidence/crafting-empty-recipe-state/scope.md). Baseline regression reproduces missing queue controls; candidate focused tests, full Player verify, root tests and backend TypeScript pass. Local Edge/full smoke are blocked by a frozen dependency fetch; browser startup is blocked by local socket permissions. No gate is waived; hosted exact-head checks and independent review remain required.
-  - Next exact item: publish this draft with its actual-number authority, qualify hosted checks and return for review. No merge, deployment, broad Crafting completion or production claim.
+  - Next exact item: qualify draft #922 with its actual-number authority (118 required/87 critical checks unchanged) and hosted checks and return for review. No merge, deployment, broad Crafting completion or production claim.
 
 
 - **`MAINT-ADMIN-SHARE-SMOKE-READINESS` — Synchronize Share smoke with existing normalization (2026-11-09)**

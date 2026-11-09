@@ -3,7 +3,8 @@
 - Roadmap item: `PLAYER-CRAFTING-EMPTY-RECIPES-001`.
 - Branch: `fix/crafting-empty-recipe-state`.
 - Baseline: `08134650d1e0c8cfebb811a5d97331196ebe08e3`.
-- Implementation: `45957af880a2d50284d8a95e3f6907e152b541f3`.
+- Local implementation: `45957af880a2d50284d8a95e3f6907e152b541f3`.
+- Draft PR: [#922](https://github.com/kohnerbouchard-star/Student-Profile/pull/922). Published implementation `63c3244813c6b17b45d88d8f1a3dcb62c58a8ae9` has tree `c38ca4f68a601702c67d5f9014d84ba531da4ff8`, identical to the qualified local tree.
 - Status: `IMPLEMENTED_NOT_MERGED`. No merge or production deployment is authorized.
 
 ## Scope and ownership
@@ -30,3 +31,5 @@ Files:
 - No connected staging, database or production runtime was exercised.
 
 Next: qualify exact-head hosted checks and independent review before merge consideration. This does not close the broader Crafting roadmap or certify live deployment.
+
+Actual-PR registration `pr-922.json` locks the six edited paths and two unchanged verifier/test paths. It preserves all 118 required and 87 critical checks from current-main PR921, with production and secret handling denied.
