@@ -14,7 +14,7 @@
     "player-terminal/src/api/adapter-transport.js",
     "player-terminal/tests/adapter-session-provider-timeout.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-913.json",
-    ".github/workflows/business-store-atomic-settlement-v2.yml",
+    ".github/workflows/progression-runtime-v1.yml",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
@@ -24,7 +24,7 @@
     "player-terminal/src/api/adapter-transport.js",
     "player-terminal/tests/adapter-session-provider-timeout.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-913.json",
-    ".github/workflows/business-store-atomic-settlement-v2.yml",
+    ".github/workflows/progression-runtime-v1.yml",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
@@ -239,5 +239,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "Owner authorized the independently reviewed optional adapter session-provider timeout fix and scoped draft publication, plus the coordinated supported-runner correction for the Atomic Settlement browser job: pin only verify-player-terminal-and-chromium to ubuntu-24.04, matching PR #914. Exactly six edited paths under eight locks. Production and focused regressions remain byte-identical to reviewed d66c06ce5ce28008cbf545b148f313406999fa44. Preserve all 117 required and 86 critical checks from PR #912 and both verifier/test scripts as read-only locks. The actual Atomic workflow correction self-triggers ordinary PR qualification; old-head manual passes do not qualify the new head. No trigger, command, checkout, dependency, runtime, migration or authority-policy change, no old retained-qualification proposal, and no unrelated owner changes. No merge, auto-merge, ready-for-review, production deployment, live application-state mutation, credentials, permissions or dispatch/rerun operation."
+  "authorizationNote": "Owner authorized finishing PR #913 through a normal forward merge of current main 415653b213cb1269074c212da9f97bdfd3e652f2, preserving merged PR #914 Marketplace runtime/test registration and shared runner/selectors. The only new workflow correction is Progression Runtime verify runs-on ubuntu-24.04; all job commands, guards, permissions, checkouts and triggers stay unchanged. The prior Atomic runner pin is now merged main and is not a newly edited PR #913 path. Exactly six edited paths under eight locks. Preserve all 117 required and 86 critical checks, both read-only verifier/test locks and false production flags. Session runtime/regressions are unchanged by reconciliation. Old-head evidence does not qualify the new head; normal PR CI and explicit retained-gate reconciliation are required. No old 17-file proposal or timezone generator change, no other-owner branch change, merge into main, auto-merge, ready transition, production deployment/promotion, live-state mutation, credential/permission change or dispatch/rerun operation."
 }
