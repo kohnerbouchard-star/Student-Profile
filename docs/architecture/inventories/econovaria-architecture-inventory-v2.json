@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1320,
+    "sourceFiles": 1321,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 53,
@@ -2898,6 +2898,10 @@
         "lines": 569
       },
       {
+        "file": "backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts",
+        "lines": 564
+      },
+      {
         "file": "admin/game-code-wiring.js",
         "lines": 563
       },
@@ -2927,10 +2931,6 @@
       },
       {
         "file": "admin/v2/src/routes/marketplace/MarketplaceController.js",
-        "lines": 554
-      },
-      {
-        "file": "backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts",
         "lines": 554
       },
       {
