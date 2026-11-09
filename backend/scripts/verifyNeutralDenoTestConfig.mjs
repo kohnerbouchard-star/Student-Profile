@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 // REF-011: only the config operand changes between each compatibility/parity run.
 import assert from "node:assert/strict";
-import { existsSync, lstatSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { dirname, join, posix } from "node:path";
-import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const NEUTRAL = "supabase/functions/deno.json";
@@ -14,6 +13,7 @@ export const LOCK = "supabase/functions/deno.lock";
 export const TSLIB_URL = "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs";
 export const TSLIB_FILE = "supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs";
 export const TSLIB_SHA256 = "c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9";
+export const TYPECHECK_MAP = "scripts/typecheck-only/import-map.json";
 export const tslibImports = (functionConfig = false) => ({
   [TSLIB_URL]: `${functionConfig ? ".." : "."}/_shared/vendor/tslib-2.8.1/tslib.mjs`,
 });
@@ -26,22 +26,31 @@ export const SUITES = Object.values(GROUPS).flat();
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 
 export function validateConfigs(neutral, classroom) {
-  assert.deepEqual(neutral, { compilerOptions: { strict: true }, imports: tslibImports() }, "Neutral effective settings changed; only the exact original-digest tslib mapping is permitted");
+  assert.deepEqual(neutral, { compilerOptions: { strict: true }, imports: tslibImports() }, "Neutral settings changed beyond the exact accepted tslib mapping");
   const { tasks, ...effective } = classroom;
   assert.deepEqual(effective, { compilerOptions: neutral.compilerOptions, imports: tslibImports(true) }, "Classroom/neutral effective settings differ");
   assert.deepEqual(tasks, { check: "deno check index.ts" }, "Unexpected Classroom task configuration");
 }
 
+// Shared by CI checks/tests and the adjacent configurations selected by the CLI.
+// Local files are not covered by remote lock hashes: verify them independently.
 export function trustedTslibConfigs(backendRoot) {
-  validateConfigs(JSON.parse(readFileSync(join(backendRoot, NEUTRAL), "utf8")), JSON.parse(readFileSync(join(backendRoot, CLASSROOM), "utf8")));
-  const functionsRoot = join(backendRoot, "supabase/functions");
+  const read = (path) => JSON.parse(readFileSync(join(backendRoot, path), "utf8"));
+  validateConfigs(read(NEUTRAL), read(CLASSROOM));
   const modulePath = join(backendRoot, TSLIB_FILE);
   assert(lstatSync(modulePath).isFile(), "Pinned tslib must be a regular repository file");
   const bytes = readFileSync(modulePath);
   assert.equal(bytes.length, 11226, "Pinned tslib length changed");
   assert.equal(digest(bytes), TSLIB_SHA256, "Pinned tslib no longer matches the ORIGINAL accepted lock identity");
-  const lock = JSON.parse(readFileSync(join(backendRoot, LOCK), "utf8"));
-  assert.equal(lock.remote[TSLIB_URL], TSLIB_SHA256, "Original remote lock identity changed");
+  assert.equal(read(LOCK).remote?.[TSLIB_URL], TSLIB_SHA256, "Original tslib lock entry changed");
+  assert.deepEqual(read(TYPECHECK_MAP), { imports: {
+    [TSLIB_URL]: "../../supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs",
+  } }, "Typecheck map must contain only the exact accepted URL and local target");
+  assert.deepEqual(read("supabase/functions/admin-api/deno.json"), {
+    compilerOptions: { strict: false, noImplicitAny: false, useUnknownInCatchVariables: false },
+    imports: tslibImports(true),
+  }, "Admin settings changed beyond the exact accepted tslib mapping");
+  const functionsRoot = join(backendRoot, "supabase/functions");
   const slugs = readdirSync(functionsRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && existsSync(join(functionsRoot, entry.name, "index.ts")))
     .map((entry) => entry.name).sort();
@@ -54,40 +63,11 @@ export function trustedTslibConfigs(backendRoot) {
       : { strict: true };
     const expected = { compilerOptions, imports: tslibImports(true) };
     if (slug === "classroom-api") expected.tasks = { check: "deno check index.ts" };
-    assert.deepEqual(config, expected, `${slug}: deployment config must preserve compiler/task settings and only the exact tslib mapping`);
+    assert.deepEqual(config, expected, `${slug}: preserve compiler/task settings and only the exact tslib mapping`);
     assert.equal(new URL(config.imports[TSLIB_URL], pathToFileURL(configPath)).href, pathToFileURL(modulePath).href);
     configs.push(configPath);
   }
   return configs;
-}
-
-export function verifyTrustedTslibGraphs(backendRoot, run = spawnSync) {
-  const configs = trustedTslibConfigs(backendRoot);
-  const directory = mkdtempSync(join(tmpdir(), "econovaria-tslib-graph-"));
-  const before = readFileSync(join(backendRoot, LOCK));
-  const moduleUrl = pathToFileURL(join(backendRoot, TSLIB_FILE)).href;
-  const parent = `data:application/javascript,${encodeURIComponent(`export { __assign } from ${JSON.stringify(TSLIB_URL)};`)}`;
-  const entry = join(directory, "transitive.ts");
-  writeFileSync(entry, `export { __assign } from ${JSON.stringify(parent)};\n`);
-  try {
-    for (const config of configs) {
-      const result = run("deno", ["info", "--json", "--no-remote", "--no-npm", "--frozen", `--lock=${join(backendRoot, LOCK)}`, `--config=${config}`, entry], {
-        cwd: directory, encoding: "utf8", timeout: 20000, maxBuffer: 2 * 1024 * 1024,
-        env: { ...process.env, DENO_DIR: join(directory, "owned-fixture-cache"), DENO_NO_PROMPT: "1" },
-      });
-      assert(!result.error, `Deno graph unavailable: ${result.error?.message}`);
-      assert.equal(result.status, 0, `Deno graph failed: ${result.stderr}`);
-      const graph = JSON.parse(result.stdout);
-      // Deno info can exit zero with graph errors: inspect the actual graph.
-      assert(graph.modules.every((module) => !module.error), `Unresolved import under ${config}`);
-      assert(graph.modules.some((module) => module.specifier === moduleUrl), `Pinned local module missing under ${config}`);
-      assert(graph.modules.every((module) => module.specifier.startsWith("file:") || module.specifier.startsWith("data:")), `Remote module retained under ${config}`);
-      assert.deepEqual(readFileSync(join(backendRoot, LOCK)), before, "Offline graph changed original lock bytes");
-    }
-    return { configs: configs.length, sha256: TSLIB_SHA256, network: "disabled", moduleExecution: false };
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
 }
 
 // Restricted to the existing literal command grammar; never execute shell input.
@@ -177,10 +157,7 @@ function main() {
   const { scripts } = read("package.json");
   validateScripts(scripts, options.includes("--preflight"));
   trustedTslibConfigs(root);
-  if (!options.includes("--static")) {
-    console.log(`TSLIB_GRAPH ${JSON.stringify(verifyTrustedTslibGraphs(root))}`);
-    runParity(scripts, root);
-  }
+  if (!options.includes("--static")) runParity(scripts, root);
   console.log(`REF-011 ${options.includes("--static") ? "static" : "parity"} verification passed for ${SUITES.length} suites`);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

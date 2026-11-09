@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.arrival-world-boundary-pr-899.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 899,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/arrival/index.ts",
+    "backend/src/domains/arrival/services/arrivalClassScoring.test.ts",
+    "backend/src/domains/arrival/services/preparePlayerArrivalAssignment.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeContracts.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.test.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts",
+    "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-899.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/arrival/index.ts",
+    "backend/src/domains/arrival/services/arrivalClassScoring.test.ts",
+    "backend/src/domains/arrival/services/preparePlayerArrivalAssignment.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeContracts.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.test.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts",
+    "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-899.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "World Runtime",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Database Replay",
+    "Player Multiplayer and Load E2E",
+    "REF-018 and REF-022 Staff Mutation Qualification",
+    "Phase 15 Controlled Staging Convergence",
+    "Phase 15 Controlled Production Promotion"
+  ],
+  "criticalJobChecks": [
+    "World Runtime",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Database Replay",
+    "Player Multiplayer and Load E2E"
+  ],
+  "readOnlyPaths": [
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "authorizationNote": "This manifest binds the ten reviewed Arrival–World source, test and generated inventory paths and this PR-specific authority to the draft for normal CI and Preview. Preserve canonical error identity, server-derived scope, assignment and grant preparation, atomic-write and snapshot ordering, DTO privacy, dependency locks, authority verifier and tests, and release holds. Both roadmaps remain excluded. This draft does not authorize production deployment, hosted mutations, secrets, review approval, force operations or release-hold changes. Exact-head CI and Preview remain pending."
+}

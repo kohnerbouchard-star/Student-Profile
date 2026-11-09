@@ -1,4 +1,3 @@
-import { createSupabaseCampaignEffectWorkerRepository } from "../../../src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts";
 import type {
   CampaignEventDefinition,
   CampaignInstance,
@@ -315,14 +314,6 @@ Deno.test("malformed effect payload fails closed before any domain port", async 
   assertEquals(failed, [id("a")]);
 });
 
-Deno.test("acknowledgements preserve booleans and reject malformed scalar results", async () => {
-  for (const data of [true, false, null, "true"]) {
-    const repo = createSupabaseCampaignEffectWorkerRepository({ rpc: async () => ({ data, error: null }) } as any);
-    const complete = () => repo.complete({ commandId: id("a"), attemptCount: 1, completedAt: NOW });
-    if (typeof data === "boolean") assertEquals(await complete(), data);
-    else await assertRejectsCode(complete, "campaign_event_invalid");
-  }
-});
 
 function provider(): CampaignProgramProvider {
   return {

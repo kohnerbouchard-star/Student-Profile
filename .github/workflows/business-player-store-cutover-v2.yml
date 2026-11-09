@@ -239,6 +239,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/verifyNeutralDenoTestConfig.mjs --static
           npm run test:player-store-public
           deno test \
             --config supabase/functions/classroom-api/deno.json \
@@ -273,15 +274,20 @@ jobs:
               ! -path 'supabase/functions/admin-api/index.ts' -print | sort
           )
           test "${#STRICT_EDGE_ROOTS[@]}" -gt 0
+          node --test scripts/verifyTypecheckOnlyImports.test.mjs
+          node scripts/verifyTypecheckOnlyImports.mjs
           deno check \
             --config supabase/functions/deno.json \
             --lock=supabase/functions/deno.lock \
             --frozen \
+            --import-map=scripts/typecheck-only/import-map.json \
             "${STRICT_EDGE_ROOTS[@]}"
+          node scripts/verifyTypecheckOnlyImports.mjs
           deno check \
             --config supabase/functions/admin-api/deno.json \
             --lock=supabase/functions/deno.lock \
             --frozen \
+            --import-map=scripts/typecheck-only/import-map.json \
             supabase/functions/admin-api/index.ts
 
   verify-database-settlement:
@@ -588,7 +594,7 @@ jobs:
 
   verify-player-terminal-and-chromium:
     name: Verify standalone Player Terminal and full Chromium suite
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
       - name: Check out exact workflow head
@@ -825,6 +831,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node backend/scripts/verifyNeutralDenoTestConfig.mjs --static
           LOG=/tmp/phase10a4-connected-supabase-startup.log
           : > "$LOG"
           STATUS=1

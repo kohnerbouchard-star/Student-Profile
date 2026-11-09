@@ -235,7 +235,12 @@ void (async function bootstrapAdminCompatibilityModules() {
   for (const phase of BOOTSTRAP_PHASES) {
     for (const modulePath of phase.modules) {
       try {
-        await import(modulePath);
+        if (modulePath === "./settings-save-error-bridge.js" &&
+            typeof window.EconovariaSimplifiedSettings?.ensureFinalPolishStylesheet === "function") {
+          window.EconovariaSimplifiedSettings.ensureFinalPolishStylesheet();
+        } else {
+          await import(modulePath);
+        }
       } catch (error) {
         reportBootstrapFailure(phase.name, modulePath, error);
       }

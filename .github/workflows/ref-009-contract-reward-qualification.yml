@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - '.github/workflows/ref-009-contract-reward-qualification.yml'
       - 'backend/supabase/functions/admin-api/**'
       - 'backend/supabase/migrations/**'
@@ -11,6 +12,7 @@ on:
       - 'docs/architecture/inventories/econovaria-architecture-inventory-v2.json'
       - 'docs/operations/contracts/player-cross-cutting/pr-752.json'
       - 'docs/roadmaps/refactor-execution-v1/tasks/REF-009.md'
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches: [main]
     paths:
@@ -49,7 +51,6 @@ jobs:
         with:
           deno-version: v2.9.3
       - name: Install pinned tooling and check qualification source
-        id: qualification_source
         shell: bash
         run: |
           set -euo pipefail
@@ -57,107 +58,11 @@ jobs:
           npm install --global npm@10.9.8
           npm ci
           npm --prefix backend ci
+          node backend/scripts/verifyNeutralDenoTestConfig.mjs --static
           deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-009-contract-reward-acceptance.ts scripts/ref-009-contract-reward-parity.test.ts
           npx supabase --version
           npx supabase start --help > /tmp/ref009/start-help.log
           npx supabase db reset --help > /tmp/ref009/reset-help.log
-      - name: Observe pinned public module once as bounded data
-        if: always() && !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.number == 885 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/game-provisioning-service-claims-v1'
-        timeout-minutes: 1
-        shell: bash
-        run: |
-          python3 - <<'DIAGNOSTIC'
-          import base64, hashlib, json, os, re, signal, subprocess
-          import urllib.error, urllib.parse, urllib.request
-          from pathlib import Path
-          URL = "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs"
-          TAG, MAX_BYTES = "ECONOVARIA_TSLIB_DATA_V1", 131072
-          OUT = Path("/tmp/ref009/frozen-module-evidence")
-          OUT.mkdir(parents=True, exist_ok=True)
-          lock_path = Path("backend/supabase/functions/deno.lock")
-          lock_bytes = lock_path.read_bytes()
-          report = {
-              "schemaVersion": 1, "sourceSha": os.environ.get("RELEASE_COMMIT"), "url": URL,
-              "bodyExecution": "never", "purpose": "NEW fetch, not original Deno response; matching UA is not request equivalence",
-              "approvedLockSha256": "66b40862285f9bd9a7426a48671427cde664f17043f02ad88ba4eef85979423b",
-              "lockPath": str(lock_path), "lockSha256": hashlib.sha256(lock_bytes).hexdigest(),
-              "expectedModuleSha256": json.loads(lock_bytes)["remote"][URL], "maximumBodyBytes": MAX_BYTES,
-              "requestHeaders": {"User-Agent": "Deno/2.9.3", "Accept-Encoding": "identity"},
-              "runner": {key: os.environ.get(key) for key in ["RUNNER_OS", "ImageOS", "ImageVersion"]},
-              "redirects": [], "fetchState": "pending", "byteLength": None, "bodySha256": None,
-          }
-          for executable in ["git", "deno", "node", "npm"]:
-              args = [executable, "rev-parse", "HEAD"] if executable == "git" else [executable, "--version"]
-              try:
-                  result = subprocess.run(args, capture_output=True, timeout=3)
-                  report[executable] = {"exit": result.returncode, "version": result.stdout.decode()[:512].strip()}
-              except (OSError, subprocess.TimeoutExpired) as error:
-                  report[executable] = {"error": type(error).__name__}
-          report["checkedOutSha"] = report["git"].pop("version", None)
-          def safe_url(value):
-              p = urllib.parse.urlsplit(value)
-              return urllib.parse.urlunsplit((p.scheme, p.hostname or "", p.path, "[redacted]" if p.query else "", ""))[:512]
-          def same_host(value):
-              p = urllib.parse.urlsplit(value)
-              return p.scheme == "https" and p.netloc == "esm.sh" and not p.username and not p.password
-          class PublicModuleRedirects(urllib.request.HTTPRedirectHandler):
-              def redirect_request(self, request, response, code, message, headers, new_url):
-                  report["redirects"].append({"status": code, "url": safe_url(new_url)})
-                  if len(report["redirects"]) > 2 or not same_host(new_url):
-                      raise ValueError("redirect_boundary_rejected")
-                  return super().redirect_request(request, response, code, message, headers, new_url)
-          def timeout(_signum, _frame):
-              raise TimeoutError("diagnostic_deadline")
-          body = None
-          report["lockMatchesApproved"] = report["lockSha256"] == report["approvedLockSha256"]
-          (OUT / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-          signal.signal(signal.SIGALRM, timeout)
-          signal.alarm(20)
-          try:
-              if (not report["lockMatchesApproved"] or not re.fullmatch(r"[0-9a-f]{40}", report["sourceSha"] or "")
-                      or report["git"].get("exit") != 0 or report["checkedOutSha"] != report["sourceSha"]):
-                  raise ValueError("source_or_lock_identity_changed")
-              opener = urllib.request.build_opener(PublicModuleRedirects())  # Retain default proxy handling; one acquisition.
-              request = urllib.request.Request(URL, headers=report["requestHeaders"])
-              try:
-                  response = opener.open(request, timeout=10)
-              except urllib.error.HTTPError as error:
-                  response = error
-              with response:
-                  report.update(status=response.status, finalUrl=safe_url(response.geturl()))
-                  allowed = ["Content-Type", "Content-Encoding", "ETag", "Cache-Control", "Age", "Date", "X-ESM-Path"]
-                  report["headers"] = {key: str(response.headers[key])[:512] for key in allowed if key in response.headers}
-                  encoding, mime = response.headers.get("Content-Encoding", "identity").strip().lower(), response.headers.get_content_type()
-                  report.update(contentEncoding=encoding[:512], javascriptMime=mime[:512])
-                  if (response.status != 200 or not same_host(response.geturl()) or encoding != "identity"
-                          or mime not in ["application/javascript", "text/javascript", "application/ecmascript", "text/ecmascript"]):
-                      raise ValueError("response_not_eligible_for_body_capture")  # Do not read error, proxy, HTML or encoded bodies.
-                  candidate = response.read(MAX_BYTES + 1)
-                  report["readPrefixBytes"] = len(candidate)
-                  if len(candidate) > MAX_BYTES or candidate.removeprefix(b"\xef\xbb\xbf").lstrip().startswith(b"<"):
-                      raise ValueError("response_size_or_html_rejected")
-                  report.update(byteLength=len(candidate), bodySha256=hashlib.sha256(candidate).hexdigest())
-                  report["matchesFrozenLock"] = report["bodySha256"] == report["expectedModuleSha256"]
-                  (OUT / "public-module.bin").write_bytes(candidate)
-                  body, report["fetchState"] = candidate, "captured_untrusted_data"
-          except Exception as error:
-              report.update(fetchState="no_capture", fetchErrorType=type(error).__name__)
-          finally:
-              signal.alarm(0)
-              (OUT / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-              print(TAG + "_META " + json.dumps(report), flush=True)
-          if body is not None:
-              encoded = base64.b64encode(body).decode("ascii")
-              if len(encoded) > 174764:
-                  raise ValueError("base64_size_boundary_exceeded")
-              count = (len(encoded) + 4095) // 4096
-              frame = {"sourceSha": report["sourceSha"], "byteLength": len(body), "sha256": report["bodySha256"],
-                       "base64Length": len(encoded), "chunkCount": count}
-              print(TAG + "_BEGIN " + json.dumps(frame), flush=True)
-              for index, offset in enumerate(range(0, len(encoded), 4096), 1):
-                  print(f"{TAG}_CHUNK {report['sourceSha']} {index}/{count} {encoded[offset:offset + 4096]}", flush=True)
-              print(TAG + "_END " + json.dumps(frame), flush=True)
-          DIAGNOSTIC
       - name: Verify focused application and retained parity regressions
         shell: bash
         run: |

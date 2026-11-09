@@ -3,6 +3,7 @@ name: Exchange Calendar Runtime
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - backend/**
       - frontend/**
       - index.html
@@ -14,6 +15,7 @@ on:
       - scripts/fix-timezone-migration-preflight-v1.mjs
       - scripts/shared-game-timezone-ui-smoke.mjs
       - .github/workflows/exchange-calendar-runtime-v1.yml
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches:
       - agent/exchange-calendar-runtime-v1
@@ -49,6 +51,8 @@ jobs:
       - name: Check out evaluated ref
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Set up Node

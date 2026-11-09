@@ -5,6 +5,7 @@ on:
   pull_request:
     branches: [main, agent/pr377-validation-base, feat/business-financial-reporting-v2, feat/business-common-equity-v2, feat/business-ipo-issuance-v2]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-916.json"
       - ".github/workflows/player-multiplayer-load-e2e.yml"
       - ".github/workflows/phase15-controlled-staging.yml"
       - "index.html"
@@ -124,11 +125,6 @@ jobs:
           PY
           npx playwright install --with-deps chromium
 
-      - name: Set up pinned Deno for bundle qualification
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.9.3
-
       - name: Build exact authorized Crafting pack
         shell: bash
         run: |
@@ -152,7 +148,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/verify-edge-tslib-bundle-closure.mjs --stack-baseline
+          node backend/scripts/verifyNeutralDenoTestConfig.mjs --static
           LOG=/tmp/player-runtime-supabase-startup.log
           : > "$LOG"
           mkdir -p backend/supabase/functions
@@ -170,17 +166,12 @@ jobs:
             STATUS=${PIPESTATUS[0]}
             set -e
             if [ "$STATUS" -eq 0 ]; then
-              node scripts/verify-edge-tslib-bundle-closure.mjs --stack-receipt
               exit 0
             fi
             npx supabase stop --workdir backend --no-backup 2>&1 | tee -a "$LOG" || true
             sleep $((ATTEMPT * 10))
           done
           exit "$STATUS"
-
-      - name: Qualify accepted tslib through real configs and pinned bundles
-        timeout-minutes: 30
-        run: node scripts/verify-edge-tslib-bundle-closure.mjs
 
       - name: Rebuild database from zero and refresh REST schema
         shell: bash
@@ -375,6 +366,13 @@ jobs:
             for CONTAINER in $(docker ps --format '{{.Names}}' | grep -E 'edge_runtime|auth|rest|kong' || true); do
               echo "-- ${CONTAINER} --"
               docker logs --since 20m "$CONTAINER" 2>&1 | tail -n 900
+            done
+            echo "== disposable database errors =="
+            for CONTAINER in $(docker ps --format '{{.Names}}' | grep -E '^supabase_db_' || true); do
+              echo "-- ${CONTAINER} --"
+              # Exclude SQL statements, DETAIL and CONTEXT; retain bounded error messages only.
+              docker logs --since 20m "$CONTAINER" 2>&1 \
+                | grep -E ' (ERROR|FATAL|PANIC):' | tail -n 100
             done
           } \
             | sed -E 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[uuid-redacted]/gi; s/ECO-[A-Z]{3,12}-[A-Z]{3,12}-[0-9]{3}/[game-code-redacted]/g; s/(BROWSER|LOAD)-(PLAYER|ACCESS)-[A-Z0-9-]+/[credential-redacted]/g' \

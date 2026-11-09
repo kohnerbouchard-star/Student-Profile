@@ -9,10 +9,19 @@ on:
       - .github/workflows/economic-core-request-claims.yml
       - docs/operations/contracts/player-cross-cutting/pr-885.json
       - docs/operations/evidence/game-provisioning-service-claims-v1.md
+  push:
+    branches: [main]
+    paths:
+      - backend/supabase/migrations/20261010040738_economic_core_request_claims_v1.sql
+      - scripts/economic-core-request-claims-acceptance.mjs
+      - scripts/economic-core-request-claims.test.mjs
+      - .github/workflows/economic-core-request-claims.yml
+      - docs/operations/contracts/player-cross-cutting/pr-885.json
+      - docs/operations/evidence/game-provisioning-service-claims-v1.md
 permissions:
   contents: read
 concurrency:
-  group: economic-core-request-claims-${{ github.event.pull_request.number }}
+  group: economic-core-request-claims-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 jobs:
   disposable:
@@ -22,12 +31,12 @@ jobs:
     env:
       ECONOMIC_CORE_DISPOSABLE_TEST: '1'
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha }}
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
       PHYSICAL_ECONOMY_PACK: /tmp/physical-economy-runtime-pack.json
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v7

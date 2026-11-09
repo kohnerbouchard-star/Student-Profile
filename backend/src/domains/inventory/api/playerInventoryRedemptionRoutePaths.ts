@@ -1,6 +1,6 @@
 import type { PlayerInventoryRedemptionRoute } from "../contracts/playerInventoryRedemptionContracts.ts";
 import { isUuid } from "../../../platform/supabase/uuid.ts";
-import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+import { readPlayerApiRouteSegments } from "../../../platform/supabase/playerApiRouteSegments.ts";
 
 const ITEM_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const REQUEST_ID_PATTERN = /^red_[0-9a-f]{32}$/;

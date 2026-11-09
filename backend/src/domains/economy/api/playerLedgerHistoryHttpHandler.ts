@@ -13,7 +13,7 @@ import { readBalanceNumber } from "../../../platform/supabase/edgeParsing.ts";
 import {
   invalidPlayerSessionResponse,
   readPlayerSessionTokenFromRequest,
-} from "../../players/api/playerSessionHttpHelpers.ts";
+} from "../../players/index.ts";
 import { readLedgerHistoryLimitQuery } from "./ledgerHistoryHttpHelpers.ts";
 import type { LedgerHistoryReadRepository } from "../contracts/ledgerHistoryReadRepository.ts";
 import { SupabaseLedgerHistoryReadRepository } from "../infrastructure/supabaseLedgerHistoryReadRepository.ts";

@@ -11,9 +11,6 @@ import {
   toNumber,
   unique,
 } from "./dashboardFinancialProjection.ts";
-import {
-  readStockMarketOpenState,
-} from "../../stocks/infrastructure/supabaseStockMarketWindowRepository.ts";
 import type {
   PlayerGameDashboardInventoryItemDto,
   PlayerGameDashboardLeaderboardEntryDto,
@@ -27,34 +24,25 @@ import type {
 import {
   PlayerGameDashboardError,
 } from "../contracts/playerGameDashboardContracts.ts";
-import type {
-  StockMarketBoardStockDto,
-} from "../../stocks/contracts/stockMarketReadContracts.ts";
 import {
+  type StockMarketBoardStockDto,
+  type StockMarketOpenStateReadRepository,
+  type StockMarketPlayerOrderDto,
+  type StockMarketPlayerOrderStatus,
+  type StockMarketPlayerTradeDto,
+  type StockMarketReadRepository,
   StockMarketReadError,
-} from "../../stocks/contracts/stockMarketReadContracts.ts";
-import type {
-  StockMarketPlayerOrderDto,
-  StockMarketPlayerOrderStatus,
-  StockMarketPlayerTradeDto,
-} from "../../stocks/contracts/stockMarketPlayerReadContracts.ts";
+} from "../../stocks/index.ts";
 import {
-  SupabaseStockMarketReadRepository,
-} from "../../stocks/infrastructure/supabaseStockMarketReadRepository.ts";
-import type {
-  StoreItemDto,
-} from "../../store/contracts/storeCatalogContracts.ts";
-import {
-  SupabaseContractRepository,
-} from "../../contracts/infrastructure/supabaseContractRepository.ts";
-import {
-  toPlayerContractDto,
-  toPlayerContractProgressDto,
-} from "../../contracts/contracts/contractHttpContracts.ts";
+  DashboardStoreListingsReadError,
+  type DashboardStoreListingsReadQuery,
+  type StoreItemDto,
+} from "../../store/dashboardReadModel.ts";
+import type { PlayerContractsReadQuery } from "../../contracts/index.ts";
 import type {
   StorePurchaseHistoryItemDto,
   StorePurchaseStatus,
-} from "../../store/contracts/storePurchaseContracts.ts";
+} from "../../store/purchaseHistoryTypes.ts";
 
 interface DashboardQueryError {
   readonly message: string;
@@ -80,7 +68,6 @@ type DashboardTableName =
   | "stock_price_ticks"
   | "stock_orders"
   | "stock_trades"
-  | "store_items"
   | "store_purchases";
 
 interface SupabasePlayerGameDashboardClient {
@@ -166,23 +153,6 @@ interface StockTradeRow {
   readonly created_at: string;
 }
 
-interface StoreItemRow {
-  readonly id: string;
-  readonly game_session_id: string;
-  readonly item_key: string;
-  readonly name: string;
-  readonly description?: string | null;
-  readonly category: string;
-  readonly price: number | string;
-  readonly currency_code: string;
-  readonly stock_quantity: number | string;
-  readonly status: StoreItemDto["status"];
-  readonly visibility: StoreItemDto["visibility"];
-  readonly sort_order: number | string;
-  readonly created_at: string;
-  readonly updated_at: string;
-}
-
 interface InventoryHoldingRow {
   readonly id: string;
   readonly store_item_id: string;
@@ -253,22 +223,6 @@ const TRADE_SELECT = [
   "gross_value",
   "created_at",
 ].join(",");
-const STORE_ITEM_SELECT = [
-  "id",
-  "game_session_id",
-  "item_key",
-  "name",
-  "description",
-  "category",
-  "price",
-  "currency_code",
-  "stock_quantity",
-  "status",
-  "visibility",
-  "sort_order",
-  "created_at",
-  "updated_at",
-].join(",");
 const INVENTORY_SELECT =
   "id,store_item_id,quantity_owned,quantity_reserved,updated_at";
 const STORE_PURCHASE_SELECT =
@@ -289,19 +243,33 @@ const MARKET_NEWS_SELECT = [
   "created_at",
 ].join(",");
 
+export interface PlayerGameDashboardReadDependencies {
+  readonly stockMarketReadRepository: StockMarketReadRepository;
+  readonly stockMarketOpenStateReadRepository: StockMarketOpenStateReadRepository;
+  readonly playerContractsReadQuery: PlayerContractsReadQuery;
+  readonly storeListingsReadQuery: DashboardStoreListingsReadQuery;
+}
+
 export class SupabasePlayerGameDashboardRepository
   implements PlayerGameDashboardRepository {
+  private readonly dependencies: PlayerGameDashboardReadDependencies;
+
   constructor(
     private readonly client: SupabasePlayerGameDashboardClient,
+    dependencies: PlayerGameDashboardReadDependencies,
     private readonly now: () => Date = () => new Date(),
-  ) {}
+  ) {
+    this.dependencies = {
+      stockMarketReadRepository: dependencies.stockMarketReadRepository,
+      stockMarketOpenStateReadRepository: dependencies.stockMarketOpenStateReadRepository,
+      playerContractsReadQuery: dependencies.playerContractsReadQuery,
+      storeListingsReadQuery: dependencies.storeListingsReadQuery,
+    };
+  }
 
   async read(
     input: PlayerGameDashboardReadInput,
   ): Promise<PlayerGameDashboardSnapshot> {
-    const contractRepository = new SupabaseContractRepository(
-      this.client as any,
-    );
     const [
       gameSession,
       marketOpen,
@@ -316,11 +284,10 @@ export class SupabasePlayerGameDashboardRepository
       inventory,
       purchases,
       marketNews,
-      availableContracts,
-      contractProgress,
+      playerContracts,
     ] = await Promise.all([
       this.readGameSession(input.gameSessionId),
-      readStockMarketOpenState(this.client, input.gameSessionId, this.now()),
+      this.dependencies.stockMarketOpenStateReadRepository.read(input.gameSessionId, this.now()),
       this.readPublicStockMarket(input.gameSessionId),
       this.readActivePlayers(input.gameSessionId),
       this.readCountryAssignments(input.gameSessionId),
@@ -332,11 +299,7 @@ export class SupabasePlayerGameDashboardRepository
       this.readInventory(input),
       this.readRecentPurchases(input),
       this.readMarketNews(input.gameSessionId),
-      contractRepository.listPlayerAvailableContracts({
-        gameSessionId: input.gameSessionId,
-        playerId: input.playerId,
-      }),
-      contractRepository.listPlayerContractProgress({
+      this.dependencies.playerContractsReadQuery.read({
         gameSessionId: input.gameSessionId,
         playerId: input.playerId,
       }),
@@ -442,8 +405,8 @@ export class SupabasePlayerGameDashboardRepository
           ),
         },
         contracts: {
-          available: availableContracts.map(toPlayerContractDto),
-          progress: contractProgress.map(toPlayerContractProgressDto),
+          available: playerContracts.available,
+          progress: playerContracts.progress,
         },
       },
       public: {
@@ -455,7 +418,7 @@ export class SupabasePlayerGameDashboardRepository
           stocks: publicMarket.stocks,
           news: marketNews.map(toMarketNewsDto),
         },
-        contracts: availableContracts.map(toPlayerContractDto),
+        contracts: playerContracts.available,
         storeListings: storeListings.map(toPublicStoreListingDto),
       },
       unseenCutscenes: [],
@@ -495,14 +458,11 @@ export class SupabasePlayerGameDashboardRepository
     readonly stocks: readonly StockMarketBoardStockDto[];
   }> {
     try {
-      const result = await new SupabaseStockMarketReadRepository(
-        this.client as any,
-      )
-        .read({
-          gameSessionId,
-          includeHistory: false,
-          historyLimit: 1,
-        });
+      const result = await this.dependencies.stockMarketReadRepository.read({
+        gameSessionId,
+        includeHistory: false,
+        historyLimit: 1,
+      });
 
       return {
         tickIndex: result.tickIndex,
@@ -667,20 +627,12 @@ export class SupabasePlayerGameDashboardRepository
   private async readStoreListings(
     gameSessionId: string,
   ): Promise<readonly StoreItemDto[]> {
-    const response = await this.client
-      .from("store_items")
-      .select(STORE_ITEM_SELECT)
-      .eq("game_session_id", gameSessionId)
-      .eq("status", "active")
-      .eq("visibility", "visible")
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true });
-
-    if (response.error) {
-      throw readFailed();
+    try {
+      return await this.dependencies.storeListingsReadQuery.read(gameSessionId);
+    } catch (error) {
+      if (error instanceof DashboardStoreListingsReadError) throw readFailed();
+      throw error;
     }
-
-    return ((response.data ?? []) as StoreItemRow[]).map(toStoreItemDto);
   }
 
   private async readInventory(
@@ -765,25 +717,6 @@ function toTradeDto(row: StockTradeRow): StockMarketPlayerTradeDto {
     executionPrice: toNumber(row.execution_price),
     grossValue: toNumber(row.gross_value),
     createdAt: row.created_at,
-  };
-}
-
-function toStoreItemDto(row: StoreItemRow): StoreItemDto {
-  return {
-    id: row.id,
-    gameSessionId: row.game_session_id,
-    itemKey: row.item_key,
-    name: row.name,
-    description: row.description ?? null,
-    category: row.category,
-    price: toNumber(row.price),
-    currencyCode: row.currency_code,
-    stockQuantity: Math.trunc(toNumber(row.stock_quantity)),
-    status: row.status,
-    visibility: row.visibility,
-    sortOrder: Math.trunc(toNumber(row.sort_order)),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
   };
 }
 

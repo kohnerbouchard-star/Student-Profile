@@ -147,11 +147,12 @@ Deno.test("Loans preserves injected scope denial and never constructs its reposi
   assertEquals((await response.json()).error.code, "invalid_player_session_scope");
 });
 
-Deno.test("Loans retains five scoped reads and the borrower/account projection contract", async () => {
+Deno.test("Loans retains its five original reads and projection when added history is unavailable", async () => {
   for (const [businessCount, missingCurrency] of [0, 1, 2].flatMap((count) =>
     [false, true].map((missing) => [count, missing] as const)
   )) {
     const calls: unknown[][] = [];
+    const historyCalls: unknown[][] = [];
     const businessKey = key("biz", "a");
     const fixtures: Record<string, Record<string, unknown>[]> = {
       loan_products: [{ id: "product", public_key: key("lop", "b"), currency_code: "NRC", borrower_type: "business", status: "active", minimum_credit_score: 550, maximum_amount: "100.10", term_cycles: 2 }],
@@ -180,12 +181,21 @@ Deno.test("Loans retains five scoped reads and the borrower/account projection c
         return Promise.resolve({ data: [{ country_code: "NRC", currency_code: "NRC" }], error: null });
       },
       from(table: string) {
+        let history = false;
+        const record = (entry: unknown[]) => (history ? historyCalls : calls).push(entry);
         const query = {
-          select(value: string) { calls.push([table, "select", value]); return query; },
-          eq(column: string, value: unknown) { calls.push([table, "eq", column, value]); return query; },
-          order(column: string, options: unknown) { calls.push([table, "order", column, options]); return query; },
-          limit(value: number) { calls.push([table, "limit", value]); return query; },
-          then(resolve: (value: unknown) => unknown) { return Promise.resolve({ data: fixtures[table], error: null }).then(resolve); },
+          select(value: string, options?: { count: string }) {
+            history = options?.count === "exact";
+            record([table, "select", value]); return query;
+          },
+          abortSignal() { return query; },
+          eq(column: string, value: unknown) { record([table, "eq", column, value]); return query; },
+          order(column: string, options: unknown) { record([table, "order", column, options]); return query; },
+          limit(value: number) { record([table, "limit", value]); return query; },
+          then(resolve: (value: unknown) => unknown) {
+            return Promise.resolve(history ? { data: null, error: { message: "HISTORY_FIXTURE_UNAVAILABLE" } }
+              : { data: fixtures[table], error: null }).then(resolve);
+          },
         };
         return query;
       },
@@ -210,7 +220,10 @@ Deno.test("Loans retains five scoped reads and the borrower/account projection c
     assertEquals(result.schedule.map((row) => row.currencyCode), [currency("NRC"), currency("NRC"), currency("LUM")]);
     // Strip only additive metadata, then compare the entire retained response.
     const stripCurrency = ({ currencyCode: _currency, ...row }: { currencyCode?: string | null }) => row;
-    const { currencyProjection, ...retained } = result;
+    const { currencyProjection, lifecycle, ...retained } = result;
+    assertEquals(lifecycle, { version: 1, state: "unavailable" });
+    assertEquals(historyCalls.filter((call) => call[1] === "select").map((call) => call[0]),
+      ["loan_applications", "player_loans", "loan_payments"]);
     assertEquals(currencyProjection, missingCurrency
       ? { version: 1, complete: false, unknownCurrencyRows: businessCount ? 3 : 2, groups: [] }
       : { version: 1, complete: true, unknownCurrencyRows: 0, groups: [

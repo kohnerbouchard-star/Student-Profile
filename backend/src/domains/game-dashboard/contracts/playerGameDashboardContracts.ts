@@ -1,26 +1,24 @@
 import type {
   PlayerContractDto,
   PlayerContractProgressDto,
-} from "../../contracts/contracts/contractHttpContracts.ts";
+} from "../../contracts/index.ts";
 import type {
   StockMarketBoardStockDto,
-} from "../../stocks/contracts/stockMarketReadContracts.ts";
-import type {
   StockMarketPlayerHoldingDto,
   StockMarketPlayerOrderDto,
   StockMarketPlayerPortfolioSummaryDto,
   StockMarketPlayerTradeDto,
-} from "../../stocks/contracts/stockMarketPlayerReadContracts.ts";
+} from "../../stocks/index.ts";
 import type {
   StoreItemDto,
-} from "../../store/contracts/storeCatalogContracts.ts";
+} from "../../store/dashboardReadModel.ts";
 import type {
   StorePurchaseHistoryItemDto,
-} from "../../store/contracts/storePurchaseContracts.ts";
+} from "../../store/purchaseHistoryTypes.ts";
 import type {
   MarkNotificationDeliveryInput,
   StoryNotificationDeliveryRecord,
-} from "../../storylines/contracts/storyNotificationContracts.ts";
+} from "../../storylines/server/notificationCapabilities.ts";
 
 export const GAME_PUBLIC_REALTIME_EVENTS = [
   "stock_tick",

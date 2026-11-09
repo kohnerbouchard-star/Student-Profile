@@ -1,7 +1,11 @@
 import "../infrastructure/supabasePlayerWorldRuntimeRepository.test.ts";
-import type { PlayerRequestScope } from "../../players/api/playerRequestScope.ts";
-import type { ArrivalClassAssignment } from "../../arrival/contracts/arrivalClassContracts.ts";
-import type { PlayerWorldRuntimeRepository } from "./playerWorldRuntimeService.ts";
+import type { PlayerRequestScope } from "../../players/index.ts";
+import { ArrivalClassError, type ArrivalClassAssignment } from "../../arrival/index.ts";
+import type {
+  PlayerWorldRuntimeRepository,
+  PlayerWorldRuntimeServiceDependencies,
+  PlayerWorldRuntimeSnapshot,
+} from "./playerWorldRuntimeService.ts";
 import { createPlayerWorldRuntimeService } from "./playerWorldRuntimeService.ts";
 import type {
   PlayerResidencyState,
@@ -37,10 +41,69 @@ Deno.test("runtime context exposes questionnaire before assignment and strips ow
   const repository = memoryRepository();
   const service = createService(repository);
   const context = await service.readContext(SCOPE);
+  assertEquals(context.campaign, null);
   assertEquals(context.arrival.required, true);
   assertEquals(context.arrival.questionnaire?.questions.length, 8);
   const serialized = JSON.stringify(context);
   for (const privateValue of [SCOPE.gameId, SCOPE.playerUuid, SCOPE.activeSessionId]) {
+    assertEquals(serialized.includes(privateValue), false);
+  }
+});
+
+Deno.test("Campaign context requires travel state and remains scoped to public fields", async () => {
+  const repository = memoryRepository();
+  const snapshot = await repository.readSnapshot(SCOPE);
+  const privateCampaignId = "00000000-0000-4000-8000-000000000099";
+  const campaignInstance = {
+    campaignInstanceId: privateCampaignId,
+    gameId: SCOPE.gameId,
+    definition: {
+      packId: "test-pack",
+      packVersion: "1",
+      definitionId: "campaign.test",
+      definitionDigest: "sha256:test",
+    },
+    status: "active",
+    currentPhase: "arrival",
+    revision: 1,
+    eventSequence: 1,
+    executedEventKeys: [],
+    completedEffectKeys: [],
+    outcome: null,
+    scheduledAt: null,
+    pausedAt: null,
+    disabledAt: null,
+    completedAt: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+  } as const;
+  const campaign: NonNullable<PlayerWorldRuntimeSnapshot["campaign"]> = {
+    instance: campaignInstance,
+    history: [{
+      publicEventId: "evt_public",
+      eventKey: "arrival",
+      phase: "arrival",
+      sequence: 1,
+      occurredAt: NOW,
+      summaryDefinitionId: "summary.arrival",
+    }],
+    affectedLocationIds: ["loc_origin"],
+  };
+  const withoutTravel = createService({
+    ...repository,
+    readSnapshot: async () => ({ ...snapshot, campaign, travelState: null }),
+  });
+  assertEquals((await withoutTravel.readContext(SCOPE)).campaign, null);
+
+  const withTravel = createService({
+    ...repository,
+    readSnapshot: async () => ({ ...snapshot, campaign }),
+  });
+  const context = await withTravel.readContext(SCOPE);
+  assertEquals(context.campaign?.currentLocationAffected, true);
+  assertEquals(context.campaign?.history.map((entry) => entry.publicEventId), ["evt_public"]);
+  const serialized = JSON.stringify(context.campaign);
+  for (const privateValue of [SCOPE.gameId, SCOPE.playerUuid, SCOPE.activeSessionId, privateCampaignId]) {
     assertEquals(serialized.includes(privateValue), false);
   }
 });
@@ -95,6 +158,103 @@ Deno.test("arrival assignment scores deterministically and sends definition refe
   assertEquals(repository.state.assignmentInput?.grantDefinitionId.startsWith("class-grant-v1:"), true);
   assertEquals(repository.state.assignmentInput?.assignmentIdempotencyKey, "arrival-assignment-0001");
   assertEquals(repository.state.assignment?.economicRestrictions, []);
+});
+
+Deno.test("arrival assignment preserves scoped preparation, write, and read ordering", async () => {
+  const repository = memoryRepository();
+  const answers = (await createService(repository).readContext(SCOPE)).arrival.questionnaire!
+    .questions.map((question) => ({ questionId: question.questionId, optionId: question.options[0]!.optionId }));
+  const events: string[] = [];
+  let clockReceiver: unknown = "not-called";
+  let idReceiver: unknown;
+  const dependencies: PlayerWorldRuntimeServiceDependencies = {
+    repository: {
+      ...repository,
+      readArrivalInput: async (scope) => {
+        if (scope !== SCOPE) throw new Error("Arrival read lost the resolved scope");
+        events.push("read-input");
+        const runtime = await repository.readArrivalInput(scope);
+        return {
+          ...runtime,
+          classGrantDefinitionId: (classId) => {
+            events.push("grant-definition");
+            return runtime.classGrantDefinitionId(classId);
+          },
+        };
+      },
+      assignArrivalClassAtomic: async (input) => {
+        if (input.scope !== SCOPE) throw new Error("Arrival write lost the resolved scope");
+        events.push("atomic-write");
+        await repository.assignArrivalClassAtomic(input);
+      },
+      readSnapshot: async (scope) => {
+        if (scope !== SCOPE) throw new Error("Arrival snapshot lost the resolved scope");
+        events.push("read-snapshot");
+        return repository.readSnapshot(scope);
+      },
+    },
+    now: function (this: unknown) { clockReceiver = this; events.push("clock"); return NOW; },
+    createAssignmentId() { idReceiver = this; events.push("assignment-id"); return "assignment-public-runtime"; },
+    createPublicQuoteId: () => QUOTE_ID,
+  };
+  const service = createPlayerWorldRuntimeService(dependencies);
+  const result = await service.assignArrivalClass({
+    scope: SCOPE,
+    request: { answers },
+    idempotencyKey: "arrival-assignment-0001",
+  });
+  const written = repository.state.assignmentInput;
+  if (!written) throw new Error("Expected an atomic assignment write");
+  assertEquals(events, ["read-input", "clock", "assignment-id", "grant-definition", "atomic-write", "read-snapshot"]);
+  if (clockReceiver !== undefined) throw new Error("Clock receiver changed");
+  if (idReceiver !== dependencies) throw new Error("Assignment ID receiver changed");
+  assertEquals(written.assignment.gameId, SCOPE.gameId);
+  assertEquals(written.assignment.gameSessionId, SCOPE.gameId);
+  assertEquals(written.assignment.playerUuid, SCOPE.playerUuid);
+  assertEquals(written.assignment.assignedAt, NOW);
+  assertEquals(written.assignment.scoreResult, written.scoreResult);
+  assertEquals(written.assignmentIdempotencyKey, "arrival-assignment-0001");
+  assertEquals(written.grantIdempotencyKey, [
+    "arrival-grant", SCOPE.gameId, SCOPE.playerUuid, "eldoran",
+    "arrival-calibration-v1:eldoran", written.grantDefinitionId,
+  ].join(":"));
+  assertEquals(result.assignment?.classId, written.assignment.classId);
+  assertEquals(JSON.stringify(result).includes(SCOPE.playerUuid), false);
+});
+
+Deno.test("invalid Arrival answers and failed writes stop subsequent work", async () => {
+  const repository = memoryRepository();
+  const answers = (await createService(repository).readContext(SCOPE)).arrival.questionnaire!
+    .questions.map((question) => ({ questionId: question.questionId, optionId: question.options[0]!.optionId }));
+  const events: string[] = [];
+  const writeFailure = new Error("owned write failure");
+  const service = createPlayerWorldRuntimeService({
+    repository: {
+      ...repository,
+      readArrivalInput: async (scope) => { events.push("read-input"); return repository.readArrivalInput(scope); },
+      assignArrivalClassAtomic: async () => { events.push("atomic-write"); throw writeFailure; },
+      readSnapshot: async (scope) => { events.push("read-snapshot"); return repository.readSnapshot(scope); },
+    },
+    now: () => { events.push("clock"); return NOW; },
+    createAssignmentId: () => { events.push("assignment-id"); return "assignment-public-runtime"; },
+    createPublicQuoteId: () => QUOTE_ID,
+  });
+  let invalid: unknown;
+  try {
+    await service.assignArrivalClass({ scope: SCOPE, request: { answers: answers.slice(0, 7) }, idempotencyKey: "arrival-invalid-0001" });
+  } catch (error) { invalid = error; }
+  if (!(invalid instanceof ArrivalClassError)) throw new Error("Expected canonical ArrivalClassError");
+  assertEquals(invalid.code, "arrival_answers_incomplete");
+  assertEquals(events, ["read-input"]);
+
+  events.length = 0;
+  let caught: unknown;
+  try {
+    await service.assignArrivalClass({ scope: SCOPE, request: { answers }, idempotencyKey: "arrival-failure-0001" });
+  } catch (error) { caught = error; }
+  if (caught !== writeFailure) throw new Error("Write error identity changed");
+  assertEquals(events, ["read-input", "clock", "assignment-id", "atomic-write"]);
+  assertEquals(repository.state.assignment, null);
 });
 
 Deno.test("travel quote is server-computed, revision-bound, persisted, and scope stripped", async () => {

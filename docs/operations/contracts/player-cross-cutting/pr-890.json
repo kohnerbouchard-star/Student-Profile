@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.dashboard-owner-read-ports-pr-890.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 890,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
+    "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
+    "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
+    "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+    "backend/src/domains/stocks/index.ts",
+    "backend/src/domains/contracts/index.ts",
+    "backend/src/domains/store/dashboardReadModel.ts",
+    "backend/src/domains/store/infrastructure/supabaseDashboardStoreListingsReadQuery.ts",
+    "scripts/apply-configurable-stock-market-timezone-v1.mjs",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/dashboard-owner-read-ports-main-v1/scope.md",
+    "docs/operations/contracts/player-cross-cutting/pr-890.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
+    "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
+    "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
+    "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+    "backend/src/domains/stocks/index.ts",
+    "backend/src/domains/contracts/index.ts",
+    "backend/src/domains/store/dashboardReadModel.ts",
+    "backend/src/domains/store/infrastructure/supabaseDashboardStoreListingsReadQuery.ts",
+    "scripts/apply-configurable-stock-market-timezone-v1.mjs",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/dashboard-owner-read-ports-main-v1/scope.md",
+    "docs/operations/contracts/player-cross-cutting/pr-890.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Required Game Market Timezone",
+    "Exchange Calendar Runtime",
+    "Business Player Store Cutover V2"
+  ],
+  "criticalJobChecks": [
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "readOnlyPaths": [
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "authorizationNote": "On 2026-11-03 the user authorized finishing and normally merging three bounded cleanup batches after qualification. This PR binds the second batch to the actual PR890/main and the exact Dashboard owner-read-port extraction from open PR888 head 1b350848b00140d1b1069615afc2ea8a0de4b49a, not the complete donor branch. The donor and other owners remain unchanged and no other owner acknowledgment is asserted. Preserve Dashboard snapshots, game/player scope and privacy, clock and error semantics, individually captured dependencies, existing tests, shared tslib/lock and all release holds. The generated inventory is rebuilt from actual post-PR887 main plus this source. Independent source review and focused local tests are recorded in the evidence file; original exact-head CI and Preview must qualify before merge. This authorization does not allow PR review approval, force operations, manual deployment, production or hosted SQL/Edge/Auth/settings writes, secret handling or release-hold changes."
+}

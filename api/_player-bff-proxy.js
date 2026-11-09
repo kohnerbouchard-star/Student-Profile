@@ -1,6 +1,7 @@
 "use strict";
 
 const { isIP } = require("node:net");
+const { readBoundedResponseBody } = require("./_bounded-response-reader.js");
 
 const MAX_BODY_BYTES = 1_048_576;
 const MAX_PATH_BYTES = 2_048;
@@ -69,8 +70,8 @@ async function proxyPlayerBff(request, response, options) {
       cache: "no-store",
       redirect: "manual"
     });
-    const bytes = new Uint8Array(await upstream.arrayBuffer());
-    if (bytes.byteLength > MAX_BODY_BYTES) {
+    const bytes = await readBoundedResponseBody(upstream, MAX_BODY_BYTES);
+    if (bytes === null) {
       return sendJson(response, 502, errorBody(
         "upstream_response_too_large",
         "Player response was too large."

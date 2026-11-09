@@ -3,6 +3,7 @@ name: multicurrency-marketplace-funding-v1
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - .github/workflows/multicurrency-marketplace-funding-v1.yml
       - backend/src/domains/marketplace/api/playerMarketplaceFundingHttpInputs.ts
       - backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.test.ts

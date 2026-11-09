@@ -24,7 +24,7 @@ import {
   type GamePublicRealtimeEnvelope,
   GamePublicRealtimePublisher,
   type GamePublicRealtimePublishResult,
-} from "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts";
+} from "../../game-dashboard/publicRealtime.ts";
 import { calculateNextStockMarketTick } from "../calculations/stockMarketEngine.ts";
 import {
   readStockMarketOpenState,
@@ -52,23 +52,11 @@ import {
   SupabaseStockMarketNewsRepository,
 } from "../infrastructure/supabaseStockMarketNewsRepository.ts";
 import {
-  SupabaseContractRepository,
-} from "../../contracts/infrastructure/supabaseContractRepository.ts";
+  createGameSessionContractWriter,
+} from "../../contracts/index.ts";
 import {
-  SupabasePlayerStoryContextRepository,
-} from "../../storylines/infrastructure/supabasePlayerStoryContextRepository.ts";
-import {
-  createStoryNotificationPublisher,
-} from "../../notifications/public/storyNotifications.ts";
-import {
-  SupabaseStorylineRepository,
-} from "../../storylines/infrastructure/supabaseStorylineRepository.ts";
-import {
-  SupabaseStoryEffectLedgerWriter,
-} from "../../storylines/infrastructure/supabaseStoryEffectLedgerWriter.ts";
-import {
-  runDueStorylineEvents,
-} from "../../storylines/services/storylineRunner.ts";
+  createStockTickStorylineRunner,
+} from "../../storylines/server/stockTickStorylineRunner.ts";
 
 declare const Deno: {
   readonly env: {
@@ -397,38 +385,10 @@ function buildStockMarketNewsShockId(
 function createDefaultStorylineRunnerAfterTick(
   client: EdgeSupabaseClient,
 ): StockMarketRunnerStorylineTickHook {
-  const storylineRepository = new SupabaseStorylineRepository(client as any);
-  const notificationRepository = createStoryNotificationPublisher(
-    client as any,
+  return createStockTickStorylineRunner(
+    client,
+    createGameSessionContractWriter,
   );
-  const playerContextRepository = new SupabasePlayerStoryContextRepository(
-    client as any,
-  );
-  const contractRepository = new SupabaseContractRepository(client as any);
-  const ledger = new SupabaseStoryEffectLedgerWriter(client as any);
-
-  return async (input) => {
-    const playerContexts = await playerContextRepository
-      .listPlayerStoryContexts(
-        input.gameSessionId,
-      );
-
-    await runDueStorylineEvents({
-      gameSessionId: input.gameSessionId,
-      now: input.generatedAt,
-      currentMarketTick: input.currentMarketTick,
-      playerContexts,
-      repository: storylineRepository,
-      notificationRepository,
-      effectDependencies: {
-        ledger,
-        policies: storylineRepository,
-        flags: storylineRepository,
-        impacts: storylineRepository,
-        contracts: contractRepository,
-      },
-    });
-  };
 }
 
 async function runStorylineEventsAfterStockTickBestEffort(args: {

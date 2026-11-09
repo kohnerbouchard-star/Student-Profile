@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.campaign-world-read-boundary-pr-894.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 894,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/campaign/index.ts",
+    "backend/src/domains/campaign/playerContextReadModel.ts",
+    "backend/src/domains/campaign/services/campaignCoordinator.test.ts",
+    "backend/src/domains/campaign/services/campaignCoordinator.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeContracts.ts",
+    "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-894.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/campaign/index.ts",
+    "backend/src/domains/campaign/playerContextReadModel.ts",
+    "backend/src/domains/campaign/services/campaignCoordinator.test.ts",
+    "backend/src/domains/campaign/services/campaignCoordinator.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeContracts.ts",
+    "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-894.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Player Terminal Verify",
+    "Player Multiplayer and Load E2E",
+    "World Runtime",
+    "Database Replay"
+  ],
+  "criticalJobChecks": [
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "readOnlyPaths": [
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "authorizationNote": "This draft binds PR 894 to the Campaign player-context read boundary and its World consumers. The existing verifier requires its own script and test in the allowlist; its readOnlyPaths field records intent but is not enforced by that verifier, so their unchanged state must be checked on the final diff. Original CI and preview remain required. This manifest does not authorize production deployment, production mutation, or secret-value handling."
+}

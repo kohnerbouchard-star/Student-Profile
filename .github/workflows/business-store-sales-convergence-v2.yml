@@ -47,6 +47,7 @@ on:
       - scripts/local-edge-runtime-contract.test.mjs
       - scripts/player-cross-cutting-authority.test.mjs
       - scripts/verify-player-cross-cutting-authority.mjs
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches:
       - refactor/business-store-sales-convergence-v2

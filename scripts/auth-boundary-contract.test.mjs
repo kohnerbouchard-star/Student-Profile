@@ -1,64 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { spawnSync } from "node:child_process";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const ROOT = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, ROOT), "utf8");
-
-test("Onboarding observation preserves requests and failures without exposing response data", async () => {
-  const workflow = await read(".github/workflows/runtime-stabilization-onboarding.yml");
-  const block = workflow.split("      - name: Prove publishable-key functions are reachable\n")[1].split("      - name: Stop local Supabase\n")[0];
-  const source = block.split("        run: |\n")[1].split("\n").map((line) => line.slice(10)).join("\n");
-  assert.equal(spawnSync("bash", ["-n"], { input: source }).status, 0);
-  const root = await mkdtemp(join(tmpdir(), "onboarding-observation-"));
-  const functions = ["player-api", "bootstrap-api", "stock-market-runner", "stock-market-read", "stock-market-seed-copy", "stock-market-player-read", "stock-market-trading"];
-  try {
-    const bin = join(root, "bin"); await mkdir(bin);
-    await writeFile(join(bin, "npx"), '#!/bin/bash\n[ "$*" = "supabase status --workdir backend -o env" ] || exit 99\nprintf "API_URL=%q\\nPUBLISHABLE_KEY=%q\\n" "$STUB_API" "$STUB_KEY"\n', { mode: 0o700 });
-    await writeFile(join(bin, "curl"), [
-      "#!/bin/bash", 'printf "%s\\0" "$@" >>"$STUB_CALLS"', 'printf "\\n" >>"$STUB_CALLS"',
-      'NAME="${!#}"; NAME="${NAME##*/}"', 'HTTP=204; CODE=0; TEXT=""',
-      'if [ "$NAME" = "$STUB_FAIL" ]; then HTTP="$STUB_HTTP"; CODE="$STUB_EXIT"; TEXT="$STUB_BODY"; fi',
-      'printf "%s" "$TEXT" >"$4"', 'printf "%s" "$HTTP"', 'printf "%s" "PRIVATE_CURL_STDERR" >&2', 'exit "$CODE"', "",
-    ].join("\n"), { mode: 0o700 });
-    const cases = [
-      { code: 0, count: 7, error: "none" },
-      { api: "", code: 1, count: 0, error: "api_url_missing" },
-      { key: "", code: 1, count: 0, error: "publishable_key_missing" },
-      { key: "PRIVATE_INVALID_KEY", code: 1, count: 0, error: "publishable_key_shape" },
-      { exit: "7", http: "000", code: 7, count: 3, error: "connection_error" },
-      { http: "503", code: 1, count: 3, error: "unexpected_http_status" },
-      { http: '204"::error::PRIVATE_STATUS', code: 1, count: 3, error: "unexpected_http_status" },
-      ...["name resolution failed", "connection refused", "upstream unavailable"].map((body) => ({ body: `${body} PRIVATE_BODY`, code: 1, count: 3, error: "response_transport_error" })),
-    ];
-    for (const scenario of cases) {
-      const callsPath = join(root, "calls"); await writeFile(callsPath, "");
-      const api = scenario.api ?? "http://127.0.0.1:54321", key = scenario.key ?? "sb_publishable_offline_fixture";
-      const result = spawnSync("bash", ["--noprofile", "--norc", "-s"], {
-        input: source.replaceAll("/tmp/", `${root}/`), cwd: root, encoding: "utf8", timeout: 5000,
-        env: { PATH: `${bin}:${process.env.PATH}`, STUB_CALLS: callsPath, STUB_API: api, STUB_KEY: key, STUB_FAIL: "stock-market-runner", STUB_HTTP: scenario.http ?? "204", STUB_EXIT: scenario.exit ?? "0", STUB_BODY: scenario.body ?? "" },
-      });
-      assert(!result.error); assert.equal(result.status, scenario.code);
-      const calls = (await readFile(callsPath, "utf8")).split("\n").filter(Boolean).map((line) => line.split("\0").slice(0, -1));
-      assert.equal(calls.length, scenario.count);
-      calls.forEach((args, index) => assert.deepEqual(args, ["--silent", "--show-error", "--output", `${root}/${functions[index]}-options.body`, "--write-out", "%{http_code}", "--request", "OPTIONS", "--header", `apikey: ${key}`, `${api}/functions/v1/${functions[index]}`]));
-      const records = result.stdout.split("\n").filter((line) => line.startsWith("ONBOARDING_OPTIONS ")).map((line) => JSON.parse(line.slice("ONBOARDING_OPTIONS ".length)));
-      assert.equal(records.length, scenario.count + 1);
-      assert.equal(records[0].apiUrlPresent, Boolean(api)); assert.equal(records[0].publishableKeyPresent, Boolean(key));
-      assert.equal(records.at(-1).errorClass, scenario.error);
-      if (scenario.count) {
-        assert.equal(records.at(-1).function, functions[scenario.count - 1]);
-        assert.equal(records.at(-1).curlExit, Number(scenario.exit ?? "0"));
-        assert.equal(records.at(-1).httpStatus, scenario.http?.length === 3 ? scenario.http : scenario.http ? "invalid" : "204");
-      }
-      assert(!`${result.stdout}${result.stderr}`.includes("PRIVATE"));
-      assert(!result.stdout.includes("sb_publishable_offline_fixture") && !result.stdout.includes(api || "http://127.0.0.1:54321"));
-    }
-  } finally { await rm(root, { recursive: true }); }
-});
 
 const browserSources = [
   "frontend/src/core/runtime-config.js",

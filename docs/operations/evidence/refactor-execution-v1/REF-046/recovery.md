@@ -172,3 +172,7 @@ Then fence current command/attempt acknowledgements and strengthen the full real
 Exact-head CI/receipts recorded on PR884; no merge, deploy, live SQL or completion credit.
 
 2026-10-09 user approved exact ninth-suffix registration (plan10/test25),13paths/cumulative23,total400; preserve passing proof37857966710/artifact11585257146 and failed replay37857967004/job113586633188; requalify final head.
+
+## Current-main repository cleanup — 2026-11-09
+
+Closed donor PRs #879–884 are consolidated in existing PR #885; their commits and branches remain preserved. The current owner instruction authorizes repository repairs, publication and verified merge, while all production holds remain. Prior local/CI receipts above are historical. The current source, exact suffix reconciliation, retained security tooling, local results and pending hosted proof are recorded in `docs/operations/evidence/pr885-current-main-qualification.md`. Primary REF-046 is not marked complete.

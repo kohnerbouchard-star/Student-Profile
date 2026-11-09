@@ -3,6 +3,7 @@ name: multicurrency-stock-funding-v1
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - .github/workflows/multicurrency-stock-funding-v1.yml
       - backend/src/domains/stocks/**
       - backend/supabase/functions/classroom-api/index.ts
@@ -29,6 +30,7 @@ on:
       - scripts/multicurrency-stock-buy-quote-*.mjs
       - scripts/multicurrency-stock-buy-settlement-*.mjs
       - scripts/multicurrency-stock-sell-settlement-*.mjs
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches:
       - feat/multicurrency-stock-funding-v1

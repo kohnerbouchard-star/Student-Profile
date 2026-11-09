@@ -4,6 +4,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { verifyTypecheckOnlyImports } from "./verifyTypecheckOnlyImports.mjs";
 
 const backendRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const functionsRoot = join(backendRoot, "supabase", "functions");
@@ -37,6 +38,7 @@ for (const entry of entrypoints) {
 }
 
 for (const [config, group] of groups) {
+  const mapPath = verifyTypecheckOnlyImports(backendRoot, { includeClassroom: true });
   const result = spawnSync(
     "deno",
     [
@@ -44,6 +46,7 @@ for (const [config, group] of groups) {
       `--config=${config}`,
       `--lock=${lockPath}`,
       "--frozen",
+      `--import-map=${mapPath}`,
       ...group.map((entry) => entry.entrypoint),
     ],
     { stdio: "inherit" },
