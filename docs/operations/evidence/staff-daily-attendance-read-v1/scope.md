@@ -240,3 +240,48 @@ Attendance source/package/receipts/manifest, exact inventory deltas and authorit
 positive/six-negative checks. Full root/Edge/Player/smoke execution is implementation
 provided evidence, not represented as independently rerun. No local database or
 browser/hosted acceptance is claimed; automatic final-head CI follows publication.
+
+
+## Parent-authorized Progression runner correction — 2026-11-09
+
+Exact-head a87c3506880b107919ed0f87729f5400ce1c5132 run42547523933/attempt1,
+job128935645748 selected Ubuntu26.04.1 and failed Install Chromium: retained
+Playwright1.59.1 does not support chromium on ubuntu26.04-x64. Earlier simulations,
+backend/capability/static checks passed; browser and downstream steps were skipped.
+This is environment incompatibility, not an assertion or fixture failure. Keep the
+original failure as history. The workflow is identical to main415653b2 and the
+predecessor Attendance head; #914 pinned eight other workflows, not this one.
+
+Approved scope: only runs-on ubuntu-latest to ubuntu-24.04 in the Progression
+workflow, one additive PR916 allowed-path lock and this scoped evidence. Preserve
+all commands, tests, permissions, guards, existing full action hashes, dependencies,
+Playwright/browser version and all117/86 checks, two read-only locks/false flags.
+#620's separate artifact-action updates are not imported or overwritten. No new
+selector is needed because the workflow already names its own path.
+
+Required before publication: YAML equality except runner, exact one-line workflow
+diff, authority positive/wrong-PR/base/extra-path/three-safety-negative checks,
+authority/action-pinning regressions, secrets/whitespace and independent exact-diff
+review. Final amended-SHA automatic qualification must execute the retained browser
+and downstream stages. Prior results do not qualify a new SHA. No manual dispatch,
+rerun, deployment, production/live mutation or credentials/settings changes.
+
+Pre-edit refs: main415653b213cb1269074c212da9f97bdfd3e652f2,
+PR916/a87c3506880b107919ed0f87729f5400ce1c5132,
+PR913/cdab447a09ed4925050e0314c44e6cede12cfbb7,
+PR620/ffa650267b6bf20c69d1c6217b31d51616c25363.
+Progression/PR916-authority baseline blobs0db27d3927be50dc3e412a89ac73d9cf6db48a71 /
+7ef60c6840507bf239dac53d6a8592c2c305b199. Fresh20-open-PR complete path census
+identifies#913/#620 overlap on Progression. Parent coordinated the identical
+runner-only hunk with#913; this branch modifies neither#913 nor its authority.
+#620's independent setup-node/artifact pins stay untouched. Actual-base scope is
+10 changed paths under13 locks; the only manifest change is an appended workflow.
+
+Local correction checks PASS under pinned Node22.23.1/npm10.9.8: YAML parses,
+complete workflow structure is identical except runner, exact one-line hunk matches
+published#913, all other manifest fields/117 required/86 critical/two read-only
+locks/false flags remain unchanged. Authority accepts10 actual paths/13 locks;
+six negative mutations reject. Authority/action-pinning regressions17/17, secrets
+and whitespace PASS. Prior integrated a87c3506 automatic workflows are now terminal:
+38 success/one Progression environment failure. No additional failure was repaired
+or ignored. Corrected exact-head hosted execution remains pending publication.
