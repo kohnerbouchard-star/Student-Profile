@@ -3,6 +3,8 @@ name: Story Replay Safety
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-916.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - "backend/src/domains/storylines/**"
       - "backend/src/domains/stocks/news.ts"
       - "backend/src/domains/stocks/news.test.ts"

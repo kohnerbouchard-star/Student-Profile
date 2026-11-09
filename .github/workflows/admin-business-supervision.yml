@@ -2,6 +2,7 @@ name: Admin Business Supervision
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-916.json"
       - ".github/workflows/admin-business-supervision.yml"
       - "admin/v2/src/routes/business/**"
       - "admin/v2/styles/routes/business.css"

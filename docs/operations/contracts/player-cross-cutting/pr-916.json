@@ -21,7 +21,14 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     ".github/workflows/player-button-click-safety.yml",
-    ".github/workflows/progression-runtime-v1.yml"
+    ".github/workflows/progression-runtime-v1.yml",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/player-multiplayer-load-e2e.yml",
+    ".github/workflows/admin-business-supervision.yml",
+    ".github/workflows/button-action-coverage.yml",
+    ".github/workflows/business-financial-market.yml",
+    ".github/workflows/business-primary-ipo.yml",
+    ".github/workflows/environment-neutral-browser.yml"
   ],
   "requiredFiles": [
     "backend/src/domains/attendance/tests/staffAttendanceDailyRead.test.ts",

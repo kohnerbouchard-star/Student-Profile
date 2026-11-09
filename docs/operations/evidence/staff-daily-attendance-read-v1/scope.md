@@ -285,3 +285,82 @@ six negative mutations reject. Authority/action-pinning regressions17/17, secret
 and whitespace PASS. Prior integrated a87c3506 automatic workflows are now terminal:
 38 success/one Progression environment failure. No additional failure was repaired
 or ignored. Corrected exact-head hosted execution remains pending publication.
+
+
+## Parent-authorized main reconciliation and retained selectors — 2026-11-09
+
+Normal no-conflict merge of main7688eeebfdfcf9c81314f849e3c7dd2e47078a02
+into Attendance35bea4798353409dcda1c46a7412b1eb3bc4afaa. Main contains merged
+#913 session-timeout implementation, registration, the same Progression runner pin
+and sixteen additive PR913 selectors. Preserve these and all merged#914 changes
+byte-for-byte outside the eight specifically approved selector additions. No
+history rewrite, stale snapshot or donor-branch import. No conflict resolution
+was necessary. Global ledger is imported from main, not independently edited.
+
+Prior-head35bea479 automatic census is terminal39 successful workflows,
+83 jobs75 success/eight guarded skips and87 checks78 success/nine skips.
+Its eight untriggered inherited workflows remain unqualified on that head.
+Previous ancestry/Ubuntu failures and all prior manual results remain historical,
+not passes for this combined source. Production/live acceptance is not claimed.
+
+New mechanical scope: add only the exact PR916 manifest path to pull_request.paths
+in Story Replay, Multiplayer/Load, Admin Business, Button Coverage, Financial
+Market, Click Safety, Primary IPO and Environment Neutral Browser. All eight
+already have adequate genuine PR events and existing real-PR checkout/auth handling.
+Admin/IPO/Financial source gates use actual event PR916; their manual defaults or
+conditional manual behavior are neither exercised nor changed. Button Coverage's
+release_gate remains false/unexercised for PR events. No dispatch/event/default,
+command, assertion, action/dependency/browser/runner version, checkout guard,
+permission, concurrency, timeout or job guard changes. Existing selectors including
+all PR913/914 entries remain. No broader old proposal is applied.
+
+Add only the seven missing edited-workflow paths to PR916 authority (Click Safety
+already has a lock). Preserve all117 required/86 critical declarations verbatim,
+both read-only locks and every false flag. Current-base scope becomes17 actual
+paths under20 locks; the now-merged Progression/Click runner locks remain harmless
+inherited allowlist entries, with no new policy or verifier change.
+
+Fresh19-open-PR complete path census was inspected before edits. Shared workflows
+overlap#620 (six selected workflows), #885/#731 (Multiplayer only); only the exact new selector
+line is added, preserving their published hunks and existing current-main action
+pins. No other owner's branch, metadata or checks is modified. Package/inventory
+#668 and receipt#885 supporting protections remain: use actual combined source,
+preserve existing registrations/three actual package receipts, regenerate inventory
+twice and stop on unrelated deltas. Parent authorization is not owner consent.
+
+Required pinned gates: YAML parses and whole-document equality after removing
+only the added selector; exact raw one-line additions; actual-base authority and
+wrong-PR/base/extra-path/three-safety negative checks; complete manifest-array/flag
+preservation; receipts/ratchets; focused Attendance, root, all28 Edge, smoke and
+Player suites; secrets/whitespace; independent exact-final integration review.
+Then normal existing-draft push and automatic exact-head qualification, with full
+paginated runs/jobs/checks and explicit117/86 declaration reconciliation. Missing,
+skipped and executed gates stay distinct. No manual dispatch/rerun/access bypass,
+#916-to-main merge, ready/auto-merge, deployment, promotion or live-state mutation.
+
+Final local integration results: pinned Node22.23.1/npm10.9.8/Deno2.9.3;
+root/backend npm ci, focused Attendance7/7, full root npm test, backend TypeScript
+and all28 Edge roots, complete smoke and Player verify PASS. The imported session
+timeout/Marketplace test registrations and implementations remain main-identical.
+Authority/action-pinning/receipt/ratchet regressions72/72, exact17-path/20-lock
+positive scope, six negative mutations, source/package/three-receipt preservation,
+secrets and whitespace PASS. All eight raw YAML diffs add exactly one selector;
+complete parsed documents compare identical after removing it. No source/runtime
+behavior or dependency changed beyond already merged main's changes.
+
+Combined inventory regenerated twice byte-identically, SHA256
+467f2e9f8ca9c5c353c74e3b88beed6e14d2fd4b31539a07c1230b035fe92ec5;
+1315 sources/Attendance15/persistence53/deep imports70 and all other metrics remain
+unchanged. Only the original Attendance delta differs from current main. Before
+commit main7688eeeb and remote916/35bea479 were reverified unchanged; main package,
+inventory and receipt blobs remain8f8fe07cb0e446a121fcbc519cb692447c2e1b68 /
+b6865fc38ebec932558e058eab9ded78077aba12 /
+4589dc191d138fbe242ba51c006e481588643c94.
+
+Independent read-only integration review found no actionable issue and independently
+passed16 authority regressions plus YAML/scope/preservation/receipt/inventory and
+six-negative checks. Broader root/Player/Edge/smoke/72 regression executions are
+implementation-provided evidence, not claimed as independently rerun. Final exact
+commit review and fresh automatic hosted qualification follow; local source checks
+do not establish database/browser/live acceptance. All existing production holds
+and draft/unmerged/auto-merge-off state remain required.

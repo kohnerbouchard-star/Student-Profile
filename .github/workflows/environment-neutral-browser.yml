@@ -3,6 +3,7 @@ name: Environment Neutral Browser
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-916.json"
       - "index.html"
       - "frontend/**"
       - "auth/**"
