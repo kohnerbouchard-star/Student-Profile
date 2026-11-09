@@ -310,29 +310,39 @@ function attendanceSuccess(name) {
   };
 }
 
-// Observe the known delayed startup read before navigation. Call the returned
-// assertion after the original UI snapshots and before another test-driven reload.
-// This completes the read instead of hiding requestfailed or other API errors.
-export function observeStartupGameCodeRead(page, gameId, timeoutMs = 15000) {
+// Observe every independent startup read before navigation. Overview's four
+// concurrent reads and the persisted Game Code read can finish in either order.
+// Call the assertion after the original UI snapshots, before a test-driven reload.
+export function observeStartupOverviewReads(page, gameId, timeoutMs = 15000) {
+  const prefix = "/functions/v1/web-session-api/proxy";
+  const paths = [
+    `${prefix}/games/${gameId}/join-code/reset`,
+    `${prefix}/games/${gameId}/dashboard`,
+    `${prefix}/games`,
+    `${prefix}/notifications`,
+    `${prefix}/games/${gameId}/store/items`,
+  ];
   let timer;
-  const read = page.waitForResponse((response) =>
+  // Register all observers synchronously; a fast response must not be missed
+  // while another request is still waiting for headers or its complete body.
+  const reads = Promise.all(paths.map((path) => page.waitForResponse((response) =>
     response.request().method() === "GET" &&
-    new URL(response.url()).pathname ===
-      `/functions/v1/web-session-api/proxy/games/${gameId}/join-code/reset`,
+    new URL(response.url()).pathname === path,
   { timeout: timeoutMs }).then(async (response) => {
     if (response.status() !== 200) {
-      throw new Error(`Startup Game Code read returned ${response.status()}.`);
+      throw new Error(`Startup read ${path} returned ${response.status()}.`);
     }
     const error = await response.finished();
     if (error) throw error;
-  });
+  })));
   const deadline = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error(
-      `Startup Game Code read did not finish within ${timeoutMs}ms.`,
+      `Startup Overview reads did not finish within ${timeoutMs}ms.`,
     )), timeoutMs);
   });
-  // Capture early rejection while snapshots run, then rethrow at the assertion.
-  const outcome = Promise.race([read, deadline])
+  // One deadline covers all headers and bodies. Capture early rejection while
+  // snapshots run, then rethrow at the assertion; no API failure is discarded.
+  const outcome = Promise.race([reads, deadline])
     .then(() => ({ ok: true }), (error) => ({ ok: false, error }))
     .finally(() => clearTimeout(timer));
   return async () => {
