@@ -4,7 +4,8 @@ Roadmap item: `ARCH-501/502-PLAYER-COUNTRY-NEWS-PROJECTIONS-001`.
 Status: `IMPLEMENTED_NOT_MERGED`; reviewed local candidate only. Parent ARCH-501/502 remain open.
 Owner branch: `refactor/player-country-news-projections-v1`.
 Baseline: `4226ca9391df4cafa2c3c3004abd5c5ba552c48d` (merged PR916).
-Implementation commit: pending local commit. Independent final review: no actionable findings.
+Implementation commit: `9aecc7f47ee7a45797d2267766c1bf92b5fe59f3`.
+Independent final review: no actionable findings.
 
 ## Bounded ownership
 
@@ -86,7 +87,7 @@ unchanged retained required/critical checks and applicable final-head CI evidenc
 
 ## Next action and rollback
 
-Record the exact reviewed implementation commit after the local commit.
+The reviewed implementation is committed locally at the SHA above.
 Return the isolated local candidate for parent review; do not automatically publish,
 merge, mark ready or deploy. Broader Player coordinator extraction is a separate
 tranche, not part of this pilot. Rollback is to revert this bounded source/test
