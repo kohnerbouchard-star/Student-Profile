@@ -56,3 +56,12 @@ test("specialized Player modal never clips inaccessible fields", () => {
   assert.match(css, /@media \(max-width: 980px\)[\s\S]*\.admin-terminal-player-container[\s\S]*overflow-y:\s*auto\s*!important/);
   assert.match(css, /@media \(max-width: 980px\)[\s\S]*\.admin-terminal-player-main,[\s\S]*\.admin-terminal-player-access[\s\S]*overflow:\s*visible\s*!important/);
 });
+
+test("scroll smoke waits strictly for the current session card rather than a hidden legacy match", async () => {
+  const source = await readFile(new URL("./admin-scroll-integrity-smoke.mjs", import.meta.url), "utf8");
+  const readiness = source.slice(source.indexOf("let failure;"), source.indexOf("const before = await shellGeometry()"));
+  assert.match(readiness, /await page\.locator\("\.econovaria-admin-game-session-card"\)\.waitFor\(\{ state: "visible", timeout: 15_000 \}\)/);
+  assert.doesNotMatch(readiness, /admin-terminal-side-code|\.first\(|catch\(/);
+  assert.match(source, /Math\.abs\(before\.cardBottom - before\.leftBottom\) <= 14/);
+  assert.match(source, /errors\.length === 0/);
+});

@@ -166,3 +166,35 @@ production/workforce/recipe setup, ownership transfer and initial balance setup)
 None is reported in the new/changed Player loop or manufacturing routines. Lint is
 not certified clean. This is isolated SQL evidence, not connected-browser or live
 service completion, and no production activity is authorized.
+
+
+## Main integration after #928
+
+Published implementation `727f8e9dacb44d9d393d59180a8a3de68f5f88a8` completed hosted
+qualification with 56 passing workflows, one expected skip and the shared Admin
+redirect-diagnostic failure. Database Replay and all five Atomic Settlement jobs
+passed, including real manufacturing-to-sale, idempotent revenue, start/settlement
+races, backend/Edge and Chromium qualification. The runner port collision in REF-009
+was retried once and passed. These results apply to that implementation head.
+
+Main `0d314bbe53832afcdc94b9dab8d3e09515f2762f` merged #928's Admin readiness and
+interruption diagnostics. This branch integrates that exact main commit without
+changing any Teacher implementation file or Business runtime/migration. The sole
+merge conflict was additive roadmap intake; both entries are preserved. The #926
+authority retains its exact original 118 required and 87 critical checks, file locks
+and production/secret denials. #928's four added Shell/Scroll names belong to its
+PR-specific authority, not the shared legacy authority or verifier. Their workflows
+are path-filtered to Admin files that this PR does not change relative to main.
+Their qualification remains attached to merged #928; no trigger is altered and no
+pre-existing Business gate is removed. The proposed union was not published. Renewed exact-head CI is required before a
+merge decision; no production action is authorized.
+
+Integration validation on the isolated cloud checkout: root `npm test`, full Player
+verify, backend `tsc`, and 44 migration/authority/redirect-diagnostic regressions
+pass. Edge checking and backend smoke stop while importing the unchanged pinned
+Supabase module because esm.sh refuses the connection. The pinned Chromium archive
+is truncated; the installed system Chromium also fails before any browser assertion
+because its process socket is unavailable. Docker is not installed in this checkout.
+These are local execution limits, not passing browser/database/Edge evidence. The
+renewed hosted checks must provide those exact-head results without substitutions
+or relaxed assertions.
