@@ -12,8 +12,10 @@
     "docs/operations/contracts/player-cross-cutting/pr-929.json",
     "docs/operations/evidence/admin-scanner-startup-reads-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/admin-contract-end-to-end-smoke.mjs",
     "scripts/admin-loading-scanner-smoke.mjs",
     "scripts/admin-loading-scope-contract.mjs",
+    "scripts/admin-modal-accessibility-source-smoke.mjs",
     "scripts/admin-quality-smoke-fixture.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
@@ -22,8 +24,10 @@
     "docs/operations/contracts/player-cross-cutting/pr-929.json",
     "docs/operations/evidence/admin-scanner-startup-reads-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/admin-contract-end-to-end-smoke.mjs",
     "scripts/admin-loading-scanner-smoke.mjs",
     "scripts/admin-loading-scope-contract.mjs",
+    "scripts/admin-modal-accessibility-source-smoke.mjs",
     "scripts/admin-quality-smoke-fixture.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
@@ -247,5 +251,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "Owner directed getting needed PRs passing on current main and implementing identified corrections. PR929 binds only the shared scanner startup-read completion follow-up from main 9fe4a5c2, plus retained deterministic coverage and bounded evidence/intake/authority. Preserve all 122 required and 89 critical current-main checks, both verifier/test files read-only, and all existing authority records. No application, dependency, workflow, backend, schema, route, RPC, auth, release, production, secret, manual dispatch or check waiver. Separate feature branches remain unchanged; merges require coordination and exact-head qualification."
+  "authorizationNote": "Owner directed getting needed PRs passing on current main and implementing identified corrections. PR929 binds only the shared scanner startup-read completion follow-up from main 9fe4a5c2, plus retained deterministic coverage and bounded evidence/intake/authority. Preserve all 122 required and 89 critical current-main checks, both verifier/test files read-only, and all existing authority records. No application, dependency, workflow, backend, schema, route, RPC, auth, release, production, secret, manual dispatch or check waiver. Separate feature branches remain unchanged; merges require coordination and exact-head qualification. The same final-head Shell run exposed the untouched Contract smoke filling before its queued initial title focus; include only its bounded bound-controls/focus readiness and retained negative/input/no-early-write assertions. Application and payload checks stay unchanged."
 }

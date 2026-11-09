@@ -87,3 +87,82 @@ for (const [label, content] of [["controller", source], ["bridge", bridge], ["dr
 }
 
 console.log("Admin modal, nested-dialog, and Player drawer accessibility source contracts passed.");
+
+// The contract payload journey must start after real control binding and its
+// initial-focus frame, not just after the form becomes visible.
+const { waitForContractCreateReady } = await import("./admin-quality-smoke-fixture.mjs");
+let predicate;
+let options;
+waitForContractCreateReady({ waitForFunction(fn, argument, settings) {
+  predicate = fn;
+  options = settings;
+  assert.equal(argument, null);
+} });
+assert.equal(options.timeout, 5000, "Contract readiness must remain bounded.");
+assert.doesNotMatch(predicate.toString(), /\.focus\s*\(|\.value\s*=(?!=)|setTimeout/, "The barrier must observe, not repair or sleep through, field state.");
+const oldDocument = globalThis.document;
+const oldWindow = globalThis.window;
+const title = { isConnected: true };
+let currentTitle = title;
+let roots = [];
+let frames = [];
+const root = { dataset: { controlsBound: "false" }, isConnected: true, querySelector: () => currentTitle };
+globalThis.document = { querySelectorAll: () => roots, activeElement: null };
+globalThis.window = { requestAnimationFrame: (callback) => frames.push(callback) };
+try {
+  assert.equal(await predicate(), false, "A missing console must not be ready.");
+  roots = [root, root];
+  assert.equal(await predicate(), false, "Duplicate consoles must not be ready.");
+  roots = [root];
+  assert.equal(await predicate(), false, "A visible but unbound console must not be ready.");
+  assert.equal(frames.length, 0);
+  root.dataset.controlsBound = "true";
+  currentTitle = null;
+  assert.equal(await predicate(), false, "A missing title must not be ready.");
+  currentTitle = title;
+  document.activeElement = title; // Earlier accessibility focus is insufficient.
+  let settled = false;
+  const ready = predicate().then((result) => { settled = true; return result; });
+  await new Promise(setImmediate);
+  assert.equal(settled, false, "Even an active title must await the binding's focus frame.");
+  frames.shift()();
+  assert.equal(await ready, true);
+  document.activeElement = {};
+  const wrongFocus = predicate();
+  frames.shift()();
+  assert.equal(await wrongFocus, false, "Unrelated focus must not be accepted.");
+  const focusAfterFrame = predicate();
+  document.activeElement = title;
+  frames.shift()();
+  assert.equal(await focusAfterFrame, true);
+  for (const invalidate of [
+    () => { root.isConnected = false; },
+    () => { roots = [root, root]; },
+    () => { roots = [{ ...root }]; },
+    () => { root.dataset.controlsBound = "false"; },
+    () => { title.isConnected = false; },
+    () => { currentTitle = { isConnected: true }; document.activeElement = currentTitle; },
+  ]) {
+    root.isConnected = true; roots = [root]; root.dataset.controlsBound = "true";
+    title.isConnected = true; currentTitle = title; document.activeElement = title;
+    const interrupted = predicate();
+    invalidate();
+    frames.shift()();
+    assert.equal(await interrupted, false, "Detached, replaced, duplicate or unbound consoles must fail after the frame.");
+  }
+  await assert.rejects(waitForContractCreateReady({ waitForFunction() {
+    return Promise.reject(new Error("readiness timeout"));
+  } }), /readiness timeout/, "A browser readiness failure must propagate.");
+} finally {
+  if (oldDocument === undefined) delete globalThis.document; else globalThis.document = oldDocument;
+  if (oldWindow === undefined) delete globalThis.window; else globalThis.window = oldWindow;
+}
+const contractSmoke = await readFile(new URL("./admin-contract-end-to-end-smoke.mjs", import.meta.url), "utf8");
+const readinessAt = contractSmoke.indexOf("await waitForContractCreateReady(page)");
+assert.ok(readinessAt > contractSmoke.indexOf('await form.waitFor({ state: "visible" })'));
+assert.ok(readinessAt < contractSmoke.indexOf('.fill("Contract Wiring Audit")'));
+assert.match(contractSmoke, /assert\(payload.title === "Contract Wiring Audit", "Title was not preserved."\)/);
+assert.match(contractSmoke, /assert\(writes.length === initialWrites, "Contract editing caused an early write."\)/);
+assert.match(contractSmoke, /Initial title entry was redirected/);
+assert.match(contractSmoke, /Initial objective entry was redirected/);
+console.log("Contract create readiness waits for bound controls and completed initial focus, preserves exact input assertions and rejects stale surfaces.");

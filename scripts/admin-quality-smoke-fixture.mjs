@@ -351,6 +351,28 @@ export function observeStartupOverviewReads(page, gameId, timeoutMs = 15000) {
   };
 }
 
+// Contract visibility precedes control binding and its queued initial focus.
+// Observe that lifecycle without focusing a field or changing any input value.
+export function waitForContractCreateReady(page, timeoutMs = 5000) {
+  return page.waitForFunction(async () => {
+    const selector = "[data-admin-terminal-contract-console]";
+    const consoles = document.querySelectorAll(selector);
+    if (consoles.length !== 1) return false;
+    const root = consoles[0];
+    if (root.dataset.controlsBound !== "true") return false;
+    const title = root.querySelector("[data-admin-terminal-contract-title]");
+    if (!title?.isConnected) return false;
+    // Binding queues initial focus before this predicate can run. Complete that
+    // frame even if an earlier accessibility controller already focused title.
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    const current = document.querySelectorAll(selector);
+    return current.length === 1 && current[0] === root && root.isConnected &&
+      root.dataset.controlsBound === "true" && title.isConnected &&
+      root.querySelector("[data-admin-terminal-contract-title]") === title &&
+      document.activeElement === title;
+  }, null, { timeout: timeoutMs });
+}
+
 export async function createQualityHarness(name) {
   const dir = process.env.ADMIN_SMOKE_ARTIFACT_DIR ||
     `admin-browser-smoke-artifacts/${name}`;
