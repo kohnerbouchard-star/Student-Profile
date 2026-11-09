@@ -1,0 +1,94 @@
+# Loans lifecycle read v1
+
+Roadmap item: LOANS-LIFECYCLE-READ-001. Status: IMPLEMENTED_NOT_MERGED.
+Base: 415653b213cb1269074c212da9f97bdfd3e652f2.
+Owner: feat/loans-lifecycle-read-v1, in an isolated checkout.
+
+## Approved boundary
+
+The owner requested richer Loans/Business/Banking capabilities in a separate PR
+without changing current work, accepted Loans lifecycle backend groundwork first,
+and explicitly approved a small intake addition on the new branch to the shared
+roadmap. Existing branches and #668's ledger ownership remain unchanged. UI is
+deferred. This is not REF-025 activation or a repayment-forecast tranche.
+
+Preserve all existing Loans response fields and transaction behavior. Add only
+versioned recorded application/facility/payment data and per-currency recorded
+debt. Keep internal UUIDs, staff notes/identities, purpose, repayment-source text,
+idempotency keys, request hashes and ledger IDs out of the new DTO. No schema,
+migration, RPC, route, policy, auth, release configuration or hosted-data writes.
+
+## Scope and coordination
+
+Expected editable paths are the existing Business-banking contracts, Loans
+repository and loan currency projection module; its retained route test; one new focused test script;
+one new PR-only read-only verification workflow; this document; the bounded
+roadmap entry; and the eventual actual-numbered PR authority manifest. No new
+backend source file is planned. Existing package manifests, inventory, shared
+workflows, #624 UI, #888 diagnostic tools and other PR authority files are excluded.
+All 20 open PR file lists were inspected. These three source paths are unowned;
+#620 overlaps the existing Business Banking workflow, so it remains untouched.
+The existing global roadmap is the only approved supporting owner overlap.
+If generated inventory changes or another shared path becomes necessary, stop
+and obtain a bounded disposition rather than weakening a gate.
+
+## Intended semantics
+
+This is a bounded recent-records read, not a complete lifecycle-event timeline or
+an atomic multi-table snapshot. Each collection returns at most 100 entries,
+requesting an exact database count and a 101st row. Missing/inconsistent counts
+or server under-return prevent completeness; an unknown hasMore stays null.
+No new pagination route is claimed.
+Coverage and data validity must be explicit; truncated debt is unavailable,
+not a partial sum presented as total debt. Exact numeric text/bigint cents
+preserve money; currencies are never summed or converted into each other.
+Recorded interest is stored interest as of each loan's last-accrual timestamp,
+not accrued-to-now interest or a payoff quote. Default does not erase debt.
+Paid rows with positive recorded debt must be flagged, not silently hidden.
+Applications lack a locked currency in the retained schema: current product
+currency is metadata, not the historical application obligation currency.
+Payments get currency only from a separately scoped associated loan and retain
+posted/reversed status and nullable installment-allocation timestamps.
+An unavailable added read is explicit without breaking the old snapshot. Added
+queries start only after the original five reads succeed. A 2000ms deadline
+returns unavailable, aborts all added queries and prevents late completions from
+starting metadata lookups. The original reads and mutation commands are untouched.
+
+## Verification
+
+Pinned tools: Node22.23.1, npm10.9.8, Deno2.9.3. Locked dependencies were installed
+only in this isolated checkout. Source implementation and synthetic tests are
+not hosted PostgREST, RLS or database/runtime certification.
+
+Initial implementation passed all 57 focused tests, full root npm test, backend
+TypeScript/all 28Edge roots, full backend smoke (1422 Deno and 18 Node cases),
+complete Player verification and retained Business/Banking runtime/surface checks.
+Root retains one existing GNU-tar platform skip on macOS.
+
+The first combined Loans test run preserved 57 new passes and 10 retained passes,
+but the retained five-read fixture rejected the newly added read calls. Its
+fixture now explicitly isolates unavailable counted-history reads and removes
+only additive lifecycle from its retained response comparison. Every original
+five-query expected entry, currency assertion and retained DTO expected value
+is unchanged. New scoped history assertions live in the new dedicated suite.
+
+Independent read-only review found a P2 unbounded optional-history
+wait, corrected with the deadline/cancellation above. A further synthetic delayed
+response test reproduced late metadata lookups after timeout (68 passed/1 failed),
+corrected by checking cancellation before each following stage. Failures remain
+historical evidence, not relabelled passes. Final focused and independent re-review results are 80/80 passing with Deno2.9.3:
+69 new tests and 11 retained route/currency tests. The independent reviewer found
+no remaining actionable issue. No executed reproduction against the original
+unbounded source is claimed. A final full aggregate rerun follows the late-stage
+guard; earlier full passes are not substituted for that rerun. Hosted CI remains
+pending and no merge-ready or completion credit is claimed.
+
+## Rollback and release
+
+Revert this isolated read enrichment to remove the additive field; no schema,
+ledger, balance, payment, application, liability or gate state changes. No new
+public route, mutation permission or audit-write behavior exists. Existing
+request authentication/rate boundaries remain; reads add only bounded scoped
+queries and a cancellation deadline. Publication is as a separate draft PR only.
+No merge, ready transition, auto-merge, production/live action, release dispatch,
+secret change or other existing branch modification is authorized here.
