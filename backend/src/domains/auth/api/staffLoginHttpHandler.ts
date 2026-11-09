@@ -5,6 +5,7 @@ import {
 import {
   type EdgeSupabaseClient,
   readSupabaseEnv,
+  systemRecoveryAccessAllowed,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
@@ -142,6 +143,14 @@ export async function handleStaffLoginRequest(
       return failure.retryAfterSeconds > 0
         ? authenticationThrottledResponse(failure)
         : invalidCredentialsResponse();
+    }
+
+    if (!await systemRecoveryAccessAllowed(envResult.value.supabaseUrl, serviceClient, authUser.id, session.access_token)) {
+      return jsonError(403, {
+        code: "staff_recovery_restricted",
+        message: "This session cannot access the application during account recovery.",
+        retryable: false,
+      });
     }
 
     const initialStaffResult = await serviceClient

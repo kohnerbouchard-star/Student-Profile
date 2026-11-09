@@ -210,6 +210,8 @@ At minimum detect/ratchet:
 
 **Gate to leave Phase 0:** current violations are inventoried with owners; ratchets are green on current `main`; no later PR is allowed to increase the baselines.
 
+**Owner-approved exception (2026-10-04, REF025c1):** only compatibilityMarkerFiles may move209→210 for the explicit persisted `legacy_v1` liability discriminator in `backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts`. Approval: Sentinel_99a22a14280c819198a0d9b9d95c87ea. See [bounded exception](../operations/evidence/refactor-execution-v1/REF-025/u5-compatibility-exception.md). All other ceilings and the no-increase rule remain; this grants no scanner exclusion, lexical workaround or future exception.
+
 ---
 
 # PHASE 1 — Make game and actor context structural
@@ -510,6 +512,10 @@ Do not build one enormous “generic repository.” Domain repositories should e
 ### `ARCH-402` — Public domain boundaries
 
 Status: `PLANNED`
+
+**Bounded Player request/session tranche:** [PR #892](https://github.com/kohnerbouchard-star/Student-Profile/pull/892) merged as `f94550551fa47f87398a0dd8455d3d4d576ab783`, accepted head `c593989763fdd357fa6efe7a51f5b72c68ab2604`, source `23000607efd09bef630e27e7c0e9e57e4d4a2c20`. The existing narrow Player boundary replaces 35 private request/session edges across 23 adapters without changing handler behavior. Merged inventory moved 151 to 116 deep imports (non-test 103 to 68; 48 test edges unchanged); foreign infrastructure remains five. Local, exact-head CI, Preview and unchanged-base Contract route-test evidence are recorded in the [scope evidence](../operations/evidence/player-request-public-boundary-main-v1/scope.md); all 18 main-push workflows succeeded and one was skipped; dynamic CodeQL succeeded. The tranche does not complete ARCH-402 or transfer ARCH-100F/global-ledger ownership.
+
+**Bounded Story notification tranche:** `IMPLEMENTED_NOT_MERGED` in draft [PR #893](https://github.com/kohnerbouchard-star/Student-Profile/pull/893), source `32e8249dacf4997a39231c59ff255c0eb595d526`. Story supplies explicit publisher and delivery-state capabilities to Notifications and Dashboard, retaining the existing persistence and security behavior. Candidate inventory measures 114 deep imports and three foreign infrastructure imports. Focused tests, full backend and Edge typechecks, four pinned runtime bundles, ownership collisions, release-trigger audit and pending exact-head CI are recorded in the [scope evidence](../operations/evidence/story-notification-capabilities-main-v1/scope.md). ARCH-402 remains `PLANNED` overall.
 
 Create or consolidate a minimal public boundary for cross-domain use. Ban random deep imports after consumers migrate.
 

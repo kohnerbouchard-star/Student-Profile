@@ -2,7 +2,7 @@ import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import type {
   GamePublicRealtimeEnvelope,
   GamePublicRealtimePublishResult,
-} from "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts";
+} from "../../game-dashboard/publicRealtime.ts";
 import {
   handleStockMarketRunnerRequest,
 } from "../../stocks/api/stockMarketRunnerHttpHandler.ts";
@@ -98,6 +98,7 @@ Deno.test("econovaria demo storyline loop resolves cutscene ledger and contract 
         },
       }),
       readRunnerSecret: () => SECRET,
+      readMarketOpenState: async () => true,
       createRepository: () => stockRepository,
       calculateNextTick: calculateDeterministicTick,
       createPublicRealtimePublisher: () => new NoopPublicRealtimePublisher(),

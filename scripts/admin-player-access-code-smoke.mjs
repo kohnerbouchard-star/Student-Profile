@@ -9,10 +9,36 @@ const CSRF_TOKEN = "C".repeat(43);
 
 const fallbackSource = readFileSync("admin/classroom-write-fallback.js", "utf8");
 const bridgeSource = readFileSync("admin/player-access-code-bridge.js", "utf8");
+const identitySource = readFileSync("admin/player-identity-wiring.js", "utf8");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
+
+assert(
+  !bridgeSource.includes("updatePlayerIdentity"),
+  "Legacy credential bridge still owns existing-player reset.",
+);
+assert(
+  identitySource.includes("window.EconovariaAdminAuth?.request"),
+  "Existing-player reset does not use the explicit authenticated Admin transport.",
+);
+assert(
+  identitySource.includes("PLAYER_RESET_CONTEXT_STALE") &&
+    identitySource.includes("disposeResetScope: disposeActiveResetScope"),
+  "Existing-player reset lacks stale-context rejection or explicit disposal.",
+);
+assert(
+  !identitySource.includes("window.fetch =") &&
+    !identitySource.includes("window.fetch="),
+  "Existing-player reset introduced a new global fetch patch.",
+);
+assert(
+  !identitySource.includes("localStorage") &&
+    !identitySource.includes("sessionStorage") &&
+    !identitySource.includes("indexedDB"),
+  "Existing-player reset persists credential material in browser storage.",
+);
 
 function storage(values = {}) {
   const state = new Map(Object.entries(values));

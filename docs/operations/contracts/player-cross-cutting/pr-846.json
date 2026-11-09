@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref025b3-loans-consumer-pr-846.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 846,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "player-terminal/src/pages/loans-page.js",
+    "player-terminal/src/api/response-normalizer.js",
+    "player-terminal/tests/business-banking-surface.mjs",
+    "player-terminal/tools/connected-banking-loans-mutation-runner.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-025/u5-loans-consumer.md",
+    "docs/operations/contracts/player-cross-cutting/pr-846.json",
+    "scripts/business-banking-player-commerce-browser-acceptance.core.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-846.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "criticalJobChecks": [
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/u5-loans-consumer.md",
+  "authorizationNote": "Parent-approved REF025b3 Loans display/normalization and tests: at most seven named paths/360 changed lines. Parent-approved five-line correction retires only the dedicated synthetic display page controller after its capture probe; connected persistence/replay/rejection and all display assertions remain unchanged. Narrow Player owner handoff preserves #624 layout/disclosures/accessibility and #668/#736 protected inventory hunks. Parent also approved the seventh commerce-core path for readiness-aware authoritative balance reads with unchanged deadlines/assertions; inventory unchanged; verifier/test entries are unchanged locks. No read-model/API/app/realtime/CSS/backend/schema/policy expansion. Preserve application/repayment rights, payloads and existing transaction/replay authority; decimal strings never become imprecise Numbers. Base d2aa78c8 is merged/qualified. No live access, settings, credentials, dispatch, deployment or U1 hold restoration. Parent reviews/merges; REF025 stays BLOCKED and REF027 retains025+026."
+}

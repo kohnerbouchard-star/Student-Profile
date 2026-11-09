@@ -1,0 +1,1327 @@
+{
+  "schemaVersion": "econovaria.phase15.economy-private-supplement.v1",
+  "structural": {
+    "columns": [],
+    "indexes": [],
+    "schemas": [],
+    "routines": [
+      {
+        "kind": "f",
+        "name": "assign_business_inventory_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "d0cca0f0f55eeb07140a090c5beda44214680e404a3b692e50a06b8c375e9f40"
+      },
+      {
+        "kind": "f",
+        "name": "assign_crafting_output_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "c307e8170ea5bf710c1fbac8ed14a53e41e5fd233c7c2cc6335392980453a105"
+      },
+      {
+        "kind": "f",
+        "name": "assign_equipment_instance_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "ac6857ed36a03c9a0ee96f3d806bc31d7a132f4a631b4c5776346fefe62028b7"
+      },
+      {
+        "kind": "f",
+        "name": "assign_inventory_event_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "3b5c4195eb1fefb2f131b2fc4079211403f0f5934836d8675e4133e2bf97c681"
+      },
+      {
+        "kind": "f",
+        "name": "assign_inventory_holding_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "716f65d99658d9f458ecf72a242e3b81f833f933b339463a38046cf03da7f1c4"
+      },
+      {
+        "kind": "f",
+        "name": "assign_inventory_reservation_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "34371fa882e7688669312ddb9b0037d563835e5954004869dc1a6b69c3169be1"
+      },
+      {
+        "kind": "f",
+        "name": "assign_item_supply_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "b20997497a82041496b65b83631becbab5d16c2a220bd7a1c98baee95060ae96"
+      },
+      {
+        "kind": "f",
+        "name": "assign_item_use_request_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "9df251dcaba6e028c8976fa2d7300dd10b94e73a6b12bcfb83fec280a277f6a5"
+      },
+      {
+        "kind": "f",
+        "name": "assign_marketplace_listing_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "953ed58d70d89df82ac2fdf7de94cbd545531af4d96ddba1bc2e36001e096a22"
+      },
+      {
+        "kind": "f",
+        "name": "assign_marketplace_order_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "36c31ac19e344f2b38fe8556f44eb9176acfd641ca2b668293491d741e6f04ce"
+      },
+      {
+        "kind": "f",
+        "name": "assign_marketplace_purchase_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "8ab1979f1d1251464945c1589b03ac5303a11e69560ee1b4dfeabcf02aee7d62"
+      },
+      {
+        "kind": "f",
+        "name": "assign_redemption_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "c67bc918c84c9823cde7a02c012e60b81c4c9a7bc691067f5fb1b35bc330db59"
+      },
+      {
+        "kind": "f",
+        "name": "assign_store_item_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "03cab1415b0a4a824b53e159ca961ae10f9e61b6233aab6ad436c6185fe97ea9"
+      },
+      {
+        "kind": "f",
+        "name": "cleanup_history_free_store_stock_account_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "9b65ddc6f2d260b6eb79e2bc9ad02d185fd2ca5d0f742792ad786f58f9326c0f"
+      },
+      {
+        "kind": "f",
+        "name": "consume_business_finished_inventory_v2",
+        "result": "numeric",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_business_id uuid, p_product_id uuid, p_quantity integer, p_settlement_key text",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "6841dbe731d36ab6ce164c380e7ee4563450609d1da9e50ac39b16cb96cd0fd9"
+      },
+      {
+        "kind": "f",
+        "name": "enforce_teacher_approval_redemption_mode_v1",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "60ee9512232c58fea05985caa80284d7d6e391dbb4b96b9d3e93ff0ed8373d7e"
+      },
+      {
+        "kind": "f",
+        "name": "ensure_business_inventory_account_v2",
+        "result": "uuid",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_business_id uuid, p_account_kind text",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "68387369b1f3165fa7d4b8319aed632b3fdb003d236751e172285ff2c9cc5b1a"
+      },
+      {
+        "kind": "f",
+        "name": "ensure_player_inventory_account_v2",
+        "result": "uuid",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_player_id uuid",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "d20aff9183f1ba75911f1590b47ebb3f324e024843a50a47d25c2647151b8ec5"
+      },
+      {
+        "kind": "f",
+        "name": "ensure_system_inventory_account_v2",
+        "result": "uuid",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_party_kind text, p_system_key text, p_account_kind text, p_location_key text",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "cca995d4879cde98a4231605ff532364bfc8b730ad259ffd66cde8108975a99d"
+      },
+      {
+        "kind": "f",
+        "name": "guard_inventory_transaction_insert_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "7f62c1c61439c106d27fec24a48f73eeba5c69c633ca453a18f4f97c41967ec1"
+      },
+      {
+        "kind": "f",
+        "name": "guard_inventory_transaction_line_insert_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "144dbee2f1b93283ed102379820900f62b593900a2e72eb273ca1580765399d4"
+      },
+      {
+        "kind": "f",
+        "name": "guard_inventory_transaction_line_mutation_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "f0f3f78ab0eb5588e90eb2ff6bb8ec60029264849620aecc1ecd2c5a14751242"
+      },
+      {
+        "kind": "f",
+        "name": "guard_inventory_transaction_mutation_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "5e1507cd3e6058b8f589d8fd49a3803366207bd04fde596f1d2f9ee4c2abd225"
+      },
+      {
+        "kind": "f",
+        "name": "mirror_redemption_reservation_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "48733535539d78dc79f499dbbde26c33908ffcfd164a5c02c222d6299d6bccf7"
+      },
+      {
+        "kind": "f",
+        "name": "post_inventory_transaction_v2",
+        "result": "jsonb",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_transaction_type text, p_source_domain text, p_source_action text, p_source_id uuid, p_idempotency_key text, p_metadata jsonb, p_lines jsonb",
+        "configuration": [
+          "search_path=public, economy_private, extensions, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "42c24a23bc3422ace87401d98b158d265dd357430c7160e3746101e8e82e3db2"
+      },
+      {
+        "kind": "f",
+        "name": "project_business_inventory_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "f85d6f9afe99bf3b14e57881fb05e81e6688efe4f67077304e1da05b2d187d9f"
+      },
+      {
+        "kind": "f",
+        "name": "promote_store_game_item_key_v2",
+        "result": "uuid",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_store_item_id uuid, p_canonical_key text, p_source_item_stable_id text",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "d303499c7e4d580fb9fc1c19117d134f44e37889e73473e166ef984ab889e500"
+      },
+      {
+        "kind": "f",
+        "name": "provision_business_economic_party_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "edb9447926748d8269207af4e6e8d1848ff1b9d0d5ee01113b80eee3365111a7"
+      },
+      {
+        "kind": "f",
+        "name": "provision_player_economic_party_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "30a36d7b1c92c740072e22f9edcf1a3c6094e81a7dadc3c89e36939784d28936"
+      },
+      {
+        "kind": "f",
+        "name": "release_history_free_store_stock_projection_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "37897dede70a07435603822d6d2fec04aa4bbbf23a849329fc22821f2e65b4f8"
+      },
+      {
+        "kind": "f",
+        "name": "sync_active_physical_pack_game_items_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "e29af06093289d960dc1bb101bd88028d4ba3ff71c30cb4ffdd0067e866598b2"
+      },
+      {
+        "kind": "f",
+        "name": "sync_associated_physical_items_v2",
+        "result": "integer",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "bc00b3ace3d82538d847283c02a26bca89468662d0e329e20bd19f2e1a9d5b39"
+      },
+      {
+        "kind": "f",
+        "name": "sync_physical_definition_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "19f391f14558327e6a55d2e7c8d3ec42d055b8b61883314e621d20a002c05ea9"
+      },
+      {
+        "kind": "f",
+        "name": "sync_physical_pack_catalog_context_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "5a93b4ca8750506b5f682d0d0d6db2cfba34cf4f9d9b1805b5bf8ac7b3f6f54b"
+      },
+      {
+        "kind": "f",
+        "name": "sync_store_stock_projection_v2",
+        "result": "trigger",
+        "schema": "economy_private",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=public, economy_private, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "5805901e29c57b7257e20da33ea5a479315a6d10a4b32af8cb4e77c833b19efc"
+      }
+    ],
+    "triggers": [],
+    "relations": [],
+    "constraints": []
+  },
+  "authorization": {
+    "policies": [],
+    "rowSecurity": [],
+    "tableGrants": [],
+    "schemaOwners": [
+      {
+        "owner": "postgres",
+        "schema": "economy_private"
+      }
+    ],
+    "routineGrants": [
+      {
+        "schema": "economy_private",
+        "grantee": "PUBLIC",
+        "grantor": "postgres",
+        "routine": "sync_active_physical_pack_game_items_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "PUBLIC",
+        "grantor": "postgres",
+        "routine": "sync_store_stock_projection_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_business_inventory_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_crafting_output_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_equipment_instance_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_inventory_event_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_inventory_holding_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_inventory_reservation_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_item_supply_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_item_use_request_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_marketplace_listing_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_marketplace_order_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_marketplace_purchase_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_redemption_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "assign_store_item_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "cleanup_history_free_store_stock_account_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "consume_business_finished_inventory_v2",
+        "arguments": "p_game_session_id uuid, p_business_id uuid, p_product_id uuid, p_quantity integer, p_settlement_key text",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "enforce_teacher_approval_redemption_mode_v1",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "ensure_business_inventory_account_v2",
+        "arguments": "p_game_session_id uuid, p_business_id uuid, p_account_kind text",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "ensure_player_inventory_account_v2",
+        "arguments": "p_game_session_id uuid, p_player_id uuid",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "ensure_system_inventory_account_v2",
+        "arguments": "p_game_session_id uuid, p_party_kind text, p_system_key text, p_account_kind text, p_location_key text",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "guard_inventory_transaction_insert_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "guard_inventory_transaction_line_insert_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "guard_inventory_transaction_line_mutation_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "guard_inventory_transaction_mutation_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "mirror_redemption_reservation_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "post_inventory_transaction_v2",
+        "arguments": "p_game_session_id uuid, p_transaction_type text, p_source_domain text, p_source_action text, p_source_id uuid, p_idempotency_key text, p_metadata jsonb, p_lines jsonb",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "project_business_inventory_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "promote_store_game_item_key_v2",
+        "arguments": "p_game_session_id uuid, p_store_item_id uuid, p_canonical_key text, p_source_item_stable_id text",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "provision_business_economic_party_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "provision_player_economic_party_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "release_history_free_store_stock_projection_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "sync_active_physical_pack_game_items_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "sync_associated_physical_items_v2",
+        "arguments": "p_game_session_id uuid",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "sync_physical_definition_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "sync_physical_pack_catalog_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "postgres",
+        "grantor": "postgres",
+        "routine": "sync_store_stock_projection_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_business_inventory_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_crafting_output_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_equipment_instance_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_inventory_event_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_inventory_holding_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_inventory_reservation_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_item_supply_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_item_use_request_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_marketplace_listing_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_marketplace_order_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_marketplace_purchase_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_redemption_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "assign_store_item_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "cleanup_history_free_store_stock_account_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "consume_business_finished_inventory_v2",
+        "arguments": "p_game_session_id uuid, p_business_id uuid, p_product_id uuid, p_quantity integer, p_settlement_key text",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "enforce_teacher_approval_redemption_mode_v1",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "ensure_business_inventory_account_v2",
+        "arguments": "p_game_session_id uuid, p_business_id uuid, p_account_kind text",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "ensure_player_inventory_account_v2",
+        "arguments": "p_game_session_id uuid, p_player_id uuid",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "ensure_system_inventory_account_v2",
+        "arguments": "p_game_session_id uuid, p_party_kind text, p_system_key text, p_account_kind text, p_location_key text",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "guard_inventory_transaction_insert_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "guard_inventory_transaction_line_insert_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "guard_inventory_transaction_line_mutation_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "guard_inventory_transaction_mutation_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "mirror_redemption_reservation_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "post_inventory_transaction_v2",
+        "arguments": "p_game_session_id uuid, p_transaction_type text, p_source_domain text, p_source_action text, p_source_id uuid, p_idempotency_key text, p_metadata jsonb, p_lines jsonb",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "project_business_inventory_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "promote_store_game_item_key_v2",
+        "arguments": "p_game_session_id uuid, p_store_item_id uuid, p_canonical_key text, p_source_item_stable_id text",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "provision_business_economic_party_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "provision_player_economic_party_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "release_history_free_store_stock_projection_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "sync_associated_physical_items_v2",
+        "arguments": "p_game_session_id uuid",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "sync_physical_definition_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "schema": "economy_private",
+        "grantee": "service_role",
+        "grantor": "postgres",
+        "routine": "sync_physical_pack_catalog_context_v2",
+        "arguments": "",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      }
+    ],
+    "routineOwners": [
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_business_inventory_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_crafting_output_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_equipment_instance_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_inventory_event_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_inventory_holding_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_inventory_reservation_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_item_supply_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_item_use_request_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_marketplace_listing_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_marketplace_order_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_marketplace_purchase_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_redemption_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "assign_store_item_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "cleanup_history_free_store_stock_account_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "consume_business_finished_inventory_v2",
+        "arguments": "p_game_session_id uuid, p_business_id uuid, p_product_id uuid, p_quantity integer, p_settlement_key text"
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "enforce_teacher_approval_redemption_mode_v1",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "ensure_business_inventory_account_v2",
+        "arguments": "p_game_session_id uuid, p_business_id uuid, p_account_kind text"
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "ensure_player_inventory_account_v2",
+        "arguments": "p_game_session_id uuid, p_player_id uuid"
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "ensure_system_inventory_account_v2",
+        "arguments": "p_game_session_id uuid, p_party_kind text, p_system_key text, p_account_kind text, p_location_key text"
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "guard_inventory_transaction_insert_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "guard_inventory_transaction_line_insert_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "guard_inventory_transaction_line_mutation_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "guard_inventory_transaction_mutation_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "mirror_redemption_reservation_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "post_inventory_transaction_v2",
+        "arguments": "p_game_session_id uuid, p_transaction_type text, p_source_domain text, p_source_action text, p_source_id uuid, p_idempotency_key text, p_metadata jsonb, p_lines jsonb"
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "project_business_inventory_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "promote_store_game_item_key_v2",
+        "arguments": "p_game_session_id uuid, p_store_item_id uuid, p_canonical_key text, p_source_item_stable_id text"
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "provision_business_economic_party_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "provision_player_economic_party_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "release_history_free_store_stock_projection_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "sync_active_physical_pack_game_items_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "sync_associated_physical_items_v2",
+        "arguments": "p_game_session_id uuid"
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "sync_physical_definition_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "sync_physical_pack_catalog_context_v2",
+        "arguments": ""
+      },
+      {
+        "owner": "postgres",
+        "schema": "economy_private",
+        "routine": "sync_store_stock_projection_v2",
+        "arguments": ""
+      }
+    ],
+    "relationOwners": [],
+    "roleAttributes": [],
+    "roleMemberships": [],
+    "defaultPrivileges": []
+  }
+}

@@ -1,8 +1,17 @@
 import {
-  readStockMarketOpenState,
-} from "../../stocks/infrastructure/supabaseStockMarketWindowRepository.ts";
+  type AccountBalanceRow,
+  balanceTotalForCurrency,
+  normalizeCurrencyCode,
+  round,
+  type StockHoldingRow,
+  sum,
+  summarizePortfolio,
+  toCashDto,
+  toHoldingDto,
+  toNumber,
+  unique,
+} from "./dashboardFinancialProjection.ts";
 import type {
-  PlayerGameDashboardCashBalanceDto,
   PlayerGameDashboardInventoryItemDto,
   PlayerGameDashboardLeaderboardEntryDto,
   PlayerGameDashboardMarketNewsDto,
@@ -15,36 +24,25 @@ import type {
 import {
   PlayerGameDashboardError,
 } from "../contracts/playerGameDashboardContracts.ts";
-import type {
-  StockMarketBoardStockDto,
-} from "../../stocks/contracts/stockMarketReadContracts.ts";
 import {
+  type StockMarketBoardStockDto,
+  type StockMarketOpenStateReadRepository,
+  type StockMarketPlayerOrderDto,
+  type StockMarketPlayerOrderStatus,
+  type StockMarketPlayerTradeDto,
+  type StockMarketReadRepository,
   StockMarketReadError,
-} from "../../stocks/contracts/stockMarketReadContracts.ts";
-import type {
-  StockMarketPlayerHoldingDto,
-  StockMarketPlayerOrderDto,
-  StockMarketPlayerOrderStatus,
-  StockMarketPlayerPortfolioSummaryDto,
-  StockMarketPlayerTradeDto,
-} from "../../stocks/contracts/stockMarketPlayerReadContracts.ts";
+} from "../../stocks/index.ts";
 import {
-  SupabaseStockMarketReadRepository,
-} from "../../stocks/infrastructure/supabaseStockMarketReadRepository.ts";
-import type {
-  StoreItemDto,
-} from "../../store/contracts/storeCatalogContracts.ts";
-import {
-  SupabaseContractRepository,
-} from "../../contracts/infrastructure/supabaseContractRepository.ts";
-import {
-  toPlayerContractDto,
-  toPlayerContractProgressDto,
-} from "../../contracts/contracts/contractHttpContracts.ts";
+  DashboardStoreListingsReadError,
+  type DashboardStoreListingsReadQuery,
+  type StoreItemDto,
+} from "../../store/dashboardReadModel.ts";
+import type { PlayerContractsReadQuery } from "../../contracts/index.ts";
 import type {
   StorePurchaseHistoryItemDto,
   StorePurchaseStatus,
-} from "../../store/contracts/storePurchaseContracts.ts";
+} from "../../store/purchaseHistoryTypes.ts";
 
 interface DashboardQueryError {
   readonly message: string;
@@ -70,7 +68,6 @@ type DashboardTableName =
   | "stock_price_ticks"
   | "stock_orders"
   | "stock_trades"
-  | "store_items"
   | "store_purchases";
 
 interface SupabasePlayerGameDashboardClient {
@@ -128,24 +125,6 @@ interface CountryProfileRow {
   readonly currency_code?: string | null;
 }
 
-interface AccountBalanceRow {
-  readonly player_id: string;
-  readonly account_type: string;
-  readonly balance: number | string;
-  readonly currency_code: string;
-}
-
-interface StockHoldingRow {
-  readonly game_session_id: string;
-  readonly listing_currency_code: string;
-  readonly player_id: string;
-  readonly stock_asset_id: string;
-  readonly ticker: string;
-  readonly quantity: number | string;
-  readonly average_cost: number | string;
-  readonly realized_pnl: number | string;
-}
-
 interface StockOrderRow {
   readonly id: string;
   readonly player_id: string;
@@ -172,23 +151,6 @@ interface StockTradeRow {
   readonly execution_price: number | string;
   readonly gross_value: number | string;
   readonly created_at: string;
-}
-
-interface StoreItemRow {
-  readonly id: string;
-  readonly game_session_id: string;
-  readonly item_key: string;
-  readonly name: string;
-  readonly description?: string | null;
-  readonly category: string;
-  readonly price: number | string;
-  readonly currency_code: string;
-  readonly stock_quantity: number | string;
-  readonly status: StoreItemDto["status"];
-  readonly visibility: StoreItemDto["visibility"];
-  readonly sort_order: number | string;
-  readonly created_at: string;
-  readonly updated_at: string;
 }
 
 interface InventoryHoldingRow {
@@ -261,22 +223,6 @@ const TRADE_SELECT = [
   "gross_value",
   "created_at",
 ].join(",");
-const STORE_ITEM_SELECT = [
-  "id",
-  "game_session_id",
-  "item_key",
-  "name",
-  "description",
-  "category",
-  "price",
-  "currency_code",
-  "stock_quantity",
-  "status",
-  "visibility",
-  "sort_order",
-  "created_at",
-  "updated_at",
-].join(",");
 const INVENTORY_SELECT =
   "id,store_item_id,quantity_owned,quantity_reserved,updated_at";
 const STORE_PURCHASE_SELECT =
@@ -297,19 +243,33 @@ const MARKET_NEWS_SELECT = [
   "created_at",
 ].join(",");
 
+export interface PlayerGameDashboardReadDependencies {
+  readonly stockMarketReadRepository: StockMarketReadRepository;
+  readonly stockMarketOpenStateReadRepository: StockMarketOpenStateReadRepository;
+  readonly playerContractsReadQuery: PlayerContractsReadQuery;
+  readonly storeListingsReadQuery: DashboardStoreListingsReadQuery;
+}
+
 export class SupabasePlayerGameDashboardRepository
   implements PlayerGameDashboardRepository {
+  private readonly dependencies: PlayerGameDashboardReadDependencies;
+
   constructor(
     private readonly client: SupabasePlayerGameDashboardClient,
+    dependencies: PlayerGameDashboardReadDependencies,
     private readonly now: () => Date = () => new Date(),
-  ) {}
+  ) {
+    this.dependencies = {
+      stockMarketReadRepository: dependencies.stockMarketReadRepository,
+      stockMarketOpenStateReadRepository: dependencies.stockMarketOpenStateReadRepository,
+      playerContractsReadQuery: dependencies.playerContractsReadQuery,
+      storeListingsReadQuery: dependencies.storeListingsReadQuery,
+    };
+  }
 
   async read(
     input: PlayerGameDashboardReadInput,
   ): Promise<PlayerGameDashboardSnapshot> {
-    const contractRepository = new SupabaseContractRepository(
-      this.client as any,
-    );
     const [
       gameSession,
       marketOpen,
@@ -324,11 +284,10 @@ export class SupabasePlayerGameDashboardRepository
       inventory,
       purchases,
       marketNews,
-      availableContracts,
-      contractProgress,
+      playerContracts,
     ] = await Promise.all([
       this.readGameSession(input.gameSessionId),
-      readStockMarketOpenState(this.client, input.gameSessionId, this.now()),
+      this.dependencies.stockMarketOpenStateReadRepository.read(input.gameSessionId, this.now()),
       this.readPublicStockMarket(input.gameSessionId),
       this.readActivePlayers(input.gameSessionId),
       this.readCountryAssignments(input.gameSessionId),
@@ -340,11 +299,7 @@ export class SupabasePlayerGameDashboardRepository
       this.readInventory(input),
       this.readRecentPurchases(input),
       this.readMarketNews(input.gameSessionId),
-      contractRepository.listPlayerAvailableContracts({
-        gameSessionId: input.gameSessionId,
-        playerId: input.playerId,
-      }),
-      contractRepository.listPlayerContractProgress({
+      this.dependencies.playerContractsReadQuery.read({
         gameSessionId: input.gameSessionId,
         playerId: input.playerId,
       }),
@@ -450,8 +405,8 @@ export class SupabasePlayerGameDashboardRepository
           ),
         },
         contracts: {
-          available: availableContracts.map(toPlayerContractDto),
-          progress: contractProgress.map(toPlayerContractProgressDto),
+          available: playerContracts.available,
+          progress: playerContracts.progress,
         },
       },
       public: {
@@ -463,7 +418,7 @@ export class SupabasePlayerGameDashboardRepository
           stocks: publicMarket.stocks,
           news: marketNews.map(toMarketNewsDto),
         },
-        contracts: availableContracts.map(toPlayerContractDto),
+        contracts: playerContracts.available,
         storeListings: storeListings.map(toPublicStoreListingDto),
       },
       unseenCutscenes: [],
@@ -503,14 +458,11 @@ export class SupabasePlayerGameDashboardRepository
     readonly stocks: readonly StockMarketBoardStockDto[];
   }> {
     try {
-      const result = await new SupabaseStockMarketReadRepository(
-        this.client as any,
-      )
-        .read({
-          gameSessionId,
-          includeHistory: false,
-          historyLimit: 1,
-        });
+      const result = await this.dependencies.stockMarketReadRepository.read({
+        gameSessionId,
+        includeHistory: false,
+        historyLimit: 1,
+      });
 
       return {
         tickIndex: result.tickIndex,
@@ -675,20 +627,12 @@ export class SupabasePlayerGameDashboardRepository
   private async readStoreListings(
     gameSessionId: string,
   ): Promise<readonly StoreItemDto[]> {
-    const response = await this.client
-      .from("store_items")
-      .select(STORE_ITEM_SELECT)
-      .eq("game_session_id", gameSessionId)
-      .eq("status", "active")
-      .eq("visibility", "visible")
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true });
-
-    if (response.error) {
-      throw readFailed();
+    try {
+      return await this.dependencies.storeListingsReadQuery.read(gameSessionId);
+    } catch (error) {
+      if (error instanceof DashboardStoreListingsReadError) throw readFailed();
+      throw error;
     }
-
-    return ((response.data ?? []) as StoreItemRow[]).map(toStoreItemDto);
   }
 
   private async readInventory(
@@ -746,104 +690,6 @@ export class SupabasePlayerGameDashboardRepository
   }
 }
 
-function toCashDto(
-  rows: readonly AccountBalanceRow[],
-  preferredCurrencyCode: string | null,
-): {
-  readonly balances: readonly PlayerGameDashboardCashBalanceDto[];
-  readonly primaryCurrencyCode: string | null;
-  readonly totalBalance: number;
-} {
-  const balances = rows.map((row) => ({
-    accountType: row.account_type,
-    currencyCode: row.currency_code,
-    balance: toNumber(row.balance),
-  }));
-  const primaryCurrencyCode = resolveValuationCurrency(
-    balances.map((balance) => balance.currencyCode),
-    preferredCurrencyCode,
-  );
-
-  return {
-    balances,
-    primaryCurrencyCode,
-    totalBalance: primaryCurrencyCode
-      ? round(sum(
-        balances.filter((balance) =>
-          normalizeCurrencyCode(balance.currencyCode) === primaryCurrencyCode
-        ),
-        (balance) => balance.balance,
-      ))
-      : 0,
-  };
-}
-
-function toHoldingDto(
-  holding: StockHoldingRow,
-  stock: StockMarketBoardStockDto | undefined,
-): StockMarketPlayerHoldingDto {
-  const quantity = toNumber(holding.quantity);
-  const averageCost = toNumber(holding.average_cost);
-  const currentPrice = stock?.currentPrice ?? 0;
-  const marketValue = round(quantity * currentPrice);
-  const costBasis = round(quantity * averageCost);
-  const unrealizedPnl = round(marketValue - costBasis);
-
-  return {
-    stockAssetId: holding.stock_asset_id,
-    ticker: stock?.ticker ?? holding.ticker,
-    companyName: stock?.companyName ?? holding.ticker,
-    sector: stock?.sector ?? "",
-    countryCode: stock?.countryCode ?? "",
-    currencyCode: holding.listing_currency_code,
-    quantity,
-    averageCost,
-    currentPrice,
-    marketValue,
-    costBasis,
-    unrealizedPnl,
-    unrealizedPnlPct: costBasis > 0
-      ? round((unrealizedPnl / costBasis) * 100)
-      : 0,
-    realizedPnl: toNumber(holding.realized_pnl),
-  };
-}
-
-function summarizePortfolio(
-  cash: ReturnType<typeof toCashDto>,
-  holdings: readonly StockMarketPlayerHoldingDto[],
-): StockMarketPlayerPortfolioSummaryDto {
-  const currencyCode = cash.primaryCurrencyCode ?? "UNKNOWN";
-  const byCurrency = [
-    ...new Set(holdings.map((h) => h.currencyCode ?? "UNKNOWN")),
-  ].sort().map((code) => {
-    const rows = holdings.filter((h) => (h.currencyCode ?? "UNKNOWN") === code);
-    return {
-      currencyCode: code,
-      marketValue: round(sum(rows, (h) => h.marketValue)),
-      costBasis: round(sum(rows, (h) => h.costBasis)),
-      unrealizedPnl: round(sum(rows, (h) => h.unrealizedPnl)),
-      realizedPnl: round(sum(rows, (h) => h.realizedPnl)),
-    };
-  });
-  const value = byCurrency.find((v) => v.currencyCode === currencyCode);
-  const holdingsMarketValue = value?.marketValue ?? 0;
-  return {
-    currencyCode,
-    byCurrency,
-    valuationStatus: byCurrency.some((v) => v.currencyCode !== currencyCode)
-      ? "partial_unconverted"
-      : "complete",
-    cashBalance: cash.totalBalance,
-    holdingsMarketValue,
-    totalEquity: round(cash.totalBalance + holdingsMarketValue),
-    totalCostBasis: value?.costBasis ?? 0,
-    unrealizedPnl: value?.unrealizedPnl ?? 0,
-    realizedPnl: value?.realizedPnl ?? 0,
-    positionsCount: holdings.filter((holding) => holding.quantity > 0).length,
-  };
-}
-
 function toOrderDto(row: StockOrderRow): StockMarketPlayerOrderDto {
   return {
     orderId: row.id,
@@ -871,25 +717,6 @@ function toTradeDto(row: StockTradeRow): StockMarketPlayerTradeDto {
     executionPrice: toNumber(row.execution_price),
     grossValue: toNumber(row.gross_value),
     createdAt: row.created_at,
-  };
-}
-
-function toStoreItemDto(row: StoreItemRow): StoreItemDto {
-  return {
-    id: row.id,
-    gameSessionId: row.game_session_id,
-    itemKey: row.item_key,
-    name: row.name,
-    description: row.description ?? null,
-    category: row.category,
-    price: toNumber(row.price),
-    currencyCode: row.currency_code,
-    stockQuantity: Math.trunc(toNumber(row.stock_quantity)),
-    status: row.status,
-    visibility: row.visibility,
-    sortOrder: Math.trunc(toNumber(row.sort_order)),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
   };
 }
 
@@ -1032,46 +859,6 @@ function toLeaderboard(
   });
 }
 
-function balanceTotalForCurrency(
-  balances: readonly AccountBalanceRow[],
-  preferredCurrencyCode: string | null,
-): number {
-  const valuationCurrencyCode = resolveValuationCurrency(
-    balances.map((balance) => balance.currency_code),
-    preferredCurrencyCode,
-  );
-  if (!valuationCurrencyCode) return 0;
-
-  return round(sum(
-    balances.filter((balance) =>
-      normalizeCurrencyCode(balance.currency_code) === valuationCurrencyCode
-    ),
-    (balance) => toNumber(balance.balance),
-  ));
-}
-
-function resolveValuationCurrency(
-  currencyCodes: readonly string[],
-  preferredCurrencyCode: string | null,
-): string | null {
-  const preferred = normalizeCurrencyCode(preferredCurrencyCode);
-  if (preferred) return preferred;
-
-  const available = unique(
-    currencyCodes
-      .map((currencyCode) => normalizeCurrencyCode(currencyCode))
-      .filter((currencyCode): currencyCode is string => Boolean(currencyCode)),
-  );
-  return available.length === 1 ? available[0] : null;
-}
-
-function normalizeCurrencyCode(
-  value: string | null | undefined,
-): string | null {
-  const normalized = value?.trim().toUpperCase();
-  return normalized && /^[A-Z0-9]{3,16}$/.test(normalized) ? normalized : null;
-}
-
 function normalizeSide(value: string): "buy" | "sell" {
   return value === "sell" ? "sell" : "buy";
 }
@@ -1094,32 +881,6 @@ function groupBy<T>(
   }
 
   return groups;
-}
-
-function unique(values: readonly string[]): readonly string[] {
-  return [...new Set(values.filter((value) => value))];
-}
-
-function sum<T>(values: readonly T[], select: (value: T) => number): number {
-  return values.reduce((total, value) => total + select(value), 0);
-}
-
-function toNumber(value: number | string | null | undefined): number {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : 0;
-  }
-
-  if (typeof value === "string") {
-    const parsed = Number(value);
-
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  return 0;
-}
-
-function round(value: number): number {
-  return Math.round(value * 1_000_000) / 1_000_000;
 }
 
 function readFailed(): PlayerGameDashboardError {

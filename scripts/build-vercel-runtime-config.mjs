@@ -185,6 +185,7 @@ function deploymentConfiguration(environment) {
     projectRef,
     supabaseUrl,
     apiProxyUrl: "",
+    apiTransport: "same-origin-bff",
     supabasePublishableKey,
   });
 }

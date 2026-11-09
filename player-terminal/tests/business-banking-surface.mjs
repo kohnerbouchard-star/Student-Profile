@@ -7,6 +7,7 @@ import { WRITE_INVALIDATIONS } from "../src/api/resource-plan.js";
 import { renderBankingPage } from "../src/pages/banking-page.js";
 import { renderBusinessPage } from "../src/pages/business-page.js";
 import { renderLoansPage } from "../src/pages/loans-page.js";
+import { normalizeApiResponse } from "../src/api/response-normalizer.js";
 
 const businessKey = `biz_${"a".repeat(32)}`;
 const productKey = `bpr_${"b".repeat(32)}`;
@@ -299,6 +300,50 @@ assert.match(loansMarkup, /accrued interest/);
 assert.match(loansMarkup, /<details class="player-terminal-disclosure"[^>]*><summary>/);
 assertAccessibleForm(loansMarkup, "loanApply");
 assertAccessibleForm(loansMarkup, "loanRepay");
+
+const due = "2026-10-05T00:00:00.000001Z";
+const projection = { version: 1, complete: true, unknownCurrencyRows: 0, groups: [
+  { currencyCode: "NRC", availableCredit: "99999999999999.99", outstanding: "0.00",
+    nextPayment: { amount: "2.00", due }, schedule: [{ due, amount: "2.00" }] },
+  { currencyCode: "LUM", availableCredit: "0.00", outstanding: "3.00", nextPayment: null, schedule: [] },
+] };
+const currencyFixture = { ...data.loans, currencyProjection: projection,
+  offers: data.loans.offers.map((row) => ({ ...row, currencyCode: "LUM", limit: "999999999999.99" })),
+  activeLoans: data.loans.activeLoans.map((row) => ({ ...row, currencyCode: "NRC", balance: "999999999999.99" })),
+  schedule: data.loans.schedule.map((row) => ({ ...row, currencyCode: "LUM", amount: "0.01" })),
+};
+const normalizedLoans = normalizeApiResponse("loans", { ok: true, data: currencyFixture });
+assert.deepEqual(normalizedLoans.currencyProjection, projection);
+const exactMarkup = renderLoansPage({ ...data, loans: normalizedLoans }, { loanOfferId: loanOfferKey });
+for (const value of ["NRC 99,999,999,999,999.99", "NRC 0.00", "LUM 3.00", "LUM 0.01", "LUM 999,999,999,999.99", due]) {
+  assert.ok(exactMarkup.includes(value), `missing exact currency value ${value}`);
+}
+assert.match(exactMarkup, /None scheduled/);
+for (const invalid of [undefined, null, { ...projection, version: 2 }, { ...projection, complete: "true" },
+  { ...projection, unknownCurrencyRows: 1 }, { ...projection, groups: [...projection.groups, projection.groups[0]] },
+  { ...projection, groups: Array(1001).fill(projection.groups[0]) },
+  ...[12.34, "1.234", "-1.00", "1.00\n", "9".repeat(5001) + ".00", null].map((outstanding) =>
+    ({ ...projection, groups: [{ ...projection.groups[0], outstanding }] })),
+  { ...projection, groups: [{ ...projection.groups[0], schedule: Array(1001).fill({ due, amount: "1.00" }) }] },
+]) {
+  const loans = normalizeApiResponse("loans", { ...currencyFixture, currencyProjection: invalid });
+  assert.equal(loans.currencyProjection, null);
+  const html = renderLoansPage({ ...data, loans }, { loanOfferId: loanOfferKey });
+  assert.match(html, /Currency totals unavailable/);
+  assert.match(html, /data-endpoint="loanApply"/);
+  assert.match(html, /data-endpoint="loanRepay"/);
+}
+const incomplete = normalizeApiResponse("loans", { ...currencyFixture,
+  currencyProjection: { ...projection, complete: false, unknownCurrencyRows: 1 } });
+const incompleteMarkup = renderLoansPage({ ...data, loans: incomplete }, { loanOfferId: loanOfferKey });
+assert.match(incompleteMarkup, /Currency totals incomplete/);
+assert.doesNotMatch(incompleteMarkup, /NRC 99,999,999,999,999.99/);
+assert.match(loansMarkup, /Currency unavailable/);
+const empty = normalizeApiResponse("loans", { ...data.loans, offers: [], activeLoans: [], schedule: [],
+  currencyProjection: { ...projection, groups: [] } });
+assert.match(renderLoansPage({ ...data, loans: empty }, {}), /No currency obligations or offers/);
+assert.deepEqual(normalizedLoans.activeLoans, currencyFixture.activeLoans);
+assert.deepEqual(normalizedLoans.offers, currencyFixture.offers);
 
 const blockedBusinessLoan = renderLoansPage({
   ...data,

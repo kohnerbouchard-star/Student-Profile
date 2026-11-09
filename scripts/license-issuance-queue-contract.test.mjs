@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { processClaimedLicenseJob } from "../backend/src/domains/licensing/application/processClaimedLicenseJob.ts";
 
 import {
   deriveLicenseCode,
@@ -205,7 +206,13 @@ test("payment ingress authenticates the raw body and acknowledges only durable w
 });
 
 test("issuance worker materializes one code and commits one email-outbox job", async () => {
-  const source = await readFile(ISSUANCE_WORKER, "utf8");
+  const worker = await readFile(ISSUANCE_WORKER, "utf8");
+  const application = await readFile(new URL("../backend/src/domains/licensing/application/processClaimedLicenseJob.ts", import.meta.url), "utf8");
+  const source = worker + application;
+  assert.match(worker, /processClaimedLicenseJob\(issuanceCommands, runtime, job, \{\s*deriveLicenseCode,\s*hashIssuedPurchaseCode,/u);
+  assert.match(worker, /materialize: \(input\) => client\.rpc\("materialize_license_and_enqueue_email_v2", input\)/u);
+  assert.match(worker, /retry: \(input\) => client\.rpc\("retry_license_issuance_job_v1", input\)/u);
+  assert.doesNotMatch(application, /Deno\.|createClient|fetch\(|\.rpc\(/u);
 
   for (const required of [
     "ECONOVARIA_LICENSE_CODE_DERIVATION_SECRET",
@@ -298,4 +305,82 @@ test("deployment inventory keeps payment fulfillment isolated and dormant in sta
     workflow,
     /environment:\s+production[\s\S]+supabase functions deploy/u,
   );
+});
+
+// These are application policy checks; SQL atomicity is qualified by the disposable worker harness.
+const claimedJob = { job_id: "00000000-0000-4000-8000-000000000045", lease_token: "00000000-0000-4000-8000-000000000046",
+  code_generation_nonce: 0, attempt_count: 1 };
+const runtime = { licenseCodeDerivationSecret: "synthetic-derive", purchaseCodeHmacSecret: "synthetic-hmac" };
+async function exerciseIssuance(replies, options = {}) {
+  const calls = [], cryptoCalls = [], logs = [];
+  const originalWarn = console.warn, originalError = console.error;
+  console.warn = (...args) => logs.push(args); console.error = (...args) => logs.push(args);
+  try {
+    const call = async (name, args) => {
+      calls.push({ name, args });
+      if (name === "retry_license_issuance_job_v1") return options.retryError
+        ? { error: { message: "synthetic detail" } } : { data: { jobStatus: options.deadLetter ? "dead_letter" : "retry" } };
+      return replies[Math.min(calls.length - 1, replies.length - 1)];
+    };
+    const result = await processClaimedLicenseJob({
+      materialize: args => call("materialize_license_and_enqueue_email_v2", args),
+      retry: args => call("retry_license_issuance_job_v1", args),
+    }, runtime, { ...claimedJob, attempt_count: options.attempt || 1 }, {
+      async deriveLicenseCode(input) {
+        cryptoCalls.push(["derive", input]);
+        if (options.cryptoError) throw new Error("sensitive synthetic detail must not reach logs");
+        return `synthetic-code-${input.nonce}`;
+      },
+      async hashIssuedPurchaseCode(secret, code) { cryptoCalls.push(["hash", secret, code]); return "a".repeat(64); },
+    });
+    return { result, calls, cryptoCalls, logs };
+  } finally { console.warn = originalWarn; console.error = originalError; }
+}
+for (const outcome of ["created", "replayed"]) {
+  test(`Licensing ${outcome} preserves claim identity and one atomic command`, async () => {
+    const r = await exerciseIssuance([{ data: { outcome } }]);
+    assert.deepEqual(r.result, { issued: true, deadLettered: false }); assert.deepEqual(r.logs, []);
+    assert.deepEqual(r.calls, [{ name: "materialize_license_and_enqueue_email_v2", args: {
+      p_job_id: claimedJob.job_id, p_lease_token: claimedJob.lease_token, p_code_hash: "a".repeat(64),
+      p_code_hash_version: "hmac-sha256-v2", p_code_generation_nonce: 0, p_template_version: "license-issued-v1",
+    } }]);
+    assert.deepEqual(r.cryptoCalls, [["derive", { secret: runtime.licenseCodeDerivationSecret, jobId: claimedJob.job_id, nonce: 0 }],
+      ["hash", runtime.purchaseCodeHmacSecret, "synthetic-code-0"]]);
+  });
+}
+test("Licensing collision advances only the returned nonce with a five-attempt bound", async () => {
+  const r = await exerciseIssuance([{ data: { outcome: "collision", nextCodeGenerationNonce: 7 } }, { data: { outcome: "created" } }]);
+  assert.equal(r.result.issued, true); assert.deepEqual(r.calls.map(c => c.args.p_code_generation_nonce), [0, 7]);
+  const exhausted = await exerciseIssuance(Array.from({ length: 5 }, (_, i) => ({ data: { outcome: "collision", nextCodeGenerationNonce: i + 1 } })));
+  assert.equal(exhausted.calls.length, 6); assert.equal(exhausted.calls.at(-1).args.p_error_code, "license_code_collision_limit");
+});
+test("Licensing invalid collision and response states never report issuance", async () => {
+  for (const nonce of [0, -1, 0.5, 101, undefined]) {
+    const r = await exerciseIssuance([{ data: { outcome: "collision", nextCodeGenerationNonce: nonce } }]);
+    assert.equal(r.result.issued, false); assert.equal(r.calls.length, 2);
+    assert.equal(r.calls.at(-1).args.p_error_code, "license_code_collision_state_invalid");
+  }
+  const r = await exerciseIssuance([{ data: { outcome: "unexpected" } }]);
+  assert.equal(r.calls.at(-1).args.p_error_code, "license_code_materialization_invalid_response");
+});
+test("Licensing persistence failure retains exact retry delay, lease and safe error", async () => {
+  for (const [attempt, delay] of [[1, 18], [2, 36], [8, 1944], [50, 3630]]) {
+    const r = await exerciseIssuance([{ error: { message: "private provider detail" } }], { attempt });
+    assert.deepEqual(r.result, { issued: false, deadLettered: false });
+    const retry = r.calls.at(-1); assert.equal(retry.name, "retry_license_issuance_job_v1");
+    assert.deepEqual(retry.args, { p_job_id: claimedJob.job_id, p_lease_token: claimedJob.lease_token,
+      p_error_code: "license_code_and_outbox_materialization_failed",
+      p_error_detail: "The license code and its email-outbox job could not be committed atomically.",
+      p_retry_after_seconds: delay, p_terminal: false });
+    assert.doesNotMatch(JSON.stringify(r.logs), /private provider detail/);
+  }
+});
+test("Licensing records only confirmed dead letters and redacts unknown crypto failures", async () => {
+  const dead = await exerciseIssuance([{ error: {} }], { deadLetter: true }); assert.equal(dead.result.deadLettered, true);
+  const failedRetry = await exerciseIssuance([{ error: {} }], { retryError: true });
+  assert.deepEqual(failedRetry.result, { issued: false, deadLettered: false });
+  assert.equal(failedRetry.logs.at(-1)[0], "license_issuance_retry_record_failed");
+  const crypto = await exerciseIssuance([], { cryptoError: true });
+  assert.equal(crypto.calls.length, 1); assert.equal(crypto.calls[0].args.p_error_code, "license_issuance_unexpected_failure");
+  assert.doesNotMatch(JSON.stringify(crypto), /sensitive synthetic detail/);
 });

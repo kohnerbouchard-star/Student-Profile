@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref017-player-roster-read-persistence-pr-768.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 768,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/players/api/playerRosterHttpHandler.ts",
+    "backend/src/domains/players/contracts/playerRosterReadRepository.ts",
+    "backend/src/domains/players/infrastructure/supabasePlayerRosterReadRepository.test.ts",
+    "backend/src/domains/players/infrastructure/supabasePlayerRosterReadRepository.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-017/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-017.md",
+    "docs/operations/contracts/player-cross-cutting/pr-768.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/players/api/playerRosterHttpHandler.ts",
+    "backend/src/domains/players/contracts/playerRosterReadRepository.ts",
+    "backend/src/domains/players/infrastructure/supabasePlayerRosterReadRepository.test.ts",
+    "backend/src/domains/players/infrastructure/supabasePlayerRosterReadRepository.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-017/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-017.md",
+    "docs/operations/contracts/player-cross-cutting/pr-768.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "players"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-017/preflight.md",
+  "authorizationNote": "Owner-authorized bounded REF-017 roster-read persistence extraction. Exact paths only; POST/create, auth/context, schema/RPC/migrations, production, secrets and Task 18 are excluded. Verifier and regression tests are locked but unchanged."
+}

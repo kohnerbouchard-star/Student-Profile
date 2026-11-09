@@ -1,0 +1,1120 @@
+name: Phase 15 Controlled Staging Convergence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/phase15-controlled-staging.yml"
+      - ".github/workflows/phase15-controlled-production.yml"
+      - ".github/workflows/database-replay.yml"
+      - ".github/workflows/player-multiplayer-load-e2e.yml"
+      - "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs"
+      - "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh"
+      - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
+      - "scripts/staging/golden-five-contract.test.mjs"
+      - "scripts/staging/golden-five-verify.mjs"
+      - "scripts/staging/golden-five-browser-acceptance.mjs"
+      - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts"
+      - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts"
+      - "backend/src/domains/world/services/playerWorldRuntimeService.ts"
+      - "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
+      - "docs/operations/contracts/player-cross-cutting/pr-699.json"
+      - "scripts/player-cross-cutting-authority.test.mjs"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/phase15-controlled-staging.yml"
+      - ".github/workflows/phase15-controlled-production.yml"
+      - ".github/workflows/database-replay.yml"
+      - "scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs"
+      - "scripts/operations/live-migration-reconciliation/verify-phase15-ledger.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+      - "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh"
+      - "scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh"
+      - "scripts/staging/golden-five-contract.test.mjs"
+      - "scripts/staging/golden-five-verify.mjs"
+      - "scripts/staging/golden-five-browser-acceptance.mjs"
+      - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts"
+      - "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts"
+      - "backend/src/domains/world/services/playerWorldRuntimeService.ts"
+      - "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: phase15-controlled-staging-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  SUPABASE_CLI_VERSION: 2.109.1
+  MANIFEST_PATH: backend/supabase/edge-function-manifest.json
+
+jobs:
+  static-contract:
+    name: Validate fail-closed staging release contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Report U1 qualification hold
+        shell: bash
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'HOLD'
+          U1 qualification hold is active. Static/disposable checks do not certify a release.
+          - certify-source: NOT_RUN — owner-approved U1 hold.
+          - converge-staging-database: NOT_RUN — owner-approved U1 hold.
+          - converge-staging-runtime: NOT_RUN — owner-approved U1 hold.
+          - exercise-staging: NOT_RUN — owner-approved U1 hold.
+          Restoration requires separate owner approval; no automatic expiry or bypass.
+          HOLD
+      - name: Check out exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Validate release construction and runtime inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs
+          node --test scripts/staging/golden-five-contract.test.mjs
+          node --test scripts/edge-function-inventory/validate.test.mjs
+          node --test scripts/local-edge-runtime-contract.test.mjs
+          node --test scripts/runtime-config-contract.test.mjs
+          bash -n scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh
+          node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs \
+            --environment staging --mode rollback --format manifest \
+            > "$RUNNER_TEMP/staging-forward-manifest.json"
+          test "$(jq -r '.migrationCount' "$RUNNER_TEMP/staging-forward-manifest.json")" = 151
+
+  certify-source:
+    name: Require exact-main replay and both live-shaped certificates
+    # U1 qualification hold; separate owner approval is required for restoration.
+    if: >-
+      false &&
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: static-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    outputs:
+      replay_run_id: ${{ steps.replay.outputs.run_id }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out exact merged main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce exact protected-main identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+      - name: Wait for exact-SHA Database Replay success
+        id: replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/database-replay.yml/runs?head_sha=$GITHUB_SHA&event=push&per_page=20"
+          for attempt in $(seq 1 300); do
+            response="$(curl --fail --silent --show-error \
+              -H 'Accept: application/vnd.github+json' \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "$api")"
+            state="$(RESPONSE="$response" SOURCE_COMMIT="$GITHUB_SHA" node - <<'NODE'
+          const body = JSON.parse(process.env.RESPONSE);
+          const run = (body.workflow_runs || []).find((value) =>
+            value.head_sha === process.env.SOURCE_COMMIT && value.event === 'push');
+          if (!run) process.stdout.write('missing');
+          else process.stdout.write(`${run.id}|${run.status}|${run.conclusion || ''}`);
+          NODE
+            )"
+            if [ "$state" = missing ]; then sleep 15; continue; fi
+            IFS='|' read -r run_id status conclusion <<< "$state"
+            if [ "$status" = completed ]; then
+              test "$conclusion" = success
+              echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo 'Timed out waiting for exact-SHA Database Replay.' >&2
+          exit 1
+      - name: Download exact clean replay certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-clean-replay-${{ github.sha }}
+          run-id: ${{ steps.replay.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-certificates/clean
+      - name: Download exact staging-shaped certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-live-shaped-rehearsal-staging-${{ github.sha }}
+          run-id: ${{ steps.replay.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-certificates/staging
+      - name: Download exact production-shaped certificate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-live-shaped-rehearsal-production-${{ github.sha }}
+          run-id: ${{ steps.replay.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-certificates/production
+      - name: Validate all exact-source certificates
+        shell: bash
+        env:
+          CERTIFICATE_ROOT: ${{ runner.temp }}/phase15-certificates
+        run: |
+          set -euo pipefail
+          node --input-type=module - <<'NODE'
+          import { readFile, readdir } from 'node:fs/promises';
+          import path from 'node:path';
+          async function find(root, filename) {
+            const entries = await readdir(root, { withFileTypes: true });
+            for (const entry of entries) {
+              const candidate = path.join(root, entry.name);
+              if (entry.isDirectory()) {
+                const nested = await find(candidate, filename);
+                if (nested) return nested;
+              } else if (entry.name === filename) return candidate;
+            }
+            return null;
+          }
+          const source = process.env.GITHUB_SHA;
+          const cleanSourcePath = await find(path.join(process.env.CERTIFICATE_ROOT, 'clean'), 'source-commit.txt');
+          if (!cleanSourcePath || (await readFile(cleanSourcePath, 'utf8')).trim() !== source) {
+            throw new Error('Clean replay source identity mismatch.');
+          }
+          for (const [environment, expectedPrelude, expectedApplied] of [
+            ['staging', 0, 151],
+            ['production', 18, 169],
+          ]) {
+            const summaryPath = await find(path.join(process.env.CERTIFICATE_ROOT, environment), 'summary.json');
+            if (!summaryPath) throw new Error(`${environment} certificate is missing.`);
+            const value = JSON.parse(await readFile(summaryPath, 'utf8'));
+            const executionIsExact =
+              (value.executionMode === 'forward-rehearsal' &&
+                value.remoteLedgerPresentCount === 0 &&
+                value.appliedMigrationCount === expectedApplied) ||
+              (value.executionMode === 'forward-suffix-rehearsal' &&
+                value.remoteLedgerPresentCount > 0 &&
+                value.remoteLedgerPresentCount < expectedApplied &&
+                value.remoteLedgerVerified === true &&
+                value.appliedMigrationCount === expectedApplied - value.remoteLedgerPresentCount) ||
+              (value.executionMode === 'already-current' &&
+                value.remoteLedgerPresentCount === expectedApplied &&
+                value.remoteLedgerVerified === true &&
+                value.appliedMigrationCount === 0);
+            if (value.status !== 'PASS' || value.sourceCommit !== source ||
+                value.preludeMigrationCount !== expectedPrelude ||
+                value.certifiedMigrationCount !== expectedApplied ||
+                !executionIsExact ||
+                value.canonicalApplicationSchemaMatched !== true) {
+              throw new Error(`${environment} live-shaped certificate failed validation.`);
+            }
+          }
+          NODE
+      - name: Upload source gate evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-source-gate-${{ github.sha }}
+          path: ${{ runner.temp }}/phase15-certificates/
+          if-no-files-found: error
+          retention-days: 30
+
+  converge-staging-database:
+    name: Rehearse and converge populated staging database
+    # U1 qualification hold; separate owner approval is required for restoration.
+    if: >-
+      false &&
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: certify-source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CONFIGURED_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PHASE15_ENVIRONMENT: staging
+      PHASE15_EXPECTED_PROJECT_REF: eecvbssdvarfcykcfrny
+      PHASE15_LIVE_APPLY_AUTHORIZED: staging
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt
+    steps:
+      - name: Check out exact certified main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Bind exact staging database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          remote_url="$CONFIGURED_SUPABASE_DB_URL"
+          if test -z "$remote_url"; then
+            test -n "$SUPABASE_DB_PASSWORD"
+            (cd backend && supabase --yes link --project-ref "$STAGING_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+            pooler_path="backend/supabase/.temp/pooler-url"
+            test -s "$pooler_path"
+            remote_url="$(POOLER_URL="$(tr -d '\r\n' < "$pooler_path")" DATABASE_PASSWORD="$SUPABASE_DB_PASSWORD" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.POOLER_URL);
+          parsed.password = process.env.DATABASE_PASSWORD;
+          process.stdout.write(parsed.href);
+          NODE
+            )"
+          fi
+          remote_url="$(DATABASE_URL="$remote_url" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.DATABASE_URL);
+          parsed.searchParams.set('sslmode', 'verify-full');
+          parsed.searchParams.delete('sslrootcert');
+          process.stdout.write(parsed.href);
+          NODE
+          )"
+          echo "::add-mask::$remote_url"
+          printf 'PHASE15_REMOTE_DATABASE_URL=%s\n' "$remote_url" >> "$GITHUB_ENV"
+      - name: Download exact canonical clean schema
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-clean-replay-${{ github.sha }}
+          run-id: ${{ needs.certify-source.outputs.replay_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/phase15-canonical
+      - name: Resolve canonical schema path
+        shell: bash
+        run: |
+          set -euo pipefail
+          schema="$(find "$RUNNER_TEMP/phase15-canonical" -type f -name schema-1.json -print -quit)"
+          test -s "$schema"
+          printf 'PHASE15_CANONICAL_SCHEMA=%s\n' "$schema" >> "$GITHUB_ENV"
+      - name: Run rollback proof and atomic staging convergence
+        shell: bash
+        env:
+          PHASE15_EVIDENCE_DIR: ${{ runner.temp }}/phase15-staging-evidence
+          PHASE15_WORK_DIR: ${{ runner.temp }}/phase15-staging-work
+        run: bash scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh
+      - name: Recover an interrupted scheduler maintenance lease
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -z "${PHASE15_REMOTE_DATABASE_URL:-}"; then exit 0; fi
+          guard_count="$(psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
+            -c "select count(*) from cron.job where jobname = 'phase15-scheduler-auto-restore-v1'")"
+          if test "$guard_count" -eq 0; then exit 0; fi
+          psql "$PHASE15_REMOTE_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          do $phase15_recover_schedulers$
+          begin
+            perform cron.alter_job(job_row.jobid, active => true)
+            from cron.job as job_row
+            where job_row.jobname like 'econovaria-%'
+              and not job_row.active;
+            perform cron.unschedule('phase15-scheduler-auto-restore-v1');
+          end;
+          $phase15_recover_schedulers$;
+          commit;
+          SQL
+      - name: Upload sanitized staging database certificate
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-staging-database-${{ github.sha }}
+          path: ${{ runner.temp }}/phase15-staging-evidence/
+          if-no-files-found: error
+          retention-days: 30
+
+  converge-staging-runtime:
+    name: Deploy and attest current staging Edge runtime
+    # U1 qualification hold; separate owner approval is required for restoration.
+    if: >-
+      false &&
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: converge-staging-database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Check out exact database-certified main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Enforce runtime source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          node --test scripts/edge-function-inventory/validate.test.mjs
+      - name: Deploy every canonical staging function from the manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          MANIFEST="$MANIFEST_PATH" node --input-type=module - <<'NODE' > "$RUNNER_TEMP/deployable-functions.txt"
+          import { readFileSync } from 'node:fs';
+          const manifest = JSON.parse(readFileSync(process.env.MANIFEST, 'utf8'));
+          for (const entry of [...manifest.canonicalFunctions, ...manifest.compatibilityFunctions]) {
+            process.stdout.write(`${entry.slug}|${entry.verifyJwt}\n`);
+          }
+          NODE
+          while IFS='|' read -r slug verify_jwt; do
+            test -n "$slug"
+            args=(functions deploy "$slug" --workdir backend --project-ref "$STAGING_PROJECT_REF")
+            if test "$verify_jwt" = false; then args+=(--no-verify-jwt); fi
+            supabase "${args[@]}"
+          done < "$RUNNER_TEMP/deployable-functions.txt"
+      - name: Remove only manifest-retired staging functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/staging-before-retirement.json"
+          INVENTORY="$RUNNER_TEMP/staging-before-retirement.json" MANIFEST="$MANIFEST_PATH" node - <<'NODE' > "$RUNNER_TEMP/staging-retire.txt"
+          const fs = require('node:fs');
+          const rows = JSON.parse(fs.readFileSync(process.env.INVENTORY, 'utf8'));
+          const manifest = JSON.parse(fs.readFileSync(process.env.MANIFEST, 'utf8'));
+          const present = new Set(rows.map((row) => String(row.slug || '')));
+          for (const slug of manifest.retiredFunctions) if (present.has(slug)) process.stdout.write(`${slug}\n`);
+          NODE
+          while IFS= read -r slug; do
+            test -n "$slug" || continue
+            curl --fail --silent --show-error --request DELETE \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions/$slug" >/dev/null
+          done < "$RUNNER_TEMP/staging-retire.txt"
+      - name: Validate exact staging inventory and security boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$STAGING_PROJECT_REF/functions" \
+            > "$RUNNER_TEMP/staging-functions.json"
+          node scripts/edge-function-inventory/validate.mjs \
+            --manifest "$MANIFEST_PATH" \
+            --environment staging \
+            --inventory "$RUNNER_TEMP/staging-functions.json" \
+            | tee "$RUNNER_TEMP/staging-attestation.json"
+          for spec in \
+            'POST banking-fx-orchestrator' \
+            'POST business-operations-worker' \
+            'POST campaign-orchestrator' \
+            'POST fx-orchestrator' \
+            'POST game-data-purger' \
+            'POST stock-market-orchestrator' \
+            'POST stock-tick-archiver' \
+            'POST web-session-api/logout'; do
+            read -r method slug <<< "$spec"
+            status="$(curl --silent --show-error --request "$method" --output /dev/null \
+              --write-out '%{http_code}' --max-time 30 \
+              "https://$STAGING_PROJECT_REF.supabase.co/functions/v1/$slug")"
+            case "$status" in 400|401|403|405|422) ;; *) echo "Unexpected unauthenticated response for $slug: $status" >&2; exit 1 ;; esac
+          done
+      - name: Upload staging runtime certificate
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-staging-runtime-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/staging-functions.json
+            ${{ runner.temp }}/staging-attestation.json
+          if-no-files-found: error
+          retention-days: 30
+
+  exercise-staging:
+    name: Exercise real staging browser lifecycle and isolation
+    # U1 qualification hold; separate owner approval is required for restoration.
+    if: >-
+      false &&
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: converge-staging-runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: eecvbssdvarfcykcfrny
+      EXPECTED_STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+      PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+      POOLER_URL: ${{ secrets.STAGING_POOLER_URL || secrets.SUPABASE_DB_URL }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD || secrets.SUPABASE_DB_PASSWORD }}
+      ECONOVARIA_PROJECT_REF: eecvbssdvarfcykcfrny
+      ECONOVARIA_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+      ECONOVARIA_BROWSER_BASE_URL: http://127.0.0.1:4173
+      ECONOVARIA_GOLDEN_EVIDENCE_PATH: /tmp/econovaria-golden-five/fixture-verification.json
+      ECONOVARIA_GOLDEN_BROWSER_OUTPUT_DIR: /tmp/econovaria-golden-five/browser
+      ECONOVARIA_GOLDEN_ALPHA_ACCESS_CODE: ${{ secrets.GOLDEN_ALPHA_ACCESS_CODE }}
+      ECONOVARIA_GOLDEN_BRAVO_ACCESS_CODE: ${{ secrets.GOLDEN_BRAVO_ACCESS_CODE }}
+      ECONOVARIA_GOLDEN_CHARLIE_ACCESS_CODE: ${{ secrets.GOLDEN_CHARLIE_ACCESS_CODE }}
+      ECONOVARIA_GOLDEN_DELTA_ACCESS_CODE: ${{ secrets.GOLDEN_DELTA_ACCESS_CODE }}
+      ECONOVARIA_GOLDEN_ECHO_ACCESS_CODE: ${{ secrets.GOLDEN_ECHO_ACCESS_CODE }}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt
+    steps:
+      - name: Check out exact runtime-certified main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Prepare and validate staging-only fixture authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_STAGING_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+
+          if test -z "$POOLER_URL"; then
+            (
+              cd backend
+              supabase --yes link \
+                --project-ref "$SUPABASE_PROJECT_REF" \
+                --password "$SUPABASE_DB_PASSWORD"
+            )
+            pooler_path="backend/supabase/.temp/pooler-url"
+            test -s "$pooler_path"
+            POOLER_URL="$(RAW_POOLER_URL="$(tr -d '\r\n' < "$pooler_path")" DATABASE_PASSWORD="$SUPABASE_DB_PASSWORD" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.RAW_POOLER_URL);
+          parsed.password = process.env.DATABASE_PASSWORD;
+          parsed.searchParams.set('sslmode', 'verify-full');
+          parsed.searchParams.delete('sslrootcert');
+          process.stdout.write(parsed.href);
+          NODE
+            )"
+          fi
+          test -n "$POOLER_URL"
+          echo "::add-mask::$POOLER_URL"
+          export POOLER_URL
+          node scripts/release-integrity/cli.mjs validate-db-url \
+            --url-env POOLER_URL \
+            --expected-project-ref "$SUPABASE_PROJECT_REF"
+          case "$POOLER_URL" in *"$SUPABASE_PROJECT_REF"*) ;; *) echo 'Staging pooler identity mismatch.' >&2; exit 1 ;; esac
+          case "$POOLER_URL" in *"$PRODUCTION_PROJECT_REF"*) echo 'Production database selection is prohibited.' >&2; exit 1 ;; esac
+
+          if test -z "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY"; then
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/api-keys?reveal=true" \
+              > "$RUNNER_TEMP/staging-api-keys.json"
+            ECONOVARIA_SUPABASE_PUBLISHABLE_KEY="$(KEYS_PATH="$RUNNER_TEMP/staging-api-keys.json" node - <<'NODE'
+          const rows = require(process.env.KEYS_PATH);
+          const row = rows.find((value) => String(value.api_key || value.apiKey || '').startsWith('sb_publishable_'));
+          process.stdout.write(String(row?.api_key || row?.apiKey || ''));
+          NODE
+            )"
+            rm -f "$RUNNER_TEMP/staging-api-keys.json"
+          fi
+          test -n "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY"
+          case "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY" in sb_publishable_*) ;; *) exit 1 ;; esac
+          echo "::add-mask::$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY"
+          export ECONOVARIA_SUPABASE_PUBLISHABLE_KEY
+
+          generated_count=0
+          for spec in \
+            'ECONOVARIA_GOLDEN_ALPHA_ACCESS_CODE|ALPHA' \
+            'ECONOVARIA_GOLDEN_BRAVO_ACCESS_CODE|BRAVO' \
+            'ECONOVARIA_GOLDEN_CHARLIE_ACCESS_CODE|CHARLIE' \
+            'ECONOVARIA_GOLDEN_DELTA_ACCESS_CODE|DELTA' \
+            'ECONOVARIA_GOLDEN_ECHO_ACCESS_CODE|ECHO'; do
+            IFS='|' read -r name slot <<< "$spec"
+            value="${!name:-}"
+            if test -z "$value"; then
+              value="G15-${slot}-$(openssl rand -hex 16 | tr '[:lower:]' '[:upper:]')"
+              generated_count=$((generated_count + 1))
+            fi
+            [[ "$value" =~ ^[A-Z0-9-]{8,96}$ ]]
+            echo "::add-mask::$value"
+            digest="$(printf '%s' "$value" | sha256sum | awk '{print $1}')"
+            [[ "$digest" =~ ^[a-f0-9]{64}$ ]]
+            echo "::add-mask::$digest"
+            printf -v "$name" '%s' "$value"
+            export "$name"
+            printf -v "GOLDEN_${slot}_DIGEST" '%s' "$digest"
+            export "GOLDEN_${slot}_DIGEST"
+            printf '%s=%s\n' "$name" "$value" >> "$GITHUB_ENV"
+          done
+
+          mkdir -p /tmp/econovaria-golden-five
+          PGSSLMODE=verify-full psql "$POOLER_URL" -X -q -v ON_ERROR_STOP=1 \
+            -v golden_alpha="$GOLDEN_ALPHA_DIGEST" \
+            -v golden_bravo="$GOLDEN_BRAVO_DIGEST" \
+            -v golden_charlie="$GOLDEN_CHARLIE_DIGEST" \
+            -v golden_delta="$GOLDEN_DELTA_DIGEST" \
+            -v golden_echo="$GOLDEN_ECHO_DIGEST" \
+            -v lifecycle_key="phase15-golden-resume-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" <<'SQL'
+          begin;
+          set local lock_timeout = '5s';
+          set local statement_timeout = '120s';
+          select pg_catalog.pg_advisory_xact_lock(
+            pg_catalog.hashtextextended('econovaria.staging.golden-five.credentials', 0)
+          );
+
+          create temp table phase15_golden_credentials (
+            player_identifier text primary key,
+            access_code_hash text not null check (access_code_hash ~ '^[0-9a-f]{64}$')
+          ) on commit drop;
+          insert into phase15_golden_credentials(player_identifier, access_code_hash) values
+            ('GOLD-ALPHA', :'golden_alpha'),
+            ('GOLD-BRAVO', :'golden_bravo'),
+            ('GOLD-CHARLIE', :'golden_charlie'),
+            ('GOLD-DELTA', :'golden_delta'),
+            ('GOLD-ECHO', :'golden_echo');
+
+          do $phase15_validate_fixture_scope$
+          begin
+            if (select count(*) from public.game_sessions where name = 'Econovaria Golden Five') <> 1 then
+              raise exception 'PHASE15_GOLDEN_GAME_SCOPE_INVALID';
+            end if;
+            if exists (
+              select 1
+              from public.game_sessions
+              where name = 'Econovaria Golden Five'
+                and (
+                  owner_staff_user_id is null
+                  or lifecycle_state not in ('active', 'paused')
+                  or provisioning_status <> 'ready'
+                  or game_join_code <> 'ECO-GOLDEN-FIVE-584'
+                  or game_join_code_hash <> encode(
+                    extensions.digest('ECO-GOLDEN-FIVE-584', 'sha256'),
+                    'hex'
+                  )
+                )
+            ) then
+              raise exception 'PHASE15_GOLDEN_GAME_PRECONDITION_INVALID';
+            end if;
+            if (select count(distinct access_code_hash) from phase15_golden_credentials) <> 5 then
+              raise exception 'PHASE15_GOLDEN_ACCESS_CODE_COLLISION';
+            end if;
+          end;
+          $phase15_validate_fixture_scope$;
+
+          update public.game_sessions
+          set game_join_code_status = 'active',
+              updated_at = clock_timestamp()
+          where name = 'Econovaria Golden Five'
+            and status = 'active'
+            and lifecycle_state in ('active', 'paused')
+            and provisioning_status = 'ready'
+            and game_join_code = 'ECO-GOLDEN-FIVE-584'
+            and game_join_code_hash = encode(
+              extensions.digest('ECO-GOLDEN-FIVE-584', 'sha256'),
+              'hex'
+            );
+
+          update public.stock_market_events as event_row
+          set shock_id = 'story_market_news:' || encode(
+                extensions.digest(event_row.shock_id, 'sha256'),
+                'hex'
+              ),
+              updated_at = clock_timestamp()
+          where event_row.game_session_id = (
+              select id
+              from public.game_sessions
+              where name = 'Econovaria Golden Five'
+            )
+            and event_row.metadata ->> 'sourceType' = 'story_event'
+            and event_row.shock_id !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$';
+
+          do $phase15_validate_golden_news_identifiers$
+          begin
+            if exists (
+              select 1
+              from public.stock_market_events as event_row
+              join public.game_sessions as game_row
+                on game_row.id = event_row.game_session_id
+              where game_row.name = 'Econovaria Golden Five'
+                and event_row.visibility = 'public'
+                and event_row.is_active
+                and event_row.shock_id !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$'
+            ) then
+              raise exception 'PHASE15_GOLDEN_NEWS_IDENTIFIER_INVALID';
+            end if;
+          end;
+          $phase15_validate_golden_news_identifiers$;
+
+          do $phase15_validate_fx_macro_alignment_scope$
+          declare
+            v_rows integer;
+            v_profiles integer;
+          begin
+            select count(*), count(distinct snapshot_row.country_profile_id)
+            into v_rows, v_profiles
+            from public.country_economic_snapshots as snapshot_row
+            join public.game_sessions as game_row
+              on game_row.id = snapshot_row.game_session_id
+            where game_row.name = 'Econovaria Golden Five'
+              and snapshot_row.effective_at = game_row.provisioned_at;
+            if v_rows not in (0, 10) or v_profiles <> v_rows then
+              raise exception 'PHASE15_GOLDEN_FX_MACRO_ALIGNMENT_SCOPE_INVALID';
+            end if;
+          end;
+          $phase15_validate_fx_macro_alignment_scope$;
+
+          create temp table phase15_golden_fx_macro_alignment on commit drop as
+          with target_game as (
+            select id, provisioned_at
+            from public.game_sessions
+            where name = 'Econovaria Golden Five'
+          ), latest_snapshots as (
+            select distinct on (snapshot_row.country_profile_id) snapshot_row.*
+            from public.country_economic_snapshots as snapshot_row
+            where snapshot_row.game_session_id = (select id from target_game)
+            order by
+              snapshot_row.country_profile_id,
+              snapshot_row.snapshot_sequence desc,
+              snapshot_row.effective_at desc,
+              snapshot_row.created_at desc,
+              snapshot_row.id desc
+          ), inserted as (
+            insert into public.country_economic_snapshots (
+              game_session_id,
+              country_profile_id,
+              snapshot_sequence,
+              effective_at,
+              snapshot_label,
+              difficulty_policy_profile_id,
+              difficulty_preset,
+              price_difficulty_modifier,
+              event_volatility_modifier,
+              scarcity_difficulty_modifier,
+              income_difficulty_modifier,
+              trade_difficulty_modifier,
+              credit_difficulty_modifier,
+              real_gdp_index,
+              gdp_growth_rate,
+              inflation_rate,
+              unemployment_rate,
+              interest_rate,
+              consumer_confidence_index,
+              business_confidence_index,
+              cost_of_living_index,
+              regional_price_multiplier,
+              supply_constraint_index,
+              import_dependency_index,
+              tax_rate,
+              subsidy_rate,
+              exchange_rate_index,
+              currency_stability_index,
+              trade_balance_index,
+              export_strength_index,
+              market_risk_index,
+              political_stability_index,
+              infrastructure_index,
+              energy_security_index,
+              metadata
+            )
+            select
+              snapshot_row.game_session_id,
+              snapshot_row.country_profile_id,
+              snapshot_row.snapshot_sequence + 1,
+              game_row.provisioned_at,
+              'Phase 15 Golden FX bootstrap alignment',
+              snapshot_row.difficulty_policy_profile_id,
+              snapshot_row.difficulty_preset,
+              snapshot_row.price_difficulty_modifier,
+              snapshot_row.event_volatility_modifier,
+              snapshot_row.scarcity_difficulty_modifier,
+              snapshot_row.income_difficulty_modifier,
+              snapshot_row.trade_difficulty_modifier,
+              snapshot_row.credit_difficulty_modifier,
+              snapshot_row.real_gdp_index,
+              snapshot_row.gdp_growth_rate,
+              snapshot_row.inflation_rate,
+              snapshot_row.unemployment_rate,
+              snapshot_row.interest_rate,
+              snapshot_row.consumer_confidence_index,
+              snapshot_row.business_confidence_index,
+              snapshot_row.cost_of_living_index,
+              snapshot_row.regional_price_multiplier,
+              snapshot_row.supply_constraint_index,
+              snapshot_row.import_dependency_index,
+              snapshot_row.tax_rate,
+              snapshot_row.subsidy_rate,
+              snapshot_row.exchange_rate_index,
+              snapshot_row.currency_stability_index,
+              snapshot_row.trade_balance_index,
+              snapshot_row.export_strength_index,
+              snapshot_row.market_risk_index,
+              snapshot_row.political_stability_index,
+              snapshot_row.infrastructure_index,
+              snapshot_row.energy_security_index,
+              coalesce(snapshot_row.metadata, '{}'::jsonb) || jsonb_build_object(
+                'authority', 'phase15-staging-golden-fx-alignment-v1',
+                'sourceSnapshotSequence', snapshot_row.snapshot_sequence,
+                'sourceEffectiveAt', snapshot_row.effective_at
+              )
+            from latest_snapshots as snapshot_row
+            cross join target_game as game_row
+            where not exists (
+              select 1
+              from public.country_economic_snapshots as existing_row
+              where existing_row.game_session_id = game_row.id
+                and existing_row.effective_at = game_row.provisioned_at
+            )
+            returning 1
+          )
+          select count(*)::integer as inserted_count from inserted;
+
+          do $phase15_validate_fx_macro_alignment$
+          begin
+            if (
+              select inserted_count
+              from phase15_golden_fx_macro_alignment
+            ) not in (0, 10) then
+              raise exception 'PHASE15_GOLDEN_FX_MACRO_ALIGNMENT_WRITE_INVALID';
+            end if;
+            if (
+              select count(distinct snapshot_row.country_profile_id)
+              from public.country_economic_snapshots as snapshot_row
+              join public.game_sessions as game_row
+                on game_row.id = snapshot_row.game_session_id
+              where game_row.name = 'Econovaria Golden Five'
+                and snapshot_row.effective_at = game_row.provisioned_at
+            ) <> 10 then
+              raise exception 'PHASE15_GOLDEN_FX_MACRO_ALIGNMENT_INCOMPLETE';
+            end if;
+          end;
+          $phase15_validate_fx_macro_alignment$;
+
+          create temp table phase15_golden_fx_authority on commit drop as
+          select public.initialize_fx_authority_for_game_v1(
+            (select id from public.game_sessions where name = 'Econovaria Golden Five'),
+            (select provisioned_at from public.game_sessions where name = 'Econovaria Golden Five'),
+            false
+          ) as result;
+
+          do $phase15_validate_fx_authority$
+          begin
+            if (
+              select count(*)
+              from phase15_golden_fx_authority
+              where result ->> 'cutoverStatus' = 'ready'
+                and result ->> 'outcome' in ('initialized', 'replayed')
+            ) <> 1 then
+              raise exception 'PHASE15_GOLDEN_FX_BOOTSTRAP_FAILED';
+            end if;
+            if (
+              select count(*)
+              from private.fx_runtime_state as runtime_row
+              where runtime_row.game_session_id = (
+                select id from public.game_sessions where name = 'Econovaria Golden Five'
+              )
+                and runtime_row.cutover_status = 'ready'
+                and runtime_row.current_fixing_id is not null
+                and (
+                  select count(*)
+                  from public.fx_fixing_currency_values as value_row
+                  where value_row.game_session_id = runtime_row.game_session_id
+                    and value_row.fixing_id = runtime_row.current_fixing_id
+                ) = 11
+                and (
+                  select count(*)
+                  from public.fx_fixing_macro_snapshots as snapshot_row
+                  where snapshot_row.game_session_id = runtime_row.game_session_id
+                    and snapshot_row.fixing_id = runtime_row.current_fixing_id
+                ) = 10
+            ) <> 1 then
+              raise exception 'PHASE15_GOLDEN_FX_AUTHORITY_INCOMPLETE';
+            end if;
+          end;
+          $phase15_validate_fx_authority$;
+
+          create temp table phase15_golden_lifecycle_transition on commit drop as
+          select *
+          from public.transition_game_lifecycle_atomic_v1(
+            (select id from public.game_sessions where name = 'Econovaria Golden Five'),
+            (select owner_staff_user_id from public.game_sessions where name = 'Econovaria Golden Five'),
+            'resume',
+            :'lifecycle_key',
+            (select lifecycle_version from public.game_sessions where name = 'Econovaria Golden Five')
+          );
+
+          do $phase15_validate_active_fixture$
+          begin
+            if (
+              select count(*)
+              from phase15_golden_lifecycle_transition
+              where transition_action = 'resume'
+                and lifecycle_state = 'active'
+                and operational_status = 'active'
+                and transition_outcome in ('applied', 'already_current', 'replayed')
+            ) <> 1 then
+              raise exception 'PHASE15_GOLDEN_LIFECYCLE_RESUME_FAILED';
+            end if;
+            if (
+              select count(*)
+              from public.game_sessions
+              where name = 'Econovaria Golden Five'
+                and status = 'active'
+                and lifecycle_state = 'active'
+                and provisioning_status = 'ready'
+                and game_join_code = 'ECO-GOLDEN-FIVE-584'
+                and game_join_code_status = 'active'
+                and game_join_code_hash = encode(
+                  extensions.digest('ECO-GOLDEN-FIVE-584', 'sha256'),
+                  'hex'
+                )
+            ) <> 1 then
+              raise exception 'PHASE15_GOLDEN_GAME_NOT_ACTIVE';
+            end if;
+            if (
+              select count(*)
+              from public.players as player_row
+              join public.game_sessions as game_row on game_row.id = player_row.game_session_id
+              join phase15_golden_credentials as fixture_row
+                on fixture_row.player_identifier = player_row.player_identifier
+              where game_row.name = 'Econovaria Golden Five'
+                and game_row.status = 'active'
+                and player_row.status = 'active'
+            ) <> 5 then
+              raise exception 'PHASE15_GOLDEN_PLAYER_SCOPE_INVALID';
+            end if;
+          end;
+          $phase15_validate_active_fixture$;
+
+          create temp table phase15_golden_readiness on commit drop as
+          select public.verify_provisioned_game_v1(
+            (select id from public.game_sessions where name = 'Econovaria Golden Five'),
+            (select owner_staff_user_id from public.game_sessions where name = 'Econovaria Golden Five')
+          ) as result;
+
+          do $phase15_validate_readiness$
+          begin
+            if (
+              select count(*)
+              from phase15_golden_readiness
+              where result ->> 'ready' = 'true'
+                and result ->> 'provisioningStatus' = 'ready'
+                and result #>> '{bankingFx,runtimeStatus}' = 'ready'
+                and (result #>> '{bankingFx,activeCurrencies}')::integer = 11
+                and (result #>> '{bankingFx,fixingValues}')::integer = 11
+                and (result #>> '{bankingFx,liquidityCapSnapshots}')::integer = 11
+                and (result #>> '{bankingFx,systemAccounts}')::integer = 44
+                and (result #>> '{bankingFx,systemAccountProjections}')::integer = 44
+            ) <> 1 then
+              raise exception 'PHASE15_GOLDEN_PROVISIONING_READINESS_FAILED';
+            end if;
+          end;
+          $phase15_validate_readiness$;
+
+          with target_players as (
+            select player_row.game_session_id, player_row.id as player_id
+            from public.players as player_row
+            join public.game_sessions as game_row on game_row.id = player_row.game_session_id
+            join phase15_golden_credentials as fixture_row
+              on fixture_row.player_identifier = player_row.player_identifier
+            where game_row.name = 'Econovaria Golden Five'
+              and game_row.status = 'active'
+              and player_row.status = 'active'
+          )
+          update public.player_access_credentials as credential_row
+          set status = 'revoked',
+              revoked_at = clock_timestamp(),
+              updated_at = clock_timestamp()
+          from target_players
+          where credential_row.game_session_id = target_players.game_session_id
+            and credential_row.player_id = target_players.player_id
+            and credential_row.status = 'active';
+
+          with target_players as (
+            select player_row.game_session_id, player_row.id as player_id
+            from public.players as player_row
+            join public.game_sessions as game_row on game_row.id = player_row.game_session_id
+            join phase15_golden_credentials as fixture_row
+              on fixture_row.player_identifier = player_row.player_identifier
+            where game_row.name = 'Econovaria Golden Five'
+              and game_row.status = 'active'
+              and player_row.status = 'active'
+          )
+          update public.player_sessions as session_row
+          set status = 'revoked',
+              revoked_at = clock_timestamp(),
+              updated_at = clock_timestamp()
+          from target_players
+          where session_row.game_session_id = target_players.game_session_id
+            and session_row.player_id = target_players.player_id
+            and session_row.status = 'active'
+            and session_row.revoked_at is null;
+
+          insert into public.player_access_credentials (
+            game_session_id,
+            player_id,
+            normalized_student_code_hash,
+            credential_version,
+            credential_salt,
+            credential_verifier,
+            credential_iterations,
+            status
+          )
+          select
+            player_row.game_session_id,
+            player_row.id,
+            fixture_row.access_code_hash,
+            'sha256-v1',
+            null,
+            null,
+            null,
+            'active'
+          from public.players as player_row
+          join public.game_sessions as game_row on game_row.id = player_row.game_session_id
+          join phase15_golden_credentials as fixture_row
+            on fixture_row.player_identifier = player_row.player_identifier
+          where game_row.name = 'Econovaria Golden Five'
+            and game_row.status = 'active'
+            and player_row.status = 'active';
+
+          do $phase15_verify_rotation$
+          begin
+            if (
+              select count(*)
+              from public.player_access_credentials as credential_row
+              join public.players as player_row
+                on player_row.game_session_id = credential_row.game_session_id
+               and player_row.id = credential_row.player_id
+              join public.game_sessions as game_row on game_row.id = player_row.game_session_id
+              join phase15_golden_credentials as fixture_row
+                on fixture_row.player_identifier = player_row.player_identifier
+              where game_row.name = 'Econovaria Golden Five'
+                and credential_row.status = 'active'
+                and credential_row.credential_version = 'sha256-v1'
+                and credential_row.normalized_student_code_hash = fixture_row.access_code_hash
+            ) <> 5 then
+              raise exception 'PHASE15_GOLDEN_CREDENTIAL_ROTATION_FAILED';
+            end if;
+          end;
+          $phase15_verify_rotation$;
+          commit;
+          SQL
+
+          SOURCE_COMMIT="$GITHUB_SHA" \
+          PROJECT_REF="$SUPABASE_PROJECT_REF" \
+          GENERATED_COUNT="$generated_count" \
+            node --input-type=module - <<'NODE' \
+            > /tmp/econovaria-golden-five/fixture-credential-authority.json
+          process.stdout.write(`${JSON.stringify({
+            schemaVersion: 1,
+            evidenceType: 'phase15-staging-fixture-credential-authority',
+            sourceCommit: process.env.SOURCE_COMMIT,
+            projectRef: process.env.PROJECT_REF,
+            productionSelected: false,
+            credentialCount: 5,
+            generatedCredentialCount: Number(process.env.GENERATED_COUNT),
+            plaintextPersisted: false,
+            browserCredentialContract: 'publishable-key-only',
+            fixtureLifecycleAction: 'resume',
+            fixtureLifecycleState: 'active',
+            fixtureJoinCodeStatus: 'active',
+            newsIdentifierAuthority: 'bounded-sha256-v1',
+            fxAuthorityState: 'ready',
+            bankingFxReadiness: 'ready',
+            fxMacroAlignment: 'bounded-latest-snapshot-copy-v1',
+            decision: 'PASS',
+          }, null, 2)}\n`);
+          NODE
+
+          printf 'POOLER_URL=%s\n' "$POOLER_URL" >> "$GITHUB_ENV"
+          printf 'ECONOVARIA_SUPABASE_PUBLISHABLE_KEY=%s\n' "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY" >> "$GITHUB_ENV"
+      - name: Install exact test dependencies and Chromium
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          npm run test:staging:scripts
+          npx playwright install --with-deps chromium
+      - name: Start same-origin staging gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/econovaria-local-gateway.py \
+            --root "$GITHUB_WORKSPACE" \
+            --project-ref "$SUPABASE_PROJECT_REF" \
+            --publishable-key "$ECONOVARIA_SUPABASE_PUBLISHABLE_KEY" \
+            --port 4173 > /tmp/econovaria-staging-gateway.log 2>&1 &
+          echo $! > /tmp/econovaria-staging-gateway.pid
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent --show-error http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/econovaria-staging-gateway.log >&2
+          exit 1
+      - name: Run connected five-player staging acceptance
+        run: npm run test:staging
+      - name: Stop staging gateway
+        if: always()
+        shell: bash
+        run: |
+          if test -f /tmp/econovaria-staging-gateway.pid; then
+            kill "$(cat /tmp/econovaria-staging-gateway.pid)" 2>/dev/null || true
+          fi
+      - name: Upload sanitized staging lifecycle certificate
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-staging-lifecycle-${{ github.sha }}
+          path: |
+            /tmp/econovaria-golden-five/
+            /tmp/econovaria-staging-gateway.log
+          if-no-files-found: error
+          retention-days: 30

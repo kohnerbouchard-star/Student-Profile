@@ -140,7 +140,7 @@ import {
 import {
   readPlayerProgressionRoutePath,
 } from "../../../src/domains/progression/api/playerProgressionRoutePaths.ts";
-import { dispatchClassroomMessagingRequest } from "../classroom-api/messagingDispatch.ts";
+import { dispatchClassroomMessagingRequest } from "../../../src/domains/messaging/api/playerMessagingDispatch.ts";
 import { dispatchPlayerBusinessRequest } from "../_shared/playerBusinessDispatch.ts";
 import {
   createServiceClient,

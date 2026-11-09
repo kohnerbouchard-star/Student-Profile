@@ -47,7 +47,7 @@ const BOOTSTRAP_PHASES = Object.freeze([
       "./scanner-auto-refresh.js",
       "./scanner-lifecycle-settle.js",
       "./scanner-reward-localization.js",
-      "./attendance-reward-settings-route-bridge-v2.js",
+      "./attendance-reward-request-adapter.js",
       "./attendance-reward-save-controller-v3.js",
       "./attendance-reward-settings-v4.js",
       "./settings-simplified.js",
@@ -235,7 +235,12 @@ void (async function bootstrapAdminCompatibilityModules() {
   for (const phase of BOOTSTRAP_PHASES) {
     for (const modulePath of phase.modules) {
       try {
-        await import(modulePath);
+        if (modulePath === "./settings-save-error-bridge.js" &&
+            typeof window.EconovariaSimplifiedSettings?.ensureFinalPolishStylesheet === "function") {
+          window.EconovariaSimplifiedSettings.ensureFinalPolishStylesheet();
+        } else {
+          await import(modulePath);
+        }
       } catch (error) {
         reportBootstrapFailure(phase.name, modulePath, error);
       }

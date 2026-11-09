@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref030b-submission-adapter-pr-795.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 795,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.test.ts",
+    "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
+    "backend/src/domains/contracts/api/playerContractStoryDecisionSubmitHttpHandler.test.ts",
+    "backend/src/domains/contracts/api/playerContractSubmissionAdapter.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-030/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-030.md",
+    "docs/operations/contracts/player-cross-cutting/pr-795.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.test.ts",
+    "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
+    "backend/src/domains/contracts/api/playerContractStoryDecisionSubmitHttpHandler.test.ts",
+    "backend/src/domains/contracts/api/playerContractSubmissionAdapter.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-030/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-030.md",
+    "docs/operations/contracts/player-cross-cutting/pr-795.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Staff Attendance and ledger adjustment database/race qualification"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "contracts",
+    "players",
+    "storylines"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-030/preflight.md",
+  "authorizationNote": "Owner-authorized REF-030b pure submission adapter extraction after accepted real PostgreSQL baseline. Preserve body and Story validation order, single progress upsert/trigger and postcommit optional renderer. No SQL, auth, policy, package, workflow, production or credential change."
+}

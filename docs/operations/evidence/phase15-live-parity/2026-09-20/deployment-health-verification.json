@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-20",
+  "scope": "Read-only health/version probes; not browser, economic, load or release certification.",
+  "production": {
+    "deploymentId": "dpl_2DG1Eb6zswrbdsP6aWariLohp1ys",
+    "url": "https://www.econovaria.com/api/health",
+    "status": 200,
+    "body": {
+      "ok": true,
+      "status": "ready",
+      "environment": "production",
+      "projectRef": "cgiukdjwicykrmtkhudh",
+      "sourceCommit": "59a82ef8580d7d571727e722424bc84cf064e8aa",
+      "services": [
+        {
+          "service": "web-session-api",
+          "ok": true,
+          "status": 200
+        },
+        {
+          "service": "player-web-session-api",
+          "ok": true,
+          "status": 200
+        }
+      ]
+    }
+  },
+  "preview": {
+    "deploymentId": "dpl_DAs2Lt6yYN96NNGQUZXzx447YP8g",
+    "url": "https://econovaria-pxg3nx2as-econovaria.vercel.app/api/health",
+    "status": 200,
+    "body": {
+      "ok": true,
+      "status": "ready",
+      "environment": "staging",
+      "projectRef": "eecvbssdvarfcykcfrny",
+      "sourceCommit": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "services": [
+        {
+          "service": "web-session-api",
+          "ok": true,
+          "status": 200
+        },
+        {
+          "service": "player-web-session-api",
+          "ok": true,
+          "status": 200
+        }
+      ]
+    },
+    "purpose": "Automatic PR preview, not a certified staging promotion."
+  }
+}

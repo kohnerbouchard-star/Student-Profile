@@ -311,6 +311,7 @@ Deno.test("scanner access-code lookup queries current peppered credentials witho
 Deno.test("scanner access-code lookup falls back only to version-gated legacy SHA-256 rows", async () => {
   const legacyDigest = "d".repeat(64);
   let legacyHashCalls = 0;
+  const legacyHashInputs: string[] = [];
   const client = attendanceLookupClient((query) => {
     if (query.table === "players" && hasFilter(query, "id", PLAYER_ID)) {
       return { data: attendancePlayerRow(), error: null };
@@ -333,11 +334,15 @@ Deno.test("scanner access-code lookup falls back only to version-gated legacy SH
   });
 
   const result = await recordAttendanceScanForAuthorizedStaff(
-    scanInput("scan-attendance-key-legacy"),
+    {
+      ...scanInput("scan-attendance-key-legacy"),
+      body: { playerId: "  se cret-4826  ", deviceTimezone: "UTC" },
+    },
     client as unknown as EdgeSupabaseClient,
     attendanceLookupDependencies({
-      hashValue: () => {
+      hashValue: (value) => {
         legacyHashCalls += 1;
+        legacyHashInputs.push(value);
         return Promise.resolve(legacyDigest);
       },
     }),
@@ -345,10 +350,12 @@ Deno.test("scanner access-code lookup falls back only to version-gated legacy SH
 
   assertEquals(result.player.id, PLAYER_ID);
   assertEquals(legacyHashCalls, 1);
+  assertEquals(legacyHashInputs, ["SECRET-4826"]);
   const credentialQueries = client.queries.filter((query) =>
     query.table === "player_access_credentials"
   );
   assertEquals(credentialQueries.length, 2);
+  assertEquals(credentialQueries.every((query) => hasFilter(query, "game_session_id", GAME_ID)), true);
   assertEquals(
     hasFilter(credentialQueries[0], "credential_version", "pbkdf2-sha256-v2"),
     true,

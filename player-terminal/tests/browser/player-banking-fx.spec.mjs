@@ -5,10 +5,12 @@ async function mountBankingFxFixture(page) {
   await expect(page.locator("#player-main-content .player-terminal-page")).toBeVisible();
   await expect(page.locator(".player-terminal-route-skeleton")).toHaveCount(0);
   await page.evaluate(async () => {
-    const [{ renderBankingPage }, { previewData }, { installBankingReadFlow }] = await Promise.all([
+    const [{ renderBankingPage }, { previewData }, { installBankingReadFlow }, { createStore }, { createResourceFreshnessCoordinator }] = await Promise.all([
       import("/src/pages/banking-page.js"),
       import("/src/data/preview-data.js"),
       import("/src/features/banking/banking-read-flow.js"),
+      import("/src/core/store.js"),
+      import("/src/api/resource-freshness-coordinator.js"),
     ]);
     const data = structuredClone(previewData);
     data.capabilities = {
@@ -68,12 +70,16 @@ async function mountBankingFxFixture(page) {
     fixture.id = "playerBankingFxBrowserFixture";
     fixture.className = "player-terminal-overview player-terminal-page-host";
     fixture.setAttribute("data-testid", "banking-fx-browser-fixture");
-    fixture.innerHTML = renderBankingPage(data);
+    const store = createStore({ status: "ready", route: "banking", data });
+    fixture.innerHTML = renderBankingPage(store.getState().data);
+    store.subscribe((state) => { fixture.innerHTML = renderBankingPage(state.data); });
     document.body.append(fixture);
     installBankingReadFlow({
       mount: fixture,
       terminal: {
-        getState: () => ({ route: "banking", data }),
+        freshness: createResourceFreshnessCoordinator(),
+        getState: store.getState,
+        subscribe: store.subscribe,
         refreshResources: async () => {},
         showToast: () => {},
       },

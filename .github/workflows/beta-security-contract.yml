@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - ".github/workflows/beta-security-contract.yml"
+      - "backend/supabase/functions/admin-api/contractRewardIssueOperation*.ts"
+      - "scripts/ref-009-contract-reward-*"
+      - ".github/workflows/ref-009-contract-reward-qualification.yml"
       - "api/**"
       - "admin/admin-auth.js"
       - "admin/auth-session-manager.js"

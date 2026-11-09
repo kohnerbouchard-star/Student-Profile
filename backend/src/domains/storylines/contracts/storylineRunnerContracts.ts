@@ -7,7 +7,7 @@ import type {
 import type { StoryEventExecutionRepository } from "./storyEventExecutionContracts.ts";
 import type {
   CreateStoryCutsceneNotificationForPlayersResult,
-  StoryNotificationRepository,
+  StoryNotificationPublisher,
 } from "./storyNotificationContracts.ts";
 import type {
   StorylineEventCandidateRecord,
@@ -22,7 +22,7 @@ export interface RunDueStorylineEventsInput {
   readonly repository: StorylineRepository;
   readonly executionRepository?: StoryEventExecutionRepository;
   readonly effectDependencies: StoryEffectExecutionDependencies;
-  readonly notificationRepository?: StoryNotificationRepository | null;
+  readonly notificationRepository?: StoryNotificationPublisher | null;
 }
 
 export interface StorylineRunnerResult {

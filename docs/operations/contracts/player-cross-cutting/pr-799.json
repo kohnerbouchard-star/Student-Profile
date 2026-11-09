@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref037-dashboard-financial-pr-799.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 799,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
+    "backend/src/domains/game-dashboard/infrastructure/dashboardFinancialProjection.ts",
+    "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-037/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-037.md",
+    "docs/operations/contracts/player-cross-cutting/pr-799.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
+    "backend/src/domains/game-dashboard/infrastructure/dashboardFinancialProjection.ts",
+    "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-037/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-037.md",
+    "docs/operations/contracts/player-cross-cutting/pr-799.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality",
+    "business-financial-market-source",
+    "business-financial-market-database",
+    "business-financial-market-browser"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "game-dashboard"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-037/preflight.md",
+  "authorizationNote": "Owner-authorized bounded REF-037 pure financial projection extraction. Preserve 15-operation concurrency, scoped query plan, currency and numeric policy, leaderboard, public contracts, SQL, auth and production."
+}

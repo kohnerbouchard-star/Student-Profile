@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-012",
+  "status": "VERIFIED_COMPLETE",
+  "scope": "repository-only replacement of the retained Attendance-specific global fetch bridge with an explicit request/response adapter",
+  "authorityCondition": "Authoritative from the merged main copy of this documentation closeout; an unmerged branch copy does not close the task.",
+  "implementationPullRequest": 759,
+  "baseMainSha": "d7112eb6cde0dad8b48fb04a55b32ad56c3f8b6d",
+  "implementationSha": "74ce4ee888a99c0def0f218729093e1f95ff0649",
+  "mergeSha": "949a82acab74db35adb1b5e016d203cb3107501f",
+  "mergeMethod": "squash",
+  "mergeUsedExpectedHeadGuard": true,
+  "mergedAt": "2026-09-28T07:45:16Z",
+  "qualifiedTreeSha": "d92c7e462f3f7993d5eb56689c9753aea554452e",
+  "observedMergeTreeSha": "d92c7e462f3f7993d5eb56689c9753aea554452e",
+  "syntheticMergeSha": "9ab02e1f872e3a2063603855a1b911e05c626d79",
+  "syntheticMergeTreeSha": "d92c7e462f3f7993d5eb56689c9753aea554452e",
+  "changedImplementationFileCount": 12,
+  "qualification": {
+    "headSha": "74ce4ee888a99c0def0f218729093e1f95ff0649",
+    "pullRequestWorkflowCount": 32,
+    "completedSuccessfulPullRequestWorkflows": 32,
+    "failedWorkflows": 0,
+    "unfinishedWorkflows": 0,
+    "workflowRuns": {
+      "Branch Hygiene": 36393384063,
+      "Backend Typecheck": 36391893114,
+      "multicurrency-store-funding-v1": 36391892992,
+      "Business Economy V2": 36391893255,
+      "REF-009 Contract Reward Qualification": 36391892890,
+      "Admin Browser E2E": 36391892940,
+      "Business Timed Manufacturing V2": 36391892995,
+      "Admin Shell Smoke": 36391892956,
+      "multicurrency-marketplace-funding-v1": 36391893079,
+      "business-multicurrency-treasury-v1": 36391892981,
+      "Admin Game Session Controls": 36391893179,
+      "business-player-store-fx-final-v2": 36391893136,
+      "multicurrency-stock-funding-v1": 36391893131,
+      "business-store-sales-convergence-v2": 36391892931,
+      "Button Action Coverage": 36391892880,
+      "Staging Readiness Preflight": 36391893069,
+      "Runtime Interaction Wiring": 36391892938,
+      "Environment Neutral Browser": 36391893108,
+      "Supply Chain Security": 36391893017,
+      "Production Runtime Promotion Contract": 36391892980,
+      "Admin Scroll Integrity": 36391892966,
+      "Business Workforce Payroll V2": 36391893246,
+      "Beta Security Contract": 36391893152,
+      "Release Promote Exact Artifacts": 36391892915,
+      "Release Integrity": 36391893263,
+      "Repository Quality": 36391893218,
+      "Business Store Listing Inventory V2": 36391893257,
+      "Player Terminal Verify": 36391892905,
+      "Business Store Withdrawal Safety V2": 36391893182,
+      "Business Player Store Cutover V2": 36391893227,
+      "Business Store Seller Offers V2": 36391893169,
+      "Business Store Atomic Settlement V2": 36391892932
+    },
+    "codeQlCheckId": 108829560350,
+    "codeQlResult": "success",
+    "vercelCommitStatus": "success",
+    "unresolvedReviewThreadsObserved": 0,
+    "resolvedOutdatedReviewThreadsObserved": 1,
+    "waivedChecks": [],
+    "runtimeEvidenceLimit": "Successful repository, browser, disposable database and release-contract checks do not certify or authorize a production deployment."
+  },
+  "acceptanceEvidence": {
+    "adminShellSmokeRunId": 36391892956,
+    "artifact": {
+      "id": 10956975851,
+      "sha256": "401328992f28609f9e369845a3319e6a5589aab8a2bfbe8bc1c4c57a1193c8a8"
+    },
+    "mutationInterfaceTests": {
+      "passed": 34,
+      "failed": 0,
+      "skipped": 0
+    },
+    "adminV2Tests": {
+      "passed": 86,
+      "failed": 0,
+      "skipped": 0
+    },
+    "attemptedWrites": 6,
+    "ownedSuccessEvents": 4,
+    "directSuccessEvents": 3,
+    "combinedSuccessEvents": 1,
+    "rejectedRetryStatuses": [
+      403,
+      503
+    ],
+    "malformedInputMutations": 0,
+    "remountDuplicateWrites": 0,
+    "globalFetchIdentityPreserved": true,
+    "browserErrors": 0,
+    "preservedBehaviors": [
+      "Settings layout and validation",
+      "failed-read behavior",
+      "game isolation",
+      "localized scanner rewards",
+      "payload-bound retry identity"
+    ]
+  },
+  "criticalStoreFx": {
+    "runId": 36391893136,
+    "sourceJobId": 108829378304,
+    "databaseJobId": 108829378101,
+    "playerBrowserJobId": 108829378289,
+    "connectedJobId": 108829378176,
+    "allPassed": true
+  },
+  "architectureEvidence": {
+    "inventoryBlobSha": "4d3995ca6c33ea438b9ec5e859cacdbb140845ed",
+    "scannedSourceFiles": 1247,
+    "browserShimFilesBefore": 27,
+    "browserShimFilesAfter": 26,
+    "generatedAdminBundleModified": false,
+    "ref003BindingsPreserved": true,
+    "retirementAssertionsPreserved": true
+  },
+  "retainedFailureHistory": {
+    "initialGeneralGreenRunsDidNotCountAsFocusedAcceptance": true,
+    "adminGameSessionControlsInitialFailure": {
+      "runId": 36391893179,
+      "jobId": 108829378280,
+      "artifactId": 10955534781,
+      "artifactSha256": "e505cb7fb4b309e46cd9f0e186ddd1ea106e3852c524a760f7d425f67fba648f"
+    },
+    "unchangedRetryJobId": 108830768838,
+    "unchangedRetryPassed": true,
+    "failureNotRelabeledAsPass": true
+  },
+  "delivered": [
+    "Source-owned Attendance request/response adapter used by the direct save controller and the authenticated Admin transport for combined Settings saves",
+    "Attendance-specific global fetch assignment removed while the generated terminal remains byte-preserved",
+    "Payload casing, supplied-window precedence, headers/options, cookie/CSRF/device/game binding, idempotency and one authoritative Settings mutation preserved",
+    "Stale verification reads and late combined responses cannot acknowledge or write into a replacement game context",
+    "Old source filename retained only as a one-way read compatibility facade for unverified historical/direct consumers",
+    "Required DOM observation/listeners, formulas, schema and economic authority retained"
+  ],
+  "children": {
+    "REF-012a": {
+      "status": "VERIFIED_COMPLETE",
+      "scope": "characterize and implement explicit Attendance request adapter"
+    },
+    "REF-012b": {
+      "status": "VERIFIED_COMPLETE",
+      "scope": "browser/retry/remount/context qualification and architecture evidence"
+    },
+    "REF-012c": {
+      "status": "VERIFIED_COMPLETE",
+      "scope": "documentation-only merged-main closeout"
+    }
+  },
+  "closeoutPaths": [
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-012.md",
+    "docs/operations/evidence/refactor-execution-v1/REF-012/completion.json"
+  ],
+  "backlogPreservation": {
+    "originalBlobSha": "eabedf8b7d5cd08f733445a354b5a2caa046d37d",
+    "updatedTask": "REF-012",
+    "changedFields": [
+      "status",
+      "implementationSha",
+      "mergeSha",
+      "evidence"
+    ],
+    "unchangedOtherTaskCount": 49,
+    "globalFieldsUnchanged": true
+  },
+  "productionDeploymentInitiated": false,
+  "liveDatabaseMutationInitiated": false,
+  "productionCertified": false,
+  "generatedAdminBundleModified": false,
+  "externalCompatibilityFacadeRetired": false,
+  "nextTask": "REF-013",
+  "nextTaskStarted": false
+}

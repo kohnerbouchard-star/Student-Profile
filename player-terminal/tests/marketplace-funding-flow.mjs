@@ -256,9 +256,9 @@ test("Marketplace source cutover contains constrained forms and legacy purchase 
   assert.ok(!page.includes('data-endpoint="marketplacePurchase"'));
   assert.ok(flow.includes('api.execute(\n        "marketplacePurchase"'));
   assert.ok(flow.includes('api.execute(\n        "marketplaceSettlement"'));
-  assert.ok(flow.includes("let ownsQuotePending = true"));
-  assert.ok(flow.includes("releaseQuotePending();\n      updateMarketplace"));
-  assert.ok(flow.includes("if (!ownsQuotePending) return"));
+  assert.ok(flow.includes("const request = begin(form, \"Pricing quote\", intent)"));
+  assert.ok(flow.includes("request.release();\n      updateMarketplace"));
+  assert.ok(flow.includes("if (pending !== operation) return"));
   assert.ok(main.includes("installMarketplaceFundingFlow"));
   assert.ok(route.includes("/settlements"));
   assert.ok(route.includes("|quotes"));

@@ -1,3 +1,4 @@
+import { readSupabaseEnv, systemRecoveryAccessAllowed } from "../../../src/platform/supabase/edgeStaffSession.ts";
 import { consumeAdminProgressionRateLimit } from "./progressionRateLimit.ts";
 import { ADMIN_PERMISSIONS, type AdminPermission } from "./adminPermissions.ts";
 
@@ -99,6 +100,11 @@ export async function guardAdminRequest(
       "Staff security state is unavailable.",
     );
   }
+  const recoveryEnv = readSupabaseEnv();
+  if (!await systemRecoveryAccessAllowed(
+    recoveryEnv.ok ? recoveryEnv.value.supabaseUrl : new URL(request.url).origin, context.service, context.user.id || "", context.token,
+  )) return failure(403, "staff_recovery_restricted", "This session cannot access the application during account recovery.");
+
   const onboardingGameCreation =
     staff?.status === "onboarding" &&
     request.method.toUpperCase() === "POST" &&

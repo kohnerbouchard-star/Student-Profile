@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-916.json"
       - ".github/workflows/button-action-coverage.yml"
       - "docs/operations/contracts/button-action-coverage-v1.json"
       - "scripts/button-action-coverage-contract.mjs"

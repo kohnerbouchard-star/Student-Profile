@@ -15,7 +15,7 @@ import {
   invalidPlayerSessionResponse,
   readPlayerSessionTokenFromRequest,
   resolveActivePlayerSession,
-} from "../../players/api/playerSessionHttpHelpers.ts";
+} from "../../players/index.ts";
 import type {
   ContractRepository,
   GameSessionContractRecord,
@@ -27,10 +27,8 @@ import {
   toPublicPlayerContractProgressDto,
 } from "../contracts/playerContractPublicListContracts.ts";
 import { SupabaseContractRepository } from "../infrastructure/supabaseContractRepository.ts";
-import {
-  listPlayerContractsAvailableNow,
-  resolveActivePlayerCountryCode,
-} from "../services/playerContractAvailabilityService.ts";
+import { listPlayerContractsAvailableNow } from "../services/playerContractAvailabilityService.ts";
+import { resolveActivePlayerCountryCode } from "../infrastructure/supabaseContractAvailabilityReadRepository.ts";
 
 export interface PlayerContractPublicListHttpHandlerDependencies {
   readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;

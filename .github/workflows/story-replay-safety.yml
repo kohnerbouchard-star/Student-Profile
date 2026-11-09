@@ -3,7 +3,13 @@ name: Story Replay Safety
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-916.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - "backend/src/domains/storylines/**"
+      - "backend/src/domains/stocks/news.ts"
+      - "backend/src/domains/stocks/news.test.ts"
+      - "backend/src/domains/stocks/contracts/stockMarketNewsContracts.ts"
+      - "backend/src/domains/stocks/contracts/stockMarketNewsContracts.test.ts"
       - "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts"
       - "backend/supabase/functions/stock-market-orchestrator/index.ts"
       - "backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql"
@@ -16,11 +22,16 @@ on:
       - "backend/supabase/migrations/20260816090600_seed_meridian_local_friend_relationships_v1.sql"
       - "backend/supabase/migrations/20260816090700_harden_meridian_arrival_clock_gate_v1.sql"
       - ".github/workflows/story-replay-safety.yml"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches:
       - main
     paths:
       - "backend/src/domains/storylines/**"
+      - "backend/src/domains/stocks/news.ts"
+      - "backend/src/domains/stocks/news.test.ts"
+      - "backend/src/domains/stocks/contracts/stockMarketNewsContracts.ts"
+      - "backend/src/domains/stocks/contracts/stockMarketNewsContracts.test.ts"
       - "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts"
       - "backend/supabase/functions/stock-market-orchestrator/index.ts"
       - "backend/supabase/migrations/20260812115000_add_story_effect_replay_safety_v1.sql"
@@ -53,6 +64,9 @@ jobs:
     steps:
       - name: Check out exact workflow head
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Deno
         uses: denoland/setup-deno@v2
@@ -82,6 +96,10 @@ jobs:
             --config supabase/functions/deno.json \
             --lock=supabase/functions/deno.lock \
             --frozen \
+            src/domains/stocks/news.test.ts \
+            src/domains/stocks/contracts/stockMarketNewsContracts.test.ts \
+            src/domains/storylines/contracts/storylineContracts.test.ts \
+            src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts \
             src/domains/storylines/infrastructure/supabaseStoryEffectLedgerWriter.test.ts \
             src/domains/storylines/infrastructure/supabaseStoryImpactWriter.test.ts \
             src/domains/storylines/infrastructure/supabaseStoryContractWriter.test.ts \
@@ -89,6 +107,7 @@ jobs:
             src/domains/storylines/services/storylineRunnerGameScope.test.ts \
             src/domains/storylines/services/storylineRunnerReplayIdentity.test.ts \
             src/domains/storylines/services/storyConditionEngine.test.ts \
+            src/domains/storylines/services/prepareStoryEffects.test.ts \
             src/domains/storylines/services/storyCompletedContractCondition.test.ts \
             src/domains/storylines/services/storyMeridianCompetingModelsMigrationContract.test.ts \
             src/domains/storylines/services/storyMeridianOutbreakOfWarMigrationContract.test.ts \
@@ -100,4 +119,5 @@ jobs:
             src/domains/storylines/services/storyMeridianCampaignContinuationReleaseSafety.test.ts \
             src/domains/storylines/services/storylineRunnerLease.test.ts \
             src/domains/storylines/tests/storyEffectReplaySafetyMigration.test.ts \
-            src/domains/storylines/tests/storyEventExecutionLeaseMigration.test.ts
+            src/domains/storylines/tests/storyEventExecutionLeaseMigration.test.ts \
+            src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts

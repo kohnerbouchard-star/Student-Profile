@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref035-message-thread-pr-794.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 794,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.ts",
+    "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.test.ts",
+    "backend/src/domains/messaging/application/createPlayerMessageThread.ts",
+    "backend/src/domains/messaging/infrastructure/supabasePlayerMessageThreadRepository.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-035/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-035.md",
+    "docs/operations/contracts/player-cross-cutting/pr-794.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.ts",
+    "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.test.ts",
+    "backend/src/domains/messaging/application/createPlayerMessageThread.ts",
+    "backend/src/domains/messaging/infrastructure/supabasePlayerMessageThreadRepository.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-035/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-035.md",
+    "docs/operations/contracts/player-cross-cutting/pr-794.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "messaging",
+    "players"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-035/preflight.md",
+  "authorizationNote": "Owner-authorized REF-035 bounded create-thread application/repository extraction. Preserve one atomic RPC, server-derived ownership, parser and policy GET, HTTP errors/status/privacy and replay. No SQL, workflow, package, credential, production or gameplay changes."
+}

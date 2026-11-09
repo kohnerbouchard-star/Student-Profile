@@ -17,6 +17,8 @@ import {
 import {
   createPlayerForAuthorizedStaff,
 } from "../application/createPlayerForAuthorizedStaff.ts";
+import { PlayerRosterReadPersistenceError } from "../contracts/playerRosterReadRepository.ts";
+import { SupabasePlayerRosterReadRepository } from "../infrastructure/supabasePlayerRosterReadRepository.ts";
 import {
   parseCreatePlayerRequestBody,
   readPlayerRosterJsonBody,
@@ -70,20 +72,6 @@ interface PlayerRosterBody {
     readonly createdAt: string;
     readonly updatedAt: string;
   }[];
-}
-
-interface PlayerRosterRow {
-  readonly id: string;
-  readonly display_name: string;
-  readonly roster_label: string | null;
-  readonly player_identifier: string | null;
-  readonly status: string;
-  readonly created_at: string;
-  readonly updated_at: string;
-}
-
-interface ActivePlayerCredentialRow {
-  readonly player_id?: unknown;
 }
 
 interface CreatePlayerSuccessBody {
@@ -169,50 +157,21 @@ export async function handlePlayerRosterRequest(
       });
     }
 
-    const playersResponse = await staffResult.serviceClient
-      .from("players")
-      .select(
-        "id,display_name,roster_label,player_identifier,status,created_at,updated_at",
-      )
-      .eq("game_session_id", gameSessionId)
-      .order("created_at", { ascending: true });
-
-    if (playersResponse.error) {
-      return jsonError(500, {
-        code: "player_roster_failed",
-        message: "Player roster could not be loaded.",
-        retryable: false,
-      });
-    }
-
-    const players = (playersResponse.data ?? []) as PlayerRosterRow[];
-    const playerIds = players.map((player) => player.id);
-    const activeCredentialPlayerIds = new Set<string>();
-
-    if (playerIds.length > 0) {
-      const credentialResponse = await staffResult.serviceClient
-        .from("player_access_credentials")
-        .select("player_id")
-        .eq("game_session_id", gameSessionId)
-        .eq("status", "active")
-        .in("player_id", playerIds);
-
-      if (credentialResponse.error) {
+    const rosterRepository = new SupabasePlayerRosterReadRepository(
+      staffResult.serviceClient,
+    );
+    let players;
+    try {
+      players = await rosterRepository.readRoster(gameSessionId);
+    } catch (error) {
+      if (error instanceof PlayerRosterReadPersistenceError) {
         return jsonError(500, {
           code: "player_roster_failed",
           message: "Player roster could not be loaded.",
           retryable: false,
         });
       }
-
-      const credentials =
-        (credentialResponse.data ?? []) as ActivePlayerCredentialRow[];
-
-      for (const credential of credentials) {
-        if (typeof credential.player_id === "string") {
-          activeCredentialPlayerIds.add(credential.player_id);
-        }
-      }
+      throw error;
     }
 
     return jsonResponse<PlayerRosterBody>(200, {
@@ -224,13 +183,13 @@ export async function handlePlayerRosterRequest(
       },
       players: players.map((player) => ({
         id: player.id,
-        displayName: player.display_name,
-        rosterLabel: player.roster_label ?? null,
-        playerIdentifier: player.player_identifier ?? null,
+        displayName: player.displayName,
+        rosterLabel: player.rosterLabel,
+        playerIdentifier: player.playerIdentifier,
         status: player.status,
-        hasActiveAccessCode: activeCredentialPlayerIds.has(player.id),
-        createdAt: player.created_at,
-        updatedAt: player.updated_at,
+        hasActiveAccessCode: player.hasActiveAccessCode,
+        createdAt: player.createdAt,
+        updatedAt: player.updatedAt,
       })),
     });
   } catch (error) {

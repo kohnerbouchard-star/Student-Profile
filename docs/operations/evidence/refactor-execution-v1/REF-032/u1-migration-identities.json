@@ -1,0 +1,2949 @@
+{
+  "schemaVersion": 1,
+  "sourceBase": "378f99849f63d044ab75029e751188a88b4ac122",
+  "purpose": "immutable bundle and separately pinned rehearsal suffix; no hosted certification",
+  "immutableManifestSha256": {
+    "staging": "75c84a56327ef8ca59090887a3f9bfcd187c8e7d8760935f365453a2d0f0591a",
+    "production": "35b59274a80760d5b09d0aea3b89f2b3de0de2db30417d5e509b261f4cb4602f"
+  },
+  "environments": {
+    "staging": {
+      "schemaVersion": 1,
+      "bundle": {
+        "schemaVersion": 1,
+        "environment": "staging",
+        "cutoff": "20260819062000",
+        "commonMigrationCount": 151,
+        "preludeMigrationCount": 0,
+        "migrationCount": 151,
+        "migrations": [
+          {
+            "order": 1,
+            "filename": "20260819062000_business_authority_foundation_v2.sql",
+            "version": "20260819062000",
+            "name": "business_authority_foundation_v2",
+            "sourceSha256": "3cc315ed46aee94fdd8921edcb4e7fd87213f90c1f7cc92da891f7f3f96d06a6",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 2,
+            "filename": "20260819062100_business_party_banking_and_activation_v2.sql",
+            "version": "20260819062100",
+            "name": "business_party_banking_and_activation_v2",
+            "sourceSha256": "029293a33a6f145bdde84dc071ca5e82c08433a93d5126d6fef8fad158d73b96",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 3,
+            "filename": "20260819063000_business_governance_equity_v2.sql",
+            "version": "20260819063000",
+            "name": "business_governance_equity_v2",
+            "sourceSha256": "80137f14ad8faa40b634f11582441215e72a725ee0fcc069c88b72c0cb49525b",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 4,
+            "filename": "20260819064000_business_recipe_access_v2.sql",
+            "version": "20260819064000",
+            "name": "business_recipe_access_v2",
+            "sourceSha256": "3e759fcb05d57a166b891394a4acd4033431a865fcb01ff0d33036489495ea4b",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 5,
+            "filename": "20260819064100_business_stockroom_read_v2.sql",
+            "version": "20260819064100",
+            "name": "business_stockroom_read_v2",
+            "sourceSha256": "b9f0330412e920df5c42dcd02e849f7aecbfb65f2f1b5d15ef844a0fb5db8c91",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 6,
+            "filename": "20260819064110_business_recipe_access_read_v2.sql",
+            "version": "20260819064110",
+            "name": "business_recipe_access_read_v2",
+            "sourceSha256": "cb1a362fb11e67b639ae69128f35fe39e68d015e1af0ce5d0b43602d0e9550bc",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 7,
+            "filename": "20260819064120_business_legacy_creation_tax_compat_v2.sql",
+            "version": "20260819064120",
+            "name": "business_legacy_creation_tax_compat_v2",
+            "sourceSha256": "110381d38cb212f9e3af9f0d18dee064ee41326c0f9673ee04cc7ca915be5d45",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 8,
+            "filename": "20260820070000_store_quote_pricing_resolver_v2.sql",
+            "version": "20260820070000",
+            "name": "store_quote_pricing_resolver_v2",
+            "sourceSha256": "2ba28d4868378553920f8628a7c1ead34abc05641248eef72334a9f5c5e4adbf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 9,
+            "filename": "20260821060000_business_store_procurement_v2.sql",
+            "version": "20260821060000",
+            "name": "business_store_procurement_v2",
+            "sourceSha256": "cfcf554423d6f1d64fd90949fc7bd97e246f445e08c3a8134c8027bdccca2eee",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 10,
+            "filename": "20260821130000_business_stockroom_locations_v2.sql",
+            "version": "20260821130000",
+            "name": "business_stockroom_locations_v2",
+            "sourceSha256": "037448b9e8131248dd178111b3165ad08d5cf55cb69c0fe4ec0897dd85581478",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 11,
+            "filename": "20260821131000_business_stockroom_snapshot_v2.sql",
+            "version": "20260821131000",
+            "name": "business_stockroom_snapshot_v2",
+            "sourceSha256": "98e81f86e6160285994aacd7cab455ff906244966456f3d3716b4738aef792ae",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 12,
+            "filename": "20260822090000_business_workforce_payroll_foundation_v2.sql",
+            "version": "20260822090000",
+            "name": "business_workforce_payroll_foundation_v2",
+            "sourceSha256": "84a5cd16ea7a88d5ed69d086b9d1ce5c1804e5cd165aaac1416493ce90cb46ed",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 13,
+            "filename": "20260822103000_business_workforce_payroll_scope_hardening_v2.sql",
+            "version": "20260822103000",
+            "name": "business_workforce_payroll_scope_hardening_v2",
+            "sourceSha256": "ab98599eafc8b2a215c7815bd6de33401b4330841ade089b4e43005c08f433d8",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 14,
+            "filename": "20260822120000_business_workforce_candidate_hiring_v2.sql",
+            "version": "20260822120000",
+            "name": "business_workforce_candidate_hiring_v2",
+            "sourceSha256": "d104c858ad7bd0538f70b44c0fe5dd4ab0764fe682bd453d5604ac7fceeef7e1",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 15,
+            "filename": "20260822140000_business_payroll_clock_v2.sql",
+            "version": "20260822140000",
+            "name": "business_payroll_clock_v2",
+            "sourceSha256": "288fc990cc1f4c4ae348ad65ef1a5ab3cec72abca5185ddd50ca1932c6106d94",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 16,
+            "filename": "20260822140100_business_payroll_settlement_v2.sql",
+            "version": "20260822140100",
+            "name": "business_payroll_settlement_v2",
+            "sourceSha256": "0af9d70e7e7c20626df8630533858163dac470f5c7a9569ba7f33ce4cad496d9",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 17,
+            "filename": "20260822140200_business_cycle_payroll_cutover_v2.sql",
+            "version": "20260822140200",
+            "name": "business_cycle_payroll_cutover_v2",
+            "sourceSha256": "83d17f266d7d8b7747ee6515aa523b507e82060d973fa58b82480615b19b9cdf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 18,
+            "filename": "20260822140300_business_production_labor_reservations_v2.sql",
+            "version": "20260822140300",
+            "name": "business_production_labor_reservations_v2",
+            "sourceSha256": "e35f42d68715a0b09f2737229989abd86869d252f2f52c7b2eb61607e5f0f823",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 19,
+            "filename": "20260823100000_business_equipment_ownership_profiles_v2.sql",
+            "version": "20260823100000",
+            "name": "business_equipment_ownership_profiles_v2",
+            "sourceSha256": "550bc89ac5efddf22291dd519145b951a0420fd474ecf3462e2516be7c3a3f26",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 20,
+            "filename": "20260823100100_business_recipe_equipment_requirements_v2.sql",
+            "version": "20260823100100",
+            "name": "business_recipe_equipment_requirements_v2",
+            "sourceSha256": "10ac31701fabd3d4a481b66bf53ce9032af419f0420d2c15df2ec19e7f18c0f6",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 21,
+            "filename": "20260823100110_business_recipe_equipment_requirement_sync_v2.sql",
+            "version": "20260823100110",
+            "name": "business_recipe_equipment_requirement_sync_v2",
+            "sourceSha256": "017879f98c43de2dd2f692769ae6f7fc9503c606309651dde3a28ccead2bb5cf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 22,
+            "filename": "20260823100200_business_equipment_installation_schema_v2.sql",
+            "version": "20260823100200",
+            "name": "business_equipment_installation_schema_v2",
+            "sourceSha256": "17c7274bea2ceb4b5c2e30f2d9bb865d262d016207df9cad6a0739f20816a869",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 23,
+            "filename": "20260823100210_business_equipment_materialization_v2.sql",
+            "version": "20260823100210",
+            "name": "business_equipment_materialization_v2",
+            "sourceSha256": "cec0d35a92c624a60f0a1f1c875613b490760910ab73deddc955631fbfb923fe",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 24,
+            "filename": "20260823100220_business_equipment_install_command_v2.sql",
+            "version": "20260823100220",
+            "name": "business_equipment_install_command_v2",
+            "sourceSha256": "558a831e7d232faab6c10421614abb65f729e26b9b8e62b1c8f87c9e79375e8b",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 25,
+            "filename": "20260823100300_business_equipment_reservation_schema_v2.sql",
+            "version": "20260823100300",
+            "name": "business_equipment_reservation_schema_v2",
+            "sourceSha256": "6197e6abbdd6e9ca9e65293220388657d370600e65b9e4f03d5b7107af861482",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 26,
+            "filename": "20260823100310_business_equipment_reserve_command_v2.sql",
+            "version": "20260823100310",
+            "name": "business_equipment_reserve_command_v2",
+            "sourceSha256": "aa540735801f3753c5bdee2e57f46d5998e4468760464614a9ba66a59b26d97f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 27,
+            "filename": "20260823100320_business_equipment_transition_status_read_v2.sql",
+            "version": "20260823100320",
+            "name": "business_equipment_transition_status_read_v2",
+            "sourceSha256": "d10d7717e6ce63bed641935412fa3ea38a28a87277d093a9d0a6f7a93d5f0281",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 28,
+            "filename": "20260823100400_business_production_equipment_capacity_v2.sql",
+            "version": "20260823100400",
+            "name": "business_production_equipment_capacity_v2",
+            "sourceSha256": "c130e9f8c96d2aac77dca37b39559acd308001d60f433530d73c19c5bc658dbc",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 29,
+            "filename": "20260823110000_business_manufacturing_job_foundation_v2.sql",
+            "version": "20260823110000",
+            "name": "business_manufacturing_job_foundation_v2",
+            "sourceSha256": "a29f2dfce2f7a6da88fa10ecffb59d5a060308dffd07043eef8b261e80143b51",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 30,
+            "filename": "20260823110100_business_manufacturing_worker_and_read_v2.sql",
+            "version": "20260823110100",
+            "name": "business_manufacturing_worker_and_read_v2",
+            "sourceSha256": "9f1e6ace6b65f933499548ae9bfa3555c1d2c19b308120ba1b3381c78ab43856",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 31,
+            "filename": "20260823110200_business_manufacturing_start_resources_v2.sql",
+            "version": "20260823110200",
+            "name": "business_manufacturing_start_resources_v2",
+            "sourceSha256": "4145a1865bad8ceca322958d4a1c4dc8ae3b1d3a7b02d16381d55ceb6d593b27",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 32,
+            "filename": "20260823110210_business_manufacturing_resource_schema_assertions_v2.sql",
+            "version": "20260823110210",
+            "name": "business_manufacturing_resource_schema_assertions_v2",
+            "sourceSha256": "d2dbcd97a5c145b55c4f08379dd8388341d197a5ebf9159760743f71943c4fd6",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 33,
+            "filename": "20260823110300_business_manufacturing_completion_v2.sql",
+            "version": "20260823110300",
+            "name": "business_manufacturing_completion_v2",
+            "sourceSha256": "d381d5010c36f1323f35db99d6d6b5fe70942e16ba2928c0602df03ea6257088",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 34,
+            "filename": "20260823110310_business_manufacturing_completion_schema_assertions_v2.sql",
+            "version": "20260823110310",
+            "name": "business_manufacturing_completion_schema_assertions_v2",
+            "sourceSha256": "53b7b639d9a943a529f0991acb21b89b6771998c6cfdcc317deeff58701510d6",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 35,
+            "filename": "20260823110400_business_manufacturing_recovery_v2.sql",
+            "version": "20260823110400",
+            "name": "business_manufacturing_recovery_v2",
+            "sourceSha256": "432b5aac626340081fc4495a47f128c83cde2617c93cd20b0dd213bcfc4eea4c",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 36,
+            "filename": "20260823110410_business_manufacturing_recovery_schema_assertions_v2.sql",
+            "version": "20260823110410",
+            "name": "business_manufacturing_recovery_schema_assertions_v2",
+            "sourceSha256": "163d72a173f524fa28d24ef1feb59ea523e6eaac42b37c2a8c7fa229d37f5a77",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 37,
+            "filename": "20260823110500_business_manufacturing_player_api_v2.sql",
+            "version": "20260823110500",
+            "name": "business_manufacturing_player_api_v2",
+            "sourceSha256": "f62dc2f357bbf5fd90e7379f0c902f3415814c60c92457963c76c09a48381922",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 38,
+            "filename": "20260823115900_business_manufacturing_manifest_trigger_fix_v2.sql",
+            "version": "20260823115900",
+            "name": "business_manufacturing_manifest_trigger_fix_v2",
+            "sourceSha256": "be6d41c71d1320abb826b046961a6509d55cb12fc0eaa6b2c41d6786226d3802",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 39,
+            "filename": "20260824100000_store_seller_offer_foundation_v2.sql",
+            "version": "20260824100000",
+            "name": "store_seller_offer_foundation_v2",
+            "sourceSha256": "fd2137dd482fc667de9d24ecafaa95151e96ab3cb152179b61519e1b11f2198a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 40,
+            "filename": "20260824100010_store_seeded_offer_compatibility_v2.sql",
+            "version": "20260824100010",
+            "name": "store_seeded_offer_compatibility_v2",
+            "sourceSha256": "da17de2465716fe28bb8cdab4cb2bd17c7914c340bf661aff48a897b5cf9d2fc",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 41,
+            "filename": "20260824100020_store_seller_offer_commands_v2.sql",
+            "version": "20260824100020",
+            "name": "store_seller_offer_commands_v2",
+            "sourceSha256": "9eea465ff07032f07a372dffbcf84c24cdbdca1420bb3435f7148c3453789d85",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 42,
+            "filename": "20260824100030_store_seller_offer_aggregation_v2.sql",
+            "version": "20260824100030",
+            "name": "store_seller_offer_aggregation_v2",
+            "sourceSha256": "9cb7a8d68ea0d3086a852c2750f3151e9412d6d4f2493952f84770e23c1caa90",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 43,
+            "filename": "20260824100040_store_seller_offer_schema_assertions_v2.sql",
+            "version": "20260824100040",
+            "name": "store_seller_offer_schema_assertions_v2",
+            "sourceSha256": "b91a752a5732ad0bba5e4ea30c823807b3b56403f8b59954d2b848423bfa3a52",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 44,
+            "filename": "20260824100041_store_seller_offer_identity_assertions_v2.sql",
+            "version": "20260824100041",
+            "name": "store_seller_offer_identity_assertions_v2",
+            "sourceSha256": "b43a2c3351a42474ccbe5fea1323f85c7978ce8646b3a17219c994d6a69ae658",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 45,
+            "filename": "20260824110000_business_store_listing_inventory_poster_v2.sql",
+            "version": "20260824110000",
+            "name": "business_store_listing_inventory_poster_v2",
+            "sourceSha256": "8562560cee6bf36f0e7f55a934a18be5eb237112acddce5aa22d7ba36edbeef8",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 46,
+            "filename": "20260824110010_business_store_listing_inventory_commands_v2.sql",
+            "version": "20260824110010",
+            "name": "business_store_listing_inventory_commands_v2",
+            "sourceSha256": "c4bc558e976f0339d19d41c200ff49db83f9bc2b105b4dd2664c8766b62cf988",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 47,
+            "filename": "20260824110015_business_store_listing_inventory_projection_v2.sql",
+            "version": "20260824110015",
+            "name": "business_store_listing_inventory_projection_v2",
+            "sourceSha256": "9446f0ae2d289b8ca4a59ccaec2516ca158268d0412284c4754bd634ca4a5819",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 48,
+            "filename": "20260824110020_business_store_listing_inventory_assertions_v2.sql",
+            "version": "20260824110020",
+            "name": "business_store_listing_inventory_assertions_v2",
+            "sourceSha256": "9e6375d4eb019d4d119613ecea24f658277cf375a44808a73e6b815e365bbf8f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 49,
+            "filename": "20260824120000_store_offer_withdrawal_foundation_v2.sql",
+            "version": "20260824120000",
+            "name": "store_offer_withdrawal_foundation_v2",
+            "sourceSha256": "575fe18ac7e2cfd254b093800bedb650b3a638a6a67745f43077103a6c3f32cf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 50,
+            "filename": "20260824120010_store_offer_withdrawal_request_command_v2.sql",
+            "version": "20260824120010",
+            "name": "store_offer_withdrawal_request_command_v2",
+            "sourceSha256": "c24d9b79646d673079b5ce812185d976de4007a63fd61bae5af12492db9e2928",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 51,
+            "filename": "20260824120020_store_offer_withdrawal_processor_v2.sql",
+            "version": "20260824120020",
+            "name": "store_offer_withdrawal_processor_v2",
+            "sourceSha256": "11eeca587039d32d7ad4f613ad606a41a4147dfe3d912aba5527568eef7f3e66",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 52,
+            "filename": "20260824120030_store_offer_withdrawal_assertions_v2.sql",
+            "version": "20260824120030",
+            "name": "store_offer_withdrawal_assertions_v2",
+            "sourceSha256": "63f6d514bb9cd0862b51f4cb10fe3e861e0981fff8d8456c0f5fed171bfa9f84",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 53,
+            "filename": "20260825100000_business_store_offer_quote_schema_v2.sql",
+            "version": "20260825100000",
+            "name": "business_store_offer_quote_schema_v2",
+            "sourceSha256": "c9f5501f40db386b98124973411d00e813bd9ef2fd3be26a2781ff8a71965d16",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 54,
+            "filename": "20260825100010_business_store_offer_quote_result_v2.sql",
+            "version": "20260825100010",
+            "name": "business_store_offer_quote_result_v2",
+            "sourceSha256": "76100725c7ce0a2a534f92676497766acac5167137b1b13f2ef964d95ccc5733",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 55,
+            "filename": "20260825100020_business_store_offer_quote_command_v2.sql",
+            "version": "20260825100020",
+            "name": "business_store_offer_quote_command_v2",
+            "sourceSha256": "7984607b7294a9d8b19d503dc77be2dc324680845de1bd6829131ffb6d774537",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 56,
+            "filename": "20260825110000_business_store_offer_purchase_receipt_v2.sql",
+            "version": "20260825110000",
+            "name": "business_store_offer_purchase_receipt_v2",
+            "sourceSha256": "9aba4b582bf292cb52213168f3ba34d6fd582ef7249cfbf9833afb8a89c66c1d",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 57,
+            "filename": "20260825110010_business_store_offer_purchase_receipt_result_v2.sql",
+            "version": "20260825110010",
+            "name": "business_store_offer_purchase_receipt_result_v2",
+            "sourceSha256": "2feac47ab4df94ea04f3fdcf41bbaf9d207bed763e02deca81a61e7c0b14f640",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 58,
+            "filename": "20260825110020_business_store_offer_atomic_settlement_v2.sql",
+            "version": "20260825110020",
+            "name": "business_store_offer_atomic_settlement_v2",
+            "sourceSha256": "a92140fd14ed858683140a0cac3c10677a7a91bdcfa319f9ad5c877ca8a1a9da",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 59,
+            "filename": "20260825110030_business_store_offer_settlement_assertions_v2.sql",
+            "version": "20260825110030",
+            "name": "business_store_offer_settlement_assertions_v2",
+            "sourceSha256": "bf44656fe5706393befd98154ea6e4ef5e0a40f3a15bf0b56105da095d4bede4",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 60,
+            "filename": "20260825223806_canonical_fx_authority_v1.sql",
+            "version": "20260825223806",
+            "name": "canonical_fx_authority_v1",
+            "sourceSha256": "b510e770d8f643f73f2480fb95cbaa32bf66b5f12a010a93bbfdb0ab41b011ae",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 61,
+            "filename": "20260826010811_banking_fx_purge_registry_v1.sql",
+            "version": "20260826010811",
+            "name": "banking_fx_purge_registry_v1",
+            "sourceSha256": "96ff8ae133b393c2a4dd02e966f22c9aad4c6fc611a3fb0246970bb99437cf14",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 62,
+            "filename": "20260826090000_banking_account_identity_v1.sql",
+            "version": "20260826090000",
+            "name": "banking_account_identity_v1",
+            "sourceSha256": "6a44e6142ce2d1cea737b4a58eb7f5567bdf0c72708889fed5079424df02c310",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 63,
+            "filename": "20260826091000_banking_transaction_holds_v1.sql",
+            "version": "20260826091000",
+            "name": "banking_transaction_holds_v1",
+            "sourceSha256": "ee440379a84cac524ade29558e7b243290e3d16a71ed581b765ed6fe8d730677",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 64,
+            "filename": "20260826092000_fx_clearing_liquidity_v1.sql",
+            "version": "20260826092000",
+            "name": "fx_clearing_liquidity_v1",
+            "sourceSha256": "82147172ed902fb36376a05fc27d0d008b8224c7bceff7649cccd38b66acaad7",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 65,
+            "filename": "20260826093000_player_banking_fx_v1.sql",
+            "version": "20260826093000",
+            "name": "player_banking_fx_v1",
+            "sourceSha256": "0f96510550337f4c344c3675d4dae82d9c032503ad5e873d1261f2bc713a43c9",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 66,
+            "filename": "20260826094000_player_banking_fx_commands_v1.sql",
+            "version": "20260826094000",
+            "name": "player_banking_fx_commands_v1",
+            "sourceSha256": "acc658c22c89152efb403a4b5646e36f5cf73cecce1e51e5985806c99e14cf3f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 67,
+            "filename": "20260826095000_player_banking_fx_order_commands_v1.sql",
+            "version": "20260826095000",
+            "name": "player_banking_fx_order_commands_v1",
+            "sourceSha256": "17f98dc8b75521806bf7f4271bbc336bb8fae05952c833b8e55988827d284cba",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 68,
+            "filename": "20260826096000_player_banking_fx_settlement_v1.sql",
+            "version": "20260826096000",
+            "name": "player_banking_fx_settlement_v1",
+            "sourceSha256": "90be6aa28291eadd0adef30f62eeb700b0c87052c66339472b3519a62f7809c5",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 69,
+            "filename": "20260826097000_player_banking_fx_worker_v1.sql",
+            "version": "20260826097000",
+            "name": "player_banking_fx_worker_v1",
+            "sourceSha256": "3ac53008a519471ed6b4ddeb29293ebb65c64b7f8f4b313bd63717fd6b621de2",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 70,
+            "filename": "20260826098000_banking_fx_readiness_v1.sql",
+            "version": "20260826098000",
+            "name": "banking_fx_readiness_v1",
+            "sourceSha256": "50707c2258b06b2e33b6e050747ff2857481bfe3f9fe0a078931b765c6e610fe",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 71,
+            "filename": "20260826100000_business_bank_identity_runtime_v1.sql",
+            "version": "20260826100000",
+            "name": "business_bank_identity_runtime_v1",
+            "sourceSha256": "477c5fcf07d4900aa7dc469eb04c0acfb72b9238345688d67b50e1c0d43126bf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 72,
+            "filename": "20260826101000_banking_staff_adjustment_compatibility_v1.sql",
+            "version": "20260826101000",
+            "name": "banking_staff_adjustment_compatibility_v1",
+            "sourceSha256": "8dcc434f75b2bb1ef877757220c78f918924c6b893234ebc7829b1c6f9541a12",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 73,
+            "filename": "20260826102000_banking_fx_postcutover_purge_registry_v1.sql",
+            "version": "20260826102000",
+            "name": "banking_fx_postcutover_purge_registry_v1",
+            "sourceSha256": "e45404f8ff3bc2bcb73e3961b9a13203c279ee11ca081b1e00efd9404ddc4e98",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 74,
+            "filename": "20260827090000_multicurrency_funding_quote_v1.sql",
+            "version": "20260827090000",
+            "name": "multicurrency_funding_quote_v1",
+            "sourceSha256": "0e7734e584ec45ab5eb79bb7fed7156f3e56843401308ef5a7fc9d2883078702",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 75,
+            "filename": "20260827090500_multicurrency_funding_quote_stage_isolation_v1.sql",
+            "version": "20260827090500",
+            "name": "multicurrency_funding_quote_stage_isolation_v1",
+            "sourceSha256": "571b332551407131ebdb03748446dd2ae4af8485cb39835f5f1bbf21ddb1473b",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 76,
+            "filename": "20260827091000_multicurrency_funding_composer_v1.sql",
+            "version": "20260827091000",
+            "name": "multicurrency_funding_composer_v1",
+            "sourceSha256": "f19093957c2e248c79aff40487e5b4f5c0b0e5ecdae38090360334b435d41e63",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 77,
+            "filename": "20260827092000_multicurrency_funding_assertions_v1.sql",
+            "version": "20260827092000",
+            "name": "multicurrency_funding_assertions_v1",
+            "sourceSha256": "800edee32f10592f7343fb74add68929d9c48c4baac2c16476ec018a5e64a2d1",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 78,
+            "filename": "20260827093000_multicurrency_store_funding_schema_v1.sql",
+            "version": "20260827093000",
+            "name": "multicurrency_store_funding_schema_v1",
+            "sourceSha256": "18122cf75bc2384904801e0f9a0773c4aafd66898f26135eff879363032d7118",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 79,
+            "filename": "20260827093500_multicurrency_store_funding_quote_commands_v1.sql",
+            "version": "20260827093500",
+            "name": "multicurrency_store_funding_quote_commands_v1",
+            "sourceSha256": "17340a20eb2422cd854f18a3e9ba481023bee928240d82cdc0c8052a5e8031e7",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 80,
+            "filename": "20260827094000_multicurrency_store_funding_settlement_v1.sql",
+            "version": "20260827094000",
+            "name": "multicurrency_store_funding_settlement_v1",
+            "sourceSha256": "88b56c1dcbaa2cf19dd46f0e64689835a5f2f090849c0c43836f26ed6234faa6",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 81,
+            "filename": "20260827094500_multicurrency_store_funding_assertions_v1.sql",
+            "version": "20260827094500",
+            "name": "multicurrency_store_funding_assertions_v1",
+            "sourceSha256": "736c33f403f7ced7f3866a3803dcef936a7cb899ada64d03cb571cf9fb2fd317",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 82,
+            "filename": "20260827100000_multicurrency_marketplace_funding_schema_v1.sql",
+            "version": "20260827100000",
+            "name": "multicurrency_marketplace_funding_schema_v1",
+            "sourceSha256": "d835f41d7941e4a32c1460ad00a8cb2f2bb7b008af6b74691baceddd67f77550",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 83,
+            "filename": "20260827100500_multicurrency_marketplace_funding_quote_v1.sql",
+            "version": "20260827100500",
+            "name": "multicurrency_marketplace_funding_quote_v1",
+            "sourceSha256": "91995e0fea1df55b8a0eb88e0db2b2de502c5ff29e5e76ab864ead7dc3cfe45f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 84,
+            "filename": "20260827101000_multicurrency_marketplace_funding_settlement_v1.sql",
+            "version": "20260827101000",
+            "name": "multicurrency_marketplace_funding_settlement_v1",
+            "sourceSha256": "2e476fdd6806c8d645b7f09a4a4d08134d08e121272efaf0e1f823065328fdf8",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 85,
+            "filename": "20260827101500_multicurrency_marketplace_funding_refund_v1.sql",
+            "version": "20260827101500",
+            "name": "multicurrency_marketplace_funding_refund_v1",
+            "sourceSha256": "b1063f1bb1bf29c52483153fec8a460e9e57b7703cd3e79cbab77864e36f89c5",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 86,
+            "filename": "20260827102000_multicurrency_marketplace_funding_assertions_v1.sql",
+            "version": "20260827102000",
+            "name": "multicurrency_marketplace_funding_assertions_v1",
+            "sourceSha256": "741828a91360a9bc83f3bd9eb0ef08caaaf3a14d062b66a92e17958058b73094",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 87,
+            "filename": "20260827102500_multicurrency_marketplace_funding_purge_registry_v1.sql",
+            "version": "20260827102500",
+            "name": "multicurrency_marketplace_funding_purge_registry_v1",
+            "sourceSha256": "d835ef5bbd8e260aba3c5daa023ab31036db50c3c860b9e26847c64b563fe0aa",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 88,
+            "filename": "20260827103000_multicurrency_marketplace_inventory_projection_order_v1.sql",
+            "version": "20260827103000",
+            "name": "multicurrency_marketplace_inventory_projection_order_v1",
+            "sourceSha256": "2bc99cf2a6fb0d9d3b47d2066c7329a46623414d9c6fea9461e277fa2d0c2d4a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 89,
+            "filename": "20260827103500_multicurrency_marketplace_financial_posting_compatibility_v1.sql",
+            "version": "20260827103500",
+            "name": "multicurrency_marketplace_financial_posting_compatibility_v1",
+            "sourceSha256": "287e10158db827f8652702c1fda597026b158a545c0c77693459f9d547111465",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 90,
+            "filename": "20260827110000_multicurrency_stock_funding_schema_v1.sql",
+            "version": "20260827110000",
+            "name": "multicurrency_stock_funding_schema_v1",
+            "sourceSha256": "a7bbdbc76127cd19418231d29cf39ec9ad9ccbd249a23b3fc6e558d480d66599",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 91,
+            "filename": "20260827110500_multicurrency_stock_funding_assertions_v1.sql",
+            "version": "20260827110500",
+            "name": "multicurrency_stock_funding_assertions_v1",
+            "sourceSha256": "d905837f8bf617825c761ff70776cbd7daa9037cee696c997416525ece9d7bdf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 92,
+            "filename": "20260827111000_multicurrency_stock_funding_purge_registry_v1.sql",
+            "version": "20260827111000",
+            "name": "multicurrency_stock_funding_purge_registry_v1",
+            "sourceSha256": "560f392d5b1b6034e8f04e060652b0a2c12501b9dcea98871a0258b0595c4eb8",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 93,
+            "filename": "20260827111500_multicurrency_stock_buy_quote_v1.sql",
+            "version": "20260827111500",
+            "name": "multicurrency_stock_buy_quote_v1",
+            "sourceSha256": "3e97113a178e72478adaa9bd653a55815f64f27b8c3e6245c3ba1410dfe0a38e",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 94,
+            "filename": "20260827111600_multicurrency_stock_buy_quote_clock_v1.sql",
+            "version": "20260827111600",
+            "name": "multicurrency_stock_buy_quote_clock_v1",
+            "sourceSha256": "142bdc487005d0dcd1f706a81ae365872e573bfa13dd4e8f7e75df382165b2bd",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 95,
+            "filename": "20260827111700_multicurrency_stock_buy_quote_assertions_v1.sql",
+            "version": "20260827111700",
+            "name": "multicurrency_stock_buy_quote_assertions_v1",
+            "sourceSha256": "2990a2e56ebb192f08a712abf4d08b47fd396eeeda19d993fafcce5feaf8ce2d",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 96,
+            "filename": "20260827111800_multicurrency_stock_buy_quote_purge_registry_v1.sql",
+            "version": "20260827111800",
+            "name": "multicurrency_stock_buy_quote_purge_registry_v1",
+            "sourceSha256": "58a97a1adc75928beb05deef65788b12e854cbcf892f0264084110b566048418",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 97,
+            "filename": "20260827112000_multicurrency_stock_buy_settlement_v1.sql",
+            "version": "20260827112000",
+            "name": "multicurrency_stock_buy_settlement_v1",
+            "sourceSha256": "d779a3de947035f19f3d8f1112c70be3fe60d57da4c46cb5b0c52e6a8fc20bcb",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 98,
+            "filename": "20260827112100_multicurrency_stock_buy_settlement_clock_v1.sql",
+            "version": "20260827112100",
+            "name": "multicurrency_stock_buy_settlement_clock_v1",
+            "sourceSha256": "f571e8bc8d669575944ae6e1a2de1105fce5e05005856213041f241758f80625",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 99,
+            "filename": "20260827112200_multicurrency_stock_buy_settlement_assertions_v1.sql",
+            "version": "20260827112200",
+            "name": "multicurrency_stock_buy_settlement_assertions_v1",
+            "sourceSha256": "507eda88fa1cd6744e6dcb558c7da6e9eae077153472c7f624a48b2bad3dbdbe",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 100,
+            "filename": "20260827113000_multicurrency_stock_sell_settlement_v1.sql",
+            "version": "20260827113000",
+            "name": "multicurrency_stock_sell_settlement_v1",
+            "sourceSha256": "c01adfdae43d34acc7a7b5f7d81f3e8fe0e8a431043b6746b2f4d12e7c026c6b",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 101,
+            "filename": "20260827113100_multicurrency_stock_sell_settlement_assertions_v1.sql",
+            "version": "20260827113100",
+            "name": "multicurrency_stock_sell_settlement_assertions_v1",
+            "sourceSha256": "1f45a6694613613e7b86e50732372d4f8bcb283296b464190a3267412aa8d8c7",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 102,
+            "filename": "20260831100000_business_multicurrency_owner_identity_v1.sql",
+            "version": "20260831100000",
+            "name": "business_multicurrency_owner_identity_v1",
+            "sourceSha256": "58f39bdf7ddaf85e032fe977552a1655784e2855d0cdd271507bc6adf9e927d3",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 103,
+            "filename": "20260831101000_business_treasury_fx_commands_v1.sql",
+            "version": "20260831101000",
+            "name": "business_treasury_fx_commands_v1",
+            "sourceSha256": "33dbf7c3cd3d2431906389c45f7c11158234515a882f5d1a30472cd89664c5fe",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 104,
+            "filename": "20260831102000_business_procurement_funding_v1.sql",
+            "version": "20260831102000",
+            "name": "business_procurement_funding_v1",
+            "sourceSha256": "26d4c0ea097c256ffd2ffa8e9e5f408c5a8983c838fa932aa2a65e6d095eb17d",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 105,
+            "filename": "20260831103000_business_multicurrency_assertions_v1.sql",
+            "version": "20260831103000",
+            "name": "business_multicurrency_assertions_v1",
+            "sourceSha256": "d8348f205c71f05ce2fd7682d8b406ff38b9808a2c7207007a842f4c28c0b4a2",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 106,
+            "filename": "20260831103001_business_player_store_fx_final_v2.sql",
+            "version": "20260831103001",
+            "name": "business_player_store_fx_final_v2",
+            "sourceSha256": "abc34050d932199a43407917554d75db690271bae59edcea5e76186a7eff50bc",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 107,
+            "filename": "20260831232642_business_operating_period_clock_lease_v1.sql",
+            "version": "20260831232642",
+            "name": "business_operating_period_clock_lease_v1",
+            "sourceSha256": "677a345aa74643f3579df8b5b5bf3bc826262be8badd8ee7966c378404163347",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 108,
+            "filename": "20260831232656_business_store_period_tax_close_v1.sql",
+            "version": "20260831232656",
+            "name": "business_store_period_tax_close_v1",
+            "sourceSha256": "0f5053491dcc566f6adba9ba61e5f9e80ab60699157c3ded82b22a695da9594a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 109,
+            "filename": "20260831232707_business_legacy_sales_retirement_v1.sql",
+            "version": "20260831232707",
+            "name": "business_legacy_sales_retirement_v1",
+            "sourceSha256": "940629645a451809a1302a783d742a93075eb34817001316225df20c0f00d34f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 110,
+            "filename": "20260831232719_business_store_sales_convergence_assertions_v1.sql",
+            "version": "20260831232719",
+            "name": "business_store_sales_convergence_assertions_v1",
+            "sourceSha256": "1ce69c9d208d161daa81e9c0165b2bfec828534274f3c360ebd06b82c17ead3d",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 111,
+            "filename": "20260901050500_fix_business_formation_checking_wallet_v1.sql",
+            "version": "20260901050500",
+            "name": "fix_business_formation_checking_wallet_v1",
+            "sourceSha256": "3a5c07b8b3e71115349c0e86d06abf9772a3336cdc347e86a80ddc1aa53cdc45",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 112,
+            "filename": "20260902090000_business_equipment_read_period_projection_v2.sql",
+            "version": "20260902090000",
+            "name": "business_equipment_read_period_projection_v2",
+            "sourceSha256": "f181ec42848775fbc1a3520dfae1f44630735f82ae1b46238e809a273df1b451",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 113,
+            "filename": "20260902091000_business_stockroom_numeric_projection_v2.sql",
+            "version": "20260902091000",
+            "name": "business_stockroom_numeric_projection_v2",
+            "sourceSha256": "f88be02e7e1722aedf383dd1183e578b72febe8ec259c1c93d455dc891d7e43a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 114,
+            "filename": "20260902092000_business_workspace_read_projections_v2.sql",
+            "version": "20260902092000",
+            "name": "business_workspace_read_projections_v2",
+            "sourceSha256": "b9decb0e4be072665d8f11c74dcad13b60321d4ed1b68c1fe1a97cd49ee1cd75",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 115,
+            "filename": "20260902103000_business_legacy_ownership_continuity_v2.sql",
+            "version": "20260902103000",
+            "name": "business_legacy_ownership_continuity_v2",
+            "sourceSha256": "4e32d63956c32b03eb4b61e94f6ab883ddc89564cc2166469d6f72a8574bff5e",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 116,
+            "filename": "20260903150000_enforce_provisioned_stock_baseline_ticks_v1.sql",
+            "version": "20260903150000",
+            "name": "enforce_provisioned_stock_baseline_ticks_v1",
+            "sourceSha256": "e744225b61faf3303c7819a48b96d5a36d472dea899b54b9ffce08f5d97f3872",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 117,
+            "filename": "20260903162000_seed_release_store_offer_rollback_compatibility_v1.sql",
+            "version": "20260903162000",
+            "name": "seed_release_store_offer_rollback_compatibility_v1",
+            "sourceSha256": "3dabb7d8c2b41a30392101f160d05bf6055cd1470ee6d16fe56d0e895aea8e5d",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 118,
+            "filename": "20260903163000_seed_store_identity_promotion_compatibility_v1.sql",
+            "version": "20260903163000",
+            "name": "seed_store_identity_promotion_compatibility_v1",
+            "sourceSha256": "447c70ade11fa6bd4cbded9f4e0e545afe2db81d8103d455f7f7088cb0672ce3",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 119,
+            "filename": "20260903170000_seed_release_store_identity_promotion_v1.sql",
+            "version": "20260903170000",
+            "name": "seed_release_store_identity_promotion_v1",
+            "sourceSha256": "906f6aa53b9736accc4f7b968f162386a400ce2c651e518fb902aea314f6d889",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 120,
+            "filename": "20260903171000_seed_jsonb_object_length_compatibility_v1.sql",
+            "version": "20260903171000",
+            "name": "seed_jsonb_object_length_compatibility_v1",
+            "sourceSha256": "640f3d54715145000e0bb24deb8403d6919bce171ff38a55c981d4726dd2cb4f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 121,
+            "filename": "20260904053000_business_workspace_nonactive_read_v2.sql",
+            "version": "20260904053000",
+            "name": "business_workspace_nonactive_read_v2",
+            "sourceSha256": "abeb1d06e3da72c5705859e25ed52812ce42285ffec860d6e3fbf5e1e4452af8",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 122,
+            "filename": "20260917214421_admin_business_supervision_v2.sql",
+            "version": "20260917214421",
+            "name": "admin_business_supervision_v2",
+            "sourceSha256": "a2919621e3f48013a8bf63d8e30d13f31c3507e975f6f02f7c1b960f2ca5ab04",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 123,
+            "filename": "20260917214558_admin_business_supervision_snapshot_v2.sql",
+            "version": "20260917214558",
+            "name": "admin_business_supervision_snapshot_v2",
+            "sourceSha256": "fe7734a98c5ab4a3c52eec326644e02bdf5a1cce7adebc99dd4da24a6f10efc2",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 124,
+            "filename": "20260918014630_business_financial_reporting_v1.sql",
+            "version": "20260918014630",
+            "name": "business_financial_reporting_v1",
+            "sourceSha256": "69f6431abd472ac2de636ac6472a7767741a8640f6dc388713fd46d78336a69e",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 125,
+            "filename": "20260918032342_business_accounting_evidence_v1.sql",
+            "version": "20260918032342",
+            "name": "business_accounting_evidence_v1",
+            "sourceSha256": "e42be17a03b4f252d92ef46ffc726ba83d5ee909ab3db3d3f80d87979e3dda2e",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 126,
+            "filename": "20260918032648_business_financial_statements_v1.sql",
+            "version": "20260918032648",
+            "name": "business_financial_statements_v1",
+            "sourceSha256": "498506e1b8d4029a9e5dfcf3744de3204b021045cb2d6df5af2ab35cc2fa533a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 127,
+            "filename": "20260918034225_business_reporting_adapters_v1.sql",
+            "version": "20260918034225",
+            "name": "business_reporting_adapters_v1",
+            "sourceSha256": "b644975c247fbdfdb07cd136878f6aaef3c6a9228c5d2e3d28b89cac2bd61d78",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 128,
+            "filename": "20260918035524_business_reporting_purge_convergence_v1.sql",
+            "version": "20260918035524",
+            "name": "business_reporting_purge_convergence_v1",
+            "sourceSha256": "7e9efc66a5955e698613524a7e0b6320bc3bf60a30cccdbf00bf34651189cc40",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 129,
+            "filename": "20260918070248_business_common_equity_invariants_v1.sql",
+            "version": "20260918070248",
+            "name": "business_common_equity_invariants_v1",
+            "sourceSha256": "1e6e14b33a6a418c13ca09cf99190a71063fec0289699f01095a0f130c4f499a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 130,
+            "filename": "20260918080340_business_primary_ipo_operator_authority_v1.sql",
+            "version": "20260918080340",
+            "name": "business_primary_ipo_operator_authority_v1",
+            "sourceSha256": "4b3a4758f19b40b296d8bda05cea79fe131343348641c7394d0ca94ef88e8630",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 131,
+            "filename": "20260918080404_business_primary_ipo_commands_v1.sql",
+            "version": "20260918080404",
+            "name": "business_primary_ipo_commands_v1",
+            "sourceSha256": "74707422a3f7618d3d9ea075d7f7efc7209ccfd5641bf257bc2dd11c39a072e5",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 132,
+            "filename": "20260918080420_business_primary_ipo_purge_registry_v1.sql",
+            "version": "20260918080420",
+            "name": "business_primary_ipo_purge_registry_v1",
+            "sourceSha256": "a367c27ea61476452fc14107bddfebcbc2dddd2c0373ae3bf5b2c5d961dff1cb",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 133,
+            "filename": "20260918083200_business_primary_ipo_purge_convergence_v1.sql",
+            "version": "20260918083200",
+            "name": "business_primary_ipo_purge_convergence_v1",
+            "sourceSha256": "b0577110f621b016fd2adfb4bda1fe681a7423af9ec2a899708621cf58673762",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 134,
+            "filename": "20260918092720_business_financial_market_ports_v1.sql",
+            "version": "20260918092720",
+            "name": "business_financial_market_ports_v1",
+            "sourceSha256": "9821841dc004fe57fb58cf7f3e57c5da2108ce134254aa3a60e45cea45e564ff",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 135,
+            "filename": "20260918093021_business_market_listing_consumer_v1.sql",
+            "version": "20260918093021",
+            "name": "business_market_listing_consumer_v1",
+            "sourceSha256": "b94d987a217cfde692e739737e45391b45561a575ad1cb7aaa3a2dd96144fa2e",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 136,
+            "filename": "20260918093133_business_market_common_share_settlement_v1.sql",
+            "version": "20260918093133",
+            "name": "business_market_common_share_settlement_v1",
+            "sourceSha256": "4fe7f476902321c153c2fffa46c751cef667942041c57786d16012e8c384454a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 137,
+            "filename": "20260918093319_business_financial_market_purge_registry_v1.sql",
+            "version": "20260918093319",
+            "name": "business_financial_market_purge_registry_v1",
+            "sourceSha256": "8c18a16d13babbdf9d4bf21927f33409d2d67c97aeb1b9b803417ab2d2da3d72",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 138,
+            "filename": "20260918095220_business_financial_market_purge_convergence_v1.sql",
+            "version": "20260918095220",
+            "name": "business_financial_market_purge_convergence_v1",
+            "sourceSha256": "fd52d2b9fb0a1f8e025bcd20485418cdb23ee6751b2213032baef1a02d027c79",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 139,
+            "filename": "20260920081000_phase15_reconcile_stock_tick_archive_lifecycle_v1.sql",
+            "version": "20260920081000",
+            "name": "phase15_reconcile_stock_tick_archive_lifecycle_v1",
+            "sourceSha256": "b603366e25f83e2859dce953cd3f34b23bc71b26292ed3a8eb5f8c8c8f5fd9e5",
+            "statementCount": 1,
+            "outerTransactionStripped": false
+          },
+          {
+            "order": 140,
+            "filename": "20260920081100_phase15_reconcile_stock_candle_retention_v1.sql",
+            "version": "20260920081100",
+            "name": "phase15_reconcile_stock_candle_retention_v1",
+            "sourceSha256": "7648c4d7b9aefb97272fedf256d44e371ee1e1a561302b1e7184db95de1b638d",
+            "statementCount": 1,
+            "outerTransactionStripped": false
+          },
+          {
+            "order": 141,
+            "filename": "20260920081200_phase15_reconcile_game_license_purge_foundation_v1.sql",
+            "version": "20260920081200",
+            "name": "phase15_reconcile_game_license_purge_foundation_v1",
+            "sourceSha256": "cdde1facb8185305d00fb98af76f8a17dc4b46336a25e996974e5d5f40411fb7",
+            "statementCount": 1,
+            "outerTransactionStripped": false
+          },
+          {
+            "order": 142,
+            "filename": "20260920081300_phase15_reconcile_game_purge_internal_contracts_v1.sql",
+            "version": "20260920081300",
+            "name": "phase15_reconcile_game_purge_internal_contracts_v1",
+            "sourceSha256": "93c968c8592fbbe6b2d2ee95767deaad29523c8de102342b81f3671503186c48",
+            "statementCount": 1,
+            "outerTransactionStripped": false
+          },
+          {
+            "order": 143,
+            "filename": "20260920081400_phase15_reconcile_game_purge_operator_controls_v1.sql",
+            "version": "20260920081400",
+            "name": "phase15_reconcile_game_purge_operator_controls_v1",
+            "sourceSha256": "701f9f8d155384fcdf1ea1dcebf1ebbdf6510c1e5d743de9375ba2889c0b8f82",
+            "statementCount": 1,
+            "outerTransactionStripped": false
+          },
+          {
+            "order": 144,
+            "filename": "20260920081500_phase15_reconcile_storage_health_and_cleanup_v1.sql",
+            "version": "20260920081500",
+            "name": "phase15_reconcile_storage_health_and_cleanup_v1",
+            "sourceSha256": "401acbd15db03f9401292dca4b04bd39d8703e198d8af0e7f2eda679c119a9bd",
+            "statementCount": 1,
+            "outerTransactionStripped": false
+          },
+          {
+            "order": 145,
+            "filename": "20260920081600_phase15_reassert_current_purge_contract_v1.sql",
+            "version": "20260920081600",
+            "name": "phase15_reassert_current_purge_contract_v1",
+            "sourceSha256": "6bb685f4c2af96e113cf1593ebca645c63ca0ac9914a3a9c8cfdb787e958fc78",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 146,
+            "filename": "20260920081700_phase15_reassert_auth_admin_routines_v1.sql",
+            "version": "20260920081700",
+            "name": "phase15_reassert_auth_admin_routines_v1",
+            "sourceSha256": "1cfe9f264fea87a7d0a1934a7d2e27777c53bc8d70c9e8dd4746eb66ed088f6a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 147,
+            "filename": "20260920081800_phase15_reassert_campaign_market_routines_v1.sql",
+            "version": "20260920081800",
+            "name": "phase15_reassert_campaign_market_routines_v1",
+            "sourceSha256": "97f651d79cda42ec1cd36dc45cadc48eb9a62329a874a8fd3b9009ec096a2f9f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 148,
+            "filename": "20260920081900_phase15_reassert_meridian_initializers_v1.sql",
+            "version": "20260920081900",
+            "name": "phase15_reassert_meridian_initializers_v1",
+            "sourceSha256": "8e2002bd96dc666803d36a7decccfb52be7113db16c911229afe5e933c2d9d7a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 149,
+            "filename": "20260920082000_phase15_retire_superseded_live_contracts_v1.sql",
+            "version": "20260920082000",
+            "name": "phase15_retire_superseded_live_contracts_v1",
+            "sourceSha256": "ed8e5b411f7493adf2398da17f5ed38525e9fa0d3871761745fd611c77841967",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 150,
+            "filename": "20260920082100_phase15_close_live_shaped_schema_parity_v1.sql",
+            "version": "20260920082100",
+            "name": "phase15_close_live_shaped_schema_parity_v1",
+            "sourceSha256": "99dbcbf830adc335e2beb212d5eda8bf240b9713e335c918f8eb56ec9e93ba50",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 151,
+            "filename": "20260920082200_phase15_close_database_advisor_findings_v1.sql",
+            "version": "20260920082200",
+            "name": "phase15_close_database_advisor_findings_v1",
+            "sourceSha256": "08b072d5ed40423ee59c49d3bc2fb9e9bd48b57ee578b79513dfb970ab6ca7fe",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          }
+        ]
+      },
+      "suffix": {
+        "schemaVersion": 1,
+        "environment": "staging",
+        "migrationCount": 1,
+        "migrations": [
+          {
+            "order": 1,
+            "filename": "20260921044500_reconcile_internal_runner_nonce_service_role_authority_v1.sql",
+            "version": "20260921044500",
+            "name": "reconcile_internal_runner_nonce_service_role_authority_v1",
+            "sourceSha256": "5c561f2bd09a2c010cb36650242c29a04d3b2ad8920043c1055db6f350d38d54",
+            "rawSha256": "5eeaa1f631f4f532835b92f344bdafe62d6ee0690e785991e9e419f025841466",
+            "statementCount": 1
+          }
+        ]
+      }
+    },
+    "production": {
+      "schemaVersion": 1,
+      "bundle": {
+        "schemaVersion": 1,
+        "environment": "production",
+        "cutoff": "20260819062000",
+        "commonMigrationCount": 151,
+        "preludeMigrationCount": 18,
+        "migrationCount": 169,
+        "migrations": [
+          {
+            "order": 1,
+            "filename": "20260812081410_add_license_expiration_and_purge_confirmation_foundation_v1.sql",
+            "version": "20260812081410",
+            "name": "add_license_expiration_and_purge_confirmation_foundation_v1",
+            "sourceSha256": "9d8a34b55312a4b0d72354f05a7e513b83f6a2f30f339e00fc080ef55580fa63",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 2,
+            "filename": "20260812081833_restrict_game_purge_to_dedicated_permission_v1.sql",
+            "version": "20260812081833",
+            "name": "restrict_game_purge_to_dedicated_permission_v1",
+            "sourceSha256": "ce8a5f24922845665c842111e87e9735957f1751098619cfba9a769657f45898",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 3,
+            "filename": "20260812082207_harden_game_purge_grace_and_arm_binding_v1.sql",
+            "version": "20260812082207",
+            "name": "harden_game_purge_grace_and_arm_binding_v1",
+            "sourceSha256": "23589a5e286b6067faba636abb030e49388f4f19b05dda225158821775e425a2",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 4,
+            "filename": "20260812082436_add_game_purge_dispatch_state_machine_v1.sql",
+            "version": "20260812082436",
+            "name": "add_game_purge_dispatch_state_machine_v1",
+            "sourceSha256": "d41f854343a1c594a96102ef9f87ed32d9eefdaefcf8684cd0c7230157c428d8",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 5,
+            "filename": "20260812082727_add_resumable_game_purge_database_cursor_v1.sql",
+            "version": "20260812082727",
+            "name": "add_resumable_game_purge_database_cursor_v1",
+            "sourceSha256": "9294a86646190db8879a2a6480a052cfd1cf9237daf0eb50311f6c454129eb14",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 6,
+            "filename": "20260812082927_add_atomic_game_purge_finalizer_v1.sql",
+            "version": "20260812082927",
+            "name": "add_atomic_game_purge_finalizer_v1",
+            "sourceSha256": "a9455fef68ce3faa82d47176eec20c8c23fecd9a1d8869a6504386da8c028bda",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 7,
+            "filename": "20260812082948_patch_game_purge_failure_recovery_v1.sql",
+            "version": "20260812082948",
+            "name": "patch_game_purge_failure_recovery_v1",
+            "sourceSha256": "1fe92dd633a1a78ab11ab40129eca8ba586d1801480028d3b807463394ba49a1",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 8,
+            "filename": "20260812103000_seed_meridian_customs_security_intrusion_v1.sql",
+            "version": "20260812103000",
+            "name": "seed_meridian_customs_security_intrusion_v1",
+            "sourceSha256": "9e73f7f9e8831fdad45610f0cbc356387746a39f82cd5cc1c79fc4f8ed6476a3",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 9,
+            "filename": "20260812111000_seed_meridian_security_center_attack_v1.sql",
+            "version": "20260812111000",
+            "name": "seed_meridian_security_center_attack_v1",
+            "sourceSha256": "9b59ed4558892796ac296f3842132b476f4873fb8e005bfd19a62f59808b691c",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 10,
+            "filename": "20260812114000_seed_meridian_emergency_response_v1.sql",
+            "version": "20260812114000",
+            "name": "seed_meridian_emergency_response_v1",
+            "sourceSha256": "9abd42e10c298b0fbcc9969ec501dc449a1a23e97257cc2b19ed65a73b4d8001",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 11,
+            "filename": "20260813090000_add_durable_license_issuance_queue_v1.sql",
+            "version": "20260813090000",
+            "name": "add_durable_license_issuance_queue_v1",
+            "sourceSha256": "949407c5935e971ec955df30631ec76254bdaa22daf7e28b9b6ee96f5c0fbfbb",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 12,
+            "filename": "20260813091500_harden_license_email_idempotency_window_v1.sql",
+            "version": "20260813091500",
+            "name": "harden_license_email_idempotency_window_v1",
+            "sourceSha256": "eeed7094b528c2d376975755293a95e7c0c143d5a08b94ded009a3422c96ce3f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 13,
+            "filename": "20260813093000_add_license_issuance_scheduler_safety_switch_v1.sql",
+            "version": "20260813093000",
+            "name": "add_license_issuance_scheduler_safety_switch_v1",
+            "sourceSha256": "36b85bcd7349f5b53b607ec0bfe2ac8a97b41563e814792c8a8048ef9491a3bf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 14,
+            "filename": "20260813100000_harden_license_fulfillment_snapshots_v1.sql",
+            "version": "20260813100000",
+            "name": "harden_license_fulfillment_snapshots_v1",
+            "sourceSha256": "d9f36f3e0795122273054ac5c0398f6c7c7e7e4050b6507431e4f6d457abd105",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 15,
+            "filename": "20260813103000_add_license_email_outbox_schema_v1.sql",
+            "version": "20260813103000",
+            "name": "add_license_email_outbox_schema_v1",
+            "sourceSha256": "93cbdcb3fc3661eeb500bc4fc2ba11d544eb9bf5f54bb77757cec367b51b906d",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 16,
+            "filename": "20260813103100_add_atomic_license_materialization_outbox_v2.sql",
+            "version": "20260813103100",
+            "name": "add_atomic_license_materialization_outbox_v2",
+            "sourceSha256": "685f54b4090eb5732bab51320a3155f4e2eb335a481f37667b05b1d9c7395844",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 17,
+            "filename": "20260813103200_add_durable_license_email_worker_queue_v1.sql",
+            "version": "20260813103200",
+            "name": "add_durable_license_email_worker_queue_v1",
+            "sourceSha256": "98add205231201026e4cf80dc7ca3846bb47d6114d459d71f24e8f8449295722",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 18,
+            "filename": "20260813103300_add_license_delivery_operations_v1.sql",
+            "version": "20260813103300",
+            "name": "add_license_delivery_operations_v1",
+            "sourceSha256": "925424c4dedd33e0d9fe07bd3f988680960ea7baad4815d434f8e415fc8f75aa",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 19,
+            "filename": "20260819062000_business_authority_foundation_v2.sql",
+            "version": "20260819062000",
+            "name": "business_authority_foundation_v2",
+            "sourceSha256": "3cc315ed46aee94fdd8921edcb4e7fd87213f90c1f7cc92da891f7f3f96d06a6",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 20,
+            "filename": "20260819062100_business_party_banking_and_activation_v2.sql",
+            "version": "20260819062100",
+            "name": "business_party_banking_and_activation_v2",
+            "sourceSha256": "029293a33a6f145bdde84dc071ca5e82c08433a93d5126d6fef8fad158d73b96",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 21,
+            "filename": "20260819063000_business_governance_equity_v2.sql",
+            "version": "20260819063000",
+            "name": "business_governance_equity_v2",
+            "sourceSha256": "80137f14ad8faa40b634f11582441215e72a725ee0fcc069c88b72c0cb49525b",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 22,
+            "filename": "20260819064000_business_recipe_access_v2.sql",
+            "version": "20260819064000",
+            "name": "business_recipe_access_v2",
+            "sourceSha256": "3e759fcb05d57a166b891394a4acd4033431a865fcb01ff0d33036489495ea4b",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 23,
+            "filename": "20260819064100_business_stockroom_read_v2.sql",
+            "version": "20260819064100",
+            "name": "business_stockroom_read_v2",
+            "sourceSha256": "b9f0330412e920df5c42dcd02e849f7aecbfb65f2f1b5d15ef844a0fb5db8c91",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 24,
+            "filename": "20260819064110_business_recipe_access_read_v2.sql",
+            "version": "20260819064110",
+            "name": "business_recipe_access_read_v2",
+            "sourceSha256": "cb1a362fb11e67b639ae69128f35fe39e68d015e1af0ce5d0b43602d0e9550bc",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 25,
+            "filename": "20260819064120_business_legacy_creation_tax_compat_v2.sql",
+            "version": "20260819064120",
+            "name": "business_legacy_creation_tax_compat_v2",
+            "sourceSha256": "110381d38cb212f9e3af9f0d18dee064ee41326c0f9673ee04cc7ca915be5d45",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 26,
+            "filename": "20260820070000_store_quote_pricing_resolver_v2.sql",
+            "version": "20260820070000",
+            "name": "store_quote_pricing_resolver_v2",
+            "sourceSha256": "2ba28d4868378553920f8628a7c1ead34abc05641248eef72334a9f5c5e4adbf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 27,
+            "filename": "20260821060000_business_store_procurement_v2.sql",
+            "version": "20260821060000",
+            "name": "business_store_procurement_v2",
+            "sourceSha256": "cfcf554423d6f1d64fd90949fc7bd97e246f445e08c3a8134c8027bdccca2eee",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 28,
+            "filename": "20260821130000_business_stockroom_locations_v2.sql",
+            "version": "20260821130000",
+            "name": "business_stockroom_locations_v2",
+            "sourceSha256": "037448b9e8131248dd178111b3165ad08d5cf55cb69c0fe4ec0897dd85581478",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 29,
+            "filename": "20260821131000_business_stockroom_snapshot_v2.sql",
+            "version": "20260821131000",
+            "name": "business_stockroom_snapshot_v2",
+            "sourceSha256": "98e81f86e6160285994aacd7cab455ff906244966456f3d3716b4738aef792ae",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 30,
+            "filename": "20260822090000_business_workforce_payroll_foundation_v2.sql",
+            "version": "20260822090000",
+            "name": "business_workforce_payroll_foundation_v2",
+            "sourceSha256": "84a5cd16ea7a88d5ed69d086b9d1ce5c1804e5cd165aaac1416493ce90cb46ed",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 31,
+            "filename": "20260822103000_business_workforce_payroll_scope_hardening_v2.sql",
+            "version": "20260822103000",
+            "name": "business_workforce_payroll_scope_hardening_v2",
+            "sourceSha256": "ab98599eafc8b2a215c7815bd6de33401b4330841ade089b4e43005c08f433d8",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 32,
+            "filename": "20260822120000_business_workforce_candidate_hiring_v2.sql",
+            "version": "20260822120000",
+            "name": "business_workforce_candidate_hiring_v2",
+            "sourceSha256": "d104c858ad7bd0538f70b44c0fe5dd4ab0764fe682bd453d5604ac7fceeef7e1",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 33,
+            "filename": "20260822140000_business_payroll_clock_v2.sql",
+            "version": "20260822140000",
+            "name": "business_payroll_clock_v2",
+            "sourceSha256": "288fc990cc1f4c4ae348ad65ef1a5ab3cec72abca5185ddd50ca1932c6106d94",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 34,
+            "filename": "20260822140100_business_payroll_settlement_v2.sql",
+            "version": "20260822140100",
+            "name": "business_payroll_settlement_v2",
+            "sourceSha256": "0af9d70e7e7c20626df8630533858163dac470f5c7a9569ba7f33ce4cad496d9",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 35,
+            "filename": "20260822140200_business_cycle_payroll_cutover_v2.sql",
+            "version": "20260822140200",
+            "name": "business_cycle_payroll_cutover_v2",
+            "sourceSha256": "83d17f266d7d8b7747ee6515aa523b507e82060d973fa58b82480615b19b9cdf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 36,
+            "filename": "20260822140300_business_production_labor_reservations_v2.sql",
+            "version": "20260822140300",
+            "name": "business_production_labor_reservations_v2",
+            "sourceSha256": "e35f42d68715a0b09f2737229989abd86869d252f2f52c7b2eb61607e5f0f823",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 37,
+            "filename": "20260823100000_business_equipment_ownership_profiles_v2.sql",
+            "version": "20260823100000",
+            "name": "business_equipment_ownership_profiles_v2",
+            "sourceSha256": "550bc89ac5efddf22291dd519145b951a0420fd474ecf3462e2516be7c3a3f26",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 38,
+            "filename": "20260823100100_business_recipe_equipment_requirements_v2.sql",
+            "version": "20260823100100",
+            "name": "business_recipe_equipment_requirements_v2",
+            "sourceSha256": "10ac31701fabd3d4a481b66bf53ce9032af419f0420d2c15df2ec19e7f18c0f6",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 39,
+            "filename": "20260823100110_business_recipe_equipment_requirement_sync_v2.sql",
+            "version": "20260823100110",
+            "name": "business_recipe_equipment_requirement_sync_v2",
+            "sourceSha256": "017879f98c43de2dd2f692769ae6f7fc9503c606309651dde3a28ccead2bb5cf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 40,
+            "filename": "20260823100200_business_equipment_installation_schema_v2.sql",
+            "version": "20260823100200",
+            "name": "business_equipment_installation_schema_v2",
+            "sourceSha256": "17c7274bea2ceb4b5c2e30f2d9bb865d262d016207df9cad6a0739f20816a869",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 41,
+            "filename": "20260823100210_business_equipment_materialization_v2.sql",
+            "version": "20260823100210",
+            "name": "business_equipment_materialization_v2",
+            "sourceSha256": "cec0d35a92c624a60f0a1f1c875613b490760910ab73deddc955631fbfb923fe",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 42,
+            "filename": "20260823100220_business_equipment_install_command_v2.sql",
+            "version": "20260823100220",
+            "name": "business_equipment_install_command_v2",
+            "sourceSha256": "558a831e7d232faab6c10421614abb65f729e26b9b8e62b1c8f87c9e79375e8b",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 43,
+            "filename": "20260823100300_business_equipment_reservation_schema_v2.sql",
+            "version": "20260823100300",
+            "name": "business_equipment_reservation_schema_v2",
+            "sourceSha256": "6197e6abbdd6e9ca9e65293220388657d370600e65b9e4f03d5b7107af861482",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 44,
+            "filename": "20260823100310_business_equipment_reserve_command_v2.sql",
+            "version": "20260823100310",
+            "name": "business_equipment_reserve_command_v2",
+            "sourceSha256": "aa540735801f3753c5bdee2e57f46d5998e4468760464614a9ba66a59b26d97f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 45,
+            "filename": "20260823100320_business_equipment_transition_status_read_v2.sql",
+            "version": "20260823100320",
+            "name": "business_equipment_transition_status_read_v2",
+            "sourceSha256": "d10d7717e6ce63bed641935412fa3ea38a28a87277d093a9d0a6f7a93d5f0281",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 46,
+            "filename": "20260823100400_business_production_equipment_capacity_v2.sql",
+            "version": "20260823100400",
+            "name": "business_production_equipment_capacity_v2",
+            "sourceSha256": "c130e9f8c96d2aac77dca37b39559acd308001d60f433530d73c19c5bc658dbc",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 47,
+            "filename": "20260823110000_business_manufacturing_job_foundation_v2.sql",
+            "version": "20260823110000",
+            "name": "business_manufacturing_job_foundation_v2",
+            "sourceSha256": "a29f2dfce2f7a6da88fa10ecffb59d5a060308dffd07043eef8b261e80143b51",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 48,
+            "filename": "20260823110100_business_manufacturing_worker_and_read_v2.sql",
+            "version": "20260823110100",
+            "name": "business_manufacturing_worker_and_read_v2",
+            "sourceSha256": "9f1e6ace6b65f933499548ae9bfa3555c1d2c19b308120ba1b3381c78ab43856",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 49,
+            "filename": "20260823110200_business_manufacturing_start_resources_v2.sql",
+            "version": "20260823110200",
+            "name": "business_manufacturing_start_resources_v2",
+            "sourceSha256": "4145a1865bad8ceca322958d4a1c4dc8ae3b1d3a7b02d16381d55ceb6d593b27",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 50,
+            "filename": "20260823110210_business_manufacturing_resource_schema_assertions_v2.sql",
+            "version": "20260823110210",
+            "name": "business_manufacturing_resource_schema_assertions_v2",
+            "sourceSha256": "d2dbcd97a5c145b55c4f08379dd8388341d197a5ebf9159760743f71943c4fd6",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 51,
+            "filename": "20260823110300_business_manufacturing_completion_v2.sql",
+            "version": "20260823110300",
+            "name": "business_manufacturing_completion_v2",
+            "sourceSha256": "d381d5010c36f1323f35db99d6d6b5fe70942e16ba2928c0602df03ea6257088",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 52,
+            "filename": "20260823110310_business_manufacturing_completion_schema_assertions_v2.sql",
+            "version": "20260823110310",
+            "name": "business_manufacturing_completion_schema_assertions_v2",
+            "sourceSha256": "53b7b639d9a943a529f0991acb21b89b6771998c6cfdcc317deeff58701510d6",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 53,
+            "filename": "20260823110400_business_manufacturing_recovery_v2.sql",
+            "version": "20260823110400",
+            "name": "business_manufacturing_recovery_v2",
+            "sourceSha256": "432b5aac626340081fc4495a47f128c83cde2617c93cd20b0dd213bcfc4eea4c",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 54,
+            "filename": "20260823110410_business_manufacturing_recovery_schema_assertions_v2.sql",
+            "version": "20260823110410",
+            "name": "business_manufacturing_recovery_schema_assertions_v2",
+            "sourceSha256": "163d72a173f524fa28d24ef1feb59ea523e6eaac42b37c2a8c7fa229d37f5a77",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 55,
+            "filename": "20260823110500_business_manufacturing_player_api_v2.sql",
+            "version": "20260823110500",
+            "name": "business_manufacturing_player_api_v2",
+            "sourceSha256": "f62dc2f357bbf5fd90e7379f0c902f3415814c60c92457963c76c09a48381922",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 56,
+            "filename": "20260823115900_business_manufacturing_manifest_trigger_fix_v2.sql",
+            "version": "20260823115900",
+            "name": "business_manufacturing_manifest_trigger_fix_v2",
+            "sourceSha256": "be6d41c71d1320abb826b046961a6509d55cb12fc0eaa6b2c41d6786226d3802",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 57,
+            "filename": "20260824100000_store_seller_offer_foundation_v2.sql",
+            "version": "20260824100000",
+            "name": "store_seller_offer_foundation_v2",
+            "sourceSha256": "fd2137dd482fc667de9d24ecafaa95151e96ab3cb152179b61519e1b11f2198a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 58,
+            "filename": "20260824100010_store_seeded_offer_compatibility_v2.sql",
+            "version": "20260824100010",
+            "name": "store_seeded_offer_compatibility_v2",
+            "sourceSha256": "da17de2465716fe28bb8cdab4cb2bd17c7914c340bf661aff48a897b5cf9d2fc",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 59,
+            "filename": "20260824100020_store_seller_offer_commands_v2.sql",
+            "version": "20260824100020",
+            "name": "store_seller_offer_commands_v2",
+            "sourceSha256": "9eea465ff07032f07a372dffbcf84c24cdbdca1420bb3435f7148c3453789d85",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 60,
+            "filename": "20260824100030_store_seller_offer_aggregation_v2.sql",
+            "version": "20260824100030",
+            "name": "store_seller_offer_aggregation_v2",
+            "sourceSha256": "9cb7a8d68ea0d3086a852c2750f3151e9412d6d4f2493952f84770e23c1caa90",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 61,
+            "filename": "20260824100040_store_seller_offer_schema_assertions_v2.sql",
+            "version": "20260824100040",
+            "name": "store_seller_offer_schema_assertions_v2",
+            "sourceSha256": "b91a752a5732ad0bba5e4ea30c823807b3b56403f8b59954d2b848423bfa3a52",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 62,
+            "filename": "20260824100041_store_seller_offer_identity_assertions_v2.sql",
+            "version": "20260824100041",
+            "name": "store_seller_offer_identity_assertions_v2",
+            "sourceSha256": "b43a2c3351a42474ccbe5fea1323f85c7978ce8646b3a17219c994d6a69ae658",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 63,
+            "filename": "20260824110000_business_store_listing_inventory_poster_v2.sql",
+            "version": "20260824110000",
+            "name": "business_store_listing_inventory_poster_v2",
+            "sourceSha256": "8562560cee6bf36f0e7f55a934a18be5eb237112acddce5aa22d7ba36edbeef8",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 64,
+            "filename": "20260824110010_business_store_listing_inventory_commands_v2.sql",
+            "version": "20260824110010",
+            "name": "business_store_listing_inventory_commands_v2",
+            "sourceSha256": "c4bc558e976f0339d19d41c200ff49db83f9bc2b105b4dd2664c8766b62cf988",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 65,
+            "filename": "20260824110015_business_store_listing_inventory_projection_v2.sql",
+            "version": "20260824110015",
+            "name": "business_store_listing_inventory_projection_v2",
+            "sourceSha256": "9446f0ae2d289b8ca4a59ccaec2516ca158268d0412284c4754bd634ca4a5819",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 66,
+            "filename": "20260824110020_business_store_listing_inventory_assertions_v2.sql",
+            "version": "20260824110020",
+            "name": "business_store_listing_inventory_assertions_v2",
+            "sourceSha256": "9e6375d4eb019d4d119613ecea24f658277cf375a44808a73e6b815e365bbf8f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 67,
+            "filename": "20260824120000_store_offer_withdrawal_foundation_v2.sql",
+            "version": "20260824120000",
+            "name": "store_offer_withdrawal_foundation_v2",
+            "sourceSha256": "575fe18ac7e2cfd254b093800bedb650b3a638a6a67745f43077103a6c3f32cf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 68,
+            "filename": "20260824120010_store_offer_withdrawal_request_command_v2.sql",
+            "version": "20260824120010",
+            "name": "store_offer_withdrawal_request_command_v2",
+            "sourceSha256": "c24d9b79646d673079b5ce812185d976de4007a63fd61bae5af12492db9e2928",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 69,
+            "filename": "20260824120020_store_offer_withdrawal_processor_v2.sql",
+            "version": "20260824120020",
+            "name": "store_offer_withdrawal_processor_v2",
+            "sourceSha256": "11eeca587039d32d7ad4f613ad606a41a4147dfe3d912aba5527568eef7f3e66",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 70,
+            "filename": "20260824120030_store_offer_withdrawal_assertions_v2.sql",
+            "version": "20260824120030",
+            "name": "store_offer_withdrawal_assertions_v2",
+            "sourceSha256": "63f6d514bb9cd0862b51f4cb10fe3e861e0981fff8d8456c0f5fed171bfa9f84",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 71,
+            "filename": "20260825100000_business_store_offer_quote_schema_v2.sql",
+            "version": "20260825100000",
+            "name": "business_store_offer_quote_schema_v2",
+            "sourceSha256": "c9f5501f40db386b98124973411d00e813bd9ef2fd3be26a2781ff8a71965d16",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 72,
+            "filename": "20260825100010_business_store_offer_quote_result_v2.sql",
+            "version": "20260825100010",
+            "name": "business_store_offer_quote_result_v2",
+            "sourceSha256": "76100725c7ce0a2a534f92676497766acac5167137b1b13f2ef964d95ccc5733",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 73,
+            "filename": "20260825100020_business_store_offer_quote_command_v2.sql",
+            "version": "20260825100020",
+            "name": "business_store_offer_quote_command_v2",
+            "sourceSha256": "7984607b7294a9d8b19d503dc77be2dc324680845de1bd6829131ffb6d774537",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 74,
+            "filename": "20260825110000_business_store_offer_purchase_receipt_v2.sql",
+            "version": "20260825110000",
+            "name": "business_store_offer_purchase_receipt_v2",
+            "sourceSha256": "9aba4b582bf292cb52213168f3ba34d6fd582ef7249cfbf9833afb8a89c66c1d",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 75,
+            "filename": "20260825110010_business_store_offer_purchase_receipt_result_v2.sql",
+            "version": "20260825110010",
+            "name": "business_store_offer_purchase_receipt_result_v2",
+            "sourceSha256": "2feac47ab4df94ea04f3fdcf41bbaf9d207bed763e02deca81a61e7c0b14f640",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 76,
+            "filename": "20260825110020_business_store_offer_atomic_settlement_v2.sql",
+            "version": "20260825110020",
+            "name": "business_store_offer_atomic_settlement_v2",
+            "sourceSha256": "a92140fd14ed858683140a0cac3c10677a7a91bdcfa319f9ad5c877ca8a1a9da",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 77,
+            "filename": "20260825110030_business_store_offer_settlement_assertions_v2.sql",
+            "version": "20260825110030",
+            "name": "business_store_offer_settlement_assertions_v2",
+            "sourceSha256": "bf44656fe5706393befd98154ea6e4ef5e0a40f3a15bf0b56105da095d4bede4",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 78,
+            "filename": "20260825223806_canonical_fx_authority_v1.sql",
+            "version": "20260825223806",
+            "name": "canonical_fx_authority_v1",
+            "sourceSha256": "b510e770d8f643f73f2480fb95cbaa32bf66b5f12a010a93bbfdb0ab41b011ae",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 79,
+            "filename": "20260826010811_banking_fx_purge_registry_v1.sql",
+            "version": "20260826010811",
+            "name": "banking_fx_purge_registry_v1",
+            "sourceSha256": "96ff8ae133b393c2a4dd02e966f22c9aad4c6fc611a3fb0246970bb99437cf14",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 80,
+            "filename": "20260826090000_banking_account_identity_v1.sql",
+            "version": "20260826090000",
+            "name": "banking_account_identity_v1",
+            "sourceSha256": "6a44e6142ce2d1cea737b4a58eb7f5567bdf0c72708889fed5079424df02c310",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 81,
+            "filename": "20260826091000_banking_transaction_holds_v1.sql",
+            "version": "20260826091000",
+            "name": "banking_transaction_holds_v1",
+            "sourceSha256": "ee440379a84cac524ade29558e7b243290e3d16a71ed581b765ed6fe8d730677",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 82,
+            "filename": "20260826092000_fx_clearing_liquidity_v1.sql",
+            "version": "20260826092000",
+            "name": "fx_clearing_liquidity_v1",
+            "sourceSha256": "82147172ed902fb36376a05fc27d0d008b8224c7bceff7649cccd38b66acaad7",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 83,
+            "filename": "20260826093000_player_banking_fx_v1.sql",
+            "version": "20260826093000",
+            "name": "player_banking_fx_v1",
+            "sourceSha256": "0f96510550337f4c344c3675d4dae82d9c032503ad5e873d1261f2bc713a43c9",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 84,
+            "filename": "20260826094000_player_banking_fx_commands_v1.sql",
+            "version": "20260826094000",
+            "name": "player_banking_fx_commands_v1",
+            "sourceSha256": "acc658c22c89152efb403a4b5646e36f5cf73cecce1e51e5985806c99e14cf3f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 85,
+            "filename": "20260826095000_player_banking_fx_order_commands_v1.sql",
+            "version": "20260826095000",
+            "name": "player_banking_fx_order_commands_v1",
+            "sourceSha256": "17f98dc8b75521806bf7f4271bbc336bb8fae05952c833b8e55988827d284cba",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 86,
+            "filename": "20260826096000_player_banking_fx_settlement_v1.sql",
+            "version": "20260826096000",
+            "name": "player_banking_fx_settlement_v1",
+            "sourceSha256": "90be6aa28291eadd0adef30f62eeb700b0c87052c66339472b3519a62f7809c5",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 87,
+            "filename": "20260826097000_player_banking_fx_worker_v1.sql",
+            "version": "20260826097000",
+            "name": "player_banking_fx_worker_v1",
+            "sourceSha256": "3ac53008a519471ed6b4ddeb29293ebb65c64b7f8f4b313bd63717fd6b621de2",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 88,
+            "filename": "20260826098000_banking_fx_readiness_v1.sql",
+            "version": "20260826098000",
+            "name": "banking_fx_readiness_v1",
+            "sourceSha256": "50707c2258b06b2e33b6e050747ff2857481bfe3f9fe0a078931b765c6e610fe",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 89,
+            "filename": "20260826100000_business_bank_identity_runtime_v1.sql",
+            "version": "20260826100000",
+            "name": "business_bank_identity_runtime_v1",
+            "sourceSha256": "477c5fcf07d4900aa7dc469eb04c0acfb72b9238345688d67b50e1c0d43126bf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 90,
+            "filename": "20260826101000_banking_staff_adjustment_compatibility_v1.sql",
+            "version": "20260826101000",
+            "name": "banking_staff_adjustment_compatibility_v1",
+            "sourceSha256": "8dcc434f75b2bb1ef877757220c78f918924c6b893234ebc7829b1c6f9541a12",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 91,
+            "filename": "20260826102000_banking_fx_postcutover_purge_registry_v1.sql",
+            "version": "20260826102000",
+            "name": "banking_fx_postcutover_purge_registry_v1",
+            "sourceSha256": "e45404f8ff3bc2bcb73e3961b9a13203c279ee11ca081b1e00efd9404ddc4e98",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 92,
+            "filename": "20260827090000_multicurrency_funding_quote_v1.sql",
+            "version": "20260827090000",
+            "name": "multicurrency_funding_quote_v1",
+            "sourceSha256": "0e7734e584ec45ab5eb79bb7fed7156f3e56843401308ef5a7fc9d2883078702",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 93,
+            "filename": "20260827090500_multicurrency_funding_quote_stage_isolation_v1.sql",
+            "version": "20260827090500",
+            "name": "multicurrency_funding_quote_stage_isolation_v1",
+            "sourceSha256": "571b332551407131ebdb03748446dd2ae4af8485cb39835f5f1bbf21ddb1473b",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 94,
+            "filename": "20260827091000_multicurrency_funding_composer_v1.sql",
+            "version": "20260827091000",
+            "name": "multicurrency_funding_composer_v1",
+            "sourceSha256": "f19093957c2e248c79aff40487e5b4f5c0b0e5ecdae38090360334b435d41e63",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 95,
+            "filename": "20260827092000_multicurrency_funding_assertions_v1.sql",
+            "version": "20260827092000",
+            "name": "multicurrency_funding_assertions_v1",
+            "sourceSha256": "800edee32f10592f7343fb74add68929d9c48c4baac2c16476ec018a5e64a2d1",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 96,
+            "filename": "20260827093000_multicurrency_store_funding_schema_v1.sql",
+            "version": "20260827093000",
+            "name": "multicurrency_store_funding_schema_v1",
+            "sourceSha256": "18122cf75bc2384904801e0f9a0773c4aafd66898f26135eff879363032d7118",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 97,
+            "filename": "20260827093500_multicurrency_store_funding_quote_commands_v1.sql",
+            "version": "20260827093500",
+            "name": "multicurrency_store_funding_quote_commands_v1",
+            "sourceSha256": "17340a20eb2422cd854f18a3e9ba481023bee928240d82cdc0c8052a5e8031e7",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 98,
+            "filename": "20260827094000_multicurrency_store_funding_settlement_v1.sql",
+            "version": "20260827094000",
+            "name": "multicurrency_store_funding_settlement_v1",
+            "sourceSha256": "88b56c1dcbaa2cf19dd46f0e64689835a5f2f090849c0c43836f26ed6234faa6",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 99,
+            "filename": "20260827094500_multicurrency_store_funding_assertions_v1.sql",
+            "version": "20260827094500",
+            "name": "multicurrency_store_funding_assertions_v1",
+            "sourceSha256": "736c33f403f7ced7f3866a3803dcef936a7cb899ada64d03cb571cf9fb2fd317",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 100,
+            "filename": "20260827100000_multicurrency_marketplace_funding_schema_v1.sql",
+            "version": "20260827100000",
+            "name": "multicurrency_marketplace_funding_schema_v1",
+            "sourceSha256": "d835f41d7941e4a32c1460ad00a8cb2f2bb7b008af6b74691baceddd67f77550",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 101,
+            "filename": "20260827100500_multicurrency_marketplace_funding_quote_v1.sql",
+            "version": "20260827100500",
+            "name": "multicurrency_marketplace_funding_quote_v1",
+            "sourceSha256": "91995e0fea1df55b8a0eb88e0db2b2de502c5ff29e5e76ab864ead7dc3cfe45f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 102,
+            "filename": "20260827101000_multicurrency_marketplace_funding_settlement_v1.sql",
+            "version": "20260827101000",
+            "name": "multicurrency_marketplace_funding_settlement_v1",
+            "sourceSha256": "2e476fdd6806c8d645b7f09a4a4d08134d08e121272efaf0e1f823065328fdf8",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 103,
+            "filename": "20260827101500_multicurrency_marketplace_funding_refund_v1.sql",
+            "version": "20260827101500",
+            "name": "multicurrency_marketplace_funding_refund_v1",
+            "sourceSha256": "b1063f1bb1bf29c52483153fec8a460e9e57b7703cd3e79cbab77864e36f89c5",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 104,
+            "filename": "20260827102000_multicurrency_marketplace_funding_assertions_v1.sql",
+            "version": "20260827102000",
+            "name": "multicurrency_marketplace_funding_assertions_v1",
+            "sourceSha256": "741828a91360a9bc83f3bd9eb0ef08caaaf3a14d062b66a92e17958058b73094",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 105,
+            "filename": "20260827102500_multicurrency_marketplace_funding_purge_registry_v1.sql",
+            "version": "20260827102500",
+            "name": "multicurrency_marketplace_funding_purge_registry_v1",
+            "sourceSha256": "d835ef5bbd8e260aba3c5daa023ab31036db50c3c860b9e26847c64b563fe0aa",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 106,
+            "filename": "20260827103000_multicurrency_marketplace_inventory_projection_order_v1.sql",
+            "version": "20260827103000",
+            "name": "multicurrency_marketplace_inventory_projection_order_v1",
+            "sourceSha256": "2bc99cf2a6fb0d9d3b47d2066c7329a46623414d9c6fea9461e277fa2d0c2d4a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 107,
+            "filename": "20260827103500_multicurrency_marketplace_financial_posting_compatibility_v1.sql",
+            "version": "20260827103500",
+            "name": "multicurrency_marketplace_financial_posting_compatibility_v1",
+            "sourceSha256": "287e10158db827f8652702c1fda597026b158a545c0c77693459f9d547111465",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 108,
+            "filename": "20260827110000_multicurrency_stock_funding_schema_v1.sql",
+            "version": "20260827110000",
+            "name": "multicurrency_stock_funding_schema_v1",
+            "sourceSha256": "a7bbdbc76127cd19418231d29cf39ec9ad9ccbd249a23b3fc6e558d480d66599",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 109,
+            "filename": "20260827110500_multicurrency_stock_funding_assertions_v1.sql",
+            "version": "20260827110500",
+            "name": "multicurrency_stock_funding_assertions_v1",
+            "sourceSha256": "d905837f8bf617825c761ff70776cbd7daa9037cee696c997416525ece9d7bdf",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 110,
+            "filename": "20260827111000_multicurrency_stock_funding_purge_registry_v1.sql",
+            "version": "20260827111000",
+            "name": "multicurrency_stock_funding_purge_registry_v1",
+            "sourceSha256": "560f392d5b1b6034e8f04e060652b0a2c12501b9dcea98871a0258b0595c4eb8",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 111,
+            "filename": "20260827111500_multicurrency_stock_buy_quote_v1.sql",
+            "version": "20260827111500",
+            "name": "multicurrency_stock_buy_quote_v1",
+            "sourceSha256": "3e97113a178e72478adaa9bd653a55815f64f27b8c3e6245c3ba1410dfe0a38e",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 112,
+            "filename": "20260827111600_multicurrency_stock_buy_quote_clock_v1.sql",
+            "version": "20260827111600",
+            "name": "multicurrency_stock_buy_quote_clock_v1",
+            "sourceSha256": "142bdc487005d0dcd1f706a81ae365872e573bfa13dd4e8f7e75df382165b2bd",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 113,
+            "filename": "20260827111700_multicurrency_stock_buy_quote_assertions_v1.sql",
+            "version": "20260827111700",
+            "name": "multicurrency_stock_buy_quote_assertions_v1",
+            "sourceSha256": "2990a2e56ebb192f08a712abf4d08b47fd396eeeda19d993fafcce5feaf8ce2d",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 114,
+            "filename": "20260827111800_multicurrency_stock_buy_quote_purge_registry_v1.sql",
+            "version": "20260827111800",
+            "name": "multicurrency_stock_buy_quote_purge_registry_v1",
+            "sourceSha256": "58a97a1adc75928beb05deef65788b12e854cbcf892f0264084110b566048418",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 115,
+            "filename": "20260827112000_multicurrency_stock_buy_settlement_v1.sql",
+            "version": "20260827112000",
+            "name": "multicurrency_stock_buy_settlement_v1",
+            "sourceSha256": "d779a3de947035f19f3d8f1112c70be3fe60d57da4c46cb5b0c52e6a8fc20bcb",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 116,
+            "filename": "20260827112100_multicurrency_stock_buy_settlement_clock_v1.sql",
+            "version": "20260827112100",
+            "name": "multicurrency_stock_buy_settlement_clock_v1",
+            "sourceSha256": "f571e8bc8d669575944ae6e1a2de1105fce5e05005856213041f241758f80625",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 117,
+            "filename": "20260827112200_multicurrency_stock_buy_settlement_assertions_v1.sql",
+            "version": "20260827112200",
+            "name": "multicurrency_stock_buy_settlement_assertions_v1",
+            "sourceSha256": "507eda88fa1cd6744e6dcb558c7da6e9eae077153472c7f624a48b2bad3dbdbe",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 118,
+            "filename": "20260827113000_multicurrency_stock_sell_settlement_v1.sql",
+            "version": "20260827113000",
+            "name": "multicurrency_stock_sell_settlement_v1",
+            "sourceSha256": "c01adfdae43d34acc7a7b5f7d81f3e8fe0e8a431043b6746b2f4d12e7c026c6b",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 119,
+            "filename": "20260827113100_multicurrency_stock_sell_settlement_assertions_v1.sql",
+            "version": "20260827113100",
+            "name": "multicurrency_stock_sell_settlement_assertions_v1",
+            "sourceSha256": "1f45a6694613613e7b86e50732372d4f8bcb283296b464190a3267412aa8d8c7",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 120,
+            "filename": "20260831100000_business_multicurrency_owner_identity_v1.sql",
+            "version": "20260831100000",
+            "name": "business_multicurrency_owner_identity_v1",
+            "sourceSha256": "58f39bdf7ddaf85e032fe977552a1655784e2855d0cdd271507bc6adf9e927d3",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 121,
+            "filename": "20260831101000_business_treasury_fx_commands_v1.sql",
+            "version": "20260831101000",
+            "name": "business_treasury_fx_commands_v1",
+            "sourceSha256": "33dbf7c3cd3d2431906389c45f7c11158234515a882f5d1a30472cd89664c5fe",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 122,
+            "filename": "20260831102000_business_procurement_funding_v1.sql",
+            "version": "20260831102000",
+            "name": "business_procurement_funding_v1",
+            "sourceSha256": "26d4c0ea097c256ffd2ffa8e9e5f408c5a8983c838fa932aa2a65e6d095eb17d",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 123,
+            "filename": "20260831103000_business_multicurrency_assertions_v1.sql",
+            "version": "20260831103000",
+            "name": "business_multicurrency_assertions_v1",
+            "sourceSha256": "d8348f205c71f05ce2fd7682d8b406ff38b9808a2c7207007a842f4c28c0b4a2",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 124,
+            "filename": "20260831103001_business_player_store_fx_final_v2.sql",
+            "version": "20260831103001",
+            "name": "business_player_store_fx_final_v2",
+            "sourceSha256": "abc34050d932199a43407917554d75db690271bae59edcea5e76186a7eff50bc",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 125,
+            "filename": "20260831232642_business_operating_period_clock_lease_v1.sql",
+            "version": "20260831232642",
+            "name": "business_operating_period_clock_lease_v1",
+            "sourceSha256": "677a345aa74643f3579df8b5b5bf3bc826262be8badd8ee7966c378404163347",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 126,
+            "filename": "20260831232656_business_store_period_tax_close_v1.sql",
+            "version": "20260831232656",
+            "name": "business_store_period_tax_close_v1",
+            "sourceSha256": "0f5053491dcc566f6adba9ba61e5f9e80ab60699157c3ded82b22a695da9594a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 127,
+            "filename": "20260831232707_business_legacy_sales_retirement_v1.sql",
+            "version": "20260831232707",
+            "name": "business_legacy_sales_retirement_v1",
+            "sourceSha256": "940629645a451809a1302a783d742a93075eb34817001316225df20c0f00d34f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 128,
+            "filename": "20260831232719_business_store_sales_convergence_assertions_v1.sql",
+            "version": "20260831232719",
+            "name": "business_store_sales_convergence_assertions_v1",
+            "sourceSha256": "1ce69c9d208d161daa81e9c0165b2bfec828534274f3c360ebd06b82c17ead3d",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 129,
+            "filename": "20260901050500_fix_business_formation_checking_wallet_v1.sql",
+            "version": "20260901050500",
+            "name": "fix_business_formation_checking_wallet_v1",
+            "sourceSha256": "3a5c07b8b3e71115349c0e86d06abf9772a3336cdc347e86a80ddc1aa53cdc45",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 130,
+            "filename": "20260902090000_business_equipment_read_period_projection_v2.sql",
+            "version": "20260902090000",
+            "name": "business_equipment_read_period_projection_v2",
+            "sourceSha256": "f181ec42848775fbc1a3520dfae1f44630735f82ae1b46238e809a273df1b451",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 131,
+            "filename": "20260902091000_business_stockroom_numeric_projection_v2.sql",
+            "version": "20260902091000",
+            "name": "business_stockroom_numeric_projection_v2",
+            "sourceSha256": "f88be02e7e1722aedf383dd1183e578b72febe8ec259c1c93d455dc891d7e43a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 132,
+            "filename": "20260902092000_business_workspace_read_projections_v2.sql",
+            "version": "20260902092000",
+            "name": "business_workspace_read_projections_v2",
+            "sourceSha256": "b9decb0e4be072665d8f11c74dcad13b60321d4ed1b68c1fe1a97cd49ee1cd75",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 133,
+            "filename": "20260902103000_business_legacy_ownership_continuity_v2.sql",
+            "version": "20260902103000",
+            "name": "business_legacy_ownership_continuity_v2",
+            "sourceSha256": "4e32d63956c32b03eb4b61e94f6ab883ddc89564cc2166469d6f72a8574bff5e",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 134,
+            "filename": "20260903150000_enforce_provisioned_stock_baseline_ticks_v1.sql",
+            "version": "20260903150000",
+            "name": "enforce_provisioned_stock_baseline_ticks_v1",
+            "sourceSha256": "e744225b61faf3303c7819a48b96d5a36d472dea899b54b9ffce08f5d97f3872",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 135,
+            "filename": "20260903162000_seed_release_store_offer_rollback_compatibility_v1.sql",
+            "version": "20260903162000",
+            "name": "seed_release_store_offer_rollback_compatibility_v1",
+            "sourceSha256": "3dabb7d8c2b41a30392101f160d05bf6055cd1470ee6d16fe56d0e895aea8e5d",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 136,
+            "filename": "20260903163000_seed_store_identity_promotion_compatibility_v1.sql",
+            "version": "20260903163000",
+            "name": "seed_store_identity_promotion_compatibility_v1",
+            "sourceSha256": "447c70ade11fa6bd4cbded9f4e0e545afe2db81d8103d455f7f7088cb0672ce3",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 137,
+            "filename": "20260903170000_seed_release_store_identity_promotion_v1.sql",
+            "version": "20260903170000",
+            "name": "seed_release_store_identity_promotion_v1",
+            "sourceSha256": "906f6aa53b9736accc4f7b968f162386a400ce2c651e518fb902aea314f6d889",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 138,
+            "filename": "20260903171000_seed_jsonb_object_length_compatibility_v1.sql",
+            "version": "20260903171000",
+            "name": "seed_jsonb_object_length_compatibility_v1",
+            "sourceSha256": "640f3d54715145000e0bb24deb8403d6919bce171ff38a55c981d4726dd2cb4f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 139,
+            "filename": "20260904053000_business_workspace_nonactive_read_v2.sql",
+            "version": "20260904053000",
+            "name": "business_workspace_nonactive_read_v2",
+            "sourceSha256": "abeb1d06e3da72c5705859e25ed52812ce42285ffec860d6e3fbf5e1e4452af8",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 140,
+            "filename": "20260917214421_admin_business_supervision_v2.sql",
+            "version": "20260917214421",
+            "name": "admin_business_supervision_v2",
+            "sourceSha256": "a2919621e3f48013a8bf63d8e30d13f31c3507e975f6f02f7c1b960f2ca5ab04",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 141,
+            "filename": "20260917214558_admin_business_supervision_snapshot_v2.sql",
+            "version": "20260917214558",
+            "name": "admin_business_supervision_snapshot_v2",
+            "sourceSha256": "fe7734a98c5ab4a3c52eec326644e02bdf5a1cce7adebc99dd4da24a6f10efc2",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 142,
+            "filename": "20260918014630_business_financial_reporting_v1.sql",
+            "version": "20260918014630",
+            "name": "business_financial_reporting_v1",
+            "sourceSha256": "69f6431abd472ac2de636ac6472a7767741a8640f6dc388713fd46d78336a69e",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 143,
+            "filename": "20260918032342_business_accounting_evidence_v1.sql",
+            "version": "20260918032342",
+            "name": "business_accounting_evidence_v1",
+            "sourceSha256": "e42be17a03b4f252d92ef46ffc726ba83d5ee909ab3db3d3f80d87979e3dda2e",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 144,
+            "filename": "20260918032648_business_financial_statements_v1.sql",
+            "version": "20260918032648",
+            "name": "business_financial_statements_v1",
+            "sourceSha256": "498506e1b8d4029a9e5dfcf3744de3204b021045cb2d6df5af2ab35cc2fa533a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 145,
+            "filename": "20260918034225_business_reporting_adapters_v1.sql",
+            "version": "20260918034225",
+            "name": "business_reporting_adapters_v1",
+            "sourceSha256": "b644975c247fbdfdb07cd136878f6aaef3c6a9228c5d2e3d28b89cac2bd61d78",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 146,
+            "filename": "20260918035524_business_reporting_purge_convergence_v1.sql",
+            "version": "20260918035524",
+            "name": "business_reporting_purge_convergence_v1",
+            "sourceSha256": "7e9efc66a5955e698613524a7e0b6320bc3bf60a30cccdbf00bf34651189cc40",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 147,
+            "filename": "20260918070248_business_common_equity_invariants_v1.sql",
+            "version": "20260918070248",
+            "name": "business_common_equity_invariants_v1",
+            "sourceSha256": "1e6e14b33a6a418c13ca09cf99190a71063fec0289699f01095a0f130c4f499a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 148,
+            "filename": "20260918080340_business_primary_ipo_operator_authority_v1.sql",
+            "version": "20260918080340",
+            "name": "business_primary_ipo_operator_authority_v1",
+            "sourceSha256": "4b3a4758f19b40b296d8bda05cea79fe131343348641c7394d0ca94ef88e8630",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 149,
+            "filename": "20260918080404_business_primary_ipo_commands_v1.sql",
+            "version": "20260918080404",
+            "name": "business_primary_ipo_commands_v1",
+            "sourceSha256": "74707422a3f7618d3d9ea075d7f7efc7209ccfd5641bf257bc2dd11c39a072e5",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 150,
+            "filename": "20260918080420_business_primary_ipo_purge_registry_v1.sql",
+            "version": "20260918080420",
+            "name": "business_primary_ipo_purge_registry_v1",
+            "sourceSha256": "a367c27ea61476452fc14107bddfebcbc2dddd2c0373ae3bf5b2c5d961dff1cb",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 151,
+            "filename": "20260918083200_business_primary_ipo_purge_convergence_v1.sql",
+            "version": "20260918083200",
+            "name": "business_primary_ipo_purge_convergence_v1",
+            "sourceSha256": "b0577110f621b016fd2adfb4bda1fe681a7423af9ec2a899708621cf58673762",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 152,
+            "filename": "20260918092720_business_financial_market_ports_v1.sql",
+            "version": "20260918092720",
+            "name": "business_financial_market_ports_v1",
+            "sourceSha256": "9821841dc004fe57fb58cf7f3e57c5da2108ce134254aa3a60e45cea45e564ff",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 153,
+            "filename": "20260918093021_business_market_listing_consumer_v1.sql",
+            "version": "20260918093021",
+            "name": "business_market_listing_consumer_v1",
+            "sourceSha256": "b94d987a217cfde692e739737e45391b45561a575ad1cb7aaa3a2dd96144fa2e",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 154,
+            "filename": "20260918093133_business_market_common_share_settlement_v1.sql",
+            "version": "20260918093133",
+            "name": "business_market_common_share_settlement_v1",
+            "sourceSha256": "4fe7f476902321c153c2fffa46c751cef667942041c57786d16012e8c384454a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 155,
+            "filename": "20260918093319_business_financial_market_purge_registry_v1.sql",
+            "version": "20260918093319",
+            "name": "business_financial_market_purge_registry_v1",
+            "sourceSha256": "8c18a16d13babbdf9d4bf21927f33409d2d67c97aeb1b9b803417ab2d2da3d72",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 156,
+            "filename": "20260918095220_business_financial_market_purge_convergence_v1.sql",
+            "version": "20260918095220",
+            "name": "business_financial_market_purge_convergence_v1",
+            "sourceSha256": "fd52d2b9fb0a1f8e025bcd20485418cdb23ee6751b2213032baef1a02d027c79",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 157,
+            "filename": "20260920081000_phase15_reconcile_stock_tick_archive_lifecycle_v1.sql",
+            "version": "20260920081000",
+            "name": "phase15_reconcile_stock_tick_archive_lifecycle_v1",
+            "sourceSha256": "b603366e25f83e2859dce953cd3f34b23bc71b26292ed3a8eb5f8c8c8f5fd9e5",
+            "statementCount": 1,
+            "outerTransactionStripped": false
+          },
+          {
+            "order": 158,
+            "filename": "20260920081100_phase15_reconcile_stock_candle_retention_v1.sql",
+            "version": "20260920081100",
+            "name": "phase15_reconcile_stock_candle_retention_v1",
+            "sourceSha256": "7648c4d7b9aefb97272fedf256d44e371ee1e1a561302b1e7184db95de1b638d",
+            "statementCount": 1,
+            "outerTransactionStripped": false
+          },
+          {
+            "order": 159,
+            "filename": "20260920081200_phase15_reconcile_game_license_purge_foundation_v1.sql",
+            "version": "20260920081200",
+            "name": "phase15_reconcile_game_license_purge_foundation_v1",
+            "sourceSha256": "cdde1facb8185305d00fb98af76f8a17dc4b46336a25e996974e5d5f40411fb7",
+            "statementCount": 1,
+            "outerTransactionStripped": false
+          },
+          {
+            "order": 160,
+            "filename": "20260920081300_phase15_reconcile_game_purge_internal_contracts_v1.sql",
+            "version": "20260920081300",
+            "name": "phase15_reconcile_game_purge_internal_contracts_v1",
+            "sourceSha256": "93c968c8592fbbe6b2d2ee95767deaad29523c8de102342b81f3671503186c48",
+            "statementCount": 1,
+            "outerTransactionStripped": false
+          },
+          {
+            "order": 161,
+            "filename": "20260920081400_phase15_reconcile_game_purge_operator_controls_v1.sql",
+            "version": "20260920081400",
+            "name": "phase15_reconcile_game_purge_operator_controls_v1",
+            "sourceSha256": "701f9f8d155384fcdf1ea1dcebf1ebbdf6510c1e5d743de9375ba2889c0b8f82",
+            "statementCount": 1,
+            "outerTransactionStripped": false
+          },
+          {
+            "order": 162,
+            "filename": "20260920081500_phase15_reconcile_storage_health_and_cleanup_v1.sql",
+            "version": "20260920081500",
+            "name": "phase15_reconcile_storage_health_and_cleanup_v1",
+            "sourceSha256": "401acbd15db03f9401292dca4b04bd39d8703e198d8af0e7f2eda679c119a9bd",
+            "statementCount": 1,
+            "outerTransactionStripped": false
+          },
+          {
+            "order": 163,
+            "filename": "20260920081600_phase15_reassert_current_purge_contract_v1.sql",
+            "version": "20260920081600",
+            "name": "phase15_reassert_current_purge_contract_v1",
+            "sourceSha256": "6bb685f4c2af96e113cf1593ebca645c63ca0ac9914a3a9c8cfdb787e958fc78",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 164,
+            "filename": "20260920081700_phase15_reassert_auth_admin_routines_v1.sql",
+            "version": "20260920081700",
+            "name": "phase15_reassert_auth_admin_routines_v1",
+            "sourceSha256": "1cfe9f264fea87a7d0a1934a7d2e27777c53bc8d70c9e8dd4746eb66ed088f6a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 165,
+            "filename": "20260920081800_phase15_reassert_campaign_market_routines_v1.sql",
+            "version": "20260920081800",
+            "name": "phase15_reassert_campaign_market_routines_v1",
+            "sourceSha256": "97f651d79cda42ec1cd36dc45cadc48eb9a62329a874a8fd3b9009ec096a2f9f",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 166,
+            "filename": "20260920081900_phase15_reassert_meridian_initializers_v1.sql",
+            "version": "20260920081900",
+            "name": "phase15_reassert_meridian_initializers_v1",
+            "sourceSha256": "8e2002bd96dc666803d36a7decccfb52be7113db16c911229afe5e933c2d9d7a",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 167,
+            "filename": "20260920082000_phase15_retire_superseded_live_contracts_v1.sql",
+            "version": "20260920082000",
+            "name": "phase15_retire_superseded_live_contracts_v1",
+            "sourceSha256": "ed8e5b411f7493adf2398da17f5ed38525e9fa0d3871761745fd611c77841967",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 168,
+            "filename": "20260920082100_phase15_close_live_shaped_schema_parity_v1.sql",
+            "version": "20260920082100",
+            "name": "phase15_close_live_shaped_schema_parity_v1",
+            "sourceSha256": "99dbcbf830adc335e2beb212d5eda8bf240b9713e335c918f8eb56ec9e93ba50",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          },
+          {
+            "order": 169,
+            "filename": "20260920082200_phase15_close_database_advisor_findings_v1.sql",
+            "version": "20260920082200",
+            "name": "phase15_close_database_advisor_findings_v1",
+            "sourceSha256": "08b072d5ed40423ee59c49d3bc2fb9e9bd48b57ee578b79513dfb970ab6ca7fe",
+            "statementCount": 1,
+            "outerTransactionStripped": true
+          }
+        ]
+      },
+      "suffix": {
+        "schemaVersion": 1,
+        "environment": "production",
+        "migrationCount": 1,
+        "migrations": [
+          {
+            "order": 1,
+            "filename": "20260921044500_reconcile_internal_runner_nonce_service_role_authority_v1.sql",
+            "version": "20260921044500",
+            "name": "reconcile_internal_runner_nonce_service_role_authority_v1",
+            "sourceSha256": "5c561f2bd09a2c010cb36650242c29a04d3b2ad8920043c1055db6f350d38d54",
+            "rawSha256": "5eeaa1f631f4f532835b92f344bdafe62d6ee0690e785991e9e419f025841466",
+            "statementCount": 1
+          }
+        ]
+      }
+    }
+  }
+}

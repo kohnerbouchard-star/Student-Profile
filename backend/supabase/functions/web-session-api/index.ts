@@ -1,6 +1,6 @@
 import {
   createAuthClient,
-  createServiceClient,
+  createServiceRoleClient,
   readEdgeSupabaseEnv,
   requirePublishableRequest,
 } from "../_shared/econovariaAuth.ts";
@@ -93,6 +93,14 @@ interface TrustedClientIp {
   readonly address: string;
 }
 
+function readAdminServiceRoleKey(): string {
+  try {
+    return String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim();
+  } catch {
+    return "";
+  }
+}
+
 Deno.serve(async (incomingRequest: Request) => {
   const route = routePath(new URL(incomingRequest.url).pathname);
 
@@ -113,12 +121,18 @@ Deno.serve(async (incomingRequest: Request) => {
   const env = readEdgeSupabaseEnv();
   if (!env.ok) return serviceUnavailable(incomingRequest);
 
-  const replayClient = createServiceClient(env.value);
+  const serviceRoleKey = readAdminServiceRoleKey();
+  if (!serviceRoleKey) return serviceUnavailable(incomingRequest);
+  const adminServiceClient = createServiceRoleClient(
+    env.value.supabaseUrl,
+    serviceRoleKey,
+    "econovaria-admin-bff-service-role-v1",
+  );
   const authorization = await authorizeAdminBffRequest(incomingRequest, {
     supabaseUrl: env.value.supabaseUrl,
     dependencies: {
       claimNonce: async (claim) => {
-        const { data, error } = await replayClient.rpc<boolean>(
+        const { data, error } = await adminServiceClient.rpc<boolean>(
           "claim_internal_runner_nonce_v2",
           {
             p_runner_name: claim.runnerName,
@@ -147,12 +161,12 @@ Deno.serve(async (incomingRequest: Request) => {
   try {
     if (route === "/login") {
       return request.method === "POST"
-        ? handleLogin(request, key)
+        ? handleLogin(request, key, adminServiceClient)
         : methodNotAllowed(request, "POST");
     }
     if (route === "/status") {
       return request.method === "GET"
-        ? handleStatus(request, key)
+        ? handleStatus(request, key, adminServiceClient)
         : methodNotAllowed(request, "GET");
     }
     if (route === "/logout") {
@@ -172,6 +186,7 @@ Deno.serve(async (incomingRequest: Request) => {
         key,
         env.value.supabaseUrl,
         env.value.supabaseAnonKey,
+        adminServiceClient,
       );
     }
     if (route.startsWith("/proxy/")) {
@@ -195,10 +210,14 @@ Deno.serve(async (incomingRequest: Request) => {
   }
 });
 
-async function handleLogin(request: Request, key: Uint8Array): Promise<Response> {
+async function handleLogin(
+  request: Request,
+  key: Uint8Array,
+  adminServiceClient: ReturnType<typeof createServiceRoleClient>,
+): Promise<Response> {
   const loginResponse = await handleStaffLoginRequest(request, {
     createAuthClient,
-    createServiceClient,
+    createServiceClient: () => adminServiceClient,
     readEnvironment: readEdgeSupabaseEnv,
   });
   if (!loginResponse.ok) return withCors(request, loginResponse);
@@ -233,7 +252,10 @@ async function handleLogin(request: Request, key: Uint8Array): Promise<Response>
       securityVersion: login.user.securityVersion,
     },
   });
-  const bootstrap = await loadStaffBootstrap(payload.accessToken);
+  const bootstrap = await loadStaffBootstrap(
+    payload.accessToken,
+    adminServiceClient,
+  );
   if (!bootstrap.ok) {
     await revokeAuthSession(payload.accessToken);
     return json(request, 403, errorBody(
@@ -262,12 +284,19 @@ async function handleLogin(request: Request, key: Uint8Array): Promise<Response>
   }, payload, key);
 }
 
-async function handleStatus(request: Request, key: Uint8Array): Promise<Response> {
+async function handleStatus(
+  request: Request,
+  key: Uint8Array,
+  adminServiceClient: ReturnType<typeof createServiceRoleClient>,
+): Promise<Response> {
   const resolved = await resolveCurrentSession(request, key);
   if (resolved.ok === false) {
     return clearSessionResponse(request, 401, resolved.code);
   }
-  const bootstrap = await loadStaffBootstrap(resolved.payload.accessToken);
+  const bootstrap = await loadStaffBootstrap(
+    resolved.payload.accessToken,
+    adminServiceClient,
+  );
   if (!bootstrap.ok) {
     return clearSessionResponse(request, 401, "staff_session_invalid");
   }
@@ -310,6 +339,7 @@ async function handleMfa(
   key: Uint8Array,
   supabaseUrl: string,
   publishableKey: string,
+  adminServiceClient: ReturnType<typeof createServiceRoleClient>,
 ): Promise<Response> {
   const routeContract = mfaRouteContract(route, request.method);
   if (!routeContract) {
@@ -402,7 +432,10 @@ async function handleMfa(
       ),
       csrfToken: randomWebAdminCsrfToken(),
     };
-    const bootstrap = await loadStaffBootstrap(elevated.accessToken);
+    const bootstrap = await loadStaffBootstrap(
+      elevated.accessToken,
+      adminServiceClient,
+    );
     if (!bootstrap.ok) {
       return clearSessionResponse(request, 401, "staff_session_invalid");
     }
@@ -628,7 +661,10 @@ function mfaRouteContract(
   return null;
 }
 
-async function loadStaffBootstrap(accessToken: string): Promise<
+async function loadStaffBootstrap(
+  accessToken: string,
+  adminServiceClient: ReturnType<typeof createServiceRoleClient>,
+): Promise<
   | { readonly ok: true; readonly body: StaffBootstrapBody }
   | { readonly ok: false }
 > {
@@ -638,7 +674,7 @@ async function loadStaffBootstrap(accessToken: string): Promise<
   });
   const response = await handleStaffBootstrapRequest(request, {
     createAuthClient,
-    createServiceClient,
+    createServiceClient: () => adminServiceClient,
   });
   const body = await readJson<StaffBootstrapBody>(response);
   return response.ok && body?.ok ? { ok: true, body } : { ok: false };

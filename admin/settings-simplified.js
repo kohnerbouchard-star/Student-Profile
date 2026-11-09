@@ -24,13 +24,13 @@
     if (element && element.textContent !== value) element.textContent = value;
   }
 
-  function ensureStylesheet() {
-    if (document.getElementById(STYLE_ID)) return;
+  function ensureStylesheet(id = STYLE_ID, href = "./css/settings-simplified.css") {
+    if (document.getElementById(id)) return;
     const link = document.createElement("link");
-    link.id = STYLE_ID;
+    link.id = id;
     link.rel = "stylesheet";
-    link.href = "./css/settings-simplified.css";
-    document.head.append(link);
+    link.href = href;
+    insertSettingsStylesheet(link, id);
   }
 
   function settingsPage() {
@@ -425,11 +425,12 @@
     const count = baselineReady ? changedCount(page) : 0;
     const dirty = baselineReady && (count > 0 || attendanceDirty());
     const busy = button?.hasAttribute("aria-busy") === true;
-    const failed = button?.getAttribute("data-admin-terminal-api-state") === "error";
+    const failed = !busy && (Boolean(text(button?.dataset.attendanceRewardError)) ||
+      button?.getAttribute("data-admin-terminal-api-state") === "error");
     const saved = Date.now() < state.savedUntil;
 
     page.classList.toggle("has-unsaved-settings", dirty);
-    panel.classList.toggle("is-saved", saved && !dirty);
+    panel.classList.toggle("is-saved", saved && !dirty && !failed && !busy);
     panel.classList.toggle("is-error", failed);
     panel.hidden = !(state.disclosureOpen || dirty || busy || failed || saved);
 
@@ -454,6 +455,7 @@
   function resetForPage(page) {
     const gameId = selectedGameId();
     if (state.page === page && state.gameId === gameId) return;
+    const pageChanged = state.page !== page;
     const previousGameId = state.gameId;
     const gameChanged = previousGameId && previousGameId !== gameId;
     state.page = page;
@@ -470,6 +472,9 @@
     }
     page.removeAttribute("data-settings-ux-baseline-ready");
     window.clearTimeout(state.savedTimer);
+    if (pageChanged && !gameChanged && page.isConnected && page === settingsPage()) {
+      window.EconovariaSettingsLifecycleBridge?.reconcile?.("page-replacement");
+    }
   }
 
   function cardsForPage(page) {
@@ -513,7 +518,9 @@
     const gameId = text(detail?.gameId);
     if (gameId && gameId !== state.gameId) return;
     const page = settingsPage();
-    if (!(page instanceof HTMLElement)) return;
+    const selected = window.EconovariaAdminGameSelection?.read?.();
+    if (!(page instanceof HTMLElement) || page !== state.page ||
+        (selected && gameId && selected !== gameId)) return;
     captureBaseline(page);
     state.savedUntil = Date.now() + 1800;
     window.clearTimeout(state.savedTimer);
@@ -625,6 +632,9 @@
   scheduleStructure();
 
   window.EconovariaSimplifiedSettings = {
+    ensureFinalPolishStylesheet: () => ensureStylesheet(
+      "econovaria-settings-final-polish-style", "./css/settings-final-polish.css",
+    ),
     reconcile: reconcileStructure,
     refresh: renderPresentation,
     acknowledgeSaved,
@@ -633,4 +643,11 @@
       return Boolean(page && state.baselineValues.size && (changedCount(page) > 0 || attendanceDirty()));
     },
   };
+
+  function insertSettingsStylesheet(link, id) {
+    const anchor = id === STYLE_ID
+      ? document.getElementById("econovaria-settings-final-polish-style") : null;
+    if (anchor?.parentNode === document.head) document.head.insertBefore(link, anchor);
+    else document.head.append(link);
+  }
 })();

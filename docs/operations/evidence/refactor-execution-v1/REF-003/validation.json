@@ -1,0 +1,339 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-003",
+  "status": "IN_PROGRESS",
+  "evidenceClass": "initial_classifier_and_reviewed_seed_register",
+  "repository": "kohnerbouchard-star/Student-Profile",
+  "pullRequest": 740,
+  "branch": "refactor/ref-003-dead-code-candidates",
+  "baseMainSha": "a64befd325a3b46fdc86b9bcd3dae60641545697",
+  "toolingHeadSha": "440ea2cb48cd37f59b492d3331f623ab7b9f2e34",
+  "executedCheckoutSha": "46c98747c03da66e5bc4fc2dc52156f1b8254428",
+  "executedCheckoutType": "synthetic_pull_request_test_merge_not_an_actual_merge",
+  "executedTreeSha": "e21f74f722f8a544ccb1a359a1f171278ea8b36d",
+  "treeMatchesToolingHead": true,
+  "actualMergeSha": null,
+  "snapshotNote": "Measurements below belong to the tooling checkpoint, before this validation file and task-checkpoint prose were added. Metadata commits require fresh PR CI; they do not retroactively change this immutable measurement.",
+  "sourceIdentities": {
+    "classifierBlobSha": "2bf8ed09e48d04d07e45d909c42d73d4965ccb6f",
+    "classifierTestBlobSha": "47354849216a61e14f4ed697a6807322a0210fbf",
+    "retirementSuiteBlobSha": "e2e9b5498e29d5079167aafc6fcf0a9b416ecafa",
+    "existingInventoryBlobSha": "9bf80e593e95cd2cad2b1cffc278a3af142375cc"
+  },
+  "census": {
+    "command": "node scripts/architecture/refactor-candidate-audit.mjs 440ea2cb48cd37f59b492d3331f623ab7b9f2e34",
+    "executedThrough": "npm run test:legacy-runtime -> registered real-source auditSnapshot test",
+    "trackedFiles": 3951,
+    "denominators": {
+      "configuration_or_data": {"files":561,"textFiles":561,"physicalLines":220549,"bytes":16812791,"unmeasuredFiles":0},
+      "asset_or_other": {"files":374,"textFiles":130,"physicalLines":11968,"bytes":67953556,"unmeasuredFiles":244},
+      "documentation": {"files":582,"textFiles":582,"physicalLines":80192,"bytes":3883068,"unmeasuredFiles":0},
+      "application_source": {"files":997,"textFiles":997,"physicalLines":242943,"bytes":9780012,"unmeasuredFiles":0},
+      "generated_output": {"files":2,"textFiles":2,"physicalLines":14046,"bytes":1723855,"unmeasuredFiles":0},
+      "historical_path": {"files":9,"textFiles":6,"physicalLines":9301,"bytes":2075523,"unmeasuredFiles":3},
+      "test": {"files":600,"textFiles":600,"physicalLines":114246,"bytes":3979103,"unmeasuredFiles":0},
+      "script": {"files":372,"textFiles":372,"physicalLines":105317,"bytes":4342338,"unmeasuredFiles":0},
+      "migration_history": {"files":450,"textFiles":450,"physicalLines":161859,"bytes":6112366,"unmeasuredFiles":0},
+      "fixture": {"files":4,"textFiles":4,"physicalLines":276,"bytes":14804,"unmeasuredFiles":0}
+    },
+    "physicalLineConvention": "UTF-8/no-NUL Git blobs; empty=0; final newline is not an extra line; symlinks/submodules/binary excluded from line totals",
+    "candidateCount": 738,
+    "dispositions": {"canonical":2,"confirmed_dead":0,"compatibility_required":3,"legacy_candidate":0,"historical_archive":0,"defensive_fallback":1,"generated_or_fixture":175,"unknown":557},
+    "reviewedSeedRecords": 8,
+    "reviewedRecordsOverlapDispositionCounts": true,
+    "candidateRecordsSha256": "f3ca18230598ac7564b095d95c37f02d69af181750e54fd26538d04d53b04e4d",
+    "safeToDeleteCount": 0,
+    "deletionShortlist": [],
+    "fullSemanticCallerAuditComplete": false,
+    "runtimeReachabilityCertified": false,
+    "existingInventoryRecomputedByClassifier": false,
+    "existingInventoryValidation": "The existing generator/ratchet remains unchanged and is independently invoked by npm test in Repository Quality; new physical-line categories do not replace its metrics."
+  },
+  "executedChecks": [
+    {
+      "command": "node --test scripts/architecture/refactor-candidate-audit.test.mjs",
+      "environment": "local synthetic fixtures only",
+      "node": "22.16.0",
+      "repositoryPinnedRuntime": false,
+      "result": "PASS",
+      "exitCode": 0,
+      "tests": 10,
+      "failures": 0,
+      "skipped": 0,
+      "credit": "supplemental fixture validation, not a full local repository checkout"
+    },
+    {
+      "command": "npm run test:legacy-runtime",
+      "environment": "GitHub Actions full immutable PR checkout",
+      "node": "22.23.1",
+      "npm": "10.9.8",
+      "workflowRunId": 35798323328,
+      "jobId": 106982684240,
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35798323328/job/106982684240",
+      "result": "PASS",
+      "exitCode": 0,
+      "tests": 17,
+      "testBreakdown": {"classifierFixtures":10,"realSourceCensus":1,"preservedRetirementTests":6},
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "command": "npm run audit:legacy-runtime",
+      "workflowRunId": 35798323328,
+      "jobId": 106982684240,
+      "result": "PASS",
+      "exitCode": 0,
+      "scope": "Repository inventory-policy validation and browser transport ratchet, not live-provider inspection"
+    },
+    {
+      "command": "npm run test:player-runtime-cutover",
+      "workflowRunId": 35798323328,
+      "jobId": 106982684240,
+      "result": "PASS",
+      "exitCode": 0,
+      "scope": "Existing static cutover smoke, not authenticated runtime testing"
+    },
+    {
+      "command": "npm test",
+      "workflowRunId": 35798323261,
+      "jobId": 106982684176,
+      "result": "PASS",
+      "exitCode": 0,
+      "scope": "Existing Repository Quality audit/source-check step, including architecture regeneration/ratchets and shared repository tests"
+    },
+    {
+      "command": "npm run security:secrets",
+      "workflowRunId": 35798323261,
+      "jobId": 106982684176,
+      "result": "PASS",
+      "exitCode": 0,
+      "scope": "Existing committed-source credential scan"
+    }
+  ],
+  "toolingCheckpointWorkflows": [
+    {"name":"Repository Quality","runId":35798323261,"result":"SUCCESS"},
+    {"name":"Legacy Runtime Retirement Audit","runId":35798323328,"result":"SUCCESS"},
+    {"name":"Supply Chain Security","runId":35798323305,"result":"SUCCESS"},
+    {"name":"Release Integrity","runId":35798323260,"result":"SUCCESS"},
+    {"name":"Production Runtime Promotion Contract","runId":35798323218,"result":"SUCCESS"},
+    {"name":"Release Promote Exact Artifacts","runId":35798323215,"result":"SUCCESS"},
+    {"name":"Staging Readiness Preflight","runId":35798323292,"result":"SUCCESS"},
+    {"name":"Business Player Store Cutover V2","runId":35798323349,"result":"IN_PROGRESS_AT_OBSERVATION"}
+  ],
+  "notRunByThisExecution": [
+    "Complete application checkout and application suites in the local authoring container",
+    "Standalone backend typecheck:all and backend smoke commands",
+    "Authenticated staging/production browser or API probes",
+    "Live SQL/RPC/trigger/job or external-traffic inspection",
+    "Production release or deployment"
+  ],
+  "remainingTaskWork": [
+    "Resolve semantic ownership, all caller classes and replacement evidence for unresolved candidates rather than treating unknown as dead.",
+    "Review the bounded classifier and initial seed register against the original task acceptance requirements.",
+    "Inspect final-head CI and diff before any later merge request; no task-completion or merge credit is granted here."
+  ],
+  "retentionPolicy": {"preDisableQuietWindowDays":14,"postDisableMonitoringDays":7,"preDeleteRecoveryWindowDays":30,"trafficWindowActuallyObserved":false},
+  "preservation": {"applicationSourceChanged":false,"applicationDeleted":false,"architectureCeilingsRaised":false,"workflowsChanged":false,"packageOrLockfilesChanged":false,"databaseChanged":false,"productionActions":false,"successorTasksStarted":false},
+  "latestMeasurement": "archiveEventContinuation",
+  "sourceReviewContinuation": {
+    "observedCensusAtUtc": "2026-09-23T00:00:04Z",
+    "inspectionSourceSha": "adbcc0561b4345c93a5c3023e418cf0a5de351c6",
+    "toolingAndReviewHeadSha": "5a6bbf7c54d16a2c77d2fdd3043b419b9fd05874",
+    "executedCheckoutSha": "a4dc419e11e92a82f0f79026e612e7d1256e0eb6",
+    "executedCheckoutType": "synthetic_pull_request_test_merge_not_an_actual_merge",
+    "executedTreeSha": "604e3f9b3a59cee3660fd6ba70fc0cd542edc25a",
+    "treeMatchesToolingHead": true,
+    "actualMergeSha": null,
+    "snapshotNote": "This new immutable snapshot supplements, rather than replaces, the initial measurements above. Later task/validation metadata commits need fresh CI. The record digest now includes per-record queries containing the exact checkout SHA; reproduce that digest at the executed checkout, not merely another commit with the same tree.",
+    "sourceIdentities": {
+      "classifierBlobSha": "6752e6c7dee83487d0bc8cfa90457118b33bf231",
+      "classifierTestBlobSha": "1f64afb0dce2f107e99eb26e7f17bb23127c65db",
+      "candidateRegisterBlobSha": "3e2e56b16979dc5c2913d511da84ceef0970622f",
+      "existingInventoryBlobSha": "9bf80e593e95cd2cad2b1cffc278a3af142375cc",
+      "localToolingBytesMatchPublishedBlobs": true
+    },
+    "census": {
+      "command": "node scripts/architecture/refactor-candidate-audit.mjs a4dc419e11e92a82f0f79026e612e7d1256e0eb6",
+      "executedThrough": "npm run test:legacy-runtime -> registerRepositoryCandidateAudit -> auditSnapshot",
+      "trackedFiles": 3952,
+      "denominators": {
+        "configuration_or_data": {"files":562,"textFiles":562,"physicalLines":220843,"bytes":16836838,"unmeasuredFiles":0},
+        "asset_or_other": {"files":374,"textFiles":130,"physicalLines":11968,"bytes":67953556,"unmeasuredFiles":244},
+        "documentation": {"files":582,"textFiles":582,"physicalLines":80212,"bytes":3887174,"unmeasuredFiles":0},
+        "application_source": {"files":997,"textFiles":997,"physicalLines":242943,"bytes":9780012,"unmeasuredFiles":0},
+        "generated_output": {"files":2,"textFiles":2,"physicalLines":14046,"bytes":1723855,"unmeasuredFiles":0},
+        "historical_path": {"files":9,"textFiles":6,"physicalLines":9301,"bytes":2075523,"unmeasuredFiles":3},
+        "test": {"files":600,"textFiles":600,"physicalLines":114278,"bytes":3981475,"unmeasuredFiles":0},
+        "script": {"files":372,"textFiles":372,"physicalLines":105335,"bytes":4344072,"unmeasuredFiles":0},
+        "migration_history": {"files":450,"textFiles":450,"physicalLines":161859,"bytes":6112366,"unmeasuredFiles":0},
+        "fixture": {"files":4,"textFiles":4,"physicalLines":276,"bytes":14804,"unmeasuredFiles":0}
+      },
+      "candidateCount": 745,
+      "dispositions": {"canonical":5,"confirmed_dead":0,"compatibility_required":7,"legacy_candidate":0,"historical_archive":2,"defensive_fallback":1,"generated_or_fixture":175,"unknown":555},
+      "reviewedSourceCount": 17,
+      "supportingSourceBindings": 14,
+      "historicalPathCandidates": 9,
+      "candidateRecordsSha256": "da27cf8849dd7810993e7cb43e92a9ddc2e3a6b65b8cb5fdcbe8f7456f11b267",
+      "safeToDeleteCount": 0,
+      "deletionShortlist": [],
+      "fullSemanticCallerAuditComplete": false,
+      "runtimeReachabilityCertified": false,
+      "interpretation": "The seven additional candidates are broader measurement, not newly added application code. Seventeen reviewed records overlap the disposition totals; the remaining unreviewed state is explicit. All historical-path files are included, but only two have reviewed historical_archive dispositions."
+    },
+    "executedChecks": [
+      {"command":"node --test scripts/architecture/refactor-candidate-audit.test.mjs","environment":"local synthetic fixtures only","node":"22.16.0","repositoryPinnedRuntime":false,"tests":14,"failures":0,"skipped":0,"result":"PASS","exitCode":0},
+      {"command":"node --check scripts/architecture/refactor-candidate-audit.mjs","environment":"local source copy whose Git blob matches publication","result":"PASS","exitCode":0},
+      {"command":"npm run test:legacy-runtime","workflowRunId":35800007942,"jobId":106987970909,"node":"22.23.1","npm":"10.9.8","tests":21,"testBreakdown":{"classifierFixtures":14,"realSourceCensus":1,"preservedRetirementTests":6},"failures":0,"skipped":0,"result":"PASS","exitCode":0},
+      {"command":"npm run audit:legacy-runtime","workflowRunId":35800007942,"jobId":106987970909,"result":"PASS","exitCode":0,"scope":"Existing repository policy and browser transport ratchets; not live traffic"},
+      {"command":"npm run test:player-runtime-cutover","workflowRunId":35800007942,"jobId":106987970909,"result":"PASS","exitCode":0,"scope":"Existing static cutover test"},
+      {"command":"npm test","workflowRunId":35800007851,"jobId":106987970962,"result":"PASS","exitCode":0,"scope":"Repository Quality audit/source step, including unchanged architecture generator and ratchets"},
+      {"command":"npm run security:secrets","workflowRunId":35800007851,"jobId":106987970962,"result":"PASS","exitCode":0},
+      {"command":"git diff --no-index --check <original-tooling> <updated-tooling>","environment":"local two-file source/test comparison only","result":"PASS","scope":"Not a whole-application checkout or whole-PR diff check"}
+    ],
+    "sourceReviewFindings": [
+      "Attendance bridge retains combined-request augmentation, game checks and successful-save acknowledgement; no deletion approved.",
+      "Player credential bridge and creation lifecycle retain credential events and create-action responsibilities beyond reset.",
+      "Historical Apps Script test logger is archival reference but is not universally read-only when executed; it was not executed.",
+      "BFF path rejection is intentional validation behavior and has explicit catch-all callers.",
+      "Neutral and Classroom compiler configs are strict; Admin relaxes strictness. Source registrations were inspected without changing checking."
+    ],
+    "scope": {
+      "existingPrFileBudget": 8,
+      "toolingAndTestPhysicalLinesIncludingRegistration": 332,
+      "backlogChangedInThisContinuation": false,
+      "retirementRegistrationChangedInThisContinuation": false,
+      "protectedApplicationAndMigrationDenominatorsUnchanged": true,
+      "workflowsChanged": false,
+      "applicationBehaviorChanged": false,
+      "productionOrDatabaseActions": false,
+      "successorTasksStarted": false
+    },
+    "remainingAcceptance": [
+      "Continue semantic/caller/replacement review for unresolved candidate families; NOT_REVIEWED is not completion credit.",
+      "Preserve the remaining explicit/dynamic callers of Player identity and Attendance save code, including literal hits in the retained generated bundle.",
+      "Historical API router and stock-history helpers remain separate unreviewed source families; external Apps Script use is not certified.",
+      "Review complete task acceptance and actual final-head CI/diff before a normal merge; no actual merge or VERIFIED_COMPLETE claim is made."
+    ]
+  },
+  "archiveEventContinuation": {
+    "observedCensusAtUtc": "2026-09-23T00:24:10Z",
+    "inspectionSourceSha": "32b35fb857e67d5107b8e83965f1153a2bdfc689",
+    "toolingAndReviewHeadSha": "cd5c85c5def487a141720273f63b0a78dd27e284",
+    "executedCheckoutSha": "123ebb1bb86d4295d84167f0cc1f6cc389b599c6",
+    "executedCheckoutType": "synthetic_pull_request_test_merge_not_an_actual_merge",
+    "executedTreeSha": "8e5d42f646b01032b558024edaac26a080f2ac6b",
+    "treeMatchesToolingHead": true,
+    "actualMergeSha": null,
+    "snapshotNote": "Earlier snapshots remain historical and unchanged. This snapshot precedes the new task/validation metadata; later commits require their own CI. Candidate record queries include the executed checkout SHA, so digest reproduction must use that exact revision. Supplemental source ranges below were inspected at the same application bytes; they are not extra complete-file reviews or executed runtime evidence.",
+    "sourceIdentities": {
+      "classifierBlobSha": "6b308db059b0393c993ead41f54c012a89889308",
+      "classifierTestBlobSha": "cd3fc55f71224ab21dc449d9819244a09dfab7ae",
+      "candidateRegisterBlobSha": "6ceac8d8328a8c106109bbd569b7fb79bb793ba0",
+      "existingInventoryBlobSha": "9bf80e593e95cd2cad2b1cffc278a3af142375cc",
+      "retirementSuiteBlobSha": "e2e9b5498e29d5079167aafc6fcf0a9b416ecafa",
+      "localToolingBytesMatchPublishedBlobs": true
+    },
+    "census": {
+      "command": "node scripts/architecture/refactor-candidate-audit.mjs 123ebb1bb86d4295d84167f0cc1f6cc389b599c6",
+      "executedThrough": "npm run test:legacy-runtime -> registerRepositoryCandidateAudit -> auditSnapshot",
+      "trackedFiles": 3952,
+      "denominators": {
+        "configuration_or_data": {"files":562,"textFiles":562,"physicalLines":221041,"bytes":16863078,"unmeasuredFiles":0},
+        "asset_or_other": {"files":374,"textFiles":130,"physicalLines":11968,"bytes":67953556,"unmeasuredFiles":244},
+        "documentation": {"files":582,"textFiles":582,"physicalLines":80232,"bytes":3891023,"unmeasuredFiles":0},
+        "application_source": {"files":997,"textFiles":997,"physicalLines":242943,"bytes":9780012,"unmeasuredFiles":0},
+        "generated_output": {"files":2,"textFiles":2,"physicalLines":14046,"bytes":1723855,"unmeasuredFiles":0},
+        "historical_path": {"files":9,"textFiles":6,"physicalLines":9301,"bytes":2075523,"unmeasuredFiles":3},
+        "test": {"files":600,"textFiles":600,"physicalLines":114302,"bytes":3983398,"unmeasuredFiles":0},
+        "script": {"files":372,"textFiles":372,"physicalLines":105343,"bytes":4344726,"unmeasuredFiles":0},
+        "migration_history": {"files":450,"textFiles":450,"physicalLines":161859,"bytes":6112366,"unmeasuredFiles":0},
+        "fixture": {"files":4,"textFiles":4,"physicalLines":276,"bytes":14804,"unmeasuredFiles":0}
+      },
+      "candidateCount": 746,
+      "dispositions": {"canonical":5,"confirmed_dead":0,"compatibility_required":11,"legacy_candidate":0,"historical_archive":4,"defensive_fallback":1,"generated_or_fixture":175,"unknown":550},
+      "reviewedSourceCount": 23,
+      "referenceTermReviewCount": 7,
+      "supportingSourceBindings": 32,
+      "historicalPathCandidates": 9,
+      "candidateRecordsSha256": "895402c04c0596d690a358c87bdf1e373eea00d54955f22493ed8ed043eda86f",
+      "safeToDeleteCount": 0,
+      "deletionShortlist": [],
+      "fullSemanticCallerAuditComplete": false,
+      "runtimeReachabilityCertified": false,
+      "existingInventoryRecomputedByClassifier": false,
+      "interpretation": "Six reviewed records and one newly included candidate reflect review/measurement coverage, not application changes. The 23 reviewed records overlap primary dispositions. The 550 unknown entries remain explicit; no external traffic or complete semantic graph is inferred."
+    },
+    "executedChecks": [
+      {"command":"node --test scripts/architecture/refactor-candidate-audit.test.mjs","environment":"local synthetic Git fixtures only","node":"22.16.0","repositoryPinnedRuntime":false,"tests":17,"failures":0,"skipped":0,"result":"PASS","exitCode":0},
+      {"command":"node --check scripts/architecture/refactor-candidate-audit.mjs","environment":"local source copy matching published Git blob","result":"PASS","exitCode":0},
+      {"command":"git diff --check","environment":"local two-file tooling fixture only, not a complete application checkout or whole-PR check","result":"PASS","exitCode":0},
+      {"command":"npm run test:legacy-runtime","workflowRunId":35801868541,"jobId":106993811580,"node":"22.23.1","npm":"10.9.8","tests":24,"testBreakdown":{"classifierFixtures":17,"realSourceCensus":1,"preservedRetirementTests":6},"failures":0,"skipped":0,"result":"PASS","exitCode":0},
+      {"command":"npm run audit:legacy-runtime","workflowRunId":35801868541,"jobId":106993811580,"result":"PASS","exitCode":0,"scope":"Repository inventory-policy and browser transport ratchet; no hosted inspection"},
+      {"command":"npm run test:player-runtime-cutover","workflowRunId":35801868541,"jobId":106993811580,"result":"PASS","exitCode":0,"scope":"Existing static cutover test; no new retirement"},
+      {"command":"npm test","workflowRunId":35801868512,"jobId":106993810002,"result":"PASS","exitCode":0,"scope":"Existing Repository Quality audit/source step, including unchanged architecture regeneration/ratchets"},
+      {"command":"npm run security:secrets","workflowRunId":35801868512,"jobId":106993810002,"result":"PASS","exitCode":0}
+    ],
+    "sourceReviewFindings": [
+      "The archived API router has cache-session/action dispatch and sequential sheet writes; a script lock is not modern SQL atomicity or rollback.",
+      "Stock history/news helpers expose read fallbacks and separate trigger installation, append, trimming and destructive deduplication functions. None was executed.",
+      "Player profile saving performs profile PATCH followed by credential update, with no complete post-await modal-generation guard in that function; it is not one atomic save.",
+      "Attendance-only save retains GET verification, one PATCH, payload-bound retry identity and event-before-completed ordering. Its generation checks suppress stale UI, not the request itself.",
+      "Attendance state and Settings lifecycle preserve matching-game acknowledgement and bounded frame settling. A loaded/mounted UI signal is not a successful fresh-read certificate.",
+      "Event-only references are now captured and labeled separately; shared event names and generic symbols are discovery evidence, not resolved call-graph edges."
+    ],
+    "supplementalReferenceDisambiguation": [
+      {
+        "path":"admin/player-create-ux.js",
+        "blobSha":"070a11352a85bf5149fb68fb939ae560b9a4e42f",
+        "inspectedLines":[225,310],
+        "evidenceClass":"source_range_review_not_new_whole_file_disposition",
+        "finding":"The capture-phase player-access-code-issued listener consumes lastCreateContext, clears it and schedules renderConfirmation. This is a second positive credential-event consumer, separate from PlayerCreateLifecycle modal closure. No whole-module disposal or stale-game guarantee is certified from this excerpt."
+      },
+      {
+        "path":"admin/settings-simplified.js",
+        "blobSha":"ac3eeed8b3f4faba024ff53bd1e7c4a97b52bc1a",
+        "inspectedLines":[430,635],
+        "evidenceClass":"source_range_review_not_new_whole_file_disposition",
+        "finding":"resetForPage emits settings-context-changed in a microtask only for a prior nonempty different game. The attendance-reward-saved listener acknowledges the save and captures a baseline. Shared event discovery is supported, without certifying unrelated structure/render code."
+      },
+      {
+        "path":"backend/legacy/apps-script/stock-market/classroom_stock_market_v1_5_legacy.gs.txt",
+        "blobSha":"04f88fae6d9b24ccbfa318686d592e5ef1c404f5",
+        "inspectedRanges":[[1360,1390],[1447,1468]],
+        "evidenceClass":"substring_collision_rejected_as_caller",
+        "finding":"The lexical logStockPriceHistory hit is a declaration/call of the different underscore-suffixed logStockPriceHistory_. It is not credited as a caller of the separate stock-history helper's logStockPriceHistory function. The full stock-engine file remains unreviewed."
+      },
+      {
+        "evidenceClass":"literal_symbol_collision_limit",
+        "finding":"Generic symbols including reconcile, loadPlayers and loadSettings match unrelated browser, server, workflow and documentation text. Their literal rows remain visible but do not establish shared implementation, reachability or a semantic caller."
+      }
+    ],
+    "toolingCheckpointWorkflows": [
+      {"name":"Repository Quality","runId":35801868512,"result":"SUCCESS"},
+      {"name":"Legacy Runtime Retirement Audit","runId":35801868541,"result":"SUCCESS"},
+      {"name":"Supply Chain Security","runId":35801868583,"result":"SUCCESS"},
+      {"name":"Release Integrity","runId":35801868525,"result":"SUCCESS"},
+      {"name":"Production Runtime Promotion Contract","runId":35801868521,"result":"SUCCESS"},
+      {"name":"Release Promote Exact Artifacts","runId":35801868535,"result":"SUCCESS"},
+      {"name":"Staging Readiness Preflight","runId":35801868517,"result":"SUCCESS"},
+      {"name":"Business Player Store Cutover V2","runId":35801868509,"result":"PENDING_AT_OBSERVATION"}
+    ],
+    "scope": {
+      "existingPrFileBudget":8,
+      "toolingAndTestPhysicalLinesIncludingRegistration":364,
+      "backlogChangedInThisContinuation":false,
+      "retirementRegistrationChangedInThisContinuation":false,
+      "protectedApplicationAndMigrationDenominatorsUnchanged":true,
+      "workflowsChanged":false,
+      "applicationBehaviorChanged":false,
+      "productionOrDatabaseActions":false,
+      "successorTasksStarted":false
+    },
+    "remainingAcceptance": [
+      "Review the complete REF-003 acceptance matrix and resolve missing source evidence for any candidate advanced beyond unknown; the classifier is not a complete semantic graph.",
+      "Retain unknown external consumers and the empty deletion shortlist. Unknown is an allowed classification, not an implicit clearance or deletion quota.",
+      "Inspect final-head CI, JSON/companion consistency and the whole PR diff before an authorized normal merge. Standalone backend typecheck/smoke and full-checkout whole-PR diff-check credit remain unclaimed.",
+      "No VERIFIED_COMPLETE or actual merge identity is recorded. REF-004 and all later tasks remain unopened."
+    ]
+  }
+}

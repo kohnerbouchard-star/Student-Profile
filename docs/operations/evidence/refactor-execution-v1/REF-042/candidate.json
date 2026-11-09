@@ -1,0 +1,275 @@
+{
+  "mode": "targeted-refresh candidate via terminal adapter",
+  "use": {
+    "calls": [
+      {
+        "key": "itemEffectUse",
+        "method": "POST",
+        "session": "game-1"
+      },
+      {
+        "key": "dashboard",
+        "method": "GET",
+        "session": "game-1"
+      },
+      {
+        "key": "crafting",
+        "method": "GET",
+        "session": "game-1"
+      },
+      {
+        "key": "inventory",
+        "method": "GET",
+        "session": "game-1"
+      }
+    ],
+    "toasts": [
+      [
+        "Item used.",
+        "success"
+      ]
+    ],
+    "visibleInventoryMarker": 1,
+    "authoritativeMarker": 1
+  },
+  "redeem": {
+    "calls": [
+      {
+        "key": "inventoryUse",
+        "method": "POST",
+        "session": "game-1"
+      },
+      {
+        "key": "dashboard",
+        "method": "GET",
+        "session": "game-1"
+      },
+      {
+        "key": "inventory",
+        "method": "GET",
+        "session": "game-1"
+      }
+    ],
+    "toasts": [
+      [
+        "Redemption request submitted.",
+        "success"
+      ]
+    ],
+    "visibleInventoryMarker": 1,
+    "authoritativeMarker": 1
+  },
+  "replay": {
+    "calls": [
+      {
+        "key": "itemEffectUse",
+        "method": "POST",
+        "session": "game-1"
+      },
+      {
+        "key": "dashboard",
+        "method": "GET",
+        "session": "game-1"
+      },
+      {
+        "key": "crafting",
+        "method": "GET",
+        "session": "game-1"
+      },
+      {
+        "key": "inventory",
+        "method": "GET",
+        "session": "game-1"
+      }
+    ],
+    "toasts": [
+      [
+        "Item used.",
+        "success"
+      ]
+    ],
+    "visibleInventoryMarker": 1,
+    "authoritativeMarker": 1
+  },
+  "rejection": {
+    "calls": [
+      {
+        "key": "itemEffectUse",
+        "method": "POST",
+        "session": "game-1"
+      }
+    ],
+    "toasts": [
+      [
+        "This action conflicts with a newer update. Refresh this section and try again.",
+        "error"
+      ]
+    ],
+    "status": "ready"
+  },
+  "abort": {
+    "calls": [
+      {
+        "key": "itemEffectUse",
+        "method": "POST",
+        "session": "game-1"
+      }
+    ],
+    "toasts": [
+      [
+        "The request was cancelled.",
+        "error"
+      ]
+    ],
+    "status": "ready"
+  },
+  "destroy": {
+    "calls": [
+      {
+        "key": "itemEffectUse",
+        "method": "POST",
+        "session": "game-1"
+      },
+      {
+        "key": "dashboard",
+        "method": "GET",
+        "session": "game-1"
+      },
+      {
+        "key": "crafting",
+        "method": "GET",
+        "session": "game-1"
+      },
+      {
+        "key": "inventory",
+        "method": "GET",
+        "session": "game-1"
+      }
+    ],
+    "toasts": [
+      [
+        "Item used.",
+        "success"
+      ]
+    ],
+    "status": "ready"
+  },
+  "sessionSwitch": {
+    "calls": [
+      {
+        "key": "itemEffectUse",
+        "method": "POST",
+        "session": "game-1"
+      },
+      {
+        "key": "session",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "dashboard",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "notifications",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "countries",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "news",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "market",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "portfolio",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "contracts",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "messages",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "banking",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "inventory",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "dashboard",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "crafting",
+        "method": "GET",
+        "session": "game-2"
+      },
+      {
+        "key": "inventory",
+        "method": "GET",
+        "session": "game-2"
+      }
+    ],
+    "toasts": [
+      [
+        "Item used.",
+        "success"
+      ]
+    ],
+    "status": "ready"
+  },
+  "concurrentRealtime": {
+    "calls": [
+      {
+        "key": "inventory",
+        "method": "GET",
+        "session": "game-1"
+      },
+      {
+        "key": "itemEffectUse",
+        "method": "POST",
+        "session": "game-1"
+      },
+      {
+        "key": "dashboard",
+        "method": "GET",
+        "session": "game-1"
+      },
+      {
+        "key": "crafting",
+        "method": "GET",
+        "session": "game-1"
+      },
+      {
+        "key": "inventory",
+        "method": "GET",
+        "session": "game-1"
+      }
+    ],
+    "before": 1,
+    "after": 0,
+    "authoritativeMarker": 1
+  }
+}

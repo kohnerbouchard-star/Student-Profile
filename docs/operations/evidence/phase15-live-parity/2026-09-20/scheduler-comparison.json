@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-20",
+  "method": "Replace only the respective known project reference in cron command text before hashing; raw command text is not exported. This is a comparison aid, not an equivalence approval.",
+  "environments": {
+    "staging": [
+      {
+        "jobname": "econovaria-autonomous-timed-services-v1",
+        "schedule": "* * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "00fdbe366e71d0fa750a93e61a5f04576bce5b1d93ddd882c6c862c7813b4ec6"
+      },
+      {
+        "jobname": "econovaria-campaign-runtime-scheduler-v1",
+        "schedule": "* * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "15cfb9e2c9c8af8e291af0636196bf3600b6ff03dc6b9b87189fd5e18fb391e2"
+      },
+      {
+        "jobname": "econovaria-cron-history-retention-v1",
+        "schedule": "47 3 * * *",
+        "active": true,
+        "project_normalized_command_sha256": "56e066fcc6d33ff00f2fce5c19724d3a7015367677c3016c1fdf769cbb2282fb"
+      },
+      {
+        "jobname": "econovaria-daily-macro-progression-v1",
+        "schedule": "7 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "ffc6f7cbfb17b415e390aa43fb42270e443730dba5d692b720c454015f3d4f0e"
+      },
+      {
+        "jobname": "econovaria-expired-staff-signup-cleanup-v1",
+        "schedule": "*/15 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "ae3838e4c1f4aa57789f926c9fe38d3b64d8e15381a0ff253938a96d81e6fbde"
+      },
+      {
+        "jobname": "econovaria-game-data-purge-scheduler-v1",
+        "schedule": "*/5 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "b5abd081590b6dae74dbc143d519fea9f345b42b56cd08b5657d99f45208946d"
+      },
+      {
+        "jobname": "econovaria-game-license-expiration-v1",
+        "schedule": "17 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "237a11152832985bf284de769e232f7ddadf33e49c25865a141eb9be26ebbb48"
+      },
+      {
+        "jobname": "econovaria-platform-storage-health-v1",
+        "schedule": "37 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "b37df42a5559e41563c72add9d3f3edeb43776a12cd4625d7ffae2207b179395"
+      },
+      {
+        "jobname": "econovaria-stock-candle-retention-v1",
+        "schedule": "23 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "e3c17d634b5d910b355bb11a890f0f0c7f696b5b29d3dfc5c0492a3c303e5e61"
+      },
+      {
+        "jobname": "econovaria-stock-runtime-scheduler-v1",
+        "schedule": "* * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "4b269d899fe6044af95d8b3093add584d56556bf040b1408ed297e061737b0a0"
+      },
+      {
+        "jobname": "econovaria-stock-tick-archive-retention-v1",
+        "schedule": "*/15 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "035ae7ab0f221b197d2c41b7b19751c04832ededb125b3848ef3716273adebd8"
+      },
+      {
+        "jobname": "econovaria-story-character-replies-log-prune-v1",
+        "schedule": "17 3 * * *",
+        "active": true,
+        "project_normalized_command_sha256": "f5313007e486085762a2e40e8165a7b5cad305771933eaacccc1d179b6542343"
+      },
+      {
+        "jobname": "econovaria-story-character-replies-v1",
+        "schedule": "10 seconds",
+        "active": true,
+        "project_normalized_command_sha256": "b38e7780a7b0ce6dbd8955390f8ab5af05d3a49bc5fc4be461a8c94ad76a6fad"
+      }
+    ],
+    "production": [
+      {
+        "jobname": "econovaria-autonomous-timed-services-v1",
+        "schedule": "* * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "00fdbe366e71d0fa750a93e61a5f04576bce5b1d93ddd882c6c862c7813b4ec6"
+      },
+      {
+        "jobname": "econovaria-campaign-runtime-scheduler-v1",
+        "schedule": "* * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "d6a6d2b6b6d562d3dd93ae1cf3db59bfae51ef7b360152a6ceb73f82ec672fb5"
+      },
+      {
+        "jobname": "econovaria-cron-history-retention-v1",
+        "schedule": "47 3 * * *",
+        "active": true,
+        "project_normalized_command_sha256": "56e066fcc6d33ff00f2fce5c19724d3a7015367677c3016c1fdf769cbb2282fb"
+      },
+      {
+        "jobname": "econovaria-daily-macro-progression-v1",
+        "schedule": "7 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "ffc6f7cbfb17b415e390aa43fb42270e443730dba5d692b720c454015f3d4f0e"
+      },
+      {
+        "jobname": "econovaria-expired-staff-signup-cleanup-v1",
+        "schedule": "*/15 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "ae3838e4c1f4aa57789f926c9fe38d3b64d8e15381a0ff253938a96d81e6fbde"
+      },
+      {
+        "jobname": "econovaria-game-data-purge-scheduler-v1",
+        "schedule": "*/5 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "b5abd081590b6dae74dbc143d519fea9f345b42b56cd08b5657d99f45208946d"
+      },
+      {
+        "jobname": "econovaria-game-license-expiration-v1",
+        "schedule": "17 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "237a11152832985bf284de769e232f7ddadf33e49c25865a141eb9be26ebbb48"
+      },
+      {
+        "jobname": "econovaria-platform-storage-health-v1",
+        "schedule": "37 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "66d705e05c2a043a1bd6794226205c4fc215a6713042c109fb233acdc6f89c94"
+      },
+      {
+        "jobname": "econovaria-stock-candle-retention-v1",
+        "schedule": "23 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "e3c17d634b5d910b355bb11a890f0f0c7f696b5b29d3dfc5c0492a3c303e5e61"
+      },
+      {
+        "jobname": "econovaria-stock-runtime-scheduler-v1",
+        "schedule": "* * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "4b269d899fe6044af95d8b3093add584d56556bf040b1408ed297e061737b0a0"
+      },
+      {
+        "jobname": "econovaria-stock-tick-archive-retention-v1",
+        "schedule": "*/15 * * * *",
+        "active": true,
+        "project_normalized_command_sha256": "5794c4aef44c868fa0fbea73ba508413fc7a373114d046f232fe8e4e73cc1e38"
+      },
+      {
+        "jobname": "econovaria-story-character-replies-log-prune-v1",
+        "schedule": "17 3 * * *",
+        "active": true,
+        "project_normalized_command_sha256": "f5313007e486085762a2e40e8165a7b5cad305771933eaacccc1d179b6542343"
+      },
+      {
+        "jobname": "econovaria-story-character-replies-v1",
+        "schedule": "10 seconds",
+        "active": true,
+        "project_normalized_command_sha256": "b38e7780a7b0ce6dbd8955390f8ab5af05d3a49bc5fc4be461a8c94ad76a6fad"
+      }
+    ]
+  },
+  "unresolved": [
+    "econovaria-campaign-runtime-scheduler-v1",
+    "econovaria-platform-storage-health-v1",
+    "econovaria-stock-tick-archive-retention-v1"
+  ]
+}

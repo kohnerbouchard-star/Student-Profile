@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref033-story-preparation-pr-844.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 844,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/storylines/services/storyEffectEngine.ts",
+    "backend/src/domains/storylines/services/prepareStoryEffects.ts",
+    "backend/src/domains/storylines/services/prepareStoryEffects.test.ts",
+    "docs/operations/evidence/refactor-execution-v1/REF-033/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-033.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/operations/contracts/player-cross-cutting/pr-844.json",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/story-replay-safety.yml"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/storylines/services/storyEffectEngine.ts",
+    "backend/src/domains/storylines/services/prepareStoryEffects.ts",
+    "backend/src/domains/storylines/services/prepareStoryEffects.test.ts",
+    "docs/operations/evidence/refactor-execution-v1/REF-033/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-033.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/operations/contracts/player-cross-cutting/pr-844.json",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/story-replay-safety.yml"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "storylines",
+    "contracts"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-033/preflight.md",
+  "authorizationNote": "Owner-authorized REF-033 pure contract_unlock descriptor extraction and unchanged executor call. Preserve validation, economic authorities, ordering and replay. No SQL, new effects, narrative/reward changes, workflow security/settings, deployment, live database or credential changes. Register the new test in the existing Story Replay Safety command."
+}

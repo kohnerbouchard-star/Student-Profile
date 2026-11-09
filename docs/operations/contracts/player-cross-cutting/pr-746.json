@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref006-messaging-dispatch-pr-746.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 746,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/messaging/api/playerMessagingDispatch.ts",
+    "backend/supabase/functions/classroom-api/messagingDispatch.ts",
+    "backend/supabase/functions/player-api/runtime.ts",
+    "backend/src/security/playerMessagingRateLimitDispatch.test.ts",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-006/messaging-dispatch.json",
+    "docs/operations/contracts/player-cross-cutting/pr-746.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/messaging/api/playerMessagingDispatch.ts",
+    "backend/supabase/functions/classroom-api/messagingDispatch.ts",
+    "backend/supabase/functions/player-api/runtime.ts",
+    "backend/src/security/playerMessagingRateLimitDispatch.test.ts",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-006/messaging-dispatch.json",
+    "docs/operations/contracts/player-cross-cutting/pr-746.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Admin API Check",
+    "Repository Quality",
+    "Beta Security Contract"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "authorizationNote": "Owner-authorized REF-006 import-only handoff from PR736. Move one unchanged Messaging dispatcher into its domain, preserve the retained one-way Classroom export and all auth/client-injection behavior, and extend the existing registered security fixture. This manifest binds PR746 to its eight exact source/test/evidence paths. The two verifier files are mandatory protected references, not authorized editable paths. No auth incident merge, workflow or gate weakening, source-path deletion, live configuration, database, secret or deployment action. All applicable exact-head CI remains required; no other PR's acceptance is reused.",
+  "protectedReferencePaths": [
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "baseMainSha": "7e2f1022c601c33c2429de10b36a86dfcb13d2f8",
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-006/messaging-dispatch.json"
+}

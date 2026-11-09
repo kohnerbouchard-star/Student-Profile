@@ -1,3 +1,4 @@
+import { readPlayerMessageThreadLifecycleRoutePath } from "./playerMessageThreadLifecycleRoutePaths.ts";
 import { readPlayerMessagingRoutePath } from "./playerMessagingRoutePaths.ts";
 
 declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
@@ -43,6 +44,49 @@ Deno.test("player messaging routes fail closed for malformed or spoofed paths", 
     null,
   );
   assertEquals(readPlayerMessagingRoutePath("/players/me/notifications"), null);
+});
+
+Deno.test("both messaging route families preserve supported Player and retained Classroom prefixes", () => {
+  for (const prefix of [
+    "",
+    "/player-api",
+    "/classroom-api",
+    "/functions/v1/player-api",
+    "/functions/v1/classroom-api",
+  ]) {
+    assertEquals(readPlayerMessagingRoutePath(`${prefix}/players/me/messages`), { kind: "list" });
+    assertEquals(
+      readPlayerMessagingRoutePath(`${prefix}/players/me/messages/threads/${THREAD}/messages`),
+      { kind: "send", threadId: THREAD },
+    );
+    assertEquals(
+      readPlayerMessageThreadLifecycleRoutePath(`${prefix}/players/me/messages/policy`),
+      { kind: "policy" },
+    );
+    assertEquals(
+      readPlayerMessageThreadLifecycleRoutePath(`${prefix}/players/me/messages/threads`),
+      { kind: "createThread" },
+    );
+  }
+});
+
+Deno.test("both messaging route families reject spoofed and Admin namespaces", () => {
+  for (const prefix of [
+    "/admin-api",
+    "/functions/v1/admin-api",
+    "/functions/v1/player-api-spoof",
+    "/functions/v1/not-classroom-api",
+  ]) {
+    assertEquals(readPlayerMessagingRoutePath(`${prefix}/players/me/messages`), null);
+    assertEquals(
+      readPlayerMessageThreadLifecycleRoutePath(`${prefix}/players/me/messages/policy`),
+      null,
+    );
+    assertEquals(
+      readPlayerMessageThreadLifecycleRoutePath(`${prefix}/players/me/messages/threads`),
+      null,
+    );
+  }
 });
 
 function assertEquals(actual: unknown, expected: unknown): void {

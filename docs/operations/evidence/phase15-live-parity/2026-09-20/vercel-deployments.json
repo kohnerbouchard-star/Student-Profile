@@ -1,0 +1,182 @@
+{
+  "capturedAt": "2026-09-20T00:06:49.596Z",
+  "production": {
+    "id": "dpl_2DG1Eb6zswrbdsP6aWariLohp1ys",
+    "commit": "59a82ef8580d7d571727e722424bc84cf064e8aa",
+    "branch": "release/production",
+    "state": "READY",
+    "aliases": [
+      "www.econovaria.com",
+      "econovaria.com",
+      "econovaria-econovaria.vercel.app",
+      "econovaria-git-release-production-econovaria.vercel.app"
+    ]
+  },
+  "recent": [
+    {
+      "id": "dpl_7V6ULW7P5RbB3iYNHuA9gtGTpVR2",
+      "commit": "edf44ee16fc63b7cff459de7904fb9b923e2f0bd",
+      "branch": "docs/phase14-merge-certification-20260919",
+      "state": "READY",
+      "target": null,
+      "created": 1789814926722
+    },
+    {
+      "id": "dpl_FmYyAhRQEQERG3MTatDLenaovFLh",
+      "commit": "70e7f0b5cf1eec0eb261ca0a3d84e043dbbdc5eb",
+      "branch": "docs/phase14-merge-certification-20260919",
+      "state": "READY",
+      "target": null,
+      "created": 1789814210648
+    },
+    {
+      "id": "dpl_3dPje6w61xbo5DMeq2CdjYVfSw6P",
+      "commit": "7ca05777456e450a3c0daab7439d2050fa81d439",
+      "branch": "feat/business-financial-market-integration-v2",
+      "state": "READY",
+      "target": null,
+      "created": 1789812523837
+    },
+    {
+      "id": "dpl_4bu1t3HrN2ZgqyQjgiSYgfHRBgR5",
+      "commit": "c29d70105330789b674ec03a914a7f87f4d87a24",
+      "branch": "feat/business-financial-market-integration-v2",
+      "state": "READY",
+      "target": null,
+      "created": 1789728923985
+    },
+    {
+      "id": "dpl_BzgZFrWU1h4Xtw6dvZvkpox5Zt29",
+      "commit": "1004c28fef6576a5fde70df1f5ec360592c89f33",
+      "branch": "feat/business-financial-market-integration-v2",
+      "state": "READY",
+      "target": null,
+      "created": 1789728135344
+    },
+    {
+      "id": "dpl_BipXGNdg44sE6UyELjkjuJ2wQZA8",
+      "commit": "796d343c101100a78fe0b2b45dcc517e82dd2ccf",
+      "branch": "feat/business-financial-market-integration-v2",
+      "state": "READY",
+      "target": null,
+      "created": 1789726625351
+    },
+    {
+      "id": "dpl_4j8qjAsYFmekX5jTTiFQ7FUm2a7x",
+      "commit": "1b1af1d492cc0f9dfe55dfa0f6a326106be3f8ea",
+      "branch": "feat/business-ipo-issuance-v2",
+      "state": "READY",
+      "target": null,
+      "created": 1789722538980
+    },
+    {
+      "id": "dpl_4idwf6toQyR52KuzBsrQss72HzfD",
+      "commit": "bab8393cd8f0d30a84be5ad36ad90f41f9cae75f",
+      "branch": "feat/business-common-equity-v2",
+      "state": "READY",
+      "target": null,
+      "created": 1789717759738
+    },
+    {
+      "id": "dpl_9VbT4RsKB7oNjd61BPj5QywmbSvo",
+      "commit": "bcc53a5f6f4c3dcca1938e385e63239d59cdad7a",
+      "branch": "feat/business-financial-reporting-v2",
+      "state": "READY",
+      "target": null,
+      "created": 1789714021329
+    },
+    {
+      "id": "dpl_7ThaJuYfHwRQqsx8rzaQrevAKyzA",
+      "commit": "e9db627372b65a95d2b3838ffe4b1d6605b39a6b",
+      "branch": "dependabot/github_actions/routine-actions-ddd89a6e2d",
+      "state": "READY",
+      "target": null,
+      "created": 1788246999357
+    },
+    {
+      "id": "dpl_DdY64uDNbqPLu6Adk4Cv4wQzh9Cc",
+      "commit": "faaf908bdd5131b451c7e87e91ed4991ad8f839d",
+      "branch": "refactor/multi-game-bootstrap-context-hydration-v1",
+      "state": "READY",
+      "target": null,
+      "created": 1787697636180
+    },
+    {
+      "id": "dpl_2DG1Eb6zswrbdsP6aWariLohp1ys",
+      "commit": "59a82ef8580d7d571727e722424bc84cf064e8aa",
+      "branch": "release/production",
+      "state": "READY",
+      "target": "production",
+      "created": 1787014910814
+    },
+    {
+      "id": "dpl_G5qzmJJMmvLGiugJazN7hdQbUcbD",
+      "commit": "83c3177ed112cc93bedae2d2d4018554c4c40a83",
+      "branch": "release/production",
+      "state": "READY",
+      "target": "production",
+      "created": 1787014156992
+    },
+    {
+      "id": "dpl_3L46hFGeyqoVxKdRSQiPEXudqX5G",
+      "commit": "651e607c0f63f79532c9f06ee74b705622ee7819",
+      "branch": "release/production",
+      "state": "READY",
+      "target": "production",
+      "created": 1787011844485
+    },
+    {
+      "id": "dpl_87ZeXjYXe64pEnL3knQqXgKznecR",
+      "commit": "4d46351fa288653dbe42f474a46c922367b8ed17",
+      "branch": "fix/production-convergence-20260817",
+      "state": "READY",
+      "target": null,
+      "created": 1786975837025
+    },
+    {
+      "id": "dpl_AdCmWMvEfWzZWqcCPPXnvFZuaVag",
+      "commit": "83a9d2af37d2eab3202eee7293780dbd31443edb",
+      "branch": "fix/player-ui-css-convergence-20260817",
+      "state": "READY",
+      "target": null,
+      "created": 1786970569228
+    },
+    {
+      "id": "dpl_QgV9y6BHYoykR8ttyeVpT3ce6Kcf",
+      "commit": "9b59048774bd91e20e9604745e6fbe49e8c9d0d3",
+      "branch": "main",
+      "state": "READY",
+      "target": "production",
+      "created": 1786874331025
+    },
+    {
+      "id": "dpl_7FCQPF9bpPH6DW61ycAvUe65QFyM",
+      "commit": "de7a7c22e1f04c9a2edb13009bdca799fdbb65f1",
+      "branch": "main",
+      "state": "READY",
+      "target": "production",
+      "created": 1786874156844
+    },
+    {
+      "id": "dpl_EDGBNYFXUfVF9at5i8eedBFujFem",
+      "commit": "13e73792315049ee2ad8d7b2504a0667d8a9e718",
+      "branch": "main",
+      "state": "READY",
+      "target": "production",
+      "created": 1786681603844
+    },
+    {
+      "id": "dpl_5gvbm6XFNoSF1QFQKmvZE3fvwQFw",
+      "commit": "b0320c841e53fdadedf24aae4f9f4eae1b68433d",
+      "branch": "main",
+      "state": "READY",
+      "target": "production",
+      "created": 1786681580663
+    }
+  ],
+  "pagination": {
+    "count": 20,
+    "next": 1786681580663,
+    "prev": 1789814926722
+  }
+}

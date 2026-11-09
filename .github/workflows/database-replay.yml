@@ -6,11 +6,21 @@ on:
       - "backend/supabase/config.toml"
       - "backend/supabase/migrations/**"
       - "backend/src/domains/notifications/infrastructure/**"
+      - "backend/src/domains/world/services/playerWorldRuntimeService.ts"
+      - "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
       - "scripts/validate-supabase-migrations.mjs"
+      - "scripts/operations/live-migration-reconciliation/**"
+      - "scripts/staging/golden-five-contract.test.mjs"
+      - "scripts/staging/golden-five-verify.mjs"
+      - "docs/operations/contracts/database-parity-v1.json"
       - "scripts/player-contract-public-key-resolution-migration.test.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/database-replay.yml"
+      - ".github/workflows/phase15-controlled-staging.yml"
+      - ".github/workflows/phase15-controlled-production.yml"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches:
       - main
@@ -18,11 +28,20 @@ on:
       - "backend/supabase/config.toml"
       - "backend/supabase/migrations/**"
       - "backend/src/domains/notifications/infrastructure/**"
+      - "backend/src/domains/world/services/playerWorldRuntimeService.ts"
+      - "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
       - "scripts/validate-supabase-migrations.mjs"
+      - "scripts/operations/live-migration-reconciliation/**"
+      - "scripts/staging/golden-five-contract.test.mjs"
+      - "scripts/staging/golden-five-verify.mjs"
+      - "docs/operations/contracts/database-parity-v1.json"
       - "scripts/player-contract-public-key-resolution-migration.test.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/database-replay.yml"
+      - ".github/workflows/phase15-controlled-staging.yml"
+      - ".github/workflows/phase15-controlled-production.yml"
+      - "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs"
   workflow_dispatch:
 
 permissions:
@@ -38,11 +57,20 @@ jobs:
     timeout-minutes: 35
 
     steps:
+      - name: Report U1 qualification hold
+        shell: bash
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'HOLD'
+          U1 qualification hold is active. Static/disposable checks do not certify a release.
+          - live-shaped-rehearsal: NOT_RUN — owner-approved U1 hold.
+          Restoration requires separate owner approval; no automatic expiry or bypass.
+          HOLD
       - name: Check out exact workflow head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -58,6 +86,17 @@ jobs:
 
       - name: Validate migration source
         run: npm run audit:migrations
+
+      - name: Validate immutable migration and reconciliation contracts
+        run: |
+          node --test scripts/operations/live-migration-reconciliation/phase15-audit.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs
+          node scripts/operations/live-migration-reconciliation/verify-immutable-manifest.mjs
+          node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs --environment staging --mode rollback --format manifest > /tmp/phase15-staging-forward-manifest.json
+          node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs --environment production --mode rollback --format manifest > /tmp/phase15-production-forward-manifest.json
+          bash -n scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh
+          bash -n scripts/operations/live-migration-reconciliation/run-phase15-live-convergence.sh
 
       - name: Validate Contract public-key repair contract
         run: node --test scripts/player-contract-public-key-resolution-migration.test.mjs
@@ -91,8 +130,35 @@ jobs:
 
       - name: Replay migrations from zero twice
         run: |
-          npx supabase db reset --workdir backend --local
-          npx supabase db reset --workdir backend --local
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/phase15-clean-replay"
+          for PASS in 1 2; do
+            npx supabase db reset --workdir backend --local
+            docker exec -i supabase_db_econovaria psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 \
+              < scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql \
+              > "$RUNNER_TEMP/phase15-clean-replay/schema-$PASS.json"
+            docker exec -i supabase_db_econovaria psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 \
+              < scripts/operations/live-migration-reconciliation/export-runtime-catalog-v2.sql \
+              > "$RUNNER_TEMP/phase15-clean-replay/catalog-$PASS.json"
+          done
+          node scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs \
+            --left "$RUNNER_TEMP/phase15-clean-replay/schema-1.json" \
+            --right "$RUNNER_TEMP/phase15-clean-replay/schema-2.json" \
+            > "$RUNNER_TEMP/phase15-clean-replay/schema-determinism.json"
+          node scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs \
+            --left "$RUNNER_TEMP/phase15-clean-replay/catalog-1.json" \
+            --right "$RUNNER_TEMP/phase15-clean-replay/catalog-2.json" \
+            > "$RUNNER_TEMP/phase15-clean-replay/catalog-determinism.json"
+          git rev-parse HEAD > "$RUNNER_TEMP/phase15-clean-replay/source-commit.txt"
+
+      - name: Upload clean schema evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-clean-replay-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/phase15-clean-replay/
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Lint rebuilt database
         run: npx supabase db lint --workdir backend --local --level warning
@@ -125,3 +191,118 @@ jobs:
       - name: Stop disposable stack
         if: always()
         run: npx supabase stop --workdir backend --no-backup || true
+
+  live-shaped-rehearsal:
+    name: Rehearse ${{ matrix.environment }}-shaped forward migration convergence
+    # U1 qualification hold; separate owner approval is required for restoration.
+    if: >-
+      false &&
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: replay
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment: staging
+            expected_project_ref: eecvbssdvarfcykcfrny
+          - environment: production
+            expected_project_ref: cgiukdjwicykrmtkhudh
+    environment: ${{ matrix.environment }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CONFIGURED_SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_CLI_VERSION: 2.109.1
+      PHASE15_ENVIRONMENT: ${{ matrix.environment }}
+      PHASE15_EXPECTED_PROJECT_REF: ${{ matrix.expected_project_ref }}
+
+    steps:
+      - name: Check out exact merged main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+
+      - name: Bind exact merged main to the environment-scoped database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          remote_url="$CONFIGURED_SUPABASE_DB_URL"
+          if test -z "$remote_url"; then
+            test -n "$SUPABASE_DB_PASSWORD"
+            (
+              cd backend
+              supabase --yes link \
+                --project-ref "$PHASE15_EXPECTED_PROJECT_REF" \
+                --password "$SUPABASE_DB_PASSWORD"
+            )
+            pooler_path="backend/supabase/.temp/pooler-url"
+            test -s "$pooler_path"
+            password_url="$RUNNER_TEMP/phase15-database-url"
+            umask 077
+            POOLER_URL="$(tr -d '\r\n' < "$pooler_path")" \
+            DATABASE_PASSWORD="$SUPABASE_DB_PASSWORD" \
+              node --input-type=module - <<'NODE' > "$password_url"
+          const parsed = new URL(process.env.POOLER_URL);
+          parsed.password = process.env.DATABASE_PASSWORD;
+          process.stdout.write(parsed.href);
+          NODE
+            remote_url="$(cat "$password_url")"
+            rm -f "$password_url"
+          fi
+          test -n "$remote_url"
+          remote_url="$(DATABASE_URL="$remote_url" node --input-type=module - <<'NODE'
+          const parsed = new URL(process.env.DATABASE_URL);
+          parsed.searchParams.set('sslmode', 'verify-full');
+          parsed.searchParams.delete('sslrootcert');
+          process.stdout.write(parsed.href);
+          NODE
+          )"
+          echo "::add-mask::$remote_url"
+          export PHASE15_REMOTE_DATABASE_URL="$remote_url"
+          node scripts/release-integrity/cli.mjs validate-db-url \
+            --url-env PHASE15_REMOTE_DATABASE_URL \
+            --expected-project-ref "$PHASE15_EXPECTED_PROJECT_REF"
+          printf 'PHASE15_REMOTE_DATABASE_URL=%s\n' "$remote_url" >> "$GITHUB_ENV"
+
+      - name: Download exact clean-replay schema
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: phase15-clean-replay-${{ github.sha }}
+          path: ${{ runner.temp }}/phase15-canonical
+
+      - name: Rehearse environment-shaped upgrade
+        shell: bash
+        env:
+          PHASE15_WORK_DIR: ${{ runner.temp }}/phase15-${{ matrix.environment }}-work
+          PHASE15_EVIDENCE_DIR: ${{ runner.temp }}/phase15-evidence/${{ matrix.environment }}
+          PHASE15_CANONICAL_SCHEMA: ${{ runner.temp }}/phase15-canonical/schema-1.json
+          PHASE15_CANONICAL_CATALOG: ${{ runner.temp }}/phase15-canonical/catalog-1.json
+        run: bash scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh
+
+      - name: Upload sanitized live-shaped rehearsal evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase15-live-shaped-rehearsal-${{ matrix.environment }}-${{ github.sha }}
+          path: ${{ runner.temp }}/phase15-evidence/${{ matrix.environment }}
+          if-no-files-found: error
+          retention-days: 30

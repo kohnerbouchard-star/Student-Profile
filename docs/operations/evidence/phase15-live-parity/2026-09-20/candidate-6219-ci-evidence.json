@@ -1,0 +1,334 @@
+{
+  "schemaVersion": 1,
+  "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+  "status": "FAILED",
+  "rootCause": "Nine source gates rejected the absent PR-689-specific authority manifest: Player authority identifier is not bound to this pull request.",
+  "codeDefectClaim": false,
+  "correction": "Add the owner's exact-path PR-689 audit authority and preserve every verifier, required check, production prohibition and threshold. New-head CI must prove that correction.",
+  "runs": [
+    {
+      "id": 35478763336,
+      "name": "Release Promote Exact Artifacts",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "success",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763336"
+    },
+    {
+      "id": 35478763295,
+      "name": "Supply Chain Security",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "success",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763295"
+    },
+    {
+      "id": 35478763313,
+      "name": "Database Replay",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "success",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763313"
+    },
+    {
+      "id": 35478763217,
+      "name": "Production Runtime Promotion Contract",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "success",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763217"
+    },
+    {
+      "id": 35478763228,
+      "name": "Workflow Action Pinning",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "success",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763228"
+    },
+    {
+      "id": 35478763205,
+      "name": "Release Integrity",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "success",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763205"
+    },
+    {
+      "id": 35478763110,
+      "name": "Staging Readiness Preflight",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "success",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763110"
+    },
+    {
+      "id": 35478763119,
+      "name": "Repository Quality",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "success",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763119"
+    },
+    {
+      "id": 35478763235,
+      "name": "Business Common Equity",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "failure",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763235",
+      "jobs": [
+        {
+          "id": 105992587390,
+          "name": "business-common-equity-database",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 105992587514,
+          "name": "business-common-equity-source",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Verify exact source and retained authority"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 35478763233,
+      "name": "Business Financial Reporting",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "failure",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763233",
+      "jobs": [
+        {
+          "id": 105992628379,
+          "name": "business-financial-reporting-source",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Verify exact source and retained authority"
+          ]
+        },
+        {
+          "id": 105992628441,
+          "name": "business-financial-reporting-database",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 105992628738,
+          "name": "business-financial-reporting-browser",
+          "conclusion": "success",
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "id": 35478763223,
+      "name": "Business Primary IPO",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "failure",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763223",
+      "jobs": [
+        {
+          "id": 105992614153,
+          "name": "business-primary-ipo-source",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Verify exact source and retained authority"
+          ]
+        },
+        {
+          "id": 105992614255,
+          "name": "business-primary-ipo-browser",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 105992614268,
+          "name": "business-primary-ipo-database",
+          "conclusion": "success",
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "id": 35478763211,
+      "name": "Admin Business Supervision",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "failure",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763211",
+      "jobs": [
+        {
+          "id": 105992632740,
+          "name": "admin-business-supervision-source",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Verify exact head and full-phase authority"
+          ]
+        },
+        {
+          "id": 105992632795,
+          "name": "admin-business-supervision-browser",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 105992632810,
+          "name": "admin-business-supervision-database",
+          "conclusion": "success",
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "id": 35478763202,
+      "name": "business-multicurrency-treasury-v1",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "failure",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763202",
+      "jobs": [
+        {
+          "id": 105992610319,
+          "name": "Verify C4 source, public contracts, and retained application boundaries",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Verify PR authority and C4 source contracts"
+          ]
+        },
+        {
+          "id": 105992610434,
+          "name": "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 105992610492,
+          "name": "Verify C4 database, replay, isolation, rollback, and concurrency",
+          "conclusion": "success",
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "id": 35478763140,
+      "name": "Business Financial Market",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "failure",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763140",
+      "jobs": [
+        {
+          "id": 105992632425,
+          "name": "business-financial-market-source",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Verify exact source and retained authority"
+          ]
+        },
+        {
+          "id": 105992632503,
+          "name": "business-financial-market-browser",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 105992632545,
+          "name": "business-financial-market-database",
+          "conclusion": "success",
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "id": 35478763136,
+      "name": "business-player-store-fx-final-v2",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "failure",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763136",
+      "jobs": [
+        {
+          "id": 105992624730,
+          "name": "business-player-store-fx-final-v2-connected",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 105992624912,
+          "name": "business-player-store-fx-final-v2-source",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Verify PR authority, exact scope, and D source contract"
+          ]
+        },
+        {
+          "id": 105992624957,
+          "name": "business-player-store-fx-final-v2-player-browser",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 105992624959,
+          "name": "business-player-store-fx-final-v2-database",
+          "conclusion": "success",
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "id": 35478763163,
+      "name": "business-store-sales-convergence-v2",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "failure",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763163",
+      "jobs": [
+        {
+          "id": 105992629626,
+          "name": "business-store-sales-convergence-v2-database",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 105992629741,
+          "name": "business-store-sales-convergence-v2-source",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Verify PR authority and Phase 11 source contract"
+          ]
+        },
+        {
+          "id": 105992629753,
+          "name": "business-store-sales-convergence-v2-worker",
+          "conclusion": "success",
+          "failedSteps": []
+        },
+        {
+          "id": 105992629781,
+          "name": "business-store-sales-convergence-v2-player-admin",
+          "conclusion": "success",
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "id": 35478763149,
+      "name": "multicurrency-stock-funding-v1",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "failure",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478763149",
+      "jobs": [
+        {
+          "id": 105992629054,
+          "name": "Verify C3C Stock buy settlement source and retained C3A/C3B scope + C3D sell + C3E Player cutover",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Verify PR authority and C3 source contracts"
+          ]
+        },
+        {
+          "id": 105992629161,
+          "name": "Verify C3C atomic Stock buy database and retained C3A/C3B authority + C3D sell + C3E cutover",
+          "conclusion": "success",
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "id": 35478761111,
+      "name": "PR #689",
+      "head": "6219b0605e632f1aec248b11028deb5164d18d03",
+      "conclusion": "success",
+      "url": "https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/35478761111"
+    }
+  ]
+}

@@ -1,13 +1,19 @@
+import { runStockMarketRunner } from "../application/runStockMarketRunner.ts";
+import "../infrastructure/runtimeCursorStockMarketRepositories.test.ts";
+import "../calculations/stockMarketEngine.test.ts";
+import "../../storylines/server/stockTickStorylineRunner.test.ts";
 import {
   handleStockMarketRunnerRequest,
 } from "./stockMarketRunnerHttpHandler.ts";
 import {
+  buildGamePublicRealtimeEnvelope,
+  buildGamePublicRealtimeStockTickEnvelope,
   type GamePublicRealtimeBroadcastMessage,
   type GamePublicRealtimeEnvelope,
   GamePublicRealtimePublisher,
   type GamePublicRealtimePublishResult,
   type GamePublicRealtimeTransport,
-} from "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts";
+} from "../../game-dashboard/publicRealtime.ts";
 import type {
   StockMarketEngineInput,
   StockMarketEngineResult,
@@ -349,6 +355,90 @@ Deno.test("stock market runner keeps successful tick response when storyline hoo
   }]);
 });
 
+Deno.test("default Story hook reads only after tick persistence and stops effects on context failure", async () => {
+  const repository = new MockRunnerRepository();
+  const reads: { table: string; applied: number }[] = [];
+  const failures: unknown[] = [];
+  const failure = new Error("context transport unavailable");
+  const client = {
+    from(table: string) {
+      reads.push({ table, applied: repository.applyCalls });
+      throw failure;
+    },
+    rpc() { throw new Error("Story effects must not start after a failed context read."); },
+  };
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    {
+      ...dependencies({
+        repository,
+        createServiceClient: () => client,
+        logStorylineRunnerFailure: (entry) => failures.push(entry),
+      }),
+      createStorylineRunnerAfterTick: undefined,
+    },
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(repository.applyCalls, 1);
+  assertEquals(reads, [
+    "players", "player_country_assignments", "account_balances",
+    "game_session_stock_assets", "stock_holdings", "game_session_contracts",
+    "player_contract_progress", "player_story_relationships", "game_session_story_flags",
+  ].map((table) => ({ table, applied: 1 })));
+  assertEquals(failures, [{
+    code: "storyline_runner_after_stock_tick_failed",
+    message: failure.message,
+    retryable: true,
+  }]);
+});
+
+Deno.test("default Story hook reads scoped contexts before Story work after the tick", async () => {
+  const repository = new MockRunnerRepository();
+  const reads: { table: string; applied: number; filters: [string, unknown][] }[] = [];
+  const failures: unknown[] = [];
+  const client = {
+    from(table: string) {
+      const read = { table, applied: repository.applyCalls, filters: [] as [string, unknown][] };
+      reads.push(read);
+      const query = {
+        select(_columns: string) { return query; },
+        eq(column: string, value: unknown) { read.filters.push([column, value]); return query; },
+        order(_column: string, _options?: unknown) { return query; },
+        then(resolve: (result: { data: never[]; error: null }) => unknown) {
+          return Promise.resolve({ data: [], error: null }).then(resolve);
+        },
+      };
+      return query;
+    },
+    rpc() { throw new Error("No Story effect should be written without an event."); },
+  };
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    {
+      ...dependencies({
+        repository,
+        createServiceClient: () => client,
+        logStorylineRunnerFailure: (entry) => failures.push(entry),
+      }),
+      createStorylineRunnerAfterTick: undefined,
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(repository.applyCalls, 1);
+  assertEquals(failures, []);
+  assertEquals(reads.map(({ table }) => table), [
+    "players", "player_country_assignments", "account_balances",
+    "game_session_stock_assets", "stock_holdings", "game_session_contracts",
+    "player_contract_progress", "player_story_relationships", "game_session_story_flags",
+    "game_session_storylines", "game_session_story_flags",
+  ]);
+  for (const read of reads) {
+    assertEquals(read.applied, 1);
+    assertEquals(read.filters.some(([key, value]) => key === "game_session_id" && value === GAME_SESSION_ID), true);
+  }
+});
+
 Deno.test("stock market runner derives the default seed from one game session", async () => {
   const engineInputs: StockMarketEngineInput[] = [];
   const repository = new MockRunnerRepository();
@@ -371,6 +461,57 @@ Deno.test("stock market runner derives the default seed from one game session", 
     `stock-market-runner-v1:${GAME_SESSION_ID}`,
   );
 });
+
+Deno.test("stock tick application preserves loaded identity and commit-before-publish order", async () => {
+  const initial = await new MockRunnerRepository().load({ gameSessionId: GAME_SESSION_ID, tickIndex: 7 });
+  const loaded = { ...initial, assets: initial.assets.map(a => ({ ...a, recentReturns: Array.from({ length: 31 }, (_, i) => i / 100) })) };
+  const stages: string[] = [];
+  let payload: any;
+  const result = await runStockMarketRunner({ gameSessionId: GAME_SESSION_ID, tickIndex: 7, seed: "  fixed  " }, {
+    repository: {
+      async load(input) { assertEquals(input, { gameSessionId: GAME_SESSION_ID, tickIndex: 7 }); stages.push("load"); return loaded; },
+      async apply(value) { stages.push("apply"); payload = value; return { assetsUpdated: 1, ticksInserted: 1 }; },
+    },
+    calculateNextTick(input) {
+      stages.push("calculate"); assertEquals(input.seed, "fixed");
+      for (const key of ["assets", "macro", "countries", "sectors", "shocks"] as const) {
+        if (input[key] !== loaded[key]) throw new Error(`Loaded ${key} identity changed`);
+      }
+      return engineResult(input);
+    },
+    publicRealtimePublisher: { async publish(envelope) {
+      stages.push("publish"); assertEquals(payload.tickIndex, 7); assertEquals(envelope.eventType, "stock_tick");
+      return { ok: true, message: { channel: envelope.channel, event: envelope.eventType, payload: envelope } };
+    } },
+  });
+  assertEquals(stages, ["load", "calculate", "apply", "publish"]);
+  assertEquals(result, { gameSessionId: GAME_SESSION_ID, tickIndex: 7, assetsProcessed: 1, ticksInserted: 1, generatedAt: "tick-7" });
+  assertEquals(payload.assetUpdates[0].recent_returns, [...loaded.assets[0].recentReturns, 0.05].slice(-30));
+  assertEquals(payload.tickRows[0].game_session_id, GAME_SESSION_ID);
+  assertEquals(payload.tickRows[0].stock_asset_id, ASSET_ID);
+});
+
+for (const failAt of ["load", "calculate", "apply"]) {
+  Deno.test(`stock tick application stops after ${failAt} failure without publication`, async () => {
+    const stages: string[] = [], failure = new Error(`synthetic ${failAt}`);
+    const stage = (name: string) => { stages.push(name); if (failAt === name) throw failure; };
+    let caught: any;
+    try {
+      await runStockMarketRunner({ gameSessionId: GAME_SESSION_ID }, {
+        repository: {
+          async load(input) { stage("load"); return await new MockRunnerRepository().load(input); },
+          async apply() { stage("apply"); return { assetsUpdated: 1, ticksInserted: 1 }; },
+        },
+        calculateNextTick(input) { stage("calculate"); return engineResult(input); },
+        publicRealtimePublisher: { async publish() { throw new Error("Must not publish"); } },
+      });
+    } catch (error) { caught = error; }
+    assertEquals(stages, ["load", "calculate", "apply"].slice(0, ["load", "calculate", "apply"].indexOf(failAt) + 1));
+    if (failAt === "calculate") {
+      assertEquals(caught?.code, "stock_market_engine_failed"); assertEquals(caught?.status, 500); assertEquals(caught?.message, failure.message);
+    } else if (caught !== failure) throw new Error("Repository failure identity changed");
+  });
+}
 
 function dependencies(options: {
   readonly createServiceClient?: () => unknown;
@@ -692,3 +833,75 @@ function assertNoPrivateRealtimeFields(value: unknown): void {
 function privateFieldName(...parts: readonly string[]): string {
   return parts.join("");
 }
+
+Deno.test("public realtime boundary projects only the canonical game tick envelope", async () => {
+  const envelope = buildGamePublicRealtimeStockTickEnvelope({
+    gameSessionId: GAME_SESSION_ID,
+    tickIndex: 7,
+    generatedAt: WALL_CLOCK_TIME,
+    assets: [{ assetId: ASSET_ID, ticker: "AURA", countryCode: "SOLVEND" }],
+    rows: [{ ticker: "AURA", companyName: "Aurora", sector: "TECH", currentPrice: 12, previousClose: 10 }],
+    ticks: [{ assetId: ASSET_ID, ticker: "AURA", changePct: 20, volume: 8 }],
+  });
+  assertEquals(envelope, {
+    gameSessionId: GAME_SESSION_ID, channel: `game:${GAME_SESSION_ID}:public`,
+    sequence: 7, eventType: "stock_tick", occurredAt: WALL_CLOCK_TIME,
+    payload: { tick: 7, stocks: [{
+      stockAssetId: ASSET_ID, ticker: "AURA", companyName: "Aurora", sector: "TECH",
+      countryCode: "SOLVEND", currentPrice: 12, previousClose: 10, changePct: 20, volume: 8,
+    }] },
+  });
+  const sent: unknown[] = [];
+  const result = await new GamePublicRealtimePublisher({
+    async send(message) { sent.push(message); return { ok: true }; },
+  }).publish(envelope);
+  assertEquals(result.ok, true);
+  assertEquals(sent, [{ channel: envelope.channel, event: "stock_tick", payload: envelope }]);
+});
+
+Deno.test("public realtime boundary rejects mismatched stock projection sources", () => {
+  for (const missing of ["asset", "row"]) {
+    let caught: unknown;
+    try {
+      buildGamePublicRealtimeStockTickEnvelope({
+        gameSessionId: GAME_SESSION_ID, tickIndex: 7, generatedAt: WALL_CLOCK_TIME,
+        assets: missing === "asset" ? [] : [{ assetId: ASSET_ID, ticker: "AURA", countryCode: "SOLVEND" }],
+        rows: missing === "row" ? [] : [{ ticker: "AURA", companyName: "Aurora", sector: "TECH", currentPrice: 12, previousClose: 10 }],
+        ticks: [{ assetId: ASSET_ID, ticker: "AURA", changePct: 20, volume: 8 }],
+      });
+    } catch (error) { caught = error; }
+    assertEquals(caught instanceof Error ? caught.message : caught,
+      "Stock tick public realtime source did not match the calculated tick.");
+  }
+});
+
+Deno.test("public realtime boundary retains privacy, channel and sequence guards before transport", async () => {
+  let sent = 0;
+  const publisher = new GamePublicRealtimePublisher({
+    async send() { sent++; return { ok: true }; },
+  });
+  const valid = buildGamePublicRealtimeEnvelope({
+    gameSessionId: GAME_SESSION_ID, sequence: 0, eventType: "stock_tick",
+    occurredAt: WALL_CLOCK_TIME, payload: { tick: 0, stocks: [] },
+  });
+  assertEquals((await publisher.publish(valid)).ok, true);
+  sent = 0;
+  const messages = [
+    "Public realtime channel must match the game session.",
+    "sequence must be a non-negative integer or null.",
+    "Public realtime payload contains private field payload.nested.playerSessionToken.",
+  ];
+  for (const [index, envelope] of [
+    { ...valid, channel: "game:another:public" as const },
+    { ...valid, sequence: -1 },
+    { ...valid, payload: { ...valid.payload, nested: { playerSessionToken: "private" } } },
+  ].entries()) {
+    const result = await publisher.publish(envelope);
+    assertEquals(result.ok, false);
+    if (!result.ok) {
+      assertEquals(result.error.code, "invalid_game_public_realtime_event");
+      assertEquals(result.error.message, messages[index]);
+    }
+  }
+  assertEquals(sent, 0);
+});

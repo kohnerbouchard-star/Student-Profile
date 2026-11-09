@@ -771,3 +771,17 @@ Marketplace resale now preserves listing currency and consumes the shared C0/B1/
 Durable evidence: `docs/roadmaps/multicurrency-marketplace-funding-implementation-handoff-v1.md`.
 
 Next authorized checkpoint: `BUSINESS-V2-10A4C3` on a separate stacked draft branch from the clean C2 handoff. No merge or deployment is authorized by this checkpoint.
+
+
+## Phase 15 — Live migration parity and controlled release
+
+Authorized by the owner on 2026-09-20, superseding earlier statements that no later phase or live release was authorized. Authority is conditional: production must remain unchanged until 15A–15E pass. Phase 14 repository certification is preserved.
+
+1. **15A:** read-only canonical migration/effective-schema reconciliation; no unexplained identity/effect conflicts, every live-only entry understood, exact convergence paths established.
+2. **15B:** minimum forward-only package; two deterministic clean replays, advisors, populated upgrade rehearsal, reviewed exact-head CI.
+3. **15C:** recovery-proven staging convergence, with pre/post schema and economic invariants.
+4. **15D:** real staging lifecycle, browser, isolation, concurrency, conservation and unchanged 30/40-player load gates.
+5. **15E:** security classification, release-integrity and backup/recovery gates against the frozen candidate.
+6. **15F:** staging-proven production convergence, immutable artifact promotion, bounded runtime/conservation certification.
+
+Current gate: **15A BLOCKED**, audit in progress. Evidence: `docs/operations/evidence/phase15-live-parity/2026-09-20/`. Existing release parity enforcement reports eleven unapproved routine differences plus post-cutoff ledger drift. No staging or production mutation is permitted by the present gate state. Migration counts and same-name candidates do not prove equivalence.

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "contractId": "econovaria.database-parity.v1",
+  "status": "BLOCKED",
+  "canonicalSourceCommit": "22dc9ce5023eb200a6608d5bb90a9ac30cb36c90",
+  "canonicalManifest": "docs/operations/evidence/phase15-live-parity/2026-09-20/repository-migration-manifest.json",
+  "canonicalManifestSha256": "9e52c6b235948f531fc075f90f1c1c63bcd3616c79d76ea46d85b1692a243b82",
+  "approvedHistoricalAliases": [],
+  "historicalAliasReview": "docs/operations/evidence/live-migration-reconciliation-v1/live-renumbered-identity-review.json",
+  "expectedSchemaFingerprint": null,
+  "stagingCertification": null,
+  "productionCertification": null,
+  "certifiedGitSha": null,
+  "rules": {
+    "appliedMigrationsImmutable": true,
+    "correctionsForwardOnly": true,
+    "migrationCountEqualityIsParity": false,
+    "ordinaryPrRequiresProductionCredentials": false
+  },
+  "blockingReason": "15A remains blocked by unproved historical aliases/live-only effects, stale production purge guards, scheduler differences, and no approved safe convergence sequence. Clean repository replay does not certify live parity.",
+  "cleanRepositoryReplay": {
+    "sourceCommit": "6219b0605e632f1aec248b11028deb5164d18d03",
+    "schemaFingerprint": "b94617ca343e1d99be228bd76f7347a8a928505bf13dd136232f2f2e33c4d509",
+    "runtimeCatalogFingerprint": "1e28a2caf0884a65ee29e090726dcb4129cca0365b5acce3db0cb6e34c5ed451",
+    "evidence": "docs/operations/evidence/phase15-live-parity/2026-09-20/canonical-replay-certification.json"
+  }
+}

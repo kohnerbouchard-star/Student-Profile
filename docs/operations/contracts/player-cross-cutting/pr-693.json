@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.phase15-supabase-ca-pinning-pr-693.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 693,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/database-replay.yml",
+    "docs/operations/contracts/player-cross-cutting/pr-693.json",
+    "scripts/operations/live-migration-reconciliation/rehearse-live-shaped-upgrade.sh",
+    "scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-693.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-financial-reporting-source",
+    "business-financial-reporting-database",
+    "business-financial-reporting-browser",
+    "business-common-equity-source",
+    "business-common-equity-database",
+    "business-primary-ipo-source",
+    "business-primary-ipo-database",
+    "business-primary-ipo-browser",
+    "business-financial-market-source",
+    "business-financial-market-database",
+    "business-financial-market-browser",
+    "admin-business-supervision-source",
+    "admin-business-supervision-database",
+    "admin-business-supervision-browser"
+  ],
+  "criticalJobChecks": [
+    "business-financial-reporting-source",
+    "business-financial-reporting-database",
+    "business-financial-reporting-browser",
+    "business-common-equity-source",
+    "business-common-equity-database",
+    "business-primary-ipo-source",
+    "business-primary-ipo-database",
+    "business-primary-ipo-browser",
+    "business-financial-market-source",
+    "business-financial-market-database",
+    "business-financial-market-browser",
+    "admin-business-supervision-source",
+    "admin-business-supervision-database",
+    "admin-business-supervision-browser"
+  ],
+  "authorizationNote": "Owner authorized the full gated Phase 15A-F program. This bounded read-only correction pins the public Supabase production root CA embedded by the current official Supabase CLI and used by the Supabase Dashboard download link, forces verify-full on the protected database URLs, and suppresses misleading cleanup comparisons when no source schema was restored. It authorizes no hosted write, migration, scheduler change, runtime deployment, assertion relaxation, or secret-value disclosure."
+}

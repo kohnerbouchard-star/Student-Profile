@@ -1,0 +1,308 @@
+name: REF-018 and REF-022 Staff Mutation Qualification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
+      - '.github/workflows/ref-018-attendance-qualification.yml'
+      - 'backend/src/domains/attendance/**'
+      - 'backend/src/domains/crafting/**'
+      - 'backend/src/domains/inventory/**'
+      - 'backend/src/domains/marketplace/**'
+      - 'backend/src/domains/economy/application/adjustLedgerForAuthorizedStaff.ts'
+      - 'backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts'
+      - 'backend/src/domains/economy/services/idempotentStaffLedgerAdjustment.ts'
+      - 'backend/src/domains/economy/tests/economicMutationLedgerInvariant.test.ts'
+      - 'scripts/ref-022-ledger-adjustment-acceptance.ts'
+      - 'scripts/ref-023-reservation-acceptance.ts'
+      - 'scripts/ref-024-marketplace-acceptance.ts'
+      - 'scripts/ref-030-submission-acceptance.ts'
+      - 'scripts/ref-036-progression-acceptance.ts'
+      - 'scripts/ref-039-stock-runner-acceptance.ts'
+      - 'scripts/ref-045-license-issuance-acceptance.ts'
+      - 'scripts/pr-889-campaign-postgrest-acceptance.ts'
+      - 'scripts/story-notification-postgrest-acceptance.ts'
+      - 'backend/src/domains/storylines/server/notificationCapabilities.ts'
+      - 'backend/src/domains/storylines/infrastructure/supabaseStoryNotificationRepository.ts'
+      - 'backend/src/domains/storylines/contracts/storyNotificationContracts.ts'
+      - 'backend/src/domains/notifications/public/storyNotifications.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/infrastructure/client.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.test.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/deno.json'
+      - 'backend/supabase/functions/deno.lock'
+      - 'backend/supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs'
+      - 'scripts/redact-econovaria-ci-log.mjs'
+      - 'backend/supabase/functions/license-issuance-worker/**'
+      - 'backend/supabase/functions/_shared/licenseCode.ts'
+      - 'backend/src/domains/licensing/**'
+      - 'backend/src/domains/stocks/**'
+      - 'backend/src/domains/progression/**'
+      - 'backend/src/domains/contracts/**'
+      - 'backend/src/platform/supabase/adminMutation.ts'
+      - 'backend/supabase/migrations/**'
+      - 'scripts/ref-018-attendance-*'
+      - 'docs/architecture/inventories/econovaria-architecture-inventory-v2.json'
+      - 'docs/roadmaps/refactor-execution-v1/tasks/REF-018.md'
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ref-018-attendance-qualification.yml'
+      - 'backend/src/domains/attendance/**'
+      - 'backend/src/domains/crafting/**'
+      - 'backend/src/domains/inventory/**'
+      - 'backend/src/domains/marketplace/**'
+      - 'backend/src/domains/economy/application/adjustLedgerForAuthorizedStaff.ts'
+      - 'backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts'
+      - 'backend/src/domains/economy/services/idempotentStaffLedgerAdjustment.ts'
+      - 'backend/src/domains/economy/tests/economicMutationLedgerInvariant.test.ts'
+      - 'scripts/ref-022-ledger-adjustment-acceptance.ts'
+      - 'scripts/ref-023-reservation-acceptance.ts'
+      - 'scripts/ref-024-marketplace-acceptance.ts'
+      - 'scripts/ref-030-submission-acceptance.ts'
+      - 'scripts/ref-036-progression-acceptance.ts'
+      - 'scripts/ref-039-stock-runner-acceptance.ts'
+      - 'scripts/ref-045-license-issuance-acceptance.ts'
+      - 'scripts/pr-889-campaign-postgrest-acceptance.ts'
+      - 'scripts/story-notification-postgrest-acceptance.ts'
+      - 'backend/src/domains/storylines/server/notificationCapabilities.ts'
+      - 'backend/src/domains/storylines/infrastructure/supabaseStoryNotificationRepository.ts'
+      - 'backend/src/domains/storylines/contracts/storyNotificationContracts.ts'
+      - 'backend/src/domains/notifications/public/storyNotifications.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/infrastructure/client.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/infrastructure/campaignReadClient.test.ts'
+      - 'backend/supabase/functions/campaign-orchestrator/deno.json'
+      - 'backend/supabase/functions/deno.lock'
+      - 'backend/supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs'
+      - 'scripts/redact-econovaria-ci-log.mjs'
+      - 'backend/supabase/functions/license-issuance-worker/**'
+      - 'backend/supabase/functions/_shared/licenseCode.ts'
+      - 'backend/src/domains/licensing/**'
+      - 'backend/src/domains/stocks/**'
+      - 'backend/src/domains/progression/**'
+      - 'backend/src/domains/contracts/**'
+      - 'backend/src/platform/supabase/adminMutation.ts'
+      - 'backend/supabase/migrations/**'
+      - 'scripts/ref-018-attendance-*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ref018-attendance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  attendance-qualification:
+    name: Staff Attendance and ledger adjustment database/race qualification
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      REF018_DISPOSABLE_DATABASE: '1'
+      REF022_DISPOSABLE_DATABASE: '1'
+      REF023_DISPOSABLE_DATABASE: '1'
+      REF024_DISPOSABLE_DATABASE: '1'
+      REF030_DISPOSABLE_DATABASE: '1'
+      REF036_DISPOSABLE_DATABASE: '1'
+      REF039_DISPOSABLE_DATABASE: '1'
+      REF045_DISPOSABLE_DATABASE: '1'
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out exact qualification head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - name: Install pinned tooling and check qualification source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ref018
+          npm install --global npm@10.9.8
+          npm ci
+          npm --prefix backend ci
+          node backend/scripts/verifyNeutralDenoTestConfig.mjs --static
+          deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-018-attendance-acceptance.ts
+          deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-022-ledger-adjustment-acceptance.ts
+          deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-023-reservation-acceptance.ts
+          deno check --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-024-marketplace-acceptance.ts
+          deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-030-submission-acceptance.ts
+          deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-036-progression-acceptance.ts
+          deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-039-stock-runner-acceptance.ts
+          deno check --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/ref-045-license-issuance-acceptance.ts
+          deno check --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/pr-889-campaign-postgrest-acceptance.ts
+          deno check --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/story-notification-postgrest-acceptance.ts
+          deno cache --allow-import=esm.sh --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen scripts/story-notification-postgrest-acceptance.ts
+          npx supabase --version
+          npx supabase start --help > /tmp/ref018/start-help.log
+          npx supabase db reset --help > /tmp/ref018/reset-help.log
+      - name: Verify focused application and retained parity regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            npm --prefix backend run test:admin-api
+            npm --prefix backend run test:economic-ledger-invariants
+            npm --prefix backend run test:admin-local-mutations
+            npm --prefix backend run test:player-security
+            npm --prefix backend run test:player-request-scope
+            npm run test:admin-economic-writes
+            npm --prefix backend run test:player-inventory
+            npm --prefix backend run test:player-crafting
+            npm --prefix backend run test:player-marketplace
+            npm --prefix backend run test:player-progression
+            npm run test:progression-simulation
+            npm run test:admin-progression
+            npm run test:crafting-runtime
+            npm --prefix player-terminal run marketplace-connected
+          } 2>&1 | tee /tmp/ref018/application-regressions.log
+      - name: Verify full backend typecheck and smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix backend run typecheck:all 2>&1 | tee /tmp/ref018/backend-typecheck.log
+          npm --prefix backend run smoke 2>&1 | tee /tmp/ref018/backend-smoke.log
+      - name: Start disposable local database and replay migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,logflare,vector,supavisor,realtime,postgres-meta,mailpit,edge-runtime 2>&1 | node scripts/redact-econovaria-ci-log.mjs > /tmp/ref018/database-start.log
+          npx supabase db reset --workdir backend --local 2>&1 | node scripts/redact-econovaria-ci-log.mjs > /tmp/ref018/database-replay.log
+      - name: Prove Story notification capabilities through local PostgREST
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test "$DATABASE_URL" = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+          story_status="$(npx supabase status --workdir backend -o env 2>&1)"
+          story_api='' story_service='' story_secret=''
+          while IFS='=' read -r story_name story_value; do
+            story_value="${story_value#\"}"; story_value="${story_value%\"}"
+            case "$story_name" in
+              API_URL) story_api="$story_value" ;;
+              SERVICE_ROLE_KEY) story_service="$story_value" ;;
+              SECRET_KEY) story_secret="$story_value" ;;
+            esac
+          done <<< "$story_status"
+          test "$story_api" = 'http://127.0.0.1:54321'
+          export SUPABASE_URL="$story_api" SUPABASE_SERVICE_ROLE_KEY="${story_service:-$story_secret}"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "notify pgrst, 'reload schema';"
+          deno run --cached-only --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF018_DISPOSABLE_DATABASE,RELEASE_COMMIT,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY --allow-read --allow-run=psql,git --allow-net=127.0.0.1:54321 scripts/story-notification-postgrest-acceptance.ts
+      - name: Capture unchanged-schema lint baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase db lint --workdir backend --local --level warning --output json > /tmp/ref018/database-lint-before.json 2> /tmp/ref018/database-lint-before.log
+      - name: Prove actual Attendance effects, replay, rollback and overlapping submissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno run --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF018_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-018-attendance-acceptance.ts 2>&1 | tee /tmp/ref018/database-qualification.log
+      - name: Prove Staff ledger atomic replay, rollback and overlapping commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno run --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF022_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-022-ledger-adjustment-acceptance.ts 2>&1 | tee /tmp/ref018/ref022-database-qualification.log
+      - name: Prove Crafting and Marketplace reservation contention and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno run --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF023_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-023-reservation-acceptance.ts 2>&1 | tee /tmp/ref018/ref023-database-qualification.log
+      - name: Prove funded Marketplace settlement, rollback and competing purchases
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno run --config backend/supabase/functions/admin-api/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF024_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-024-marketplace-acceptance.ts 2>&1 | tee /tmp/ref018/ref024-database-qualification.log
+      - name: Prove Contract submission and Story trigger commit, replay, rollback and races
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno run --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF030_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-030-submission-acceptance.ts 2>&1 | tee /tmp/ref018/ref030-database-qualification.log
+      - name: Prove Progression grant replay, competing claims and in-command rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          deno run --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF036_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-036-progression-acceptance.ts 2>&1 | tee /tmp/ref018/ref036-database-qualification.log
+      - name: Prove real Stock runner duplicate, race, rollback and calendar boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix backend run test:stock-market-calendar 2>&1 | tee /tmp/ref018/ref039-calendar.log
+          npm run test:market-trigger 2>&1 | tee /tmp/ref018/ref039-market-trigger.log
+          deno run --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF039_DISPOSABLE_DATABASE,RELEASE_COMMIT --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-039-stock-runner-acceptance.ts 2>&1 | tee /tmp/ref018/ref039-database-qualification.log
+      - name: Prove synthetic Licensing issuance, claim contention and atomic outbox rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types --test scripts/license-issuance-queue-contract.test.mjs scripts/license-issuance-hardening-contract.test.mjs scripts/license-email-outbox-contract.test.mjs scripts/stripe-license-adapter-contract.test.mjs 2>&1 | tee /tmp/ref018/ref045-contracts.log
+          deno run --config backend/supabase/functions/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,REF045_DISPOSABLE_DATABASE,RELEASE_COMMIT,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,ECONOVARIA_LICENSE_CODE_DERIVATION_SECRET,ECONOVARIA_PURCHASE_CODE_HMAC_SECRET --allow-read --allow-run=psql --allow-write=/tmp/ref018 --deny-net scripts/ref-045-license-issuance-acceptance.ts 2>&1 | tee /tmp/ref018/ref045-database-qualification.log
+      - name: Prove Campaign SDK reads and scheduler authorization through local PostgREST
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test "$DATABASE_URL" = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+          pr889_status="$(npx supabase status --workdir backend -o env 2>&1)"
+          pr889_api='' pr889_service='' pr889_secret=''
+          while IFS='=' read -r pr889_name pr889_value; do
+            pr889_value="${pr889_value#\"}"; pr889_value="${pr889_value%\"}"
+            case "$pr889_name" in
+              API_URL) pr889_api="$pr889_value" ;;
+              SERVICE_ROLE_KEY) pr889_service="$pr889_value" ;;
+              SECRET_KEY) pr889_secret="$pr889_value" ;;
+            esac
+          done <<< "$pr889_status"
+          test "$pr889_api" = 'http://127.0.0.1:54321'
+          export SUPABASE_URL="$pr889_api"
+          export SUPABASE_SERVICE_ROLE_KEY="${pr889_service:-$pr889_secret}"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "notify pgrst, 'reload schema';"
+          PR889_DISPOSABLE_DATABASE=1 deno run --cached-only --config backend/supabase/functions/campaign-orchestrator/deno.json --lock=backend/supabase/functions/deno.lock --frozen --allow-env=DATABASE_URL,PR889_DISPOSABLE_DATABASE,RELEASE_COMMIT,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY --allow-read --allow-run=psql --allow-net=127.0.0.1:54321 --allow-write=/tmp/ref018 scripts/pr-889-campaign-postgrest-acceptance.ts 2>&1 | tee /tmp/ref018/pr889-campaign-postgrest.log
+      - name: Preserve baseline lint findings without introducing new diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase db lint --workdir backend --local --level warning --output json > /tmp/ref018/database-lint-after.json 2> /tmp/ref018/database-lint-after.log
+          python3 - <<'PYTHON'
+          import json
+          from pathlib import Path
+          root = Path('/tmp/ref018')
+          def normalized(name):
+              rows = json.loads((root / name).read_text())
+              return sorted(json.dumps({'function': row['function'], 'issue': issue}, sort_keys=True)
+                            for row in rows for issue in row['issues'])
+          before = normalized('database-lint-before.json')
+          after = normalized('database-lint-after.json')
+          report = {'unchanged': before == after, 'baselineFindingCount': len(before),
+                    'baselineErrorCount': sum(json.loads(row)['issue']['level'] == 'error' for row in before),
+                    'added': sorted(set(after) - set(before)), 'removed': sorted(set(before) - set(after)),
+                    'meaning': 'Existing findings retained; this is not a clean database certification.'}
+          (root / 'database-lint-comparison.json').write_text(json.dumps(report, indent=2) + '\n')
+          print(json.dumps(report, indent=2))
+          assert before == after, 'Qualification harness changed database lint diagnostics'
+          PYTHON
+      - name: Verify deterministic inventory and unchanged architecture limits
+        run: npm run audit:architecture
+      - name: Upload exact-head qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ref018-attendance-qualification-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/ref018/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Stop disposable database
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup

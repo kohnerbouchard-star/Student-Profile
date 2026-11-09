@@ -1,17 +1,13 @@
-import type { PlayerRequestScope } from "../../players/api/playerRequestScope.ts";
+import type { PlayerRequestScope } from "../../players/index.ts";
 import type {
   ArrivalClassAssignment,
   ArrivalClassId,
   ArrivalClassScoreResult,
-} from "../../arrival/contracts/arrivalClassContracts.ts";
-import type {
-  CampaignInstance,
-  CampaignPhase,
-  CampaignStatus,
-} from "../../campaign/contracts/campaignRuntimeContracts.ts";
+} from "../../arrival/index.ts";
 import type {
   CampaignHistoryEntry,
-} from "../../campaign/services/campaignCoordinator.ts";
+  PlayerCampaignProjectionSource,
+} from "../../campaign/index.ts";
 import type {
   RequestResidencyChangeRequest,
 } from "../api/playerWorldRuntimeContracts.ts";
@@ -34,6 +30,9 @@ import type {
   PlayerWorldRuntimeRepository,
   PlayerWorldRuntimeSnapshot,
 } from "../services/playerWorldRuntimeService.ts";
+
+type CampaignPhase = PlayerCampaignProjectionSource["currentPhase"];
+type CampaignStatus = PlayerCampaignProjectionSource["status"];
 
 interface DatabaseError {
   readonly code?: string;
@@ -397,7 +396,7 @@ async function readCampaignContext(
       summaryDefinitionId: execution.event_key,
     })
   );
-  const instance: CampaignInstance = Object.freeze({
+  const instance = Object.freeze({
     campaignInstanceId: row.public_id,
     gameId: scope.gameId,
     definition: Object.freeze({
@@ -423,7 +422,7 @@ async function readCampaignContext(
     completedAt: nullableTimestamp(row.completed_at),
     createdAt: requireTimestamp(row.created_at, "campaign creation"),
     updatedAt: requireTimestamp(row.updated_at, "campaign update"),
-  });
+  }) satisfies PlayerCampaignProjectionSource;
   return Object.freeze({
     instance,
     history: Object.freeze(history),

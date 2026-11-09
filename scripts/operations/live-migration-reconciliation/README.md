@@ -1,5 +1,13 @@
 # Live migration reconciliation tooling
 
+## Phase 15 extension (2026-09-20)
+
+`phase15-audit.mjs` reuses the migration loader to produce conservative three-way identity classifications. `verify-immutable-manifest.mjs` binds frozen checksums to Git and rejects changed, deleted, renamed or backdated migrations. `export-effective-schema-v2.sql` extends the established release exporter to `economy_private`; pair it with `export-runtime-catalog-v2.sql`. Database Replay captures both twice and compares deterministic fingerprints. Ordinary PR checks require no live credentials.
+
+The active parity contract is `docs/operations/contracts/database-parity-v1.json`; its incomplete certification fields deliberately remain null while Phase 15A is blocked. Evidence and interpretation are in `docs/operations/evidence/phase15-live-parity/2026-09-20/README.md`.
+
+The historical `apply-pending-via-psql.sh` and `normalize-outer-transactions.py` are not approved Phase 15 mutation tools. The former contains 71-migration-era ledger-writing assumptions; the latter rewrites source. Preserve their history and use only a separately reviewed, forward-only convergence sequence after the hard gates pass.
+
 This directory is intentionally read-only with respect to the connected environment. None of these tools applies migrations, changes a migration ledger, modifies Auth, changes grants or policies, deploys Edge Functions, or writes application data.
 
 ## Required sequence

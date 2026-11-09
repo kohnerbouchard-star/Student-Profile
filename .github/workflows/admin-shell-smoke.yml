@@ -19,6 +19,7 @@ on:
       - "scripts/admin-v606-full-drift-audit.mjs"
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-shell-smoke.mjs"
+      - "scripts/admin-local-mutation-ui-contract.test.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-modal-accessibility-source-smoke.mjs"
       - "scripts/admin-modal-accessibility-smoke.mjs"
@@ -74,6 +75,7 @@ on:
       - "scripts/admin-v606-full-drift-audit.mjs"
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-shell-smoke.mjs"
+      - "scripts/admin-local-mutation-ui-contract.test.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-modal-accessibility-source-smoke.mjs"
       - "scripts/admin-modal-accessibility-smoke.mjs"
@@ -132,6 +134,14 @@ jobs:
 
       - name: Install repository dependencies
         run: npm ci
+
+      - name: Verify focused Admin mutation and V2 contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p admin-browser-smoke-artifacts/ref012
+          npm run test:admin-local-mutation-ui 2>&1 | tee admin-browser-smoke-artifacts/ref012/mutation-ui.log
+          npm run test:admin-v2 2>&1 | tee admin-browser-smoke-artifacts/ref012/admin-v2.log
 
       - name: Validate repository-owned assets
         run: node scripts/asset-reference-audit.mjs
@@ -282,6 +292,21 @@ jobs:
 
       - name: Exercise attendance scanner action
         run: node scripts/admin-attendance-action-smoke.mjs
+
+      - name: Capture exact refactor qualification inputs
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=admin-browser-smoke-artifacts/ref012
+          mkdir -p "$output"
+          git rev-parse HEAD > "$output/source-sha.txt"
+          git rev-parse 'HEAD^{tree}' > "$output/source-tree.txt"
+          cp docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json "$output/candidates.json"
+          cp docs/roadmaps/refactor-execution-v1/backlog.json "$output/backlog.json"
+          cp docs/architecture/inventories/econovaria-architecture-inventory-v2.json "$output/inventory-checked.json"
+          node scripts/architecture/build-architecture-inventory.mjs
+          cp docs/architecture/inventories/econovaria-architecture-inventory-v2.json "$output/inventory-generated.json"
 
       - name: Upload browser diagnostics
         if: always()

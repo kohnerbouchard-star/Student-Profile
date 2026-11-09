@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref011-neutral-deno-config-pr-757.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 757,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/package.json",
+    "backend/scripts/verifyNeutralDenoTestConfig.mjs",
+    "backend/scripts/verifyNeutralDenoTestConfig.test.mjs",
+    "docs/operations/contracts/player-cross-cutting/pr-757.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-011/preflight.md",
+    "docs/operations/evidence/refactor-execution-v1/REF-011/execution.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-011.md",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-011/qualification.md",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/package.json",
+    "backend/scripts/verifyNeutralDenoTestConfig.mjs",
+    "backend/scripts/verifyNeutralDenoTestConfig.test.mjs",
+    "docs/operations/contracts/player-cross-cutting/pr-757.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-011/execution.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-011.md",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-011/qualification.md",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Beta Security Contract"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": ["players", "security", "countries", "world", "notifications", "messaging", "progression", "inventory", "contracts", "stocks", "store", "economy", "banking-fx", "marketplace", "crafting"],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-011/execution.md",
+  "authorizationNote": "Owner requested finishing REF-011 on existing PR757 and confirmed continuation. Nine actual implementation/evidence paths: the original seven plus REF-003/candidates.json supporting-source maintenance and REF-011/qualification.md, registered as REF-011e. Refresh only the three Deno-configuration reviews affected by the inspected package change and append its source revalidation; preserve all other reviews, historical measurements, dispositions, deletion gates and task statuses. The two existing authority verifiers remain mandatory locked references and byte-identical. Only nineteen config-path substitutions, a task-specific Node verification command, and the outer smoke wrapper may change package behavior. Preserve test:smoke, PR668 bootstrap ownership, Admin/Classroom runtime composition, all suite test lists and explicit permissions, compiler options, dependency versions and the frozen shared lockfile. Full old/neutral parity, backend smoke, typecheck:all and every applicable exact-head gate remain required. No workflow, router, SQL, migration, credential, cloud, production release, global ledger or REF-012 change. This declaration does not grant passing evidence, completion credit or a check waiver. See qualification.md for the bounded evidence-repair rationale and final qualification boundary."
+}

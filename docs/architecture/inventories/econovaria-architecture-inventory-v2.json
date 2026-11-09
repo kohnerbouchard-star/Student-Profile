@@ -8,16 +8,16 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1236,
+    "sourceFiles": 1317,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
-    "persistenceOutsideInfrastructure": 55,
-    "crossDomainDeepImports": 168,
-    "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 209,
+    "persistenceOutsideInfrastructure": 53,
+    "crossDomainDeepImports": 70,
+    "browserTransportShimFiles": 26,
+    "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 100,
-    "capabilityStrings": 136
+    "capabilityStrings": 139
   },
   "domains": [
     {
@@ -39,8 +39,10 @@
         "contracts",
         "services"
       ],
-      "sourceFiles": 3,
-      "publicBoundaryFiles": []
+      "sourceFiles": 5,
+      "publicBoundaryFiles": [
+        "backend/src/domains/arrival/index.ts"
+      ]
     },
     {
       "name": "attendance",
@@ -52,7 +54,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 10,
+      "sourceFiles": 15,
       "publicBoundaryFiles": []
     },
     {
@@ -117,7 +119,7 @@
         "domain",
         "infrastructure"
       ],
-      "sourceFiles": 6,
+      "sourceFiles": 7,
       "publicBoundaryFiles": []
     },
     {
@@ -128,8 +130,10 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 13,
-      "publicBoundaryFiles": []
+      "sourceFiles": 15,
+      "publicBoundaryFiles": [
+        "backend/src/domains/campaign/index.ts"
+      ]
     },
     {
       "name": "contracts",
@@ -141,8 +145,10 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 41,
-      "publicBoundaryFiles": []
+      "sourceFiles": 48,
+      "publicBoundaryFiles": [
+        "backend/src/domains/contracts/index.ts"
+      ]
     },
     {
       "name": "countries",
@@ -152,7 +158,7 @@
         "infrastructure",
         "services"
       ],
-      "sourceFiles": 12,
+      "sourceFiles": 13,
       "publicBoundaryFiles": []
     },
     {
@@ -163,8 +169,10 @@
         "domain",
         "infrastructure"
       ],
-      "sourceFiles": 14,
-      "publicBoundaryFiles": []
+      "sourceFiles": 17,
+      "publicBoundaryFiles": [
+        "backend/src/domains/crafting/index.ts"
+      ]
     },
     {
       "name": "economy",
@@ -177,7 +185,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 15,
+      "sourceFiles": 20,
       "publicBoundaryFiles": [
         "backend/src/domains/economy/index.ts"
       ]
@@ -203,7 +211,7 @@
         "infrastructure",
         "realtime"
       ],
-      "sourceFiles": 9,
+      "sourceFiles": 11,
       "publicBoundaryFiles": []
     },
     {
@@ -216,8 +224,10 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 33,
-      "publicBoundaryFiles": []
+      "sourceFiles": 34,
+      "publicBoundaryFiles": [
+        "backend/src/domains/game-sessions/index.ts"
+      ]
     },
     {
       "name": "games",
@@ -251,7 +261,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 24,
+      "sourceFiles": 26,
       "publicBoundaryFiles": []
     },
     {
@@ -281,9 +291,11 @@
       "name": "messaging",
       "layers": [
         "api",
+        "application",
+        "infrastructure",
         "tests"
       ],
-      "sourceFiles": 15,
+      "sourceFiles": 18,
       "publicBoundaryFiles": []
     },
     {
@@ -294,10 +306,11 @@
         "contracts",
         "domain",
         "infrastructure",
+        "public",
         "services",
         "tests"
       ],
-      "sourceFiles": 19,
+      "sourceFiles": 21,
       "publicBoundaryFiles": []
     },
     {
@@ -310,7 +323,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 34,
+      "sourceFiles": 38,
       "publicBoundaryFiles": [
         "backend/src/domains/players/index.ts"
       ]
@@ -339,8 +352,10 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 94,
-      "publicBoundaryFiles": []
+      "sourceFiles": 100,
+      "publicBoundaryFiles": [
+        "backend/src/domains/stocks/index.ts"
+      ]
     },
     {
       "name": "store",
@@ -352,7 +367,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 60,
+      "sourceFiles": 63,
       "publicBoundaryFiles": [
         "backend/src/domains/store/index.ts"
       ]
@@ -363,11 +378,14 @@
         "api",
         "contracts",
         "infrastructure",
+        "server",
         "services",
         "tests"
       ],
-      "sourceFiles": 72,
-      "publicBoundaryFiles": []
+      "sourceFiles": 81,
+      "publicBoundaryFiles": [
+        "backend/src/domains/storylines/index.ts"
+      ]
     },
     {
       "name": "world",
@@ -378,7 +396,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 18,
+      "sourceFiles": 19,
       "publicBoundaryFiles": []
     }
   ],
@@ -502,14 +520,6 @@
         "layer": "api"
       },
       {
-        "file": "backend/src/domains/attendance/api/staffAttendanceDailyHttpHandler.ts",
-        "layer": "api"
-      },
-      {
-        "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
-        "layer": "application"
-      },
-      {
         "file": "backend/src/domains/auth/api/staffBootstrapHttpHandler.ts",
         "layer": "api"
       },
@@ -524,10 +534,6 @@
       {
         "file": "backend/src/domains/auth/api/staffSignupHttpHandler.ts",
         "layer": "api"
-      },
-      {
-        "file": "backend/src/domains/contracts/services/playerContractAvailabilityService.ts",
-        "layer": "services"
       },
       {
         "file": "backend/src/domains/economy/api/initialBalanceSeedHttpHandler.ts",
@@ -555,10 +561,6 @@
       },
       {
         "file": "backend/src/domains/players/api/playerLoginHttpHandler.ts",
-        "layer": "api"
-      },
-      {
-        "file": "backend/src/domains/players/api/playerRosterHttpHandler.ts",
         "layer": "api"
       },
       {
@@ -698,7 +700,15 @@
         "layer": "outside-domain"
       },
       {
+        "file": "backend/supabase/functions/password-reset-api/index.ts",
+        "layer": "outside-domain"
+      },
+      {
         "file": "backend/supabase/functions/staff-mfa-api/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/staff-mfa-api/systemRecovery.ts",
         "layer": "outside-domain"
       },
       {
@@ -716,124 +726,22 @@
     ],
     "crossDomainDeepImports": [
       {
-        "consumer": "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts",
-        "ownerDomain": "attendance",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
         "consumer": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
         "ownerDomain": "attendance",
         "importedDomain": "players",
-        "target": "../../players/domain/playerAccessCodes.ts"
+        "target": "../../players/identifiers.ts"
       },
       {
-        "consumer": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
+        "consumer": "backend/src/domains/attendance/infrastructure/supabaseAttendanceRecordRepository.ts",
         "ownerDomain": "attendance",
         "importedDomain": "players",
-        "target": "../../players/domain/playerIdentifiers.ts"
+        "target": "../../players/identifiers.ts"
       },
       {
-        "consumer": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts",
-        "ownerDomain": "business-banking",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts",
-        "ownerDomain": "business-banking",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
-        "ownerDomain": "business-banking",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractAcceptanceHttpHandler.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractAcceptanceHttpHandler.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractHttpHandler.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractPublicListHttpHandler.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractPublicListRoutePaths.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "storylines",
-        "target": "../../storylines/services/storyDecisionRoleplayService.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/contracts/api/playerContractPublicSubmitRoutePaths.ts",
-        "ownerDomain": "contracts",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/countries/api/playerWorldReadHttpHandler.ts",
-        "ownerDomain": "countries",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/countries/api/playerWorldReadHttpHandler.ts",
-        "ownerDomain": "countries",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/countries/api/playerWorldRoutePaths.ts",
-        "ownerDomain": "countries",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/crafting/api/playerCraftingHttpHandler.ts",
+        "consumer": "backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts",
         "ownerDomain": "crafting",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/crafting/api/playerCraftingHttpHandler.ts",
-        "ownerDomain": "crafting",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
+        "importedDomain": "inventory",
+        "target": "../../inventory/api/playerInventoryReadHttpHandler.ts"
       },
       {
         "consumer": "backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts",
@@ -842,46 +750,10 @@
         "target": "../../inventory/api/playerInventoryRoutePaths.ts"
       },
       {
-        "consumer": "backend/src/domains/crafting/api/playerCraftingRoutePaths.ts",
-        "ownerDomain": "crafting",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
         "consumer": "backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.test.ts",
         "ownerDomain": "crafting",
         "importedDomain": "players",
         "target": "../../players/contracts/playerCapabilityManifestContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.ts",
-        "ownerDomain": "crafting",
-        "importedDomain": "players",
-        "target": "../../players/contracts/playerCapabilityManifestContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/economy/api/playerBankingPublicHttpHandler.ts",
-        "ownerDomain": "economy",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/economy/api/playerBankingPublicHttpHandler.ts",
-        "ownerDomain": "economy",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/economy/api/playerBankingPublicRoutePaths.ts",
-        "ownerDomain": "economy",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/economy/api/playerLedgerHistoryHttpHandler.ts",
-        "ownerDomain": "economy",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
       },
       {
         "consumer": "backend/src/domains/economy/tests/economicMutationLedgerInvariant.test.ts",
@@ -892,302 +764,98 @@
       {
         "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
         "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/dashboardReadModel.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
+        "ownerDomain": "game-dashboard",
         "importedDomain": "storylines",
-        "target": "../../storylines/contracts/storyNotificationContracts.ts"
+        "target": "../../storylines/server/notificationCapabilities.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
         "ownerDomain": "game-dashboard",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "storylines",
-        "target": "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "storylines",
-        "target": "../../storylines/contracts/storyNotificationContracts.ts"
+        "importedDomain": "store",
+        "target": "../../store/dashboardReadModel.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "storylines",
-        "target": "../../storylines/contracts/storyNotificationContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "contracts",
-        "target": "../../contracts/contracts/contractHttpContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketReadContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketPlayerReadContracts.ts"
+        "target": "../../storylines/server/notificationCapabilities.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "store",
-        "target": "../../store/contracts/storeCatalogContracts.ts"
+        "target": "../../store/dashboardReadModel.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "store",
-        "target": "../../store/contracts/storePurchaseContracts.ts"
+        "target": "../../store/purchaseHistoryTypes.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "storylines",
-        "target": "../../storylines/contracts/storyNotificationContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/infrastructure/supabaseStockMarketWindowRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketReadContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketReadContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketPlayerReadContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "stocks",
-        "target": "../../stocks/infrastructure/supabaseStockMarketReadRepository.ts"
+        "target": "../../storylines/server/notificationCapabilities.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "store",
-        "target": "../../store/contracts/storeCatalogContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "contracts",
-        "target": "../../contracts/infrastructure/supabaseContractRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "contracts",
-        "target": "../../contracts/contracts/contractHttpContracts.ts"
+        "target": "../../store/dashboardReadModel.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "store",
-        "target": "../../store/contracts/storePurchaseContracts.ts"
+        "target": "../../store/purchaseHistoryTypes.ts"
       },
       {
         "consumer": "backend/src/domains/game-sessions/application/createGame.ts",
         "ownerDomain": "game-sessions",
         "importedDomain": "stocks",
-        "target": "../../stocks/calendars/stockMarketWindowConfig"
+        "target": "../../stocks/marketWindow.ts"
       },
       {
         "consumer": "backend/src/domains/game-sessions/application/updateGameSettings.ts",
         "ownerDomain": "game-sessions",
         "importedDomain": "stocks",
-        "target": "../../stocks/calendars/stockMarketWindowConfig.ts"
+        "target": "../../stocks/marketWindow.ts"
       },
       {
         "consumer": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
         "ownerDomain": "inventory",
         "importedDomain": "crafting",
-        "target": "../../crafting/api/playerCraftingHttpHandler.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "crafting",
-        "target": "../../crafting/contracts/playerCraftingContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryRedemptionHttpHandler.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryRedemptionHttpHandler.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryRedemptionRoutePaths.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "crafting",
-        "target": "../../crafting/api/playerCraftingRoutePaths.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/inventory/contracts/playerInventoryReadContracts.ts",
-        "ownerDomain": "inventory",
-        "importedDomain": "crafting",
-        "target": "../../crafting/contracts/playerCraftingContracts.ts"
+        "target": "../../crafting/server.ts"
       },
       {
         "consumer": "backend/src/domains/licensing/contracts/activationRequestParser.ts",
         "ownerDomain": "licensing",
         "importedDomain": "stocks",
-        "target": "../../stocks/calendars/stockMarketWindowConfig.ts"
+        "target": "../../stocks/marketWindow.ts"
       },
       {
-        "consumer": "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts",
-        "ownerDomain": "marketplace",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts",
-        "ownerDomain": "marketplace",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts",
-        "ownerDomain": "marketplace",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.ts",
-        "ownerDomain": "messaging",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.ts",
-        "ownerDomain": "messaging",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/messaging/api/playerMessageThreadLifecycleRoutePaths.ts",
-        "ownerDomain": "messaging",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
-        "ownerDomain": "messaging",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
-        "ownerDomain": "messaging",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/messaging/api/playerMessagingRoutePaths.ts",
-        "ownerDomain": "messaging",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/notifications/api/playerNotificationHttpHandler.ts",
+        "consumer": "backend/src/domains/notifications/public/storyNotifications.test.ts",
         "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
+        "importedDomain": "storylines",
+        "target": "../../storylines/services/storyNotificationService.ts"
       },
       {
-        "consumer": "backend/src/domains/notifications/api/playerNotificationHttpHandler.ts",
+        "consumer": "backend/src/domains/notifications/public/storyNotifications.ts",
         "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
+        "importedDomain": "storylines",
+        "target": "../../storylines/server/notificationCapabilities.ts"
       },
       {
-        "consumer": "backend/src/domains/notifications/api/playerNotificationRequestParser.ts",
+        "consumer": "backend/src/domains/notifications/public/storyNotifications.ts",
         "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/notifications/api/playerNotificationRoutePaths.ts",
-        "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/notifications/api/playerStoryDeliveryHttpHandler.ts",
-        "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/notifications/api/playerStoryDeliveryHttpHandler.ts",
-        "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/notifications/api/playerStoryDeliveryRoutePaths.ts",
-        "ownerDomain": "notifications",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts",
-        "ownerDomain": "players",
-        "importedDomain": "crafting",
-        "target": "../../crafting/contracts/playerCraftingCapabilityManifest.ts"
+        "importedDomain": "storylines",
+        "target": "../../storylines/server/notificationCapabilities.ts"
       },
       {
         "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
@@ -1290,12 +958,6 @@
         "ownerDomain": "players",
         "importedDomain": "world",
         "target": "../../world/api/playerWorldRuntimeRoutePaths.ts"
-      },
-      {
-        "consumer": "backend/src/domains/players/api/playerLoginHttpHandler.ts",
-        "ownerDomain": "players",
-        "importedDomain": "game-sessions",
-        "target": "../../game-sessions/api/gameJoinCodeHttpHelpers.ts"
       },
       {
         "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
@@ -1406,184 +1068,64 @@
         "target": "../../progression/api/playerProgressionRoutePaths.ts"
       },
       {
-        "consumer": "backend/src/domains/progression/api/playerProgressionHttpHandler.ts",
-        "ownerDomain": "progression",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/progression/api/playerProgressionHttpHandler.ts",
-        "ownerDomain": "progression",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/progression/api/playerProgressionRoutePaths.ts",
-        "ownerDomain": "progression",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockAssetListHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockAssetListHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockAssetListRoutePaths.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockMarketTradingHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockWatchlistHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockWatchlistHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/playerStockWatchlistRoutePaths.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
         "ownerDomain": "stocks",
         "importedDomain": "game-dashboard",
-        "target": "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts"
+        "target": "../../game-dashboard/publicRealtime.ts"
       },
       {
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
         "ownerDomain": "stocks",
         "importedDomain": "game-dashboard",
-        "target": "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts"
+        "target": "../../game-dashboard/publicRealtime.ts"
       },
       {
         "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+        "ownerDomain": "stocks",
+        "importedDomain": "storylines",
+        "target": "../../storylines/server/stockTickStorylineRunner.ts"
+      },
+      {
+        "consumer": "backend/src/domains/stocks/application/runStockMarketRunner.ts",
         "ownerDomain": "stocks",
         "importedDomain": "game-dashboard",
-        "target": "../../game-dashboard/realtime/gamePublicRealtimeStockTick.ts"
+        "target": "../../game-dashboard/publicRealtime.ts"
       },
       {
-        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+        "consumer": "backend/src/domains/stocks/application/runStockMarketRunner.ts",
         "ownerDomain": "stocks",
-        "importedDomain": "contracts",
-        "target": "../../contracts/infrastructure/supabaseContractRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "storylines",
-        "target": "../../storylines/infrastructure/supabasePlayerStoryContextRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "storylines",
-        "target": "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "storylines",
-        "target": "../../storylines/infrastructure/supabaseStorylineRepository.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "storylines",
-        "target": "../../storylines/infrastructure/supabaseStoryEffectLedgerWriter.ts"
-      },
-      {
-        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "ownerDomain": "stocks",
-        "importedDomain": "storylines",
-        "target": "../../storylines/services/storylineRunner.ts"
-      },
-      {
-        "consumer": "backend/src/domains/store/api/playerStoreCatalogHttpHandler.ts",
-        "ownerDomain": "store",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/store/api/playerStorePublicHttpHandler.ts",
-        "ownerDomain": "store",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/store/api/playerStorePublicHttpHandler.ts",
-        "ownerDomain": "store",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/store/api/playerStorePublicRoutePaths.ts",
-        "ownerDomain": "store",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/store/api/playerStorePurchaseHttpHandler.ts",
-        "ownerDomain": "store",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/storylines/contracts/storyEffectExecutionContracts.ts",
-        "ownerDomain": "storylines",
-        "importedDomain": "contracts",
-        "target": "../../contracts/contracts/contractRepositoryContracts.ts"
+        "importedDomain": "game-dashboard",
+        "target": "../../game-dashboard/publicRealtime.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/contracts/storylineContracts.ts",
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketNewsContracts.ts"
+        "target": "../../stocks/news.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts",
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketNewsContracts.ts"
+        "target": "../../stocks/news.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts",
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
-        "target": "../../stocks/contracts/stockMarketNewsContracts.ts"
+        "target": "../../stocks/news.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/server/stockTickStorylineRunner.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "notifications",
+        "target": "../../notifications/public/storyNotifications.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
         "ownerDomain": "storylines",
         "importedDomain": "game-dashboard",
-        "target": "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts"
+        "target": "../../game-dashboard/publicRealtime.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
@@ -1602,126 +1144,6 @@
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
         "target": "../../stocks/contracts/stockMarketRunnerContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeContracts.ts",
-        "ownerDomain": "world",
-        "importedDomain": "arrival",
-        "target": "../../arrival/contracts/arrivalClassContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeContracts.ts",
-        "ownerDomain": "world",
-        "importedDomain": "campaign",
-        "target": "../../campaign/services/campaignCoordinator.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeEdgeAdapter.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerSessionHttpHelpers.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.test.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts",
-        "ownerDomain": "world",
-        "importedDomain": "arrival",
-        "target": "../../arrival/contracts/arrivalClassContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/api/playerWorldRuntimeRoutePaths.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerApiRouteSegments.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
-        "ownerDomain": "world",
-        "importedDomain": "arrival",
-        "target": "../../arrival/contracts/arrivalClassContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
-        "ownerDomain": "world",
-        "importedDomain": "campaign",
-        "target": "../../campaign/contracts/campaignRuntimeContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
-        "ownerDomain": "world",
-        "importedDomain": "campaign",
-        "target": "../../campaign/services/campaignCoordinator.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
-        "ownerDomain": "world",
-        "importedDomain": "arrival",
-        "target": "../../arrival/contracts/arrivalClassContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
-        "ownerDomain": "world",
-        "importedDomain": "players",
-        "target": "../../players/api/playerRequestScope.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
-        "ownerDomain": "world",
-        "importedDomain": "arrival",
-        "target": "../../arrival/services/arrivalClassScoring.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
-        "ownerDomain": "world",
-        "importedDomain": "arrival",
-        "target": "../../arrival/contracts/arrivalClassContracts.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
-        "ownerDomain": "world",
-        "importedDomain": "campaign",
-        "target": "../../campaign/services/campaignCoordinator.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
-        "ownerDomain": "world",
-        "importedDomain": "campaign",
-        "target": "../../campaign/services/campaignCoordinator.ts"
-      },
-      {
-        "consumer": "backend/src/domains/world/services/playerWorldRuntimeService.ts",
-        "ownerDomain": "world",
-        "importedDomain": "campaign",
-        "target": "../../campaign/contracts/campaignRuntimeContracts.ts"
       }
     ],
     "browserTransportShims": [
@@ -1741,12 +1163,6 @@
         "file": "admin/asset-wiring.js",
         "patterns": [
           "MutationObserver"
-        ]
-      },
-      {
-        "file": "admin/attendance-reward-settings-route-bridge-v2.js",
-        "patterns": [
-          "window.fetch="
         ]
       },
       {
@@ -1823,15 +1239,15 @@
         ]
       },
       {
-        "file": "admin/settings-save-error-bridge.js",
+        "file": "admin/settings-simplified.js",
         "patterns": [
           "MutationObserver"
         ]
       },
       {
-        "file": "admin/settings-simplified.js",
+        "file": "backend/src/domains/economy/api/ledgerHistoryReadRepository.test.ts",
         "patterns": [
-          "MutationObserver"
+          "globalThis.fetch="
         ]
       },
       {
@@ -1919,7 +1335,7 @@
       {
         "file": "admin/attendance-reward-settings-route-bridge-v2.js",
         "markers": [
-          "fallback"
+          "compatibility"
         ]
       },
       {
@@ -2398,14 +1814,14 @@
         "markers": [
           "legacy",
           "legacydigest",
-          "legacyhashcalls"
+          "legacyhashcalls",
+          "legacyhashinputs"
         ]
       },
       {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
         "markers": [
-          "legacy",
-          "legacyhash"
+          "legacy"
         ]
       },
       {
@@ -2418,6 +1834,12 @@
         "file": "backend/src/domains/auth/api/staffSignupResendHttpHandler.ts",
         "markers": [
           "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts",
+        "markers": [
+          "legacy_v1"
         ]
       },
       {
@@ -3188,40 +2610,32 @@
     ],
     "oversizedFiles": [
       {
-        "file": "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
-        "lines": 1667
+        "file": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
+        "lines": 2536
       },
       {
-        "file": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
-        "lines": 1601
+        "file": "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
+        "lines": 1371
       },
       {
         "file": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
-        "lines": 1194
+        "lines": 1195
+      },
+      {
+        "file": "player-terminal/src/app.js",
+        "lines": 1171
       },
       {
         "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.test.ts",
         "lines": 1132
       },
       {
-        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "lines": 1132
-      },
-      {
-        "file": "player-terminal/src/api/read-model.js",
-        "lines": 1114
-      },
-      {
         "file": "admin/v2/src/routes/crafting/CraftingRoute.js",
         "lines": 1078
       },
       {
-        "file": "player-terminal/src/app.js",
-        "lines": 1048
-      },
-      {
         "file": "backend/supabase/functions/web-session-api/index.ts",
-        "lines": 1018
+        "lines": 1054
       },
       {
         "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.ts",
@@ -3229,7 +2643,7 @@
       },
       {
         "file": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
-        "lines": 998
+        "lines": 997
       },
       {
         "file": "admin/v2/src/routes/world-management/WorldManagementRoute.js",
@@ -3240,6 +2654,10 @@
         "lines": 931
       },
       {
+        "file": "player-terminal/src/api/read-model.js",
+        "lines": 929
+      },
+      {
         "file": "backend/src/domains/contracts/api/staffContractReviewHttpHandler.test.ts",
         "lines": 920
       },
@@ -3248,12 +2666,20 @@
         "lines": 908
       },
       {
-        "file": "backend/supabase/functions/classroom-api/index.ts",
-        "lines": 888
+        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+        "lines": 908
       },
       {
-        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "lines": 869
+        "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
+        "lines": 895
+      },
+      {
+        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+        "lines": 893
+      },
+      {
+        "file": "backend/supabase/functions/classroom-api/index.ts",
+        "lines": 888
       },
       {
         "file": "backend/supabase/functions/player-web-session-api/runtime.ts",
@@ -3268,20 +2694,12 @@
         "lines": 860
       },
       {
-        "file": "backend/src/domains/storylines/services/storyEffectEngine.ts",
-        "lines": 856
-      },
-      {
         "file": "backend/supabase/functions/admin-api/readModels.ts",
         "lines": 851
       },
       {
-        "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
-        "lines": 838
-      },
-      {
-        "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.ts",
-        "lines": 836
+        "file": "admin/player-identity-wiring.js",
+        "lines": 845
       },
       {
         "file": "backend/src/domains/contracts/api/staffContractHttpHandler.test.ts",
@@ -3298,6 +2716,10 @@
       {
         "file": "admin/world-runtime-console.js",
         "lines": 809
+      },
+      {
+        "file": "backend/src/domains/storylines/services/storyEffectEngine.ts",
+        "lines": 778
       },
       {
         "file": "backend/src/domains/contracts/api/playerContractHttpHandler.test.ts",
@@ -3320,8 +2742,8 @@
         "lines": 730
       },
       {
-        "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
-        "lines": 724
+        "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.ts",
+        "lines": 727
       },
       {
         "file": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts",
@@ -3340,28 +2762,24 @@
         "lines": 697
       },
       {
-        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
-        "lines": 695
-      },
-      {
         "file": "backend/src/domains/markets/contracts/financialMarketContracts.ts",
         "lines": 683
       },
       {
-        "file": "admin/player-identity-wiring.js",
-        "lines": 671
+        "file": "admin/admin-auth.js",
+        "lines": 676
       },
       {
         "file": "admin/v2/src/routes/market/MarketRoute.js",
         "lines": 667
       },
       {
-        "file": "admin/admin-auth.js",
-        "lines": 658
+        "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
+        "lines": 656
       },
       {
-        "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
-        "lines": 649
+        "file": "admin/settings-simplified.js",
+        "lines": 654
       },
       {
         "file": "backend/src/security/adminBffRequestAuth.ts",
@@ -3380,12 +2798,12 @@
         "lines": 638
       },
       {
-        "file": "admin/settings-simplified.js",
+        "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.ts",
         "lines": 637
       },
       {
-        "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.ts",
-        "lines": 637
+        "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
+        "lines": 632
       },
       {
         "file": "backend/src/domains/markets/calculations/collectiveInvestmentAnalytics.ts",
@@ -3420,16 +2838,20 @@
         "lines": 609
       },
       {
+        "file": "admin/game-session-controls.js",
+        "lines": 608
+      },
+      {
+        "file": "backend/src/platform/supabase/edgeStaffSession.ts",
+        "lines": 603
+      },
+      {
         "file": "frontend/src/core/admin-mfa.js",
         "lines": 603
       },
       {
         "file": "backend/src/domains/contracts/contracts/contractContracts.ts",
         "lines": 600
-      },
-      {
-        "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
-        "lines": 598
       },
       {
         "file": "backend/supabase/functions/admin-api/mutationAdapters.ts",
@@ -3442,10 +2864,6 @@
       {
         "file": "backend/src/simulations/economy/creditRecoveryScenarioSimulation.ts",
         "lines": 592
-      },
-      {
-        "file": "admin/game-session-controls.js",
-        "lines": 591
       },
       {
         "file": "admin/interaction-quality.js",
@@ -3468,20 +2886,24 @@
         "lines": 577
       },
       {
+        "file": "backend/supabase/functions/admin-api/index.ts",
+        "lines": 570
+      },
+      {
         "file": "admin/inventory-redemption-queue-surface.js",
         "lines": 569
       },
       {
-        "file": "backend/supabase/functions/admin-api/index.ts",
-        "lines": 569
-      },
-      {
         "file": "backend/src/domains/contracts/tests/playerContractFullLifecycleIntegration.test.ts",
-        "lines": 567
+        "lines": 569
       },
       {
         "file": "admin/game-code-wiring.js",
         "lines": 563
+      },
+      {
+        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+        "lines": 561
       },
       {
         "file": "player-terminal/src/recovery/player-recovery-controller.js",
@@ -3520,10 +2942,6 @@
         "lines": 550
       },
       {
-        "file": "backend/src/platform/supabase/edgeStaffSession.ts",
-        "lines": 548
-      },
-      {
         "file": "backend/src/domains/markets/calculations/bondMath.ts",
         "lines": 547
       },
@@ -3552,6 +2970,10 @@
         "lines": 532
       },
       {
+        "file": "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
+        "lines": 532
+      },
+      {
         "file": "admin/v2/src/routes/players/PlayersRoute.js",
         "lines": 521
       },
@@ -3573,7 +2995,7 @@
       },
       {
         "file": "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
-        "lines": 507
+        "lines": 509
       },
       {
         "file": "backend/supabase/functions/admin-api/playerOperations.ts",
@@ -3705,7 +3127,7 @@
       {
         "capability": "attendance.scan",
         "locations": [
-          "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts"
+          "backend/src/domains/attendance/infrastructure/supabaseAttendanceRecordRepository.ts"
         ]
       },
       {
@@ -3758,6 +3180,12 @@
         "locations": [
           "backend/src/domains/world/infrastructure/betaSeedPackRuntimeAdapter.test.ts",
           "backend/src/domains/world/infrastructure/betaSeedPackRuntimeAdapter.ts"
+        ]
+      },
+      {
+        "capability": "campaign.test",
+        "locations": [
+          "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
         ]
       },
       {
@@ -3883,6 +3311,12 @@
         ]
       },
       {
+        "capability": "contract.story-test",
+        "locations": [
+          "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts"
+        ]
+      },
+      {
         "capability": "contract.title",
         "locations": [
           "backend/src/domains/contracts/contracts/contractContracts.ts"
@@ -3905,6 +3339,12 @@
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
           "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
+          "backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts",
+          "backend/supabase/functions/admin-api/contractProgressReadOperation.ts",
+          "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
+          "backend/supabase/functions/admin-api/contractReviewOperation.ts",
+          "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
+          "backend/supabase/functions/admin-api/contractRewardIssueOperation.ts",
           "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
@@ -4022,6 +3462,12 @@
         ]
       },
       {
+        "capability": "event.contract",
+        "locations": [
+          "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts"
+        ]
+      },
+      {
         "capability": "event.default",
         "locations": [
           "backend/src/simulations/economy/crossDomainExploitDetection.test.ts"
@@ -4094,6 +3540,7 @@
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts",
           "backend/supabase/functions/admin-api/gameJoinCodeOperations.test.ts",
           "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts"
         ]
@@ -4117,6 +3564,9 @@
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
+          "backend/supabase/functions/admin-api/contractReviewOperation.ts",
+          "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
           "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts",
           "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
@@ -4314,7 +3764,8 @@
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
           "backend/supabase/functions/admin-api/bankingOperations.test.ts",
           "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
-          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts",
+          "backend/supabase/functions/admin-api/playerAccessCodeResetOperation.ts"
         ]
       },
       {
@@ -4534,7 +3985,8 @@
       {
         "capability": "summary.arrival",
         "locations": [
-          "backend/src/domains/campaign/services/campaignCoordinator.test.ts"
+          "backend/src/domains/campaign/services/campaignCoordinator.test.ts",
+          "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
         ]
       },
       {

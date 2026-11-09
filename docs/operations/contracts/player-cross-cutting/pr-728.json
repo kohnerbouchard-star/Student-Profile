@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.phase15-disposable-managed-default-acl-owner-filter-pr-728.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 728,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/phase15-controlled-production.yml",
+    "scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+    "docs/operations/contracts/player-cross-cutting/pr-728.json",
+    "scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-728.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-financial-reporting-source",
+    "business-financial-reporting-database",
+    "business-financial-reporting-browser",
+    "business-common-equity-source",
+    "business-common-equity-database",
+    "business-primary-ipo-source",
+    "business-primary-ipo-database",
+    "business-primary-ipo-browser",
+    "business-financial-market-source",
+    "business-financial-market-database",
+    "business-financial-market-browser",
+    "admin-business-supervision-source",
+    "admin-business-supervision-database",
+    "admin-business-supervision-browser"
+  ],
+  "criticalJobChecks": [
+    "business-financial-reporting-source",
+    "business-financial-reporting-database",
+    "business-financial-reporting-browser",
+    "business-common-equity-source",
+    "business-common-equity-database",
+    "business-primary-ipo-source",
+    "business-primary-ipo-database",
+    "business-primary-ipo-browser",
+    "business-financial-market-source",
+    "business-financial-market-database",
+    "business-financial-market-browser",
+    "admin-business-supervision-source",
+    "admin-business-supervision-database",
+    "admin-business-supervision-browser"
+  ],
+  "authorizationNote": "Owner authorized the full gated Phase 15A-F program. Production run 35547345465 proved the disposable managed-default round trip preserves all six expected application-schema default-ACL rows and keeps every object-level routine grant exact. Its only two differences were local-image postgres defaults being merged on top of the source dump's authoritative postgres defaults: anon/authenticated retained WRITE on future sequences and DELETE/TRUNCATE/TRIGGER/MAINTAIN on future tables. The hosted source expects no such postgres grants. This exact-path correction selects only the three DEFAULT ACL archive entries owned by target-managed role supabase_admin, asserts the count is exactly three, and restores them after source schema replay. The source dump remains sole authority for all postgres-owned defaults. Exact structures, owners, object grants, row security, policies, and all six default-privilege rows must still match before recovery upload or mutation. Run 35547345465 failed before recovery upload and before mutation; hosted production remains at 294 migrations with zero Phase 15 entries. No migration bytes, hosted data, secret values, environment identity, purge controls, Edge runtime code, or production deployment are altered directly; protected replay and exact controlled staging remain mandatory."
+}

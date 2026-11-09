@@ -1,3 +1,5 @@
+// Keep adjacent ledger-history parity in the existing Banking suite.
+import "./ledgerHistoryReadRepository.test.ts";
 import { handlePlayerBankingPublicRequest } from "./playerBankingPublicHttpHandler.ts";
 import { readPlayerBankingPublicRoutePath } from "./playerBankingPublicRoutePaths.ts";
 import type {

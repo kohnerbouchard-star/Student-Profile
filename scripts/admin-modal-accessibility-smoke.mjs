@@ -17,6 +17,28 @@ page.on("console", (message) => {
 });
 
 try {
+  report.openerIdentity = [];
+  for (const mode of ["visible", "inert", "replacement", "ineligible"]) {
+    const fixture = await page.context().newPage();
+    await fixture.setContent('<main id="adminPreview" tabindex="-1">Root</main><div id="area"><button id="opener" data-admin-terminal-action="fixture-open">Open</button></div><div id="backdrop"><section id="dialog"><button>Inside</button></section></div>');
+    await fixture.addScriptTag({ url: new URL("./modal-accessibility.js", BASE_URL).href });
+    report.openerIdentity.push(await fixture.evaluate(async (mode) => {
+      const area = document.querySelector("#area"), opener = document.querySelector("#opener");
+      area.inert = mode !== "visible";
+      const controller = window.EconovariaAdminModalAccessibility.activate({ backdrop: document.querySelector("#backdrop"), dialog: document.querySelector("#dialog"), opener });
+      if (mode === "replacement") {
+        const replacement = opener.cloneNode(true); replacement.id = "replacement";
+        opener.replaceWith(replacement);
+      }
+      area.inert = mode === "ineligible";
+      controller.close("regression");
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      return { mode, activeId: document.activeElement.id, expectedId: mode === "ineligible" ? "adminPreview" : mode === "replacement" ? "replacement" : "opener" };
+    }, mode));
+    await fixture.close();
+  }
+  console.log("REF015_OPENER_REGRESSION " + JSON.stringify(report.openerIdentity));
+  assert(report.openerIdentity.every(({ activeId, expectedId }) => activeId === expectedId), "Modal restoration lost opener identity or focused an ineligible opener.");
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
   await page.waitForFunction(

@@ -142,55 +142,6 @@
     return !selected || selected === gameId;
   }
 
-  async function updatePlayerIdentity(input) {
-    const gameId = text(input?.gameId);
-    const playerId = text(input?.playerId);
-    const playerIdentifier = text(input?.playerIdentifier);
-    const accessCode = text(input?.accessCode);
-
-    if (!gameId || !playerId || !playerIdentifier) {
-      throw new Error("Player and Player ID / RFID card are required.");
-    }
-    if (!hasSafeAdminSession() || !selectedGameMatches(gameId)) {
-      throw new Error("Sign in again before changing Player credentials.");
-    }
-
-    const payload = { playerIdentifier };
-    if (accessCode) payload.accessCode = accessCode;
-    const response = await delegatedFetch(resetPath(gameId, playerId), {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload),
-      credentials: "same-origin",
-      cache: "no-store"
-    });
-    const body = await responseJson(response);
-    if (!response.ok || body.ok === false) {
-      const error = record(body.error);
-      throw new Error(
-        text(error.message || body.message) ||
-          "Player credentials could not be updated."
-      );
-    }
-
-    const player = playerFrom(body);
-    const studentCode = accessCodeFrom(body) || accessCode;
-    const savedIdentifier = playerIdentifierFrom(body) || playerIdentifier;
-    const detail = {
-      playerId,
-      displayName: text(player.displayName || player.name || input?.displayName),
-      playerIdentifier: savedIdentifier,
-      studentCode
-    };
-
-    dispatchCredentialEvent("econovaria:player-identity-updated", detail);
-    if (studentCode) emitAccessCode(detail);
-    return body;
-  }
-
   window.fetch = async function econovariaPlayerAccessCodeFetch(input, init) {
     const rawUrl = input instanceof Request
       ? input.url
@@ -279,7 +230,6 @@
   window.EconovariaPlayerAccessCodeBridge = {
     accessCodeFrom,
     playerFrom,
-    playerIdentifierFrom,
-    updatePlayerIdentity
+    playerIdentifierFrom
   };
 })();

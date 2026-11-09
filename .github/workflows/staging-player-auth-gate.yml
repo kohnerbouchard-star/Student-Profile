@@ -1,0 +1,69 @@
+name: Staging Player Auth Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      fixture_version_verified_at:
+        description: "UTC timestamp of fresh read-only GOLD-ALPHA pbkdf2-sha256-v2 confirmation (max 1 hour old)"
+        required: true
+        type: string
+      fixture_credential_version:
+        description: "Confirm existing active credential version; never upgrade or rotate it for this check"
+        required: true
+        type: choice
+        options: [pbkdf2-sha256-v2]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: econovaria-staging-golden-five-acceptance
+  cancel-in-progress: false
+
+jobs:
+  auth-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    environment: staging
+    env:
+      ECONOVARIA_PROJECT_REF: eecvbssdvarfcykcfrny
+      ECONOVARIA_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+      ECONOVARIA_GOLDEN_ALPHA_ACCESS_CODE: ${{ secrets.GOLDEN_ALPHA_ACCESS_CODE }}
+      AUTH_FIXTURE_VERSION: ${{ inputs.fixture_credential_version }}
+      AUTH_FIXTURE_VERIFIED_AT: ${{ inputs.fixture_version_verified_at }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Validate exact main and bounded test contract
+        run: |
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node scripts/staging/player-auth-gate.mjs --self-test
+          node --input-type=module -e 'import { configuration } from "./scripts/staging/player-auth-gate.mjs"; configuration(process.env)'
+      # Existing gateway keeps configured credentials inside the protected runner.
+      # No deployment, fixture provisioning, Story UI, SQL, or configuration update.
+      - name: Start staging gateway and run one bounded auth sequence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/econovaria-local-gateway.py --root "$GITHUB_WORKSPACE" --port 4173 > /tmp/player-auth-gateway.log 2>&1 &
+          gateway_pid=$!
+          trap 'kill "$gateway_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --output /dev/null http://127.0.0.1:4173/; then break; fi
+            sleep 0.25
+          done
+          node scripts/staging/player-auth-gate.mjs
+      # Test SHA identifies this harness only; deployed Edge source remains separately attested.
+      - name: Retain status-only evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: player-auth-gate-${{ github.run_id }}
+          path: /tmp/player-auth-gate/evidence.json
+          if-no-files-found: ignore
+          retention-days: 7

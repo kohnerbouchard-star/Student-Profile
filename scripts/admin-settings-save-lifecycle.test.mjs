@@ -1,0 +1,489 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import vm from "node:vm";
+import test from "node:test";
+
+const PAGE = ".admin-terminal-settings-page";
+const SAVE = '[data-admin-terminal-action="save-settings"]';
+const CARD = "[data-admin-attendance-reward-settings]";
+const controllerSource = readFileSync("admin/attendance-reward-save-controller-v3.js", "utf8");
+const presenterSource = readFileSync("admin/settings-simplified.js", "utf8");
+const bridgeSource = readFileSync("admin/settings-save-error-bridge.js", "utf8");
+const tick = () => new Promise((resolve) => setImmediate(resolve));
+async function until(predicate) {
+  for (let attempt = 0; attempt < 200; attempt++) { if (predicate()) return; await tick(); }
+  assert.fail("Settings fixture did not settle");
+}
+function deferred() { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; }
+const json = (body = {}, status = 200) => new Response(JSON.stringify(body), { status });
+
+function fixture() {
+  const listeners = new Map(), storage = new Map(), timers = new Map();
+  const calls = [], events = [], errors = [], links = [];
+  let sequence = 0, mounted = null, focused = null;
+  const state = { game: "game-one", selected: "game-one", dirty: true, reply: () => json(), read: null };
+  class Element {
+    constructor(kind = "node") {
+      this.kind = kind; this.tagName = kind === "status" ? "SPAN" : "DIV"; this.attrs = new Map(); this.connected = true;
+      const names = new Set();
+      this.classList = { add: (...values) => values.forEach((v) => names.add(v)), remove: (...values) => values.forEach((v) => names.delete(v)),
+        contains: (v) => names.has(v), toggle: (v, on) => { if (on) names.add(v); else names.delete(v); } };
+      this.dataset = new Proxy({}, { get: (_, k) => this.getAttribute("data-" + String(k).replace(/[A-Z]/g, (v) => "-" + v.toLowerCase())),
+        set: (_, k, v) => { this.setAttribute("data-" + String(k).replace(/[A-Z]/g, (v) => "-" + v.toLowerCase()), v); return true; } });
+    }
+    get isConnected() { return this.connected && (!this.page || this.page.connected); }
+    setAttribute(k, v) { this.attrs.set(k, String(v)); }
+    getAttribute(k) { return this.attrs.get(k) ?? null; }
+    removeAttribute(k) { this.attrs.delete(k); }
+    hasAttribute(k) { return this.attrs.has(k); }
+    closest(selector) {
+      if (selector === PAGE) return this.kind === "page" ? this : this.page || null;
+      if (selector === SAVE) return this.kind === "button" ? this : null;
+      if (selector === "[data-admin-section]") return this.kind === "nav" ? this : null;
+      if (selector === "[data-game-setting-key]") return this.hasAttribute("data-game-setting-key") ? this : null;
+      return null;
+    }
+    focus() { focused = this; }
+    querySelector(selector) {
+      const page = this.kind === "page" ? this : this.page;
+      if (!page) return null;
+      if (selector === SAVE) return page.button;
+      if (selector === "[data-settings-save-status]") return page.status;
+      if (selector === ".admin-terminal-settings-save-panel-v543") return page.panel;
+      if (selector.startsWith(CARD)) return page.card;
+      const name = selector.match(/^\[data-attendance-reward-field="([^"]+)"\]$/)?.[1];
+      return name ? page.fields[name] || null : null;
+    }
+    querySelectorAll(selector) {
+      if (selector === "[data-game-setting-key]") return [];
+      if (selector.includes("[data-game-setting-key],")) return Object.values(this.fields || {});
+      return [];
+    }
+    append() {}
+  }
+  class Input extends Element { constructor(name, value) { super("input"); this.tagName = "INPUT"; this.type = "number"; this.value = value; this.setAttribute("data-attendance-reward-field", name); } }
+  class Button extends Element { constructor() { super("button"); this.disabled = false; } }
+  class CustomEvent { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } }
+  const document = {
+    querySelector: (s) => s === PAGE ? mounted : mounted?.querySelector(s) || null,
+    querySelectorAll: (s) => mounted?.querySelectorAll(s) || [],
+    addEventListener(type, fn, capture = false) { const set = listeners.get(type) || new Map(); set.set(fn, capture); listeners.set(type, set); },
+    removeEventListener(type, fn) { listeners.get(type)?.delete(fn); },
+    dispatchEvent(event) { events.push(event); for (const fn of [...(listeners.get(event.type)?.keys() || [])]) { fn(event); if (event.stopped) break; } return true; },
+    getElementById: (id) => links.find((link) => link.id === id), createElement: () => new Element(),
+    head: { append(link) { link.parentNode = document.head; links.push(link); }, insertBefore(link, anchor) { const i = links.indexOf(anchor); assert.ok(i >= 0); link.parentNode = document.head; links.splice(i, 0, link); } },
+  };
+  function mount() {
+    if (mounted) mounted.connected = false;
+    const page = new Element("page");
+    page.fields = { presentRewardAmount: new Input("presentRewardAmount", "7.25"), lateRewardAmount: new Input("lateRewardAmount", "0") };
+    page.button = new Button(); page.card = new Element("card"); page.status = new Element("status"); page.panel = new Element("panel");
+    for (const node of [...Object.values(page.fields), page.button, page.card, page.status, page.panel]) node.page = page;
+    page.panel.parentElement = page;
+    mounted = page;
+    return page;
+  }
+  mount();
+  const persisted = { timezone: "Etc/UTC", presentRewardAmount: 1, lateRewardAmount: 0, currencyMode: "player_country", currencyCode: "ECO", retained: true };
+  async function request(input, init) {
+    const call = { input, init, body: init?.body ? JSON.parse(init.body) : null }; calls.push(call);
+    if (init.method === "GET") return state.read ? state.read(call) : json({ data: { settings: { attendanceWindow: persisted } } });
+    return state.reply(call);
+  }
+  const window = {
+    fetch: request, sessionStorage: { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, v), removeItem: (k) => storage.delete(k) },
+    crypto: { randomUUID: () => `00000000-0000-4000-8000-${String(++sequence).padStart(12, "0")}` },
+    Econovaria: { features: { adminOverviewTerminal: { get currentModel() { return { gameId: state.game }; } } } },
+    EconovariaAdminGameSelection: { read: () => state.selected },
+    EconovariaAttendanceRewardRequestAdapter: { request },
+    EconovariaAttendanceRewardSettings: { isDirty: () => state.dirty, isLoaded: () => true, getGameId: () => state.game,
+      getDraftWindow: () => persisted, getPersistedWindow: () => persisted },
+    EconovariaSimplifiedSettings: { refresh() {} },
+    setTimeout(fn) { const id = ++sequence; timers.set(id, fn); return id; }, clearTimeout: (id) => timers.delete(id),
+    requestAnimationFrame() {}, queueMicrotask, addEventListener() {},
+  };
+  const context = vm.createContext({ window, document, Element, HTMLElement: Element, HTMLButtonElement: Button,
+    HTMLInputElement: Input, HTMLSelectElement: class extends Element {}, HTMLTextAreaElement: class extends Element {},
+    CustomEvent, Response, Request, Headers, URL, console: { error: (value) => errors.push(value) } });
+  function install() { vm.runInContext(controllerSource, context); }
+  function click(target = mounted.button) { document.dispatchEvent({ type: "click", target, preventDefault() { this.prevented = true; }, stopImmediatePropagation() { this.stopped = true; } }); }
+  function navigate(name) { const nav = new Element("nav"); nav.setAttribute("data-admin-section", name); click(nav); }
+  function presenter() { vm.runInContext(presenterSource, context); window.EconovariaSimplifiedSettings.refresh(); }
+  install();
+  return { state, calls, events, errors, links, window, document, storage, timers, context, mount, install, click, navigate, presenter,
+    get page() { return mounted; }, get focused() { return focused; }, writes: () => calls.filter((c) => c.init.method === "PATCH"),
+    saved: () => events.filter((e) => e.type === "econovaria:attendance-reward-saved"), listenerCount: () => [...listeners.values()].reduce((sum, set) => sum + set.size, 0) };
+}
+
+test("REF-014 stylesheet bridge installs no listeners, observer or transport", () => {
+  const h = fixture(), before = h.listenerCount(), fetch = h.window.fetch;
+  vm.runInContext(bridgeSource, h.context);
+  assert.equal(h.listenerCount(), before); assert.equal(h.window.fetch, fetch);
+  assert.doesNotMatch(bridgeSource, /MutationObserver|requestAnimationFrame|addEventListener|window\.fetch\s*=/);
+});
+
+for (const mode of ["owner", "absent", "older", "existing-id", "mixed"]) {
+  test(`REF-015 synchronous stylesheet identity, order and idempotency: ${mode}`, () => {
+    const h = fixture(), id = "econovaria-settings-final-polish-style";
+    const run = () => vm.runInContext(bridgeSource, h.context);
+    if (mode === "owner" || mode === "mixed") h.presenter();
+    if (mode === "absent") delete h.window.EconovariaSimplifiedSettings;
+    const original = { id }; // Even a non-link occupying the ID must short-circuit.
+    if (mode === "existing-id") h.links.push(original);
+    h.links.unshift({ id: "earlier-style" });
+    const before = h.listenerCount(), fetch = h.window.fetch, timers = h.timers.size;
+    let delegates = 0;
+    const owner = h.window.EconovariaSimplifiedSettings;
+    if (owner?.ensureFinalPolishStylesheet) {
+      const ensure = owner.ensureFinalPolishStylesheet;
+      owner.ensureFinalPolishStylesheet = () => { delegates++; ensure(); };
+    }
+    let lookups = 0; const lookup = h.document.getElementById;
+    h.document.getElementById = (key) => { lookups++; return lookup(key); };
+    run(); // Assert before yielding: no Promise/import/timer may defer insertion.
+    assert.equal(lookups, 1); // Delegation must not also execute inline insertion.
+    assert.equal(h.links.filter((link) => link.id === id).length, 1);
+    const link = h.document.getElementById(id);
+    if (mode === "existing-id") assert.equal(link, original);
+    else { assert.equal(link.rel, "stylesheet"); assert.equal(link.href, "./css/settings-final-polish.css"); }
+    assert.equal(h.links[0].id, "earlier-style");
+    if (mode === "mixed") delete h.window.EconovariaSimplifiedSettings;
+    run();
+    assert.equal(h.links.filter((item) => item.id === id).length, 1);
+    assert.equal(delegates, mode === "owner" ? 2 : mode === "mixed" ? 1 : 0);
+    assert.equal(h.listenerCount(), before); assert.equal(h.window.fetch, fetch);
+    assert.equal(h.calls.length, 0); assert.equal(h.timers.size, timers);
+  });
+}
+
+test("REF-015 presenter retains its default stylesheet and does not eagerly load final polish", () => {
+  const h = fixture(); h.presenter(); h.document.querySelector = () => null;
+  h.window.EconovariaSimplifiedSettings.reconcile();
+  h.window.EconovariaSimplifiedSettings.reconcile();
+  assert.deepEqual(h.links.map(({ id, href, rel }) => ({ id, href, rel })), [
+    { id: "econovaria-settings-simplified-style", href: "./css/settings-simplified.css", rel: "stylesheet" },
+  ]);
+});
+
+test("REF-014 direct save preserves payload, identity headers and one-request double-click behavior", async () => {
+  const h = fixture(), pending = deferred(); h.state.reply = () => pending.promise;
+  h.click(); h.click(); await until(() => h.writes().length === 1);
+  const write = h.writes()[0], key = write.init.headers["X-Idempotency-Key"];
+  assert.equal(write.input, "/api/admin/games/game-one/settings"); assert.equal(write.init.headers["X-Request-Id"], key);
+  assert.equal(write.body.idempotencyKey, key); assert.equal(write.body.attendanceWindow.timezone, "Etc/UTC");
+  assert.equal(write.body.attendanceWindow.presentRewardAmount, 7.25); assert.equal(write.body.attendanceWindow.retained, true);
+  assert.equal(h.page.button.getAttribute("aria-busy"), "true"); pending.resolve(json());
+  await until(() => h.saved().length === 1); assert.equal(h.writes().length, 1); assert.equal(h.storage.size, 0);
+});
+
+for (const [status, message] of [[400, "Invalid timezone"], [403, "Wrong game or permission denied"], [503, "Service unavailable"]]) {
+  test(`REF-014 ${status} rejection retains draft/error and same-payload retry key`, async () => {
+    const h = fixture(); h.state.reply = () => json({ message }, status); h.click();
+    await until(() => h.errors.length === 1);
+    assert.equal(h.saved().length, 0); assert.equal(h.page.fields.presentRewardAmount.value, "7.25");
+    assert.equal(h.page.button.dataset.attendanceRewardError, message); assert.equal(h.page.button.dataset.adminTerminalApiState, "error");
+    const key = h.writes()[0].body.idempotencyKey;
+    h.state.reply = () => json(); h.click(); await until(() => h.saved().length === 1);
+    assert.equal(h.writes()[1].body.idempotencyKey, key); assert.equal(h.page.button.hasAttribute("data-attendance-reward-error"), false);
+  });
+}
+
+test("REF-014 offline rejection never acknowledges success", async () => {
+  const h = fixture(); h.state.reply = () => { throw new Error("synthetic offline"); }; h.click();
+  await until(() => h.errors.length === 1); assert.equal(h.saved().length, 0); assert.equal(h.writes().length, 1);
+});
+
+for (const name of ["TimeoutError", "AbortError"]) {
+  test(`REF015 ${name} preserves the failed draft and payload-bound retry`, async () => {
+    const h = fixture(); h.state.reply = () => { throw Object.assign(new Error("synthetic request interruption"), { name }); };
+    h.click(); await until(() => h.errors.length === 1);
+    assert.equal(h.saved().length, 0); assert.equal(h.writes().length, 1); assert.equal(h.page.fields.presentRewardAmount.value, "7.25");
+    const key = h.writes()[0].body.idempotencyKey; h.state.reply = () => json(); h.click();
+    await until(() => h.saved().length === 1); assert.equal(h.writes().length, 2); assert.equal(h.writes()[1].body.idempotencyKey, key);
+  });
+}
+
+test("REF-014 no-op and invalid settings do not write and invalid input keeps focus", async () => {
+  const h = fixture(); h.state.dirty = false; h.click(); await tick(); assert.equal(h.calls.length, 0);
+  h.state.dirty = true; h.page.fields.presentRewardAmount.value = "1001"; h.click(); await tick();
+  assert.equal(h.calls.length, 0); assert.equal(h.focused, h.page.fields.presentRewardAmount);
+  assert.equal(h.focused.getAttribute("aria-invalid"), "true");
+});
+
+for (const replacement of ["page", "route", "game", "dispose"]) for (const status of [200, 403]) {
+  test(`REF-014 stale ${status} after ${replacement} cannot update or acknowledge replacement context`, async () => {
+    const h = fixture(), pending = deferred(); h.state.reply = () => pending.promise; h.click();
+    await until(() => h.writes().length === 1);
+    if (replacement === "page") h.mount();
+    if (replacement === "route") { h.navigate("Players"); h.navigate("Settings"); }
+    if (replacement === "game") { h.state.selected = "game-two"; h.state.game = "game-two"; }
+    if (replacement === "dispose") h.window.EconovariaAttendanceRewardSaveController.dispose();
+    const before = JSON.stringify([...h.page.button.attrs]); pending.resolve(json({ message: "old failure" }, status));
+    for (let i = 0; i < 20; i++) await tick();
+    assert.equal(h.saved().length, 0); assert.equal(h.errors.length, 0); assert.equal(JSON.stringify([...h.page.button.attrs]), before);
+  });
+}
+
+test("REF-014 stale pre-save GET prevents the mutation", async () => {
+  const h = fixture(), pending = deferred(); h.state.read = () => pending.promise;
+  h.click(); await until(() => h.calls.length === 1); h.mount();
+  pending.resolve(json({ data: { settings: { attendanceWindow: { timezone: "Etc/UTC" } } } }));
+  for (let i = 0; i < 20; i++) await tick(); assert.equal(h.writes().length, 0); assert.equal(h.saved().length, 0);
+});
+
+test("REF-014 listener disposal is idempotent and reinstallation does not multiply saves", async () => {
+  const h = fixture(), before = h.listenerCount();
+  const identity = h.window.EconovariaAttendanceRewardSaveController.getContextIdentity();
+  h.install(); assert.equal(h.listenerCount(), before);
+  assert.notEqual(h.window.EconovariaAttendanceRewardSaveController.getContextIdentity(), identity);
+  h.window.EconovariaAttendanceRewardSaveController.dispose(); h.window.EconovariaAttendanceRewardSaveController.dispose();
+  assert.equal(h.listenerCount(), 0); h.click(); await tick(); assert.equal(h.calls.length, 0);
+  h.install(); h.click(); await until(() => h.saved().length === 1); assert.equal(h.writes().length, 1);
+});
+
+test("REF-014 presenter retains generic errors and never styles failed saves as success", () => {
+  const h = fixture(); h.presenter();
+  h.window.EconovariaSimplifiedSettings.acknowledgeSaved({ gameId: "game-one" });
+  h.state.dirty = false; h.page.button.dataset.adminTerminalApiState = "error";
+  h.window.EconovariaSimplifiedSettings.refresh();
+  assert.equal(h.page.panel.classList.contains("is-error"), true); assert.equal(h.page.panel.classList.contains("is-saved"), false);
+  assert.match(h.page.status.textContent, /not saved/); assert.equal(h.page.button.dataset.adminTerminalApiState, "error");
+  h.page.button.removeAttribute("data-admin-terminal-api-state"); h.page.button.dataset.attendanceRewardError = "denied";
+  h.window.EconovariaSimplifiedSettings.refresh(); assert.match(h.page.status.textContent, /not saved/);
+});
+
+test("REF-014 an old same-game completion cannot discard a newer payload retry identity", async () => {
+  const h = fixture(), old = deferred(), newer = deferred();
+  h.state.reply = () => old.promise; h.click(); await until(() => h.writes().length === 1);
+  h.mount(); h.page.fields.presentRewardAmount.value = "8.25"; h.state.reply = () => newer.promise;
+  h.click(); await until(() => h.writes().length === 2);
+  const newKey = h.writes()[1].body.idempotencyKey;
+  old.resolve(json()); for (let i = 0; i < 20; i++) await tick();
+  assert.equal(JSON.parse([...h.storage.values()][0]).key, newKey);
+  newer.resolve(json({ message: "retry required" }, 503)); await until(() => h.errors.length === 1);
+  h.state.reply = () => json(); h.click(); await until(() => h.saved().length === 1);
+  assert.equal(h.writes()[2].body.idempotencyKey, newKey);
+});
+
+test("REF-014 selector mismatch prevents a direct write", async () => {
+  const h = fixture(); h.state.selected = "other-game"; h.click(); await tick();
+  assert.equal(h.calls.length, 0); assert.equal(h.saved().length, 0);
+});
+
+for (const mode of ["present", "older", "missing", "throws"]) {
+  test(`REF015 Settings bootstrap preserves serial slot and ${mode} owner behavior`, async () => {
+    const calls = [], events = [], attributes = [];
+    const owner = mode === "missing" ? undefined : {};
+    if (["present", "throws"].includes(mode)) owner.ensureFinalPolishStylesheet = () => {
+      calls.push("owner"); if (mode === "throws") throw new Error("synthetic style error");
+    };
+    const context = {
+      window: { EconovariaSimplifiedSettings: owner, dispatchEvent: (event) => events.push(event) },
+      document: { readyState: "loading", addEventListener() {}, getElementById: () => ({ setAttribute: (...args) => attributes.push(args), querySelector: () => null }) },
+      console: { error() {} }, CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
+      load: async (path) => { calls.push(path); },
+    };
+    // Keep the real serial loop/error handler; replace only the VM import boundary.
+    const bootstrap = readFileSync("admin/admin-bootstrap.js", "utf8");
+    vm.runInNewContext(bootstrap.replaceAll("import(modulePath)", "load(modulePath)"), context);
+    await until(() => events.some((event) => event.type === "econovaria:admin-bootstrap-complete"));
+    const position = calls.indexOf("./settings-lifecycle-bridge.js") + 1;
+    assert.equal(calls[position], ["present", "throws"].includes(mode) ? "owner" : "./settings-save-error-bridge.js");
+    assert.equal(calls[position + 1], "./inventory-redemption-queue-loader.js");
+    assert.equal(calls.filter((x) => x === "./settings-save-error-bridge.js").length, ["present", "throws"].includes(mode) ? 0 : 1);
+    const failures = events.filter((event) => event.type === "econovaria:admin-bootstrap-error");
+    assert.equal(failures.length, mode === "throws" ? 1 : 0);
+    if (mode === "throws") {
+      assert.equal(failures[0].detail.phase, "attendance-settings");
+      assert.equal(failures[0].detail.modulePath, "./settings-save-error-bridge.js");
+      assert.equal(attributes[0][0], "data-admin-bootstrap-error");
+    }
+  });
+}
+
+const styleIds = { A: "econovaria-attendance-reward-settings-style", S: "econovaria-settings-simplified-style", F: "econovaria-settings-final-polish-style" };
+function ownerFunction(source, name) {
+  const start = source.indexOf(`  function ${name}(`);
+  assert.ok(start >= 0, `Missing actual owner function ${name}`);
+  return source.slice(start, source.indexOf("\n  }", start) + 4);
+}
+function styleFixture() {
+  const nodes = [], frames = [], effects = [];
+  const head = { append(node) { node.parentNode = head; nodes.push(node); }, insertBefore(node, anchor) { assert.equal(anchor.parentNode, head); node.parentNode = head; nodes.splice(nodes.indexOf(anchor), 0, node); } };
+  const document = { head, getElementById: (id) => nodes.find((node) => node.id === id), createElement: () => ({}), querySelector: () => null };
+  const window = { requestAnimationFrame: (fn) => frames.push(fn) };
+  const attendance = readFileSync("admin/attendance-reward-settings-v4.js", "utf8");
+  function install(source, id, helper, schedule, reconcileName) {
+    const context = vm.createContext({ document, window, state: {}, selectedGameId: () => "synthetic", prepareGameState() {},
+      loadSettings: () => effects.push("read"), [reconcileName]: () => { context.ensureStylesheet(); effects.push("render"); } });
+    vm.runInContext(`const STYLE_ID = ${JSON.stringify(id)}; ${ownerFunction(source, "ensureStylesheet")}\n${source.includes(`function ${helper}(`) ? ownerFunction(source, helper) : ""}\n${ownerFunction(source, schedule)}`, context);
+    return context;
+  }
+  const a = install(attendance, styleIds.A, "insertAttendanceStylesheet", "scheduleRender", "ensureCard");
+  const s = install(presenterSource, styleIds.S, "insertSettingsStylesheet", "scheduleStructure", "reconcileStructure");
+  const run = { A: () => a.ensureStylesheet(), S: () => s.ensureStylesheet(), F: () => s.ensureStylesheet(styleIds.F, "./css/settings-final-polish.css") };
+  return { nodes, frames, effects, head, document, a, s, run, targets: () => nodes.filter((n) => Object.values(styleIds).includes(n.id)).map((n) => n.id) };
+}
+for (const order of ["ASF", "AFS", "SAF", "SFA", "FAS", "FSA"]) {
+  test(`REF015 actual stylesheet owners converge for ${order} without moving existing nodes`, () => {
+    const h = styleFixture(), sentinels = [];
+    for (const key of order) { const sentinel = { id: `sentinel-${key}` }; sentinels.push(sentinel); h.head.append(sentinel); h.run[key](); }
+    assert.deepEqual(h.targets(), Object.values(styleIds));
+    assert.deepEqual(h.nodes.filter((n) => sentinels.includes(n)), sentinels);
+    const before = [...h.nodes]; for (const key of "ASFFSA") h.run[key]();
+    vm.runInNewContext(bridgeSource, { document: h.document, window: {} });
+    assert.deepEqual(h.nodes, before); assert.equal(h.frames.length, 0); assert.deepEqual(h.effects, []);
+  });
+}
+for (const order of ["AS", "SA"]) {
+  test(`REF015 actual queued owner callbacks preserve precedence in ${order} order`, () => {
+    const h = styleFixture(); h.document.querySelector = () => ({});
+    for (const key of order) (key === "A" ? h.a.scheduleRender : h.s.scheduleStructure)();
+    h.run.F(); while (h.frames.length) h.frames.shift()();
+    assert.deepEqual(h.targets(), Object.values(styleIds)); assert.deepEqual(h.effects, order === "AS" ? ["render", "read", "render"] : ["render", "render", "read"]);
+  });
+}
+test("REF015 skipped off-page Attendance pass stays lazy through first mount and remount", () => {
+  const h = styleFixture(); h.a.scheduleRender(); h.s.scheduleStructure(); h.run.F();
+  while (h.frames.length) h.frames.shift()();
+  assert.deepEqual(h.targets(), [styleIds.S, styleIds.F]); assert.deepEqual(h.effects, ["render"]);
+  h.document.querySelector = () => ({}); h.a.scheduleRender(); h.frames.shift()();
+  const before = [...h.nodes]; h.a.scheduleRender(); h.frames.shift()();
+  assert.deepEqual(h.targets(), Object.values(styleIds)); assert.deepEqual(h.nodes, before);
+});
+for (const location of ["head", "body"]) for (const key of "ASF") {
+  test(`REF015 existing own-ID nonlink ${key} in ${location} remains untouched`, () => {
+    const h = styleFixture(), node = { id: styleIds[key], parentNode: location === "head" ? h.head : {} };
+    h.nodes.push(node); h.run[key](); assert.deepEqual(h.nodes, [node]); assert.equal(h.nodes[0], node);
+  });
+}
+test("REF015 ignores outside-head dependency anchors and tries the next valid nonlink", () => {
+  const h = styleFixture(), outside = { id: styleIds.S, parentNode: {} }, final = { id: styleIds.F };
+  h.nodes.push(outside); h.head.append(final); h.run.A();
+  assert.equal(h.nodes.indexOf(h.document.getElementById(styleIds.A)), h.nodes.indexOf(final) - 1);
+  const s = styleFixture(); s.nodes.push({ id: styleIds.F, parentNode: {} }); s.run.S();
+  assert.equal(s.nodes.at(-1).id, styleIds.S);
+  const a = styleFixture(); a.nodes.push({ id: styleIds.S, parentNode: {} }, { id: styleIds.F, parentNode: {} }); a.run.A();
+  assert.equal(a.nodes.at(-1).id, styleIds.A);
+});
+test("REF015 uses valid head nonlinks as anchors and preserves preexisting reversed targets", () => {
+  const h = styleFixture(); h.head.append({ id: styleIds.S }); h.run.A(); h.run.F();
+  assert.deepEqual(h.targets(), Object.values(styleIds));
+  const s = styleFixture(); s.head.append({ id: styleIds.F }); s.run.S(); assert.deepEqual(s.targets(), [styleIds.S, styleIds.F]);
+  const reversed = styleFixture(); for (const key of "FSA") reversed.head.append({ id: styleIds[key] });
+  const before = [...reversed.nodes]; for (const key of "ASF") reversed.run[key](); assert.deepEqual(reversed.nodes, before);
+});
+
+// Exercise the real reset body and complete retained bridge under controlled frame interleavings.
+const lifecycleSource = readFileSync("admin/settings-lifecycle-bridge.js", "utf8");
+function replacementFixture({ offPage = false, owner = "current" } = {}) {
+  const frames = [], microtasks = [], events = [], clears = [], listeners = new Map();
+  let current, game = "game-one", reconciles = 0, refreshes = 0, batches = 0;
+  class Element {
+    constructor(id) { this.id = id; this.isConnected = true; this.loaded = true; this.attrs = new Map([["data-settings-ux-baseline-ready", "true"]]); }
+    querySelector() { return this.loaded ? this : null; }
+    removeAttribute(name) { this.attrs.delete(name); }
+    dispatchEvent(event) { event.target = this; return document.dispatchEvent(event); }
+  }
+  class CustomEvent { constructor(type, options = {}) { this.type = type; Object.assign(this, options); } }
+  current = offPage ? null : new Element("old");
+  const state = { page: current, gameId: offPage ? null : game, baselineValues: new Map([["draft", "kept"]]), savedUntil: 99, savedTimer: 7, disclosureOpen: true };
+  const document = {
+    querySelector: () => current,
+    addEventListener(type, fn) { const entries = listeners.get(type) || []; entries.push(fn); listeners.set(type, entries); },
+    dispatchEvent(event) { events.push(event); for (const fn of listeners.get(event.type) || []) fn(event); return true; },
+  };
+  const window = {
+    requestAnimationFrame: (fn) => frames.push(fn), queueMicrotask: (fn) => microtasks.push(fn),
+    clearTimeout: (id) => clears.push(id), addEventListener() {},
+    EconovariaSimplifiedSettings: { reconcile() { reconciles++; context.resetForPage(current); }, refresh() { refreshes++; } },
+  };
+  const context = vm.createContext({ window, document, state, selectedGameId: () => game, settingsPage: () => current, Element, HTMLElement: Element, CustomEvent });
+  vm.runInContext(ownerFunction(presenterSource, "resetForPage"), context);
+  vm.runInContext(lifecycleSource, context);
+  const frame = () => { assert.ok(frames.length); batches++; for (const fn of frames.splice(0)) fn(); while (microtasks.length) microtasks.shift()(); };
+  const drain = () => { let count = 0; while (frames.length) { assert.ok(++count <= 122, "Lifecycle queue must remain bounded"); frame(); } };
+  drain();
+  if (owner === "absent") delete window.EconovariaSettingsLifecycleBridge;
+  if (owner === "older") window.EconovariaSettingsLifecycleBridge = {};
+  const emit = (type, detail = {}) => document.dispatchEvent(new CustomEvent(type, { detail }));
+  const reset = (page = current) => context.resetForPage(page);
+  const replace = (notify = true) => { if (current) current.isConnected = false; current = new Element("new"); if (notify) reset(); };
+  return { frames, events, clears, listeners, state, window, frame, drain, emit, reset, replace,
+    setGame: (value) => { game = value; }, flushMicrotasks: () => { while (microtasks.length) microtasks.shift()(); },
+    get page() { return current; }, get reconciles() { return reconciles; }, get refreshes() { return refreshes; }, get batches() { return batches; },
+    mounted: () => events.filter((event) => event.type === "econovaria:admin-settings-mounted" && event.target === current) };
+}
+for (const phase of ["committed", "failed", "cancelled"]) for (const timing of ["between", "after"]) {
+  test(`L1 same-game replacement ${timing} old publication after ${phase} read`, () => {
+    const h = replacementFixture(), registrations = h.listeners.size;
+    h.emit("econovaria:admin-request-lifecycle", { pageRead: true, pathname: "/api/admin/games/synthetic/settings", phase });
+    h.frame(); if (timing === "after") h.frame();
+    h.replace(); h.drain();
+    assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "page-replacement");
+    assert.equal(h.listeners.size, registrations); assert.equal(h.frames.length, 0);
+    assert.equal(h.clears.length, 1); assert.equal(h.state.savedUntil, 0); assert.equal(h.state.baselineValues.size, 0);
+    assert.equal(h.state.disclosureOpen, true); // Same-game reset never clears disclosure or dispatches game context.
+    assert.equal(h.events.filter((event) => event.type === "econovaria:settings-context-changed").length, 0);
+  });
+}
+test("L1 replacement before original settle has one surviving new-root publication", () => {
+  const h = replacementFixture(); h.emit("econovaria:attendance-reward-saved"); h.replace(); h.drain();
+  assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "page-replacement");
+});
+test("L1 bridge-discovered reset supersedes once without a notification cycle", () => {
+  const h = replacementFixture(), reconciles = h.reconciles, batches = h.batches, refreshes = h.refreshes;
+  h.replace(false); h.emit("econovaria:attendance-reward-saved"); h.drain();
+  assert.equal(h.reconciles - reconciles, 2); assert.equal(h.batches - batches, 3); assert.equal(h.refreshes - refreshes, 1);
+  assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "page-replacement");
+  for (let i = 0; i < 4; i++) h.reset();
+  assert.equal(h.frames.length, 0); assert.equal(h.clears.length, 1);
+});
+test("L1 null-to-first root rearms an exhausted off-page generation", () => {
+  const h = replacementFixture({ offPage: true }); assert.equal(h.batches, 120);
+  h.replace(); h.drain(); assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "page-replacement");
+});
+for (const owner of ["absent", "older"]) test(`L1 ${owner} optional bridge preserves original reset`, () => {
+  const h = replacementFixture({ owner }); h.replace(); h.drain();
+  assert.equal(h.frames.length, 0); assert.equal(h.mounted().length, 0); assert.equal(h.clears.length, 1);
+  assert.equal(h.state.page, h.page); assert.equal(h.state.baselineValues.size, 0);
+});
+test("L1 game switch retains the original context event and reason", () => {
+  const h = replacementFixture(); h.setGame("game-two"); h.replace(); assert.equal(h.frames.length, 0);
+  h.flushMicrotasks(); h.drain(); assert.equal(h.mounted().length, 1); assert.equal(h.mounted()[0].detail.reason, "game-context");
+  const contexts = h.events.filter((event) => event.type === "econovaria:settings-context-changed");
+  assert.equal(contexts.length, 1); assert.equal(contexts[0].detail.previousGameId, "game-one"); assert.equal(contexts[0].detail.gameId, "game-two");
+  assert.equal(h.state.disclosureOpen, false);
+});
+test("L1 dirty remount needs no baseline-ready flag and preserves later save notification", () => {
+  const h = replacementFixture(); h.replace(); assert.equal(h.page.attrs.has("data-settings-ux-baseline-ready"), false);
+  h.drain(); assert.equal(h.mounted().length, 1);
+  h.emit("econovaria:attendance-reward-saved"); h.drain();
+  assert.equal(h.mounted().length, 2); assert.equal(h.mounted()[1].detail.reason, "attendance-saved");
+});
+test("L1 partial Attendance readiness can settle inside the retained 120-frame window", () => {
+  const h = replacementFixture(); h.replace(); h.page.loaded = false;
+  for (let i = 0; i < 119; i++) h.frame();
+  assert.equal(h.mounted().length, 0); h.page.loaded = true; h.drain(); assert.equal(h.mounted().length, 1);
+});
+test("L1 retains exhaustion beyond 120 frames without a later existing trigger", () => {
+  const h = replacementFixture(); h.replace(); h.page.loaded = false; const before = h.batches; h.drain();
+  assert.equal(h.batches - before, 120); h.page.loaded = true; h.reset(); assert.equal(h.frames.length, 0); assert.equal(h.mounted().length, 0);
+  h.emit("econovaria:attendance-reward-saved"); h.drain(); assert.equal(h.mounted().length, 1);
+});
+test("L1 disconnected/non-current roots do not schedule and same-node reattach is not an epoch", () => {
+  const h = replacementFixture(), old = h.page; h.replace(false);
+  old.isConnected = true; h.state.page = null; h.reset(old); assert.equal(h.frames.length, 0);
+  h.page.isConnected = false; h.reset(); assert.equal(h.frames.length, 0);
+  h.page.isConnected = true; h.reset(); assert.equal(h.frames.length, 0); assert.equal(h.mounted().length, 0);
+});
+test("L1 reset hands off only after original reset work and adds no transport or registration", () => {
+  const h = replacementFixture(), bridge = h.window.EconovariaSettingsLifecycleBridge; let calls = 0;
+  h.window.EconovariaSettingsLifecycleBridge = { reconcile(reason) {
+    calls++; assert.equal(reason, "page-replacement"); assert.equal(h.state.page, h.page); assert.equal(h.state.gameId, "game-one");
+    assert.equal(h.state.savedUntil, 0); assert.equal(h.state.baselineValues.size, 0); assert.equal(h.page.attrs.size, 0);
+    assert.deepEqual(h.clears, [13]); return bridge.reconcile(reason);
+  } };
+  h.state.savedTimer = 13; h.replace(); h.drain();
+  assert.equal(calls, 1); assert.equal(h.mounted().length, 1); assert.deepEqual(h.clears, [13]);
+});

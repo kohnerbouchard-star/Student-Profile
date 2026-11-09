@@ -1,0 +1,4540 @@
+{
+  "capturedAt": "2026-09-20T00:06:49.596Z",
+  "security": [
+    {
+      "name": "rls_enabled_no_policy",
+      "level": "INFO",
+      "facing": "EXTERNAL",
+      "count": 180,
+      "findings": [
+        {
+          "detail": "Table \\`private.admin_mutation_requests\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "admin_mutation_requests",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.game_data_purge_control\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_data_purge_control",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.game_data_purge_requests\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_data_purge_requests",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.game_data_purge_table_registry\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_data_purge_table_registry",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.internal_runner_nonce_claims\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "internal_runner_nonce_claims",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.legacy_shadow_kv_archive\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "legacy_shadow_kv_archive",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.migration_ledger_history_archive\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "migration_ledger_history_archive",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.platform_storage_health\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "platform_storage_health",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.runtime_scheduler_tokens\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "runtime_scheduler_tokens",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.staff_signup_requests\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "staff_signup_requests",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.stock_market_runtime_state\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "stock_market_runtime_state",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.stock_market_simulation_checkpoints\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "stock_market_simulation_checkpoints",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.story_character_reply_jobs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "story_character_reply_jobs",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`private.story_character_reply_runtime\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "story_character_reply_runtime",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.account_balances\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "account_balances",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.arrival_class_admin_audit\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "arrival_class_admin_audit",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.arrival_class_assignments\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "arrival_class_assignments",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.arrival_class_grant_definitions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "arrival_class_grant_definitions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.arrival_class_grant_runtime\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "arrival_class_grant_runtime",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.arrival_grant_commands\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "arrival_grant_commands",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.arrival_package_runtime_definitions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "arrival_package_runtime_definitions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.attendance_day_locks\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "attendance_day_locks",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.audit_log\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "audit_log",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.audit_log_flags\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "audit_log_flags",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.authentication_throttle_buckets\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "authentication_throttle_buckets",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.banking_transfer_requests\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "banking_transfer_requests",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.business_compliance_records\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "business_compliance_records",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.business_employees\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "business_employees",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.business_entities\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "business_entities",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.business_inventory\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "business_inventory",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.business_product_inputs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "business_product_inputs",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.business_product_outputs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "business_product_outputs",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.business_production_runs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "business_production_runs",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.business_products\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "business_products",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.business_sales\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "business_sales",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_admin_audit\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "campaign_admin_audit",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_effect_application_receipts\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "campaign_effect_application_receipts",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_effect_commands\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "campaign_effect_commands",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_effect_definitions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "campaign_effect_definitions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_effect_recovery_audit\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "campaign_effect_recovery_audit",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_event_executions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "campaign_event_executions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_instances\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "campaign_instances",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_outcome_evidence_snapshots\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "campaign_outcome_evidence_snapshots",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_program_definitions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "campaign_program_definitions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.contract_reward_issuances\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "contract_reward_issuances",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.contract_templates\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "contract_templates",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.country_economic_snapshots\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "country_economic_snapshots",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.country_event_impacts\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "country_event_impacts",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.country_profiles\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "country_profiles",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.crafting_job_inputs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "crafting_job_inputs",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.crafting_job_outputs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "crafting_job_outputs",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.crafting_job_transitions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "crafting_job_transitions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.crafting_jobs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "crafting_jobs",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.credit_profiles\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "credit_profiles",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.currencies\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "currencies",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.currency_exchange_rates\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "currency_exchange_rates",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.difficulty_policy_profiles\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "difficulty_policy_profiles",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.economic_parties\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "economic_parties",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.entitlements\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "entitlements",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.equipment_instances\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "equipment_instances",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.equipment_salvage_jobs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "equipment_salvage_jobs",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_country_economic_baseline_settings\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_country_economic_baseline_settings",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_creation_provisioning_requests\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_creation_provisioning_requests",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_difficulty_policy_settings\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_difficulty_policy_settings",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_feature_activation_evidence\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_feature_activation_evidence",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_items\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_items",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_lifecycle_transition_requests\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_lifecycle_transition_requests",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_contracts\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_session_contracts",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_item_supply\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_session_item_supply",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_physical_economy_packs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_session_physical_economy_packs",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_policies\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_session_policies",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_recipe_availability\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_session_recipe_availability",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_stock_assets\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_session_stock_assets",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_story_event_overrides\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_session_story_event_overrides",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_story_flags\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_session_story_flags",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_storylines\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_session_storylines",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.game_settings\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "game_settings",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_accounts\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "inventory_accounts",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_events\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "inventory_events",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_holdings\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "inventory_holdings",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_redemption_requests\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "inventory_redemption_requests",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_redemption_transitions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "inventory_redemption_transitions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_reservations\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "inventory_reservations",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_transaction_lines\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "inventory_transaction_lines",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_transactions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "inventory_transactions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.item_effect_grants\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "item_effect_grants",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.item_effect_history\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "item_effect_history",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.item_use_requests\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "item_use_requests",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.ledger_entries\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "ledger_entries",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.loan_applications\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "loan_applications",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.loan_payments\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "loan_payments",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.loan_products\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "loan_products",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_action_receipts\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "marketplace_action_receipts",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_audit_events\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "marketplace_audit_events",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_disputes\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "marketplace_disputes",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_financial_postings\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "marketplace_financial_postings",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_listings\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "marketplace_listings",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_orders\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "marketplace_orders",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_policies\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "marketplace_policies",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_purchase_reservations\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "marketplace_purchase_reservations",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_treasury_balances\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "marketplace_treasury_balances",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.message_game_policies\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "message_game_policies",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.message_moderation_audit\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "message_moderation_audit",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.message_thread_participants\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "message_thread_participants",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.message_threads\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "message_threads",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.messages\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "messages",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.mutation_idempotency_keys\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "mutation_idempotency_keys",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.notification_deliveries\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "notification_deliveries",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.notifications\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "notifications",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.physical_economy_admin_events\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "physical_economy_admin_events",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.physical_economy_content_packs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "physical_economy_content_packs",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.physical_economy_effect_definitions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "physical_economy_effect_definitions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.physical_economy_item_definitions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "physical_economy_item_definitions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.physical_economy_recipe_definitions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "physical_economy_recipe_definitions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.physical_economy_recipe_inputs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "physical_economy_recipe_inputs",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.physical_economy_recipe_outputs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "physical_economy_recipe_outputs",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.physical_economy_salvage_rules\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "physical_economy_salvage_rules",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.physical_economy_substitution_options\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "physical_economy_substitution_options",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_access_credentials\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_access_credentials",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_achievement_progress\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_achievement_progress",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_admin_flags\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_admin_flags",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_admin_settings\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_admin_settings",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_arrival_grant_receipts\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_arrival_grant_receipts",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_attendance_records\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_attendance_records",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_contract_progress\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_contract_progress",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_country_assignments\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_country_assignments",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_country_migration_events\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_country_migration_events",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_loans\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_loans",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_progression_counters\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_progression_counters",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_progression_profiles\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_progression_profiles",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_progression_reward_grants\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_progression_reward_grants",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_progression_skills\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_progression_skills",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_recipe_unlocks\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_recipe_unlocks",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_reputation_scores\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_reputation_scores",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_residency_states\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_residency_states",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_sessions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_sessions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_stock_watchlist\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_stock_watchlist",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_story_decisions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_story_decisions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_story_impacts\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_story_impacts",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_story_relationship_adjustments\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_story_relationship_adjustments",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_story_relationships\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_story_relationships",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_travel_journeys\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_travel_journeys",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_travel_quotes\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_travel_quotes",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.player_travel_states\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "player_travel_states",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.players\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "players",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.progression_achievement_definitions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "progression_achievement_definitions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.progression_admin_corrections\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "progression_admin_corrections",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.progression_command_audit\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "progression_command_audit",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.progression_events\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "progression_events",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.progression_skill_definitions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "progression_skill_definitions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.purchase_codes\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "purchase_codes",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.request_rate_limit_buckets\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "request_rate_limit_buckets",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.savings_interest_runs\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "savings_interest_runs",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.seed_content_release_members\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "seed_content_release_members",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.seed_content_release_revisions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "seed_content_release_revisions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.seed_content_releases\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "seed_content_releases",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.staff_admin_preferences\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "staff_admin_preferences",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.staff_permission_grants\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "staff_permission_grants",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.stock_holdings\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "stock_holdings",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.stock_market_events\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "stock_market_events",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.stock_market_regimes\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "stock_market_regimes",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.stock_orders\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "stock_orders",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.stock_price_candles\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "stock_price_candles",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.stock_price_ticks\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "stock_price_ticks",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.stock_templates\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "stock_templates",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.stock_trades\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "stock_trades",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.store_items\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "store_items",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.store_purchase_quotes\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "store_purchase_quotes",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.store_purchases\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "store_purchases",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.story_cash_adjustments\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "story_cash_adjustments",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.story_decision_definitions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "story_decision_definitions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.story_event_execution_claims\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "story_event_execution_claims",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.story_event_resolutions\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "story_event_resolutions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.storyline_events\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "storyline_events",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.storylines\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "storylines",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.world_country_runtime\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "world_country_runtime",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.world_location_states\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "world_location_states",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.world_route_states\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "world_route_states",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.world_runtime_commands\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "world_runtime_commands",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        },
+        {
+          "detail": "Table \\`public.world_runtime_instances\\` has RLS enabled, but no policies exist",
+          "metadata": {
+            "name": "world_runtime_instances",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:34.057Z"
+        }
+      ],
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+    },
+    {
+      "name": "auth_leaked_password_protection",
+      "level": "WARN",
+      "facing": "EXTERNAL",
+      "count": 1,
+      "findings": [
+        {
+          "detail": "Supabase Auth prevents the use of compromised passwords by checking against HaveIBeenPwned.org. Enable this feature to enhance security.",
+          "metadata": {
+            "type": "auth",
+            "entity": "Auth"
+          }
+        }
+      ],
+      "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+    }
+  ],
+  "performance": [
+    {
+      "name": "unindexed_foreign_keys",
+      "level": "INFO",
+      "facing": "EXTERNAL",
+      "count": 170,
+      "findings": [
+        {
+          "detail": "Table \\`private.staff_signup_requests\\` has a foreign key \\`staff_signup_requests_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "staff_signup_requests",
+            "type": "table",
+            "schema": "private",
+            "fkey_name": "staff_signup_requests_staff_user_id_fkey",
+            "fkey_columns": [
+              11
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`private.story_character_reply_jobs\\` has a foreign key \\`story_character_reply_jobs_player_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "story_character_reply_jobs",
+            "type": "table",
+            "schema": "private",
+            "fkey_name": "story_character_reply_jobs_player_fk",
+            "fkey_columns": [
+              2,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.arrival_class_admin_audit\\` has a foreign key \\`arrival_class_admin_audit_actor_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "arrival_class_admin_audit",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "arrival_class_admin_audit_actor_staff_user_id_fkey",
+            "fkey_columns": [
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.arrival_class_admin_audit\\` has a foreign key \\`arrival_class_admin_audit_assignment_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "arrival_class_admin_audit",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "arrival_class_admin_audit_assignment_fk",
+            "fkey_columns": [
+              3,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.arrival_class_admin_audit\\` has a foreign key \\`arrival_class_admin_audit_player_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "arrival_class_admin_audit",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "arrival_class_admin_audit_player_fk",
+            "fkey_columns": [
+              3,
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.arrival_grant_commands\\` has a foreign key \\`arrival_grant_commands_assignment_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "arrival_grant_commands",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "arrival_grant_commands_assignment_fk",
+            "fkey_columns": [
+              3,
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.banking_transfer_requests\\` has a foreign key \\`banking_transfer_requests_recipient_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "banking_transfer_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "banking_transfer_requests_recipient_ledger_entry_id_fkey",
+            "fkey_columns": [
+              16
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.banking_transfer_requests\\` has a foreign key \\`banking_transfer_requests_sender_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "banking_transfer_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "banking_transfer_requests_sender_ledger_entry_id_fkey",
+            "fkey_columns": [
+              15
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_compliance_records\\` has a foreign key \\`business_compliance_records_business_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_compliance_records",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_compliance_records_business_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_compliance_records\\` has a foreign key \\`business_compliance_records_reviewed_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_compliance_records",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_compliance_records_reviewed_by_staff_user_id_fkey",
+            "fkey_columns": [
+              11
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_employees\\` has a foreign key \\`business_employees_business_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_employees",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_employees_business_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_employees\\` has a foreign key \\`business_employees_player_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_employees",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_employees_player_scope_fk",
+            "fkey_columns": [
+              3,
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_inventory\\` has a foreign key \\`business_inventory_account_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_inventory",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_inventory_account_scope_fk",
+            "fkey_columns": [
+              2,
+              11
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_inventory\\` has a foreign key \\`business_inventory_business_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_inventory",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_inventory_business_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_inventory\\` has a foreign key \\`business_inventory_game_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_inventory",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_inventory_game_item_scope_fk",
+            "fkey_columns": [
+              2,
+              12
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_product_inputs\\` has a foreign key \\`business_product_inputs_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_product_inputs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_product_inputs_item_scope_fk",
+            "fkey_columns": [
+              2,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_product_outputs\\` has a foreign key \\`business_product_outputs_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_product_outputs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_product_outputs_item_scope_fk",
+            "fkey_columns": [
+              2,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_production_runs\\` has a foreign key \\`business_production_runs_business_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_production_runs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_production_runs_business_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_production_runs\\` has a foreign key \\`business_production_runs_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_production_runs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_production_runs_ledger_entry_id_fkey",
+            "fkey_columns": [
+              16
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_production_runs\\` has a foreign key \\`business_production_runs_product_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_production_runs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_production_runs_product_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_products\\` has a foreign key \\`business_products_business_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_products",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_products_business_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_products\\` has a foreign key \\`business_products_output_game_item_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_products",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_products_output_game_item_fk",
+            "fkey_columns": [
+              3,
+              19
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_sales\\` has a foreign key \\`business_sales_business_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_sales",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_sales_business_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_sales\\` has a foreign key \\`business_sales_product_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_sales",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_sales_product_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_sales\\` has a foreign key \\`business_sales_revenue_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_sales",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_sales_revenue_ledger_entry_id_fkey",
+            "fkey_columns": [
+              14
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_sales\\` has a foreign key \\`business_sales_tax_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_sales",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_sales_tax_ledger_entry_id_fkey",
+            "fkey_columns": [
+              16
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.business_sales\\` has a foreign key \\`business_sales_wage_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "business_sales",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "business_sales_wage_ledger_entry_id_fkey",
+            "fkey_columns": [
+              15
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_admin_audit\\` has a foreign key \\`campaign_admin_audit_actor_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "campaign_admin_audit",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "campaign_admin_audit_actor_staff_user_id_fkey",
+            "fkey_columns": [
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_admin_audit\\` has a foreign key \\`campaign_admin_audit_campaign_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "campaign_admin_audit",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "campaign_admin_audit_campaign_fk",
+            "fkey_columns": [
+              3,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_effect_commands\\` has a foreign key \\`campaign_effect_commands_campaign_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "campaign_effect_commands",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "campaign_effect_commands_campaign_fk",
+            "fkey_columns": [
+              3,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_effect_commands\\` has a foreign key \\`campaign_effect_commands_execution_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "campaign_effect_commands",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "campaign_effect_commands_execution_fk",
+            "fkey_columns": [
+              3,
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_effect_recovery_audit\\` has a foreign key \\`campaign_effect_recovery_audit_actor_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "campaign_effect_recovery_audit",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "campaign_effect_recovery_audit_actor_staff_user_id_fkey",
+            "fkey_columns": [
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_effect_recovery_audit\\` has a foreign key \\`campaign_effect_recovery_audit_campaign_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "campaign_effect_recovery_audit",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "campaign_effect_recovery_audit_campaign_fk",
+            "fkey_columns": [
+              3,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_effect_recovery_audit\\` has a foreign key \\`campaign_effect_recovery_audit_command_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "campaign_effect_recovery_audit",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "campaign_effect_recovery_audit_command_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_event_executions\\` has a foreign key \\`campaign_event_executions_actor_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "campaign_event_executions",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "campaign_event_executions_actor_staff_user_id_fkey",
+            "fkey_columns": [
+              12
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.campaign_event_executions\\` has a foreign key \\`campaign_event_executions_campaign_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "campaign_event_executions",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "campaign_event_executions_campaign_fk",
+            "fkey_columns": [
+              3,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.country_economic_snapshots\\` has a foreign key \\`country_economic_snapshots_country_profile_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "country_economic_snapshots",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "country_economic_snapshots_country_profile_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.country_economic_snapshots\\` has a foreign key \\`country_economic_snapshots_profile_preset_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "country_economic_snapshots",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "country_economic_snapshots_profile_preset_fk",
+            "fkey_columns": [
+              7,
+              8
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.country_event_impacts\\` has a foreign key \\`country_event_impacts_country_profile_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "country_event_impacts",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "country_event_impacts_country_profile_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.country_event_impacts\\` has a foreign key \\`country_event_impacts_result_snapshot_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "country_event_impacts",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "country_event_impacts_result_snapshot_scope_fk",
+            "fkey_columns": [
+              10,
+              2,
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.country_event_impacts\\` has a foreign key \\`country_event_impacts_source_snapshot_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "country_event_impacts",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "country_event_impacts_source_snapshot_scope_fk",
+            "fkey_columns": [
+              9,
+              2,
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.crafting_job_outputs\\` has a foreign key \\`crafting_job_outputs_game_item_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "crafting_job_outputs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "crafting_job_outputs_game_item_fk",
+            "fkey_columns": [
+              10
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.crafting_job_outputs\\` has a foreign key \\`crafting_job_outputs_store_item_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "crafting_job_outputs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "crafting_job_outputs_store_item_id_fkey",
+            "fkey_columns": [
+              7
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.crafting_job_transitions\\` has a foreign key \\`crafting_job_transitions_game_session_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "crafting_job_transitions",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "crafting_job_transitions_game_session_id_fkey",
+            "fkey_columns": [
+              2
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.crafting_job_transitions\\` has a foreign key \\`crafting_job_transitions_job_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "crafting_job_transitions",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "crafting_job_transitions_job_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.crafting_jobs\\` has a foreign key \\`crafting_jobs_recipe_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "crafting_jobs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "crafting_jobs_recipe_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.currency_exchange_rates\\` has a foreign key \\`currency_exchange_rates_from_currency_code_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "currency_exchange_rates",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "currency_exchange_rates_from_currency_code_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.currency_exchange_rates\\` has a foreign key \\`currency_exchange_rates_to_currency_code_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "currency_exchange_rates",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "currency_exchange_rates_to_currency_code_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.equipment_instances\\` has a foreign key \\`equipment_instances_account_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "equipment_instances",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "equipment_instances_account_scope_fk",
+            "fkey_columns": [
+              3,
+              14
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.equipment_instances\\` has a foreign key \\`equipment_instances_game_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "equipment_instances",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "equipment_instances_game_item_scope_fk",
+            "fkey_columns": [
+              3,
+              15
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.equipment_instances\\` has a foreign key \\`equipment_instances_source_job_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "equipment_instances",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "equipment_instances_source_job_id_fkey",
+            "fkey_columns": [
+              10
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.equipment_instances\\` has a foreign key \\`equipment_instances_store_item_provenance_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "equipment_instances",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "equipment_instances_store_item_provenance_scope_fk",
+            "fkey_columns": [
+              3,
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.equipment_salvage_jobs\\` has a foreign key \\`equipment_salvage_jobs_equipment_instance_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "equipment_salvage_jobs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "equipment_salvage_jobs_equipment_instance_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_difficulty_policy_settings\\` has a foreign key \\`game_difficulty_policy_settings_profile_preset_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_difficulty_policy_settings",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_difficulty_policy_settings_profile_preset_fk",
+            "fkey_columns": [
+              3,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_feature_activation_evidence\\` has a foreign key \\`game_feature_activation_evidenc_activated_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_feature_activation_evidence",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_feature_activation_evidenc_activated_by_staff_user_id_fkey",
+            "fkey_columns": [
+              9
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_feature_activation_evidence\\` has a foreign key \\`game_feature_activation_evidence_source_game_session_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_feature_activation_evidence",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_feature_activation_evidence_source_game_session_id_fkey",
+            "fkey_columns": [
+              2
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_items\\` has a foreign key \\`game_items_physical_item_definition_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_items",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_items_physical_item_definition_id_fkey",
+            "fkey_columns": [
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_lifecycle_transition_requests\\` has a foreign key \\`game_lifecycle_transition_requests_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_lifecycle_transition_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_lifecycle_transition_requests_staff_user_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_contracts\\` has a foreign key \\`game_session_contracts_contract_template_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_session_contracts",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_session_contracts_contract_template_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_contracts\\` has a foreign key \\`game_session_contracts_created_by_staff_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_session_contracts",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_session_contracts_created_by_staff_id_fkey",
+            "fkey_columns": [
+              7
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_item_supply\\` has a foreign key \\`game_session_item_supply_game_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_session_item_supply",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_session_item_supply_game_item_scope_fk",
+            "fkey_columns": [
+              2,
+              14
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_physical_economy_packs\\` has a foreign key \\`game_session_physical_economy_p_activated_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_session_physical_economy_packs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_session_physical_economy_p_activated_by_staff_user_id_fkey",
+            "fkey_columns": [
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_physical_economy_packs\\` has a foreign key \\`game_session_physical_economy_pa_imported_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_session_physical_economy_packs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_session_physical_economy_pa_imported_by_staff_user_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_physical_economy_packs\\` has a foreign key \\`game_session_physical_economy_packs_pack_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_session_physical_economy_packs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_session_physical_economy_packs_pack_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_recipe_availability\\` has a foreign key \\`game_session_recipe_availability_recipe_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_session_recipe_availability",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_session_recipe_availability_recipe_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_session_storylines\\` has a foreign key \\`game_session_storylines_storyline_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_session_storylines",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_session_storylines_storyline_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.game_sessions\\` has a foreign key \\`game_sessions_provisioning_source_game_session_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "game_sessions",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "game_sessions_provisioning_source_game_session_id_fkey",
+            "fkey_columns": [
+              21
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_events\\` has a foreign key \\`inventory_events_account_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_events",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_events_account_scope_fk",
+            "fkey_columns": [
+              2,
+              12
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_events\\` has a foreign key \\`inventory_events_game_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_events",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_events_game_item_scope_fk",
+            "fkey_columns": [
+              2,
+              13
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_events\\` has a foreign key \\`inventory_events_transaction_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_events",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_events_transaction_scope_fk",
+            "fkey_columns": [
+              2,
+              14
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_holdings\\` has a foreign key \\`inventory_holdings_game_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_holdings",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_holdings_game_item_scope_fk",
+            "fkey_columns": [
+              2,
+              10
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_redemption_requests\\` has a foreign key \\`inventory_redemption_requests_fulfilled_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_redemption_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_redemption_requests_fulfilled_by_staff_user_id_fkey",
+            "fkey_columns": [
+              16
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_redemption_requests\\` has a foreign key \\`inventory_redemption_requests_game_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_redemption_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_redemption_requests_game_item_scope_fk",
+            "fkey_columns": [
+              3,
+              21
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_redemption_requests\\` has a foreign key \\`inventory_redemption_requests_holding_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_redemption_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_redemption_requests_holding_scope_fk",
+            "fkey_columns": [
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_redemption_requests\\` has a foreign key \\`inventory_redemption_requests_inventory_account_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_redemption_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_redemption_requests_inventory_account_scope_fk",
+            "fkey_columns": [
+              3,
+              20
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_redemption_requests\\` has a foreign key \\`inventory_redemption_requests_inventory_reservation_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_redemption_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_redemption_requests_inventory_reservation_fk",
+            "fkey_columns": [
+              23
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_redemption_requests\\` has a foreign key \\`inventory_redemption_requests_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_redemption_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_redemption_requests_item_scope_fk",
+            "fkey_columns": [
+              3,
+              6,
+              7
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_redemption_requests\\` has a foreign key \\`inventory_redemption_requests_reviewed_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_redemption_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_redemption_requests_reviewed_by_staff_user_id_fkey",
+            "fkey_columns": [
+              14
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_reservations\\` has a foreign key \\`inventory_reservations_game_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_reservations",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_reservations_game_item_scope_fk",
+            "fkey_columns": [
+              3,
+              16
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_reservations\\` has a foreign key \\`inventory_reservations_holding_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_reservations",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_reservations_holding_scope_fk",
+            "fkey_columns": [
+              3,
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_reservations\\` has a foreign key \\`inventory_reservations_store_provenance_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_reservations",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_reservations_store_provenance_scope_fk",
+            "fkey_columns": [
+              3,
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_reservations\\` has a foreign key \\`inventory_reservations_transaction_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_reservations",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_reservations_transaction_scope_fk",
+            "fkey_columns": [
+              3,
+              18
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.inventory_transaction_lines\\` has a foreign key \\`inventory_transaction_lines_transaction_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "inventory_transaction_lines",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "inventory_transaction_lines_transaction_scope_fk",
+            "fkey_columns": [
+              2,
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.item_effect_grants\\` has a foreign key \\`item_effect_grants_effect_definition_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "item_effect_grants",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "item_effect_grants_effect_definition_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.item_effect_grants\\` has a foreign key \\`item_effect_grants_source_use_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "item_effect_grants",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "item_effect_grants_source_use_id_fkey",
+            "fkey_columns": [
+              14
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.item_effect_history\\` has a foreign key \\`item_effect_history_effect_grant_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "item_effect_history",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "item_effect_history_effect_grant_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.item_effect_history\\` has a foreign key \\`item_effect_history_game_session_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "item_effect_history",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "item_effect_history_game_session_id_fkey",
+            "fkey_columns": [
+              2
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.item_effect_history\\` has a foreign key \\`item_effect_history_game_session_id_player_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "item_effect_history",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "item_effect_history_game_session_id_player_id_fkey",
+            "fkey_columns": [
+              2,
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.item_effect_history\\` has a foreign key \\`item_effect_history_item_use_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "item_effect_history",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "item_effect_history_item_use_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.item_use_requests\\` has a foreign key \\`item_use_requests_account_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "item_use_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "item_use_requests_account_scope_fk",
+            "fkey_columns": [
+              3,
+              14
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.item_use_requests\\` has a foreign key \\`item_use_requests_game_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "item_use_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "item_use_requests_game_item_scope_fk",
+            "fkey_columns": [
+              3,
+              15
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.item_use_requests\\` has a foreign key \\`item_use_requests_store_item_provenance_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "item_use_requests",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "item_use_requests_store_item_provenance_scope_fk",
+            "fkey_columns": [
+              3,
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.loan_applications\\` has a foreign key \\`loan_applications_business_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "loan_applications",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "loan_applications_business_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.loan_applications\\` has a foreign key \\`loan_applications_loan_product_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "loan_applications",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "loan_applications_loan_product_id_fkey",
+            "fkey_columns": [
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.loan_applications\\` has a foreign key \\`loan_applications_reviewed_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "loan_applications",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "loan_applications_reviewed_by_staff_user_id_fkey",
+            "fkey_columns": [
+              16
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.loan_payments\\` has a foreign key \\`loan_payments_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "loan_payments",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "loan_payments_ledger_entry_id_fkey",
+            "fkey_columns": [
+              11
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.loan_payments\\` has a foreign key \\`loan_payments_loan_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "loan_payments",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "loan_payments_loan_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_audit_events\\` has a foreign key \\`marketplace_audit_dispute_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_audit_events",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_audit_dispute_scope_fk",
+            "fkey_columns": [
+              3,
+              7
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_audit_events\\` has a foreign key \\`marketplace_audit_listing_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_audit_events",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_audit_listing_scope_fk",
+            "fkey_columns": [
+              3,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_audit_events\\` has a foreign key \\`marketplace_audit_order_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_audit_events",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_audit_order_scope_fk",
+            "fkey_columns": [
+              3,
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_audit_events\\` has a foreign key \\`marketplace_audit_reservation_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_audit_events",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_audit_reservation_scope_fk",
+            "fkey_columns": [
+              3,
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_disputes\\` has a foreign key \\`marketplace_disputes_order_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_disputes",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_disputes_order_scope_fk",
+            "fkey_columns": [
+              3,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_disputes\\` has a foreign key \\`marketplace_disputes_resolved_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_disputes",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_disputes_resolved_by_staff_user_id_fkey",
+            "fkey_columns": [
+              10
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_financial_postings\\` has a foreign key \\`marketplace_postings_player_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_financial_postings",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_postings_player_scope_fk",
+            "fkey_columns": [
+              3,
+              7
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_listings\\` has a foreign key \\`marketplace_listings_game_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_listings",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_listings_game_item_scope_fk",
+            "fkey_columns": [
+              3,
+              25
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_listings\\` has a foreign key \\`marketplace_listings_holding_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_listings",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_listings_holding_scope_fk",
+            "fkey_columns": [
+              3,
+              4,
+              6,
+              7
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_listings\\` has a foreign key \\`marketplace_listings_inventory_account_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_listings",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_listings_inventory_account_scope_fk",
+            "fkey_columns": [
+              3,
+              24
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_listings\\` has a foreign key \\`marketplace_listings_inventory_reservation_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_listings",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_listings_inventory_reservation_fk",
+            "fkey_columns": [
+              26
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_listings\\` has a foreign key \\`marketplace_listings_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_listings",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_listings_item_scope_fk",
+            "fkey_columns": [
+              3,
+              7,
+              8
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_listings\\` has a foreign key \\`marketplace_listings_moderated_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_listings",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_listings_moderated_by_staff_user_id_fkey",
+            "fkey_columns": [
+              20
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_orders\\` has a foreign key \\`marketplace_orders_buyer_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_orders",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_orders_buyer_ledger_entry_id_fkey",
+            "fkey_columns": [
+              20
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_orders\\` has a foreign key \\`marketplace_orders_game_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_orders",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_orders_game_item_scope_fk",
+            "fkey_columns": [
+              3,
+              26
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_orders\\` has a foreign key \\`marketplace_orders_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_orders",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_orders_item_scope_fk",
+            "fkey_columns": [
+              3,
+              8,
+              9
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_orders\\` has a foreign key \\`marketplace_orders_reservation_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_orders",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_orders_reservation_scope_fk",
+            "fkey_columns": [
+              3,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_orders\\` has a foreign key \\`marketplace_orders_seller_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_orders",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_orders_seller_ledger_entry_id_fkey",
+            "fkey_columns": [
+              21
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_policies\\` has a foreign key \\`marketplace_policies_updated_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_policies",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_policies_updated_by_staff_user_id_fkey",
+            "fkey_columns": [
+              13
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_purchase_reservations\\` has a foreign key \\`marketplace_purchase_reservations_game_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_purchase_reservations",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_purchase_reservations_game_item_scope_fk",
+            "fkey_columns": [
+              3,
+              29
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.marketplace_purchase_reservations\\` has a foreign key \\`marketplace_reservations_seller_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "marketplace_purchase_reservations",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "marketplace_reservations_seller_scope_fk",
+            "fkey_columns": [
+              3,
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.message_game_policies\\` has a foreign key \\`message_game_policies_updated_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "message_game_policies",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "message_game_policies_updated_by_staff_user_id_fkey",
+            "fkey_columns": [
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.message_moderation_audit\\` has a foreign key \\`message_moderation_audit_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "message_moderation_audit",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "message_moderation_audit_staff_user_id_fkey",
+            "fkey_columns": [
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.message_thread_participants\\` has a foreign key \\`message_thread_participants_thread_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "message_thread_participants",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "message_thread_participants_thread_scope_fk",
+            "fkey_columns": [
+              2,
+              1
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.message_threads\\` has a foreign key \\`message_threads_created_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "message_threads",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "message_threads_created_by_staff_user_id_fkey",
+            "fkey_columns": [
+              12
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.messages\\` has a foreign key \\`messages_hidden_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "messages",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "messages_hidden_by_staff_user_id_fkey",
+            "fkey_columns": [
+              11
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.messages\\` has a foreign key \\`messages_sender_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "messages",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "messages_sender_staff_user_id_fkey",
+            "fkey_columns": [
+              7
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.notification_deliveries\\` has a foreign key \\`notification_deliveries_notification_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "notification_deliveries",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "notification_deliveries_notification_scope_fk",
+            "fkey_columns": [
+              3,
+              2
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.physical_economy_admin_events\\` has a foreign key \\`physical_economy_admin_events_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "physical_economy_admin_events",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "physical_economy_admin_events_staff_user_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.physical_economy_content_packs\\` has a foreign key \\`physical_economy_content_packs_imported_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "physical_economy_content_packs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "physical_economy_content_packs_imported_by_staff_user_id_fkey",
+            "fkey_columns": [
+              8
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_achievement_progress\\` has a foreign key \\`player_achievement_progress_public_achievement_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_achievement_progress",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_achievement_progress_public_achievement_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_arrival_grant_receipts\\` has a foreign key \\`player_arrival_grant_receipts_arrival_package_definition_i_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_arrival_grant_receipts",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_arrival_grant_receipts_arrival_package_definition_i_fkey",
+            "fkey_columns": [
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_arrival_grant_receipts\\` has a foreign key \\`player_arrival_grant_receipts_grant_definition_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_arrival_grant_receipts",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_arrival_grant_receipts_grant_definition_id_fkey",
+            "fkey_columns": [
+              7
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_arrival_grant_receipts\\` has a foreign key \\`player_arrival_grant_receipts_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_arrival_grant_receipts",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_arrival_grant_receipts_ledger_entry_id_fkey",
+            "fkey_columns": [
+              8
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_contract_progress\\` has a foreign key \\`player_contract_progress_contract_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_contract_progress",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_contract_progress_contract_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_country_assignments\\` has a foreign key \\`player_country_assignments_country_profile_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_country_assignments",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_country_assignments_country_profile_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_country_migration_events\\` has a foreign key \\`player_country_migration_events_from_assignment_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_country_migration_events",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_country_migration_events_from_assignment_scope_fk",
+            "fkey_columns": [
+              6,
+              2,
+              3,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_country_migration_events\\` has a foreign key \\`player_country_migration_events_from_country_profile_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_country_migration_events",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_country_migration_events_from_country_profile_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_country_migration_events\\` has a foreign key \\`player_country_migration_events_to_assignment_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_country_migration_events",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_country_migration_events_to_assignment_scope_fk",
+            "fkey_columns": [
+              7,
+              2,
+              3,
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_country_migration_events\\` has a foreign key \\`player_country_migration_events_to_country_profile_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_country_migration_events",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_country_migration_events_to_country_profile_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_loans\\` has a foreign key \\`player_loans_business_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_loans",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_loans_business_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_loans\\` has a foreign key \\`player_loans_disbursement_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_loans",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_loans_disbursement_ledger_entry_id_fkey",
+            "fkey_columns": [
+              16
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_loans\\` has a foreign key \\`player_loans_loan_product_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_loans",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_loans_loan_product_id_fkey",
+            "fkey_columns": [
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_progression_skills\\` has a foreign key \\`player_progression_skills_public_skill_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_progression_skills",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_progression_skills_public_skill_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_recipe_unlocks\\` has a foreign key \\`player_recipe_unlocks_recipe_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_recipe_unlocks",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_recipe_unlocks_recipe_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_story_decisions\\` has a foreign key \\`player_story_decisions_contract_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_story_decisions",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_story_decisions_contract_id_fkey",
+            "fkey_columns": [
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_story_decisions\\` has a foreign key \\`player_story_decisions_decision_key_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_story_decisions",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_story_decisions_decision_key_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_story_decisions\\` has a foreign key \\`player_story_decisions_player_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_story_decisions",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_story_decisions_player_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_story_relationship_adjustments\\` has a foreign key \\`player_story_relationship_adjustments_player_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_story_relationship_adjustments",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_story_relationship_adjustments_player_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_travel_journeys\\` has a foreign key \\`player_travel_journeys_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_travel_journeys",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_travel_journeys_ledger_entry_id_fkey",
+            "fkey_columns": [
+              12
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_travel_journeys\\` has a foreign key \\`player_travel_journeys_quote_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_travel_journeys",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_travel_journeys_quote_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_travel_quotes\\` has a foreign key \\`player_travel_quotes_from_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_travel_quotes",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_travel_quotes_from_fk",
+            "fkey_columns": [
+              3,
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_travel_quotes\\` has a foreign key \\`player_travel_quotes_to_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_travel_quotes",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_travel_quotes_to_fk",
+            "fkey_columns": [
+              3,
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_travel_states\\` has a foreign key \\`player_travel_states_active_journey_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_travel_states",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_travel_states_active_journey_fk",
+            "fkey_columns": [
+              2,
+              6
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.player_travel_states\\` has a foreign key \\`player_travel_states_location_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "player_travel_states",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "player_travel_states_location_fk",
+            "fkey_columns": [
+              2,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.players\\` has a foreign key \\`players_country_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "players",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "players_country_id_fkey",
+            "fkey_columns": [
+              10
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.progression_admin_corrections\\` has a foreign key \\`progression_admin_correction_player_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "progression_admin_corrections",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "progression_admin_correction_player_scope_fk",
+            "fkey_columns": [
+              2,
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.progression_admin_corrections\\` has a foreign key \\`progression_admin_corrections_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "progression_admin_corrections",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "progression_admin_corrections_staff_user_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.progression_command_audit\\` has a foreign key \\`progression_command_audit_actor_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "progression_command_audit",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "progression_command_audit_actor_staff_user_id_fkey",
+            "fkey_columns": [
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.progression_skill_definitions\\` has a foreign key \\`progression_skill_definitions_prerequisite_skill_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "progression_skill_definitions",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "progression_skill_definitions_prerequisite_skill_id_fkey",
+            "fkey_columns": [
+              8
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.savings_interest_runs\\` has a foreign key \\`savings_interest_runs_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "savings_interest_runs",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "savings_interest_runs_ledger_entry_id_fkey",
+            "fkey_columns": [
+              9
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.staff_permission_grants\\` has a foreign key \\`staff_permission_grants_granted_by_staff_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "staff_permission_grants",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "staff_permission_grants_granted_by_staff_user_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.stock_trades\\` has a foreign key \\`stock_trades_order_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "stock_trades",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "stock_trades_order_scope_fk",
+            "fkey_columns": [
+              3,
+              4,
+              2
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.stock_trades\\` has a foreign key \\`stock_trades_player_session_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "stock_trades",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "stock_trades_player_session_scope_fk",
+            "fkey_columns": [
+              3,
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.store_items\\` has a foreign key \\`store_items_game_item_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "store_items",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "store_items_game_item_scope_fk",
+            "fkey_columns": [
+              2,
+              15
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.store_items\\` has a foreign key \\`store_items_inventory_account_scope_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "store_items",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "store_items_inventory_account_scope_fk",
+            "fkey_columns": [
+              2,
+              17
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.store_purchases\\` has a foreign key \\`store_purchases_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "store_purchases",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "store_purchases_ledger_entry_id_fkey",
+            "fkey_columns": [
+              10
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.story_cash_adjustments\\` has a foreign key \\`story_cash_adjustments_ledger_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "story_cash_adjustments",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "story_cash_adjustments_ledger_entry_id_fkey",
+            "fkey_columns": [
+              10
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.story_cash_adjustments\\` has a foreign key \\`story_cash_adjustments_storyline_event_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "story_cash_adjustments",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "story_cash_adjustments_storyline_event_id_fkey",
+            "fkey_columns": [
+              4
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.story_event_execution_claims\\` has a foreign key \\`story_event_execution_claims_completed_resolution_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "story_event_execution_claims",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "story_event_execution_claims_completed_resolution_id_fkey",
+            "fkey_columns": [
+              12
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.story_event_execution_claims\\` has a foreign key \\`story_event_execution_claims_storyline_event_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "story_event_execution_claims",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "story_event_execution_claims_storyline_event_id_fkey",
+            "fkey_columns": [
+              3
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.world_country_runtime\\` has a foreign key \\`world_country_runtime_country_uuid_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "world_country_runtime",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "world_country_runtime_country_uuid_fkey",
+            "fkey_columns": [
+              8
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Table \\`public.world_country_runtime\\` has a foreign key \\`world_country_runtime_location_fk\\` without a covering index. This can lead to suboptimal query performance.",
+          "metadata": {
+            "name": "world_country_runtime",
+            "type": "table",
+            "schema": "public",
+            "fkey_name": "world_country_runtime_location_fk",
+            "fkey_columns": [
+              2,
+              5
+            ]
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        }
+      ],
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys"
+    },
+    {
+      "name": "unused_index",
+      "level": "INFO",
+      "facing": "EXTERNAL",
+      "count": 64,
+      "findings": [
+        {
+          "detail": "Index \\`account_balances_last_ledger_entry_id_idx\\` on table \\`public.account_balances\\` has not been used",
+          "metadata": {
+            "name": "account_balances",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`stock_market_simulation_checkpoints_config_idx\\` on table \\`private.stock_market_simulation_checkpoints\\` has not been used",
+          "metadata": {
+            "name": "stock_market_simulation_checkpoints",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`stock_market_events_active_idx\\` on table \\`public.stock_market_events\\` has not been used",
+          "metadata": {
+            "name": "stock_market_events",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`stock_market_events_scope_target_idx\\` on table \\`public.stock_market_events\\` has not been used",
+          "metadata": {
+            "name": "stock_market_events",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`contract_reward_issuances_contract_idx\\` on table \\`public.contract_reward_issuances\\` has not been used",
+          "metadata": {
+            "name": "contract_reward_issuances",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`contract_reward_issuances_progress_idx\\` on table \\`public.contract_reward_issuances\\` has not been used",
+          "metadata": {
+            "name": "contract_reward_issuances",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`stock_templates_active_idx\\` on table \\`public.stock_templates\\` has not been used",
+          "metadata": {
+            "name": "stock_templates",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`stock_templates_country_sector_idx\\` on table \\`public.stock_templates\\` has not been used",
+          "metadata": {
+            "name": "stock_templates",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`game_session_stock_assets_country_sector_idx\\` on table \\`public.game_session_stock_assets\\` has not been used",
+          "metadata": {
+            "name": "game_session_stock_assets",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`game_session_stock_assets_template_id_idx\\` on table \\`public.game_session_stock_assets\\` has not been used",
+          "metadata": {
+            "name": "game_session_stock_assets",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`purchase_codes_status_idx\\` on table \\`public.purchase_codes\\` has not been used",
+          "metadata": {
+            "name": "purchase_codes",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`purchase_codes_expires_at_idx\\` on table \\`public.purchase_codes\\` has not been used",
+          "metadata": {
+            "name": "purchase_codes",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`game_sessions_owner_staff_user_id_idx\\` on table \\`public.game_sessions\\` has not been used",
+          "metadata": {
+            "name": "game_sessions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`game_sessions_status_idx\\` on table \\`public.game_sessions\\` has not been used",
+          "metadata": {
+            "name": "game_sessions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`entitlements_purchase_code_id_idx\\` on table \\`public.entitlements\\` has not been used",
+          "metadata": {
+            "name": "entitlements",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`entitlements_status_idx\\` on table \\`public.entitlements\\` has not been used",
+          "metadata": {
+            "name": "entitlements",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`player_access_credentials_code_lookup_idx\\` on table \\`public.player_access_credentials\\` has not been used",
+          "metadata": {
+            "name": "player_access_credentials",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`players_game_session_id_idx\\` on table \\`public.players\\` has not been used",
+          "metadata": {
+            "name": "players",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`players_game_session_status_idx\\` on table \\`public.players\\` has not been used",
+          "metadata": {
+            "name": "players",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`stock_holdings_player_session_idx\\` on table \\`public.stock_holdings\\` has not been used",
+          "metadata": {
+            "name": "stock_holdings",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`stock_orders_player_session_created_idx\\` on table \\`public.stock_orders\\` has not been used",
+          "metadata": {
+            "name": "stock_orders",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`store_items_game_category_idx\\` on table \\`public.store_items\\` has not been used",
+          "metadata": {
+            "name": "store_items",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`mutation_idempotency_keys_expires_at_idx\\` on table \\`public.mutation_idempotency_keys\\` has not been used",
+          "metadata": {
+            "name": "mutation_idempotency_keys",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`store_purchase_quotes_player_status_expires_idx\\` on table \\`public.store_purchase_quotes\\` has not been used",
+          "metadata": {
+            "name": "store_purchase_quotes",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`store_purchase_quotes_item_created_at_idx\\` on table \\`public.store_purchase_quotes\\` has not been used",
+          "metadata": {
+            "name": "store_purchase_quotes",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`inventory_holdings_item_idx\\` on table \\`public.inventory_holdings\\` has not been used",
+          "metadata": {
+            "name": "inventory_holdings",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`inventory_events_player_created_at_idx\\` on table \\`public.inventory_events\\` has not been used",
+          "metadata": {
+            "name": "inventory_events",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`inventory_events_source_idx\\` on table \\`public.inventory_events\\` has not been used",
+          "metadata": {
+            "name": "inventory_events",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`inventory_events_item_created_at_idx\\` on table \\`public.inventory_events\\` has not been used",
+          "metadata": {
+            "name": "inventory_events",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`audit_log_flags_audit_log_idx\\` on table \\`public.audit_log_flags\\` has not been used",
+          "metadata": {
+            "name": "audit_log_flags",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`contract_reward_issuances_contract_issued_idx\\` on table \\`public.contract_reward_issuances\\` has not been used",
+          "metadata": {
+            "name": "contract_reward_issuances",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`players_identifier_lookup_idx\\` on table \\`public.players\\` has not been used",
+          "metadata": {
+            "name": "players",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`player_story_impacts_event_idx\\` on table \\`public.player_story_impacts\\` has not been used",
+          "metadata": {
+            "name": "player_story_impacts",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`authentication_throttle_lock_idx\\` on table \\`public.authentication_throttle_buckets\\` has not been used",
+          "metadata": {
+            "name": "authentication_throttle_buckets",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`staff_users_status_role_idx\\` on table \\`public.staff_users\\` has not been used",
+          "metadata": {
+            "name": "staff_users",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`storylines_active_idx\\` on table \\`public.storylines\\` has not been used",
+          "metadata": {
+            "name": "storylines",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`game_session_policies_source_event_idx\\` on table \\`public.game_session_policies\\` has not been used",
+          "metadata": {
+            "name": "game_session_policies",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`game_session_story_flags_source_event_idx\\` on table \\`public.game_session_story_flags\\` has not been used",
+          "metadata": {
+            "name": "game_session_story_flags",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`player_stock_watchlist_player_created_idx\\` on table \\`public.player_stock_watchlist\\` has not been used",
+          "metadata": {
+            "name": "player_stock_watchlist",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`inventory_redemption_requests_player_requested_idx\\` on table \\`public.inventory_redemption_requests\\` has not been used",
+          "metadata": {
+            "name": "inventory_redemption_requests",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`game_sessions_lifecycle_state_idx\\` on table \\`public.game_sessions\\` has not been used",
+          "metadata": {
+            "name": "game_sessions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`inventory_transaction_lines_account_created_idx\\` on table \\`public.inventory_transaction_lines\\` has not been used",
+          "metadata": {
+            "name": "inventory_transaction_lines",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`world_route_states_from_idx\\` on table \\`public.world_route_states\\` has not been used",
+          "metadata": {
+            "name": "world_route_states",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`world_route_states_to_idx\\` on table \\`public.world_route_states\\` has not been used",
+          "metadata": {
+            "name": "world_route_states",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`banking_transfer_requests_recipient_created_idx\\` on table \\`public.banking_transfer_requests\\` has not been used",
+          "metadata": {
+            "name": "banking_transfer_requests",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`business_entities_game_owner_status_idx\\` on table \\`public.business_entities\\` has not been used",
+          "metadata": {
+            "name": "business_entities",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`request_rate_limit_buckets_last_request_idx\\` on table \\`public.request_rate_limit_buckets\\` has not been used",
+          "metadata": {
+            "name": "request_rate_limit_buckets",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`loan_applications_game_status_created_idx\\` on table \\`public.loan_applications\\` has not been used",
+          "metadata": {
+            "name": "loan_applications",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`player_loans_player_status_idx\\` on table \\`public.player_loans\\` has not been used",
+          "metadata": {
+            "name": "player_loans",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`campaign_outcome_evidence_latest_idx\\` on table \\`public.campaign_outcome_evidence_snapshots\\` has not been used",
+          "metadata": {
+            "name": "campaign_outcome_evidence_snapshots",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`stock_price_ticks_ticker_tick_desc_idx\\` on table \\`public.stock_price_ticks\\` has not been used",
+          "metadata": {
+            "name": "stock_price_ticks",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`game_session_story_event_overrides_source_impact_idx\\` on table \\`public.game_session_story_event_overrides\\` has not been used",
+          "metadata": {
+            "name": "game_session_story_event_overrides",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`game_data_purge_requests_status_created_idx\\` on table \\`private.game_data_purge_requests\\` has not been used",
+          "metadata": {
+            "name": "game_data_purge_requests",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`marketplace_listings_game_item_status_idx\\` on table \\`public.marketplace_listings\\` has not been used",
+          "metadata": {
+            "name": "marketplace_listings",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`marketplace_reservations_listing_status_idx\\` on table \\`public.marketplace_purchase_reservations\\` has not been used",
+          "metadata": {
+            "name": "marketplace_purchase_reservations",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`game_provisioning_failure_log_request_idx\\` on table \\`private.game_provisioning_failure_log\\` has not been used",
+          "metadata": {
+            "name": "game_provisioning_failure_log",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`story_event_execution_claims_retry_idx\\` on table \\`public.story_event_execution_claims\\` has not been used",
+          "metadata": {
+            "name": "story_event_execution_claims",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`message_threads_contract_idx\\` on table \\`public.message_threads\\` has not been used",
+          "metadata": {
+            "name": "message_threads",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`message_moderation_audit_game_created_idx\\` on table \\`public.message_moderation_audit\\` has not been used",
+          "metadata": {
+            "name": "message_moderation_audit",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`stock_market_runtime_state_due_idx\\` on table \\`private.stock_market_runtime_state\\` has not been used",
+          "metadata": {
+            "name": "stock_market_runtime_state",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`stock_market_simulation_checkpoints_game_tick_desc_idx\\` on table \\`private.stock_market_simulation_checkpoints\\` has not been used",
+          "metadata": {
+            "name": "stock_market_simulation_checkpoints",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`seed_content_release_revisions_release_recorded_idx\\` on table \\`public.seed_content_release_revisions\\` has not been used",
+          "metadata": {
+            "name": "seed_content_release_revisions",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`stock_market_simulation_configs_game_tick_idx\\` on table \\`private.stock_market_simulation_configs\\` has not been used",
+          "metadata": {
+            "name": "stock_market_simulation_configs",
+            "type": "table",
+            "schema": "private"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        },
+        {
+          "detail": "Index \\`staff_permission_grants_permission_idx\\` on table \\`public.staff_permission_grants\\` has not been used",
+          "metadata": {
+            "name": "staff_permission_grants",
+            "type": "table",
+            "schema": "public"
+          },
+          "observed_at": "2026-09-20T00:08:33.908Z"
+        }
+      ],
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+    }
+  ],
+  "classification": "UNREVIEWED; advisor severity is not a release decision"
+}

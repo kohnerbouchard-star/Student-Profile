@@ -219,7 +219,9 @@ test("server-side Admin BFF is the only Staff credential transport", async () =>
   assert.match(edge, /WEB_ADMIN_SESSION_COOKIE/);
   assert.match(edge, /HttpOnly|SameSite=Strict|constantTimeTextEqual/);
   assert.match(edge, /Authorization:\s*`Bearer \$\{accessToken\}`/);
-  assert.match(vercel, /COOKIE_ENVELOPE_PATTERN|proxyAdminBff|x-vercel-forwarded-for/);
+  assert.match(vercel, /COOKIE_ENVELOPE_PATTERN|proxyAdminBff/);
+  assert.match(vercel, /VERCEL_OIDC_TOKEN/);
+  assert.match(vercel, /x-forwarded-for/);
   assert.match(recoveryProxy, /password-reset-api/);
   assert.match(logoutProxy, /proxyAdminBff/);
   assert.match(logoutProxy, /path:\s*\["logout"\]/);

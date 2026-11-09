@@ -876,6 +876,49 @@ export async function startAdminV2FixtureServer({
       ? ADMIN_V2_FIXTURE_OPAQUE_GAME_ID
       : ADMIN_V2_FIXTURE_GAME_ID;
     const overviewPath = `/games/${gameId}/dashboard`;
+    // Exact read-only World contracts; unknown queries/methods retain the 404 boundary.
+    const worldPath = `/games/${gameId}/world/`;
+    const worldReads = {
+      campaign: { campaigns: [], scheduler: { due: 0, active: 0, paused: 0, emergencyDisabled: 0 } },
+      "campaign/history?limit=100": { history: [] },
+      "campaign/effects?status=all&limit=100": {
+        effects: [], summary: { pending: 0, processing: 0, completed: 0, failed: 0 },
+      },
+      "arrival-classes?limit=100": { assignments: [] },
+      geography: {
+        runtime: {
+          pack_id: "admin-world-browser-fixture", pack_version: "1.0.0", revision: 19,
+          initialized_at: "2026-08-07T00:00:00.000Z", updated_at: "2026-08-07T00:00:00.000Z",
+        },
+        locations: [], routes: [],
+      },
+      "travel?limit=100": { states: [], journeys: [] },
+      "residency?limit=100": { residency: [] },
+    };
+    const worldKey = upstreamPath.slice(worldPath.length) + requestUrl.search;
+    if (scenario === "ready" && request.method === "GET" && upstreamPath.startsWith(worldPath) && Object.hasOwn(worldReads, worldKey)) {
+      sendJson(response, 200, responseEnvelope(worldReads[worldKey], "admin-v2-world-read"));
+      return;
+    }
+    const auditPath = `/games/${gameId}/`;
+    const auditReads = {
+      players: { players: [] },
+      "attendance/today": { attendanceDate: "2026-08-07", timezone: "Asia/Seoul",
+        attendanceRows: [], missingPlayers: [], attendanceLocked: false },
+      contracts: { contracts: [] },
+      marketplace: { policy: {}, listings: [], reservations: [], orders: [], disputes: [], audit: [], postings: [] },
+      settings: { difficultyBasePreset: "moderate", priceMultiplier: 1, incomeMultiplier: 1,
+        shockFrequency: 1, shockSeverity: 1, recoverySupport: 1, tradeMultiplier: 1,
+        attendanceWindow: { timezone: "Asia/Seoul", presentRewardAmount: 1, lateRewardAmount: 0,
+          currencyMode: "player_country", applyDifficultyIncomeModifier: true, currencyCode: "ECO" } },
+      "logs?page=1&pageSize=50": { logs: [], total: 0, pagination: { page: 1, pageSize: 50,
+        total: 0, totalPages: 1, hasNextPage: false, hasPreviousPage: false } },
+    };
+    const auditKey = upstreamPath.slice(auditPath.length) + requestUrl.search;
+    if (scenario === "ready" && request.method === "GET" && upstreamPath.startsWith(auditPath) && Object.hasOwn(auditReads, auditKey)) {
+      sendJson(response, 200, responseEnvelope(auditReads[auditKey], "admin-v2-route-audit-read"));
+      return;
+    }
     const storePath = `/games/${gameId}/store/items`;
     const marketAssetsPath = `/games/${gameId}/market/assets`;
     const marketTradesPath = `/games/${gameId}/market/trades/recent`;

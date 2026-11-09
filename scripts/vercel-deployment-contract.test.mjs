@@ -12,6 +12,7 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -291,3 +292,39 @@ test("Vercel config preserves and explicitly rewrites Player API functions", asy
     assert.equal(route.isFile(), true);
   }
 });
+
+
+for (const environment of ["staging", "production"]) {
+  test(`generated ${environment} config executes with same-origin BFF transport`, async () => {
+    const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "econovaria-bff-config-"));
+    const fixtureRoot = path.join(temporaryRoot, "repository");
+    const outputRoot = path.join(temporaryRoot, "dist");
+    await mkdir(fixtureRoot, { recursive: true });
+    await fixtureRepository(fixtureRoot);
+    const projectRef = environment === "staging" ? "eecvbssdvarfcykcfrny" : productionEnvironment.ECONOVARIA_PROJECT_REF;
+    try {
+      await buildVercelDeployment({ repoRoot: fixtureRoot, outputRoot, environment: {
+        ...productionEnvironment, ECONOVARIA_ENVIRONMENT: environment,
+        ECONOVARIA_PROJECT_REF: projectRef,
+        ECONOVARIA_SUPABASE_URL: `https://${projectRef}.supabase.co`,
+      } });
+      const window = { location: { origin: "https://synthetic-preview.example" } };
+      const context = vm.createContext({ window, URL });
+      vm.runInContext(await readFile(path.join(outputRoot, "runtime-config.env.js"), "utf8"), context);
+      vm.runInContext(await readFile(path.join(repositoryRoot, "frontend/src/core/runtime-config.js"), "utf8"), context);
+      const runtime = window.EconovariaRuntimeConfig;
+      assert.equal(runtime.environment, environment);
+      assert.equal(runtime.projectRef, projectRef);
+      assert.equal(runtime.supabaseUrl, `https://${projectRef}.supabase.co`);
+      assert.equal(runtime.apiTransport, "same-origin-bff");
+      assert.equal(runtime.apiProxyUrl, "");
+      for (const [key, route] of Object.entries({
+        playerWebSessionApiUrl: "/api/player-session", playerApiUrl: "/api/player",
+        webSessionApiUrl: "/api/admin-session", adminBffApiUrl: "/api/admin",
+        adminLogoutApiUrl: "/api/admin-logout", passwordResetApiUrl: "/api/password-reset",
+      })) assert.equal(runtime[key], route);
+    } finally {
+      await rm(temporaryRoot, { recursive: true, force: true });
+    }
+  });
+}

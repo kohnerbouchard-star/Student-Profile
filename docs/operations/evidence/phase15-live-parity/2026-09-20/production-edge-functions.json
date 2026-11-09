@@ -1,0 +1,157 @@
+{
+  "capturedAt": "2026-09-20T00:06:49.596Z",
+  "functions": [
+    {
+      "slug": "classroom-api",
+      "status": "ACTIVE",
+      "version": 68,
+      "verify_jwt": true,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "fd203631716787420a514dac6b943957aef55ae008fbaef38fe3a144a0186780"
+    },
+    {
+      "slug": "stock-market-runner",
+      "status": "ACTIVE",
+      "version": 53,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "1db4be56ad8ed9126c6238a605ce956c0e7eb4d877a80700062a5a0d87d5c457"
+    },
+    {
+      "slug": "stock-market-seed-copy",
+      "status": "ACTIVE",
+      "version": 47,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "3c8ebea6c9b5a971be72a3b801b5ae54d0e5f79f894433103f753e0a31109c67"
+    },
+    {
+      "slug": "stock-market-read",
+      "status": "ACTIVE",
+      "version": 47,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "1ad3e435f675ad9d1b38beb39113683003b6f4c56642669341130c8cb826b269"
+    },
+    {
+      "slug": "stock-market-trading",
+      "status": "ACTIVE",
+      "version": 47,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "b40bd735e950ad6cbf07a1e9dfdab1f62c0dba4970dfa50c7798f7127104ecfc"
+    },
+    {
+      "slug": "stock-market-player-read",
+      "status": "ACTIVE",
+      "version": 45,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "f043c1efc5aa47879a68ac375a114fe526f15ed50f6991ad55cffad53f810164"
+    },
+    {
+      "slug": "admin-api",
+      "status": "ACTIVE",
+      "version": 76,
+      "verify_jwt": true,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "ec01137b24c7b8aeeb2ea6d9d8292fd0a585b884bdbc107e3b331e64cfd1eb8f"
+    },
+    {
+      "slug": "web-session-api",
+      "status": "ACTIVE",
+      "version": 58,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "3ed0f1bd9840e3002a6e66ab870e2d61129b6fea397c8eb7d4b6efa6b199766b"
+    },
+    {
+      "slug": "admin-password-recovery",
+      "status": "ACTIVE",
+      "version": 38,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "2a3ec47f42e500ca758e862681903019979358150e26112f9255b07ac3f72dd8"
+    },
+    {
+      "slug": "staff-mfa-api",
+      "status": "ACTIVE",
+      "version": 50,
+      "verify_jwt": true,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "4dd12aea1a99823b4ddb8676adc4fe02763b3c38db9acd7e739875f687152b26"
+    },
+    {
+      "slug": "bootstrap-api",
+      "status": "ACTIVE",
+      "version": 42,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "6d8c2fef673aecf178d209fa7daabbdfd5f0d8054dcc62558b6f2e32fff468b4"
+    },
+    {
+      "slug": "player-web-session-api",
+      "status": "ACTIVE",
+      "version": 37,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "a002e2e287d9d042fa86c66bcec7b5b03cdb5467e9cbc55d5076c58d42f2e522"
+    },
+    {
+      "slug": "player-api",
+      "status": "ACTIVE",
+      "version": 38,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "c3d472ac21ef2fea99581f522e9ae81501581412576d223497df82786e396fae"
+    },
+    {
+      "slug": "stock-market-orchestrator",
+      "status": "ACTIVE",
+      "version": 38,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "550b886828804918df9147162a1d17b53254b8ab86f706a5259d6ca6d5bc0edd"
+    },
+    {
+      "slug": "password-reset-api",
+      "status": "ACTIVE",
+      "version": 32,
+      "verify_jwt": true,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "2bf27ccc6820e101f1a399c7a7abbb78b70d7fa1e8ae69cc3b0d0d397599a233"
+    },
+    {
+      "slug": "admin-email-verification",
+      "status": "ACTIVE",
+      "version": 32,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "443520f3c3550717db00e61c666eba86c7f8988de212e62b88cba1848bc6607b"
+    },
+    {
+      "slug": "stock-tick-archiver",
+      "status": "ACTIVE",
+      "version": 35,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "957bd8f08480bcddb4e62a24d7a4c948a404fa93fbf4fce9bedfebde08621433"
+    },
+    {
+      "slug": "game-data-purger",
+      "status": "ACTIVE",
+      "version": 28,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "08dc291d41493943a8de6d799d89f3a8ecedac5917d0c0ba1f1494920dc0342f"
+    },
+    {
+      "slug": "campaign-orchestrator",
+      "status": "ACTIVE",
+      "version": 7,
+      "verify_jwt": false,
+      "updated_at": 1789691511298,
+      "ezbr_sha256": "912716cd35d6641a9f152f5d16c9c3cad58ef730e42aaadda7e7c062650cc735"
+    }
+  ]
+}
