@@ -33,3 +33,11 @@ Files:
 Next: qualify exact-head hosted checks and independent review before merge consideration. This does not close the broader Crafting roadmap or certify live deployment.
 
 Actual-PR registration `pr-922.json` locks the six edited paths and two unchanged verifier/test paths. It preserves all 118 required and 87 critical checks from current-main PR921, with production and secret handling denied.
+
+## Main-forward integration
+
+Main `f6ef470e39bc4b40c191daf160ad55e57ff02328` includes merged Admin #928, Loans #925, provisioning/Campaign #885 and Business #926. Preserve all inherited files and shared intake entries; do not reinterpret their prior draft wording as current source status. The scoped feature source/tests are unchanged, except the Banking handler test retains the new main Loans assertion plus its existing transfer regression. Crafting has only an additive roadmap conflict; Banking additionally regenerates the combined architecture inventory with its four-line read-model delta. Authority check arrays now exactly retain current-main PR885 (125 required/92 critical), with no new writable paths or production/secret permission.
+
+The owner authorized finishing and merging qualified PRs. This integration remains unmerged and needs new exact-head CI; prior-head success is historical only. No deployment or live mutation.
+
+Integrated-tree local checks: full Player verification, full root tests, architecture ratchet, actual-PR scope verifier, secret and whitespace checks pass. The shared backend TypeScript step passes; full Edge and backend smoke stop on the unchanged frozen esm.sh Supabase module connection refusal, not a source/test failure. Banking also passes 26 merged Loans/transfer handler and forecast tests. Original feature source/browser test blobs remain unchanged; fresh hosted Chromium and exact-head checks remain required.

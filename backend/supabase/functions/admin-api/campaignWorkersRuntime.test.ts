@@ -243,8 +243,8 @@ Deno.test("effect worker completes all reviewed kinds, records failures, and nev
   const delivered: string[] = [];
   const repository: CampaignEffectWorkerRepository = {
     claim: async () => commands(),
-    complete: async ({ commandId }) => { completed.push(commandId); },
-    fail: async (input) => { failed.push(input); },
+    complete: async ({ commandId, attemptCount }) => { assertEquals(attemptCount, 1); completed.push(commandId); return true; },
+    fail: async (input) => { assertEquals(input.attemptCount, 1); failed.push({ commandId: input.commandId, errorCode: input.errorCode }); return true; },
   };
   const ports: CampaignEffectPorts = {
     publishNews: async ({ idempotencyKey }) => { delivered.push(`news:${idempotencyKey}`); },
@@ -296,7 +296,7 @@ Deno.test("malformed effect payload fails closed before any domain port", async 
       attemptCount: 1,
     }],
     complete: async () => { throw new Error("must not complete"); },
-    fail: async ({ commandId }) => { failed.push(commandId); },
+    fail: async ({ commandId, attemptCount }) => { assertEquals(attemptCount, 1); failed.push(commandId); return true; },
   };
   const ports: CampaignEffectPorts = {
     publishNews: async () => { portCalls += 1; },
@@ -313,6 +313,7 @@ Deno.test("malformed effect payload fails closed before any domain port", async 
   assertEquals(portCalls, 0);
   assertEquals(failed, [id("a")]);
 });
+
 
 function provider(): CampaignProgramProvider {
   return {

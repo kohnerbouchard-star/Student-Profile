@@ -146,7 +146,14 @@
     "Rendered Admin browser and secure mutation journey",
     "Environment Neutral Browser",
     "runtime-config-contract",
-    "Loans Lifecycle Read"
+    "Loans Lifecycle Read",
+    "Database Replay",
+    "Economic Core Request Claims",
+    "REF046 exclusive disposable qualification",
+    "Admin Shell Smoke",
+    "admin-shell-smoke",
+    "Admin Scroll Integrity",
+    "Rendered viewport and drawer scrolling"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -235,7 +242,12 @@
     "business-primary-ipo-browser",
     "Rendered Admin browser and secure mutation journey",
     "runtime-config-contract",
-    "Loans Lifecycle Read"
+    "Loans Lifecycle Read",
+    "Database Replay",
+    "Economic Core Request Claims",
+    "REF046 exclusive disposable qualification",
+    "admin-shell-smoke",
+    "Rendered viewport and drawer scrolling"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",

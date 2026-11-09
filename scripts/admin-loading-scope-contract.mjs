@@ -70,3 +70,74 @@ assert.match(
 );
 
 console.log("Admin single-loader and CSS-owned responsive card-grid contract passed.");
+
+// Deterministic coverage for the browser harness's navigation boundary. No
+// browser is launched, and rejected network/body reads must remain failures.
+const { observeStartupGameCodeRead } = await import("./admin-quality-smoke-fixture.mjs");
+const gameId = "fixture-game";
+const responseFor = ({ method = "GET", path = `/functions/v1/web-session-api/proxy/games/${gameId}/join-code/reset`, status = 200, finished = async () => null } = {}) => ({
+  request: () => ({ method: () => method }),
+  url: () => `https://fixture.example.test${path}`,
+  status: () => status,
+  finished,
+});
+const deferred = () => {
+  let resolve;
+  let reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+};
+const headers = deferred();
+const body = deferred();
+let observationStarted = false;
+const finishRead = observeStartupGameCodeRead({
+  waitForResponse(predicate, options) {
+    observationStarted = true;
+    assert.equal(options.timeout, 15000);
+    assert.equal(predicate(responseFor()), true);
+    for (const patch of [
+      { method: "POST" },
+      { path: "/functions/v1/web-session-api/proxy/games/other-game/join-code/reset" },
+      { path: `/functions/v1/web-session-api/proxy/games/${gameId}/join-code/reset/extra` },
+      { path: `/functions/v1/web-session-api/proxy/games/${gameId}/settings` },
+    ]) assert.equal(predicate(responseFor(patch)), false);
+    return headers.promise;
+  },
+}, gameId);
+assert.equal(observationStarted, true, "The read must be observed before navigation starts.");
+let settled = false;
+const completion = finishRead().then(() => { settled = true; });
+await new Promise(setImmediate);
+assert.equal(settled, false, "A missing response must not complete readiness.");
+headers.resolve(responseFor({ finished: () => body.promise }));
+await new Promise(setImmediate);
+assert.equal(settled, false, "Response headers must not substitute for the completed body.");
+body.resolve(null);
+await completion;
+
+for (const [name, waitForResponse, message] of [
+  ["HTTP failure", () => Promise.resolve(responseFor({ status: 500 })), /returned 500/],
+  ["redirect", () => Promise.resolve(responseFor({ status: 302 })), /returned 302/],
+  ["body failure", () => Promise.resolve(responseFor({ finished: async () => new Error("body aborted") })), /body aborted/],
+  ["response failure", () => Promise.reject(new Error("request aborted")), /request aborted/],
+]) {
+  const requireRead = observeStartupGameCodeRead({ waitForResponse }, gameId);
+  await new Promise(setImmediate);
+  await assert.rejects(requireRead(), message, name);
+}
+for (const waitForResponse of [
+  () => new Promise(() => {}),
+  () => Promise.resolve(responseFor({ finished: () => new Promise(() => {}) })),
+]) {
+  const requireRead = observeStartupGameCodeRead({ waitForResponse }, gameId, 10);
+  await assert.rejects(requireRead(), /did not finish within 10ms/);
+}
+const mounted = loadingScannerSmoke.slice(
+  loadingScannerSmoke.indexOf("async function mountedAdminContract"),
+  loadingScannerSmoke.indexOf("async function scannerLifecycleSnapshot"),
+);
+const observedAt = mounted.indexOf("observeStartupGameCodeRead(page, GAME_ID)");
+assert.ok(observedAt >= 0 && observedAt < mounted.indexOf("await page.goto"));
+assert.ok(mounted.indexOf("await finishStartupRead()") > mounted.indexOf("if (result.overflow > 2)"));
+assert.match(loadingScannerSmoke, /const scanner = await scannerLifecycleSnapshot\(\);\s*await finishStartupRead\(\);\s*if \(errors.length\) fail\(errors\[0\]\)/);
+console.log("Admin startup read completion preserves snapshots, waits for bodies, and rejects HTTP, network and deadline failures.");

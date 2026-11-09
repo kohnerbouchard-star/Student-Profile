@@ -277,7 +277,8 @@ async function mountWorkspace(page) {
     document.querySelector("#phase12BusinessWorkspaceFixture")?.remove();
     const fixture = document.createElement("main");
     fixture.id = "phase12BusinessWorkspaceFixture";
-    fixture.className = "player-terminal-overview player-terminal-page-host";
+    // The detached renderer fixture must retain the real shell styling boundary.
+    fixture.className = "player-terminal-app-root player-terminal-overview player-terminal-page-host";
     fixture.dataset.testid = "phase12-business-workspace-fixture";
     fixture.innerHTML = renderBusinessWorkspacePage(data);
     document.body.append(fixture);

@@ -65,6 +65,10 @@ assert.equal(resolved.actions.businessFormationPropose, true);
 assert.equal(resolved.actions.businessFormationRespond, true);
 assert.equal(resolved.actions.businessFormationActivate, true);
 assert.equal(resolved.actions.businessProduction, true);
+for (const endpointKey of ["businessEquipmentInstall", "businessStoreOfferCreate", "businessStoreOfferStock", "businessStoreOfferPublish"]) {
+  assert.equal(resolved.actions[endpointKey], true, `Server must advertise ${endpointKey}.`);
+  assert.equal(isEndpointEnabled(resolved, endpointKey), true, `Current manifest must enable ${endpointKey}.`);
+}
 assert.equal(resolved.actions.bankingFxQuote, true);
 assert.equal(resolved.actions.bankingFxStandard, true);
 assert.equal(resolved.actions.bankingFxInstant, true);

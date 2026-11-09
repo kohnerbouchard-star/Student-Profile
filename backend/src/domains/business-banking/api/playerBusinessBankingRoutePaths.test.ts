@@ -220,7 +220,8 @@ Deno.test("Loans retains its five original reads and projection when added histo
     assertEquals(result.schedule.map((row) => row.currencyCode), [currency("NRC"), currency("NRC"), currency("LUM")]);
     // Strip only additive metadata, then compare the entire retained response.
     const stripCurrency = ({ currencyCode: _currency, ...row }: { currencyCode?: string | null }) => row;
-    const { currencyProjection, lifecycle, ...retained } = result;
+    const { currencyProjection, lifecycle, repaymentForecast, ...retained } = result;
+    assertEquals(repaymentForecast?.facilities.every((row) => row.state === "unavailable"), true);
     assertEquals(lifecycle, { version: 1, state: "unavailable" });
     assertEquals(historyCalls.filter((call) => call[1] === "select").map((call) => call[0]),
       ["loan_applications", "player_loans", "loan_payments"]);

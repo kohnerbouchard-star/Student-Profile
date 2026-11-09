@@ -122,6 +122,40 @@ const ROUTES = Object.freeze({
       idempotencyKey: key(payload, "businessCandidateHire"),
     },
   }),
+  businessEquipmentInstall: ({ payload }) => ({
+    method: "POST",
+    path: "/players/me/business/equipment/install",
+    payload: {
+      equipmentKey: required(payload.equipmentKey, "equipmentKey", "businessEquipmentInstall"),
+      idempotencyKey: key(payload, "businessEquipmentInstall"),
+    },
+  }),
+  businessStoreOfferCreate: ({ payload }) => ({
+    method: "POST",
+    path: "/players/me/business/store/offers",
+    payload: {
+      itemKey: required(payload.itemKey, "itemKey", "businessStoreOfferCreate"),
+      unitPrice: number(payload.unitPrice, "unitPrice", "businessStoreOfferCreate"),
+      idempotencyKey: key(payload, "businessStoreOfferCreate"),
+    },
+  }),
+  businessStoreOfferStock: ({ payload }) => ({
+    method: "POST",
+    path: `/players/me/business/store/offers/${encodeURIComponent(required(payload.offerKey, "offerKey", "businessStoreOfferStock"))}/stock`,
+    payload: {
+      quantity: number(payload.quantity, "quantity", "businessStoreOfferStock"),
+      expectedOfferVersion: number(payload.expectedOfferVersion, "expectedOfferVersion", "businessStoreOfferStock"),
+      idempotencyKey: key(payload, "businessStoreOfferStock"),
+    },
+  }),
+  businessStoreOfferPublish: ({ payload }) => ({
+    method: "POST",
+    path: `/players/me/business/store/offers/${encodeURIComponent(required(payload.offerKey, "offerKey", "businessStoreOfferPublish"))}/publish`,
+    payload: {
+      expectedOfferVersion: number(payload.expectedOfferVersion, "expectedOfferVersion", "businessStoreOfferPublish"),
+      idempotencyKey: key(payload, "businessStoreOfferPublish"),
+    },
+  }),
   businessStoreWithdrawal: ({ payload }) => {
     const mode = required(payload.mode, "mode", "businessStoreWithdrawal").toLowerCase();
     if (mode !== "full" && mode !== "reduce") {
