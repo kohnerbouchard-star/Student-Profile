@@ -14,6 +14,7 @@ on:
       - "scripts/business-phase8-store-listing-inventory-*.mjs"
       - "scripts/business-phase7-store-seller-offers-*.mjs"
       - ".github/workflows/business-store-listing-inventory-v2.yml"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches: [main]
     paths:
@@ -157,7 +158,7 @@ jobs:
 
   verify-player-terminal-and-chromium:
     name: Verify retained Player Terminal and Chromium
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - name: Check out exact workflow head

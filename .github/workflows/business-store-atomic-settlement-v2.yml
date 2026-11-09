@@ -16,6 +16,7 @@ on:
       - "docs/roadmaps/business-phase10-atomic-store-settlement-scope-v1.md"
       - "scripts/business-phase10-atomic-settlement-*.mjs"
       - ".github/workflows/business-store-atomic-settlement-v2.yml"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches: [main]
     paths:
@@ -465,7 +466,7 @@ jobs:
 
   verify-player-terminal-and-chromium:
     name: Verify retained Player Terminal and Chromium
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - name: Check out exact workflow head

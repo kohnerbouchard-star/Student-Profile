@@ -25,6 +25,7 @@ on:
       - "player-terminal/src/app.js"
       - "player-terminal/tests/browser/player-route-refresh.spec.mjs"
       - ".github/workflows/backend-typecheck.yml"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches:
       - main

@@ -336,13 +336,14 @@ includesAll(source.playerTest, [
   "The false-to-true formation transition must fetch Treasury exactly once without route re-entry.",
 ], "C4 prerequisite-gated Treasury regression evidence");
 includesAll(source.marketplaceFundingFlow, [
-  "ownsQuotePending",
-  "releaseQuotePending();",
-  "updateMarketplace",
+  "const request = begin(form, \"Pricing quote\", intent)",
+  "if (pending !== operation) return",
+  "request.release();\n      updateMarketplace",
 ], "C4 retained Marketplace quote-to-settlement transition");
 includesAll(source.marketplaceFundingTest, [
-  "releaseQuotePending();\\n      updateMarketplace",
-  "if (!ownsQuotePending) return",
+  "const request = begin(form, \\\"Pricing quote\\\", intent)",
+  "request.release();\\n      updateMarketplace",
+  "if (pending !== operation) return",
   "endpointKeys: { marketplacePurchase: true }",
 ], "C4 retained Marketplace transition regression evidence");
 includesAll(source.capabilities, [
