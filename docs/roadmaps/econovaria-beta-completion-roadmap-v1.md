@@ -21,6 +21,12 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`PLAYER-MARKETPLACE-FIXTURE-001` — Preserve reservations across connected journeys (2026-11-09)**
+  - Status: `IMPLEMENTED_NOT_MERGED`; isolated branch `fix/marketplace-reservation-fixture` from main `ea24905ef5770567c96cf128897335f69074fcd6`, separate from Banking #923. The owner approved completing needed integration fixes in separate branches and PRs. Actual PR-number authority registration remains pending.
+  - Scope: preserve the inventory reserved projection and authoritative rows during disposable Marketplace setup, ensure ten available fixture units, and fail closed on real pre-existing drift or over-reservation. Add deterministic regressions and a mandatory rollback-only PostgreSQL proof before all existing hosted connected journeys. No production migration, runtime backend, API, UI, dependency or deployment change.
+  - Evidence: [bounded scope, cause and validation](../operations/evidence/marketplace-reservation-fixture/scope.md). Full local root and Player verification pass; backend TypeScript passes, Edge/full smoke dependency access remains blocked, and local PostgreSQL proof is unexecuted because psql/Docker are absent. Hosted proof and the full ordered journey remain mandatory, not waived.
+  - Next exact item: independently review, register actual PR authority preserving all current-main checks, and qualify the new exact head before owner-authorized merge. No production deployment or broad Marketplace completion claim.
+
 - **`PLAYER-CRAFTING-EMPTY-RECIPES-001` — Preserve owned workshop state without recipes (2026-11-09)**
   - Status: `IMPLEMENTED_NOT_MERGED`; draft [PR #922](https://github.com/kohnerbouchard-star/Student-Profile/pull/922), isolated branch `fix/crafting-empty-recipe-state` from main `08134650d1e0c8cfebb811a5d97331196ebe08e3`, implementation `45957af880a2d50284d8a95e3f6907e152b541f3`. The owner requested separate branches and PRs for these smaller integration fixes; current open PR/branch inspection found no competing owner for this correction.
   - Scope: render recipe emptiness inside the recipe area while retaining the independent queue, equipment, usable effects, active effects and history. Preserve existing action permissions/public keys and recipe restoration. No backend, migration, route, RPC, dependency or CSS change. Earlier source-integration statuses remain historical where main already contains their merges; this entry does not certify their outstanding runtime evidence.
