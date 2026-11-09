@@ -34,6 +34,7 @@ on:
       - "scripts/business-banking-player-inventory-browser-acceptance.mjs"
       - "scripts/business-banking-player-market-browser-acceptance.mjs"
       - "scripts/player-runtime-load-profile.mjs"
+      - "scripts/marketplace-inventory-fixture.test.mjs"
       - "scripts/econovaria-local-gateway.py"
       - "scripts/local-staging-gateway-contract.test.mjs"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
@@ -219,6 +220,11 @@ jobs:
             's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/[0-9a-f]{64}/[digest-redacted]/gi' \
             /tmp/auth-throttle-readiness-response.json >&2 || true
           exit 1
+
+      - name: Prove Marketplace fixture reservation isolation
+        env:
+          MARKETPLACE_FIXTURE_DATABASE_PROOF: "1"
+        run: node --test scripts/marketplace-inventory-fixture.test.mjs
 
       - name: Provision canonical source content
         shell: bash
