@@ -1,3 +1,4 @@
+import { normalizeLoanLifecycle, normalizeLoanForecast } from "./loans-read-model.js";
 import { normalizeBusinessIpoResponse } from "./business-ipo-response.js";
 import { ApiRequestError } from "./errors.js";
 import { validateStoreResponse } from "./response-store-validator.js";
@@ -440,7 +441,12 @@ export function normalizeApiResponse(endpointKey, raw, context = {}) {
   if (!ARRAY_READS.has(endpointKey)) {
     value = applySafeDefaults(endpointKey, value);
     validateEndpointShape(endpointKey, value, context);
-    if (endpointKey === "loans") value.currencyProjection = normalizeLoanCurrencies(unwrap(endpointKey, raw)?.currencyProjection);
+    if (endpointKey === "loans") {
+      const loans = unwrap(endpointKey, raw);
+      value.currencyProjection = normalizeLoanCurrencies(loans?.currencyProjection);
+      value.lifecycle = normalizeLoanLifecycle(loans?.lifecycle);
+      value.repaymentForecast = normalizeLoanForecast(loans?.repaymentForecast);
+    }
   }
   return value;
 }

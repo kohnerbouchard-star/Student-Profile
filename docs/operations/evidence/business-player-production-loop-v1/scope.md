@@ -198,3 +198,23 @@ because its process socket is unavailable. Docker is not installed in this check
 These are local execution limits, not passing browser/database/Edge evidence. The
 renewed hosted checks must provide those exact-head results without substitutions
 or relaxed assertions.
+
+
+## Main integration after #925
+
+Main `9fe4a5c2fe145cdaf6c0f9d53e5f99fbe731a375` contains merged Loans #925. This
+branch preserves its complete implementation, authority, test registration and
+roadmap records. The shared response normalizer retains both the Business equipment
+validation and Loans lifecycle/forecast normalization. Architecture inventory is
+regenerated from the combined source rather than choosing either conflicting count.
+The unchanged original Business authority still applies. Prior integration head
+`0371981af362eac46b2b4a3dba94d92cc2f6a8e2` passed Admin Browser E2E and Database
+Replay; its remaining checks were still running when this additive integration
+began. Those results do not qualify the next head. No production action is authorized.
+
+Combined-source local checks pass: root tests, full Player verify, backend TypeScript,
+Business production-loop contracts, 83 focused Loans Deno assertions, 28 migration/
+redirect regressions, 16 authority tests, secret scanning and diff checks. Independent
+read-only review confirms the shared normalizer union and no guard/test loss. The
+previously described cloud Edge/browser/database limits still apply; fresh hosted
+qualification is required.

@@ -1,3 +1,4 @@
+import { projectLoanRepaymentForecast } from "../domain/loanRepaymentForecast.ts";
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
   type LoansSnapshotDto,
@@ -158,7 +159,9 @@ export class SupabasePlayerBusinessBankingRepository
         });
       }),
     };
-    return { ...snapshot, currencyProjection: projectLoanCurrencies(eligibleProducts, active, exactSchedule), lifecycle: await lifecycle };
+    const recordedLifecycle = await lifecycle;
+    return { ...snapshot, currencyProjection: projectLoanCurrencies(eligibleProducts, active, exactSchedule),
+      lifecycle: recordedLifecycle, repaymentForecast: projectLoanRepaymentForecast(active, products, recordedLifecycle) };
   }
 
   private async readLoanLifecycle(input: {
