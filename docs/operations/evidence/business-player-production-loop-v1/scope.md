@@ -1,9 +1,11 @@
 # Business Player production loop
 
-Roadmap item: BUSINESS-PLAYER-LOOP-001. Status: IN_PROGRESS.
+Roadmap item: BUSINESS-PLAYER-LOOP-001. Status: IMPLEMENTED_NOT_MERGED.
 
 Base: main `08134650d1e0c8cfebb811a5d97331196ebe08e3`.
 Branch: `feat/business-player-production-loop-v1`.
+Draft PR: https://github.com/kohnerbouchard-star/Student-Profile/pull/926.
+Verification authority: `docs/operations/contracts/player-cross-cutting/pr-926.json`.
 
 ## Scope and ownership
 
