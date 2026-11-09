@@ -14,6 +14,11 @@
     "docs/operations/evidence/admin-browser-readiness-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/admin-keyboard-workflows-smoke.mjs",
+    "scripts/admin-loading-scanner-smoke.mjs",
+    "scripts/admin-loading-scope-contract.mjs",
+    "scripts/admin-quality-smoke-fixture.mjs",
+    "scripts/admin-scroll-integrity-contract.test.mjs",
+    "scripts/admin-scroll-integrity-smoke.mjs",
     "scripts/admin-session-redirect-diagnostics.mjs",
     "scripts/admin-session-redirect-diagnostics.test.mjs",
     "scripts/admin-v2-browser-smoke.mjs",
@@ -27,6 +32,11 @@
     "docs/operations/evidence/admin-browser-readiness-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/admin-keyboard-workflows-smoke.mjs",
+    "scripts/admin-loading-scanner-smoke.mjs",
+    "scripts/admin-loading-scope-contract.mjs",
+    "scripts/admin-quality-smoke-fixture.mjs",
+    "scripts/admin-scroll-integrity-contract.test.mjs",
+    "scripts/admin-scroll-integrity-smoke.mjs",
     "scripts/admin-session-redirect-diagnostics.mjs",
     "scripts/admin-session-redirect-diagnostics.test.mjs",
     "scripts/admin-v2-browser-smoke.mjs",
@@ -152,7 +162,11 @@
     "Rendered Admin browser and secure mutation journey",
     "Environment Neutral Browser",
     "runtime-config-contract",
-    "Loans Lifecycle Read"
+    "Loans Lifecycle Read",
+    "Admin Shell Smoke",
+    "admin-shell-smoke",
+    "Admin Scroll Integrity",
+    "Rendered viewport and drawer scrolling"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -241,7 +255,9 @@
     "business-primary-ipo-browser",
     "Rendered Admin browser and secure mutation journey",
     "runtime-config-contract",
-    "Loans Lifecycle Read"
+    "Loans Lifecycle Read",
+    "admin-shell-smoke",
+    "Rendered viewport and drawer scrolling"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
