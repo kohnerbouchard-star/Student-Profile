@@ -255,3 +255,31 @@ assert.equal(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 assert.equal(serialized.includes('"accountType":"cash"'), false);
 
 console.log("Banking read model passed: checking terminology, capability-gated transfers, legacy alias translation, pagination, freshness, empty state, and UUID privacy are valid.");
+
+// Transfers retain the server's cent precision without discarding fractional balances.
+for (const [minorUnit, expectedStep] of [[undefined, "0.01"], [0, "1"], [1, "0.1"], [2, "0.01"], [4, "0.01"]]) {
+  const transferData = structuredClone(configuredData);
+  transferData.bankingFx = { currencies: minorUnit === undefined ? [] : [{ currencyCode: "ECO", minorUnit }] };
+  const transferHtml = renderBankingPage(transferData);
+  for (const endpointKey of ["bankTransfer", "savingsTransfer"]) {
+    const form = formMarkup(transferHtml, endpointKey);
+    assert.match(form, new RegExp(`name="amount"[^>]*min="${expectedStep.replace(".", "\\.")}"[^>]*max="500"[^>]*step="${expectedStep.replace(".", "\\.")}"[^>]*inputmode="decimal"`));
+    assertSubmitEnabled(transferHtml, endpointKey, "Fractional amounts must not change capability gating.");
+  }
+}
+for (const amount of ["0.01", "0.50", "12.34"]) {
+  for (const endpointKey of ["bankTransfer", "savingsTransfer"]) {
+    const request = resolvePlayerBackendRequest({
+      endpointKey, method: "POST", path: endpointKey === "bankTransfer" ? "/banking/transfers" : "/banking/savings/transfers",
+      payload: { amount, recipientPlayerIdentifier: "PLAYER-002", fromAccount: "checking", toAccount: "savings", idempotencyKey: "fractional-transfer-01" },
+      params: {}, session: { playerSessionToken: "fixture" },
+    });
+    assert.equal(request.payload.amount, Number(amount));
+    assert.equal(request.payload.idempotencyKey, "fractional-transfer-01");
+    assert.equal(request.path, endpointKey === "bankTransfer" ? "/players/me/banking/transfers" : "/players/me/banking/savings/transfers");
+    assert.equal(request.payload.playerId, undefined);
+    assert.equal(request.payload.gameSessionId, undefined);
+    assert.equal(request.payload.currencyCode, undefined);
+  }
+}
+console.log("Banking fractional inputs and adapter payloads preserve cents, currency precision and server-owned scope.");
