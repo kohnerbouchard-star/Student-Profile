@@ -88,3 +88,38 @@ const legacyTokenMarkup = renderCraftingPage({
 assert.doesNotMatch(legacyTokenMarkup, /data-endpoint="itemEffectUse"/);
 
 console.log("Crafting renders public-key equip, salvage, and server-approved effect-use controls without ownership fields.");
+
+// Recipe availability is independent of already-owned jobs, equipment and effects.
+const retainedCrafting = {
+  ...data.crafting,
+  recipes: [],
+  queue: [
+    { jobKey: "cft_" + "b".repeat(32), name: "Running job", quantity: 1, status: "in_progress", canCancel: true, canClaim: false },
+    { jobKey: "cft_" + "c".repeat(32), name: "Completed job", quantity: 1, status: "completed", canCancel: false, canClaim: true },
+    { jobKey: "cft_" + "d".repeat(32), name: "Locked job", quantity: 1, status: "in_progress", canCancel: false, canClaim: false },
+  ],
+  effects: [{ summary: "Retained active effect", status: "active", stackCount: 1 }],
+  effectHistory: [{ summary: "Retained effect history", action: "applied", createdAt: "2026-11-09" }],
+};
+for (const recipes of [[], undefined, null]) {
+  const emptyRecipes = renderCraftingPage({ ...data, crafting: { ...retainedCrafting, recipes } }, { craftingRecipeId: "removed.recipe" });
+  assert.match(emptyRecipes, /No recipes available/);
+  assert.doesNotMatch(emptyRecipes, /data-endpoint="craftItem"|data-player-crafting-recipe=/);
+  for (const endpoint of ["craftCancel", "craftClaim", "equipmentEquip", "itemSalvage", "itemEffectUse"]) {
+    assert.match(emptyRecipes, new RegExp(`data-endpoint="${endpoint}"`));
+  }
+  assert.equal((emptyRecipes.match(/data-endpoint="craftCancel"/g) || []).length, 1);
+  assert.equal((emptyRecipes.match(/data-endpoint="craftClaim"/g) || []).length, 1);
+  assert.match(emptyRecipes, /3 jobs/);
+  assert.match(emptyRecipes, /Retained active effect/);
+  assert.match(emptyRecipes, /Retained effect history/);
+  assert.doesNotMatch(emptyRecipes, /playerUuid|playerId|gameSessionId|ownerPlayerId|recipientPlayerUuid/);
+}
+const idleMarkup = renderCraftingPage({ crafting: { ...data.crafting, recipes: [], queue: [], equipment: [] } }, {});
+assert.match(idleMarkup, /No items are currently being fabricated/);
+assert.match(idleMarkup, /No crafted equipment is available/);
+assert.doesNotMatch(idleMarkup, /data-endpoint=/);
+const restoredMarkup = renderCraftingPage(data, { craftingRecipeId: "removed.recipe" });
+assert.match(restoredMarkup, /data-recipe-id="recipe.connected"/);
+assert.match(renderCraftingPage({}, {}), /No recipes available/);
+console.log("Empty recipe catalogs preserve independent queue, equipment, effect and history controls; recipe restoration remains usable.");
