@@ -594,7 +594,7 @@ jobs:
 
   verify-player-terminal-and-chromium:
     name: Verify standalone Player Terminal and full Chromium suite
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
       - name: Check out exact workflow head

@@ -25,6 +25,7 @@ on:
       - "scripts/verify-player-cross-cutting-authority.mjs"
       - ".github/workflows/business-*-manufacturing-*.yml"
       - ".github/workflows/business-timed-manufacturing-v2.yml"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches: [main]
     paths:

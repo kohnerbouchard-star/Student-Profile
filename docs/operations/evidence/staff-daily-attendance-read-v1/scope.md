@@ -177,3 +177,66 @@ secret scan and whitespace PASS. Independent read-only review found no actionabl
 finding and independently passed authority16/16, YAML/equality and negative guards.
 No browser, dependency-install or hosted rerun was performed locally; the actual
 supported-runner browser execution remains NOT_RUN pending parent publication.
+
+
+## Parent-authorized current-main integration — 2026-11-09
+
+Normal merge of main415653b213cb1269074c212da9f97bdfd3e652f2 into published
+Attendance480cb88322594b3b37ba8161cd613d257ea1b2b6; no history rewrite or
+force-push. Main contains merged Marketplace PR914/head5b257c38e7ae6745d114d1255f01455dd787f9fd.
+The no-commit merge was clean: no conflicting hunks and no manual resolutions.
+Every imported main path remains byte-identical to main. All Attendance runtime,
+contract, test, backend package, PR916 manifest and REF003 receipt bytes remain
+identical to the independently reviewed predecessor. Only this scoped evidence
+record is amended beyond the automatic merge. No new workflow proposal is applied.
+
+Fresh complete census covered20 open PRs. Existing package/inventory overlap with
+#668, receipt/inventory overlap with#885 and action-pin overlap with#620 are
+preserved, not acquired. #913/#915 own independent Player changes; their shared
+package/Atomic workflow paths are imported only from already merged main, never
+from their unmerged branches. No owner consent is inferred and no other checkout
+or branch is modified. Global roadmaps remain protected and are not edited.
+This continues the bounded Attendance daily-read context/database seam; completed
+REF018 and gated REF019/ARCH100H are not activated or claimed complete.
+
+Pre-integration main package/inventory/receipt blobs:
+8f8fe07cb0e446a121fcbc519cb692447c2e1b68 /
+b6865fc38ebec932558e058eab9ded78077aba12 /
+4589dc191d138fbe242ba51c006e481588643c94.
+Current-base diff has nine Attendance/supporting paths: the Click workflow is now
+identical to merged main. PR916 authority already binds main by ref, not a base
+commit hash; unchanged verifier accepts9 changed paths under12 exact locks.
+All117 required/86 critical entries, both read-only locks and false flags remain
+byte-unchanged. Positive scope and six wrong-PR/base/path/safety mutations pass.
+All three package receipts still bind actual package01e8517103cdd62ca3ba6a7bc5046189ac2a97b3.
+
+Inventory was regenerated twice from this combined tree, byte-identically:
+SHA256467f2e9f8ca9c5c353c74e3b88beed6e14d2fd4b31539a07c1230b035fe92ec5.
+It retains1315 source files, Attendance15, persistence exceptions53, cross-domain
+imports70 and zero foreign-infrastructure debt. Main-relative changes remain only
+the original Attendance counts and removal of the daily handler exception.
+No ceilings or unrelated measurements were changed or manually forced.
+
+Prior-head480cb883 hosted results are historical: Click Safety16/16 and31 successful
+workflows; eight browser workflows failed Chromium installation on unsupported
+Ubuntu26.04, and Seed failed its current-main ancestry guard after main advanced.
+Those failures are not rewritten as passes. Old0c9 manual results likewise do not
+qualify this integration. New exact-head automatic qualification is required.
+No manual dispatch/retry, access bypass, release/production action, hosted mutation
+or credentials/settings change is authorized; PR916 stays draft with auto-merge off.
+
+Pinned local tools are Node22.23.1/npm10.9.8/Deno2.9.3, installed outside the
+repository with writable temporary caches and unchanged frozen locks. Root/backend
+npm ci PASS; focused Attendance7/7 PASS; full root npm test PASS; backend TypeScript
+and all28 Edge roots PASS; Player verify PASS including imported Marketplace
+ownership regressions. Authority/action-pinning/receipt/ratchet regressions72/72,
+actual-base authority, package-identity/preservation guards, secrets and whitespace
+PASS. Backend smoke and independent review are recorded at final closeout.
+
+Final local backend smoke PASS with the same frozen source and pinned tools,
+including the seven daily tests. Independent read-only merge review found no
+actionable issue; it independently verified both-parent preservation, unchanged
+Attendance source/package/receipts/manifest, exact inventory deltas and authority
+positive/six-negative checks. Full root/Edge/Player/smoke execution is implementation
+provided evidence, not represented as independently rerun. No local database or
+browser/hosted acceptance is claimed; automatic final-head CI follows publication.
