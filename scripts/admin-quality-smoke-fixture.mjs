@@ -310,6 +310,37 @@ function attendanceSuccess(name) {
   };
 }
 
+// Observe the known delayed startup read before navigation. Call the returned
+// assertion after the original UI snapshots and before another test-driven reload.
+// This completes the read instead of hiding requestfailed or other API errors.
+export function observeStartupGameCodeRead(page, gameId, timeoutMs = 15000) {
+  let timer;
+  const read = page.waitForResponse((response) =>
+    response.request().method() === "GET" &&
+    new URL(response.url()).pathname ===
+      `/functions/v1/web-session-api/proxy/games/${gameId}/join-code/reset`,
+  { timeout: timeoutMs }).then(async (response) => {
+    if (response.status() !== 200) {
+      throw new Error(`Startup Game Code read returned ${response.status()}.`);
+    }
+    const error = await response.finished();
+    if (error) throw error;
+  });
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(
+      `Startup Game Code read did not finish within ${timeoutMs}ms.`,
+    )), timeoutMs);
+  });
+  // Capture early rejection while snapshots run, then rethrow at the assertion.
+  const outcome = Promise.race([read, deadline])
+    .then(() => ({ ok: true }), (error) => ({ ok: false, error }))
+    .finally(() => clearTimeout(timer));
+  return async () => {
+    const result = await outcome;
+    if (!result.ok) throw result.error;
+  };
+}
+
 export async function createQualityHarness(name) {
   const dir = process.env.ADMIN_SMOKE_ARTIFACT_DIR ||
     `admin-browser-smoke-artifacts/${name}`;

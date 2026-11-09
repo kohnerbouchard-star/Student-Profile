@@ -154,7 +154,11 @@
     "runtime-config-contract",
     "Loans Lifecycle Read",
     "Admin V2 Settings Check",
-    "Settings contract and browser acceptance"
+    "Settings contract and browser acceptance",
+    "Admin Shell Smoke",
+    "admin-shell-smoke",
+    "Admin Scroll Integrity",
+    "Rendered viewport and drawer scrolling"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -244,7 +248,9 @@
     "Rendered Admin browser and secure mutation journey",
     "runtime-config-contract",
     "Loans Lifecycle Read",
-    "Settings contract and browser acceptance"
+    "Settings contract and browser acceptance",
+    "admin-shell-smoke",
+    "Rendered viewport and drawer scrolling"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
