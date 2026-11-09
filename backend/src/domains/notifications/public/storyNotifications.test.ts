@@ -1,6 +1,8 @@
 import { createStoryNotificationPublisher } from "./storyNotifications.ts";
 import type { StoryNotificationPublisher } from "./storyNotifications.ts";
 import { createStoryCutsceneNotificationForPlayers } from "../../storylines/services/storyNotificationService.ts";
+// Run the Story-owned capability checks through the existing Notifications suite.
+import "../../storylines/server/notificationCapabilities.test.ts";
 
 declare const Deno: {
   test(name: string, run: () => Promise<void>): void;
@@ -22,6 +24,16 @@ for (
   Deno.test(`public Story publisher preserves writes/retry after ${failure}`, async () => {
     const actual = await exercise(publicPublisher, failure);
     equal(actual.afterFirst, rows);
+    equal(
+      actual.trace[0] && (actual.trace[0] as { table: string }).table,
+      "notifications",
+    );
+    const firstDelivery = actual.trace.findIndex((entry) =>
+      (entry as { table: string }).table === "notification_deliveries"
+    );
+    if (firstDelivery < 1) {
+      throw new Error("Delivery must follow notification creation");
+    }
     equal(
       actual.first,
       table
@@ -59,9 +71,63 @@ for (
   });
 }
 
+for (const failure of [null, "notification"] as const) {
+  Deno.test(`public Story publisher awaits notification insert before delivery (${failure})`, async () => {
+    let release!: () => void;
+    const pendingWrite = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const client = new FixtureClient(failure, pendingWrite);
+    const publisher = publicPublisher(client);
+    const result = createStoryCutsceneNotificationForPlayers(input(publisher))
+      .then(
+        (value) => ({ value, error: null }),
+        (error: unknown) => ({ value: null, error }),
+      );
+    // Let a mistakenly unawaited delivery continuation run while the insert is held.
+    await Promise.resolve();
+    await Promise.resolve();
+    equal(client.queryStarts, ["notifications"]);
+    equal(client.rows.notification_deliveries, []);
+    release();
+    const completed = await result;
+    if (failure) {
+      const error = completed.error as {
+        code: string;
+        tableName: string;
+        operation: string;
+      };
+      equal([error.code, error.tableName, error.operation], [
+        "story_notification_repository_query_failed",
+        "notifications",
+        "insert",
+      ]);
+      equal(client.queryStarts, ["notifications"]);
+      equal(client.rows.notification_deliveries, []);
+    } else {
+      equal(completed.error, null);
+      equal(completed.value, receipt(2, 0));
+      equal(client.queryStarts, [
+        "notifications",
+        "notification_deliveries",
+        "notification_deliveries",
+      ]);
+      equal(client.rows.notification_deliveries.map((row) => row.player_id), [
+        "player-1",
+        "player-2",
+      ]);
+    }
+  });
+}
+
 async function exercise(factory: Factory, failure: string | null) {
   const client = new FixtureClient(failure);
   const repository = factory(client);
+  equal(Object.keys(repository), [
+    "createStoryNotification",
+    "createNotificationDeliveries",
+  ]);
+  equal(client.trace, []);
   const first = await publish(repository);
   const afterFirst = [
     client.rows.notifications.length,
@@ -149,8 +215,13 @@ class FixtureClient {
     notification_deliveries: [],
   };
   readonly trace: unknown[] = [];
-  constructor(private failure: string | null = null) {}
+  readonly queryStarts: string[] = [];
+  constructor(
+    private failure: string | null = null,
+    private readonly pendingNotificationWrite?: Promise<void>,
+  ) {}
   from(table: string) {
+    this.queryStarts.push(table);
     let inserted: Row | undefined;
     let columns = "";
     const filters: Row = {};
@@ -168,6 +239,11 @@ class FixtureClient {
         return query;
       },
       maybeSingle: async () => {
+        if (
+          table === "notifications" && inserted && this.pendingNotificationWrite
+        ) {
+          await this.pendingNotificationWrite;
+        }
         this.trace.push({ table, inserted, columns, filters });
         const rows = this.rows[table];
         if (!inserted) {

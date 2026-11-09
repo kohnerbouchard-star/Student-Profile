@@ -14,7 +14,7 @@ import {
   isRecord,
   parseRequiredText,
 } from "../../../platform/supabase/edgeParsing.ts";
-import { normalizeJoinCode } from "../../game-sessions/api/gameJoinCodeHttpHelpers.ts";
+import { normalizeJoinCode } from "../../game-sessions/index.ts";
 import { normalizeStudentCode } from "../domain/playerAccessCodes.ts";
 import { normalizePlayerIdentifier } from "../domain/playerIdentifiers.ts";
 import {

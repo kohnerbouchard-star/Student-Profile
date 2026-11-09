@@ -1,4 +1,4 @@
-import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+import { readPlayerApiRouteSegments } from "../../../platform/supabase/playerApiRouteSegments.ts";
 import type { PlayerCraftingRoute } from "../contracts/playerCraftingContracts.ts";
 
 const JOB_KEY = /^cft_[0-9a-f]{32}$/;

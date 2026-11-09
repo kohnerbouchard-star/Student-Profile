@@ -3,7 +3,6 @@ import {
   gameDto,
   json,
   number,
-  proxyClassroom,
 } from "./common.ts";
 import {
   loadContracts,
@@ -35,12 +34,6 @@ import { handleAdminContractRewardIssueOperation } from "./contractRewardIssueOp
 import { handleAdminPlayerAccessCodeResetOperation } from "./playerAccessCodeResetOperation.ts";
 import type { AdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 import { createSupabaseGameSettingsReadRepository } from "../../../src/domains/game-sessions/infrastructure/supabaseGameSettingsReadRepository.ts";
-
-function classroomContractPath(gameId: string, suffix = ""): string {
-  return `/staff/game-sessions/${
-    encodeURIComponent(gameId)
-  }/contracts${suffix}`;
-}
 
 function csvResponse(
   request: Request,

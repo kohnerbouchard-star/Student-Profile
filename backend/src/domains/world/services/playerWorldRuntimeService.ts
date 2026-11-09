@@ -1,20 +1,16 @@
-import type { PlayerRequestScope } from "../../players/api/playerRequestScope.ts";
+import type { PlayerRequestScope } from "../../players/index.ts";
 import {
-  buildArrivalGrantCommand,
-  createArrivalClassAssignment,
   DEFAULT_ARRIVAL_QUESTIONNAIRE,
-  scoreArrivalQuestionnaire,
-} from "../../arrival/services/arrivalClassScoring.ts";
-import type {
-  ArrivalClassAssignment,
-  ArrivalClassScoreResult,
-} from "../../arrival/contracts/arrivalClassContracts.ts";
+  preparePlayerArrivalAssignment,
+  type ArrivalClassAssignment,
+  type ArrivalClassScoreResult,
+} from "../../arrival/index.ts";
 import type {
   CampaignHistoryEntry,
   PlayerCampaignContext,
-} from "../../campaign/services/campaignCoordinator.ts";
-import { buildPlayerCampaignContext } from "../../campaign/services/campaignCoordinator.ts";
-import type { CampaignInstance } from "../../campaign/contracts/campaignRuntimeContracts.ts";
+  PlayerCampaignProjectionSource,
+} from "../../campaign/index.ts";
+import { buildPlayerCampaignContext } from "../../campaign/index.ts";
 import type {
   CreateTravelQuoteResponse,
   ExecuteTravelResponse,
@@ -37,7 +33,7 @@ import { prepareStoredTravelQuote } from "./playerTravelService.ts";
 
 export interface PlayerWorldRuntimeSnapshot {
   readonly campaign: {
-    readonly instance: CampaignInstance;
+    readonly instance: PlayerCampaignProjectionSource;
     readonly history: readonly CampaignHistoryEntry[];
     readonly affectedLocationIds: readonly string[];
   } | null;
@@ -121,24 +117,11 @@ export function createPlayerWorldRuntimeService(
       readonly idempotencyKey: string;
     }): Promise<PlayerWorldRuntimeContextPayload["arrival"]> => {
       const runtimeInput = await dependencies.repository.readArrivalInput(input.scope);
-      const scoreResult = scoreArrivalQuestionnaire(
-        DEFAULT_ARRIVAL_QUESTIONNAIRE,
-        input.request.answers,
-      );
-      const assignedAt = now();
-      const assignment = createArrivalClassAssignment({
-        assignmentId: dependencies.createAssignmentId(),
-        gameId: input.scope.gameId,
-        gameSessionId: input.scope.gameId,
-        playerUuid: input.scope.playerUuid,
-        countryId: runtimeInput.countryId,
-        scoreResult,
-        assignedAt,
-      });
-      const grant = buildArrivalGrantCommand({
-        assignment,
-        arrivalPackageDefinitionId: runtimeInput.arrivalPackageDefinitionId,
-        grantDefinitionId: runtimeInput.classGrantDefinitionId(assignment.classId),
+      const { assignment, scoreResult, grant } = preparePlayerArrivalAssignment({
+        subject: input,
+        runtimeInput,
+        now,
+        createAssignmentId: () => dependencies.createAssignmentId(),
       });
       await dependencies.repository.assignArrivalClassAtomic({
         scope: input.scope,

@@ -1,15 +1,9 @@
-import type { StoryNotificationRepository } from "../../storylines/contracts/storyNotificationContracts.ts";
-import { SupabaseStoryNotificationRepository } from "../../storylines/infrastructure/supabaseStoryNotificationRepository.ts";
+import { createStoryNotificationPublisher as createStoryPublisher } from "../../storylines/server/notificationCapabilities.ts";
+export type { StoryNotificationPublisher } from "../../storylines/server/notificationCapabilities.ts";
 
 /** Notifications-owned write port; read/acknowledgement operations stay private. */
-export type StoryNotificationPublisher = Pick<
-  StoryNotificationRepository,
-  "createStoryNotification" | "createNotificationDeliveries"
->;
-
-/** Reuse the existing writer and its awaited writes, conflicts and errors. */
 export function createStoryNotificationPublisher(
-  client: ConstructorParameters<typeof SupabaseStoryNotificationRepository>[0],
-): StoryNotificationPublisher {
-  return new SupabaseStoryNotificationRepository(client);
+  client: Parameters<typeof createStoryPublisher>[0],
+): ReturnType<typeof createStoryPublisher> {
+  return createStoryPublisher(client);
 }

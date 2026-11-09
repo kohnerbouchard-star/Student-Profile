@@ -4,6 +4,7 @@ on:
   # Inventory lifecycle qualification retains the required full backend smoke gate.
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - "scripts/ref025-business-loan-concurrency.sql"
       - "scripts/ref025-business-loan-concurrency.mjs"
       - "scripts/ref025-business-loan-concurrency.test.mjs"
@@ -25,6 +26,7 @@ on:
       - "player-terminal/src/app.js"
       - "player-terminal/tests/browser/player-route-refresh.spec.mjs"
       - ".github/workflows/backend-typecheck.yml"
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches:
       - main
@@ -126,6 +128,9 @@ jobs:
             echo "Backend typecheck failed. Download the backend-typecheck-diagnostics artifact."
             false
           fi
+
+      - name: Verify Crafting Inventory bridge
+        run: deno test --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/crafting/api/playerCraftingInventoryBridge.test.ts
 
       - name: Run backend smoke tests
         if: ${{ !cancelled() && steps.tooling.outcome == 'success' }}

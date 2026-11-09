@@ -20,7 +20,7 @@ import {
 import {
   derivePlayerCredentialLookupDigest,
 } from "../../../security/playerCredentialHashing.ts";
-import { normalizePlayerIdentifier } from "../../players/domain/playerIdentifiers.ts";
+import { normalizePlayerIdentifier } from "../../players/identifiers.ts";
 import type {
   AttendancePlayerRecord,
   AttendanceRecordRepository,

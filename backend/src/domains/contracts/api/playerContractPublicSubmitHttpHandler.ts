@@ -15,12 +15,12 @@ import {
   renderStoryDecisionRoleplay,
   type StoryDecisionRoleplayClient,
   type StoryDecisionRoleplayResult,
-} from "../../storylines/services/storyDecisionRoleplayService.ts";
+} from "../../storylines/index.ts";
 import {
   invalidPlayerSessionResponse,
   readPlayerSessionTokenFromRequest,
   resolveActivePlayerSession,
-} from "../../players/api/playerSessionHttpHelpers.ts";
+} from "../../players/index.ts";
 import type { ContractRepository } from "../contracts/contractRepositoryContracts.ts";
 import { ContractRepositoryError } from "../contracts/contractRepositoryContracts.ts";
 import {

@@ -1,4 +1,4 @@
-import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+import { readPlayerApiRouteSegments } from "../../../platform/supabase/playerApiRouteSegments.ts";
 import type { PlayerStoryDeliveryRoute } from "../contracts/playerStoryDeliveryContracts.ts";
 
 const DELIVERY_ID_PATTERN = /^ndl_[0-9a-f]{32}$/;

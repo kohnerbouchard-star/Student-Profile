@@ -17,7 +17,7 @@ import {
   invalidPlayerSessionResponse,
   readPlayerSessionTokenFromRequest,
   resolveActivePlayerSession,
-} from "../../players/api/playerSessionHttpHelpers.ts";
+} from "../../players/index.ts";
 import type {
   ContractRepository,
   PlayerContractProgressRecord,

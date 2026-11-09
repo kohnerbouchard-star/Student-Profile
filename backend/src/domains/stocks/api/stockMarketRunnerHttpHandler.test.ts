@@ -1,16 +1,19 @@
 import { runStockMarketRunner } from "../application/runStockMarketRunner.ts";
 import "../infrastructure/runtimeCursorStockMarketRepositories.test.ts";
 import "../calculations/stockMarketEngine.test.ts";
+import "../../storylines/server/stockTickStorylineRunner.test.ts";
 import {
   handleStockMarketRunnerRequest,
 } from "./stockMarketRunnerHttpHandler.ts";
 import {
+  buildGamePublicRealtimeEnvelope,
+  buildGamePublicRealtimeStockTickEnvelope,
   type GamePublicRealtimeBroadcastMessage,
   type GamePublicRealtimeEnvelope,
   GamePublicRealtimePublisher,
   type GamePublicRealtimePublishResult,
   type GamePublicRealtimeTransport,
-} from "../../game-dashboard/realtime/gamePublicRealtimePublisher.ts";
+} from "../../game-dashboard/publicRealtime.ts";
 import type {
   StockMarketEngineInput,
   StockMarketEngineResult,
@@ -350,6 +353,90 @@ Deno.test("stock market runner keeps successful tick response when storyline hoo
     message: "storyline repository unavailable",
     retryable: true,
   }]);
+});
+
+Deno.test("default Story hook reads only after tick persistence and stops effects on context failure", async () => {
+  const repository = new MockRunnerRepository();
+  const reads: { table: string; applied: number }[] = [];
+  const failures: unknown[] = [];
+  const failure = new Error("context transport unavailable");
+  const client = {
+    from(table: string) {
+      reads.push({ table, applied: repository.applyCalls });
+      throw failure;
+    },
+    rpc() { throw new Error("Story effects must not start after a failed context read."); },
+  };
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    {
+      ...dependencies({
+        repository,
+        createServiceClient: () => client,
+        logStorylineRunnerFailure: (entry) => failures.push(entry),
+      }),
+      createStorylineRunnerAfterTick: undefined,
+    },
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(repository.applyCalls, 1);
+  assertEquals(reads, [
+    "players", "player_country_assignments", "account_balances",
+    "game_session_stock_assets", "stock_holdings", "game_session_contracts",
+    "player_contract_progress", "player_story_relationships", "game_session_story_flags",
+  ].map((table) => ({ table, applied: 1 })));
+  assertEquals(failures, [{
+    code: "storyline_runner_after_stock_tick_failed",
+    message: failure.message,
+    retryable: true,
+  }]);
+});
+
+Deno.test("default Story hook reads scoped contexts before Story work after the tick", async () => {
+  const repository = new MockRunnerRepository();
+  const reads: { table: string; applied: number; filters: [string, unknown][] }[] = [];
+  const failures: unknown[] = [];
+  const client = {
+    from(table: string) {
+      const read = { table, applied: repository.applyCalls, filters: [] as [string, unknown][] };
+      reads.push(read);
+      const query = {
+        select(_columns: string) { return query; },
+        eq(column: string, value: unknown) { read.filters.push([column, value]); return query; },
+        order(_column: string, _options?: unknown) { return query; },
+        then(resolve: (result: { data: never[]; error: null }) => unknown) {
+          return Promise.resolve({ data: [], error: null }).then(resolve);
+        },
+      };
+      return query;
+    },
+    rpc() { throw new Error("No Story effect should be written without an event."); },
+  };
+  const response = await handleStockMarketRunnerRequest(
+    request({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 }, SECRET),
+    {
+      ...dependencies({
+        repository,
+        createServiceClient: () => client,
+        logStorylineRunnerFailure: (entry) => failures.push(entry),
+      }),
+      createStorylineRunnerAfterTick: undefined,
+    },
+  );
+  assertEquals(response.status, 200);
+  assertEquals(repository.applyCalls, 1);
+  assertEquals(failures, []);
+  assertEquals(reads.map(({ table }) => table), [
+    "players", "player_country_assignments", "account_balances",
+    "game_session_stock_assets", "stock_holdings", "game_session_contracts",
+    "player_contract_progress", "player_story_relationships", "game_session_story_flags",
+    "game_session_storylines", "game_session_story_flags",
+  ]);
+  for (const read of reads) {
+    assertEquals(read.applied, 1);
+    assertEquals(read.filters.some(([key, value]) => key === "game_session_id" && value === GAME_SESSION_ID), true);
+  }
 });
 
 Deno.test("stock market runner derives the default seed from one game session", async () => {
@@ -746,3 +833,75 @@ function assertNoPrivateRealtimeFields(value: unknown): void {
 function privateFieldName(...parts: readonly string[]): string {
   return parts.join("");
 }
+
+Deno.test("public realtime boundary projects only the canonical game tick envelope", async () => {
+  const envelope = buildGamePublicRealtimeStockTickEnvelope({
+    gameSessionId: GAME_SESSION_ID,
+    tickIndex: 7,
+    generatedAt: WALL_CLOCK_TIME,
+    assets: [{ assetId: ASSET_ID, ticker: "AURA", countryCode: "SOLVEND" }],
+    rows: [{ ticker: "AURA", companyName: "Aurora", sector: "TECH", currentPrice: 12, previousClose: 10 }],
+    ticks: [{ assetId: ASSET_ID, ticker: "AURA", changePct: 20, volume: 8 }],
+  });
+  assertEquals(envelope, {
+    gameSessionId: GAME_SESSION_ID, channel: `game:${GAME_SESSION_ID}:public`,
+    sequence: 7, eventType: "stock_tick", occurredAt: WALL_CLOCK_TIME,
+    payload: { tick: 7, stocks: [{
+      stockAssetId: ASSET_ID, ticker: "AURA", companyName: "Aurora", sector: "TECH",
+      countryCode: "SOLVEND", currentPrice: 12, previousClose: 10, changePct: 20, volume: 8,
+    }] },
+  });
+  const sent: unknown[] = [];
+  const result = await new GamePublicRealtimePublisher({
+    async send(message) { sent.push(message); return { ok: true }; },
+  }).publish(envelope);
+  assertEquals(result.ok, true);
+  assertEquals(sent, [{ channel: envelope.channel, event: "stock_tick", payload: envelope }]);
+});
+
+Deno.test("public realtime boundary rejects mismatched stock projection sources", () => {
+  for (const missing of ["asset", "row"]) {
+    let caught: unknown;
+    try {
+      buildGamePublicRealtimeStockTickEnvelope({
+        gameSessionId: GAME_SESSION_ID, tickIndex: 7, generatedAt: WALL_CLOCK_TIME,
+        assets: missing === "asset" ? [] : [{ assetId: ASSET_ID, ticker: "AURA", countryCode: "SOLVEND" }],
+        rows: missing === "row" ? [] : [{ ticker: "AURA", companyName: "Aurora", sector: "TECH", currentPrice: 12, previousClose: 10 }],
+        ticks: [{ assetId: ASSET_ID, ticker: "AURA", changePct: 20, volume: 8 }],
+      });
+    } catch (error) { caught = error; }
+    assertEquals(caught instanceof Error ? caught.message : caught,
+      "Stock tick public realtime source did not match the calculated tick.");
+  }
+});
+
+Deno.test("public realtime boundary retains privacy, channel and sequence guards before transport", async () => {
+  let sent = 0;
+  const publisher = new GamePublicRealtimePublisher({
+    async send() { sent++; return { ok: true }; },
+  });
+  const valid = buildGamePublicRealtimeEnvelope({
+    gameSessionId: GAME_SESSION_ID, sequence: 0, eventType: "stock_tick",
+    occurredAt: WALL_CLOCK_TIME, payload: { tick: 0, stocks: [] },
+  });
+  assertEquals((await publisher.publish(valid)).ok, true);
+  sent = 0;
+  const messages = [
+    "Public realtime channel must match the game session.",
+    "sequence must be a non-negative integer or null.",
+    "Public realtime payload contains private field payload.nested.playerSessionToken.",
+  ];
+  for (const [index, envelope] of [
+    { ...valid, channel: "game:another:public" as const },
+    { ...valid, sequence: -1 },
+    { ...valid, payload: { ...valid.payload, nested: { playerSessionToken: "private" } } },
+  ].entries()) {
+    const result = await publisher.publish(envelope);
+    assertEquals(result.ok, false);
+    if (!result.ok) {
+      assertEquals(result.error.code, "invalid_game_public_realtime_event");
+      assertEquals(result.error.message, messages[index]);
+    }
+  }
+  assertEquals(sent, 0);
+});

@@ -1,4 +1,4 @@
-import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+import { readPlayerApiRouteSegments } from "../../../platform/supabase/playerApiRouteSegments.ts";
 import {
   MARKETPLACE_LISTING_KEY_PATTERN,
   MARKETPLACE_ORDER_KEY_PATTERN,
