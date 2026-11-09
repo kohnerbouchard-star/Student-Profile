@@ -1,11 +1,14 @@
 # Player Countries/News projection extraction
 
 Roadmap item: `ARCH-501/502-PLAYER-COUNTRY-NEWS-PROJECTIONS-001`.
-Status: `IMPLEMENTED_NOT_MERGED`; reviewed local candidate only. Parent ARCH-501/502 remain open.
+Status: `IMPLEMENTED_NOT_MERGED`; published draft candidate, final-head CI pending. Parent ARCH-501/502 remain open.
 Owner branch: `refactor/player-country-news-projections-v1`.
 Baseline: `4226ca9391df4cafa2c3c3004abd5c5ba552c48d` (merged PR916).
 Implementation commit: `9aecc7f47ee7a45797d2267766c1bf92b5fe59f3`.
-Independent final review: no actionable findings.
+Independent final source review: no actionable findings.
+Draft [PR #919](https://github.com/kohnerbouchard-star/Student-Profile/pull/919) targets main.
+Reviewed local head `147943a0f06d0e19fd8949433f1dcf25d960712b` was pushed after
+explicit owner approval; this actual-number publication amendment adds no runtime change.
 
 ## Bounded ownership
 
@@ -27,6 +30,9 @@ no competing Countries/News extraction owner. Loans #918, CSS #624, Dashboard
 - Generated architecture inventory: two added source files and the reduced
   read-model line count, with every debt count and ceiling unchanged.
 - This scope record and the required roadmap intake/source-status correction.
+- Actual-PR authority `docs/operations/contracts/player-cross-cutting/pr-919.json`: the
+  nine changed paths plus two unchanged read-only verifier/test locks. The 117
+  required and 86 critical check arrays are identical to merged PR916.
 
 There is no UI, route, RPC, migration, backend, dependency/lock, authorization,
 economic, freshness-owner, shared workflow or production change. No duplicate
@@ -80,15 +86,23 @@ Repository-pinned Node 22.23.1 is used for the recorded local checks.
   merge evidence, and reproduced the exact generated inventory in memory.
 
 These focused checks are not a full repository, Backend/Edge, browser, connected
-or CI qualification claim. No whole-suite reruns, hosted workflow dispatch, hosted application-state
-reads/writes, deployment, merge or public draft publication occurred.
-Publication, if authorized later, needs a manifest bound to the actual PR number,
-unchanged retained required/critical checks and applicable final-head CI evidence.
+or CI qualification claim. No whole-suite reruns, hosted workflow dispatch, hosted
+application-state reads/writes, deployment or merge occurred. Owner-approved draft
+publication starts automatic PR checks. The first published head precedes the
+actual-number manifest and is not the final qualification target; record automatic
+check results only against the final amended head. Required/critical arrays, all
+existing scopes and production holds remain unchanged.
+
+Initial publication head `147943a0` failed Admin Business source run
+`42555794156`, job `128961068934`, with `Player authority identifier is not
+bound to this pull request.` The inspected log stops at authority validation
+before its tests. This precedes the actual-PR919 manifest and remains historical
+failure evidence; it does not qualify the final amended head.
 
 ## Next action and rollback
 
-The reviewed implementation is committed locally at the SHA above.
-Return the isolated local candidate for parent review; do not automatically publish,
-merge, mark ready or deploy. Broader Player coordinator extraction is a separate
+The reviewed implementation is committed at the SHA above. Independently review
+the actual-PR metadata amendment, publish it and qualify its exact final head.
+Return draft PR919 for parent review; do not merge, mark ready or deploy. Broader Player coordinator extraction is a separate
 tranche, not part of this pilot. Rollback is to revert this bounded source/test
 change and its registration; no data or environment rollback is involved.
