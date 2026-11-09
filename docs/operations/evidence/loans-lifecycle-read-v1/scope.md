@@ -1,7 +1,9 @@
 # Loans lifecycle read v1
 
 Roadmap item: LOANS-LIFECYCLE-READ-001. Status: IMPLEMENTED_NOT_MERGED.
-Base: 415653b213cb1269074c212da9f97bdfd3e652f2.
+Initial base: 415653b213cb1269074c212da9f97bdfd3e652f2.
+Reconciled main: 7688eeebfdfcf9c81314f849e3c7dd2e47078a02.
+Draft PR: https://github.com/kohnerbouchard-star/Student-Profile/pull/918.
 Owner: feat/loans-lifecycle-read-v1, in an isolated checkout.
 
 ## Approved boundary
@@ -23,7 +25,7 @@ migration, RPC, route, policy, auth, release configuration or hosted-data writes
 Expected editable paths are the existing Business-banking contracts, Loans
 repository and loan currency projection module; its retained route test; one new focused test script;
 one new PR-only read-only verification workflow; this document; the bounded
-roadmap entry; and the eventual actual-numbered PR authority manifest. No new
+roadmap entry; and the actual-numbered PR918 authority manifest. No new
 backend source file is planned. Existing package manifests, inventory, shared
 workflows, #624 UI, #888 diagnostic tools and other PR authority files are excluded.
 All 20 open PR file lists were inspected. These three source paths are unowned;
@@ -89,6 +91,28 @@ regressions pass 18/18; generated inventory is byte-unchanged, with all debt
 measurements and ceilings unchanged. No package, shared workflow or verifier
 source changed. Hosted CI remains pending; no merge-ready, live or completion
 credit is claimed. Actual PR identity and exact-head results follow publication.
+
+## Actual PR binding and main reconciliation
+
+Draft PR918 initially published head d3a228e26ea2ba7aa9fd466e73b0ba28d619814c.
+Immediately before publication, main advanced through merged #913 to
+7688eeebfdfcf9c81314f849e3c7dd2e47078a02. Normal forward merge preserved the
+entire new main roadmap verbatim with only this approved intake entry added.
+All Loans implementation and focused/retained test files are byte-identical to
+reviewed source 8e4aee65a1b2199b28bba51cc7d71bff4192fa76. Fresh full root and
+complete Player verification pass on that reconciled base.
+
+Actual-numbered pr-918.json binds nine edited paths under eleven locks. Its
+118 required and 87 critical checks preserve every predecessor 117/86 check
+from accepted PR912 and PR913, adding only Loans Lifecycle Read to both.
+The authority verifier and its regression tests remain read-only. Only the new
+Loans workflow selects the new exact authority path; no shared workflow selector
+is changed. Missing retained checks are not waived. Exact-head hosted results
+remain pending after this metadata amendment; final qualification is reported
+against the verified remote SHA, not a preceding head. Independent metadata
+review found no actionable finding, confirmed all nine paths and preserved
+source/roadmap/check arrays, and passed actual authority verification, six
+negative PR/base/path/safety variants and all 16 unchanged authority regressions.
 
 ## Rollback and release
 

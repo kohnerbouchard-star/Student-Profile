@@ -9,6 +9,7 @@ on:
       - 'backend/src/domains/business-banking/infrastructure/supabasePlayerBusinessBankingRepository.ts'
       - 'scripts/business-banking-loan-lifecycle.test.ts'
       - 'docs/operations/evidence/loans-lifecycle-read-v1/**'
+      - 'docs/operations/contracts/player-cross-cutting/pr-918.json'
       - '.github/workflows/loans-lifecycle-read-v1.yml'
 
 permissions:
