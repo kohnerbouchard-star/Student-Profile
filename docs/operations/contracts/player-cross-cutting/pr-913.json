@@ -16,7 +16,23 @@
     "docs/operations/contracts/player-cross-cutting/pr-913.json",
     ".github/workflows/progression-runtime-v1.yml",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/backend-typecheck.yml",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/ref-009-contract-reward-qualification.yml",
+    ".github/workflows/ref-018-attendance-qualification.yml",
+    ".github/workflows/business-store-listing-inventory-v2.yml",
+    ".github/workflows/business-store-seller-offers-v2.yml",
+    ".github/workflows/business-store-withdrawal-safety-v2.yml",
+    ".github/workflows/business-store-atomic-settlement-v2.yml",
+    ".github/workflows/business-timed-manufacturing-v2.yml",
+    ".github/workflows/business-workforce-payroll-v2.yml",
+    ".github/workflows/configurable-stock-market-timezone-v1.yml",
+    ".github/workflows/exchange-calendar-runtime-v1.yml",
+    ".github/workflows/multicurrency-marketplace-funding-v1.yml",
+    ".github/workflows/multicurrency-stock-funding-v1.yml",
+    ".github/workflows/multicurrency-store-funding-v1.yml",
+    ".github/workflows/release-promote.yml"
   ],
   "requiredFiles": [
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
@@ -26,7 +42,23 @@
     "docs/operations/contracts/player-cross-cutting/pr-913.json",
     ".github/workflows/progression-runtime-v1.yml",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/backend-typecheck.yml",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/ref-009-contract-reward-qualification.yml",
+    ".github/workflows/ref-018-attendance-qualification.yml",
+    ".github/workflows/business-store-listing-inventory-v2.yml",
+    ".github/workflows/business-store-seller-offers-v2.yml",
+    ".github/workflows/business-store-withdrawal-safety-v2.yml",
+    ".github/workflows/business-store-atomic-settlement-v2.yml",
+    ".github/workflows/business-timed-manufacturing-v2.yml",
+    ".github/workflows/business-workforce-payroll-v2.yml",
+    ".github/workflows/configurable-stock-market-timezone-v1.yml",
+    ".github/workflows/exchange-calendar-runtime-v1.yml",
+    ".github/workflows/multicurrency-marketplace-funding-v1.yml",
+    ".github/workflows/multicurrency-stock-funding-v1.yml",
+    ".github/workflows/multicurrency-store-funding-v1.yml",
+    ".github/workflows/release-promote.yml"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -239,5 +271,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "Owner authorized finishing PR #913 through a normal forward merge of current main 415653b213cb1269074c212da9f97bdfd3e652f2, preserving merged PR #914 Marketplace runtime/test registration and shared runner/selectors. The only new workflow correction is Progression Runtime verify runs-on ubuntu-24.04; all job commands, guards, permissions, checkouts and triggers stay unchanged. The prior Atomic runner pin is now merged main and is not a newly edited PR #913 path. Exactly six edited paths under eight locks. Preserve all 117 required and 86 critical checks, both read-only verifier/test locks and false production flags. Session runtime/regressions are unchanged by reconciliation. Old-head evidence does not qualify the new head; normal PR CI and explicit retained-gate reconciliation are required. No old 17-file proposal or timezone generator change, no other-owner branch change, merge into main, auto-merge, ready transition, production deployment/promotion, live-state mutation, credential/permission change or dispatch/rerun operation."
+  "authorizationNote": "Owner authorized PR #913 current-main reconciliation and the coordinated selector-only qualification amendment. Exactly sixteen workflows add only docs/operations/contracts/player-cross-cutting/pr-913.json to pull_request.paths, retaining all existing owner selectors, events, branches, jobs, commands, actions, dependencies, permissions, checkouts, manual defaults and guards. Progression retains its separately reviewed Ubuntu 24.04 runner pin. Exactly twenty-two edited paths under twenty-four locks. Preserve all 117 required and 86 critical declarations, both read-only verifier/test locks and false production flags. Release Promote qualifies only its existing PR contract tests; its promotion condition and Payroll PR-657 write guard are unchanged. Session and merged Marketplace runtime/tests/registrations stay unchanged. No generator/runtime/migration edits, other-owner manifest/branch change, no-op trigger, duplicate dispatch, forbidden-access retry, credential/permission change, merge into main, auto-merge, ready transition, promotion/deployment or live-state mutation. New-head hosted evidence must qualify every retained obligation; old-head passes are historical only."
 }
