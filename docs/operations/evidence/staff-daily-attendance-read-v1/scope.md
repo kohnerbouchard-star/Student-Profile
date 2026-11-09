@@ -364,3 +364,58 @@ implementation-provided evidence, not claimed as independently rerun. Final exac
 commit review and fresh automatic hosted qualification follow; local source checks
 do not establish database/browser/live acceptance. All existing production holds
 and draft/unmerged/auto-merge-off state remain required.
+
+
+## Parent-authorized merged Store reconciliation — 2026-11-09
+
+Main advanced during d5fa971109355f57d3c6566550eb4452bfdbfc02 qualification.
+Authoritative main46d17fe80affcd55abced395f6b7526f9b93d4b2 is the confirmed
+PR915 merge, donor head88346ca15694904c07a1d6028ec8d12d099ae52b. Normal
+main-into-Attendance no-commit merge completed without conflicts/manual resolution.
+The actual main delta is seven Store paths: runtime flow/convergence, two retained
+test files, Player package store-flow registration, Store evidence and PR915
+manifest. No new workflow/selector delta was supplied by this main update.
+Preserve all seven paths exactly as main; preserve existing PR916 Attendance,
+eight additive selectors, complete manifest/locks and other supporting bytes.
+All #913 session-timeout/#914 Marketplace registrations stay in Player package
+alongside #915's appended Store ownership test. Backend package and its three
+REF003 receipt hashes remain unchanged; no wholesale side was selected.
+
+Fresh19-open-PR complete path census was rechecked. No open Player package owner
+was found; existing #668 backend-package/inventory and #885 receipt/inventory
+protections remain. This is integration of already accepted main, not acquisition
+of an unmerged branch or owner consent. Global roadmaps are imported/preserved,
+not independently changed. Scope remains17 actual current-main paths/20 locks;
+117 required/86 critical entries, read-only locks and false safety flags stay
+byte-identical. No test, dependency, workflow command/guard/selector/event change
+is added by this integration. The eight approved PR916 selectors remain the only
+workflow delta from main.
+
+Combined inventory was regenerated twice, still byte-identical SHA256
+467f2e9f8ca9c5c353c74e3b88beed6e14d2fd4b31539a07c1230b035fe92ec5.
+Only original Attendance metrics differ from main; no debt/ceiling change or forced
+measurement. Previous-head d5fa9711 results remain historical while its admitted
+automatic runs finish; they do not qualify this amended source. No duplicate or
+manual dispatch/rerun is authorized. Final pinned/full local checks, independent
+exact-commit review, fresh-ref/blob readback and new-head automatic qualification
+remain required before any completion claim. Draft/unmerged/auto-merge-off and all
+production/live mutation/credentials/settings/release holds remain unchanged.
+
+Final Store integration local gates PASS with Node22.23.1/npm10.9.8/Deno2.9.3:
+root/backend npm ci, Attendance7/7, full root npm test, backend TypeScript/all28
+Edge roots, complete backend smoke, complete Player verify, imported Store/session/
+Marketplace ownership70/70 and authority/action-pinning/receipt/ratchet72/72.
+Main/published-head/protected package/inventory/receipt refs remained unchanged
+before commit. Guards independently confirm all seven Store paths main-identical,
+all accepted Attendance/selectors/manifest/receipts unchanged,17paths20locks,
+117/86read-only/falseflag preservation and six negative authority mutations.
+Secrets, both whitespace checks and deterministic inventory PASS.
+
+Independent read-only integration review found no actionable issue and separately
+passed16 authority regressions plus preservation/inventory/scope/negative checks.
+Broader execution counts above are implementation-provided, not independently
+rerun. Exact final committed review remains required before publication.
+Prior d5fa9711 Seed run42552382236/job128950597001 failed only its current-main
+ancestry assertion after Store merged: git rev-list HEAD..origin/main was nonzero.
+Preserve that exact failing run as history; do not retry unchanged old source or
+convert the failure to a pass. All new final-head qualification remains pending.
