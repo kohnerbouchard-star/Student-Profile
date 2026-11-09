@@ -3,6 +3,7 @@
 ## Scope and ownership
 
 - Roadmap: `BETA-ADMIN-LIFECYCLE-V2-001`, `IMPLEMENTED_NOT_MERGED`.
+- Draft [PR #927](https://github.com/kohnerbouchard-star/Student-Profile/pull/927), reviewed implementation `d1cd44688ad8a4285988ae64026d6970b217ccf2`.
 - Owner: `feat/teacher-game-lifecycle-v1`, from fetched main `08134650d1e0c8cfebb811a5d97331196ebe08e3`.
 - The owner requested the incomplete teacher management flows in separate branches and PRs. Settings draft-retention PR #924 is independent, with no runtime overlap. PR #668 retains backend context/global-ledger ownership; existing entries and other branches are unchanged.
 - This slice exposes existing read/start/pause/resume/end/archive/revoke-sessions capability in native Overview. Game creation, ownership transfer, data deletion, Settings retirement and new backend lifecycle policy are excluded.
@@ -41,6 +42,6 @@ Raw synthetic evidence is in `/tmp/teacher-lifecycle-*` logs and final browser a
 
 ## Remaining gates
 
-Draft publication and actual-number authority registration follow review. Exact final-head hosted CI is not yet qualified. Fixture coverage does not certify live persistence. Keep draft; no merge, release, production action or broad completion claim.
+Actual-number `pr-927.json` registration locks15 changed paths plus2 read-only verifier/test paths; it retains all118/87 predecessor checks and adds lifecycle checks for120 required/88 critical. Draft publication is confirmed. Exact final-head hosted CI is not yet qualified. Fixture coverage does not certify live persistence. Keep draft; no merge, release, production action or broad completion claim.
 
 Next: publish/register this bounded draft, independently review metadata, qualify its final head, and reconcile shared intake/inventory additions before any separately authorized merge. Teacher/Settings retirement and backend context propagation remain with existing owners.
