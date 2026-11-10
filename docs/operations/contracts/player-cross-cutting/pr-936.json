@@ -10,11 +10,17 @@
   "secretValuesAllowed": false,
   "allowedPaths": [
     "admin/dist/admin-overview-terminal.js",
+    "docs/operations/contracts/player-cross-cutting/pr-929.json",
     "docs/operations/contracts/player-cross-cutting/pr-936.json",
     "docs/operations/evidence/admin-scanner-focus-ownership-v1/scope.md",
+    "docs/operations/evidence/admin-scanner-startup-reads-v1/scope.md",
     "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/admin-contract-end-to-end-smoke.mjs",
+    "scripts/admin-loading-scanner-smoke.mjs",
+    "scripts/admin-loading-scope-contract.mjs",
     "scripts/admin-modal-accessibility-source-smoke.mjs",
+    "scripts/admin-quality-smoke-fixture.mjs",
     "scripts/admin-scanner-focus-ownership.test.mjs",
     "scripts/admin-scanner-focus-patch-contract.mjs",
     "scripts/admin-v606-full-drift-audit.mjs",
@@ -23,11 +29,17 @@
   ],
   "requiredFiles": [
     "admin/dist/admin-overview-terminal.js",
+    "docs/operations/contracts/player-cross-cutting/pr-929.json",
     "docs/operations/contracts/player-cross-cutting/pr-936.json",
     "docs/operations/evidence/admin-scanner-focus-ownership-v1/scope.md",
+    "docs/operations/evidence/admin-scanner-startup-reads-v1/scope.md",
     "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/admin-contract-end-to-end-smoke.mjs",
+    "scripts/admin-loading-scanner-smoke.mjs",
+    "scripts/admin-loading-scope-contract.mjs",
     "scripts/admin-modal-accessibility-source-smoke.mjs",
+    "scripts/admin-quality-smoke-fixture.mjs",
     "scripts/admin-scanner-focus-ownership.test.mjs",
     "scripts/admin-scanner-focus-patch-contract.mjs",
     "scripts/admin-v606-full-drift-audit.mjs",
@@ -265,5 +277,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "The owner explicitly approved publishing the bounded scanner focus correction, its regressions, integrity review binding, qualification records and required roadmap update to this public repository. Retain every current-main required and critical check. Keep the PR draft until fresh exact-head qualification and all required gates pass. No production deployment or mutation, secret handling, verifier change or test weakening is authorized."
+  "authorizationNote": "The owner explicitly approved publishing the bounded scanner focus correction, its regressions, integrity review binding, qualification records and required roadmap update to this public repository. Retain every current-main required and critical check. Keep the PR draft until fresh exact-head qualification and all required gates pass. No production deployment or mutation, secret handling, verifier change or test weakening is authorized. The owner also directed consolidating the dependent PR929 startup-read and Contract-readiness correction into this existing PR936 owner, preserving both histories, records and all assertions. This manifest binds the combined 15 changed paths plus two unchanged read-only verifier/test paths against main. Retain PR929 authority as its historical record; PR936 is the active combined-head authority with all 129 required and 94 critical current-main checks. No workflow or dependency edits, bypass, release dispatch or new feature scope."
 }
