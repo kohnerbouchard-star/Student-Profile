@@ -1,10 +1,11 @@
 import { escapeHtml, formatNumber } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
+import { ingredientAvailability, ingredientQuantityLabel, renderCraftingGuidance } from "./crafting-guidance.js";
 
 function ingredientLine(item) {
-  const enough = Number(item.owned) >= Number(item.required);
-  return `<li class="${enough ? "is-ready" : "is-missing"}"><span>${icon(enough ? "check" : "close")}</span><div><strong>${escapeHtml(item.name || item.itemKey)}</strong><small>${escapeHtml(formatNumber(item.owned))} owned / ${escapeHtml(formatNumber(item.required))} required</small></div></li>`;
+  const { enough } = ingredientAvailability(item);
+  return `<li class="${enough ? "is-ready" : "is-missing"}"><span>${icon(enough ? "check" : "close")}</span><div><strong>${escapeHtml(item?.name || item?.itemKey)}</strong><small>${escapeHtml(ingredientQuantityLabel(item))}</small></div></li>`;
 }
 
 function media(item) {
@@ -50,7 +51,8 @@ export function renderCraftingPage(data, ui) {
   const recipes = Array.isArray(crafting.recipes) ? crafting.recipes : [];
   const queue = Array.isArray(crafting.queue) ? crafting.queue : [];
   const selected = recipes.find((item) => item.id === ui.craftingRecipeId) || recipes[0];
-  const craftable = selected && selected.enabled !== false && selected.ingredients.every((item) => Number(item.owned) >= Number(item.required)) && selected.unlockStatus === "Unlocked";
+  const ingredients = Array.isArray(selected?.ingredients) ? selected.ingredients : [];
+  const craftable = selected && selected.enabled !== false && Array.isArray(selected.ingredients) && ingredients.every((item) => ingredientAvailability(item).enough) && selected.unlockStatus === "Unlocked";
   const effects = Array.isArray(crafting.effects) ? crafting.effects : [];
   const history = Array.isArray(crafting.effectHistory) ? crafting.effectHistory : [];
   const equipment = Array.isArray(crafting.equipment) ? crafting.equipment : [];
@@ -77,7 +79,8 @@ export function renderCraftingPage(data, ui) {
       ${selected ? `<section class="player-terminal-panel player-terminal-recipe-detail">
         <header class="player-terminal-panel-header"><div><span>RECIPE REVIEW</span><strong>${escapeHtml(selected.name)}</strong></div>${renderStatusPill(craftable ? "READY" : "BLOCKED", craftable ? "green" : "red")}</header>
         <div class="player-terminal-recipe-hero"><span>${media(selected)}</span><div><small>${escapeHtml(selected.category)} · ${escapeHtml(selected.duration)}</small><h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description)}</p></div></div>
-        <div class="player-terminal-recipe-grid"><section><small>INGREDIENTS</small><ul>${selected.ingredients.map(ingredientLine).join("")}</ul></section><section><small>OUTPUT</small><article><span>${media(selected)}</span><div><strong>${escapeHtml(selected.outputQuantity)} × ${escapeHtml(selected.name)}</strong><small>${escapeHtml(selected.effect)}</small></div></article><dl><div><dt>CRAFT TIME</dt><dd>${escapeHtml(selected.duration)}</dd></div><div><dt>WORKSHOP</dt><dd>${escapeHtml(selected.requiredWorkshop)}</dd></div></dl></section></div>
+        ${renderCraftingGuidance(selected)}
+        <div class="player-terminal-recipe-grid"><section><small>INGREDIENTS</small><ul>${ingredients.map(ingredientLine).join("")}</ul></section><section><small>OUTPUT</small><article><span>${media(selected)}</span><div><strong>${escapeHtml(selected.outputQuantity)} × ${escapeHtml(selected.name)}</strong><small>${escapeHtml(selected.effect)}</small></div></article><dl><div><dt>CRAFT TIME</dt><dd>${escapeHtml(selected.duration)}</dd></div><div><dt>WORKSHOP</dt><dd>${escapeHtml(selected.requiredWorkshop)}</dd></div></dl></section></div>
         <form data-player-form="craft-item" data-endpoint="craftItem" data-recipe-id="${escapeHtml(selected.id)}"><label>QUANTITY<input name="quantity" type="number" min="1" max="${escapeHtml(selected.maxCraft)}" value="1" required /></label><button class="player-terminal-primary-button" type="submit" ${craftable ? "" : "disabled"}>${icon("factory")} Craft item</button></form>
       </section>` : ""}
 
