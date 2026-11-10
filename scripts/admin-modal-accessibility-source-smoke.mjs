@@ -167,4 +167,68 @@ assert.match(contractSmoke, /Initial title entry was redirected/);
 assert.match(contractSmoke, /Initial objective entry was redirected/);
 console.log("Contract create readiness waits for bound controls and completed initial focus, preserves exact input assertions and rejects stale surfaces.");
 
+// Execute the mounted harness's real pre-boundary sequence with a deterministic
+// binding/frame queue. Visibility and bridge close-focus precede Contract binding.
+const mountedSmoke = await readFile(new URL("./admin-mounted-operational-modal-focus-smoke.mjs", import.meta.url), "utf8");
+const setupStart = mountedSmoke.indexOf('    await modal.waitFor({ state: "visible", timeout: 5000 });');
+const setupEnd = mountedSmoke.indexOf("    const bounds = await boundary(modal, true);", setupStart);
+assert.ok(setupStart >= 0 && setupEnd > setupStart);
+const mountedSetup = mountedSmoke.slice(setupStart, setupEnd) + "return await boundary(modal, true);";
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+async function simulateMountedSetup(setup) {
+  const saved = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  class Element {}
+  const close = { tagName: "BUTTON", getAttribute: () => "close-modal", closest: () => dialog };
+  const title = { isConnected: true, tagName: "INPUT", getAttribute: () => null, closest: () => dialog };
+  const objective = {};
+  const cash = {};
+  const last = {};
+  const dialog = new Element();
+  dialog.contains = (node) => [close, title, objective, last].includes(node);
+  const root = { dataset: {}, isConnected: true, querySelector: () => title };
+  let queue = [() => {
+    root.dataset.controlsBound = "true";
+    // Reward setup focuses its cash input before binding queues title focus.
+    queue.push(() => { document.activeElement = cash; });
+    queue.push(() => { document.activeElement = title; });
+  }];
+  const advance = () => { const frame = queue; queue = []; frame.forEach(callback => callback()); };
+  globalThis.HTMLElement = Element;
+  globalThis.document = { querySelector: () => dialog, querySelectorAll: () => [root], activeElement: close };
+  globalThis.window = { requestAnimationFrame: callback => queue.push(callback) };
+  const page = {
+    evaluate: callback => callback(),
+    async waitForFunction(callback) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const result = callback();
+        if (result instanceof Promise) advance();
+        if (await result) return;
+        advance();
+      }
+      throw new Error("readiness timeout");
+    },
+  };
+  try {
+    await new AsyncFunction("page", "modal", "action", "boundary", "waitForContractCreateReady", setup)(
+      page, { waitFor: async () => {} }, "add-contract",
+      async () => { document.activeElement = last; }, waitForContractCreateReady,
+    );
+    while (queue.length) advance();
+    // The browser Tab starts from the actual owner after queued startup work.
+    document.activeElement = document.activeElement === last ? close : objective;
+    return document.activeElement === close;
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete globalThis[key]; else globalThis[key] = value;
+    }
+  }
+}
+const mountedBarrier = '    if (action === "add-contract") await waitForContractCreateReady(page);\n';
+assert.equal(await simulateMountedSetup(mountedSetup.replace(mountedBarrier, "")), false,
+  "Visibility and inside-focus alone must reproduce the queued Contract focus stealing the boundary.");
+assert.equal(await simulateMountedSetup(mountedSetup), true,
+  "Mounted Contract readiness must complete initial focus before the harness chooses the last control.");
+assert.ok(mountedSmoke.includes(mountedBarrier), "Only Contract startup should use the Contract readiness barrier.");
+console.log("Mounted Contract boundary ordering reproduces the old race and waits for initial focus without changing wrap assertions.");
+
 await import("./admin-scanner-focus-ownership.test.mjs");
