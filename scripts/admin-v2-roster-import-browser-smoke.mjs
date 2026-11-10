@@ -11,6 +11,20 @@ const names = ["SYNTHETIC Avery", "SYNTHETIC Avery", "김하늘"];
 const code = "C".repeat(31) + "1";
 const students = names.map((displayName, i) => ({ row: i + 1, displayName,
   playerIdentifier: `STU-${String(i + 1).padStart(24, "A")}`, accessCode: i ? "D".repeat(31) + i : code }));
+const rosterValues = students.flatMap(({ displayName, playerIdentifier, accessCode }) => [displayName, playerIdentifier, accessCode]);
+const accessCodes = students.map(({ accessCode }) => accessCode);
+function assertAbsent(text, values, label) {
+  for (const [index, value] of values.entries()) {
+    assert.equal(text.includes(value), false, `${label}: roster value ${index} must be absent`);
+  }
+}
+const publicFixture = JSON.stringify({ csrf: ADMIN_V2_FIXTURE_CSRF, game, session: createAdminV2FixtureSession("ready") });
+assertAbsent(publicFixture, rosterValues, "public fixture noncollision");
+assert.equal(new Set(accessCodes).size, students.length, "distinct synthetic codes");
+assert.equal(new Set(students.map(({ playerIdentifier }) => playerIdentifier)).size, students.length);
+for (const value of rosterValues) {
+  assert.throws(() => assertAbsent(`prefix ${value} suffix`, [value], "self-check"), { name: "AssertionError" });
+}
 const result = (replayed = false) => ({ data: { createdCount: names.length, replayed, credentialsAvailable: !replayed,
   students: students.map(({ accessCode, ...row }) => ({ ...row, ...(!replayed ? { accessCode } : {}) })) } });
 const runtimePath = new URL("../runtime-config.env.js", import.meta.url);
@@ -93,7 +107,7 @@ try {
         release();
         await settled;
         await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-        assert.doesNotMatch(await page.locator("body").innerText(), /SYNTHETIC Avery|CCCCCCCCCCCCCCCC/);
+        assertAbsent(await page.locator("body").innerText(), rosterValues, "dismissed DOM");
       } else {
         if (scenario === "lost-response") {
           await dialog.getByText(/The import result could not be confirmed/).waitFor();
@@ -103,11 +117,15 @@ try {
           await dialog.getByText(/This import already created 3 students/).waitFor();
           assert.equal(calls.length, 2);
           assert.equal(calls[0].key, calls[1].key);
-          assert.doesNotMatch(await dialog.innerText(), /CCCCCCCCCCCCCCCC/);
+          assertAbsent(await dialog.innerText(), accessCodes, "replayed receipt");
         } else {
           await dialog.getByText(/3 students created/).waitFor();
           assert.equal(calls.length, 1);
-          assert.match(await dialog.innerText(), new RegExp(code));
+          for (const accessCode of accessCodes) assert.ok((await dialog.innerText()).includes(accessCode));
+        }
+        for (const { displayName, playerIdentifier } of students) {
+          assert.ok((await dialog.innerText()).includes(displayName));
+          assert.ok((await dialog.innerText()).includes(playerIdentifier));
         }
         assert.equal(reads, initialReads, "refresh must not destroy one-time credentials");
         assert.equal(await dialog.locator("tbody tr").count(), names.length);
@@ -115,10 +133,10 @@ try {
         assert.ok(await dialog.evaluate((element) => element.scrollWidth - element.clientWidth <= 1));
         await dialog.getByRole("button", { name: "Close", exact: true }).click();
         await dialog.waitFor({ state: "detached" });
-        assert.doesNotMatch(await page.locator("body").innerText(), /SYNTHETIC Avery|CCCCCCCCCCCCCCCC/);
+        assertAbsent(await page.locator("body").innerText(), rosterValues, "dismissed DOM");
       }
-      assert.doesNotMatch(await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage })), /SYNTHETIC Avery|CCCCCCCCCCCCCCCC/);
-      assert.doesNotMatch(logs.join("\n"), /SYNTHETIC Avery|CCCCCCCCCCCCCCCC/);
+      assertAbsent(await page.evaluate(() => JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage } })), rosterValues, "browser storage");
+      assertAbsent(logs.join("\n"), rosterValues, "browser logs");
       checks.push(`${scenario}-${width}`);
       await context.close();
     }
