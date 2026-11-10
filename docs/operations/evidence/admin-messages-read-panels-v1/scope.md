@@ -1,0 +1,33 @@
+# Messages read-only presentation extraction
+
+- Roadmap item: `ARCH-LARGE-ADMIN-MESSAGES-001`.
+- Status: `IMPLEMENTED_NOT_MERGED`; owner `refactor/admin-messages-read-panels`, separate draft publication pending.
+- Implementation: `a20ff6a121423f4e868052b3d7e3a6cfbaebb75d`, tree `f5f891964d83520f92aa9be8583d25c5cdbe96cf`.
+- Base: freshly fetched main `b77c9610e9b6ed3be93d8f4c888cacbc706df8ca`, 2026-11-10.
+- No merge, deployment, hosted mutation or gate weakening.
+
+## Scope and ownership
+
+The owner requested continued large-file reduction. A fresh audit of all sixteen open PR heads and changed-path inventories (#943, #942, #941, #940, #939, #938, #936, #933, #929, #927, #924, #735, #731, #668, #624 and #620) against unchanged main found no active Messages route/test owner. The existing Messages workflow is owned by the broad dependency-update PR #620 and is unchanged. Shared inventory and roadmap additions must be reconciled without overwriting other owners. Main includes merged Crafting #935, Player Crafting #932, hash #937 and Story #934; historical unmerged ledger wording is not new runtime evidence. World #939, Market #941, Banking #940, News & Events #942 and Attendance #943 remain separate drafts. Legacy scanner fixes #929/#936 remain untouched.
+
+This minimal tranche moves only five read-only presentation functions: title/time formatting, metric/summary rendering and status badge. `MessagesReadPanels.js` is 49 physical lines and exports only the four bindings used by the route. `MessagesRoute.js` falls from 512 to 465 physical lines (scanner count 513 to 466). All fourteen complete original functions are byte-identical apart from export keywords. The sole public route export stays unchanged.
+
+Participant rendering, message/thread cards, filter callbacks, paging, moderation and required reasons, retention deletion, confirmation, error and cleanup behavior stay in the original route. DOM elements, classes, accessible labels, order and callback payload/identity are preserved. No API/controller, authorization, privacy policy, persistence, backend, schema, migration, RPC, stylesheet, dependency or workflow change. No dead-code removal is claimed.
+
+The deterministic inventory moves from 99 to 98 oversized sources and from 1,333 to 1,334 source files. All other counts and ceilings are unchanged, including 52 persistence exceptions. Regenerate the inventory after integration; do not combine stale generated snapshots.
+
+## Characterization and qualification
+
+Twenty-three new characterization cases pass against unchanged main before extraction and against this candidate. They cover all fourteen function hashes, sole public export, six route states and retries, summary/status/time/Unicode presentation, participant truncation/fallback, empty bodies/conversations, keyboard filtering, pagination and filtered empty state. Six explicit moderation scenarios retain confirmation, required-reason validation, callback identity, correct tones and cleanup. Closed/unexpired affordances, rejected operations, cancellation and dialog reuse remain covered. Shared-component doubles execute the actual local route module graph; they do not certify native focus, layout, disabled-event handling, shared dialog duplicate-click behavior or real server mutations.
+
+The six pre-existing API/controller/privacy cases are unchanged except one additive import. Combined Messages tests pass 29/29; the separately registered Admin suite passes 126/126, and the Admin/Player messaging privacy/source contract passes. The existing `Admin V2 Messages` workflow already runs both suites, the privacy contract and native responsive Messages browser smoke. All workflow/browser files and assertions are unchanged. Any eventual actual-number authority must retain every current-main required/critical check and add the applicable Messages workflow/job if not already registered. Exact-head hosted qualification is mandatory.
+
+Pinned Node 22.23.1/npm 10.9.8/Deno 2.9.3 are used. Fresh root/backend installs, full root `npm test`, backend TypeScript, architecture/boundary ratchets, secret scan and whitespace checks pass. Independent read-only review found no actionable extraction finding. Acorn verifies all fourteen complete functions and fixture hashes directly against the actual main source, the helper has exactly four exports, and the twenty-eight-module import/re-export graph is acyclic. Independent baseline and candidate characterization suites pass 23/23, combined baseline and candidate Messages suites pass 29/29, and candidate Admin passes 126/126. Independent read-only inventory recomputation exactly matches committed bytes.
+
+The unchanged native Messages browser runner was attempted and fails before assertions because pinned Chromium headless shell 1254 is absent after prior official matching downloads returned truncated ZIPs. No new download retry or substitute was used. Current `typecheck:all` passes TypeScript then stops on the unchanged frozen Supabase 2.108.2 esm.sh import with connection refused; full backend smoke also stops on that import. Browser and full backend qualification remain mandatory; neither aggregate is claimed as passing.
+
+## Publication and next step
+
+The owner explicitly approved retained-content public roadmap updates and separate publication for all six route refactors. Preserve every current-main roadmap byte and add only this Messages intake. Publish a separate draft with actual-number authority and exact-head hosted qualification; no gate is waived. The authority will retain all 129 required and 94 critical current-main PR934 checks in order, including Admin Browser E2E and its rendered-browser job, then add the existing `Admin V2 Messages` workflow and exact `Messages moderation contract and browser smoke` job for 131 required and 95 critical checks. Lock all nine changed files, the new authority, and two unchanged read-only verifier/test files, with all production/mutation/secret flags false.
+
+This is sixth in the serial order: World #939, Market #941, Banking #940, News & Events #942, Attendance #943, then Messages. Preliminary draft CI does not qualify a later reconciled head. After preceding serial merges, refresh main, preserve predecessor content, regenerate inventory, obtain independent integration review and rerun exact-head qualification. No merge, readiness transition, auto-merge, manual release dispatch, deployment or hosted mutation is performed here. Rollback is limited to this read-presentation extraction and inventory regeneration. Legacy scanner fixes #929/#936 remain separate and untouched. Reassess further targets only after these six candidates are integrated.
