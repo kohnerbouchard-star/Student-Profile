@@ -8,9 +8,9 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1331,
+    "sourceFiles": 1336,
     "edgeEntrypoints": 28,
-    "handlerFiles": 63,
+    "handlerFiles": 64,
     "persistenceOutsideInfrastructure": 53,
     "crossDomainDeepImports": 70,
     "browserTransportShimFiles": 26,
@@ -323,7 +323,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 38,
+      "sourceFiles": 43,
       "publicBoundaryFiles": [
         "backend/src/domains/players/index.ts"
       ]
@@ -476,6 +476,7 @@
       "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts",
       "backend/src/domains/players/api/playerLoginHttpHandler.ts",
       "backend/src/domains/players/api/playerRosterHttpHandler.ts",
+      "backend/src/domains/players/api/playerRosterImportHttpHandler.ts",
       "backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts",
       "backend/src/domains/players/api/playerSessionLogoutHttpHandler.ts",
       "backend/src/domains/progression/api/playerProgressionHttpHandler.ts",
@@ -3760,6 +3761,8 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/overview/OverviewRoute.js",
           "admin/v2/src/routes/players/PlayersController.js",
+          "backend/src/domains/players/api/playerRosterImportHttpHandler.ts",
+          "backend/src/domains/players/application/importPlayerRoster.test.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
