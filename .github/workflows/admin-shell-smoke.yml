@@ -3,6 +3,7 @@ name: Admin Shell Smoke
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-945.json"
       - "admin/**"
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/functions/admin-api/businessBankingOperations*.ts"
@@ -122,6 +123,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@v7
