@@ -23,7 +23,22 @@
     "scripts/fixtures/admin-world-route-harness.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-939.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/configurable-stock-market-timezone-v1.yml",
+    ".github/workflows/player-multiplayer-load-e2e.yml",
+    ".github/workflows/exchange-calendar-runtime-v1.yml",
+    ".github/workflows/banking-fx-clearing-v1.yml",
+    ".github/workflows/business-financial-market.yml",
+    ".github/workflows/player-button-click-safety.yml",
+    ".github/workflows/crafting-item-runtime.yml",
+    ".github/workflows/business-primary-ipo.yml",
+    ".github/workflows/world-runtime.yml",
+    ".github/workflows/loans-lifecycle-read-v1.yml",
+    ".github/workflows/database-replay.yml",
+    ".github/workflows/economic-core-request-claims.yml",
+    ".github/workflows/admin-v2-crafting.yml",
+    ".github/workflows/player-response-privacy.yml"
   ],
   "requiredFiles": [
     "admin/v2/src/routes/world-management/WorldCampaignPanels.js",
@@ -40,7 +55,22 @@
     "scripts/fixtures/admin-world-route-harness.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-939.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/configurable-stock-market-timezone-v1.yml",
+    ".github/workflows/player-multiplayer-load-e2e.yml",
+    ".github/workflows/exchange-calendar-runtime-v1.yml",
+    ".github/workflows/banking-fx-clearing-v1.yml",
+    ".github/workflows/business-financial-market.yml",
+    ".github/workflows/player-button-click-safety.yml",
+    ".github/workflows/crafting-item-runtime.yml",
+    ".github/workflows/business-primary-ipo.yml",
+    ".github/workflows/world-runtime.yml",
+    ".github/workflows/loans-lifecycle-read-v1.yml",
+    ".github/workflows/database-replay.yml",
+    ".github/workflows/economic-core-request-claims.yml",
+    ".github/workflows/admin-v2-crafting.yml",
+    ".github/workflows/player-response-privacy.yml"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -273,5 +303,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "The owner approved behavior-preserving large Admin route refactors as separate PRs, explicitly approved updating the existing public roadmap while retaining its content, and authorized serial merges after required checks pass. This authority covers only the World Management presentation extraction, registered characterization, inventory and scoped evidence. All predecessor required and critical checks remain unchanged. No production deployment, hosted mutation, schema, SQL, authentication, workflow, verifier or secret handling is authorized."
+  "authorizationNote": "The owner approved separate behavior-preserving Admin route refactors, retained-content public roadmap updates and serial merges after required checks pass. This authority covers World Management presentation extraction, characterization, inventory and scoped evidence, plus only the exact PR939 authority-path additions to fifteen existing pull-request filters needed to execute retained qualification. All current-main required/critical checks, PR936 filter entries, exact-head checkout bindings, workflow jobs/assertions/permissions and production holds remain unchanged. No production deployment, hosted mutation, schema, SQL, authentication, verifier change or secret handling is authorized."
 }

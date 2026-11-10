@@ -3,6 +3,7 @@ name: Business Store Withdrawal Safety V2
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
       - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - "backend/package.json"
       - "backend/src/domains/store/**"

@@ -87,3 +87,148 @@ for (const [label, content] of [["controller", source], ["bridge", bridge], ["dr
 }
 
 console.log("Admin modal, nested-dialog, and Player drawer accessibility source contracts passed.");
+
+// The contract payload journey must start after real control binding and its
+// initial-focus frame, not just after the form becomes visible.
+const { waitForContractCreateReady } = await import("./admin-quality-smoke-fixture.mjs");
+let predicate;
+let options;
+waitForContractCreateReady({ waitForFunction(fn, argument, settings) {
+  predicate = fn;
+  options = settings;
+  assert.equal(argument, null);
+} });
+assert.equal(options.timeout, 5000, "Contract readiness must remain bounded.");
+assert.doesNotMatch(predicate.toString(), /\.focus\s*\(|\.value\s*=(?!=)|setTimeout/, "The barrier must observe, not repair or sleep through, field state.");
+const oldDocument = globalThis.document;
+const oldWindow = globalThis.window;
+const title = { isConnected: true };
+let currentTitle = title;
+let roots = [];
+let frames = [];
+const root = { dataset: { controlsBound: "false" }, isConnected: true, querySelector: () => currentTitle };
+globalThis.document = { querySelectorAll: () => roots, activeElement: null };
+globalThis.window = { requestAnimationFrame: (callback) => frames.push(callback) };
+try {
+  assert.equal(await predicate(), false, "A missing console must not be ready.");
+  roots = [root, root];
+  assert.equal(await predicate(), false, "Duplicate consoles must not be ready.");
+  roots = [root];
+  assert.equal(await predicate(), false, "A visible but unbound console must not be ready.");
+  assert.equal(frames.length, 0);
+  root.dataset.controlsBound = "true";
+  currentTitle = null;
+  assert.equal(await predicate(), false, "A missing title must not be ready.");
+  currentTitle = title;
+  document.activeElement = title; // Earlier accessibility focus is insufficient.
+  let settled = false;
+  const ready = predicate().then((result) => { settled = true; return result; });
+  await new Promise(setImmediate);
+  assert.equal(settled, false, "Even an active title must await the binding's focus frame.");
+  frames.shift()();
+  assert.equal(await ready, true);
+  document.activeElement = {};
+  const wrongFocus = predicate();
+  frames.shift()();
+  assert.equal(await wrongFocus, false, "Unrelated focus must not be accepted.");
+  const focusAfterFrame = predicate();
+  document.activeElement = title;
+  frames.shift()();
+  assert.equal(await focusAfterFrame, true);
+  for (const invalidate of [
+    () => { root.isConnected = false; },
+    () => { roots = [root, root]; },
+    () => { roots = [{ ...root }]; },
+    () => { root.dataset.controlsBound = "false"; },
+    () => { title.isConnected = false; },
+    () => { currentTitle = { isConnected: true }; document.activeElement = currentTitle; },
+  ]) {
+    root.isConnected = true; roots = [root]; root.dataset.controlsBound = "true";
+    title.isConnected = true; currentTitle = title; document.activeElement = title;
+    const interrupted = predicate();
+    invalidate();
+    frames.shift()();
+    assert.equal(await interrupted, false, "Detached, replaced, duplicate or unbound consoles must fail after the frame.");
+  }
+  await assert.rejects(waitForContractCreateReady({ waitForFunction() {
+    return Promise.reject(new Error("readiness timeout"));
+  } }), /readiness timeout/, "A browser readiness failure must propagate.");
+} finally {
+  if (oldDocument === undefined) delete globalThis.document; else globalThis.document = oldDocument;
+  if (oldWindow === undefined) delete globalThis.window; else globalThis.window = oldWindow;
+}
+const contractSmoke = await readFile(new URL("./admin-contract-end-to-end-smoke.mjs", import.meta.url), "utf8");
+const readinessAt = contractSmoke.indexOf("await waitForContractCreateReady(page)");
+assert.ok(readinessAt > contractSmoke.indexOf('await form.waitFor({ state: "visible" })'));
+assert.ok(readinessAt < contractSmoke.indexOf('.fill("Contract Wiring Audit")'));
+assert.match(contractSmoke, /assert\(payload.title === "Contract Wiring Audit", "Title was not preserved."\)/);
+assert.match(contractSmoke, /assert\(writes.length === initialWrites, "Contract editing caused an early write."\)/);
+assert.match(contractSmoke, /Initial title entry was redirected/);
+assert.match(contractSmoke, /Initial objective entry was redirected/);
+console.log("Contract create readiness waits for bound controls and completed initial focus, preserves exact input assertions and rejects stale surfaces.");
+
+// Execute the mounted harness's real pre-boundary sequence with a deterministic
+// binding/frame queue. Visibility and bridge close-focus precede Contract binding.
+const mountedSmoke = await readFile(new URL("./admin-mounted-operational-modal-focus-smoke.mjs", import.meta.url), "utf8");
+const setupStart = mountedSmoke.indexOf('    await modal.waitFor({ state: "visible", timeout: 5000 });');
+const setupEnd = mountedSmoke.indexOf("    const bounds = await boundary(modal, true);", setupStart);
+assert.ok(setupStart >= 0 && setupEnd > setupStart);
+const mountedSetup = mountedSmoke.slice(setupStart, setupEnd) + "return await boundary(modal, true);";
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+async function simulateMountedSetup(setup) {
+  const saved = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  class Element {}
+  const close = { tagName: "BUTTON", getAttribute: () => "close-modal", closest: () => dialog };
+  const title = { isConnected: true, tagName: "INPUT", getAttribute: () => null, closest: () => dialog };
+  const objective = {};
+  const cash = {};
+  const last = {};
+  const dialog = new Element();
+  dialog.contains = (node) => [close, title, objective, last].includes(node);
+  const root = { dataset: {}, isConnected: true, querySelector: () => title };
+  let queue = [() => {
+    root.dataset.controlsBound = "true";
+    // Reward setup focuses its cash input before binding queues title focus.
+    queue.push(() => { document.activeElement = cash; });
+    queue.push(() => { document.activeElement = title; });
+  }];
+  const advance = () => { const frame = queue; queue = []; frame.forEach(callback => callback()); };
+  globalThis.HTMLElement = Element;
+  globalThis.document = { querySelector: () => dialog, querySelectorAll: () => [root], activeElement: close };
+  globalThis.window = { requestAnimationFrame: callback => queue.push(callback) };
+  const page = {
+    evaluate: callback => callback(),
+    async waitForFunction(callback) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const result = callback();
+        if (result instanceof Promise) advance();
+        if (await result) return;
+        advance();
+      }
+      throw new Error("readiness timeout");
+    },
+  };
+  try {
+    await new AsyncFunction("page", "modal", "action", "boundary", "waitForContractCreateReady", setup)(
+      page, { waitFor: async () => {} }, "add-contract",
+      async () => { document.activeElement = last; }, waitForContractCreateReady,
+    );
+    while (queue.length) advance();
+    // The browser Tab starts from the actual owner after queued startup work.
+    document.activeElement = document.activeElement === last ? close : objective;
+    return document.activeElement === close;
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete globalThis[key]; else globalThis[key] = value;
+    }
+  }
+}
+const mountedBarrier = '    if (action === "add-contract") await waitForContractCreateReady(page);\n';
+assert.equal(await simulateMountedSetup(mountedSetup.replace(mountedBarrier, "")), false,
+  "Visibility and inside-focus alone must reproduce the queued Contract focus stealing the boundary.");
+assert.equal(await simulateMountedSetup(mountedSetup), true,
+  "Mounted Contract readiness must complete initial focus before the harness chooses the last control.");
+assert.ok(mountedSmoke.includes(mountedBarrier), "Only Contract startup should use the Contract readiness barrier.");
+console.log("Mounted Contract boundary ordering reproduces the old race and waits for initial focus without changing wrap assertions.");
+
+await import("./admin-scanner-focus-ownership.test.mjs");

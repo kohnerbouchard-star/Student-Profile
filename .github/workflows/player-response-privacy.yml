@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-939.json"
       - ".github/workflows/player-response-privacy.yml"
       - "backend/src/security/playerBrowserResponsePrivacy.ts"
       - "backend/src/security/playerBrowserResponsePrivacy.test.ts"
@@ -28,6 +30,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Deno
         uses: denoland/setup-deno@v2

@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import {
   BASE_URL,
   createQualityHarness,
+  waitForContractCreateReady,
 } from "./admin-quality-smoke-fixture.mjs";
 
 const OUT = process.env.ADMIN_SMOKE_ARTIFACT_DIR ||
@@ -241,6 +242,8 @@ async function exercise([action, section, key]) {
       const dialog = document.querySelector(".admin-terminal-modal:not([hidden])");
       return dialog instanceof HTMLElement && dialog.contains(document.activeElement);
     }, null, { timeout: 5000 });
+    // Visibility and bridge focus precede Contract control binding and title focus.
+    if (action === "add-contract") await waitForContractCreateReady(page);
     const initial = await page.evaluate(() => ({
       tag: document.activeElement?.tagName || "",
       action: document.activeElement?.getAttribute?.("data-admin-terminal-action") || "",
