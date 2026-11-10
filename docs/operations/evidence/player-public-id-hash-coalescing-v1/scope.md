@@ -3,7 +3,7 @@
 - Roadmap: `PLAYER-READ-PUBLIC-ID-HASH-001`.
 - Owner: `fix/player-dashboard-read-capacity`.
 - Audited main: `c616ece3e1cebea79fd33c58f5f04ed961121407`.
-- Status: `IN_PROGRESS`, unpublished candidate pending independent review and hosted qualification.
+- Status: `IMPLEMENTED_NOT_MERGED`; draft [PR #937](https://github.com/kohnerbouchard-star/Student-Profile/pull/937), published source `4e4a4fa4865dd4291f499407ce90c022d3e86df7`, reviewed tree `dc993e9d73de7c507bf5054716f48fd5535e1b43`. Independent source review found no actionable defect; exact-head hosted qualification remains required.
 - This is separate from Crafting guidance PR #932. No merge, deployment or hosted application-data mutation is authorized or performed.
 
 ## Observed blocker
@@ -14,7 +14,7 @@ The same artifact records 30 successful logins and 210 successful reads in the 3
 
 The prior attempt stopped during Messaging after a dashboard 500 and a prematurely closed PostgREST RPC connection; subsequent RPC/dashboard reads succeeded. One failed-job-only retry was used, not repeated until green. PR #932 changes no backend, load script or workflow. Its UI renderer is not imported by the HTTP-only load runner.
 
-Current-main and open-PR inspection found no active owner of this hash-work optimization. PRs #934, #933, #929, #927, #924, #620, #668, #624, #735 and #731 remain separate. Merged #935's older unmerged ledger wording is historical source status, not new runtime certification.
+Current-main and open-PR inspection found no active owner of this hash-work optimization. PRs #936, #934, #933, #929, #927, #924, #620, #668, #624, #735 and #731 remain separate. Merged #935's older unmerged ledger wording is historical source status, not new runtime certification.
 
 ## Bounded candidate
 
@@ -32,6 +32,8 @@ Files: `backend/src/security/playerPublicIdHash.ts`, its call site in `playerBro
 - Backend TypeScript passes. Full Edge typecheck is blocked by the unchanged frozen external Supabase import connection refusal. Backend smoke passes 936 Deno cases across 23 completed groups before the same frozen import blocks Game Sessions; the aggregate is not certified. No dependency/gate changed.
 - Synthetic benchmark: 40 concurrent 364,234-byte responses, 553 unique identifiers. Unchanged code performs 22,120 hashes per round; candidate performs 553. Node 22.23.1 measured about 1.04–1.16 seconds CPU before versus 0.46–0.56 after. Deno 2.9.3 measured about 0.68–1.06 seconds before versus 0.31–0.49 after. Timings are diagnostic only, not acceptance thresholds or proof of hosted root cause.
 - Reproduce with `node --experimental-strip-types scripts/benchmark-player-public-id-hash.mjs`, optionally supplying the absolute unchanged privacy-module path from another checkout for comparison. The benchmark uses only generated data and checks equal sanitized outputs/no raw UUIDs.
-- Independent review and exact-head hosted connected load qualification remain pending. Keep #932 draft and blocked until its shared inventory/roadmap conflicts are reconciled and a final combined head passes all required gates. Do not treat this optimization as a proven capacity fix before the retained 30/40-player gate passes.
+- Independent source review found no actionable defect. Exact-head hosted connected load qualification remains pending. Keep #932 draft and blocked until its shared inventory/roadmap conflicts are reconciled and a final combined head passes all required gates. Do not treat this optimization as a proven capacity fix before the retained 30/40-player gate passes.
 
-Next: independent review and full local checks, then authorized draft publication and exact-head qualification without reducing concurrency, increasing resource/retry limits or waiving failures.
+Actual-number authority `pr-937.json` retains all 127 required/93 critical current-main checks and adds the existing response-privacy workflow/job, for 129 required/94 critical checks. Nine changed paths and two unchanged verifier/test locks are exact; production deployment, mutation and secret handling remain denied.
+
+Next: independently review the actual-number metadata and qualify the final exact head without reducing concurrency, increasing resource/retry limits or waiving failures.
