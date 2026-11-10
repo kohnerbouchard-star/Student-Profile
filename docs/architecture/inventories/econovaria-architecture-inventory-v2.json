@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1333,
+    "sourceFiles": 1334,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 99,
+    "oversizedSourceFiles": 98,
     "capabilityStrings": 140
   },
   "domains": [
@@ -2868,10 +2868,6 @@
       {
         "file": "backend/src/domains/marketplace/infrastructure/supabasePlayerMarketplaceRepository.ts",
         "lines": 581
-      },
-      {
-        "file": "admin/v2/src/routes/attendance/AttendanceRoute.js",
-        "lines": 579
       },
       {
         "file": "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",

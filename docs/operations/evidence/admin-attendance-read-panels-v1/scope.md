@@ -1,0 +1,34 @@
+# Admin Attendance read-panel extraction
+
+- Roadmap ID: `ARCH-LARGE-ADMIN-ATTENDANCE-001`.
+- Status: `IMPLEMENTED_NOT_MERGED`; owner `refactor/admin-attendance-read-panels`, separate draft publication pending.
+- Source implementation: `aac5027dc3fa882eafef4f7a10e7a09f29152122`, tree `36bb1356226d6defdb11ef010a893eaf819bb338`.
+- Base: freshly fetched main `b77c9610e9b6ed3be93d8f4c888cacbc706df8ca`, 2026-11-10.
+- No production deployment, hosted mutation, merge or gate weakening.
+
+## Bounded source and ownership
+
+The owner requested continuing large-file work beyond the initial five routes. To limit integration churn, this tranche adds only one read-only presentation module. The fifteen open PR heads and changed-path inventories (#942, #941, #940, #939, #938, #936, #933, #929, #927, #924, #735, #731, #668, #624 and #620) were refreshed against unchanged main `b77c9610e9b6ed3be93d8f4c888cacbc706df8ca`; none owns these Attendance runtime or test files. Shared roadmap and inventory metadata remain additive. The historical `reconcile/admin-v2-attendance-main-20260808` ref is not an active PR owner or donor. Active legacy scanner #929/#936 and their files remain untouched. World #939, Market #941, Banking #940 and News & Events #942 remain separate draft owners, and main already includes merged Crafting #935, Player Crafting #932, hash #937 and Story #934. Historical unmerged ledger wording does not certify new runtime evidence.
+
+Runtime edits:
+
+- `admin/v2/src/routes/attendance/AttendanceRoute.js`: 578 physical lines to 466. Scanner input, timing/focus callback wiring, player selection, correction/note/reward actions, day locking, confirmation and route cleanup stay together and unchanged.
+- `admin/v2/src/routes/attendance/AttendanceReadPanels.js`: 114 lines. Six cohesive read-only functions move: title/time formatting, metric/summary rendering, roster table and selected-player card. Only four cross-file bindings are exported; the route's sole public `AttendanceRoute` export is unchanged.
+
+All twelve complete original functions remain byte-identical apart from export keywords. The correction-option constant remains unchanged in the original route. All DOM elements, classes, accessibility labels, order, table columns, public row identities, mutation callbacks and failure/busy/cleanup semantics remain intact. No controller/API, scanner policy, reward currency/account authority, idempotency, auth, backend, schema, migration, RPC, stylesheet, dependency or workflow edit. No dead-code removal is claimed.
+
+Generated inventory moves from 99 to 98 oversized sources and from 1,333 to 1,334 source files. Scanner counts include the trailing newline (original route 579). Every other count and debt ceiling stays unchanged, including 52 persistence exceptions. Only shared inventory and additive intake metadata need reconciliation with other local candidates; regenerate the inventory on integration.
+
+## Characterization and gates
+
+Twenty-one characterization cases pass before extraction against unchanged main and on the candidate. These cover all twelve complete function hashes and correction options, native public export, six route states, retry and destruction, original summary/table order and accessible labels, timezone/invalid-value formatting, Unicode/public row keys, explicit selection and selected card, locked affordances, scanner submission/focus intent, duplicate pending correction, note failure, reward validation/payload, explicit lock confirmation/cancellation/failure and unlock results. Shared-component doubles execute the actual local module graph; they do not certify native focus, disabled events, layout or real economic writes.
+
+The original eight Attendance API/controller cases are unchanged except one additive import, including all existing scanner timing/focus source assertions. Combined suite 29/29 passes. It is already registered in the Admin suite and the retained `Admin V2 Attendance` workflow. Existing workflows, native Admin browser runner, permission/security gates and connected mutation acceptance are unchanged. Actual-number authority must retain all current-main required/critical checks and explicitly include the applicable Attendance workflow/job and Admin Browser E2E gate; no broader refactor or scanner-fix qualification is inferred.
+
+Pinned Node 22.23.1/npm 10.9.8/Deno 2.9.3 are used. Fresh root/backend installs, 29 Attendance cases, 147 Admin cases, full root `npm test`, backend TypeScript, architecture/seam ratchets, secret scan and whitespace checks pass. Independent read-only review found no actionable finding. Acorn comparison verifies all twelve complete functions and correction options directly against main; the full static graph adds only the one read-panel module, with all existing transitive source unchanged. Independent baseline/candidate suites both pass 29/29, Admin 147/147, and inventory regeneration matches committed bytes. The unchanged native Admin browser runner was attempted and fails before assertions because pinned Chromium is absent after the official matching headless-shell download returned a truncated ZIP. Current Edge and full backend smoke attempts stop at the unchanged frozen Supabase 2.108.2 esm.sh import with connection refused. Browser and full backend qualification remain mandatory, with no aggregate pass claimed.
+
+## Publication and next step
+
+The owner explicitly approved retained-content public roadmap updates and separate publication for all six route refactors. Preserve every current-main roadmap byte and add only this Attendance intake. Publish a separate draft with actual-number authority and exact-head hosted qualification; no gate is waived. The actual authority will retain all 129 required and 94 critical current-main PR934 checks in order, including Admin Browser E2E and its rendered-browser job, then add the existing `Admin V2 Attendance` workflow and its exact `focused` job for 131 required and 95 critical checks. Because `focused` is generic, evidence must be bound to `.github/workflows/admin-v2-attendance.yml`, not a same-named job from another workflow. Lock the nine changed files, new authority, and two unchanged read-only verifier/test files, with every production/mutation/secret flag false.
+
+This is the fifth of six separate refactors: World #939, Market #941, Banking #940, News & Events #942, Attendance, then Messages. Preliminary draft CI does not qualify a later reconciled head. After preceding serial merges, refresh main, retain all predecessor content, regenerate inventory, obtain independent integration review and rerun exact-head qualification. No merge, ready-for-review transition, auto-merge, manual release dispatch, deployment or hosted mutation is performed here. Revert only this bounded read-panel extraction and regenerate inventory for rollback; no hosted rollback is needed. Legacy scanner fixes #929/#936 remain separate and untouched.
