@@ -1,7 +1,8 @@
 # Admin Market route extraction
 
 - Roadmap ID: `ARCH-LARGE-ADMIN-MARKET-001`.
-- Status: `IMPLEMENTED_NOT_MERGED`; isolated owner `refactor/admin-market-route-extraction`.
+- Status: `IMPLEMENTED_NOT_MERGED`; draft [PR #941](https://github.com/kohnerbouchard-star/Student-Profile/pull/941), isolated owner `refactor/admin-market-route-extraction`.
+- Published implementation: `fb2c1d75c2cc27b262c72656bbc1cc02fbc0ee0c`, tree `f03d7c0a930ee55f1e9610d86f4783b83bb4e970`, identical to local current-main integration `2233a3039b2097541799902b084614c273a228ea`.
 - Original base: `c616ece3e1cebea79fd33c58f5f04ed961121407`; reviewed implementation `9ee3c9e953d64565dab2ef37c96a1cde235ca150`. Current-main reconciliation base: `b77c9610e9b6ed3be93d8f4c888cacbc706df8ca`, fetched 2026-11-10.
 - The owner approved retained-content public roadmap updates and qualified serial merges in World, Market, Banking, News & Events, Attendance and Messages order. Independent draft qualification may proceed while prerequisites are resolved. Merge only after World, current-main reconciliation, every required gate and a parent-coordinated slot. No production deployment, hosted-data mutation or release is authorized.
 
@@ -34,7 +35,7 @@ Passed:
 
 - Baseline route: 25/25; original API/controller baseline: 10/10.
 - Candidate registered Market route/API/controller: 37/37, including two added browser-source/workflow registration regressions. The stale-heading/disposition regression fails before the runner correction and passes afterward; the original 25 baseline behavior cases remain unchanged.
-- Registered Admin V2 suite: 153/153.
+- Registered Admin V2 suite: 153/153. Current-main reruns of 37 Market cases, 153 Admin cases and full root also pass.
 - Full root `npm test`, including architecture, boundaries, legacy and Admin contracts.
 - Deterministic inventory regeneration, with 98 oversized files and unchanged other debt counts.
 - Backend TypeScript stage, secret scan and whitespace checks.
@@ -50,4 +51,6 @@ Pending or limited at this checkpoint:
 
 Revert only the bounded extraction and regenerate source inventory. No hosted-state or database rollback is needed. Preserve concurrent owners and all prior roadmap entries.
 
-Next exact item: review current-main integration, publish a separate draft with actual-number authority preserving all 129 required/94 critical current-main checks plus the Market workflow/job if absent, then qualify that exact head. Reconcile shared metadata and source against main again after World merges; rerun exact-head qualification before the parent-coordinated Market merge slot. Banking, News & Events, Attendance and Messages remain separate later merges. No broad feature/runtime completion or production action is claimed.
+PR #941 authority retains all 129 required/94 critical current-main checks in order and adds `Admin V2 Market` plus `Market V2 contracts and browser smoke` for 131 required/95 critical checks. Sixteen exact path locks cover fourteen changed files and two unchanged read-only verifier/test files; production deployment, mutation and secret flags stay false.
+
+Next exact item: complete independent integration/authority review and qualify the exact published head. Reconcile shared metadata and source against main again after World merges; rerun exact-head qualification before the parent-coordinated Market merge slot. Banking, News & Events, Attendance and Messages remain separate later merges. No broad feature/runtime completion or production action is claimed.
