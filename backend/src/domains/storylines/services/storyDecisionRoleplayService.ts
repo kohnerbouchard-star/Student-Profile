@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 
-import type { JsonValue } from "../../../supabase/tableTypes.ts";
+import type { StoryDecisionRoleplayReadRepository } from "../contracts/storyDecisionRoleplayReadRepository.ts";
 
 export interface StoryDecisionRoleplayInput {
   readonly gameSessionId: string;
@@ -14,34 +14,15 @@ export interface StoryDecisionRoleplayResult {
   readonly source: "openai" | "fallback";
 }
 
-interface QueryError { readonly message: string; }
-interface QueryResponse { readonly data: unknown; readonly error: QueryError | null; }
-interface QueryBuilder {
-  select(columns: string): QueryBuilder;
-  eq(column: string, value: unknown): QueryBuilder;
-  maybeSingle(): Promise<QueryResponse>;
-}
-export interface StoryDecisionRoleplayClient {
-  from(tableName: string): QueryBuilder;
-}
-
-type JsonRecord = Record<string, JsonValue>;
-
 const DEFAULT_FALLBACK = "You have made your position clear. I will remember where you stood when we see what follows.";
 const MAX_DIALOGUE_LENGTH = 900;
 const ROLEPLAY_TIMEOUT_MS = 6_000;
 
 export async function renderStoryDecisionRoleplay(
-  client: StoryDecisionRoleplayClient,
+  repository: StoryDecisionRoleplayReadRepository,
   input: StoryDecisionRoleplayInput,
 ): Promise<StoryDecisionRoleplayResult | null> {
-  const decisionResponse = await client
-    .from("player_story_decisions")
-    .select("decision_key,option_key,rationale,relationship_character_key,semantic_tags,dimensions")
-    .eq("game_session_id", input.gameSessionId)
-    .eq("player_id", input.playerId)
-    .eq("contract_key", input.contractKey)
-    .maybeSingle();
+  const decisionResponse = await repository.readDecision(input);
   if (decisionResponse.error || !isRecord(decisionResponse.data)) return null;
 
   const decision = decisionResponse.data;
@@ -50,12 +31,7 @@ export async function renderStoryDecisionRoleplay(
   const rationale = readText(decision.rationale);
   if (!decisionKey || !optionKey || !rationale) return null;
 
-  const definitionResponse = await client
-    .from("story_decision_definitions")
-    .select("public_prompt")
-    .eq("decision_key", decisionKey)
-    .eq("is_active", true)
-    .maybeSingle();
+  const definitionResponse = await repository.readDefinition(decisionKey);
   const publicPrompt = isRecord(definitionResponse.data) && isRecord(definitionResponse.data.public_prompt)
     ? definitionResponse.data.public_prompt
     : {};
@@ -68,13 +44,11 @@ export async function renderStoryDecisionRoleplay(
   let trustScore: number | null = null;
   let memory: Record<string, unknown> = {};
   if (characterKey) {
-    const relationshipResponse = await client
-      .from("player_story_relationships")
-      .select("character_name,stage,trust_score,memory")
-      .eq("game_session_id", input.gameSessionId)
-      .eq("player_id", input.playerId)
-      .eq("character_key", characterKey)
-      .maybeSingle();
+    const relationshipResponse = await repository.readRelationship({
+      gameSessionId: input.gameSessionId,
+      playerId: input.playerId,
+      characterKey,
+    });
     if (isRecord(relationshipResponse.data)) {
       characterName = readText(relationshipResponse.data.character_name) || characterName;
       relationshipStage = readText(relationshipResponse.data.stage) || relationshipStage;

@@ -8,10 +8,10 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1331,
+    "sourceFiles": 1333,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
-    "persistenceOutsideInfrastructure": 53,
+    "persistenceOutsideInfrastructure": 52,
     "crossDomainDeepImports": 70,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
@@ -382,7 +382,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 81,
+      "sourceFiles": 83,
       "publicBoundaryFiles": [
         "backend/src/domains/storylines/index.ts"
       ]
@@ -578,10 +578,6 @@
       {
         "file": "backend/src/domains/store/tests/playerStoreNegativeStateMatrix.test.ts",
         "layer": "tests"
-      },
-      {
-        "file": "backend/src/domains/storylines/services/storyDecisionRoleplayService.ts",
-        "layer": "services"
       },
       {
         "file": "backend/src/security/attendanceRateLimitContract.test.ts",
