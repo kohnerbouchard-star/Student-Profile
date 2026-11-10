@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1327,
+    "sourceFiles": 1332,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 100,
+    "oversizedSourceFiles": 99,
     "capabilityStrings": 140
   },
   "domains": [
@@ -1583,7 +1583,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/crafting/CraftingRoute.js",
+        "file": "admin/v2/src/routes/crafting/CraftingViewHelpers.js",
         "markers": [
           "fallback"
         ]
@@ -2624,10 +2624,6 @@
       {
         "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.test.ts",
         "lines": 1132
-      },
-      {
-        "file": "admin/v2/src/routes/crafting/CraftingRoute.js",
-        "lines": 1078
       },
       {
         "file": "backend/supabase/functions/web-session-api/index.ts",

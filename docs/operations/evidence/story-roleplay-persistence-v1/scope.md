@@ -131,3 +131,52 @@ test, guard or budget change is introduced. The full root suite passed against c
 `301114fd38ab3ce5be200f56bc0db15b7c2c8b94`; authority CLI, all 16 authority
 tests, secrets and whitespace also passed. This result replaces the earlier
 working-tree-only qualification for the hash-bound census.
+
+
+## Main-forward integration after PR935
+
+Observed main advanced to `c616ece3e1cebea79fd33c58f5f04ed961121407`, merging
+Admin Crafting extraction PR935. Integrate that main as a merge parent without
+changing either runtime tranche. Resolve only the two shared metadata conflicts:
+retain both complete Scope Intake entries and regenerate the inventory from the
+combined source. Preserve every inherited main file byte-for-byte except the
+existing PR934 paths. PR935's historical unmerged intake below is superseded by
+its observed merge; no feature or large-file work is added to PR934's own diff.
+The PR934 authority now preserves all current-main 127 required/93 critical
+checks, including the two new Crafting checks. Exact path locks and read-only,
+production-denial and secret-denial flags remain unchanged.
+
+Pre-integration head `eed95aae004e08f156171d7203820c09b652e77b` passed all 39
+triggered workflows: 76 successful jobs and eight conditional staging/release
+skips. Backend full smoke and all Edge checks passed hosted; the verified smoke
+artifact confirms all 24 new parity cases. One database-startup job failed
+because loopback port 54322 was occupied before replay/lint; its authorized
+single-job retry passed startup, both replays and lint. These old-head results
+are not qualification of the new integrated head. Keep draft pending independent
+integration review and fresh required checks; no deployment is authorized.
+
+Integrated local qualification: full root `npm test`, backend TypeScript,
+Contract acceptance (124), Contract lifecycle (21), Player scope (85), Player
+security (59), registered Admin tests (126), authority CLI (12 changed/14 locked),
+all 16 authority regressions, secrets and whitespace pass. Exact comparisons
+confirm the Story runtime/test/package bytes equal eed95aae, all inherited
+Crafting runtime/test bytes equal main, and removing only this PR's intake entry
+restores main's entire roadmap verbatim. Regenerated combined inventory measures
+1,331 source files, 52 persistence candidates and 99 oversized sources, retaining
+both tranches' reductions. Final integrated-head hosted checks and independent
+integration review remain pending; old-head CI is historical evidence only.
+
+## Serial reconciliation after PR937
+
+Before publication, main advanced through merged PR937 to
+`76a1a7734ffc1cebac29e723a8828e3dacce3d83`. Preserve its public-ID hashing source,
+privacy tests, workflow and complete intake byte-for-byte. Only shared inventory
+and roadmap conflicts require reconciliation; Story runtime, registration and
+parity tests remain unchanged. PR934 now preserves all current-main 129 required
+and 94 critical checks with unchanged exact paths and safety flags. The combined
+inventory retains both merged improvements and this extraction, with 1,332 source
+files, 52 lexical persistence candidates and 99 oversized sources. The owner
+explicitly approved publishing this regenerated inventory to the public
+Student-Profile repository for PR934. No production deployment is authorized.
+Fresh combined-head tests and independent review are required; prior CI results
+remain historical evidence and are not a waiver for the new head.

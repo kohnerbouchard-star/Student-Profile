@@ -165,7 +165,11 @@
     "Admin Shell Smoke",
     "admin-shell-smoke",
     "Admin Scroll Integrity",
-    "Rendered viewport and drawer scrolling"
+    "Rendered viewport and drawer scrolling",
+    "Admin V2 Crafting",
+    "Crafting V2 contracts and browser smoke",
+    "Player Response Privacy",
+    "player-response-privacy"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -259,11 +263,13 @@
     "Economic Core Request Claims",
     "REF046 exclusive disposable qualification",
     "admin-shell-smoke",
-    "Rendered viewport and drawer scrolling"
+    "Rendered viewport and drawer scrolling",
+    "Crafting V2 contracts and browser smoke",
+    "player-response-privacy"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "The owner authorized reducing misplaced persistence in a separate PR from feature work and large-file refactors. This authority covers only the three-read Story roleplay repository extraction, registered parity tests, generated inventory and scoped evidence. It preserves the existing provider behavior and Contract submission authority. No merge, deployment, database mutation, SQL, authentication, workflow, verifier or secret handling is authorized."
+  "authorizationNote": "The owner authorized reducing misplaced persistence in a separate PR from feature work and large-file refactors. This authority covers only the three-read Story roleplay repository extraction, registered parity tests, generated inventory and scoped evidence. It preserves the existing provider behavior and Contract submission authority. The owner also approved publishing the regenerated inventory to this public repository and merging the independently reviewed PR after all required checks pass. No deployment, database mutation, SQL, authentication, workflow, verifier or secret handling is authorized."
 }
