@@ -7,6 +7,7 @@ on:
       - ".github/workflows/player-response-privacy.yml"
       - "backend/src/security/playerBrowserResponsePrivacy.ts"
       - "backend/src/security/playerBrowserResponsePrivacy.test.ts"
+      - "backend/src/security/playerPublicIdHash.ts"
       - "backend/src/security/playerRateLimitDispatch.ts"
       - "backend/src/security/playerRateLimitDispatch.test.ts"
       - "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts"
