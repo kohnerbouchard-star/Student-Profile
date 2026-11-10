@@ -57,6 +57,10 @@ const BUSINESS_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
   "businessManufacturingJobs",
   "businessManufacturingStart",
   "businessManufacturingCancel",
+  "businessEquipmentInstall",
+  "businessStoreOfferCreate",
+  "businessStoreOfferStock",
+  "businessStoreOfferPublish",
   "businessPrice",
   "businessCandidateHire",
   "businessTerminate",
@@ -269,7 +273,7 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":productKey", `bpr_${"a".repeat(32)}`)
         .replace(":candidateKey", `wfc_${"d".repeat(32)}`)
         .replace(":employeeKey", `emp_${"a".repeat(32)}`)
-        .replace(":offerKey", `lop_${"a".repeat(32)}`)
+        .replace(":offerKey", `${endpoint.key.startsWith("businessStoreOffer") ? "sof" : "lop"}_${"a".repeat(32)}`)
         .replace(":loanKey", `lon_${"a".repeat(32)}`)
         .replace(":orderKey", `fxo_${"9".repeat(32)}`)
         .replace(":skillId", "skl_market_literacy_v1")

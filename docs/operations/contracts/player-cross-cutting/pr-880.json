@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref046a-campaign-events-pr-880.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 880,
+  "baseRef": "refactor/ref-046-db-registration",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "scripts/ref-046-campaign-acceptance.ts",
+    "docs/operations/evidence/refactor-execution-v1/REF-046/recovery.md",
+    "docs/operations/contracts/player-cross-cutting/pr-880.json",
+    ".github/workflows/ref-018-attendance-qualification.yml",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": ["docs/operations/contracts/player-cross-cutting/pr-880.json", "scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "requiredChecks": ["player-terminal-verify", "player-edge-trusted-ip-entrypoint-contract", "player-production-secret-provision-contract", "player-api-read-resilience", "Backend Typecheck", "Repository Quality", "World Runtime", "Admin API Check", "Certify Banking FX clearing source", "Verify Banking FX database acceptance", "Verify Banking FX Chromium acceptance", "Staff Attendance and ledger adjustment database/race qualification"],
+  "criticalJobChecks": ["Certify Banking FX clearing source", "Verify Banking FX database acceptance", "Verify Banking FX Chromium acceptance"],
+  "readOnlyPaths": ["scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "nonblankChangedLineLimit": 400,
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-046/recovery.md",
+  "authorizationNote": "Parent authorized bounded REF046a disposable qualification after serial registration, stacked on PR879; preserve PR878, frozen migrations, all eight acceptance gates and the ten-path/400-line limits. Workflow write remains gated on PR620 coordination. No behavior change, SQL/runtime/lease repair, deployment, credentials, holds or merge authorized. Main-only checks absent on this stack remain acceptance blockers."
+}

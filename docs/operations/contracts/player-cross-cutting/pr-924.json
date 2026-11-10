@@ -19,7 +19,21 @@
     "scripts/admin-v2-settings-browser-smoke.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-924.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/banking-fx-clearing-v1.yml",
+    ".github/workflows/business-financial-market.yml",
+    ".github/workflows/business-primary-ipo.yml",
+    ".github/workflows/configurable-stock-market-timezone-v1.yml",
+    ".github/workflows/crafting-item-runtime.yml",
+    ".github/workflows/database-replay.yml",
+    ".github/workflows/economic-core-request-claims.yml",
+    ".github/workflows/exchange-calendar-runtime-v1.yml",
+    ".github/workflows/loans-lifecycle-read-v1.yml",
+    ".github/workflows/player-button-click-safety.yml",
+    ".github/workflows/player-multiplayer-load-e2e.yml",
+    ".github/workflows/player-response-privacy.yml",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/world-runtime.yml"
   ],
   "requiredFiles": [
     "admin/v2/src/app.js",
@@ -32,7 +46,21 @@
     "scripts/admin-v2-settings-browser-smoke.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-924.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/banking-fx-clearing-v1.yml",
+    ".github/workflows/business-financial-market.yml",
+    ".github/workflows/business-primary-ipo.yml",
+    ".github/workflows/configurable-stock-market-timezone-v1.yml",
+    ".github/workflows/crafting-item-runtime.yml",
+    ".github/workflows/database-replay.yml",
+    ".github/workflows/economic-core-request-claims.yml",
+    ".github/workflows/exchange-calendar-runtime-v1.yml",
+    ".github/workflows/loans-lifecycle-read-v1.yml",
+    ".github/workflows/player-button-click-safety.yml",
+    ".github/workflows/player-multiplayer-load-e2e.yml",
+    ".github/workflows/player-response-privacy.yml",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/world-runtime.yml"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -153,12 +181,21 @@
     "Environment Neutral Browser",
     "runtime-config-contract",
     "Loans Lifecycle Read",
-    "Admin V2 Settings Check",
-    "Settings contract and browser acceptance",
+    "Database Replay",
+    "Economic Core Request Claims",
+    "REF046 exclusive disposable qualification",
     "Admin Shell Smoke",
     "admin-shell-smoke",
     "Admin Scroll Integrity",
-    "Rendered viewport and drawer scrolling"
+    "Rendered viewport and drawer scrolling",
+    "Admin V2 Crafting",
+    "Crafting V2 contracts and browser smoke",
+    "Player Response Privacy",
+    "player-response-privacy",
+    "Admin V2 Settings Check",
+    "Settings contract and browser acceptance",
+    "Admin V2 Market",
+    "Market V2 contracts and browser smoke"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -248,13 +285,19 @@
     "Rendered Admin browser and secure mutation journey",
     "runtime-config-contract",
     "Loans Lifecycle Read",
-    "Settings contract and browser acceptance",
+    "Database Replay",
+    "Economic Core Request Claims",
+    "REF046 exclusive disposable qualification",
     "admin-shell-smoke",
-    "Rendered viewport and drawer scrolling"
+    "Rendered viewport and drawer scrolling",
+    "Crafting V2 contracts and browser smoke",
+    "player-response-privacy",
+    "Settings contract and browser acceptance",
+    "Market V2 contracts and browser smoke"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "User explicitly requested completing teacher controls and Settings in separate branches and PRs on 2026-11-09. This bounded draft preserves Settings edits and existing save semantics. It registers exactly nine changed paths with two unchanged read-only verifier/test locks, preserving all 118 required and 87 critical predecessor checks and adding the Settings workflow and job. No merge, production deployment/mutation, hosted data, credentials, release holds, legacy Settings retirement or PR668 branch changes are authorized."
+  "authorizationNote": "User explicitly requested completing teacher controls and Settings in separate branches and PRs on 2026-11-09. This bounded draft preserves Settings edits and existing save semantics. It registers exactly nine changed paths with two unchanged read-only verifier/test locks, preserving all 118 required and 87 critical predecessor checks and adding the Settings workflow and job. No merge, production deployment/mutation, hosted data, credentials, release holds, legacy Settings retirement or PR668 branch changes are authorized. Current-main reconciliation onto a44d8e52119b9f2f3e6642dad0caabf845c46b39 retains all 129/94 main identities plus the Settings-specific 2/1, totaling 131/95. Owner instructions to update filters and run workflows authorize only 14 exact pr-924.json pull-request path additions for otherwise excluded retained qualification families, expanding nine changed paths/two read-only locks to 23 changed paths/25 locks. This bounded scheduling amendment supersedes the earlier no-workflow-change boundary only for those filters; jobs, permissions, guards, non-PR triggers, source-review bindings and production holds remain unchanged. Publication and merge remain parent-controlled after exact-head qualification. Serial World/Market integration preserves their complete source and test trees, existing PR939/PR941 filters and all prior qualification identities. Inheriting Market-specific workflow/job checks expands the Settings authority to 133 required/96 critical, with the same 23 changed paths/25 locks. The existing Market workflow already selects app.js, so no additional filter or workflow semantics change is needed. The final serial predecessor is actual merged main 3b6c713e460bea08565bf67b6314ec85c5183b64; its complete World/Market tree and ordered check sets remain inherited. Fresh Settings exact-head qualification is required before its separately coordinated merge."
 }

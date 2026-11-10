@@ -1,3 +1,4 @@
+import "./playerBusinessLoopCommands.test.ts";
 import { mapPlayerBusinessDatabaseError } from "../infrastructure/playerBusinessDatabaseErrors.ts";
 import { handlePlayerBusinessRequest } from "./playerBusinessHttpHandler.ts";
 
@@ -52,6 +53,7 @@ Deno.test("Business Stockroom HTTP response fails closed for malformed snapshot 
 Deno.test("Business Equipment HTTP response exposes public finite-capacity evidence", async () => {
   const client = new FakeClient({
     read_owned_business_equipment_v2: [equipmentRow()],
+    read_owned_business_player_loop_options_v1: { availableEquipment: [{ equipmentKey: `eqp_${"2".repeat(32)}`, itemKey: `itm_${"2".repeat(32)}`, canonicalKey: "equipment.press", name: "Press", internalId: GAME_ID }], saleableStoreItems: [{ itemKey: "paper", catalogItemKey: `itm_${"3".repeat(32)}`, name: "Paper", currencyCode: "USD", internalId: GAME_ID }] },
   });
   const response = await handlePlayerBusinessRequest(
     request("equipment"),
@@ -62,12 +64,14 @@ Deno.test("Business Equipment HTTP response exposes public finite-capacity evide
 
   assertEquals(response.status, 200);
   assertEquals(body.equipment.length, 1);
+  assertEquals(body.availableEquipment, [{ equipmentKey: `eqp_${"2".repeat(32)}`, itemKey: `itm_${"2".repeat(32)}`, canonicalKey: "equipment.press", name: "Press" }]);
+  assertEquals(body.saleableStoreItems, [{ itemKey: "paper", catalogItemKey: `itm_${"3".repeat(32)}`, name: "Paper", currencyCode: "USD" }]);
   assertEquals(body.equipment[0].businessKey, BUSINESS_KEY);
   assertEquals(body.equipment[0].installationKey, `bei_${"1".repeat(32)}`);
   assertEquals(body.equipment[0].equipmentKey, `eqp_${"1".repeat(32)}`);
   assertEquals(body.equipment[0].availableMinutes, 300);
   assertEquals(body.equipment[0].utilizationBasisPoints, 3750);
-  assertEquals(client.calls, ["read_owned_business_equipment_v2"]);
+  assertEquals(client.calls, ["read_owned_business_equipment_v2", "read_owned_business_player_loop_options_v1"]);
   assertEquals(response.headers.get("cache-control"), "private, no-store, max-age=0");
   assertNoUuid(JSON.stringify(body));
 });

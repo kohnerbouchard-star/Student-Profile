@@ -220,7 +220,8 @@ Deno.test("Loans retains its five original reads and projection when added histo
     assertEquals(result.schedule.map((row) => row.currencyCode), [currency("NRC"), currency("NRC"), currency("LUM")]);
     // Strip only additive metadata, then compare the entire retained response.
     const stripCurrency = ({ currencyCode: _currency, ...row }: { currencyCode?: string | null }) => row;
-    const { currencyProjection, lifecycle, ...retained } = result;
+    const { currencyProjection, lifecycle, repaymentForecast, ...retained } = result;
+    assertEquals(repaymentForecast?.facilities.every((row) => row.state === "unavailable"), true);
     assertEquals(lifecycle, { version: 1, state: "unavailable" });
     assertEquals(historyCalls.filter((call) => call[1] === "select").map((call) => call[0]),
       ["loan_applications", "player_loans", "loan_payments"]);
@@ -378,4 +379,43 @@ Deno.test("Loan exact projection distinguishes empty and zero from unavailable i
     accrued_interest_exact: "0.00", scheduled_payment_exact: "1.00", next_due_at: "invalid" }], []);
   assertEquals(badDate.complete, false);
   assertEquals(badDate.groups[0].nextPayment, { amount: null, due: null });
+});
+
+Deno.test("Fractional player and savings transfers preserve cents and server-derived scope", async () => {
+  for (const kind of ["playerTransfer", "savingsTransfer"] as const) {
+    for (const amount of [0.01, 0.5, 12.34, 0, -0.01, 1000000.01]) {
+      const calls: [string, Record<string, unknown>][] = [];
+      const response = await handlePlayerBusinessBankingRequest(
+        new Request("https://example.test/players/me/banking/transfers", {
+          method: "POST", body: JSON.stringify({ amount, idempotencyKey: "fractional-transfer-01",
+            ...(kind === "playerTransfer" ? { recipientPlayerIdentifier: "PLAYER-002" } : { fromAccount: "checking", toAccount: "savings" }),
+          }),
+        }),
+        { kind },
+        {
+          readEnvironment: () => ({ ok: true, value: { supabaseUrl: "https://example.test", supabaseAnonKey: "fixture", supabaseServiceRoleKey: "fixture" } }),
+          createServiceClient: () => ({} as EdgeSupabaseClient),
+          resolveScope: () => Promise.resolve({ gameId: "server-game", playerUuid: "server-player" }),
+          createRepository: () => ({
+            readLoans: () => { throw new Error("must not read loans during a transfer"); },
+            readEconomicContext: () => Promise.resolve({ countryCode: "NRC", currencyCode: "NRC" }),
+            execute: (command, args) => { calls.push([command, args]); return Promise.resolve({ status: "posted", amount }); },
+          }),
+        },
+      );
+      const valid = amount >= 0.01 && amount <= 1000000;
+      assertEquals(response.status, valid ? 200 : 400);
+      if (!valid) { assertEquals(calls, []); continue; }
+      assertEquals(calls, [[kind === "playerTransfer" ? "execute_player_transfer_v1" : "execute_player_account_transfer_v1", {
+        p_game_session_id: "server-game", p_player_id: "server-player",
+        ...(kind === "playerTransfer"
+          ? { p_sender_player_id: "server-player", p_recipient_player_identifier: "PLAYER-002" }
+          : { p_from_account_type: "checking", p_to_account_type: "savings" }),
+        p_amount: amount, p_currency_code: "NRC",
+        ...(kind === "playerTransfer" ? { p_memo: null } : { p_note: null }),
+        p_idempotency_key: "fractional-transfer-01",
+      }]]);
+      assertEquals(await response.json(), { ok: true, result: { status: "posted", amount }, refreshRequired: true });
+    }
+  }
 });

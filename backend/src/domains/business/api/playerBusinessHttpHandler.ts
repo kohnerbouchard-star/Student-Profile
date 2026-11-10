@@ -5,8 +5,9 @@ import { type EdgeSupabaseClient, readSupabaseEnv, type SupabaseEnv } from "../.
 import type { PlayerRequestApplicationContext } from "../../players/index.ts";
 import { PlayerBusinessError, type PlayerBusinessRepository, type PlayerBusinessRoute } from "../contracts/playerBusinessContracts.ts";
 import { BusinessTreasuryError, type BusinessTreasuryRepositoryV1 } from "../contracts/businessTreasuryContracts.ts";
-import { readBusinessEquipment, readBusinessRecipes, readBusinessStockroom, readBusinessWorkspaceProjection } from "../infrastructure/supabaseBusinessStockroomReadRepository.ts";
+import { readBusinessPlayerLoopOptions, readBusinessEquipment, readBusinessRecipes, readBusinessStockroom, readBusinessWorkspaceProjection } from "../infrastructure/supabaseBusinessStockroomReadRepository.ts";
 import { SupabasePlayerBusinessRepository } from "../infrastructure/supabasePlayerBusinessRepository.ts";
+import { executeBusinessPlayerLoopCommand } from "./playerBusinessLoopCommands.ts";
 import { executePlayerBusinessMutation } from "./playerBusinessMutationExecutor.ts";
 import { readBusinessRequestBody, validateBusinessRequestEnvelope, validateBusinessRequestMethodAndFields } from "./playerBusinessRequestValidation.ts";
 import { createBusinessStoreQuote, purchaseBusinessStoreQuote, requestBusinessStoreWithdrawal } from "./playerBusinessStoreProcurement.ts";
@@ -51,6 +52,7 @@ export async function handlePlayerBusinessRequest(
     const treasuryResponse = await dispatchPlayerBusinessTreasuryRequest({ route, body, client, publicScope, createTreasuryRepository: dependencies.createTreasuryRepository });
     if (treasuryResponse) return treasuryResponse;
 
+    if (route.kind === "businessStoreOfferPublish" || route.kind === "businessEquipmentInstall" || route.kind === "businessStoreOfferCreate" || route.kind === "businessStoreOfferStock") return privateJson(200, { ok: true, result: await executeBusinessPlayerLoopCommand(repository, route, body, publicScope), refreshRequired: true });
     if (route.kind === "businessRead") return await handleBusinessRead(route, client, repository, publicScope);
     if (route.kind === "businessManufacturingCollection") {
       if (request.method === "GET") return privateJson(200, { jobs: await readPlayerBusinessManufacturingJobs(client, publicScope, route.businessKey) });
@@ -99,7 +101,7 @@ async function handleBusinessRead(
 ): Promise<Response> {
   if (route.resource === "stockroom") return privateJson(200, await readBusinessStockroom(client, publicScope));
   if (route.resource === "recipes") return privateJson(200, { recipes: await readBusinessRecipes(client, publicScope) });
-  if (route.resource === "equipment") return privateJson(200, { equipment: await readBusinessEquipment(client, publicScope) });
+  if (route.resource === "equipment") return privateJson(200, { equipment: await readBusinessEquipment(client, publicScope), ...await readBusinessPlayerLoopOptions(client, publicScope) });
   if (route.resource === "workforceCandidates") return privateJson(200, await readBusinessWorkforceCandidates(repository, publicScope));
   const snapshot = await repository.readBusiness(publicScope);
   const manufacturingJobs = snapshot.configured && snapshot.company.id ? await readPlayerBusinessManufacturingJobs(client, publicScope, snapshot.company.id) : [];

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 import { resolvePlayerBackendRequest } from "../src/api/backend-routes.js";
+import { mergeTerminalRead } from "../src/api/read-model.js";
 import {
   mergeBankingPages,
   resolveBankingReadFailure,
@@ -255,3 +256,73 @@ assert.equal(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 assert.equal(serialized.includes('"accountType":"cash"'), false);
 
 console.log("Banking read model passed: checking terminology, capability-gated transfers, legacy alias translation, pagination, freshness, empty state, and UUID privacy are valid.");
+
+// Transfers retain the server's cent precision without discarding fractional balances.
+for (const [minorUnit, expectedStep] of [[undefined, "0.01"], [0, "1"], [1, "0.1"], [2, "0.01"], [4, "0.01"]]) {
+  const transferData = structuredClone(configuredData);
+  transferData.bankingFx = { currencies: minorUnit === undefined ? [] : [{ currencyCode: "ECO", minorUnit }] };
+  const transferHtml = renderBankingPage(transferData);
+  for (const endpointKey of ["bankTransfer", "savingsTransfer"]) {
+    const form = formMarkup(transferHtml, endpointKey);
+    assert.match(form, new RegExp(`name="amount"[^>]*min="${expectedStep.replace(".", "\\.")}"[^>]*max="500"[^>]*step="${expectedStep.replace(".", "\\.")}"[^>]*inputmode="decimal"`));
+    assertSubmitEnabled(transferHtml, endpointKey, "Fractional amounts must not change capability gating.");
+  }
+}
+for (const amount of ["0.01", "0.50", "12.34"]) {
+  for (const endpointKey of ["bankTransfer", "savingsTransfer"]) {
+    const request = resolvePlayerBackendRequest({
+      endpointKey, method: "POST", path: endpointKey === "bankTransfer" ? "/banking/transfers" : "/banking/savings/transfers",
+      payload: { amount, recipientPlayerIdentifier: "PLAYER-002", fromAccount: "checking", toAccount: "savings", idempotencyKey: "fractional-transfer-01" },
+      params: {}, session: { playerSessionToken: "fixture" },
+    });
+    assert.equal(request.payload.amount, Number(amount));
+    assert.equal(request.payload.idempotencyKey, "fractional-transfer-01");
+    assert.equal(request.path, endpointKey === "bankTransfer" ? "/players/me/banking/transfers" : "/players/me/banking/savings/transfers");
+    assert.equal(request.payload.playerId, undefined);
+    assert.equal(request.payload.gameSessionId, undefined);
+    assert.equal(request.payload.currencyCode, undefined);
+  }
+}
+console.log("Banking fractional inputs and adapter payloads preserve cents, currency precision and server-owned scope.");
+
+// Local transfers must never validate against a different currency's account.
+const localData = structuredClone(configuredData);
+localData.session.currencyCode = "NRC";
+const currentBalances = [
+  { accountKey: "bac_11111111111111111111111111111111", accountKind: "checking", currencyCode: "ECO", postedAmount: 0, heldAmount: 0, availableAmount: 0 },
+  { accountKey: "bac_22222222222222222222222222222222", accountKind: "checking", currencyCode: "NRC", postedAmount: 15.34, heldAmount: 3, availableAmount: 12.34 },
+  { accountKey: "bac_33333333333333333333333333333333", accountKind: "savings", currencyCode: "ECO", postedAmount: 999, heldAmount: 0, availableAmount: 999 },
+  { accountKey: "bac_44444444444444444444444444444444", accountKind: "savings", currencyCode: "NRC", postedAmount: 9.50, heldAmount: 2, availableAmount: 7.50 },
+];
+const localRead = mergeTerminalRead(localData, "banking", { currentBalances, ledgerEntries: [] });
+assert.equal(localRead.banking.checking.currencyCode, "NRC");
+assert.equal(localRead.banking.checking.balance, 15.34);
+assert.equal(localRead.banking.checking.available, 12.34);
+assert.equal(localRead.banking.savings.currencyCode, "NRC");
+assert.equal(localRead.banking.savings.balance, 9.50);
+assert.equal(localRead.banking.savings.available, 7.50);
+assert.equal(localRead.dashboard.liquidBalance, 15.34);
+assert.equal(localRead.dashboard.savingsBalance, 9.50);
+assert.deepEqual(localRead.banking.balances.map((balance) => balance.accountKey), currentBalances.map((balance) => balance.accountKey));
+assertSubmitEnabled(renderBankingPage(localRead), "bankTransfer", "A local checking account must support peer transfers even when another currency sorts first.");
+assertSubmitEnabled(renderBankingPage(localRead), "savingsTransfer", "Only local checking and savings accounts configure internal transfers.");
+for (const missingKind of ["checking", "savings", "both"]) {
+  const balances = currentBalances.filter((balance) => balance.currencyCode !== "NRC" || (missingKind !== "both" && balance.accountKind !== missingKind));
+  const missing = mergeTerminalRead(localRead, "banking", { currentBalances: balances, ledgerEntries: [] });
+  const missingHtml = renderBankingPage(missing);
+  if (missingKind !== "savings") {
+    assert.equal(missing.banking.checking.configured, false);
+    assert.equal(missing.banking.checking.balance, null);
+    assert.equal(missing.banking.checking.available, null);
+    assert.equal(missing.dashboard.liquidBalance, null);
+    assertSubmitDisabled(missingHtml, "bankTransfer", "Missing local checking must not reuse a foreign or stale account.");
+  }
+  if (missingKind !== "checking") {
+    assert.equal(missing.banking.savings.configured, false);
+    assert.equal(missing.banking.savings.balance, null);
+    assert.equal(missing.dashboard.savingsBalance, null);
+  }
+  assertSubmitDisabled(missingHtml, "savingsTransfer", "Internal transfers require both local accounts.");
+  assert.equal(missing.banking.balances.length, balances.length, "Foreign balances remain available for display and FX.");
+}
+console.log("Banking local-currency summaries preserve posted/held/available amounts and fail closed when local accounts are missing.");
