@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-939.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-941.json"
       - ".github/workflows/admin-v2-crafting.yml"
       - "admin/v2.html"
       - "admin/v2/src/app.js"

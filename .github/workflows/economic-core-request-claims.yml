@@ -3,6 +3,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-939.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-941.json"
       - backend/supabase/migrations/20261010040738_economic_core_request_claims_v1.sql
       - scripts/economic-core-request-claims-acceptance.mjs
       - scripts/economic-core-request-claims.test.mjs

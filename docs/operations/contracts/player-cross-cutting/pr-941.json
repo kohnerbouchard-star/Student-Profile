@@ -9,6 +9,21 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/admin-v2-crafting.yml",
+    ".github/workflows/banking-fx-clearing-v1.yml",
+    ".github/workflows/business-financial-market.yml",
+    ".github/workflows/business-primary-ipo.yml",
+    ".github/workflows/configurable-stock-market-timezone-v1.yml",
+    ".github/workflows/crafting-item-runtime.yml",
+    ".github/workflows/database-replay.yml",
+    ".github/workflows/economic-core-request-claims.yml",
+    ".github/workflows/exchange-calendar-runtime-v1.yml",
+    ".github/workflows/loans-lifecycle-read-v1.yml",
+    ".github/workflows/player-button-click-safety.yml",
+    ".github/workflows/player-multiplayer-load-e2e.yml",
+    ".github/workflows/player-response-privacy.yml",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/world-runtime.yml",
     ".github/workflows/admin-v2-market.yml",
     "admin/v2/src/routes/market/MarketActivityPanels.js",
     "admin/v2/src/routes/market/MarketInstrumentDirectory.js",
@@ -27,6 +42,21 @@
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
   "requiredFiles": [
+    ".github/workflows/admin-v2-crafting.yml",
+    ".github/workflows/banking-fx-clearing-v1.yml",
+    ".github/workflows/business-financial-market.yml",
+    ".github/workflows/business-primary-ipo.yml",
+    ".github/workflows/configurable-stock-market-timezone-v1.yml",
+    ".github/workflows/crafting-item-runtime.yml",
+    ".github/workflows/database-replay.yml",
+    ".github/workflows/economic-core-request-claims.yml",
+    ".github/workflows/exchange-calendar-runtime-v1.yml",
+    ".github/workflows/loans-lifecycle-read-v1.yml",
+    ".github/workflows/player-button-click-safety.yml",
+    ".github/workflows/player-multiplayer-load-e2e.yml",
+    ".github/workflows/player-response-privacy.yml",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/world-runtime.yml",
     ".github/workflows/admin-v2-market.yml",
     "admin/v2/src/routes/market/MarketActivityPanels.js",
     "admin/v2/src/routes/market/MarketInstrumentDirectory.js",
@@ -278,5 +308,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "The owner approved separate behavior-preserving Admin route refactors, retained-content public roadmap updates, and serial merges after required qualification. This authority covers only Market presentation extraction, retained characterization, the isolated Market browser workflow and bounded correction of its stale baseline expectations, inventory and scoped evidence. All predecessor checks are retained in order and the Market workflow/job is added. World must merge first and this branch must reconcile current main and qualify its exact final head. No production deployment, hosted mutation, schema, SQL, authentication, existing workflow, verifier or secret handling change is authorized."
+  "authorizationNote": "The owner approved separate behavior-preserving Admin route refactors, retained-content public roadmap updates, and serial merges after required qualification. This authority covers only Market presentation extraction, retained characterization, the isolated Market browser workflow and bounded correction of its stale baseline expectations, inventory, scoped evidence, and exact PR941-only additions to fifteen inherited pull-request scheduling filters. All predecessor checks are retained in order and the Market workflow/job is added. World merged as main 150ca9935ace3182c0a069e2b92691a4b58f2a0f; this branch reconciles that actual main and must qualify its exact final head before the coordinated Market merge. No production deployment, hosted mutation, schema, SQL, authentication, workflow job/assertion/action/permission/non-PR trigger/production guard, verifier or secret handling change is authorized."
 }

@@ -4276,13 +4276,37 @@ function renderPlayerSideProfilePreview(draft) {
       ? consoleRoot.querySelector("[data-admin-terminal-manual-scan-input]")
       : consoleRoot.querySelector("[data-admin-terminal-auto-scan-input]");
   }
-  function focusActiveScannerInput() {
-    const input = getActiveScannerInput();
-    window.requestAnimationFrame(() => input?.focus?.());
+  let scannerFocusRequest = 0;
+  function queueScannerInputFocus(consoleRoot, input, { preserveFocus = false, focusOrigin = document.activeElement } = {}) {
+    const request = ++scannerFocusRequest;
+    if (!consoleRoot || !input) return;
+    const mode = consoleRoot.dataset.scanMode;
+    const dialog = consoleRoot.closest(".admin-terminal-modal");
+    window.requestAnimationFrame(() => {
+      if (request !== scannerFocusRequest || !consoleRoot.isConnected || !input.isConnected) return;
+      if (document.querySelector("[data-admin-terminal-scanner-console]") !== consoleRoot) return;
+      if (consoleRoot.dataset.scanMode !== mode || getActiveScannerInput() !== input) return;
+      if (input.disabled || input.closest('[hidden], [inert], [aria-hidden="true"]')) return;
+      const owner = window.EconovariaAdminModalAccessibility?.getActiveController?.();
+      if (owner?.dialog && owner.dialog !== dialog) return;
+      const active = document.activeElement;
+      const hiddenInputBlur = active === document.body && focusOrigin !== input &&
+        consoleRoot.contains(focusOrigin) &&
+        focusOrigin?.matches?.("[data-admin-terminal-auto-scan-input], [data-admin-terminal-manual-scan-input]") &&
+        Boolean(focusOrigin.closest('[hidden], [aria-hidden="true"]'));
+      if (active !== focusOrigin && active !== input && !hiddenInputBlur) return;
+      if (preserveFocus && dialog?.contains(active) && active !== input && active !== dialog) return;
+      input.focus();
+    });
   }
-  function setScannerMode(mode) {
+  function focusActiveScannerInput() {
+    const consoleRoot = document.querySelector("[data-admin-terminal-scanner-console]");
+    queueScannerInputFocus(consoleRoot, getActiveScannerInput());
+  }
+  function setScannerMode(mode, { preserveFocus = false } = {}) {
     const consoleRoot = document.querySelector("[data-admin-terminal-scanner-console]");
     if (!consoleRoot) return;
+    const focusOrigin = document.activeElement;
     const nextMode = mode === "manual" ? "manual" : "auto";
     const autoPanel = consoleRoot.querySelector("[data-admin-terminal-auto-panel]");
     const manualPanel = consoleRoot.querySelector("[data-admin-terminal-manual-panel]");
@@ -4311,10 +4335,7 @@ function renderPlayerSideProfilePreview(draft) {
       state.classList.remove("is-captured");
     }
     window.clearTimeout(window.Econovaria.features.adminOverviewTerminal.scannerAutoSubmitTimer);
-    window.requestAnimationFrame(() => {
-      if (nextMode === "manual") manualInput?.focus?.();
-      else autoInput?.focus?.();
-    });
+    queueScannerInputFocus(consoleRoot, nextMode === "manual" ? manualInput : autoInput, { preserveFocus, focusOrigin });
   }
   function scheduleAutoScannerCapture(input) {
     if (!input) return;
@@ -4456,7 +4477,7 @@ async function handleAttendanceScanCapture(source = "confirm") {
       event.stopImmediatePropagation?.();
       handleAttendanceScanCapture("enter");
     }, true);
-    setScannerMode(scanner.dataset.scanMode === "manual" ? "manual" : "auto");
+    setScannerMode(scanner.dataset.scanMode === "manual" ? "manual" : "auto", { preserveFocus: true });
   }
   function normalizeTerminalPageSection(section) {
     const value = String(section || "").trim();

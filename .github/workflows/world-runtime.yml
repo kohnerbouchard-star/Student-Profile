@@ -3,6 +3,9 @@ name: World Runtime
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-939.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-941.json"
       - ".github/workflows/world-runtime.yml"
       - "backend/package.json"
       - "backend/src/domains/arrival/**"
@@ -69,6 +72,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@v7
