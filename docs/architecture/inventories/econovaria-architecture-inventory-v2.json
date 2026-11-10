@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1333,
+    "sourceFiles": 1336,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 99,
+    "oversizedSourceFiles": 98,
     "capabilityStrings": 140
   },
   "domains": [
@@ -1547,7 +1547,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/banking/BankingRoute.js",
+        "file": "admin/v2/src/routes/banking/BankingViewHelpers.js",
         "markers": [
           "fallback"
         ]
@@ -2804,10 +2804,6 @@
       {
         "file": "backend/src/domains/markets/state/orderReservationStateMachine.ts",
         "lines": 621
-      },
-      {
-        "file": "admin/v2/src/routes/banking/BankingRoute.js",
-        "lines": 620
       },
       {
         "file": "backend/supabase/functions/player-api/runtime.ts",
