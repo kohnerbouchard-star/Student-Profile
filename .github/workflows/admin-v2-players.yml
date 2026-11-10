@@ -15,7 +15,8 @@ on:
       - "scripts/admin-v2-unit.test.mjs"
       - "scripts/admin-v2-players-api.test.mjs"
       - "scripts/admin-v2-players-browser-smoke.mjs"
-      - "scripts/admin-v2-roster-csv*.mjs"
+      - "scripts/admin-v2-roster-*.mjs"
+      - "admin/v2/src/api/player-roster-import.js"
 
 permissions:
   contents: read
@@ -85,6 +86,7 @@ jobs:
           scripts/admin-v2-market-api.test.mjs
           scripts/admin-v2-players-api.test.mjs
           scripts/admin-v2-roster-csv.test.mjs
+          scripts/admin-v2-roster-import.test.mjs
 
       - name: Run authentication-boundary regressions
         run: npm run test:auth-boundaries
@@ -110,6 +112,9 @@ jobs:
 
       - name: Verify local-only roster CSV review and interrupted reads
         run: node scripts/admin-v2-roster-csv-browser-smoke.mjs
+
+      - name: Verify confirmed CSV import, retry, and credential lifecycle
+        run: node scripts/admin-v2-roster-import-browser-smoke.mjs
 
       - name: Upload Players V2 browser evidence
         if: always()

@@ -3,8 +3,8 @@ import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { chromium } from "playwright";
 import { ADMIN_V2_FIXTURE_GAME_ID, createAdminV2FixtureSession, startAdminV2FixtureServer } from "./admin-v2-browser-fixture-server.mjs";
 
-const header = "display_name,roster_label,player_identifier";
-const valid = `${header}\nFILEMARKER Avery,Class A,CARD-1\n"Doe, Blair",,CARD-2`;
+const header = "student_name";
+const valid = `${header}\nFILEMARKER Avery\n"Doe, Blair"`;
 const runtimePath = new URL("../runtime-config.env.js", import.meta.url);
 const previous = existsSync(runtimePath) ? readFileSync(runtimePath, "utf8") : null;
 writeFileSync(runtimePath, `window.__ECONOVARIA_RUNTIME_CONFIG__ = Object.freeze({
@@ -33,17 +33,16 @@ try {
     const requests = [];
     page.on("request", (request) => requests.push({ method: request.method(), value: `${request.url()} ${request.postData() || ""}` }));
     await page.goto(`${fixture.origin}/admin/v2.html?game=${ADMIN_V2_FIXTURE_GAME_ID}#players`);
-    const opener = page.getByRole("button", { name: "Check roster CSV", exact: true });
+    const opener = page.getByRole("button", { name: "Import roster CSV", exact: true });
     await opener.click();
-    const dialog = page.getByRole("dialog", { name: "Check roster CSV" });
+    const dialog = page.getByRole("dialog", { name: "Import roster CSV" });
     const input = dialog.getByLabel("Roster CSV file");
     const file = (text, name = "roster.csv") => ({ name, mimeType: "text/csv", buffer: Buffer.from(text) });
     await input.setInputFiles(file(valid));
-    await dialog.getByText(/2 player rows passed local format checks/).waitFor();
+    await dialog.getByText(/2 student rows passed local format checks/).waitFor();
     assert.equal(await dialog.locator("tbody tr").count(), 2);
-    assert.match(await dialog.innerText(), /Import unavailable/);
-    assert.match(await dialog.innerText(), /Existing-roster conflicts have not been checked/);
-    assert.equal(await dialog.getByRole("button", { name: /^(Import|Submit|Create)/i }).count(), 0);
+    assert.match(await dialog.innerText(), /Preview stays on this device until you confirm/);
+    assert.equal(await dialog.getByRole("button", { name: "Create students", exact: true }).isDisabled(), true);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1));
     assert.ok(await dialog.evaluate((element) => element.scrollWidth - element.clientWidth <= 1));
     await page.keyboard.press("Tab");
@@ -55,20 +54,26 @@ try {
 
     await opener.click();
     assert.equal(await dialog.locator("tbody tr").count(), 0);
-    await input.setInputFiles(file(`${header}\nAvery,,card-1\nBlair,,CARD-1`));
-    await dialog.getByText(/Player ID duplicates row 2/).waitFor();
-    assert.equal(await dialog.locator("tbody tr").count(), 0);
-    await input.setInputFiles(file(`${header},access_code\nAvery,,CARD-1,PRIVATE-MARKER`));
-    await dialog.getByText(/Use exactly these columns/).waitFor();
+    await input.setInputFiles(file("Name\nAvery"));
+    await dialog.getByText(/1 student row passed/).waitFor();
+    await dialog.getByLabel("CSV heading").selectOption("absent");
+    await dialog.getByText(/2 student rows passed/).waitFor();
+    assert.match(await dialog.locator("tbody").innerText(), /Name/);
+    await dialog.getByLabel("CSV heading").selectOption("auto");
+    await input.setInputFiles(file(`${header}\nAvery\nAvery`));
+    await dialog.getByText(/Repeated names are kept as separate student rows/).waitFor();
+    assert.equal(await dialog.locator("tbody tr").count(), 2);
+    await input.setInputFiles(file(`${header},access_code\nAvery,PRIVATE-MARKER`));
+    await dialog.getByText(/Use one column containing student names only/).waitFor();
     assert.doesNotMatch(await dialog.innerText(), /PRIVATE-MARKER/);
     await input.setInputFiles(file("a".repeat(128 * 1024 + 1)));
     await dialog.getByText("Use a CSV file no larger than 128 KiB.", { exact: true }).waitFor();
-    await input.setInputFiles(file(`${header}\n<img src=x onerror=alert(1)>,,CARD-1`));
-    await dialog.getByText(/1 player row passed local format checks/).waitFor();
+    await input.setInputFiles(file(`${header}\n<img src=x onerror=alert(1)>`));
+    await dialog.getByText(/1 student row passed local format checks/).waitFor();
     assert.equal(await dialog.locator("img").count(), 0);
     assert.match(await dialog.locator("tbody").innerText(), /<img/);
     await input.setInputFiles(file(valid));
-    await dialog.getByText(/2 player rows passed local format checks/).waitFor();
+    await dialog.getByText(/2 student rows passed local format checks/).waitFor();
 
     // A later selection owns publication even when the earlier File read finishes last.
     await page.evaluate(() => {
@@ -80,8 +85,8 @@ try {
       };
     });
     await input.setInputFiles(file(valid, "slow.csv"));
-    await input.setInputFiles(file(`${header}\nNewer,,CARD-NEW`));
-    await dialog.getByText(/1 player row passed local format checks/).waitFor();
+    await input.setInputFiles(file(`${header}\nNewer`));
+    await dialog.getByText(/1 student row passed local format checks/).waitFor();
     await page.evaluate((source) => window.finishSlowCsv(source), valid);
     assert.match(await dialog.locator("tbody").innerText(), /Newer/);
     assert.doesNotMatch(await dialog.innerText(), /FILEMARKER/);
@@ -95,7 +100,7 @@ try {
     await opener.click();
     assert.equal(await dialog.locator("tbody tr").count(), 0);
     await input.setInputFiles(file(valid));
-    await dialog.getByText(/2 player rows passed local format checks/).waitFor();
+    await dialog.getByText(/2 student rows passed local format checks/).waitFor();
     await page.evaluate(() => { location.hash = "overview"; });
     await dialog.waitFor({ state: "detached" });
     await page.goBack();
@@ -105,8 +110,8 @@ try {
     await dialog.waitFor({ state: "detached" });
     assert.doesNotMatch(await page.locator("body").innerText(), /FILEMARKER/);
     const storage = await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }));
-    assert.doesNotMatch(storage, /FILEMARKER|CARD-NEW|PRIVATE-MARKER/);
-    assert.doesNotMatch(JSON.stringify(requests), /FILEMARKER|CARD-NEW|PRIVATE-MARKER/);
+    assert.doesNotMatch(storage, /FILEMARKER|PRIVATE-MARKER/);
+    assert.doesNotMatch(JSON.stringify(requests), /FILEMARKER|PRIVATE-MARKER/);
     assert.deepEqual(requests.filter((request) => !["GET", "HEAD"].includes(request.method)), []);
     checks.push(`local-preview-validation-dismissal-races-navigation-no-transmission-${width}`);
     await context.close();

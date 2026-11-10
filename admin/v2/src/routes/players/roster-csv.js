@@ -1,6 +1,6 @@
 export const ROSTER_CSV_MAX_BYTES = 128 * 1024;
 export const ROSTER_CSV_MAX_ROWS = 200;
-export const ROSTER_CSV_HEADERS = Object.freeze(["display_name", "roster_label", "player_identifier"]);
+export const ROSTER_CSV_HEADERS = Object.freeze(["student_name"]);
 
 function invalid(message, row = null) {
   return { ok: false, rows: [], errors: [{ row, message }] };
@@ -50,11 +50,14 @@ function decodeCsv(source) {
   return records;
 }
 
-const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069\ufffd]/u;
+const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069\ud800-\udfff\ufffd]/u;
 const INTERNAL_UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
 
-/** Local readiness check only. Does not match, provision, or update server records. */
-export function checkRosterCsv(value) {
+const NAME_HEADERS = new Set(["name", "student name", "student_name", "display_name"]);
+
+/** Names only. Repeated names are separate rows, never inferred student identities. */
+export function checkRosterCsv(value, { headerMode = "auto" } = {}) {
+  if (!["auto", "present", "absent"].includes(headerMode)) return invalid("Choose a valid header option.");
   if (typeof value !== "string" || !value.trim()) return invalid("Choose a non-empty UTF-8 CSV file.");
   if (new TextEncoder().encode(value).length > ROSTER_CSV_MAX_BYTES) {
     return invalid("Use a CSV file no larger than 128 KiB.");
@@ -63,40 +66,37 @@ export function checkRosterCsv(value) {
   try { records = decodeCsv(value.replace(/^\uFEFF/, "")); }
   catch (error) {
     return invalid(error.message === "too_many_rows"
-      ? "Use no more than 200 player rows."
-      : "Invalid CSV structure. Use three columns and standard CSV quoting.");
+      ? "Use no more than 200 student rows."
+      : "Invalid CSV structure. Use one name column and standard CSV quoting.");
   }
-  if (!records.length || records[0].length !== ROSTER_CSV_HEADERS.length
-    || records[0].some((header, index) => header.trim() !== ROSTER_CSV_HEADERS[index])) {
-    return invalid("Use exactly these columns, in order: display_name, roster_label, player_identifier. Do not include Access Codes or other personal information.");
+  while (records.length && records.at(-1).length === 1 && !records.at(-1)[0].trim()) records.pop();
+  if (records.some((record) => record.length !== 1)) {
+    return invalid("Use one column containing student names only. Do not include IDs, credentials, or other fields.");
   }
-  const data = records.slice(1);
-  if (!data.length) return invalid("Add at least one player row after the header.");
-  if (data.length > ROSTER_CSV_MAX_ROWS) return invalid("Use no more than 200 player rows.");
+  const headerSkipped = headerMode === "present"
+    || (headerMode === "auto" && NAME_HEADERS.has(records[0]?.[0]?.trim().toLowerCase()));
+  const data = records.slice(headerSkipped ? 1 : 0);
+  if (!data.length) return invalid("Add at least one student name.");
+  if (data.length > ROSTER_CSV_MAX_ROWS) return invalid("Use no more than 200 student rows.");
   const rows = [];
   const errors = [];
-  const identifiers = new Map();
-  data.forEach((record, index) => {
-    const row = index + 2;
-    const report = (message) => errors.push({ row, message });
-    if (record.length !== ROSTER_CSV_HEADERS.length) {
-      report("Expected exactly three columns.");
+  const seen = new Set();
+  let duplicateNameCount = 0;
+  data.forEach(([cell], index) => {
+    const row = index + (headerSkipped ? 2 : 1);
+    if (CONTROL_CHARACTERS.test(cell) || INTERNAL_UUID.test(cell)) {
+      errors.push({ row, message: "Remove control characters, invalid UTF-8, line breaks, or internal UUIDs." });
       return;
     }
-    if (record.some((cell) => CONTROL_CHARACTERS.test(cell) || INTERNAL_UUID.test(cell))) {
-      report("Remove control characters, invalid UTF-8, line breaks, or internal UUIDs.");
+    const displayName = cell.trim().normalize("NFC");
+    if (!displayName || displayName.length > 240) {
+      errors.push({ row, message: "Student name must contain 1–240 characters." });
       return;
     }
-    const [displayName, rosterLabel, identifier] = record.map((cell) => cell.trim());
-    const playerIdentifier = identifier.toUpperCase();
-    if (!displayName || displayName.length > 240) report("Player name must contain 1–240 characters.");
-    if (rosterLabel.length > 240) report("Roster label must contain no more than 240 characters.");
-    if (!/^[A-Z0-9:_-]{1,128}$/.test(playerIdentifier)) {
-      report("Player ID must contain 1–128 letters, numbers, colons, underscores, or hyphens.");
-    } else if (identifiers.has(playerIdentifier)) {
-      report(`Player ID duplicates row ${identifiers.get(playerIdentifier)} in this file.`);
-    } else identifiers.set(playerIdentifier, row);
-    rows.push({ row, displayName, rosterLabel, playerIdentifier });
+    const comparison = displayName.toLowerCase();
+    if (seen.has(comparison)) duplicateNameCount += 1;
+    seen.add(comparison);
+    rows.push({ row, displayName });
   });
-  return { ok: !errors.length, rows: errors.length ? [] : rows, errors };
+  return { ok: !errors.length, rows: errors.length ? [] : rows, errors, headerSkipped, duplicateNameCount };
 }

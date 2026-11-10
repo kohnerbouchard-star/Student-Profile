@@ -1,5 +1,6 @@
 import { sha256Hex } from "../platform/supabase/edgeCrypto.ts";
 import { jsonError } from "../platform/supabase/edgeResponse.ts";
+import { createPlayerPublicIdHash } from "./playerPublicIdHash.ts";
 
 const UUID_PATTERN =
   /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
@@ -7,6 +8,7 @@ const JSON_CONTENT_TYPE = /(?:^|;)\s*application\/(?:[a-z0-9.+-]*\+)?json(?:;|$)
 const PUBLIC_ID_PREFIX = "pub_";
 const MAX_DEPTH = 24;
 const HASH_BATCH_SIZE = 32;
+const hashPublicId = createPlayerPublicIdHash(sha256Hex);
 
 export async function enforcePlayerBrowserResponsePrivacy(
   response: Response,
@@ -81,7 +83,7 @@ async function buildAliases(
   for (let index = 0; index < values.length; index += HASH_BATCH_SIZE) {
     const batch = values.slice(index, index + HASH_BATCH_SIZE);
     const entries = await Promise.all(batch.map(async (normalized) => {
-      const digest = await sha256Hex(`player-browser-public-id:v1:${normalized}`);
+      const digest = await hashPublicId(`player-browser-public-id:v1:${normalized}`);
       return [normalized, `${PUBLIC_ID_PREFIX}${digest.slice(0, 24)}`] as const;
     }));
     for (const [normalized, alias] of entries) aliases.set(normalized, alias);

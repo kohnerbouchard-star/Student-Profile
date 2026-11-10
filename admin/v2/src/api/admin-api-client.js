@@ -1,3 +1,4 @@
+import { createRosterImportRequest } from "./player-roster-import.js";
 import { normalizeAdminError } from "../core/error-envelope.js";
 
 export const ADMIN_API_BASE_PATH = "/api/admin";
@@ -899,6 +900,7 @@ export function createAdminApiClient({
     updateStoreItem,
     archiveStoreItem,
     createPlayer,
+    importPlayerRoster: createRosterImportRequest({ mutate: playerMutation, collectionPath: playersCollectionPath }),
     updatePlayerSettings,
     updatePlayerCredentials,
     getRequestVersion: () => activeRequestVersion,

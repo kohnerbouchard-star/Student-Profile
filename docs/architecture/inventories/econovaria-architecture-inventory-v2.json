@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1327,
+    "sourceFiles": 1334,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 53,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 100,
+    "oversizedSourceFiles": 99,
     "capabilityStrings": 140
   },
   "domains": [
@@ -1587,7 +1587,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/crafting/CraftingRoute.js",
+        "file": "admin/v2/src/routes/crafting/CraftingViewHelpers.js",
         "markers": [
           "fallback"
         ]
@@ -2630,10 +2630,6 @@
         "lines": 1132
       },
       {
-        "file": "admin/v2/src/routes/crafting/CraftingRoute.js",
-        "lines": 1078
-      },
-      {
         "file": "backend/supabase/functions/web-session-api/index.ts",
         "lines": 1054
       },
@@ -2663,7 +2659,7 @@
       },
       {
         "file": "admin/v2/src/api/admin-api-client.js",
-        "lines": 908
+        "lines": 910
       },
       {
         "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
@@ -2958,6 +2954,10 @@
         "lines": 535
       },
       {
+        "file": "admin/v2/src/routes/players/PlayersRoute.js",
+        "lines": 535
+      },
+      {
         "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.ts",
         "lines": 533
       },
@@ -2972,10 +2972,6 @@
       {
         "file": "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
         "lines": 532
-      },
-      {
-        "file": "admin/v2/src/routes/players/PlayersRoute.js",
-        "lines": 530
       },
       {
         "file": "backend/supabase/functions/license-payment-webhook/index.ts",
@@ -3764,6 +3760,7 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/overview/OverviewRoute.js",
           "admin/v2/src/routes/players/PlayersController.js",
+          "admin/v2/src/routes/players/RosterImportController.js",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
