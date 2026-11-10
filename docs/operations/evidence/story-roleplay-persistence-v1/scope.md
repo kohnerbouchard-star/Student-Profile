@@ -1,6 +1,6 @@
 # Story roleplay persistence extraction
 
-Status: IN_PROGRESS. Item: PERSISTENCE-STORY-ROLEPLAY-001 / ARCH-401.
+Status: IMPLEMENTED_NOT_MERGED. Item: PERSISTENCE-STORY-ROLEPLAY-001 / ARCH-401.
 Base: `a29f4439368aca18e14a06819e5a7ad6040ac74d`.
 Owner: `refactor/story-roleplay-persistence-port`.
 
@@ -66,7 +66,7 @@ legacy and secret guards. Use pinned Node 22.23.1/npm 10.9.8/Deno 2.9.3.
 Provider tests are synthetic and deny network. No hosted provider, database,
 staging or production action is authorized or required for this read-only move.
 
-Publication identity and exact-head CI remain pending below.
+Published as draft [PR #934](https://github.com/kohnerbouchard-star/Student-Profile/pull/934); implementation `e31349cead6db5b23de5be1e3a2e60c6677887d6`, tree `2efc45c3b9d37b2fcd9e3d40e668eaf2266ae5b4`. Every uploaded blob was verified against the local Git blob identity. Exact-final-head CI remains pending.
 
 ## Local qualification
 
@@ -106,3 +106,13 @@ denominator excludes backend/tests and must not be presented as test coverage.
 
 Rollback is a normal revert of this bounded source change. No stored data,
 transactional authority, existing legacy path or production state was modified.
+
+
+## Actual-number registration
+
+The metadata-only follow-up records PR #934, its implementation identity and the
+exact path authority. It locks 11 changed paths plus two unchanged read-only
+verifier/test paths. All 125 required and 92 critical predecessor checks from
+current-main PR923 are preserved in order. Production deployment, mutation and
+secret flags remain false. No existing authority, workflow or verifier changes.
+Keep draft until final-head checks and any required acceptance evidence qualify.
