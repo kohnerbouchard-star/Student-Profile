@@ -1,9 +1,10 @@
 # Messages read-only presentation extraction
 
 - Roadmap item: `ARCH-LARGE-ADMIN-MESSAGES-001`.
-- Status: `IMPLEMENTED_NOT_MERGED`; owner `refactor/admin-messages-read-panels`, separate draft publication pending.
+- Status: `IMPLEMENTED_NOT_MERGED`; draft [PR #944](https://github.com/kohnerbouchard-star/Student-Profile/pull/944), owner `refactor/admin-messages-read-panels`.
 - Implementation: `a20ff6a121423f4e868052b3d7e3a6cfbaebb75d`, tree `f5f891964d83520f92aa9be8583d25c5cdbe96cf`.
 - Base: freshly fetched main `b77c9610e9b6ed3be93d8f4c888cacbc706df8ca`, 2026-11-10.
+- Published implementation: `88ff8d087a6a366418f74ce8891f9162fb7cd6fc`, tree `742098fb1b478762cc561a55a1df182b724e6eb3`, identical to independently reviewed local `4ac6ef499d1336c9ede7a27d8a3463b013ca2b7c`.
 - No merge, deployment, hosted mutation or gate weakening.
 
 ## Scope and ownership
@@ -28,6 +29,6 @@ The unchanged native Messages browser runner was attempted and fails before asse
 
 ## Publication and next step
 
-The owner explicitly approved retained-content public roadmap updates and separate publication for all six route refactors. Preserve every current-main roadmap byte and add only this Messages intake. Publish a separate draft with actual-number authority and exact-head hosted qualification; no gate is waived. The authority will retain all 129 required and 94 critical current-main PR934 checks in order, including Admin Browser E2E and its rendered-browser job, then add the existing `Admin V2 Messages` workflow and exact `Messages moderation contract and browser smoke` job for 131 required and 95 critical checks. Lock all nine changed files, the new authority, and two unchanged read-only verifier/test files, with all production/mutation/secret flags false.
+The owner explicitly approved retained-content public roadmap updates and separate publication for all six route refactors. Preserve every current-main roadmap byte and add only this Messages intake. Draft PR #944 is published with actual-number authority and exact-head hosted qualification pending; no gate is waived. Its authority retains all 129 required and 94 critical current-main PR934 checks in order, including Admin Browser E2E and its rendered-browser job, and adds the existing `Admin V2 Messages` workflow and exact `Messages moderation contract and browser smoke` job for 131 required and 95 critical checks. The twelve exact locks cover all ten changed files and two unchanged read-only verifier/test files, with all production/mutation/secret flags false. Fresh authority validation and all sixteen authority regressions pass; every prior required and critical check is retained in order. Independent actual-number metadata review and hosted checks remain mandatory before claiming merge readiness.
 
 This is sixth in the serial order: World #939, Market #941, Banking #940, News & Events #942, Attendance #943, then Messages. Preliminary draft CI does not qualify a later reconciled head. After preceding serial merges, refresh main, preserve predecessor content, regenerate inventory, obtain independent integration review and rerun exact-head qualification. No merge, readiness transition, auto-merge, manual release dispatch, deployment or hosted mutation is performed here. Rollback is limited to this read-presentation extraction and inventory regeneration. Legacy scanner fixes #929/#936 remain separate and untouched. Reassess further targets only after these six candidates are integrated.
