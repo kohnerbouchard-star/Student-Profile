@@ -244,3 +244,35 @@ test("Banking browser correction controls accommodate the shared required-label 
   assert.ok(runner.includes('page.locator(".admin-banking-adjustment-form").count(), 0'));
   assert.doesNotMatch(runner, /getByLabel\("(?:Account|Correction amount|Teacher reason)", \{ exact: true \}\)/);
 });
+
+test("Banking browser fixture intercepts the configured HttpOnly BFF transport path", async () => {
+  const { runInNewContext } = await import("node:vm");
+  const { startAdminV2FixtureServer, ADMIN_V2_FIXTURE_GAME_ID: game } = await import("./admin-v2-browser-fixture-server.mjs");
+  const { createAdminBffTransport } = await import("../admin/v2/src/api/admin-bff-transport.js");
+  const { createBankingApiClient } = await import("../admin/v2/src/routes/banking/BankingApi.js");
+  const fixture = await startAdminV2FixtureServer();
+  try {
+    const window = { location: new URL(`${fixture.origin}/admin/v2.html`) };
+    const configuration = await (await fetch(`${fixture.origin}/runtime-config.env.js`)).text();
+    runInNewContext(configuration, { window, URL });
+    runInNewContext(readFileSync("frontend/src/core/runtime-config.js", "utf8"), { window, URL });
+    let requestedUrl;
+    const transport = createAdminBffTransport({
+      selectedGameId: game,
+      runtimeConfig: window.EconovariaRuntimeConfig,
+      locationLike: window.location,
+      storage: { getItem: () => "a0000000-0000-4000-8000-00000000000a" },
+      fetchImpl: async (url) => {
+        requestedUrl = new URL(url);
+        return new Response(JSON.stringify({ data: { players: [] } }), { status: 200 });
+      },
+    });
+    await createBankingApiClient({ fetchImpl: transport }).readBanking({ gameId: game });
+    const runner = readFileSync("scripts/admin-v2-banking-browser-smoke.mjs", "utf8");
+    const fixturePath = runner.match(/^const BASE = `([^`]+)`;/m)?.[1].replace("${GAME}", game);
+    assert.equal(requestedUrl.origin, fixture.origin);
+    assert.equal(fixturePath, requestedUrl.pathname, "Intercept the real configured BFF URL, not the API client's pre-transport alias");
+  } finally {
+    await fixture.close();
+  }
+});

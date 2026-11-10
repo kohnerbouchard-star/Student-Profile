@@ -10,7 +10,7 @@ import { ADMIN_V2_FIXTURE_GAME_ID, createAdminV2FixtureSession, startAdminV2Fixt
 const GAME = ADMIN_V2_FIXTURE_GAME_ID;
 const PLAYER = "b1000000-0000-4000-8000-000000000001";
 const DEVICE = "a0000000-0000-4000-8000-00000000000a";
-const BASE = `/api/admin/games/${GAME}/banking/players`;
+const BASE = `/functions/v1/web-session-api/proxy/games/${GAME}/banking/players`;
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
 const output = path.resolve(process.env.ADMIN_V2_EVIDENCE_DIR || "/tmp/admin-v2-banking-evidence");
 const results = [];
@@ -111,6 +111,7 @@ try {
     });
     try {
       await page.goto(`${fixture.origin}/admin/v2.html?game=${GAME}#banking`);
+      await until(() => requests.some((request) => request.method === "GET" && request.pathname === BASE), "Initial Banking read reaches the held BFF fixture");
       await state(page, "initial-loading");
       mode.holdRead.resolve(); mode.holdRead = null;
       await state(page, "ready");
