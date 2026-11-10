@@ -54,3 +54,18 @@ Current-main continuation after publication permission: preserve all merged #932
 ## Typical classroom browser qualification
 
 The owner expects about 30 students per roster. The synthetic import browser suite now registers 3, 30 and 40 rows at 1280/390/320 widths across fresh creation, lost-response same-key replay and in-flight navigation (27 scenarios). Repeated names remain distinct, all row identities/codes are checked, code-free replay and dismissal/storage/log privacy remain mandatory, and the 200-row limit is unchanged. The nine prior three-row scenarios passed hosted at exact head 1b38f0c1; expanded 30/40-row execution is still pending. This is mocked transport UI evidence, not deployed atomic-import or Edge CPU qualification. Paired backend draft #938 owns real SQL/class-size and runtime-limit qualification.
+
+
+## Scanner and Story main reconciliation
+
+Current-main integration: a44d8e52119b9f2f3e6642dad0caabf845c46b39. Preserve every merged #934 and #936/#929 source/test/workflow/authority/evidence file and complete roadmap intake. The roster runtime, migration (where present), names-only contract, 30/40-row test cases, 200-row limit and credential policy are byte-identical to 1eaabe026bb54b625e971307e386002ea296183e. Only additive scope/roadmap reconciliation and deterministic inventory regeneration are required. All current-main required/critical check identifiers are retained in the unchanged PR933 authority; deployment, mutation and secrets grants remain false.
+
+Prior exact head 1eaabe02 passed 54 workflows and all 27 synthetic browser combinations (3/30/40 rows, three widths, fresh/replay/navigation); only the now-integrated scanner smoke failed. These prior-head passes do not certify this new integration. Paired backend remains draft PR938.
+
+Fresh root, focused, TypeScript/Edge/smoke and applicable browser/database qualification are required for this combined head. Keep draft while exact-head gates and authorized realistic combined Edge/BFF capacity are unresolved. No production deployment or actual student data is authorized.
+
+## Bounded exact-head CI scheduling amendment
+
+The owner authorized filter updates and workflow qualification. Add only PR933's exact authority path to twelve existing required test-workflow PR filters and bind the three shared test-only Admin Shell, Button Action Coverage and Environment Neutral Browser checkouts to the exact PR head with persisted credentials disabled. This supersedes earlier unchanged-workflow scope only for these bounded scheduling corrections. The active authority locks 32 changed paths plus two unchanged read-only verifier/test paths. All 131 required and 95 critical check identifiers, test commands, permissions, non-PR triggers, PR657-only writer and live-production guards remain unchanged. These mixed repository identifiers are not a branch-protection inventory.
+
+Fresh integrated root, focused and backend TypeScript checks pass. Local full Edge/smoke qualification is blocked by the unchanged pinned SDK network fetch. Local browser execution remains unverified after the pinned Chromium archive download failed; Docker/psql are unavailable. Independent review and renewed exact-head hosted workflow, browser and database evidence remain mandatory. Preserve the combined deployed-path and realistic Edge/BFF capacity release hold, all names-only and 30/40-row assertions, 200-row capacity and 600,000-iteration hashing. No dispatch, gate waiver, production action or real student data is authorized.
