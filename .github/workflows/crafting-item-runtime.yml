@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-938.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
       - ".github/workflows/crafting-item-runtime.yml"
       - "admin/crafting-oversight-*.js"
       - "admin/css/crafting-oversight.css"

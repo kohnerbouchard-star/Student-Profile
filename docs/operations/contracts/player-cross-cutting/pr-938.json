@@ -9,7 +9,19 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/admin-scroll-integrity.yml",
+    ".github/workflows/admin-shell-smoke.yml",
+    ".github/workflows/admin-v2-crafting.yml",
+    ".github/workflows/button-action-coverage.yml",
+    ".github/workflows/crafting-item-runtime.yml",
+    ".github/workflows/economic-core-request-claims.yml",
+    ".github/workflows/environment-neutral-browser.yml",
+    ".github/workflows/loans-lifecycle-read-v1.yml",
+    ".github/workflows/player-button-click-safety.yml",
+    ".github/workflows/player-response-privacy.yml",
     ".github/workflows/player-roster-import.yml",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/world-runtime.yml",
     "backend/scripts/benchmarkRosterCredentialHashing.ts",
     "backend/src/domains/players/api/playerRosterImportHttpHandler.ts",
     "backend/src/domains/players/application/importPlayerRoster.test.ts",
@@ -35,7 +47,19 @@
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
+    ".github/workflows/admin-scroll-integrity.yml",
+    ".github/workflows/admin-shell-smoke.yml",
+    ".github/workflows/admin-v2-crafting.yml",
+    ".github/workflows/button-action-coverage.yml",
+    ".github/workflows/crafting-item-runtime.yml",
+    ".github/workflows/economic-core-request-claims.yml",
+    ".github/workflows/environment-neutral-browser.yml",
+    ".github/workflows/loans-lifecycle-read-v1.yml",
+    ".github/workflows/player-button-click-safety.yml",
+    ".github/workflows/player-response-privacy.yml",
     ".github/workflows/player-roster-import.yml",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/world-runtime.yml",
     "backend/scripts/benchmarkRosterCredentialHashing.ts",
     "backend/src/domains/players/api/playerRosterImportHttpHandler.ts",
     "backend/src/domains/players/application/importPlayerRoster.test.ts",
@@ -292,5 +316,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "The owner explicitly authorized public publication of names-only roster import source, tests and supporting records in a separate draft backend PR. Scope is the ordered names-only protected Admin contract, server credential generation, canonical atomic provisioning and idempotency, one forward migration, synthetic qualification, generated inventory and scoped records. Current-main checks remain mandatory with the unique roster workflow/job added. Production deployment, real student data use, gate waivers, hash weakening, external account or notification delivery, merge and activation are not authorized. Hosted rollback/concurrency and Edge CPU/BFF feasibility remain release holds."
+  "authorizationNote": "The owner explicitly authorized public publication of names-only roster import source, tests and supporting records in a separate draft backend PR. Scope is the ordered names-only protected Admin contract, server credential generation, canonical atomic provisioning and idempotency, one forward migration, synthetic qualification, generated inventory and scoped records. Current-main checks remain mandatory with the unique roster workflow/job added. Production deployment, real student data use, gate waivers, hash weakening, external account or notification delivery, merge and activation are not authorized. Hosted rollback/concurrency and Edge CPU/BFF feasibility remain release holds. The owner also authorized bounded filter updates and workflow qualification: add only this PR authority path to twelve existing required test-workflow PR filters and bind three shared test-only checkouts to the exact PR head without persisted credentials. All test commands, permissions, non-PR triggers, manual/live guards, required/critical check identifiers and production holds remain unchanged. Shared changes preserve other owners during serial main integration."
 }

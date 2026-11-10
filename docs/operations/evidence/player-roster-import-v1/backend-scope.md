@@ -61,3 +61,18 @@ Fresh synthetic offline benchmark on the same toolchain: 1 row 91ms, 30 rows 2,6
 
 
 Hosted initial head fc4f156a passed full Edge typecheck and clean migration reset. Its first SQL import stopped with GAME_SESSION_NOT_FOUND because the synthetic fixture mixed active status with draft lifecycle; the existing lifecycle trigger correctly made it inactive. The corrected fixtures use consistent active/non-joinable state and migration-seeded canonical countries without disabling or changing any guard. Renewed actual SQL/rollback/concurrency execution remains mandatory; no atomicity success is claimed from the failed run.
+
+
+## Scanner and Story main reconciliation
+
+Current-main integration: a44d8e52119b9f2f3e6642dad0caabf845c46b39. Preserve every merged #934 and #936/#929 source/test/workflow/authority/evidence file and complete roadmap intake. The roster runtime, migration (where present), names-only contract, 30/40-row test cases, 200-row limit and credential policy are byte-identical to 6bddb34097bc87b11b7e4ac62ecfbb2ce06f45d5. Only additive scope/roadmap reconciliation and deterministic inventory regeneration are required. All current-main required/critical check identifiers are retained in the unchanged PR938 authority; deployment, mutation and secrets grants remain false.
+
+Prior exact head 6bddb340 passed 49 workflows, including real disposable PostgreSQL rollback/replay/ownership, 30/40-row provisioning, three concurrency races, full Edge checks and connected 30/40-player load. PR361 repair was intentionally skipped; the canceled PR-only promotion contract run could not be retried (GitHub403), with no dispatch or bypass. These results do not certify this new integration.
+
+Fresh root, focused, TypeScript/Edge/smoke and applicable browser/database qualification are required for this combined head. Keep draft while exact-head gates and authorized realistic combined Edge/BFF capacity are unresolved. No production deployment or actual student data is authorized.
+
+## Bounded exact-head CI scheduling amendment
+
+The owner authorized filter updates and workflow qualification. Add only PR938's exact authority path to twelve existing required test-workflow PR filters and bind the three shared test-only Admin Shell, Button Action Coverage and Environment Neutral Browser checkouts to the exact PR head with persisted credentials disabled. This supersedes earlier unchanged-workflow scope only for these bounded scheduling corrections. The active authority locks 34 changed paths plus two unchanged read-only verifier/test paths. All 131 required and 95 critical check identifiers, test commands, permissions, non-PR triggers, PR657-only writer and live-production guards remain unchanged. These mixed repository identifiers are not a branch-protection inventory.
+
+Fresh integrated root, focused and backend TypeScript checks pass. Local full Edge/smoke qualification is blocked by the unchanged pinned SDK network fetch. Local browser execution remains unverified after the pinned Chromium archive download failed; Docker/psql are unavailable. Independent review and renewed exact-head hosted workflow, browser and database evidence remain mandatory. Preserve the combined deployed-path and realistic Edge/BFF capacity release hold, all names-only and 30/40-row assertions, 200-row capacity and 600,000-iteration hashing. No dispatch, gate waiver, production action or real student data is authorized.
