@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1337,
+    "sourceFiles": 1340,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 98,
+    "oversizedSourceFiles": 97,
     "capabilityStrings": 140
   },
   "domains": [
@@ -1663,7 +1663,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/market/MarketRoute.js",
+        "file": "admin/v2/src/routes/market/MarketViewHelpers.js",
         "markers": [
           "fallback"
         ]
@@ -2756,10 +2756,6 @@
       {
         "file": "admin/admin-auth.js",
         "lines": 676
-      },
-      {
-        "file": "admin/v2/src/routes/market/MarketRoute.js",
-        "lines": 667
       },
       {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",

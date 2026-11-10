@@ -5,6 +5,7 @@ on:
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-936.json"
       - "docs/operations/contracts/player-cross-cutting/pr-939.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-941.json"
       - .github/workflows/banking-fx-clearing-v1.yml
       - backend/package.json
       - backend/src/domains/banking-fx/**
