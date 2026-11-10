@@ -11,6 +11,7 @@ import { renderConnectionError, renderSkeletonPage } from "./components/ui.js";
 import { escapeHtml, formatCurrency, serializeForm } from "./core/format.js";
 import { navigate, readRoute } from "./core/router.js";
 import { createStore } from "./core/store.js";
+import { subscribeTerminalRender } from "./core/terminal-render-subscription.js";
 import { focusFirstInteractive, setButtonProcessing } from "./core/dom.js";
 import { applyCapabilityControls } from "./core/capability-controls.js";
 import { ROUTE_TITLES, renderPlayerRoute } from "./core/route-renderer.js";
@@ -1116,7 +1117,7 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
     operation.catch((error) => { if (current(ticket) && !obsolete(error)) store.setState({ status: "error", error: normalizeApiError(error) }); });
   };
   globalThis.addEventListener(config.sessionReadyEvent, handleSessionReady);
-  const unsubscribe = store.subscribe(render);
+  const unsubscribe = subscribeTerminalRender(store, render);
   render();
   loadData();
   clockTimer = globalThis.setInterval(updateClock, 1000);

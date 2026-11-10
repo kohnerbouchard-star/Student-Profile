@@ -419,6 +419,40 @@ test("explicit Business offer completes once with keyboard-only modal operation"
   await expectFocused(businessPurchase);
   await expect(businessRow).toContainText("1 available");
   await expect(product).toContainText("TOTAL STOCK 11 · 3 SELLERS");
+
+  // A superseded background read can publish its live status after dismissal.
+  // Drive that ordering directly, without sleeps or relaxing keyboard checks.
+  await page.evaluate(async (offerKey) => {
+    const { installLiveStatusPresenter } = await import("/src/realtime/live-status-presenter.js");
+    globalThis.storeLiveFocusProbe = {
+      opener: document.querySelector(`[data-player-store-offer="${offerKey}"]`),
+      presenter: installLiveStatusPresenter({
+        mount: document.getElementById("playerTerminal"),
+        terminal: globalThis.Econovaria.playerTerminal,
+        config: { usePreviewData: false },
+      }),
+    };
+  }, BUSINESS_OFFER_KEY);
+  const liveIndicator = page.locator(".player-terminal-topbar-status [data-player-live-status]");
+  for (const status of ["updating", "offline", "reconnecting", "connected"]) {
+    const presented = await page.evaluate(async (status) => {
+      const { updateStoreFromSnapshot } = await import("/src/core/store.js");
+      const terminal = globalThis.Econovaria.playerTerminal;
+      updateStoreFromSnapshot(terminal.getState(), { live: { status, updatedAt: Date.now(), error: "" } });
+      await Promise.resolve(); // The existing presenter publishes in a microtask.
+      const indicator = document.querySelector(".player-terminal-topbar-status [data-player-live-status]");
+      return { status: indicator?.dataset.playerLiveStatus, live: indicator?.getAttribute("aria-live") };
+    }, status);
+    expect(presented).toEqual({ status, live: "polite" });
+    await expectFocused(businessPurchase);
+    await expectVisibleKeyboardFocus(businessPurchase);
+    expect(await businessPurchase.evaluate((element) => element === globalThis.storeLiveFocusProbe.opener)).toBe(true);
+  }
+  await page.evaluate(() => globalThis.Econovaria.playerTerminal.refreshResources(["store"]));
+  expect(await businessPurchase.evaluate((element) => element === globalThis.storeLiveFocusProbe.opener)).toBe(false);
+  await expect(businessRow).toContainText("1 available");
+  await expect(liveIndicator).toHaveAttribute("data-player-live-status", "connected");
+  await page.evaluate(() => globalThis.storeLiveFocusProbe.presenter.destroy());
 });
 
 test("NPC seller uses the same offer-bound funded Store checkout", async ({ page }) => {
