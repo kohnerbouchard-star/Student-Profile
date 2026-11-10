@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1333,
+    "sourceFiles": 1337,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 99,
+    "oversizedSourceFiles": 98,
     "capabilityStrings": 140
   },
   "domains": [
@@ -1699,7 +1699,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/news-events/NewsEventsRoute.js",
+        "file": "admin/v2/src/routes/news-events/NewsEventsViewHelpers.js",
         "markers": [
           "fallback"
         ]
@@ -2940,10 +2940,6 @@
       {
         "file": "backend/src/domains/players/api/playerLoginHttpHandler.ts",
         "lines": 545
-      },
-      {
-        "file": "admin/v2/src/routes/news-events/NewsEventsRoute.js",
-        "lines": 544
       },
       {
         "file": "admin/v2/src/routes/market/MarketController.js",
