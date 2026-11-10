@@ -17,6 +17,7 @@ import {
   PlayerProfileForm,
 } from "./PlayerForms.js";
 import { PlayersSkeleton } from "./PlayersSkeleton.js";
+import { openRosterCsvReview } from "./RosterCsvReview.js";
 
 function titleCase(value, fallback = "Not available") {
   const text = String(value || "").trim();
@@ -449,7 +450,15 @@ export function PlayersRoute({
   });
   const actions = createElement("div", {
     className: "admin-players-route__page-actions",
-    children: [refreshButton, addButton],
+    children: [refreshButton, routeButton({
+      label: "Check roster CSV",
+      quiet: true,
+      action: "check-roster",
+      onClick(event) {
+        destroyDialog();
+        activeDialog = openRosterCsvReview(event.currentTarget);
+      },
+    }), addButton],
   });
   const route = createElement("div", {
     className: "admin-players-route",

@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1325,
+    "sourceFiles": 1327,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 53,
@@ -2975,7 +2975,7 @@
       },
       {
         "file": "admin/v2/src/routes/players/PlayersRoute.js",
-        "lines": 521
+        "lines": 530
       },
       {
         "file": "backend/supabase/functions/license-payment-webhook/index.ts",
