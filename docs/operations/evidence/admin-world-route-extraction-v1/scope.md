@@ -1,7 +1,8 @@
 # Admin World Management route extraction
 
 - Roadmap ID: `ARCH-LARGE-ADMIN-WORLD-001`.
-- Status: `IMPLEMENTED_NOT_MERGED`; isolated owner `refactor/admin-world-management-route-extraction`.
+- Status: `IMPLEMENTED_NOT_MERGED`; draft [PR #939](https://github.com/kohnerbouchard-star/Student-Profile/pull/939), isolated owner `refactor/admin-world-management-route-extraction`.
+- Published implementation: `d162f3ea55064cc0816a94d34439e91e0c6929f6`, tree `d2a173023034f40d995b358bb09a77bc6e35488e`, identical to current-main local integration checkpoint `8e0db57bffbc0346ff6361684be05ef52174196e`.
 - Original source base: `c616ece3e1cebea79fd33c58f5f04ed961121407`; reviewed implementation `f7d94eef29aade53236482b642479c3d5730c715`. Current-main reconciliation base: `b77c9610e9b6ed3be93d8f4c888cacbc706df8ca`, freshly fetched 2026-11-10.
 - The owner explicitly approved retained-content public roadmap updates and qualified serial merges in World, Market, Banking, News & Events, Attendance and Messages order. Merge only after every required gate clears and the parent grants the serial merge slot. No production deployment, hosted-data mutation or release is authorized.
 
@@ -35,7 +36,7 @@ Completed checks:
 
 - Unchanged-main route characterization: 24/24.
 - Candidate route characterization: 24/24.
-- Registered Admin V2 suite: 150/150.
+- Registered Admin V2 suite: 150/150. Current-main integration reruns of all 24 focused, 150 Admin and full root tests also pass.
 - Backend TypeScript stage: passes; aggregate Edge qualification is recorded separately below.
 - Deterministic architecture inventory: 98 oversized sources, with other debt counts unchanged.
 - Full root `npm test`: passes, including its architecture, boundary, legacy, security and Admin contracts.
@@ -54,4 +55,4 @@ Outstanding checks and known baseline failure:
 
 Revert only this extraction and regenerate the inventory. No database or hosted-state rollback is required. Preserve other owners' source and additive ledger entries.
 
-Next exact item: independently review current-main integration, publish a separate draft PR with actual-number authority preserving all current-main required/critical checks, then qualify its exact final head. The newly explicit public-roadmap approval permits one evidence-backed retry of the previously unexecuted denied upload; stop if denied again and never use a bypass. After every mandatory gate clears, coordinate the merge slot with the parent, then advance to Market, Banking, News & Events, Attendance and Messages serially. No deployment or broader feature/runtime completion credit is granted.
+Next exact item: independently review current-main integration, publish a separate draft PR with actual-number authority preserving all current-main required/critical checks, then qualify its exact final head. The newly explicit public-roadmap approval cleared the previously unexecuted upload on its single evidence-backed retry; the returned blob and published tree hashes were verified. PR #939 authority retains all 129 required and 94 critical predecessor checks unchanged, including Admin Browser E2E, under 15 exact path locks (13 changed paths plus two unchanged read-only verifier/test paths). Production deployment, mutation and secret handling remain false. After every mandatory gate clears, coordinate the merge slot with the parent, then advance to Market, Banking, News & Events, Attendance and Messages serially. No deployment or broader feature/runtime completion credit is granted.
