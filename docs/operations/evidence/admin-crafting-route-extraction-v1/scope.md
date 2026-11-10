@@ -1,7 +1,8 @@
 # Admin Crafting route extraction
 
 - Roadmap ID: `ARCH-LARGE-ADMIN-CRAFTING-001`.
-- Status: `IMPLEMENTED_NOT_MERGED`; branch `refactor/admin-crafting-route-extraction`.
+- Status: `IMPLEMENTED_NOT_MERGED`; branch `refactor/admin-crafting-route-extraction`, draft [PR #935](https://github.com/kohnerbouchard-star/Student-Profile/pull/935).
+- Implementation commit: `15b920eafe1faa60601d090f6ec878f8c06ab906`; independently reviewed tree: `cea8622d88caf15358fe81c240c62ce263330049`.
 - Audited base: `a29f4439368aca18e14a06819e5a7ad6040ac74d` (current main fetched 2026-11-10).
 - Production deployment, hosted-data mutation, merge, auto-merge and ready-for-review transition are not authorized.
 
@@ -27,7 +28,7 @@ New route characterization was run against a separate unchanged-main source copy
 
 The characterization is imported by the existing Crafting API/controller suite, which the retained Admin V2 suite and Crafting workflow already run. Existing tests and assertions are unchanged. The original desktop/mobile Crafting and supply-mutation browser runners remain required and byte-identical.
 
-Local pinned tools: Node 22.23.1, npm 10.9.8 and Deno 2.9.3. Existing installed root/backend dependencies are reused with manifests and lockfiles unchanged.
+Local pinned tools: Node 22.23.1, npm 10.9.8 and Deno 2.9.3. Initial checks reused existing installed dependencies. Clean root/backend `npm ci` subsequently pass with a writable temporary cache, with manifests and lockfiles unchanged; the final registered Admin, TypeScript and full root checks all pass on those fresh installs.
 
 Completed local checks:
 
@@ -43,10 +44,16 @@ Outstanding qualification:
 - Backend `typecheck:all` passes TypeScript but cannot complete its Edge step because the unchanged pinned Supabase dependency at esm.sh returns connection refused.
 - Full backend smoke stops at the unchanged pinned Supabase esm.sh import with connection refused; no aggregate pass is claimed.
 - Real-browser run cannot launch because pinned Chromium is absent. The official Playwright Chromium 158.0.8127.18 install fails with truncated/invalid ZIP downloads; both retained browser suites still require hosted qualification.
-- Independent read-only review found no actionable source or test issue and independently passed the 38-case Crafting and 126-case Admin suites. Exact-head hosted checks and final publication metadata remain pending.
+- Independent read-only review found no actionable source or test issue and independently passed the 38-case Crafting and 126-case Admin suites. Exact-head hosted checks remain pending; metadata registration is described below.
 
 ## Rollback and next step
 
 Revert only the bounded extraction and regenerate the source inventory if needed. Characterization can still run against the original route; no database or hosted-state rollback is required. Preserve all concurrent feature work, prior roadmap entries and release/security holds.
 
-Next exact item: independently review this branch, publish its own draft PR with actual-number scope authority, and qualify the exact final head. Continue the other proposed large Admin route extractions separately after another ownership check. This tranche does not certify the entire large-file program or any feature/persistence retirement.
+Next exact item: independently review and publish the actual-number scope authority, then qualify the exact final head of draft PR935. Continue the other proposed large Admin route extractions separately after another ownership check. This tranche does not certify the entire large-file program or any feature/persistence retirement.
+
+## Draft publication registration
+
+Draft PR935 contains the exact independently reviewed implementation tree. Its actual-number authority locks the 13 changed paths plus the two unchanged authority verifier/test paths, with no wildcard. Main PR923's 125 required and 92 critical checks are retained in order and unchanged; the existing `Admin V2 Crafting` workflow and `Crafting V2 contracts and browser smoke` job bring the totals to 127 required and 93 critical checks. No workflow or verifier is edited. Production deployment, hosted mutation and secret-value flags remain false. This metadata does not waive unavailable browser/Edge evidence or grant merged-main completion credit.
+
+The three-file registration changes only this evidence, the additive roadmap entry and `pr-935.json`; runtime, tests and generated inventory remain byte-identical to implementation `15b920ea`. Final source qualification and the exact-head hosted results must be checked after this metadata commit.
