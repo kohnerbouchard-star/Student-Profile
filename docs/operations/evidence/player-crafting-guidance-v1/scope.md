@@ -4,7 +4,8 @@
 - Owner: `feat/player-crafting-guidance-v1`.
 - Audited main: `a29f4439368aca18e14a06819e5a7ad6040ac74d`.
 - Implementation: `d9685b612d74f7e0b1289cac01941d9fd16a8f1f`.
-- Status: `IMPLEMENTED_NOT_MERGED`; draft publication and exact-head hosted qualification follow.
+- Draft PR: [#932](https://github.com/kohnerbouchard-star/Student-Profile/pull/932). Published implementation `c784ac1ae5094b3f352a84a9eeeea30f7530fbae` has tree `f5e061efc1d06230f0d5a0b7dc0fe9327e013801`, identical to the locally tested implementation/evidence tree.
+- Status: `IMPLEMENTED_NOT_MERGED`; exact-head hosted qualification remains required.
 - Production deployment and live data mutation: not authorized and not performed.
 
 ## Request, ownership and reconciliation
@@ -38,4 +39,6 @@ The helper is 53 lines. Source count grows from 1,325 to 1,326; oversized files 
 - Independent source review: one overbroad sentence about server requirement checks was narrowed to the verified start decision; re-review and focused regression are clear. Workshop/tools/entitlements are published metadata, not a newly enforced backend policy.
 - No connected staging, live database, deployment, merge or broad runtime certification.
 
-Next: bind the draft PR's actual number, qualify its exact head and obtain browser evidence. Later economy roadmap work requires its own bounded owner/PR; do not infer new lending/default policy or expand this PR.
+Next: qualify the final exact head and obtain browser evidence. Later economy roadmap work requires its own bounded owner/PR; do not infer new lending/default policy or expand this PR.
+
+Actual-number authority `pr-932.json` retains all 125 required/92 critical predecessor checks, eight edited paths and two unchanged verifier/test paths. Production deployment, mutation and secret permissions remain false. Secret/whitespace checks and all 16 authority regressions pass.
