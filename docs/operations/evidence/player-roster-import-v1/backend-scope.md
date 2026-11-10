@@ -20,7 +20,7 @@ No prior migration is edited. Normal rollout requires review, mandatory disposab
 
 ## Verification
 
-Passed locally: ten focused Deno application/adapter/HTTP cases, three Node boundary/source checks, 22 existing-plus-extended Admin guard/dispatcher/control tests, backend TypeScript, migration-source audit (463 unique versions), 27 immutable Phase15 forward-bundle/rehearsal checks, and whitespace checks. New source modules remain below 500 lines. New API/application modules contain no persistence calls.
+Passed locally: twelve focused Deno application/adapter/HTTP cases, three Node boundary/source checks, 22 existing-plus-extended Admin guard/dispatcher/control tests, backend TypeScript, migration-source audit (463 unique versions), 27 immutable Phase15 forward-bundle/rehearsal checks, and whitespace checks. New source modules remain below 500 lines. New API/application modules contain no persistence calls.
 
 Full Edge typecheck cannot finish because the frozen Supabase SDK esm.sh fetch is refused in this environment. The dedicated workflow invokes the focused Deno suite directly, leaving the frozen backend package/snapshot intact. Full root validation passes on committed current-main integration 7113ffdd (tree identical to published e0745b21) with the regenerated inventory; all existing architecture, migration, release and source-census guards remain intact. Local psql/Docker are absent, so scripts/player-roster-import-database.sql has NOT executed. The dedicated Player Roster Import workflow requires clean disposable migration replay, real SQL rollback/replay/conflict/scope assertions, and database lint. Static source checks do not replace that SQL gate. Full smoke also stopped at the frozen SDK import. Exact-head hosted results remain required. The added concurrency harness is syntax-checked but unexecuted locally: it starts real separate disposable Docker psql sessions, verifies advisory-lock waiting before release, and proves same-key replay, distinct-import serialization, and import/single-player-create lock-order compatibility. The new migration is the exact-digest fifteenth suffix; all fourteen predecessor registrations and immutable manifests remain unchanged.
 
@@ -51,3 +51,13 @@ Normal merges through main 56c72864 preserve every merged #932 Crafting guidance
 ## Exact PR qualification scope
 
 PR938 authority locks the 22 changed paths and two unchanged read-only verifier/test paths. It retains every PR937 required and critical check in original order and adds Player Roster Import / Atomic roster provisioning and replay (131 required / 95 critical). All deployment, production mutation and secret-value grants remain false. Initial hosted runs have started; no SQL, concurrency or deployed resource success is inferred before their exact-head results.
+
+
+## Typical classroom qualification
+
+The owner clarified that a typical roster has about 30 students. Qualification now includes 30 and an above-class margin of 40, while preserving the 200-row maximum and 600,000-iteration credential hash. Two focused application tests verify full ordered receipts, repeated names as distinct identities, unique generated codes, one create and code-free replay without further hashing. The rollback-only SQL fixture adds real 30/40-row canonical assignment/credential counts, one aggregate audit, ordered receipts and unchanged replay. Those SQL assertions remain pending hosted execution; local doubles do not prove atomicity.
+
+Fresh synthetic offline benchmark on the same toolchain: 1 row 91ms, 30 rows 2,658ms, 40 rows 3,464ms, 200 rows 17,247ms wall time. No credential material was printed. These measurements help size the realistic qualification matrix but do not establish hosted Edge CPU accounting or BFF headroom; the existing resource release hold remains unchanged.
+
+
+Hosted initial head fc4f156a passed full Edge typecheck and clean migration reset. Its first SQL import stopped with GAME_SESSION_NOT_FOUND because the synthetic fixture mixed active status with draft lifecycle; the existing lifecycle trigger correctly made it inactive. The corrected fixtures use consistent active/non-joinable state and migration-seeded canonical countries without disabling or changing any guard. Renewed actual SQL/rollback/concurrency execution remains mandatory; no atomicity success is claimed from the failed run.

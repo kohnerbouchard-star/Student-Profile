@@ -340,3 +340,69 @@ Deno.test("lone UTF-16 surrogates fail before replay or hashing; valid supplemen
   const name = "Synthetic \u{20000} \u{1F600}";
   assert(parseRosterImportNames({ studentNames: [name] })[0] === name);
 });
+
+for (const rows of [30, 40]) {
+  Deno.test(`synthetic ${rows}-student class preserves all ordered identities and code-free replay`, async () => {
+    const names = Array.from(
+      { length: rows },
+      (_, index) => `Synthetic Class Student ${Math.floor(index / 2) + 1}`,
+    );
+    const cohort = { ...command, studentNames: names };
+    let saved: RosterImportReceipt | null = null;
+    let creates = 0;
+    let hashes = 0;
+    const codes: string[] = [];
+    const repository = {
+      readReplay: async () => saved && { ...saved, replayed: true },
+      create: async (
+        input: RosterImportCommand,
+        credentials: readonly RosterImportCredential[],
+      ) => {
+        creates++;
+        assert(
+          input.studentNames.length === rows && credentials.length === rows,
+        );
+        assert(JSON.stringify(input.studentNames) === JSON.stringify(names));
+        assert(
+          new Set(credentials.map((value) => value.playerIdentifier)).size ===
+            rows,
+        );
+        assert(
+          codes.every((code) => !JSON.stringify(credentials).includes(code)),
+        );
+        saved = {
+          status: 201,
+          replayed: false,
+          createdCount: rows,
+          students: credentials.map((credential, index) => ({
+            row: index + 1,
+            displayName: input.studentNames[index],
+            playerIdentifier: credential.playerIdentifier,
+          })),
+        };
+        return saved;
+      },
+    };
+    const dependencies = {
+      createCredentialMaterial: async (code: string) => {
+        hashes++;
+        codes.push(code);
+        return material;
+      },
+    };
+    const fresh = await importPlayerRoster(repository, cohort, dependencies);
+    assert(fresh.createdCount === rows && fresh.students.length === rows);
+    assert(fresh.credentialsAvailable && !fresh.replayed);
+    assert(new Set(codes).size === rows);
+    assert(fresh.students.every((student, index) =>
+      student.row === index + 1 &&
+      student.displayName === names[index] &&
+      "accessCode" in student && student.accessCode === codes[index]
+    ));
+    const replay = await importPlayerRoster(repository, cohort, dependencies);
+    assert(replay.replayed && !replay.credentialsAvailable);
+    assert(!JSON.stringify(replay).includes("accessCode"));
+    assert(JSON.stringify(replay.students) === JSON.stringify(saved!.students));
+    assert(creates === 1 && hashes === rows);
+  });
+}

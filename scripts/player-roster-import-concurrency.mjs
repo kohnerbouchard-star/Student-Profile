@@ -24,10 +24,10 @@ await session(`
 begin;
 insert into public.staff_users(id,supabase_auth_user_id,email,display_name,status,role)
 values('${staff}','f3000000-0000-4000-8000-000000000002','roster-race@example.invalid','Synthetic concurrency owner','active','game_admin');
-insert into public.game_sessions(id,owner_staff_user_id,name,status,lifecycle_state,provisioning_status)
-values('${game}','${staff}','Synthetic concurrent import','active','draft','pending');
-insert into public.country_profiles(country_code,country_name,capital_name,currency_code,status)
-values('ROSTER_RACE','Synthetic race country','Synthetic capital','ECO','active');
+insert into public.game_sessions(id,owner_staff_user_id,name,status,lifecycle_state,provisioning_status,game_join_code_status)
+values('${game}','${staff}','Synthetic concurrent import','active','active','pending','pending');
+-- The active game is non-joinable; retain lifecycle and provisioning guards.
+-- Canonical countries are supplied by the migration-replayed disposable DB.
 commit;
 `);
 const args = letter => {
