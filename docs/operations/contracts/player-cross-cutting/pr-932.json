@@ -157,7 +157,11 @@
     "Admin Shell Smoke",
     "admin-shell-smoke",
     "Admin Scroll Integrity",
-    "Rendered viewport and drawer scrolling"
+    "Rendered viewport and drawer scrolling",
+    "Admin V2 Crafting",
+    "Crafting V2 contracts and browser smoke",
+    "Player Response Privacy",
+    "player-response-privacy"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -251,12 +255,14 @@
     "Economic Core Request Claims",
     "REF046 exclusive disposable qualification",
     "admin-shell-smoke",
-    "Rendered viewport and drawer scrolling"
+    "Rendered viewport and drawer scrolling",
+    "Crafting V2 contracts and browser smoke",
+    "player-response-privacy"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "The owner requested starting feature-roadmap changes in separate PRs. PR932 covers only selected-recipe Crafting guidance, a small read-only helper, focused Node/browser regressions, generated inventory, evidence and additive roadmap intake. Keep all 125 required and 92 critical predecessor checks unchanged and both verifier/test paths read-only. Existing mutation, ownership, permission and idempotency contracts remain authoritative. No teacher/CSS/backend, migration, economic-policy or lending-gate changes, merge, deployment, live mutation, secrets, manual dispatch or check waiver. Exact-head hosted checks and Chromium qualification remain required.",
+  "authorizationNote": "The owner requested starting feature-roadmap changes in separate PRs. PR932 covers only selected-recipe Crafting guidance, a small read-only helper, focused Node/browser regressions, generated inventory, evidence and additive roadmap intake. Keep all 129 required and 94 critical current-main checks unchanged and both verifier/test paths read-only. Existing mutation, ownership, permission and idempotency contracts remain authoritative. No teacher/CSS/backend, migration, economic-policy or lending-gate changes, merge, deployment, live mutation, secrets, manual dispatch or check waiver. Exact-head hosted checks and Chromium qualification remain required.",
   "scopeRecord": "docs/operations/evidence/player-crafting-guidance-v1/scope.md"
 }
