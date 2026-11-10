@@ -161,7 +161,9 @@
     "Admin Scroll Integrity",
     "Rendered viewport and drawer scrolling",
     "Admin V2 Crafting",
-    "Crafting V2 contracts and browser smoke"
+    "Crafting V2 contracts and browser smoke",
+    "Player Response Privacy",
+    "player-response-privacy"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -256,11 +258,12 @@
     "REF046 exclusive disposable qualification",
     "admin-shell-smoke",
     "Rendered viewport and drawer scrolling",
-    "Crafting V2 contracts and browser smoke"
+    "Crafting V2 contracts and browser smoke",
+    "player-response-privacy"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "The owner approved publishing the bounded scanner focus correction, its regressions, integrity review binding and supporting qualification records, and continuing hosted checks in a draft. Retain every current-main required and critical check. The required roadmap update remains a completion and merge blocker, with no waiver. No production deployment or mutation, secret handling, verifier change or test weakening is authorized."
+  "authorizationNote": "The owner explicitly approved publishing the bounded scanner focus correction, its regressions, integrity review binding, qualification records and required roadmap update to this public repository. Retain every current-main required and critical check. Keep the PR draft until fresh exact-head qualification and all required gates pass. No production deployment or mutation, secret handling, verifier change or test weakening is authorized."
 }
