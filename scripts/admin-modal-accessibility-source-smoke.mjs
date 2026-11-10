@@ -87,3 +87,5 @@ for (const [label, content] of [["controller", source], ["bridge", bridge], ["dr
 }
 
 console.log("Admin modal, nested-dialog, and Player drawer accessibility source contracts passed.");
+
+await import("./admin-scanner-focus-ownership.test.mjs");

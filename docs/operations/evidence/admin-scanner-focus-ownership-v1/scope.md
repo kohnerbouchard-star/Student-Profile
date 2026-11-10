@@ -1,0 +1,25 @@
+# Scanner focus ownership correction
+
+Roadmap: `MAINT-ADMIN-SCANNER-FOCUS-001`. Base main: `a29f4439368aca18e14a06819e5a7ad6040ac74d`. Branch: `fix/admin-scanner-autofocus-ownership`.
+
+## Cause and scope
+
+PR929 head `74a4bafb92b1091a72f73d7913a1056043bd5e46` fails the retained mounted modal focus assertion in [Shell run 42605617081, job 129120723348](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/42605617081/job/129120723348). The focus trace records a keyboard-selected Refocus button followed by the legacy `setScannerMode` animation-frame callback focusing the scanner input. Current main retains that unconditional callback. The separate test-only startup/Contract-readiness work is not changed here.
+
+Guard only the scanner focus queue and its passive initial binding. Each request captures focus and mode, supersedes older requests, and verifies the original current scanner, connected visible enabled target, current mode and modal owner. A newer focus choice wins. Passive initialization preserves a focused dialog control. Explicit mode switches and Refocus retain their normal input focus; hiding the previously active input may reset focus to body and is handled narrowly.
+
+The runtime file is a retained source artifact under `admin/dist/`. Its accepted historical v606 blob hash remains `763f6c1af68eb985a77f36fed412a2ec7e6e819d`. The audit uniquely matches two exact replacement blocks, restores their exact original bytes in memory, then hashes the complete reconstructed file against the unchanged historical hash. Missing/duplicate/edited correction blocks and unrelated drift must fail. The three CSS hashes and every other visual/transport/authentication assertion remain unchanged.
+
+No backend, schema, migration, route, RPC, CSS, API, workflow, dependency, auth, deployment, live-data mutation or security setting change. No waived or removed test. Existing Refocus browser assertion stays unchanged.
+
+## Qualification
+
+Pinned Node 22.23.1/npm 10.9.8: all 34 deterministic focus/integrity cases pass, including two reproductions using the exact original scanner implementation. The existing modal source gate imports these regressions. Full root `npm test`, backend TypeScript, historical v606 integrity, secret scan and whitespace checks pass. Independent read-only review found no actionable issue and independently reran all 34 cases and the unchanged-hash audit. Browser qualification remains pending: the official locked Chromium 158 download returned invalid/truncated archives. Pinned Deno 2.9.3 Edge typechecking stops at the unchanged esm.sh Supabase SDK connection refusal; it is not a pass. Backend smoke was interrupted before a final result; no complete pass is claimed. Exact-head hosted checks must supply missing browser/Edge evidence. Source publication alone will not be reported as browser or merged-main qualification. All production holds remain.
+
+## Current-main reconciliation
+
+Before publication, integrate merged Crafting refactor #935 through main `c616ece3e1cebea79fd33c58f5f04ed961121407`. Its thirteen source/test/authority/evidence paths and complete intake entry are retained byte-for-byte. The five scanner runtime/test/audit files remain byte-identical to independently reviewed local implementation `c0e0d72e71472c0022c60a0304e93115b0570c47`. The only shared conflict is resolved by retaining both roadmap entries. Fresh combined-tree root/focused checks and exact-head hosted browser/Edge qualification remain required.
+
+## Committed source-review binding
+
+The first combined committed-tree root run correctly failed REF-003 because its retained generated-source review still named original blob `763f6c1a`. Earlier uncommitted root qualification read the old Git snapshot and did not certify this binding. Rebind only this reviewed source record to `d1eb31f6`, retain its disposition and every external-use/deletion/retirement limit, and hash-bind the exact patch contract and focused regressions. The v606 original hash and scanner inverse-normalization remain unchanged. No refactor audit assertion or verifier is relaxed. Fresh committed-tree qualification follows.
