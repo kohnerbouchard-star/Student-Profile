@@ -195,3 +195,78 @@ for (const viewport of [
     await expect(surface.getByText("No recipes available", { exact: true })).toHaveCount(0);
   });
 }
+
+async function mountGuidanceTerminal(page, acquisitionEnabled = true) {
+  await page.route("**/__crafting-guidance-fixture", (route) => route.fulfill({ contentType: "text/html", body: fixtureDocument }));
+  await page.goto("/__crafting-guidance-fixture#crafting");
+  await page.evaluate(async ({ crafting, acquisitionEnabled }) => {
+    const { createPlayerTerminal } = await import("/src/app.js");
+    const { buildPlayerTerminalConfig } = await import("/src/config/player-terminal.config.js");
+    const { previewData } = await import("/src/data/preview-data.js");
+    const models = structuredClone(previewData);
+    models.crafting = structuredClone(crafting);
+    models.crafting.recipes.unshift({
+      ...crafting.recipes[0], id: "recipe.blocked", recipeKey: "recipe.blocked", name: "Locked Filter",
+      unlockStatus: "Locked", enabled: false,
+      ingredients: [{ itemKey: "fiber", name: "Fiber", owned: 2, required: 6 }],
+      requiredTools: ["tool.welder"], requiredEntitlements: ["license.fabrication"],
+    });
+    const calls = [];
+    const config = buildPlayerTerminalConfig({
+      usePreviewData: false, authenticated: true, csrfToken: "C".repeat(43), gameSessionId: "crafting-guidance-fixture",
+      capabilities: { routes: { crafting: true, inventory: true, store: acquisitionEnabled, marketplace: acquisitionEnabled }, actions: { craftItem: true } },
+      apiCall: async (context) => { calls.push(context.endpointKey); return structuredClone(models[context.endpointKey]); },
+    });
+    const terminal = createPlayerTerminal({ mount: document.querySelector("#playerTerminal"), config });
+    globalThis.craftingGuidanceFixture = { terminal, calls, models };
+  }, { crafting, acquisitionEnabled });
+  await expect(page.getByRole("region", { name: "Recipe requirements" })).toBeVisible();
+}
+
+test("Crafting explains shortages and supports real acquisition navigation without writes", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await mountGuidanceTerminal(page);
+  const guidance = page.getByRole("region", { name: "Recipe requirements" });
+  await expect(page.getByText("2 available / 6 required · Need 4 more for one craft")).toBeVisible();
+  await expect(guidance).toContainText("does not specify how to unlock");
+  await expect(guidance).toContainText("Required tools: tool.welder");
+  await expect(guidance).toContainText("Required entitlements: license.fabrication");
+  await expect(guidance).toContainText("allowed slot before equipping");
+  await expect(page.getByRole("button", { name: "Craft item", exact: true })).toBeDisabled();
+  for (const [label, route] of [["Browse Store", "store"], ["Browse Marketplace", "marketplace"], ["Review Inventory", "inventory"]]) {
+    await guidance.getByRole("button", { name: label, exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(new RegExp(`#${route}$`));
+    await expect(page.locator("#player-main-content .player-terminal-page")).toBeVisible();
+    await page.goBack();
+    await expect(guidance).toBeVisible();
+    await expect(page.getByText("2 available / 6 required · Need 4 more for one craft")).toBeVisible();
+    await page.goForward();
+    await expect(page).toHaveURL(new RegExp(`#${route}$`));
+    await page.goBack();
+    await expect(guidance).toBeVisible();
+  }
+  await page.locator('[data-player-crafting-recipe="recipe.field_filter"]').click();
+  await expect(guidance).toContainText("Ingredients are available for one craft");
+  await expect(guidance.getByRole("button", { name: "Browse Store" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Craft item", exact: true })).toBeEnabled();
+  await page.locator('[data-player-crafting-recipe="recipe.blocked"]').click();
+  await expect(page.getByRole("button", { name: "Craft item", exact: true })).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false);
+  expect(await page.evaluate(() => craftingGuidanceFixture.calls.filter((key) => ["craftItem", "storePurchase", "marketplacePurchase", "inventoryUse"].includes(key)))).toEqual([]);
+  expect(errors).toEqual([]);
+  await page.evaluate(() => craftingGuidanceFixture.terminal.destroy());
+});
+
+test("Crafting acquisition controls honor unavailable route capabilities", async ({ page }) => {
+  await mountGuidanceTerminal(page, false);
+  const guidance = page.getByRole("region", { name: "Recipe requirements" });
+  await expect(guidance.getByRole("button", { name: "Browse Store" })).toBeDisabled();
+  await expect(guidance.getByRole("button", { name: "Browse Marketplace" })).toBeDisabled();
+  await expect(guidance.getByRole("button", { name: "Review Inventory" })).toBeEnabled();
+  await guidance.getByRole("button", { name: "Browse Store" }).dispatchEvent("click");
+  await expect(page).toHaveURL(/#crafting$/);
+  expect(await page.evaluate(() => craftingGuidanceFixture.calls.includes("store"))).toBe(false);
+  await page.evaluate(() => craftingGuidanceFixture.terminal.destroy());
+});
