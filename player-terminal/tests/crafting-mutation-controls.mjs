@@ -143,7 +143,16 @@ assert.match(blockedMarkup, /current read does not specify how to unlock/);
 assert.match(blockedMarkup, /tool.&lt;welder&gt;/);
 assert.match(blockedMarkup, /license.&amp;fabrication/);
 assert.match(blockedMarkup, /Alloy &lt;script&gt;/);
-assert.doesNotMatch(blockedMarkup, /<script>|<welder>/);
+assert.doesNotMatch(blockedMarkup, /<script\b|<welder\b/i);
+for (const [name, escaped] of [
+  ["<SCRIPT>alert(1)</SCRIPT>", "&lt;SCRIPT&gt;alert(1)&lt;/SCRIPT&gt;"],
+  ["<ScRiPt src=x>", "&lt;ScRiPt src=x&gt;"],
+  ["<script >", "&lt;script &gt;"],
+]) {
+  const markup = renderRecipe({ ...blockedRecipe, ingredients: [{ name, owned: 2, required: 6 }] });
+  assert.ok(markup.includes(escaped));
+  assert.doesNotMatch(markup, /<script\b/i);
+}
 assert.match(blockedMarkup, /data-route="store"/);
 assert.match(blockedMarkup, /data-route="marketplace"/);
 assert.match(blockedMarkup, /data-route="inventory"/);

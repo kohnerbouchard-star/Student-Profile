@@ -42,3 +42,11 @@ The helper is 53 lines. Source count grows from 1,325 to 1,326; oversized files 
 Next: qualify the final exact head and obtain browser evidence. Later economy roadmap work requires its own bounded owner/PR; do not infer new lending/default policy or expand this PR.
 
 Actual-number authority `pr-932.json` retains all 125 required/92 critical predecessor checks, eight edited paths and two unchanged verifier/test paths. Production deployment, mutation and secret permissions remain false. Secret/whitespace checks and all 16 authority regressions pass.
+
+## Hosted checkpoint and test-only follow-up
+
+Exact head `169a85c592b6577d2127659e8af31e8ce81ac4ef` passed [Player Terminal Verify](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/42770464334): 291 Chromium cases pass, including all 12 Crafting cases across both projects; 11 existing suite skips remain. This supplies hosted evidence for the previously blocked local browser stage. Crafting Runtime and Repository Quality also passed on that head. This is not an aggregate readiness certificate.
+
+The separate CodeQL check flagged a case-sensitive HTML-detection assertion in the new test file, not the production escaping. The follow-up makes the assertion case-insensitive with a tag-name boundary and adds explicit uppercase, mixed-case and whitespace tag cases. Runtime source and all existing guards remain unchanged. New-head CodeQL and all applicable checks must pass; the comment is not dismissed or waived.
+
+That earlier head also encountered an Admin test-gateway startup failure and one transient connected-commerce ledger-read 503. Admin state checks and database setup passed before readiness failed. The commerce artifact proves transfer/Store assertions passed and later ledger reads recovered; its strict console check still correctly failed and blocked downstream journeys. One failed-job-only retry of each unchanged job was requested without weakening checks. Admin retry job `129686909514` passed its complete rendered and secure mutation journeys on the unchanged head; connected Player retry remained pending at this checkpoint. Final-head results supersede these historical attempts.
