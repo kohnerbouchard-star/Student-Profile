@@ -20,6 +20,7 @@
     "docs/operations/evidence/story-roleplay-persistence-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "docs/operations/contracts/player-cross-cutting/pr-934.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
@@ -35,6 +36,7 @@
     "docs/operations/evidence/story-roleplay-persistence-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "docs/operations/contracts/player-cross-cutting/pr-934.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],

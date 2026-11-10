@@ -29,7 +29,7 @@ Editable runtime/test paths:
 - `backend/tests/domains/storylines/storyDecisionRoleplayParity.test.ts`
 - `backend/package.json` (existing test registration only)
 
-Evidence/metadata: this directory, actual-number PR authority (after creation), the generated architecture inventory and one
+Evidence/metadata: this directory, the three supporting package hashes in REF-003 candidates.json, actual-number PR authority, the generated architecture inventory and one
 additive beta Scope Intake entry. No legacy path is deleted without reachability
 and retirement evidence. The 53-file lexical count is not a removal target.
 
@@ -111,8 +111,23 @@ transactional authority, existing legacy path or production state was modified.
 ## Actual-number registration
 
 The metadata-only follow-up records PR #934, its implementation identity and the
-exact path authority. It locks 11 changed paths plus two unchanged read-only
+exact path authority. It locks 12 changed paths plus two unchanged read-only
 verifier/test paths. All 125 required and 92 critical predecessor checks from
 current-main PR923 are preserved in order. Production deployment, mutation and
 secret flags remain false. No existing authority, workflow or verifier changes.
 Keep draft until final-head checks and any required acceptance evidence qualify.
+
+
+## Committed-tree evidence refresh
+
+A final check on committed head `50e18e40` detected stale REF-003 supporting
+hashes for backend/package.json. The earlier root pass used the prior committed
+HEAD while validating working-tree scripts. Review confirms the package change
+only adds this parity test to the existing Contract suite. Refresh the three
+supporting hashes and append that review record, preserving all classifications,
+retirement gates, historical measurements and the invalidation assertion. This
+necessary evidence maintenance is included in the 12-path authority; no source,
+test, guard or budget change is introduced. The full root suite passed against corrected committed tree
+`301114fd38ab3ce5be200f56bc0db15b7c2c8b94`; authority CLI, all 16 authority
+tests, secrets and whitespace also passed. This result replaces the earlier
+working-tree-only qualification for the hash-bound census.
