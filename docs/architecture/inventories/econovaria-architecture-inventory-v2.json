@@ -3920,6 +3920,7 @@
         "locations": [
           "backend/src/domains/store/api/playerStorePublicHttpHandlerTestSupport.ts",
           "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts",
+          "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.test.ts",
           "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts",
           "player-terminal/src/api/preview-transport.js",
           "player-terminal/src/features/store/store-purchase-contract.js"

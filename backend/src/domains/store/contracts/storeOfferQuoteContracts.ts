@@ -99,6 +99,21 @@ export function normalizeBusinessStoreOfferQuoteCommand(
 export function parseBusinessStoreOfferQuote(
   value: unknown,
 ): BusinessStoreOfferQuoteDto {
+  return parseBusinessStoreOfferQuoteWithLifetime(value, "exact");
+}
+
+export function parseBusinessStoreOfferFundingQuote(
+  value: unknown,
+): BusinessStoreOfferQuoteDto {
+  // Funded SQL caps expiry at the next FX fixing. The unfunded v2 authority
+  // retains its exact two-minute lifetime; only funded callers use this bound.
+  return parseBusinessStoreOfferQuoteWithLifetime(value, "funded");
+}
+
+function parseBusinessStoreOfferQuoteWithLifetime(
+  value: unknown,
+  lifetimePolicy: "exact" | "funded",
+): BusinessStoreOfferQuoteDto {
   const row = record(value);
   const quantity = integer(row.quantity, "quantity", true);
   const available = integer(row.availableQuantityAtQuote, "availableQuantityAtQuote");
@@ -128,7 +143,12 @@ export function parseBusinessStoreOfferQuote(
   const createdAt = timestamp(row.createdAt, "createdAt");
   const expiresAt = timestamp(row.expiresAt, "expiresAt");
   const lifetime = Date.parse(expiresAt) - Date.parse(createdAt);
-  if (lifetime !== 120_000) resultFail("Quote lifetime must be exactly two minutes.");
+  if (lifetimePolicy === "exact" && lifetime !== 120_000) {
+    resultFail("Quote lifetime must be exactly two minutes.");
+  }
+  if (lifetime <= 0 || lifetime > 120_000) {
+    resultFail("Funded quote lifetime must be positive and at most two minutes.");
+  }
 
   return {
     quoteKey: pattern(row.quoteKey, PATTERNS.quoteKey, "quoteKey"),
