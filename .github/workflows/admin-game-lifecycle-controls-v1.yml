@@ -3,6 +3,7 @@ name: Admin Game Lifecycle Controls
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
       - "docs/operations/contracts/player-cross-cutting/pr-940.json"
       - "admin/css/game-lifecycle-controls.css"
       - "admin/game-lifecycle-controls.js"
