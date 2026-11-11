@@ -5,6 +5,9 @@ on:
   pull_request:
     branches: [main, feat/player-business-workspace-v2, feat/business-financial-reporting-v2, feat/business-common-equity-v2, feat/business-ipo-issuance-v2]
     paths:
+      - "scripts/admin-account-controls-dom-fixture.mjs"
+      - "scripts/admin-account-controls.test.mjs"
+      - "scripts/admin-account-controls-browser-check.mjs"
       - "docs/operations/contracts/player-cross-cutting/pr-951.json"
       - "docs/operations/contracts/player-cross-cutting/pr-945.json"
       - "docs/operations/contracts/player-cross-cutting/pr-949.json"

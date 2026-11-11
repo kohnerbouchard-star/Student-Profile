@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-938.json"
+      - "scripts/admin-account-controls-dom-fixture.mjs"
+      - "scripts/admin-account-controls.test.mjs"
       - "docs/operations/contracts/player-cross-cutting/pr-946.json"
       - "docs/operations/contracts/player-cross-cutting/pr-951.json"
       - "docs/operations/contracts/player-cross-cutting/pr-945.json"

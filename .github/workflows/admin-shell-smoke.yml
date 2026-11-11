@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-938.json"
+      - "scripts/admin-account-controls-dom-fixture.mjs"
+      - "scripts/admin-account-controls.test.mjs"
       - "docs/operations/contracts/player-cross-cutting/pr-946.json"
       - "docs/operations/contracts/player-cross-cutting/pr-945.json"
       - "docs/operations/contracts/player-cross-cutting/pr-950.json"
@@ -71,6 +73,8 @@ on:
     branches:
       - main
     paths:
+      - "scripts/admin-account-controls-dom-fixture.mjs"
+      - "scripts/admin-account-controls.test.mjs"
       - "admin/**"
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/functions/admin-api/businessBankingOperations*.ts"
