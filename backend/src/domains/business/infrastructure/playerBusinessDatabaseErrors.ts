@@ -1,9 +1,11 @@
+import { businessPlayerLoopDatabaseErrors } from "./playerBusinessLoopDatabaseErrors.ts";
 import { PlayerBusinessError } from "../contracts/playerBusinessContracts.ts";
 
 export function mapPlayerBusinessDatabaseError(
   message: string,
 ): PlayerBusinessError {
   const mappings: Record<string, [number, string, boolean?]> = {
+    ...businessPlayerLoopDatabaseErrors,
     PLAYER_SCOPE_REQUIRED: [401, "Player session scope is required."],
     PLAYER_NOT_FOUND: [404, "Player was not found in this game."],
     PLAYER_ECONOMIC_CONTEXT_REQUIRED: [

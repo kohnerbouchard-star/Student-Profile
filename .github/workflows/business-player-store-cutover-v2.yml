@@ -3,6 +3,7 @@ name: Business Player Store Cutover V2
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
       - "package.json"
       - "package-lock.json"
       - "api/**"

@@ -310,35 +310,67 @@ function attendanceSuccess(name) {
   };
 }
 
-// Observe the known delayed startup read before navigation. Call the returned
-// assertion after the original UI snapshots and before another test-driven reload.
-// This completes the read instead of hiding requestfailed or other API errors.
-export function observeStartupGameCodeRead(page, gameId, timeoutMs = 15000) {
+// Observe every independent startup read before navigation. Overview's four
+// concurrent reads and the persisted Game Code read can finish in either order.
+// Call the assertion after the original UI snapshots, before a test-driven reload.
+export function observeStartupOverviewReads(page, gameId, timeoutMs = 15000) {
+  const prefix = "/functions/v1/web-session-api/proxy";
+  const paths = [
+    `${prefix}/games/${gameId}/join-code/reset`,
+    `${prefix}/games/${gameId}/dashboard`,
+    `${prefix}/games`,
+    `${prefix}/notifications`,
+    `${prefix}/games/${gameId}/store/items`,
+  ];
   let timer;
-  const read = page.waitForResponse((response) =>
+  // Register all observers synchronously; a fast response must not be missed
+  // while another request is still waiting for headers or its complete body.
+  const reads = Promise.all(paths.map((path) => page.waitForResponse((response) =>
     response.request().method() === "GET" &&
-    new URL(response.url()).pathname ===
-      `/functions/v1/web-session-api/proxy/games/${gameId}/join-code/reset`,
+    new URL(response.url()).pathname === path,
   { timeout: timeoutMs }).then(async (response) => {
     if (response.status() !== 200) {
-      throw new Error(`Startup Game Code read returned ${response.status()}.`);
+      throw new Error(`Startup read ${path} returned ${response.status()}.`);
     }
     const error = await response.finished();
     if (error) throw error;
-  });
+  })));
   const deadline = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error(
-      `Startup Game Code read did not finish within ${timeoutMs}ms.`,
+      `Startup Overview reads did not finish within ${timeoutMs}ms.`,
     )), timeoutMs);
   });
-  // Capture early rejection while snapshots run, then rethrow at the assertion.
-  const outcome = Promise.race([read, deadline])
+  // One deadline covers all headers and bodies. Capture early rejection while
+  // snapshots run, then rethrow at the assertion; no API failure is discarded.
+  const outcome = Promise.race([reads, deadline])
     .then(() => ({ ok: true }), (error) => ({ ok: false, error }))
     .finally(() => clearTimeout(timer));
   return async () => {
     const result = await outcome;
     if (!result.ok) throw result.error;
   };
+}
+
+// Contract visibility precedes control binding and its queued initial focus.
+// Observe that lifecycle without focusing a field or changing any input value.
+export function waitForContractCreateReady(page, timeoutMs = 5000) {
+  return page.waitForFunction(async () => {
+    const selector = "[data-admin-terminal-contract-console]";
+    const consoles = document.querySelectorAll(selector);
+    if (consoles.length !== 1) return false;
+    const root = consoles[0];
+    if (root.dataset.controlsBound !== "true") return false;
+    const title = root.querySelector("[data-admin-terminal-contract-title]");
+    if (!title?.isConnected) return false;
+    // Binding queues initial focus before this predicate can run. Complete that
+    // frame even if an earlier accessibility controller already focused title.
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    const current = document.querySelectorAll(selector);
+    return current.length === 1 && current[0] === root && root.isConnected &&
+      root.dataset.controlsBound === "true" && title.isConnected &&
+      root.querySelector("[data-admin-terminal-contract-title]") === title &&
+      document.activeElement === title;
+  }, null, { timeout: timeoutMs });
 }
 
 export async function createQualityHarness(name) {

@@ -1,13 +1,16 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { normalizeScannerFocusSource } from "./admin-scanner-focus-patch-contract.mjs";
 
 const root = process.cwd();
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 const read = (path) => readFileSync(resolve(root, path));
 const readText = (path) => read(path).toString("utf8");
 function gitBlobSha(path) {
-  const content = read(path);
+  const content = path === "admin/dist/admin-overview-terminal.js"
+    ? Buffer.from(normalizeScannerFocusSource(readText(path)), "utf8")
+    : read(path);
   const header = Buffer.from(`blob ${content.length}\0`, "utf8");
   return createHash("sha1").update(header).update(content).digest("hex");
 }

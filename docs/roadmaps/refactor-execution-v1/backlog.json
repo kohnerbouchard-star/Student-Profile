@@ -779,7 +779,47 @@
       "recheckOpenPrs": [],
       "implementationSha": null,
       "mergeSha": null,
-      "evidence": null
+      "evidence": null,
+      "children": [
+        {
+          "id": "REF-046a",
+          "status": "IN_PROGRESS",
+          "scope": "Atomic event/outbox replay and rollback with real notification destination effects; see REF-046 task child section",
+          "dependsOn": [
+            "REF-032",
+            "REF-033"
+          ],
+          "implementationSha": null,
+          "mergeSha": null,
+          "evidence": null
+        },
+        {
+          "id": "REF-046a-cleanup",
+          "status": "IN_PROGRESS",
+          "scope": "Approved 380-line isolated disposable qualification; twelve cumulative paths; see REF-046 cleanup child section",
+          "dependsOn": [
+            "REF-046a"
+          ],
+          "implementationSha": null,
+          "mergeSha": null,
+          "evidence": null
+        },
+        {
+          "id": "REF-046b",
+          "status": "IN_PROGRESS",
+          "scope": "Competing claims, expiry and stale-worker failing defect gate after accepted A; 400 total: harness295/supervisor25/workflow15/authority40/recovery25",
+          "dependsOn": [
+            "REF-046a",
+            "REF-046a-cleanup"
+          ],
+          "implementationSha": null,
+          "mergeSha": null,
+          "evidence": null
+        },
+        { "id": "REF-046c", "status": "IN_PROGRESS", "dependsOn": ["REF-046b"], "scope": "Approved current-claim acknowledgement correction; forward migration, truthful completion, legacy rejection; 400 lines/13 paths; approved ninth-suffix registration caps10/25; task record controls", "implementationSha": null, "mergeSha": null, "evidence": null }
+      ],
+      "cumulativeAllowedPaths": 23,
+      "qualificationAmendment": "2026-11-09 owner-authorized current-main integration in PR885 supersedes historical child draft-only/cap checkpoints; retain immutable SQL, all current checks and production holds. See pr885-current-main-qualification.md; no primary completion credit."
     },
     {
       "id": "REF-047",

@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
       - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - '.github/workflows/ref-018-attendance-qualification.yml'
       - 'backend/src/domains/attendance/**'
@@ -21,6 +22,12 @@ on:
       - 'scripts/ref-036-progression-acceptance.ts'
       - 'scripts/ref-039-stock-runner-acceptance.ts'
       - 'scripts/ref-045-license-issuance-acceptance.ts'
+      - 'scripts/ref-046-campaign-acceptance.ts'
+      - 'scripts/ref-046-disposable-qualification.mjs'
+      - 'backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts'
+      - 'backend/src/domains/campaign/services/campaignEffectWorker.ts'
+      - 'backend/supabase/functions/admin-api/campaignWorkersRuntime.test.ts'
+      - 'backend/supabase/functions/admin-api/campaignEffectAcknowledgements.test.ts'
       - 'scripts/pr-889-campaign-postgrest-acceptance.ts'
       - 'scripts/story-notification-postgrest-acceptance.ts'
       - 'backend/src/domains/storylines/server/notificationCapabilities.ts'
@@ -65,6 +72,12 @@ on:
       - 'scripts/ref-036-progression-acceptance.ts'
       - 'scripts/ref-039-stock-runner-acceptance.ts'
       - 'scripts/ref-045-license-issuance-acceptance.ts'
+      - 'scripts/ref-046-campaign-acceptance.ts'
+      - 'scripts/ref-046-disposable-qualification.mjs'
+      - 'backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts'
+      - 'backend/src/domains/campaign/services/campaignEffectWorker.ts'
+      - 'backend/supabase/functions/admin-api/campaignWorkersRuntime.test.ts'
+      - 'backend/supabase/functions/admin-api/campaignEffectAcknowledgements.test.ts'
       - 'scripts/pr-889-campaign-postgrest-acceptance.ts'
       - 'scripts/story-notification-postgrest-acceptance.ts'
       - 'backend/src/domains/storylines/server/notificationCapabilities.ts'
@@ -306,3 +319,47 @@ jobs:
       - name: Stop disposable database
         if: always()
         run: npx supabase stop --workdir backend --no-backup
+
+  campaign-qualification:
+    name: REF046 exclusive disposable qualification
+    needs: attendance-qualification
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out exact qualification head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - name: Install frozen supervisor dependencies
+        run: npm ci
+      - name: Verify supervisor fail-closed guards
+        run: node scripts/ref-046-disposable-qualification.mjs --self-test
+      - name: Prove Campaign assertions in an exclusive owned stack
+        run: for phase in events leases; do node scripts/ref-046-disposable-qualification.mjs run "$phase"; done
+      - name: Independently reconcile owned resource teardown
+        if: always()
+        run: |
+          status=0
+          for phase in events leases; do node scripts/ref-046-disposable-qualification.mjs cleanup "$phase" || status=1; done
+          exit "$status"
+      - name: Certify only after assertions and teardown succeed
+        if: success() && !cancelled()
+        run: for phase in events leases; do node scripts/ref-046-disposable-qualification.mjs finalize "$phase"; done
+      - name: Upload exact-head Campaign receipts and teardown evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ref046-owned-phases-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/ref018/
+          if-no-files-found: error
+          retention-days: 30

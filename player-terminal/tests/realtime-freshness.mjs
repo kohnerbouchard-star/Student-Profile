@@ -404,3 +404,5 @@ for (const releaseBeforePoll of [true, false]) {
   f.close();
 }
 console.log("Optional realtime generations, coalescing, publication and lifecycle boundaries passed.");
+
+await import("./realtime-market-dialog.mjs");

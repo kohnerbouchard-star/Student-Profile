@@ -5,6 +5,11 @@ on:
   pull_request:
     branches: [main, agent/pr377-validation-base, feat/business-financial-reporting-v2, feat/business-common-equity-v2, feat/business-ipo-issuance-v2]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-927.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-939.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-941.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-924.json"
       - "docs/operations/contracts/player-cross-cutting/pr-916.json"
       - ".github/workflows/player-multiplayer-load-e2e.yml"
       - ".github/workflows/phase15-controlled-staging.yml"
@@ -34,6 +39,7 @@ on:
       - "scripts/business-banking-player-inventory-browser-acceptance.mjs"
       - "scripts/business-banking-player-market-browser-acceptance.mjs"
       - "scripts/player-runtime-load-profile.mjs"
+      - "scripts/marketplace-inventory-fixture.test.mjs"
       - "scripts/econovaria-local-gateway.py"
       - "scripts/local-staging-gateway-contract.test.mjs"
       - "scripts/game-creation-provisioning-local-acceptance.mjs"
@@ -219,6 +225,11 @@ jobs:
             's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[jwt-redacted]/g; s/sb_(secret|publishable)_[A-Za-z0-9_-]+/[supabase-key-redacted]/g; s/[0-9a-f]{64}/[digest-redacted]/gi' \
             /tmp/auth-throttle-readiness-response.json >&2 || true
           exit 1
+
+      - name: Prove Marketplace fixture reservation isolation
+        env:
+          MARKETPLACE_FIXTURE_DATABASE_PROOF: "1"
+        run: node --test scripts/marketplace-inventory-fixture.test.mjs
 
       - name: Provision canonical source content
         shell: bash

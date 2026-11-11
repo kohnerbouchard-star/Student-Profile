@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { waitForContractCreateReady } from "./admin-quality-smoke-fixture.mjs";
 import {
   BASE_URL,
   createSpecializedQualityHarness,
@@ -126,13 +127,18 @@ const cashReward = (payload) => object(object(payload.rewardPayload).cash).amoun
     : { amount: payload.cashRewardAmount || payload.rewardCash || payload.cashAmount };
 
 try {
+  const initialWrites = writes.length;
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
   await page.locator('[data-admin-terminal-action="add-contract"]').first().click();
   const form = page.locator("[data-admin-terminal-contract-form]");
   await form.waitFor({ state: "visible" });
+  await waitForContractCreateReady(page);
+  assert(writes.length === initialWrites, "Contract readiness caused an early write.");
   await form.locator('[name="title"]').fill("Contract Wiring Audit");
   await form.locator('[name="objective"]').fill("Verify complete contract persistence.");
+  assert(await form.locator('[name="title"]').inputValue() === "Contract Wiring Audit", "Initial title entry was redirected.");
+  assert(await form.locator('[name="objective"]').inputValue() === "Verify complete contract persistence.", "Initial objective entry was redirected.");
   await form.locator('[name="instructions"]').fill("Complete all attached work.");
   await form.locator('[name="evidence"]').fill("Submit the attached quiz and written response.");
   await form.locator('[name="deadline"]').fill("2027-01-20T17:00");
@@ -150,6 +156,7 @@ try {
   await addRewards(form);
   await capture("contract-before-submit");
 
+  assert(writes.length === initialWrites, "Contract editing caused an early write.");
   const start = writes.length;
   await schedule(form);
   const write = await waitForWrite(start);

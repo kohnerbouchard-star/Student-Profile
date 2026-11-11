@@ -276,13 +276,21 @@ function renderFxPanel(data, checkingBalances) {
 export function renderBankingPage(data) {
   const bank = data.banking;
   const currencyCode = data.session.currencyCode;
+  const checkingConfigured = bank.checking?.configured !== false &&
+    hasNumericValue(bank.checking?.balance);
   const savingsConfigured = bank.savings?.configured !== false &&
     hasNumericValue(bank.savings?.balance);
   const creditConfigured = bank.creditConfigured === true &&
     hasNumericValue(bank.creditScore);
-  const bankTransferConfigured = isEndpointEnabled(data.capabilities, "bankTransfer");
-  const savingsTransferConfigured = savingsConfigured &&
+  const bankTransferConfigured = checkingConfigured && isEndpointEnabled(data.capabilities, "bankTransfer");
+  const savingsTransferConfigured = checkingConfigured && savingsConfigured &&
     isEndpointEnabled(data.capabilities, "savingsTransfer");
+  const transferCurrency = Array.isArray(data.bankingFx?.currencies)
+    ? data.bankingFx.currencies.find((entry) => entry.currencyCode === currencyCode)
+    : null;
+  // The transfer commands accept cents at most; the ledger may require coarser units.
+  const minorUnit = Number(transferCurrency?.minorUnit ?? 2);
+  const transferStep = decimalStep(Number.isSafeInteger(minorUnit) && minorUnit >= 0 ? Math.min(minorUnit, 2) : 2);
   const transferLimitAvailable = hasNumericValue(bank.transferLimit);
   const transferLimit = transferLimitAvailable ? Number(bank.transferLimit) : null;
   const transferMax = transferLimitAvailable && transferLimit > 0
@@ -331,7 +339,7 @@ export function renderBankingPage(data) {
           <form data-player-form="savings-transfer" data-endpoint="savingsTransfer">
             <label>FROM ACCOUNT<select name="fromAccount" ${savingsConfigured ? "" : "disabled"}><option value="checking">Checking · ${escapeHtml(checkingAccountId)}</option><option value="savings">Savings · ${escapeHtml(bank.savings?.accountId || "NOT CONFIGURED")}</option></select></label>
             <label>TO ACCOUNT<select name="toAccount" ${savingsConfigured ? "" : "disabled"}><option value="savings">Savings · ${escapeHtml(bank.savings?.accountId || "NOT CONFIGURED")}</option><option value="checking">Checking · ${escapeHtml(checkingAccountId)}</option></select></label>
-            <label>AMOUNT<input name="amount" type="number" min="1"${transferMax} step="1" required placeholder="0" ${savingsConfigured ? "" : "disabled"}/></label>
+            <label>AMOUNT<input name="amount" type="number" min="${transferStep}"${transferMax} step="${transferStep}" inputmode="decimal" required placeholder="0" ${savingsConfigured ? "" : "disabled"}/></label>
             <label>NOTE<input name="note" type="text" maxlength="100" placeholder="Optional transfer note" ${savingsConfigured ? "" : "disabled"}/></label>
             <button class="player-terminal-primary-button" type="submit" ${savingsTransferConfigured ? "" : "disabled"}>${icon("arrowSwap")} Transfer funds</button>
           </form>
@@ -342,7 +350,7 @@ export function renderBankingPage(data) {
         <details class="player-terminal-disclosure" data-player-live-refresh-pause><summary><span>${icon("send")}</span><div><strong>Send money to a player</strong><small>The mutable Player ID will be resolved to the recipient UUID by the backend before funds move</small></div>${icon("chevronRight")}</summary>
           <form data-player-form="bank-transfer" data-endpoint="bankTransfer">
             <label>RECIPIENT PLAYER ID<input name="recipientPlayerIdentifier" type="text" required maxlength="160" autocomplete="off" autocapitalize="characters" placeholder="Enter the current Player ID" /></label>
-            <label>AMOUNT<input name="amount" type="number" min="1"${transferMax} step="1" required placeholder="0" /></label>
+            <label>AMOUNT<input name="amount" type="number" min="${transferStep}"${transferMax} step="${transferStep}" inputmode="decimal" required placeholder="0" /></label>
             <label>MEMO<input name="memo" type="text" maxlength="120" placeholder="Payment description" /></label>
             <button class="player-terminal-primary-button" type="submit" ${bankTransferConfigured ? "" : "disabled"}>${icon("send")} Send transfer</button>
           </form>

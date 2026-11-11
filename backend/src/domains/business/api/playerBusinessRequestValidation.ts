@@ -161,6 +161,14 @@ export function validateBusinessRequestMethodAndFields(
       "idempotencyKey",
       "clientSubmittedAt",
     ],
+    businessStoreOfferPublish: ["expectedOfferVersion", "idempotencyKey"],
+    businessEquipmentInstall: ["equipmentKey", "idempotencyKey"],
+    businessStoreOfferCreate: ["itemKey", "unitPrice", "idempotencyKey"],
+    businessStoreOfferStock: [
+      "quantity",
+      "expectedOfferVersion",
+      "idempotencyKey",
+    ],
     businessStoreWithdrawal: [
       "offerKey",
       "mode",
