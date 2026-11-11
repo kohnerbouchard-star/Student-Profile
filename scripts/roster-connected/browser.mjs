@@ -1,3 +1,4 @@
+import { markCheckpoint } from './checkpoints.mjs';
 import { chromium } from 'playwright';
 import { randomUUID } from 'node:crypto';
 import { createFixture, createOwnedGame, login, browserSessionStatus, runSql, sqlLiteral, forgetFixture } from './auth-fixture.mjs';
@@ -52,21 +53,21 @@ export async function runBrowser(report, checkServerLogs, onBrowser = () => {}, 
     privateValues.push(...secrets); rosterValues.push(...names,...ids,...secrets);
   };
   const privacy = async () => {
-    check(!logOverflow, 'browser-log-overflow');
-    absent(logs.join('\n'), [...rosterValues,...privateValues], 'browser-log-leak');
+    markCheckpoint(report, 'main', 'privacy-browser-log-size'); check(!logOverflow, 'browser-log-overflow');
+    markCheckpoint(report, 'main', 'privacy-browser-logs'); absent(logs.join('\n'), [...rosterValues,...privateValues], 'browser-log-leak');
     for (const context of contexts) {
       for (const page of context.pages()) {
         if (!page.url().startsWith(BASE)) continue;
-        const storage = await page.evaluate(async () => ({
+        markCheckpoint(report, 'main', 'privacy-browser-storage-read'); const storage = await page.evaluate(async () => ({
           local:{...localStorage},session:{...sessionStorage},
           indexedDb:(await indexedDB.databases()).length,caches:(await caches.keys()).length,
         }));
-        absent(JSON.stringify(storage), [...rosterValues,...authSecrets], 'browser-storage-roster-leak');
-        absent(JSON.stringify(await context.cookies()), [...rosterValues,...authSecrets], 'browser-cookie-leak');
-        check(storage.indexedDb === 0 && storage.caches === 0, 'browser-persistent-store');
+        markCheckpoint(report, 'main', 'privacy-browser-storage'); absent(JSON.stringify(storage), [...rosterValues,...authSecrets], 'browser-storage-roster-leak');
+        markCheckpoint(report, 'main', 'privacy-browser-cookies'); absent(JSON.stringify(await context.cookies()), [...rosterValues,...authSecrets], 'browser-cookie-leak');
+        markCheckpoint(report, 'main', 'privacy-browser-stores'); check(storage.indexedDb === 0 && storage.caches === 0, 'browser-persistent-store');
       }
     }
-    await checkServerLogs([...rosterValues,...privateValues]);
+    markCheckpoint(report, 'main', 'privacy-server-entry'); await checkServerLogs([...rosterValues,...privateValues]);
   };
   try {
     report.stage = 'real-auth-and-game';
@@ -248,52 +249,52 @@ export async function runBrowser(report, checkServerLogs, onBrowser = () => {}, 
     const committedPromise = new Promise(resolve => {committedResolve = resolve;});
     const deliveredPromise = new Promise(resolve => {deliveredResolve = resolve;});
     let lateError = false;
-    const lateNames = namesFor(2,'Late'); before = await snapshot(gameName);
-    await page.route(endpoint(game.gameId), async route => {
+    markCheckpoint(report, 'main', 'late-snapshot'); const lateNames = namesFor(2,'Late'); before = await snapshot(gameName);
+    markCheckpoint(report, 'main', 'late-route-install'); await page.route(endpoint(game.gameId), async route => {
       try {
-        const response = await route.fetch({timeout:30_000,maxRetries:0,maxRedirects:0});
-        check(response.status() === 201,'late-real-201');
-        const receipt = publicReceipt(await response.json(),lateNames,false); rememberReceipt(receipt);
-        assertDelta(before,await snapshot(gameName),2);
-        const hold = new Promise(resolve => {release = resolve;}); committedResolve(); await bounded(hold);
-        await route.fulfill({response}).catch(() => {});
+        markCheckpoint(report, 'callback', 'late-fetch'); const response = await route.fetch({timeout:30_000,maxRetries:0,maxRedirects:0});
+        markCheckpoint(report, 'callback', 'late-status'); check(response.status() === 201,'late-real-201');
+        markCheckpoint(report, 'callback', 'late-receipt'); const receipt = publicReceipt(await response.json(),lateNames,false); rememberReceipt(receipt);
+        markCheckpoint(report, 'callback', 'late-db-delta'); assertDelta(before,await snapshot(gameName),2);
+        const hold = new Promise(resolve => {release = resolve;}); committedResolve(); markCheckpoint(report, 'callback', 'late-hold'); await bounded(hold);
+        markCheckpoint(report, 'callback', 'late-fulfill'); await route.fulfill({response}).catch(() => {});
       } catch {lateError = true; committedResolve(); await route.abort('failed').catch(() => {});}
       finally {deliveredResolve();}
     });
-    dialog = await preview(lateNames,false); // No observer is needed to inspect this request's credentials.
-    await dialog.getByRole('button',{name:'Create students',exact:true}).click(); await bounded(committedPromise);
-    check(!lateError,'late-response-committed');
-    await page.keyboard.press('Escape'); check(await dialog.isVisible(),'busy-close-protected');
-    await page.evaluate(() => {location.hash = 'overview';}); await dialog.waitFor({state:'detached'});
-    release(); await bounded(deliveredPromise);
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    absent(await page.locator('body').innerText(),accessCodes,'late-response-cannot-repopulate');
-    await page.unroute(endpoint(game.gameId));
-    await page.evaluate(() => {location.hash = 'players';}); await opener.waitFor();
-    const beforeLogout = await snapshot(gameName);
-    dialog = await preview(namesFor(2,'Logout'),false);
+    markCheckpoint(report, 'main', 'late-preview'); dialog = await preview(lateNames,false); // No observer is needed to inspect this request's credentials.
+    markCheckpoint(report, 'main', 'late-submit'); await dialog.getByRole('button',{name:'Create students',exact:true}).click(); markCheckpoint(report, 'main', 'late-await-commit'); await bounded(committedPromise);
+    markCheckpoint(report, 'main', 'late-commit-confirm'); check(!lateError,'late-response-committed');
+    markCheckpoint(report, 'main', 'late-escape'); await page.keyboard.press('Escape'); markCheckpoint(report, 'main', 'late-busy-visible'); check(await dialog.isVisible(),'busy-close-protected');
+    markCheckpoint(report, 'main', 'late-navigation'); await page.evaluate(() => {location.hash = 'overview';}); markCheckpoint(report, 'main', 'late-dialog-detached'); await dialog.waitFor({state:'detached'});
+    markCheckpoint(report, 'main', 'late-release'); release(); markCheckpoint(report, 'main', 'late-await-delivery'); await bounded(deliveredPromise);
+    markCheckpoint(report, 'main', 'late-render-settle'); await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    markCheckpoint(report, 'main', 'late-no-codes'); absent(await page.locator('body').innerText(),accessCodes,'late-response-cannot-repopulate');
+    markCheckpoint(report, 'main', 'late-unroute'); await page.unroute(endpoint(game.gameId));
+    markCheckpoint(report, 'main', 'logout-navigation'); await page.evaluate(() => {location.hash = 'players';}); markCheckpoint(report, 'main', 'logout-opener'); await opener.waitFor();
+    markCheckpoint(report, 'main', 'logout-snapshot'); const beforeLogout = await snapshot(gameName);
+    markCheckpoint(report, 'main', 'logout-preview'); dialog = await preview(namesFor(2,'Logout'),false);
     const logoutResponsePromise = page.waitForResponse(response => response.url() === endpoint(game.gameId) && response.request().method() === 'POST');
     void logoutResponsePromise.catch(() => {});
     started = performance.now();
-    await dialog.getByRole('button',{name:'Create students',exact:true}).click();
-    const logoutResponse = await logoutResponsePromise;
-    check(logoutResponse.status() === 201,'logout-fresh-201');
-    const logoutReceipt = publicReceipt(await logoutResponse.json(),namesFor(2,'Logout'),false); rememberReceipt(logoutReceipt);
-    await dialog.getByText(/2 students created/).waitFor();
-    for (const value of codes(logoutReceipt)) check((await dialog.innerText()).includes(value),'logout-codes-visible-before');
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    underDeadline(started);
-    assertDelta(beforeLogout,await snapshot(gameName),2);
+    markCheckpoint(report, 'main', 'logout-submit'); await dialog.getByRole('button',{name:'Create students',exact:true}).click();
+    markCheckpoint(report, 'main', 'logout-response'); const logoutResponse = await logoutResponsePromise;
+    markCheckpoint(report, 'main', 'logout-status'); check(logoutResponse.status() === 201,'logout-fresh-201');
+    markCheckpoint(report, 'main', 'logout-receipt'); const logoutReceipt = publicReceipt(await logoutResponse.json(),namesFor(2,'Logout'),false); rememberReceipt(logoutReceipt);
+    markCheckpoint(report, 'main', 'logout-render'); await dialog.getByText(/2 students created/).waitFor();
+    markCheckpoint(report, 'main', 'logout-codes'); for (const value of codes(logoutReceipt)) check((await dialog.innerText()).includes(value),'logout-codes-visible-before');
+    markCheckpoint(report, 'main', 'logout-render-settle'); await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    markCheckpoint(report, 'main', 'logout-deadline'); underDeadline(started);
+    markCheckpoint(report, 'main', 'logout-database-delta'); assertDelta(beforeLogout,await snapshot(gameName),2);
     // Invoke the existing shell Sign out action while a receipt is mounted. Its
     // confirmation and real session revocation run; no auth/session stub is used.
-    await page.locator('.admin-shell-account-actions button').filter({hasText:'Sign out'}).evaluate(button => button.click());
-    await page.waitForURL(/reason=signed-out/);
-    absent(await page.locator('body').innerText(),accessCodes,'logout-removes-codes');
-    check(await page.evaluate(() => sessionStorage.getItem('econovaria.admin.auth.v1')) === null,'logout-clears-session');
-    const revoked = await rawPost(page,game.gameId,['Synthetic Denied'],`roster-negative-${randomUUID()}`,status.csrfToken);
-    check(revoked.status === 401,'logout-session-revoked');
-    const final = await snapshot(gameName);
-    assertPersistedPrivacy(final,accessCodes,allNames,allIdentifiers);
+    markCheckpoint(report, 'main', 'admin-signout'); await page.locator('.admin-shell-account-actions button').filter({hasText:'Sign out'}).evaluate(button => button.click());
+    markCheckpoint(report, 'main', 'admin-redirect'); await page.waitForURL(/reason=signed-out/);
+    markCheckpoint(report, 'main', 'admin-no-codes'); absent(await page.locator('body').innerText(),accessCodes,'logout-removes-codes');
+    markCheckpoint(report, 'main', 'admin-storage-cleared'); check(await page.evaluate(() => sessionStorage.getItem('econovaria.admin.auth.v1')) === null,'logout-clears-session');
+    markCheckpoint(report, 'main', 'admin-revoked-request'); const revoked = await rawPost(page,game.gameId,['Synthetic Denied'],`roster-negative-${randomUUID()}`,status.csrfToken);
+    markCheckpoint(report, 'main', 'admin-revoked-status'); check(revoked.status === 401,'logout-session-revoked');
+    markCheckpoint(report, 'main', 'privacy-final-snapshot'); const final = await snapshot(gameName);
+    markCheckpoint(report, 'main', 'privacy-persisted'); assertPersistedPrivacy(final,accessCodes,allNames,allIdentifiers);
     await privacy();
     // Authentication has legitimate session/throttle writes. Keep it after all
     // original import/replay/negative/logout snapshots and outside their timing.

@@ -1,3 +1,4 @@
+import { markCheckpoint } from './checkpoints.mjs';
 import { createHash } from 'node:crypto';
 import { runSql, sqlLiteral, assertNoUuid } from './auth-fixture.mjs';
 import { absent, check, equal } from './evidence.mjs';
@@ -111,15 +112,15 @@ export function assertAccountTransition(before, after, phase) {
 }
 
 export async function verifyStudentAccess({game, gameName, cohorts, pageFor, privateValues, rosterValues, report}) {
-  const joinCode=game.created.data?.joinCode;
+  markCheckpoint(report, 'main', 'student-entry-code'); const joinCode=game.created.data?.joinCode;
   check(typeof joinCode==='string' && /^[A-Z0-9-]+$/.test(joinCode),'student-created-game-code');
-  const created=game.created.data?.game;
+  markCheckpoint(report, 'main', 'student-entry-lifecycle'); const created=game.created.data?.game;
   check(created?.id===game.gameId && created.gameId===game.gameId && created.status==='active' &&
     created.lifecycleState==='active' && created.provisioningStatus==='ready' && created.joinCodeStatus==='active','student-created-game-lifecycle');
-  check(cohorts.length===2 && cohorts[0].count===30 && cohorts[1].count===40 &&
+  markCheckpoint(report, 'main', 'student-entry-representatives'); check(cohorts.length===2 && cohorts[0].count===30 && cohorts[1].count===40 &&
     cohorts[0].row.displayName===cohorts[1].row.displayName && cohorts[0].row.playerIdentifier!==cohorts[1].row.playerIdentifier,'student-representative-distinct-duplicates');
   privateValues.push(joinCode);
-  const results=[];
+  markCheckpoint(report, 'main', 'student-access-execution'); const results=[];
   for(const {count,row} of cohorts) {
     report.stage=count===30 ? 'student-access-30' : 'student-access-40';
     const page=await pageFor(), context=page.context(), started=performance.now();

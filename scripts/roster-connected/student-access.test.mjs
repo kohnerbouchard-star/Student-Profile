@@ -1,3 +1,6 @@
+import vm from 'node:vm';
+import { sealCheckpoints } from './checkpoints.mjs';
+import { assertTeacherDto } from './auth-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -170,4 +173,38 @@ test('all actual student JSON response paths apply source-bound control or succe
   for(const exact of ["assertStudentControlDto(deniedBody,'wrong-code')","assertStudentControlDto(anonymous.body,'missing-session')",
     "assertStudentControlDto(protectedRead.body,'missing-session')","assertStudentControlDto(await json(loggedOut),'logout')",
     "assertStudentControlDto(replayBody,'revoked-session')",'assertStudentDto(acceptedBody,row,gameName)','assertStudentDto(authenticated.body,row,gameName)']) assert.ok(source.includes(exact),exact);
+});
+
+
+test('student entry checkpoints identify all negative controls without entering browser or SQL', async t=>{
+  const browser=await readFile(new URL('./browser.mjs',import.meta.url),'utf8');
+  const namesFor=vm.runInNewContext(browser.slice(browser.indexOf('const namesFor = '),browser.indexOf('\nconst normalized ='))+'\nnamesFor;',Object.freeze({}));
+  const id='12345678-1234-4234-8234-123456789abc',joinCode='ECO-AMBER-ANCHOR-000';
+  const game={gameId:id,created:{ok:true,data:{joinCode,joinCodeStatus:'active',game:{id,gameId:id,name:'Synthetic Connected Roster',status:'active',lifecycleState:'active',provisioningStatus:'ready',joinCodeStatus:'active',joinCode,gameCode:joinCode,createdAt:'2026-11-11T00:00:00.000Z',updatedAt:'2026-11-11T00:00:00.000Z'}}}};
+  assertTeacherDto(game.created,'create-game');
+  const cohorts=[{count:30,row:{displayName:namesFor(30)[0].normalize('NFC'),playerIdentifier:`STU-${'A'.repeat(24)}`}},{count:40,row:{displayName:namesFor(40)[1].normalize('NFC'),playerIdentifier:`STU-${'B'.repeat(24)}`}}];
+  const stopped=new Error('injected-before-browser-or-sql');
+  async function prove(input,expected,checkpoint) {
+    let calls=0;const report={stage:'late-response-and-logout',passed:false};
+    await assert.rejects(verifyStudentAccess({...input,gameName:'Synthetic Connected Roster',privateValues:[],rosterValues:[],report,
+      pageFor:async()=>{calls++;throw stopped;}}),error=>expected ? error.message===expected : error===stopped);
+    assert.equal(calls,expected?0:1);assert.equal(report.stage,expected?'late-response-and-logout':'student-access-30');
+    assert.equal(report.studentAccess,undefined);assert.equal(report.passed,false);
+    assert.deepEqual(sealCheckpoints(report),{main:checkpoint,callback:'not-started'});
+  }
+  await t.test('source-consistent entry reaches the next stage',()=>prove({game,cohorts},null,'student-access-execution'));
+  const controls=[
+    ['missing-code',x=>delete x.game.created.data.joinCode,'student-created-game-code','student-entry-code'],
+    ['lowercase-code',x=>x.game.created.data.joinCode=joinCode.toLowerCase(),'student-created-game-code','student-entry-code'],
+    ['wrong-game-id',x=>x.game.created.data.game.id='22345678-1234-4234-8234-123456789abc','student-created-game-lifecycle','student-entry-lifecycle'],
+    ['inactive-game',x=>x.game.created.data.game.status='disabled','student-created-game-lifecycle','student-entry-lifecycle'],
+    ['draft-lifecycle',x=>x.game.created.data.game.lifecycleState='draft','student-created-game-lifecycle','student-entry-lifecycle'],
+    ['pending-provisioning',x=>x.game.created.data.game.provisioningStatus='pending','student-created-game-lifecycle','student-entry-lifecycle'],
+    ['pending-join-code',x=>x.game.created.data.game.joinCodeStatus='pending','student-created-game-lifecycle','student-entry-lifecycle'],
+    ['wrong-cohort',x=>x.cohorts[1].count=30,'student-representative-distinct-duplicates','student-entry-representatives'],
+    ['different-name',x=>x.cohorts[1].row.displayName='Synthetic Other','student-representative-distinct-duplicates','student-entry-representatives'],
+    ['same-identifier',x=>x.cohorts[1].row.playerIdentifier=x.cohorts[0].row.playerIdentifier,'student-representative-distinct-duplicates','student-entry-representatives'],
+    ['empty-code-fallback',x=>x.game.created.data.joinCode='','student-created-game-code','student-entry-code'],
+  ];
+  for(const [name,mutate,expected,checkpoint] of controls) await t.test(name,()=>{const input=structuredClone({game,cohorts});mutate(input);return prove(input,expected,checkpoint);});
 });

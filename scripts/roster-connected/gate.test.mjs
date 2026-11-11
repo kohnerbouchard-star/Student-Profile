@@ -1,3 +1,4 @@
+import { MAIN_CHECKPOINTS, CALLBACK_CHECKPOINTS } from './checkpoints.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, mkdtemp, rm } from 'node:fs/promises';
@@ -181,11 +182,65 @@ test('installation diagnostics run only on locked-tools failure without changing
 
 test('diagnostic classification adds exactly two harness files and leaves the guard algorithm unchanged', async () => {
   const baseline = path => execFileSync('git',['-C',root,'show',`978b178ac9f21aebf16bd4b3d1ecd2a13b01a966:${path}`],{encoding:'utf8'});
-  const policy = await read('./runtime-inputs.mjs');
+  const policy = (await read('./runtime-inputs.mjs')).replace(",'checkpoints.mjs','checkpoints.test.mjs'",'');
   const addition = ",'install-diagnostics.mjs','install-diagnostics.test.mjs'";
   assert.equal(policy.split(addition).length,2);
   assert.equal(policy.replace(addition,''),baseline('scripts/roster-connected/runtime-inputs.mjs'));
   for(const name of ['runtime-equivalence.mjs','prepare.mjs','run.mjs','browser.mjs','student-access.mjs','database.mjs','evidence.mjs','auth-fixture.mjs','provisioning.mjs']) {
+    assert.equal(withoutCheckpoints(await read(`./${name}`)),baseline(`scripts/roster-connected/${name}`));
+  }
+});
+
+
+// Remove only these reviewed literal diagnostic statements, never application
+// operations or assertions. Unknown/malformed instrumentation fails the test.
+function withoutCheckpoints(source) {
+  const imports = ["import { markCheckpoint } from './checkpoints.mjs';\n",
+    "import { markCheckpoint, sealCheckpoints, validateCheckpointSnapshot } from './checkpoints.mjs';\n"];
+  for(const line of imports) {
+    assert.ok(source.split(line).length <= 2);
+    source=source.replace(line,'');
+  }
+  source=source.replace(/markCheckpoint\(report, '(main|callback)', '([a-z-]+)'\); /g,(_,channel,id)=>{
+    assert.ok((channel==='main' ? MAIN_CHECKPOINTS : CALLBACK_CHECKPOINTS).includes(id));return '';
+  });
+  const seal='      report.checkpoints = validateCheckpointSnapshot(sealCheckpoints(report));\n';
+  assert.ok(source.split(seal).length <= 2);source=source.replace(seal,'');
+  assert.doesNotMatch(source,/markCheckpoint|sealCheckpoints|validateCheckpointSnapshot/);
+  return source;
+}
+
+test('checkpoint inverse preserves all original flow bytes and exact runtime guard scope', async()=>{
+  const baseline=path=>execFileSync('git',['-C',root,'show',`ecbc05c375fe8c52af911f4142f229e6ca5db255:${path}`],{encoding:'utf8'});
+  for(const name of ['browser.mjs','student-access.mjs','run.mjs']) {
+    assert.equal(withoutCheckpoints(await read(`./${name}`)),baseline(`scripts/roster-connected/${name}`));
+  }
+  const addition=",'checkpoints.mjs','checkpoints.test.mjs'";
+  const policy=await read('./runtime-inputs.mjs');assert.equal(policy.split(addition).length,2);
+  assert.equal(policy.replace(addition,''),baseline('scripts/roster-connected/runtime-inputs.mjs'));
+  // sources.json is intentionally replaced by complete-mode fixtures. Its strict
+  // schema, explicit relation, pin trees and runtime projection are verified by
+  // prepare/verifyRuntime above; exact public pin bytes are checked separately
+  // against the frozen publication candidate, never a synthetic fixture.
+  for(const name of ['runtime-equivalence.mjs','prepare.mjs','database.mjs','evidence.mjs','auth-fixture.mjs','provisioning.mjs','mode-fixtures.mjs','install-diagnostics.mjs','install-diagnostics.test.mjs']) {
     assert.equal(await read(`./${name}`),baseline(`scripts/roster-connected/${name}`));
   }
+  assert.equal(await read('../../.github/workflows/roster-connected-e2e.yml'),baseline('.github/workflows/roster-connected-e2e.yml'));
+});
+
+test('each literal checkpoint is bound to the intended source channel and serialized only once',async()=>{
+  const files=await Promise.all(['browser.mjs','student-access.mjs','run.mjs'].map(name=>read(`./${name}`)));
+  const found={main:[],callback:[]};
+  for(const source of files) for(const match of source.matchAll(/markCheckpoint\(report, '(main|callback)', '([a-z-]+)'\); /g)) found[match[1]].push(match[2]);
+  assert.deepEqual(found.main.sort(),MAIN_CHECKPOINTS.filter(x=>x!=='not-started').slice().sort());
+  assert.deepEqual(found.callback.sort(),CALLBACK_CHECKPOINTS.filter(x=>x!=='not-started').slice().sort());
+  const browser=files[0], start=browser.indexOf("markCheckpoint(report, 'main', 'late-route-install')");
+  const end=browser.indexOf("markCheckpoint(report, 'main', 'late-preview')",start);
+  const callback=browser.slice(start,end);
+  assert.equal((callback.match(/markCheckpoint\(report, 'main'/g)||[]).length,1);
+  assert.equal((callback.match(/markCheckpoint\(report, 'callback'/g)||[]).length,6);
+  assert.ok(!callback.slice(callback.indexOf('} catch')).includes('markCheckpoint'));
+  const runner=files[2];assert.equal((runner.match(/report\.checkpoints = validateCheckpointSnapshot\(sealCheckpoints\(report\)\);/g)||[]).length,1);
+  assert.ok(runner.indexOf('report.checkpoints = validateCheckpointSnapshot(sealCheckpoints(report))')>runner.indexOf('report.cleanup = await cleanup()'));
+  assert.ok(runner.indexOf('report.checkpoints = validateCheckpointSnapshot(sealCheckpoints(report))')<runner.indexOf('const artifacts ='));
 });

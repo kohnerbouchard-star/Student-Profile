@@ -238,3 +238,10 @@ trust expansion, real student data, merge or broad completion is authorized here
 Local connected execution is currently unrun: Docker/psql are unavailable, frozen
 Edge SDK cache misses remain, and prior browser installation/socket failures are
 not retried by this tranche. Source/static tests do not waive hosted execution.
+
+
+### Attempted-checkpoint diagnostics
+
+The first real paired run on public `ecbc05c3` passed30/40 imports, replay/security and retained database assertions but failed under a coarse late-response stage. It did not finish lifecycle/privacy/student-access qualification. Do not infer a logout, fixture or production cause from that stage.
+
+`checkpoints.mjs` keeps two independent in-memory channels for literal attempted-operation IDs: main flow and held-response callback. Only their allowlisted, immutable final snapshot is included in the existing aggregate. A checkpoint identifies the last attempted boundary, not its outcome. No errors, DOM, request/response contents, SQL, names, identifiers or credentials are accepted. Invalid input is rejected with fixed diagnostics; once sealed, later valid callbacks cannot change the snapshot. Original assertions and behavior remain, with inverse-source preservation tests. The three student-entry checkpoints distinguish code shape, canonical lifecycle and representative selection without exposing values. No source or lifecycle fix is inferred or included. New exact-head connected and all hosted-capacity qualifications remain required.

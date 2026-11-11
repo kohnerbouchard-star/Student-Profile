@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { markCheckpoint, sealCheckpoints, validateCheckpointSnapshot } from './checkpoints.mjs';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile, rm, symlink, realpath, lstat } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
@@ -139,13 +140,13 @@ if (process.argv.includes('--cleanup')) {
     await startGateway(180); // Canonical licensed provisioning is outside the timed import phase.
     const {runBrowser} = await import('./browser.mjs');
     const privacy = await runBrowser(report,async values => {
-      check(!gatewayOverflow,'gateway-log-overflow'); absent(gatewayLog,values,'gateway-log-leak');
-      const names = await execute('docker',['ps','--format','{{.Names}}']);
+      markCheckpoint(report, 'main', 'privacy-gateway-log-size'); check(!gatewayOverflow,'gateway-log-overflow'); markCheckpoint(report, 'main', 'privacy-gateway-logs'); absent(gatewayLog,values,'gateway-log-leak');
+      markCheckpoint(report, 'main', 'privacy-server-enumerate'); const names = await execute('docker',['ps','--format','{{.Names}}']);
       const servers = names.trim().split(/\r?\n/).filter(name => /^supabase_(?:edge_runtime|auth|rest|kong)_econovaria$/.test(name));
-      check(servers.length === 4,'server-log-coverage');
+      markCheckpoint(report, 'main', 'privacy-server-coverage'); check(servers.length === 4,'server-log-coverage');
       for(const name of servers) {
-        const output = await execute('docker',['logs',name],{timeout:30_000});
-        absent(output,values,'server-log-leak');
+        markCheckpoint(report, 'main', 'privacy-service-read'); const output = await execute('docker',['logs',name],{timeout:30_000});
+        markCheckpoint(report, 'main', 'privacy-service-logs'); absent(output,values,'server-log-leak');
       }
     },value => {browser = value;},async () => {
       await stopGateway();
@@ -168,6 +169,7 @@ if (process.argv.includes('--cleanup')) {
     report.passed &&= report.cleanup && !interrupted;
     if (evidenceDirectory && resolve(evidenceDirectory) === join(temporaryRoot,'roster-safe-evidence')) {
       await mkdir(evidenceDirectory,{recursive:true,mode:0o700});
+      report.checkpoints = validateCheckpointSnapshot(sealCheckpoints(report));
       const artifacts = [JSON.stringify(report,null,2),manifest ? JSON.stringify(manifest,null,2) : ''];
       absent(artifacts.join('\n'),sensitive,'artifact-secret-leak');
       await writeFile(join(evidenceDirectory,'result.json'),`${artifacts[0]}\n`,{mode:0o600});
