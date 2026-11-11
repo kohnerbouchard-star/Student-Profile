@@ -3,6 +3,7 @@ name: Runtime Interaction Wiring
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-948.json"
       - "docs/operations/contracts/player-cross-cutting/pr-947.json"
       - "player-terminal/**"
       - "admin/**"
