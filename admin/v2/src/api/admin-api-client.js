@@ -1,3 +1,4 @@
+import { GAME_LIFECYCLE_ACTIONS, normalizeGameLifecycleResult } from "./game-lifecycle-model.js";
 import { normalizeAdminError } from "../core/error-envelope.js";
 
 export const ADMIN_API_BASE_PATH = "/api/admin";
@@ -884,7 +885,35 @@ export function createAdminApiClient({
     }
   }
 
+  function readGameLifecycle({ gameId, signal } = {}) {
+    try {
+      return requestAdminJson(fetchImpl, `/games/${requireGameToken(gameId)}/lifecycle`, {
+        signal, timeoutMs,
+        validate: (payload) => normalizeGameLifecycleResult(payload),
+      });
+    } catch (error) { return asSafeRejection(error); }
+  }
+
+  function transitionGameLifecycle({ gameId, action, expectedVersion, idempotencyKey, signal } = {}) {
+    try {
+      if (!Object.hasOwn(GAME_LIFECYCLE_ACTIONS, action) || !Number.isSafeInteger(expectedVersion)
+        || expectedVersion < 1 || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(idempotencyKey || "")) {
+        throw new AdminTransportDiagnostic({ status: 400, code: "INVALID_REQUEST" });
+      }
+      const suffix = action === "revoke_sessions" ? "sessions/revoke" : `lifecycle/${action}`;
+      return playerMutation({
+        method: "POST",
+        path: `/games/${requireGameToken(gameId)}/${suffix}`,
+        body: { idempotencyKey, expectedVersion },
+        idempotencyKey, signal,
+        validate: (payload) => normalizeGameLifecycleResult(payload, action),
+      });
+    } catch (error) { return asSafeRejection(error); }
+  }
+
   return Object.freeze({
+    readGameLifecycle,
+    transitionGameLifecycle,
     readOverview,
     cancelOverviewRequest,
     readStore,

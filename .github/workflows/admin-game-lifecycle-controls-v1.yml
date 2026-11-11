@@ -3,6 +3,11 @@ name: Admin Game Lifecycle Controls
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-943.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-948.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-942.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-940.json"
       - "admin/css/game-lifecycle-controls.css"
       - "admin/game-lifecycle-controls.js"
       - "admin/index.html"
@@ -14,6 +19,12 @@ on:
       - "backend/supabase/functions/admin-api/gameLifecycleOperations.test.ts"
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/migrations/20260719200000_add_game_lifecycle_controls_v1.sql"
+      - "admin/v2/src/api/admin-api-client.js"
+      - "admin/v2/src/api/game-lifecycle-model.js"
+      - "admin/v2/src/routes/overview/**"
+      - "scripts/admin-v2-game-lifecycle.test.mjs"
+      - "scripts/admin-v2-game-lifecycle-browser-smoke.mjs"
+      - "scripts/admin-v2-browser-fixture-server.mjs"
       - "scripts/admin-game-lifecycle-contract.mjs"
       - "scripts/admin-game-lifecycle-smoke.mjs"
       - "package.json"
@@ -33,6 +44,12 @@ on:
       - "backend/supabase/functions/admin-api/gameLifecycleOperations.test.ts"
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/migrations/20260719200000_add_game_lifecycle_controls_v1.sql"
+      - "admin/v2/src/api/admin-api-client.js"
+      - "admin/v2/src/api/game-lifecycle-model.js"
+      - "admin/v2/src/routes/overview/**"
+      - "scripts/admin-v2-game-lifecycle.test.mjs"
+      - "scripts/admin-v2-game-lifecycle-browser-smoke.mjs"
+      - "scripts/admin-v2-browser-fixture-server.mjs"
       - "scripts/admin-game-lifecycle-contract.mjs"
       - "scripts/admin-game-lifecycle-smoke.mjs"
       - "package.json"
@@ -125,5 +142,43 @@ jobs:
           path: |
             admin-browser-smoke-artifacts/game-lifecycle/
             /tmp/admin-game-lifecycle-server.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  native-v2:
+    name: Game lifecycle V2 contracts and browser acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact workflow head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Install pinned tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+      - name: Run native lifecycle and retained Admin contracts
+        run: |
+          node --test scripts/admin-v2-game-lifecycle.test.mjs
+          npm run test:admin-v2
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run native lifecycle browser acceptance
+        env:
+          ADMIN_V2_LIFECYCLE_EVIDENCE_DIR: /tmp/admin-v2-lifecycle-evidence
+        run: node scripts/admin-v2-game-lifecycle-browser-smoke.mjs
+      - name: Upload native lifecycle diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-v2-lifecycle-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/admin-v2-lifecycle-evidence/
           if-no-files-found: warn
           retention-days: 14

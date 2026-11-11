@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import "./admin-v2-news-events-route.test.mjs";
 
 import { createNewsEventsApi } from "../admin/v2/src/routes/news-events/NewsEventsApi.js";
 import {

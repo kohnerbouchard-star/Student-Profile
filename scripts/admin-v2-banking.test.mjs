@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import "./admin-v2-banking-route.test.mjs";
 
 import { createBankingApiClient } from "../admin/v2/src/routes/banking/BankingApi.js";
 import {
