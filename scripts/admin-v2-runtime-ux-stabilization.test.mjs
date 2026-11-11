@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import "./admin-session-redirect-diagnostics.test.mjs";
+import "./admin-v2-world-route.test.mjs";
 
 const read = (path) => readFileSync(path, "utf8");
 
