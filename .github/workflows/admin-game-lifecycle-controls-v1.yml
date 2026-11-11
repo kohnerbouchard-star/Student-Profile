@@ -3,6 +3,9 @@ name: Admin Game Lifecycle Controls
 on:
   pull_request:
     paths:
+      - "scripts/admin-account-controls-dom-fixture.mjs"
+      - "scripts/admin-account-controls.test.mjs"
+      - "docs/operations/contracts/player-cross-cutting/pr-952.json"
       - "docs/operations/contracts/player-cross-cutting/pr-946.json"
       - "docs/operations/contracts/player-cross-cutting/pr-945.json"
       - "docs/operations/contracts/player-cross-cutting/pr-950.json"
@@ -38,6 +41,8 @@ on:
     branches:
       - main
     paths:
+      - "scripts/admin-account-controls-dom-fixture.mjs"
+      - "scripts/admin-account-controls.test.mjs"
       - "admin/css/game-lifecycle-controls.css"
       - "admin/game-lifecycle-controls.js"
       - "admin/index.html"

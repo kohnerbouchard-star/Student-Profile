@@ -438,10 +438,13 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     description: "Administrator alerts for the current game context.",
     content: overview.renderNotifications(),
   });
+  const accountDetails = createElement("div", {
+    children: accountDrawerContent(session, initialGame),
+  });
   accountDrawer = AdminDrawer({
     title: "Administrator account",
     description: "Authenticated administrator and current game context.",
-    content: accountDrawerContent(session, initialGame),
+    content: accountDetails,
   });
   gameDrawer = AdminDrawer({
     title: "Select game",
@@ -579,7 +582,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     });
     topbar.setNotificationCount(data.model.notificationCount ?? data.model.notifications?.length ?? 0);
     notificationDrawer.setContent(overview.renderNotifications());
-    accountDrawer.setContent(accountDrawerContent(session, game));
+    accountDetails.replaceChildren(accountDrawerContent(session, game));
     gameDrawer.setContent(gameDrawerContent({
       session,
       selectedGameId,

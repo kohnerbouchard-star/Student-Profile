@@ -2767,7 +2767,7 @@
       },
       {
         "file": "admin/v2/src/app.js",
-        "lines": 647
+        "lines": 650
       },
       {
         "file": "backend/src/security/adminBffRequestAuth.ts",
