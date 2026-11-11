@@ -3,6 +3,7 @@ name: Environment Neutral Browser
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-945.json"
       - "docs/operations/contracts/player-cross-cutting/pr-949.json"
       - "docs/operations/contracts/player-cross-cutting/pr-948.json"
       - "docs/operations/contracts/player-cross-cutting/pr-947.json"
@@ -40,6 +41,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22.23.1

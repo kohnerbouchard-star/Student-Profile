@@ -1,3 +1,13 @@
+import { StoreOfferQuoteContractError } from "../contracts/storeOfferQuoteContracts.ts";
+import {
+  assertPrivateFieldsAbsent,
+  BUSINESS_OFFER_KEY,
+  BUSINESS_PARTY_KEY,
+  businessIdentity,
+  captureError,
+  FakeClient,
+  quoteResult,
+} from "./supabasePlayerStoreOfferPublicRepositoryTestFixtures.ts";
 import { PlayerStorePublicError } from "../contracts/playerStorePublicContracts.ts";
 import { SupabasePlayerStoreFundingPublicRepository } from "./supabasePlayerStoreFundingPublicRepository.ts";
 
@@ -137,6 +147,137 @@ Deno.test("funded Store settlement RPCs accept quote and idempotency intent only
     },
   }]);
 });
+
+// SQL caps funded Business quotes at the next FX fixing, rather than requiring
+// the unfunded quote's exact two-minute lifetime.
+for (const duration of [120_000, 119_999, 60_000, 40_276, 58_981, 1]) {
+  Deno.test(`funded Business quote preserves a valid ${duration}ms lifetime and replay`, async () => {
+    const payload = businessQuotePayload(duration);
+    payload.replayed = true;
+    const client = new FakeClient({
+      rpc: { create_business_store_offer_funding_quote_v1: payload },
+      identities: [businessIdentity({ currencyCode: "NRC" })],
+    });
+    const result = await createBusinessQuote(client);
+    assertEquals(result.expiresAt, payload.expiresAt);
+    assertEquals(result.fundingQuote.expiresAt, payload.expiresAt);
+    assertEquals(result.replayed, true);
+    assertEquals(result.totalPrice, 100);
+    assertEquals(client.rpcCalls, [{
+      functionName: "create_business_store_offer_funding_quote_v1",
+      args: {
+        p_game_session_id: GAME_ID,
+        p_buyer_player_id: PLAYER_ID,
+        p_offer_key: BUSINESS_OFFER_KEY,
+        p_quantity: 2,
+        p_expected_offer_version: 3,
+        p_allocations: [{ sourceAccountKey: ACCOUNT_KEY, targetAmount: null }],
+        p_idempotency_key: "store.business.quote.12345678",
+      },
+    }]);
+    assertEquals(client.queries[0].filters, [
+      ["game_session_id", GAME_ID],
+      ["party_kind", "business"],
+      ["status", "active"],
+    ]);
+    assertEquals(client.queries[0].inFilters, [["public_key", [
+      BUSINESS_PARTY_KEY,
+    ]]]);
+    assertPrivateFieldsAbsent(result);
+  });
+}
+
+Deno.test("funded Business quotes reject nonpositive and overlong lifetimes before identity reads", async () => {
+  for (const duration of [0, -1, 120_001]) {
+    const client = new FakeClient({
+      rpc: {
+        create_business_store_offer_funding_quote_v1: businessQuotePayload(
+          duration,
+        ),
+      },
+    });
+    const error = await captureError(() => createBusinessQuote(client));
+    if (!(error instanceof StoreOfferQuoteContractError)) {
+      throw new Error(
+        "Expected the commercial quote contract to reject the lifetime.",
+      );
+    }
+    assertEquals(error.code, "invalid_store_offer_quote_result");
+    assertEquals(client.queries.length, 0);
+  }
+});
+
+Deno.test("shortened funded Business quotes retain public privacy and immutable funding bindings", async () => {
+  for (
+    const corrupt of [
+      (value: ReturnType<typeof businessQuotePayload>) => {
+        value.quoteKey = GAME_ID;
+      },
+      (value: ReturnType<typeof businessQuotePayload>) => {
+        value.contextDigest = "invalid";
+      },
+      (value: ReturnType<typeof businessQuotePayload>) => {
+        value.fundingQuote.funding_context_key = `quote_${"2".repeat(32)}`;
+      },
+      (value: ReturnType<typeof businessQuotePayload>) => {
+        value.fundingQuote.funding_context_kind = "store.system-offer";
+      },
+    ]
+  ) {
+    const payload = businessQuotePayload(60_000);
+    corrupt(payload);
+    const client = new FakeClient({
+      rpc: { create_business_store_offer_funding_quote_v1: payload },
+    });
+    await assertRejects(() => createBusinessQuote(client));
+    assertEquals(client.queries.length, 0);
+  }
+  const payload = businessQuotePayload(60_000);
+  const client = new FakeClient({
+    rpc: { create_business_store_offer_funding_quote_v1: payload },
+    identities: [{
+      ...businessIdentity(),
+      public_key: `pty_${"9".repeat(32)}`,
+    }],
+  });
+  await assertRejects(() => createBusinessQuote(client));
+});
+
+function businessQuotePayload(duration: number) {
+  const createdAt = "2026-11-10T22:59:00.000Z";
+  const expiresAt = new Date(Date.parse(createdAt) + duration).toISOString();
+  return {
+    ...quoteResult(),
+    sellerUnitPrice: 50,
+    finalUnitPrice: 50,
+    sellerTotalPrice: 100,
+    finalTotalPrice: 100,
+    sellerCurrencyCode: "NRC",
+    buyerCurrencyCode: "NRC",
+    createdAt,
+    expiresAt,
+    contextDigest: "c".repeat(64),
+    fundingQuote: {
+      ...seededQuotePayload().fundingQuote,
+      funding_context_kind: "store.business-offer",
+      generated_at: createdAt,
+      expires_at: expiresAt,
+    },
+  };
+}
+
+function createBusinessQuote(client: FakeClient) {
+  return new SupabasePlayerStoreFundingPublicRepository(client as never)
+    .createBusinessOfferQuote({
+      gameSessionId: GAME_ID,
+      playerId: PLAYER_ID,
+      offerKey: BUSINESS_OFFER_KEY,
+      quantity: 2,
+      expectedVersion: 3,
+      allocations: [{ sourceAccountKey: ACCOUNT_KEY, targetAmount: null }],
+      idempotencyKey: "store.business.quote.12345678",
+    });
+}
 
 class CapturingRpcClient {
   readonly calls: Array<{

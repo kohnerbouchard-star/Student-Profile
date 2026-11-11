@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-945.json"
       - "docs/operations/contracts/player-cross-cutting/pr-950.json"
       - "docs/operations/contracts/player-cross-cutting/pr-949.json"
       - "docs/operations/contracts/player-cross-cutting/pr-948.json"
@@ -33,6 +34,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@v7
