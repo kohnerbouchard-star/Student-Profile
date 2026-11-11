@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1338,
+    "sourceFiles": 1358,
     "edgeEntrypoints": 28,
     "handlerFiles": 64,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 99,
+    "oversizedSourceFiles": 93,
     "capabilityStrings": 140
   },
   "domains": [
@@ -1548,7 +1548,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/banking/BankingRoute.js",
+        "file": "admin/v2/src/routes/banking/BankingViewHelpers.js",
         "markers": [
           "fallback"
         ]
@@ -1664,7 +1664,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/market/MarketRoute.js",
+        "file": "admin/v2/src/routes/market/MarketViewHelpers.js",
         "markers": [
           "fallback"
         ]
@@ -1688,7 +1688,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/messages/MessagesRoute.js",
+        "file": "admin/v2/src/routes/messages/MessagesReadPanels.js",
         "markers": [
           "fallback"
         ]
@@ -1700,7 +1700,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/news-events/NewsEventsRoute.js",
+        "file": "admin/v2/src/routes/news-events/NewsEventsViewHelpers.js",
         "markers": [
           "fallback"
         ]
@@ -1761,7 +1761,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/world-management/WorldManagementRoute.js",
+        "file": "admin/v2/src/routes/world-management/WorldViewHelpers.js",
         "markers": [
           "fallback"
         ]
@@ -2620,7 +2620,7 @@
       },
       {
         "file": "player-terminal/src/app.js",
-        "lines": 1171
+        "lines": 1172
       },
       {
         "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.test.ts",
@@ -2643,8 +2643,8 @@
         "lines": 960
       },
       {
-        "file": "admin/v2/src/routes/world-management/WorldManagementRoute.js",
-        "lines": 935
+        "file": "admin/v2/src/api/admin-api-client.js",
+        "lines": 937
       },
       {
         "file": "player-terminal/src/api/read-model.js",
@@ -2653,10 +2653,6 @@
       {
         "file": "backend/src/domains/contracts/api/staffContractReviewHttpHandler.test.ts",
         "lines": 920
-      },
-      {
-        "file": "admin/v2/src/api/admin-api-client.js",
-        "lines": 908
       },
       {
         "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
@@ -2763,16 +2759,16 @@
         "lines": 676
       },
       {
-        "file": "admin/v2/src/routes/market/MarketRoute.js",
-        "lines": 667
-      },
-      {
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
         "lines": 656
       },
       {
         "file": "admin/settings-simplified.js",
         "lines": 654
+      },
+      {
+        "file": "admin/v2/src/app.js",
+        "lines": 647
       },
       {
         "file": "backend/src/security/adminBffRequestAuth.ts",
@@ -2785,10 +2781,6 @@
       {
         "file": "backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.ts",
         "lines": 639
-      },
-      {
-        "file": "admin/v2/src/app.js",
-        "lines": 638
       },
       {
         "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.ts",
@@ -2805,10 +2797,6 @@
       {
         "file": "backend/src/domains/markets/state/orderReservationStateMachine.ts",
         "lines": 621
-      },
-      {
-        "file": "admin/v2/src/routes/banking/BankingRoute.js",
-        "lines": 620
       },
       {
         "file": "backend/supabase/functions/player-api/runtime.ts",
@@ -2869,10 +2857,6 @@
       {
         "file": "backend/src/domains/marketplace/infrastructure/supabasePlayerMarketplaceRepository.ts",
         "lines": 581
-      },
-      {
-        "file": "admin/v2/src/routes/attendance/AttendanceRoute.js",
-        "lines": 579
       },
       {
         "file": "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",
@@ -2943,10 +2927,6 @@
         "lines": 545
       },
       {
-        "file": "admin/v2/src/routes/news-events/NewsEventsRoute.js",
-        "lines": 544
-      },
-      {
         "file": "admin/v2/src/routes/market/MarketController.js",
         "lines": 535
       },
@@ -2977,10 +2957,6 @@
       {
         "file": "backend/src/domains/markets/calculations/fixedIncomeAnalytics.ts",
         "lines": 514
-      },
-      {
-        "file": "admin/v2/src/routes/messages/MessagesRoute.js",
-        "lines": 513
       },
       {
         "file": "backend/supabase/functions/admin-api/readExtensions.ts",
@@ -3531,6 +3507,7 @@
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/overview/GameLifecycleController.js",
           "admin/v2/src/routes/overview/OverviewController.js",
           "backend/src/domains/game-sessions/application/readGameJoinCode.test.ts",
           "backend/src/domains/game-sessions/infrastructure/supabaseGameJoinCodeReadRepository.test.ts",
@@ -3558,6 +3535,8 @@
         "locations": [
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
+          "admin/v2/src/routes/overview/GameLifecycleController.js",
+          "admin/v2/src/routes/overview/GameLifecyclePanel.js",
           "backend/src/domains/game-sessions/application/rotateGameJoinCode.test.ts",
           "backend/src/domains/game-sessions/application/updateGameSettings.test.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
@@ -3927,6 +3906,7 @@
         "locations": [
           "backend/src/domains/store/api/playerStorePublicHttpHandlerTestSupport.ts",
           "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts",
+          "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.test.ts",
           "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts",
           "player-terminal/src/api/preview-transport.js",
           "player-terminal/src/features/store/store-purchase-contract.js"

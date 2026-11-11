@@ -3,6 +3,9 @@ name: Runtime Interaction Wiring
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-949.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-948.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
       - "player-terminal/**"
       - "admin/**"
       - "backend/src/domains/**"
@@ -31,6 +34,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@v7
