@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-949.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-948.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
       - "docs/operations/contracts/player-cross-cutting/pr-936.json"
       - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - '.github/workflows/ref-009-contract-reward-qualification.yml'

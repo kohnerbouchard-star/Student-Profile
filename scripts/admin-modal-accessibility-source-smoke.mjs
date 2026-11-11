@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 
 const source = await readFile(new URL("../admin/modal-accessibility.js", import.meta.url), "utf8");
 const bridge = await readFile(new URL("../admin/modal-lifecycle-bridge.js", import.meta.url), "utf8");
@@ -91,15 +93,58 @@ console.log("Admin modal, nested-dialog, and Player drawer accessibility source 
 // The contract payload journey must start after real control binding and its
 // initial-focus frame, not just after the form becomes visible.
 const { waitForContractCreateReady } = await import("./admin-quality-smoke-fixture.mjs");
-let predicate;
-let options;
-waitForContractCreateReady({ waitForFunction(fn, argument, settings) {
-  predicate = fn;
-  options = settings;
-  assert.equal(argument, null);
-} });
-assert.equal(options.timeout, 5000, "Contract readiness must remain bounded.");
-assert.doesNotMatch(predicate.toString(), /\.focus\s*\(|\.value\s*=(?!=)|setTimeout/, "The barrier must observe, not repair or sleep through, field state.");
+// Execute the installed, lockfile-pinned browser polling function itself. An
+// async predicate is truthy before resolution in this version; awaiting it in a
+// stub would conceal the defect these regressions must catch.
+const require = createRequire(import.meta.url);
+const playwrightPackage = require.resolve("playwright-core/package.json");
+const playwrightVersion = JSON.parse(await readFile(playwrightPackage, "utf8")).version;
+const lock = JSON.parse(await readFile(new URL("../package-lock.json", import.meta.url), "utf8"));
+assert.equal(playwrightVersion, lock.packages["node_modules/playwright-core"].version);
+const playwrightSource = await readFile(new URL("lib/coreBundle.js", pathToFileURL(playwrightPackage)), "utf8");
+const pollingStartMarker = "injectedScript.evaluateHandle((injected, { expression:";
+const pollingEndMarker = "\n          }, { expression: expression2, isFunction: isFunction2, polling:";
+const pollingStart = playwrightSource.indexOf(pollingStartMarker);
+const pollingEnd = playwrightSource.indexOf(pollingEndMarker, pollingStart);
+assert.ok(pollingStart >= 0 && pollingEnd > pollingStart, "Pinned Playwright polling extraction must be reviewed when its implementation changes.");
+const browserPolling = new Function(`return (${playwrightSource.slice(
+  pollingStart + "injectedScript.evaluateHandle(".length, pollingEnd,
+)}\n});`)();
+const flush = () => new Promise(setImmediate);
+function pollingPage(enqueue) {
+  const handles = [];
+  const waits = [];
+  const handle = (value) => {
+    const result = { value, disposed: false, async dispose() { this.disposed = true; } };
+    handles.push(result);
+    return result;
+  };
+  const injected = { utils: { builtins: {
+    requestAnimationFrame: enqueue,
+    setTimeout: () => assert.fail("Readiness must retain animation-frame polling, not fixed sleeps."),
+  } } };
+  return {
+    handles, waits,
+    evaluate: callback => callback(),
+    evaluateHandle: async callback => handle(callback()),
+    waitForFunction(callback, argument, options) {
+      const poll = browserPolling(injected, {
+        expression: callback.toString(), isFunction: true,
+        arg: argument?.value ?? argument,
+      });
+      let expire;
+      const deadline = new Promise((_, reject) => { expire = () => {
+        poll.abort();
+        reject(new Error("readiness timeout"));
+      }; });
+      waits.push({ callback, options, expire });
+      // This models Playwright's outer progress deadline, not its predicate.
+      // The actual polling implementation above decides truthiness and frames.
+      return Promise.race([poll.result, deadline]).then(handle);
+    },
+    expire() { waits.forEach(wait => wait.expire()); },
+  };
+}
 const oldDocument = globalThis.document;
 const oldWindow = globalThis.window;
 const title = { isConnected: true };
@@ -109,50 +154,122 @@ let frames = [];
 const root = { dataset: { controlsBound: "false" }, isConnected: true, querySelector: () => currentTitle };
 globalThis.document = { querySelectorAll: () => roots, activeElement: null };
 globalThis.window = { requestAnimationFrame: (callback) => frames.push(callback) };
+const advance = async () => {
+  const frame = frames; frames = [];
+  frame.forEach(callback => callback());
+  await flush();
+};
+const reset = () => {
+  frames = []; roots = [root]; root.isConnected = true;
+  root.dataset.controlsBound = "true"; title.isConnected = true;
+  currentTitle = title; document.activeElement = title;
+};
+async function startReadiness(timeoutMs) {
+  const page = pollingPage(callback => frames.push(callback));
+  const outcome = { settled: false };
+  const ready = waitForContractCreateReady(page, timeoutMs);
+  ready.then(() => { outcome.settled = true; }, () => { outcome.settled = true; });
+  await flush();
+  assert.equal(page.waits[0].options.timeout, timeoutMs ?? 5000, "Contract readiness must retain its caller's single bounded deadline.");
+  assert.notEqual(page.waits[0].callback.constructor.name, "AsyncFunction", "A Promise must never be used as readiness truthiness.");
+  assert.doesNotMatch(page.waits[0].callback.toString(), /\.focus\s*\(|\.value\s*=(?!=)|setTimeout/, "The barrier must observe, not repair or sleep through, field state.");
+  return { page, outcome, ready };
+}
+async function rejectPending(observation, message) {
+  assert.equal(observation.outcome.settled, false, message);
+  observation.page.expire();
+  await assert.rejects(observation.ready, /readiness timeout/, "A browser readiness failure must propagate.");
+  assert.ok(observation.page.handles.every(handle => handle.disposed), "Timeout must dispose private observation state.");
+}
 try {
-  assert.equal(await predicate(), false, "A missing console must not be ready.");
-  roots = [root, root];
-  assert.equal(await predicate(), false, "Duplicate consoles must not be ready.");
-  roots = [root];
-  assert.equal(await predicate(), false, "A visible but unbound console must not be ready.");
-  assert.equal(frames.length, 0);
-  root.dataset.controlsBound = "true";
-  currentTitle = null;
-  assert.equal(await predicate(), false, "A missing title must not be ready.");
-  currentTitle = title;
-  document.activeElement = title; // Earlier accessibility focus is insufficient.
-  let settled = false;
-  const ready = predicate().then((result) => { settled = true; return result; });
-  await new Promise(setImmediate);
-  assert.equal(settled, false, "Even an active title must await the binding's focus frame.");
-  frames.shift()();
-  assert.equal(await ready, true);
-  document.activeElement = {};
-  const wrongFocus = predicate();
-  frames.shift()();
-  assert.equal(await wrongFocus, false, "Unrelated focus must not be accepted.");
-  const focusAfterFrame = predicate();
+  const brokenPage = pollingPage(callback => frames.push(callback));
+  const falseHandle = await brokenPage.waitForFunction(async () => false, null, { timeout: 5000 });
+  assert.equal(falseHandle.value, false, "Pinned Playwright must reproduce the original false-Promise early completion.");
+  assert.equal(frames.length, 0, "The original async predicate stops before scheduling a second poll.");
+  await falseHandle.dispose();
+
+  for (const [message, invalidate] of [
+    ["A missing console must not be ready.", () => { roots = []; }],
+    ["Duplicate consoles must not be ready.", () => { roots = [root, root]; }],
+    ["A visible but unbound console must not be ready.", () => { root.dataset.controlsBound = "false"; }],
+    ["A missing title must not be ready.", () => { currentTitle = null; }],
+    ["A disconnected console must not be ready.", () => { root.isConnected = false; }],
+    ["A disconnected title must not be ready.", () => { title.isConnected = false; }],
+  ]) {
+    reset(); invalidate();
+    const observation = await startReadiness();
+    assert.equal(frames.length, 1, "Only polling, not a candidate focus frame, is scheduled before valid binding.");
+    await advance();
+    await rejectPending(observation, message);
+  }
+  reset();
+  const alreadyFocused = await startReadiness();
+  assert.equal(alreadyFocused.outcome.settled, false, "Even an active title must await the binding's focus frame.");
+  await advance();
+  await alreadyFocused.ready;
+  assert.ok(alreadyFocused.page.handles.every(handle => handle.disposed), "Success must dispose observation and result handles.");
+
+  reset(); document.activeElement = {};
+  const wrongFocus = await startReadiness();
+  await advance();
+  assert.equal(wrongFocus.outcome.settled, false, "Unrelated focus must not be accepted.");
   document.activeElement = title;
-  frames.shift()();
-  assert.equal(await focusAfterFrame, true);
+  await advance();
+  await wrongFocus.ready;
+
+  reset(); root.dataset.controlsBound = "false"; document.activeElement = {};
+  const lateBinding = await startReadiness();
+  root.dataset.controlsBound = "true";
+  await advance();
+  assert.equal(lateBinding.outcome.settled, false, "Later binding must start its own frame barrier.");
+  document.activeElement = title;
+  await advance();
+  await lateBinding.ready;
+
   for (const invalidate of [
     () => { root.isConnected = false; },
+    () => { roots = []; },
     () => { roots = [root, root]; },
     () => { roots = [{ ...root }]; },
     () => { root.dataset.controlsBound = "false"; },
     () => { title.isConnected = false; },
+    () => { currentTitle = null; },
     () => { currentTitle = { isConnected: true }; document.activeElement = currentTitle; },
   ]) {
-    root.isConnected = true; roots = [root]; root.dataset.controlsBound = "true";
-    title.isConnected = true; currentTitle = title; document.activeElement = title;
-    const interrupted = predicate();
+    reset();
+    const interrupted = await startReadiness();
     invalidate();
-    frames.shift()();
-    assert.equal(await interrupted, false, "Detached, replaced, duplicate or unbound consoles must fail after the frame.");
+    await advance();
+    await rejectPending(interrupted, "Detached, replaced, duplicate or unbound consoles must fail after the frame.");
   }
-  await assert.rejects(waitForContractCreateReady({ waitForFunction() {
-    return Promise.reject(new Error("readiness timeout"));
-  } }), /readiness timeout/, "A browser readiness failure must propagate.");
+
+  reset();
+  const replaced = await startReadiness();
+  roots = [{ ...root }];
+  currentTitle = { isConnected: true }; document.activeElement = currentTitle;
+  await advance();
+  assert.equal(replaced.outcome.settled, false, "The old candidate's frame must not qualify a replacement.");
+  await advance();
+  await replaced.ready;
+
+  reset();
+  const stalled = await startReadiness(37);
+  await rejectPending(stalled, "A stalled focus frame must remain pending until the same browser deadline rejects.");
+  await advance();
+  assert.equal(frames.length, 0, "A timeout must abort polling even when a stale frame later runs.");
+
+  reset();
+  const first = await startReadiness();
+  const second = await startReadiness();
+  assert.notEqual(first.page.handles[0].value, second.page.handles[0].value, "Concurrent calls must not share browser observation state.");
+  await rejectPending(first, "One wait can time out independently.");
+  await advance();
+  await second.ready;
+  assert.ok(second.page.handles.every(handle => handle.disposed));
+
+  await assert.rejects(waitForContractCreateReady({ evaluateHandle() {
+    return Promise.reject(new Error("observation context closed"));
+  } }), /observation context closed/, "Browser context failures must propagate.");
 } finally {
   if (oldDocument === undefined) delete globalThis.document; else globalThis.document = oldDocument;
   if (oldWindow === undefined) delete globalThis.window; else globalThis.window = oldWindow;
@@ -196,23 +313,20 @@ async function simulateMountedSetup(setup) {
   globalThis.HTMLElement = Element;
   globalThis.document = { querySelector: () => dialog, querySelectorAll: () => [root], activeElement: close };
   globalThis.window = { requestAnimationFrame: callback => queue.push(callback) };
-  const page = {
-    evaluate: callback => callback(),
-    async waitForFunction(callback) {
-      for (let attempt = 0; attempt < 5; attempt += 1) {
-        const result = callback();
-        if (result instanceof Promise) advance();
-        if (await result) return;
-        advance();
-      }
-      throw new Error("readiness timeout");
-    },
-  };
+  const page = pollingPage(callback => queue.push(callback));
   try {
-    await new AsyncFunction("page", "modal", "action", "boundary", "waitForContractCreateReady", setup)(
+    let settled = false;
+    const running = new AsyncFunction("page", "modal", "action", "boundary", "waitForContractCreateReady", setup)(
       page, { waitFor: async () => {} }, "add-contract",
       async () => { document.activeElement = last; }, waitForContractCreateReady,
     );
+    running.then(() => { settled = true; }, () => { settled = true; });
+    for (let attempt = 0; !settled && attempt < 8; attempt += 1) {
+      await flush();
+      if (!settled) advance();
+    }
+    if (!settled) page.expire();
+    await running;
     while (queue.length) advance();
     // The browser Tab starts from the actual owner after queued startup work.
     document.activeElement = document.activeElement === last ? close : objective;

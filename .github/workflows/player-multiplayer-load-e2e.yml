@@ -6,8 +6,18 @@ on:
     branches: [main, agent/pr377-validation-base, feat/business-financial-reporting-v2, feat/business-common-equity-v2, feat/business-ipo-issuance-v2]
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-945.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-949.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-944.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-943.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-948.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-942.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-940.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-927.json"
       - "docs/operations/contracts/player-cross-cutting/pr-936.json"
       - "docs/operations/contracts/player-cross-cutting/pr-939.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-941.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-924.json"
       - "docs/operations/contracts/player-cross-cutting/pr-916.json"
       - ".github/workflows/player-multiplayer-load-e2e.yml"
       - ".github/workflows/phase15-controlled-staging.yml"
