@@ -139,6 +139,9 @@ jobs:
           PY
           npx playwright install --with-deps chromium
 
+      - name: Verify bounded Business Banking readiness in Chromium
+        run: node scripts/business-banking-readiness-browser.mjs
+
       - name: Build exact authorized Crafting pack
         shell: bash
         run: |

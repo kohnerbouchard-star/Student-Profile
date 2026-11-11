@@ -32,7 +32,7 @@
     "story-decisions": "node tests/story-decision-flow.mjs",
     "market-flow": "node tests/market-order-flow.mjs",
     "market-holdings": "node tests/portfolio-market-holdings.mjs",
-    "banking-read": "node tests/banking-read-model.mjs && node --test tests/banking-freshness-ownership.mjs",
+    "banking-read": "node tests/banking-read-model.mjs && node --test tests/banking-freshness-ownership.mjs ../scripts/business-banking-readiness.test.mjs",
     "banking-fx": "node tests/banking-fx-surface.mjs",
     "inventory-read": "node tests/inventory-read-model.mjs",
     "inventory-redemption-connected": "node tests/inventory-redemption-connected-lifecycle.mjs",
