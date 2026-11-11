@@ -23,8 +23,26 @@
     "scripts/fixtures/admin-banking-function-hashes.json",
     "scripts/fixtures/admin-banking-route-harness.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-940.json",
+    ".github/workflows/admin-v2-crafting.yml",
+    ".github/workflows/admin-v2-market.yml",
+    ".github/workflows/banking-fx-clearing-v1.yml",
+    ".github/workflows/business-financial-market.yml",
+    ".github/workflows/business-primary-ipo.yml",
+    ".github/workflows/configurable-stock-market-timezone-v1.yml",
+    ".github/workflows/crafting-item-runtime.yml",
+    ".github/workflows/database-replay.yml",
+    ".github/workflows/economic-core-request-claims.yml",
+    ".github/workflows/exchange-calendar-runtime-v1.yml",
+    ".github/workflows/loans-lifecycle-read-v1.yml",
+    ".github/workflows/player-button-click-safety.yml",
+    ".github/workflows/player-multiplayer-load-e2e.yml",
+    ".github/workflows/player-response-privacy.yml",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/world-runtime.yml",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/admin-v2-settings-check.yml",
+    ".github/workflows/admin-game-lifecycle-controls-v1.yml"
   ],
   "requiredFiles": [
     ".github/workflows/admin-v2-banking.yml",
@@ -41,8 +59,26 @@
     "scripts/fixtures/admin-banking-function-hashes.json",
     "scripts/fixtures/admin-banking-route-harness.mjs",
     "docs/operations/contracts/player-cross-cutting/pr-940.json",
+    ".github/workflows/admin-v2-crafting.yml",
+    ".github/workflows/admin-v2-market.yml",
+    ".github/workflows/banking-fx-clearing-v1.yml",
+    ".github/workflows/business-financial-market.yml",
+    ".github/workflows/business-primary-ipo.yml",
+    ".github/workflows/configurable-stock-market-timezone-v1.yml",
+    ".github/workflows/crafting-item-runtime.yml",
+    ".github/workflows/database-replay.yml",
+    ".github/workflows/economic-core-request-claims.yml",
+    ".github/workflows/exchange-calendar-runtime-v1.yml",
+    ".github/workflows/loans-lifecycle-read-v1.yml",
+    ".github/workflows/player-button-click-safety.yml",
+    ".github/workflows/player-multiplayer-load-e2e.yml",
+    ".github/workflows/player-response-privacy.yml",
+    ".github/workflows/story-replay-safety.yml",
+    ".github/workflows/world-runtime.yml",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/admin-v2-settings-check.yml",
+    ".github/workflows/admin-game-lifecycle-controls-v1.yml"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -163,6 +199,8 @@
     "Environment Neutral Browser",
     "runtime-config-contract",
     "Loans Lifecycle Read",
+    "Admin Game Lifecycle Controls",
+    "Game lifecycle V2 contracts and browser acceptance",
     "Database Replay",
     "Economic Core Request Claims",
     "REF046 exclusive disposable qualification",
@@ -174,6 +212,10 @@
     "Crafting V2 contracts and browser smoke",
     "Player Response Privacy",
     "player-response-privacy",
+    "Admin V2 Settings Check",
+    "Settings contract and browser acceptance",
+    "Admin V2 Market",
+    "Market V2 contracts and browser smoke",
     "Admin V2 Banking",
     "Banking V2 contracts and browser smoke"
   ],
@@ -265,6 +307,7 @@
     "Rendered Admin browser and secure mutation journey",
     "runtime-config-contract",
     "Loans Lifecycle Read",
+    "Game lifecycle V2 contracts and browser acceptance",
     "Database Replay",
     "Economic Core Request Claims",
     "REF046 exclusive disposable qualification",
@@ -272,11 +315,13 @@
     "Rendered viewport and drawer scrolling",
     "Crafting V2 contracts and browser smoke",
     "player-response-privacy",
+    "Settings contract and browser acceptance",
+    "Market V2 contracts and browser smoke",
     "Banking V2 contracts and browser smoke"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "The owner approved continued separate behavior-preserving large-file refactors and retained-content public roadmap updates for World Management, Market, Banking, News & Events, Attendance and Messages. This authority is bounded to the Admin Banking presentation extraction, characterization and synthetic browser qualification, the new exact-head read-only Banking workflow, additive evidence/inventory/roadmap metadata and this actual-number registration. All current-main required and critical checks are retained. The verifier and its regression tests are read-only. Preliminary qualification requires later fresh main-forward reconciliation and independent union review after World and Market merge. No production deployment, production mutation, secret handling, unrelated route or scanner change, gate weakening or release dispatch is authorized by this manifest."
+  "authorizationNote": "The owner approved separate behavior-preserving Admin route refactors, retained-content public roadmap updates and serial qualified merges, and directed continued checks until main is current. This authority covers the existing Banking extraction, characterization, synthetic browser qualification, additive scope/inventory/roadmap metadata and exact PR940 paths in eighteen existing pull-request filters needed for inherited qualification. Preserve every ordered predecessor check, prior PR path, job, assertion, action, permission, exact-head checkout and production hold. Verifier/test files remain read-only. Actual Settings and lifecycle are now merged at main 8cac339fd72342633f13bf92e233114ee9961179. Reconcile that main into the existing reviewed Banking history, retain every incoming authority/evidence/roadmap byte, and add only bounded Banking and lifecycle merged-qualification metadata. This local reconciliation does not publish or merge main; independent final review and all fresh exact-head hosted gates, including legacy lifecycle synthetic merge-tree equality, remain required. No production deployment/mutation, secret handling, unrelated feature change, gate weakening or release dispatch."
 }

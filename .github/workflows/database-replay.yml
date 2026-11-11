@@ -3,6 +3,12 @@ name: Database Replay
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-940.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-927.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-939.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-941.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-924.json"
       - "backend/supabase/config.toml"
       - "backend/supabase/migrations/**"
       - "backend/src/domains/notifications/infrastructure/**"

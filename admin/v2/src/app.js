@@ -454,9 +454,10 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     || "route-boundary";
 
   function selectGame(gameId) {
-    if (!gameId) return;
+    if (!gameId || gameId === selectedGameId || !settings.canDiscardChanges()) return;
     try {
       window.EconovariaAdminGameSelection?.write?.(gameId);
+      settings.discardChanges();
       window.location.reload();
     } catch (_error) {
       toast.push({
@@ -592,11 +593,18 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     renderRoute();
   }
 
+  function handleBeforeUnload(event) {
+    if (!settings.hasUnsavedChanges() && !settings.isSaving()) return;
+    event.preventDefault();
+    event.returnValue = "";
+  }
+
   function handleCollapse(event) {
     rememberCollapsedPreference(event.detail?.collapsed);
   }
 
   window.addEventListener("hashchange", handleHashChange);
+  window.addEventListener("beforeunload", handleBeforeUnload);
   navigation.element.addEventListener("admin-navigation-collapse", handleCollapse);
   renderRoute();
 
@@ -626,6 +634,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
       settings.destroy();
       logs.destroy();
       window.removeEventListener("hashchange", handleHashChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       navigation.element.removeEventListener("admin-navigation-collapse", handleCollapse);
       notificationDrawer.destroy();
       accountDrawer.destroy();

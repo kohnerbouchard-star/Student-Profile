@@ -3,6 +3,7 @@ import test from "node:test";
 
 import "./admin-v2-banking.test.mjs";
 import "./admin-v2-loans-api.test.mjs";
+import "./admin-v2-game-lifecycle.test.mjs";
 
 import {
   ADMIN_OVERVIEW_RESOURCE_KEYS,
