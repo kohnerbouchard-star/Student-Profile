@@ -5,6 +5,7 @@ import {
   BUSINESS_STORE_OFFER_QUOTE_PRICING_VERSION,
   normalizeBusinessStoreOfferQuoteCommand,
   parseBusinessStoreOfferQuote,
+  parseBusinessStoreOfferFundingQuote,
   StoreOfferQuoteContractError,
 } from "../backend/src/domains/store/contracts/storeOfferQuoteContracts.ts";
 
@@ -104,5 +105,37 @@ assert.throws(
   () => parseBusinessStoreOfferQuote({ ...quote, buyerCurrencyCode: "N_RC" }),
   /invalid public format/u,
 );
+
+// Preserve the original unfunded policy while admitting the shorter lifetime
+// already allowed by the canonical funded quote schema and FX boundary cap.
+assert.deepEqual(parseBusinessStoreOfferFundingQuote(quote), quote);
+for (const duration of [1, 40_276, 58_981, 60_000, 119_999]) {
+  const shortened = {
+    ...quote,
+    expiresAt: new Date(Date.parse(quote.createdAt) + duration).toISOString(),
+  };
+  assert.equal(parseBusinessStoreOfferFundingQuote(shortened).expiresAt, shortened.expiresAt);
+  assert.throws(() => parseBusinessStoreOfferQuote(shortened), /exactly two minutes/u);
+}
+for (const duration of [-1, 0, 120_001]) {
+  assert.throws(
+    () => parseBusinessStoreOfferFundingQuote({
+      ...quote,
+      expiresAt: new Date(Date.parse(quote.createdAt) + duration).toISOString(),
+    }),
+    /positive and at most two minutes/u,
+  );
+}
+for (const invalid of [
+  { createdAt: "invalid" }, { expiresAt: "invalid" },
+  { quoteKey: command.gameSessionId }, { sellerPartyKey: command.buyerPlayerId },
+  { finalTotalPrice: 40 }, { buyerCurrencyCode: "ALT" }, { exchangeRate: 1.2 },
+  { availableQuantityAtQuote: 2 }, { pricingVersion: "other" },
+]) {
+  assert.throws(
+    () => parseBusinessStoreOfferFundingQuote({ ...quote, ...invalid }),
+    (error) => error instanceof StoreOfferQuoteContractError,
+  );
+}
 
 console.log("Business Phase 10A.2 offer-aware quote typed contract: PASS");

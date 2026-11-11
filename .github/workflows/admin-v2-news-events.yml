@@ -5,6 +5,14 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-933.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-946.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-951.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-945.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-950.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-949.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-944.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-943.json"
       - ".github/workflows/admin-v2-news-events.yml"
       - "admin/v2.html"
       - "admin/v2/src/app.js"
