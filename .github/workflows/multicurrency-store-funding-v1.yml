@@ -3,6 +3,7 @@ name: multicurrency-store-funding-v1
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-951.json"
       - "docs/operations/contracts/player-cross-cutting/pr-950.json"
       - "docs/operations/contracts/player-cross-cutting/pr-949.json"
       - "docs/operations/contracts/player-cross-cutting/pr-948.json"

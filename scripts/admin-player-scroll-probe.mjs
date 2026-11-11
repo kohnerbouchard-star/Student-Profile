@@ -106,3 +106,15 @@ export async function createPlayerScrollProbe(page) {
     dispose: () => observation.dispose(),
   };
 }
+
+// Share only the observer's readiness checks with the operational focus smoke.
+// Revalidate the exact surface and natural focus before boundary positioning.
+export async function waitForPlayerCreateReady(page) {
+  const probe = await createPlayerScrollProbe(page);
+  try {
+    await probe.waitUntilReady();
+    await probe.observation.evaluate(state => { state.pane(); });
+  } finally {
+    await probe.dispose();
+  }
+}
