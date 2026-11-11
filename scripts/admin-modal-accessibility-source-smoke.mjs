@@ -346,3 +346,6 @@ assert.ok(mountedSmoke.includes(mountedBarrier), "Only Contract startup should u
 console.log("Mounted Contract boundary ordering reproduces the old race and waits for initial focus without changing wrap assertions.");
 
 await import("./admin-scanner-focus-ownership.test.mjs");
+
+// Run the Player-only operational readiness controls with this retained source gate.
+await import("./admin-operational-modal-readiness.test.mjs");
