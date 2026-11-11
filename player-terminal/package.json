@@ -39,7 +39,7 @@
     "notifications-inbox": "node tests/notification-inbox-flow.mjs",
     "world-news-route": "node tests/world-news-route-contract.mjs",
     "world-runtime": "node tests/world-runtime-flow.mjs",
-    "realtime": "node tests/realtime-freshness.mjs",
+    "realtime": "node tests/realtime-freshness.mjs && node --test tests/terminal-live-render.mjs",
     "session-timeout": "node tests/session-timeout-safe-exit.mjs",
     "recovery": "node tests/player-recovery-states.mjs",
     "skeletons": "node tests/skeleton-registry.mjs",

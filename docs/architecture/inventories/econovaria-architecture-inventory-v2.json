@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1352,
+    "sourceFiles": 1353,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -2619,7 +2619,7 @@
       },
       {
         "file": "player-terminal/src/app.js",
-        "lines": 1171
+        "lines": 1172
       },
       {
         "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.test.ts",
