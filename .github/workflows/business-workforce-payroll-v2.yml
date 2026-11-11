@@ -3,6 +3,7 @@ name: Business Workforce Payroll V2
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
       - "docs/operations/contracts/player-cross-cutting/pr-936.json"
       - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - "backend/supabase/migrations/20260822*.sql"

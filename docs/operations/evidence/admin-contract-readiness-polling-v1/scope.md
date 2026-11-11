@@ -1,12 +1,20 @@
 # Contract create readiness polling correction
 
-## Registration scope
+## Actual PR947 scope and qualification hold
 
-Roadmap: `MAINT-ADMIN-CONTRACT-READINESS-POLLING-001`. Status: `IN_PROGRESS`.
+Roadmap: `MAINT-ADMIN-CONTRACT-READINESS-POLLING-001`. Status: `IN_PROGRESS`; draft [PR #947](https://github.com/kohnerbouchard-star/Student-Profile/pull/947).
+
+The verified public registration head is `01621a490b4e1a6387b7954638afa9db90dcb6a4`, tree `05261ea319d37c7feac3567b9000061f8dc0234d`, with sole parent current main `6bf9774c97e140beac74f54ba4cee6730df31403`. It contains only this scope and the additive roadmap intake. Its CI is interim registration evidence, not qualification of the source correction.
+
+The complete local candidate preserves that registration history and the reviewed source with normal ancestry. Actual `pr-947.json` retains every ordered main PR940 identity: 137 required and 98 critical checks, without additions, removals or substitutions. Forty-three changed paths are covered by 45 exact locks, including the two unchanged read-only verifier/test files. All production-deployment, production-mutation and secret-value flags remain false.
+
+Independent scheduling review found that 12 of the 50 required workflow families match the complete source/metadata/authority scope naturally. Each of the remaining 38 existing workflows receives only the exact `docs/operations/contracts/player-cross-cutting/pr-947.json` path in its existing `pull_request.paths`. Every earlier entry, job, assertion, action, permission, checkout, concurrency setting, non-PR trigger and production guard stays unchanged. No wildcard or dispatch is added. No selected workflow filename would itself trigger another missing family, so each of these 38 entries is necessary. CodeQL remains an inherited external check requiring exact-head evidence.
+
+Source and registration/scheduling-plan reviews are clear. Final actual-number metadata review, committed-candidate checks and expected-head publication are required before fresh complete hosted qualification. All default synthetic-merge checkouts, including legacy lifecycle and Shell, must use a tree identical to the reviewed head. No initial registration check or earlier source pass qualifies this complete candidate.
 
 Base is freshly fetched main `6bf9774c97e140beac74f54ba4cee6730df31403`, tree `80db7fb2024b3332cb687860ede84c3ff6f653fe`. The separately reviewed local source correction is `4aab22bb3f8fc40c0d8d89615cd15d28c7e67c97`, tree `1cb4c0fab7f9dfea8d93581a35df6c111e2b69fb`, on `fix/contract-readiness-polling-20261111`.
 
-Initial draft registration contains only this evidence and an additive roadmap intake on exact main. The correction, regression changes, actual-number authority and necessary scheduling entries are not part of that registration. No PR number is assigned in this document. Registration checks cannot qualify the pending source correction. Publish the complete independently reviewed candidate once the real PR number can bind its exact scope, then run fresh full exact-head qualification.
+The initial draft registration was deliberately metadata-only. The correction, regression changes, actual-number authority and scheduling entries are prepared as one complete qualification update. Publish only after final independent review and committed checks, then run fresh full exact-head qualification; no hosted pass is claimed here.
 
 The owner authorized continued checks and ordered merges, including this separate bounded prerequisite before News [PR #942](https://github.com/kohnerbouchard-star/Student-Profile/pull/942). Twelve refreshed open PR pathsets contain no competing change to the selected fixture helper or modal source-smoke. News, Attendance, Messages, roster, Store and other open scopes remain separate. Shared roadmap and workflow files require additive preservation during later reconciliation.
 
@@ -35,7 +43,7 @@ The root suite retains its existing isolated-PostgreSQL reservation-proof skip. 
 
 ## Authority, qualification and rollback
 
-After draft registration supplies the real number, add a separate exact-path authority preserving main PR940's ordered 137 required and 98 critical identities unchanged. Lock every changed path plus the two unchanged read-only verifier/test paths. Preserve all production-deployment, production-mutation and secret-value denials. Add only the exact new authority path to existing pull-request filters that otherwise miss this bounded scope; preserve every prior path, job, assertion, action, permission, non-PR trigger, checkout and production guard. Actual-number scope and scheduling require independent review before full-candidate publication.
+Actual [PR947 authority](../../contracts/player-cross-cutting/pr-947.json) preserves main PR940's ordered 137 required and 98 critical identities unchanged. Its 45 exact locks cover all 43 changed paths plus the two unchanged read-only verifier/test paths. All production-deployment, production-mutation and secret-value denials remain false. The 38 scheduling changes are exact authority-path additions only. Final actual-number scope and scheduling require independent review before full-candidate publication.
 
 Fresh complete hosted gates must qualify the exact final head, including Contract full-payload and subsequent acceptance steps, mounted focus, all inherited browser/backend/database checks and protected production skips. The retained legacy lifecycle checkout requires proof that its synthetic merge tree equals the reviewed head tree. No blind retry, substituted check or gate waiver is permitted.
 

@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
       - ".github/workflows/admin-scroll-integrity.yml"
       - "admin/**"
       - "scripts/admin-scroll-integrity-contract.test.mjs"
