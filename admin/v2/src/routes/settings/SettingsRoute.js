@@ -81,7 +81,7 @@ function change(label, before, after, format = String) {
   return { label, before: format(before), after: format(after) };
 }
 
-function settingsForm(model, { onValidate, onSave, canSave = true }) {
+function settingsForm(model, { onValidate, onSave, canSave = true, refreshing = false }) {
   const form = createElement("form", {
     className: "admin-settings-form",
     attrs: { novalidate: "", "aria-label": "Game settings" },
@@ -280,6 +280,8 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
   }
 
   let presetWasAutoCustom = false;
+  let submitting = false;
+  let destroyed = false;
   MODIFIER_FIELDS.forEach((name) => {
     fields.get(name).control.addEventListener("input", () => {
       const modifiersDiffer = MODIFIER_FIELDS.some((fieldName) => (
@@ -305,7 +307,7 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (!canSave) return;
+    if (!canSave || refreshing || submitting || destroyed) return;
     const input = draft();
     const validation = onValidate(input);
     if (!showValidation(validation)) return;
@@ -316,8 +318,11 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
       before: String(entry.before),
       after: String(entry.after),
     })));
+    submitting = true;
+    saveConfirm.setBusy(false);
     const accepted = await saveConfirm.open(saveButton);
-    if (!accepted) return;
+    if (!accepted || destroyed) { submitting = false; return; }
+    fields.forEach((field) => { field.control.disabled = true; });
     saveButton.disabled = true;
     resetButton.disabled = true;
     saveButton.textContent = "Saving…";
@@ -326,15 +331,22 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
       if (result?.validation) showValidation(result.validation);
       if (result?.ok === true) dirtyStatus.textContent = "Saved; refreshing authoritative values…";
     } finally {
-      saveButton.textContent = canSave ? "Review changes" : "Refresh before saving";
-      updateDirtyState();
+      submitting = false;
+      if (!destroyed) {
+        fields.forEach((field) => { field.control.disabled = refreshing; });
+        saveButton.textContent = canSave ? "Review changes" : "Refresh before saving";
+        updateDirtyState();
+      }
     }
   });
 
   reset();
+  fields.forEach((field) => { field.control.disabled = refreshing; });
   return {
     element: form,
-    destroy() { saveConfirm.destroy(); },
+    isDirty: () => changeSet().length > 0,
+    deactivate() { saveConfirm.close("navigation"); },
+    destroy() { destroyed = true; saveConfirm.destroy(); },
   };
 }
 
@@ -375,7 +387,8 @@ export function SettingsRoute({ state, onRetry = () => {}, onValidate = () => ({
   const formView = settingsForm(state.data, {
     onValidate,
     onSave: async (draft) => onSave(draft),
-    canSave: state.status !== ADMIN_DATA_STATES.STALE,
+    canSave: ![ADMIN_DATA_STATES.STALE, ADMIN_DATA_STATES.REFRESHING].includes(state.status),
+    refreshing: state.status === ADMIN_DATA_STATES.REFRESHING,
   });
 
   const form = formView.element;
@@ -403,6 +416,8 @@ export function SettingsRoute({ state, onRetry = () => {}, onValidate = () => ({
   });
   return {
     element: frame.element,
+    isDirty: formView.isDirty,
+    deactivate: formView.deactivate,
     destroy() { formView.destroy(); },
   };
 }

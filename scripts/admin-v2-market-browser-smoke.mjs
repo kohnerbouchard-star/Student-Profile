@@ -214,7 +214,7 @@ async function waitForMarketState(page, state, timeout = 10_000) {
 async function waitForReady(page, timeout = 10_000) {
   await waitForMarketState(page, "ready", timeout);
   await waitForSessionGateRelease(page);
-  await page.getByRole("heading", { level: 1, name: "Market Management", exact: true })
+  await page.getByRole("heading", { level: 1, name: "Market Monitor", exact: true })
     .waitFor({ state: "visible", timeout });
 }
 
@@ -545,22 +545,34 @@ try {
     });
   }
 
-  await runCheck("marketplace-separate-planned", async () => {
+  await runCheck("marketplace-separate-native", async () => {
     const runtime = await createRuntime(browser, fixture, "ready");
     try {
       await waitForReady(runtime.page);
+      const initialUrl = new URL(runtime.page.url());
       const readsBefore = marketRequests(fixture, runtime.runId).length;
       await runtime.page.locator('.admin-navigation__link[data-route="marketplace"]').click();
-      const boundary = runtime.page.locator('.admin-route-boundary[data-route="marketplace"][data-mode="planned"]');
+      const boundary = runtime.page.locator('.admin-route-boundary[data-route="marketplace"][data-mode="source"]');
       await boundary.waitFor({ state: "visible" });
-      assert.match(await boundary.innerText(), /Marketplace is planned for Admin v2/i);
-      assert.equal(await runtime.page.getByRole("heading", { level: 1, name: "Market Management", exact: true }).count(), 0);
+      await runtime.page.locator('.admin-navigation__link[data-route="marketplace"][aria-current="page"]')
+        .waitFor({ state: "attached" });
+      await boundary.locator('.admin-marketplace-route[data-admin-v2-state="empty"]')
+        .waitFor({ state: "visible" });
+      await runtime.page.getByRole("heading", { level: 1, name: "Marketplace Moderation", exact: true })
+        .waitFor({ state: "visible" });
+      assert.equal(await boundary.locator(".admin-route-boundary__handoff").count(), 0, "Marketplace rendered a planned or legacy handoff");
+      assert.equal(await runtime.page.locator('.admin-route-boundary[data-route="marketplace"][data-mode="planned"], .admin-route-boundary[data-route="marketplace"][data-mode="legacy"]').count(), 0);
+      assert.equal(await runtime.page.getByRole("heading", { level: 1, name: "Market Monitor", exact: true }).count(), 0);
       assert.equal(marketRequests(fixture, runtime.runId).length, readsBefore, "Marketplace navigation issued a financial-Market request");
-      assert.equal(new URL(runtime.page.url()).hash, "#marketplace");
-      await assertNoHorizontalOverflow(runtime.page, "Marketplace planned boundary");
-      await assertNoPrivateIdsOrRawDetails(runtime.page, "Marketplace planned boundary");
-      await assertCleanRuntime(runtime, "Marketplace planned boundary");
-      return { market: "v2", marketplace: "planned", sharedRequests: 0 };
+      const currentUrl = new URL(runtime.page.url());
+      assert.equal(currentUrl.origin, initialUrl.origin, "Marketplace navigation changed origin");
+      assert.equal(currentUrl.pathname, initialUrl.pathname, "Marketplace navigation left Admin V2");
+      assert.equal(currentUrl.search, initialUrl.search, "Marketplace navigation changed the selected game");
+      assert.equal(currentUrl.hash, "#marketplace");
+      await assertNoHorizontalOverflow(runtime.page, "Marketplace native boundary");
+      await assertNoPrivateIdsOrRawDetails(runtime.page, "Marketplace native boundary");
+      await assertCleanRuntime(runtime, "Marketplace native boundary");
+      return { market: "v2", marketplace: "v2", sharedRequests: 0 };
     } finally {
       await runtime.close();
     }
@@ -727,7 +739,7 @@ try {
       await waitForSessionGateRelease(runtime.page);
       const error = runtime.page.locator('.admin-market-route .admin-state[data-tone="error"]');
       await error.waitFor({ state: "visible" });
-      assert.match(await error.innerText(), /Market Management could not be loaded|temporarily unavailable/i);
+      assert.match(await error.innerText(), /Market Monitor could not be loaded|temporarily unavailable/i);
       const retry = error.getByRole("button", { name: /retry|try again|refresh/i });
       assert.ok(await retry.count() > 0, "Retryable Market failure omitted Retry");
       await assertNoPrivateIdsOrRawDetails(runtime.page, "Market failed state");
@@ -772,7 +784,7 @@ try {
       const denied = runtime.page.locator('.admin-permission-boundary[data-state="denied"]');
       await denied.waitFor({ state: "visible" });
       await waitForSessionGateRelease(runtime.page);
-      assert.match(await denied.innerText(), /Market access restricted/i);
+      assert.match(await denied.innerText(), /Market Monitor access restricted/i);
       assert.equal(marketRequests(fixture, runtime.runId).length, 0, "Permission-denied Market route fetched protected data");
       await assertNoPrivateIdsOrRawDetails(runtime.page, "Market permission boundary");
       await assertNoHorizontalOverflow(runtime.page, "Market permission boundary");

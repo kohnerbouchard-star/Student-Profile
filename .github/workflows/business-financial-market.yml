@@ -2,6 +2,13 @@ name: Business Financial Market
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-942.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-940.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-927.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-939.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-941.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-924.json"
       - "docs/operations/contracts/player-cross-cutting/pr-916.json"
       - ".github/workflows/business-financial-market.yml"
       - "backend/supabase/migrations/**"
