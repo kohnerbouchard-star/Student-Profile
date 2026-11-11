@@ -17,6 +17,10 @@ export const MAIN_CHECKPOINTS = Object.freeze([
   'privacy-browser-cookies', 'privacy-browser-stores', 'privacy-server-entry',
   'privacy-gateway-log-size', 'privacy-gateway-logs', 'privacy-server-enumerate',
   'privacy-server-coverage', 'privacy-service-read', 'privacy-service-logs',
+  'privacy-before-student-edge', 'privacy-before-student-auth',
+  'privacy-before-student-rest', 'privacy-before-student-kong',
+  'privacy-after-student-edge', 'privacy-after-student-auth',
+  'privacy-after-student-rest', 'privacy-after-student-kong',
   'student-entry-code', 'student-entry-lifecycle', 'student-entry-representatives',
   'student-access-execution',
 ]);
@@ -24,6 +28,31 @@ export const CALLBACK_CHECKPOINTS = Object.freeze([
   'not-started', 'late-fetch', 'late-status', 'late-receipt', 'late-db-delta',
   'late-hold', 'late-fulfill',
 ]);
+
+// Only fixed phase/service labels may cross the existing aggregate boundary.
+// No service output, matched value, or caller-controlled text is returned.
+const SERVICE_LOG_CHECKPOINTS = Object.freeze({
+  'before-student-access': Object.freeze({
+    supabase_edge_runtime_econovaria: 'privacy-before-student-edge',
+    supabase_auth_econovaria: 'privacy-before-student-auth',
+    supabase_rest_econovaria: 'privacy-before-student-rest',
+    supabase_kong_econovaria: 'privacy-before-student-kong',
+  }),
+  'after-student-access': Object.freeze({
+    supabase_edge_runtime_econovaria: 'privacy-after-student-edge',
+    supabase_auth_econovaria: 'privacy-after-student-auth',
+    supabase_rest_econovaria: 'privacy-after-student-rest',
+    supabase_kong_econovaria: 'privacy-after-student-kong',
+  }),
+});
+export function serviceLogCheckpoint(phase, service) {
+  if (typeof phase !== 'string' || typeof service !== 'string'
+      || !Object.hasOwn(SERVICE_LOG_CHECKPOINTS, phase)
+      || !Object.hasOwn(SERVICE_LOG_CHECKPOINTS[phase], service)) {
+    throw new Error('Invalid service log checkpoint');
+  }
+  return SERVICE_LOG_CHECKPOINTS[phase][service];
+}
 
 const states = new WeakMap();
 const allowed = (channel, identifier) => typeof identifier === 'string'

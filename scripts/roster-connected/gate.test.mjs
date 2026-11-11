@@ -194,7 +194,34 @@ test('diagnostic classification adds exactly two harness files and leaves the gu
 
 // Remove only these reviewed literal diagnostic statements, never application
 // operations or assertions. Unknown/malformed instrumentation fails the test.
+const SERVICE_LOG_LABELS = [
+  'privacy-before-student-edge', 'privacy-before-student-auth',
+  'privacy-before-student-rest', 'privacy-before-student-kong',
+  'privacy-after-student-edge', 'privacy-after-student-auth',
+  'privacy-after-student-rest', 'privacy-after-student-kong',
+];
+// Exact inverse of this diagnostic-only seam. Every original operation, corpus,
+// assertion and command must still match the frozen public baseline byte-for-byte.
+function withoutServicePhaseCheckpoints(source) {
+  const replacements = [
+    ["import { markCheckpoint, sealCheckpoints, validateCheckpointSnapshot, serviceLogCheckpoint } from './checkpoints.mjs';", "import { markCheckpoint, sealCheckpoints, validateCheckpointSnapshot } from './checkpoints.mjs';"],
+    ['await runBrowser(report,async (values, phase) => {', 'await runBrowser(report,async values => {'],
+    ["markCheckpoint(report, 'main', serviceLogCheckpoint(phase, name));", "markCheckpoint(report, 'main', 'privacy-service-logs');"],
+    ['const privacy = async phase => {', 'const privacy = async () => {'],
+    ['await checkServerLogs([...rosterValues,...privateValues], phase);', 'await checkServerLogs([...rosterValues,...privateValues]);'],
+    ["await privacy('before-student-access');", 'await privacy();'],
+    ["await privacy('after-student-access');", 'await privacy();'],
+  ];
+  for(const [replacement,original] of replacements) {
+    assert.ok(source.split(replacement).length<=2);
+    source=source.replace(replacement,original);
+  }
+  assert.doesNotMatch(source,/serviceLogCheckpoint|before-student-access|after-student-access|async phase/);
+  return source;
+}
+
 function withoutCheckpoints(source) {
+  source=withoutServicePhaseCheckpoints(source);
   const imports = ["import { markCheckpoint } from './checkpoints.mjs';\n",
     "import { markCheckpoint, sealCheckpoints, validateCheckpointSnapshot } from './checkpoints.mjs';\n"];
   for(const line of imports) {
@@ -231,8 +258,8 @@ test('checkpoint inverse preserves all original flow bytes and exact runtime gua
 test('each literal checkpoint is bound to the intended source channel and serialized only once',async()=>{
   const files=await Promise.all(['browser.mjs','student-access.mjs','run.mjs'].map(name=>read(`./${name}`)));
   const found={main:[],callback:[]};
-  for(const source of files) for(const match of source.matchAll(/markCheckpoint\(report, '(main|callback)', '([a-z-]+)'\); /g)) found[match[1]].push(match[2]);
-  assert.deepEqual(found.main.sort(),MAIN_CHECKPOINTS.filter(x=>x!=='not-started').slice().sort());
+  for(const source of files.map(withoutServicePhaseCheckpoints)) for(const match of source.matchAll(/markCheckpoint\(report, '(main|callback)', '([a-z-]+)'\); /g)) found[match[1]].push(match[2]);
+  assert.deepEqual(found.main.sort(),MAIN_CHECKPOINTS.filter(x=>x!=='not-started'&&!SERVICE_LOG_LABELS.includes(x)).slice().sort());
   assert.deepEqual(found.callback.sort(),CALLBACK_CHECKPOINTS.filter(x=>x!=='not-started').slice().sort());
   const browser=files[0], start=browser.indexOf("markCheckpoint(report, 'main', 'late-route-install')");
   const end=browser.indexOf("markCheckpoint(report, 'main', 'late-preview')",start);
@@ -243,4 +270,32 @@ test('each literal checkpoint is bound to the intended source channel and serial
   const runner=files[2];assert.equal((runner.match(/report\.checkpoints = validateCheckpointSnapshot\(sealCheckpoints\(report\)\);/g)||[]).length,1);
   assert.ok(runner.indexOf('report.checkpoints = validateCheckpointSnapshot(sealCheckpoints(report))')>runner.indexOf('report.cleanup = await cleanup()'));
   assert.ok(runner.indexOf('report.checkpoints = validateCheckpointSnapshot(sealCheckpoints(report))')<runner.indexOf('const artifacts ='));
+});
+
+
+test('eight service/phase labels preserve the complete public browser/orchestrator sources by exact inverse',async()=>{
+  for(const name of ['browser.mjs','run.mjs']) {
+    const source=await read(`./${name}`);
+    const baseline=execFileSync('git',['-C',root,'show',`5f69fbb36ab9de78293c8ab3d4384b441b096f57:scripts/roster-connected/${name}`],{encoding:'utf8'});
+    assert.equal(withoutServicePhaseCheckpoints(source),baseline);
+  }
+  for(const name of ['student-access.mjs','evidence.mjs','runtime-inputs.mjs','runtime-equivalence.mjs']) {
+    const baseline=execFileSync('git',['-C',root,'show',`5f69fbb36ab9de78293c8ab3d4384b441b096f57:scripts/roster-connected/${name}`],{encoding:'utf8'});
+    assert.equal(await read(`./${name}`),baseline);
+  }
+});
+test('service checkpoints bind both existing privacy passes and mark only after unchanged cumulative retrieval',async()=>{
+  const browser=await read('./browser.mjs'),runner=await read('./run.mjs'),helper=await read('./checkpoints.mjs');
+  assert.equal((browser.match(/await privacy\('before-student-access'\);/g)||[]).length,1);
+  assert.equal((browser.match(/await privacy\('after-student-access'\);/g)||[]).length,1);
+  assert.ok(browser.indexOf("await privacy('before-student-access')")<browser.indexOf('await verifyStudentAccess('));
+  assert.ok(browser.indexOf("await privacy('after-student-access')")>browser.indexOf('await verifyStudentAccess('));
+  assert.ok(browser.includes('await checkServerLogs([...rosterValues,...privateValues], phase);'));
+  assert.ok(runner.includes("markCheckpoint(report, 'main', 'privacy-service-read'); const output = await execute('docker',['logs',name],{timeout:30_000});"));
+  assert.ok(runner.includes("markCheckpoint(report, 'main', serviceLogCheckpoint(phase, name)); absent(output,values,'server-log-leak');"));
+  assert.doesNotMatch(runner,/--since|--tail|--follow|LOG_LEVEL|ACCESS_LOG/);
+  const mapping=helper.slice(helper.indexOf('const SERVICE_LOG_CHECKPOINTS'),helper.indexOf('export function serviceLogCheckpoint'));
+  const labels=[...mapping.matchAll(/: '(privacy-[a-z-]+)'/g)].map(match=>match[1]);
+  assert.deepEqual(labels,SERVICE_LOG_LABELS);assert.equal(new Set(labels).size,8);
+  assert.ok(labels.every(label=>MAIN_CHECKPOINTS.includes(label)&&!CALLBACK_CHECKPOINTS.includes(label)));
 });

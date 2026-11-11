@@ -52,7 +52,7 @@ export async function runBrowser(report, checkServerLogs, onBrowser = () => {}, 
     allNames.push(...names); allIdentifiers.push(...ids); accessCodes.push(...secrets);
     privateValues.push(...secrets); rosterValues.push(...names,...ids,...secrets);
   };
-  const privacy = async () => {
+  const privacy = async phase => {
     markCheckpoint(report, 'main', 'privacy-browser-log-size'); check(!logOverflow, 'browser-log-overflow');
     markCheckpoint(report, 'main', 'privacy-browser-logs'); absent(logs.join('\n'), [...rosterValues,...privateValues], 'browser-log-leak');
     for (const context of contexts) {
@@ -67,7 +67,7 @@ export async function runBrowser(report, checkServerLogs, onBrowser = () => {}, 
         markCheckpoint(report, 'main', 'privacy-browser-stores'); check(storage.indexedDb === 0 && storage.caches === 0, 'browser-persistent-store');
       }
     }
-    markCheckpoint(report, 'main', 'privacy-server-entry'); await checkServerLogs([...rosterValues,...privateValues]);
+    markCheckpoint(report, 'main', 'privacy-server-entry'); await checkServerLogs([...rosterValues,...privateValues], phase);
   };
   try {
     report.stage = 'real-auth-and-game';
@@ -295,12 +295,12 @@ export async function runBrowser(report, checkServerLogs, onBrowser = () => {}, 
     markCheckpoint(report, 'main', 'admin-revoked-status'); check(revoked.status === 401,'logout-session-revoked');
     markCheckpoint(report, 'main', 'privacy-final-snapshot'); const final = await snapshot(gameName);
     markCheckpoint(report, 'main', 'privacy-persisted'); assertPersistedPrivacy(final,accessCodes,allNames,allIdentifiers);
-    await privacy();
+    await privacy('before-student-access');
     // Authentication has legitimate session/throttle writes. Keep it after all
     // original import/replay/negative/logout snapshots and outside their timing.
     await verifyStudentAccess({game,gameName,cohorts:[{count:30,row:thirty.receipt.students[0]},
       {count:40,row:forty.receipt.students[1]}],pageFor,privateValues,rosterValues,report});
-    await privacy(); // Student contexts were validated before logout and closed.
+    await privacy('after-student-access'); // Student contexts were validated before logout and closed.
     report.counts = {players:final.players,countries:final.countries,activeCredentials:final.credentials,completedReceipts:final.completed,audits:final.audits};
     report.lifecycle = {close:true,navigation:true,lateResponse:true,logout:true};
     report.privacy = {browserStorage:true,browserLogs:true,serverLogs:true,persistedReceipts:true,aggregateAudit:true,publicDto:true};

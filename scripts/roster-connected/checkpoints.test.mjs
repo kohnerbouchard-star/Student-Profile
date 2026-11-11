@@ -1,8 +1,9 @@
 import test from 'node:test';
+import { absent } from './evidence.mjs';
 import assert from 'node:assert/strict';
 import {
   MAIN_CHECKPOINTS, CALLBACK_CHECKPOINTS, markCheckpoint, sealCheckpoints,
-  validateCheckpointSnapshot,
+  validateCheckpointSnapshot, serviceLogCheckpoint,
 } from './checkpoints.mjs';
 
 // Synthetic values only. No host, database, browser, or network observations.
@@ -23,6 +24,10 @@ const MAIN = [
   'privacy-browser-cookies', 'privacy-browser-stores', 'privacy-server-entry',
   'privacy-gateway-log-size', 'privacy-gateway-logs', 'privacy-server-enumerate',
   'privacy-server-coverage', 'privacy-service-read', 'privacy-service-logs',
+  'privacy-before-student-edge', 'privacy-before-student-auth',
+  'privacy-before-student-rest', 'privacy-before-student-kong',
+  'privacy-after-student-edge', 'privacy-after-student-auth',
+  'privacy-after-student-rest', 'privacy-after-student-kong',
   'student-entry-code', 'student-entry-lifecycle', 'student-entry-representatives',
   'student-access-execution',
 ];
@@ -247,4 +252,68 @@ test('snapshot getters, serializers, custom prototypes, and proxy traps are neve
   assert.equal(invoked, 0);
   const accepted = { callback: 'late-fetch', main: 'late-navigation' };
   assert.equal(validateCheckpointSnapshot(accepted), accepted);
+});
+
+const SERVICE_CASES = [
+  ['before-student-access','supabase_edge_runtime_econovaria','privacy-before-student-edge'],
+  ['before-student-access','supabase_auth_econovaria','privacy-before-student-auth'],
+  ['before-student-access','supabase_rest_econovaria','privacy-before-student-rest'],
+  ['before-student-access','supabase_kong_econovaria','privacy-before-student-kong'],
+  ['after-student-access','supabase_edge_runtime_econovaria','privacy-after-student-edge'],
+  ['after-student-access','supabase_auth_econovaria','privacy-after-student-auth'],
+  ['after-student-access','supabase_rest_econovaria','privacy-after-student-rest'],
+  ['after-student-access','supabase_kong_econovaria','privacy-after-student-kong'],
+];
+for (const [phase,service,label] of SERVICE_CASES) {
+  test(`fixed service log checkpoint selects ${label}`, () => {
+    const report={passed:false};
+    assert.equal(serviceLogCheckpoint(phase,service),label);
+    markCheckpoint(report,'main',serviceLogCheckpoint(phase,service));
+    markCheckpoint(report,'callback','late-fulfill');
+    const snapshot=sealCheckpoints(report);
+    assert.equal(validateCheckpointSnapshot(snapshot),snapshot);
+    assert.deepEqual(snapshot,{main:label,callback:'late-fulfill'});
+    assert.deepEqual(report,{passed:false});
+    assert.equal(JSON.stringify(snapshot),JSON.stringify({main:label,callback:'late-fulfill'}));
+  });
+}
+test('service phase selector rejects unknown/private/coerced inputs without touching accessors', () => {
+  const hostile=hostileValues();
+  const invalid=[undefined,null,true,false,0,1n,NaN,'',CANARY,'__proto__','constructor',
+    'toString','before-student-access\n','after-student-access-private',
+    'supabase_kong_econovaria\n','supabase_unknown_econovaria','supabase_kong_other',
+    'Student Test Name','STU-0123456789ABCDEF01234567',...hostile.values];
+  for(const value of invalid) {
+    rejects(()=>serviceLogCheckpoint(value,'supabase_kong_econovaria'),'Invalid service log checkpoint');
+    rejects(()=>serviceLogCheckpoint('after-student-access',value),'Invalid service log checkpoint');
+  }
+  for(const [phase,service] of SERVICE_CASES) {
+    rejects(()=>serviceLogCheckpoint(service,phase),'Invalid service log checkpoint');
+  }
+  hostile.assertUntouched();
+});
+test('service labels never alter sealed snapshots or get overwritten by late callbacks', async () => {
+  const report={};
+  markCheckpoint(report,'main',serviceLogCheckpoint('after-student-access','supabase_rest_econovaria'));
+  const snapshot=sealCheckpoints(report);
+  await Promise.resolve();
+  markCheckpoint(report,'callback','late-fulfill');
+  for(const [phase,service] of SERVICE_CASES) markCheckpoint(report,'main',serviceLogCheckpoint(phase,service));
+  assert.deepEqual(snapshot,{main:'privacy-after-student-rest',callback:'not-started'});
+  assert.equal(sealCheckpoints(report),snapshot);
+});
+
+test('fixed service checkpoints retain full-value absence failure without exposing or classifying the match', () => {
+  const values=['synthetic roster name',CANARY];
+  for(const [phase,service,label] of SERVICE_CASES) {
+    const report={passed:false};
+    markCheckpoint(report,'main',serviceLogCheckpoint(phase,service));
+    assert.throws(()=>absent(`prefix ${CANARY} suffix`,values,'server-log-leak'),error=>{
+      assert.equal(error.message,'server-log-leak');assert.ok(!String(error).includes(CANARY));return true;
+    });
+    assert.deepEqual(values,['synthetic roster name',CANARY]);
+    const snapshot=sealCheckpoints(report);assert.equal(snapshot.main,label);
+    assert.ok(!JSON.stringify(snapshot).includes(CANARY));assert.deepEqual(Reflect.ownKeys(snapshot),['main','callback']);
+    assert.doesNotThrow(()=>absent('unrelated service message',values,'server-log-leak'));
+  }
 });
