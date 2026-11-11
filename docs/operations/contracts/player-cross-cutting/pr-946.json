@@ -25,11 +25,7 @@
     ".github/workflows/exchange-calendar-runtime-v1.yml",
     ".github/workflows/loans-lifecycle-read-v1.yml",
     ".github/workflows/player-response-privacy.yml",
-    ".github/workflows/repository-quality.yml",
-    ".github/workflows/runtime-interaction-wiring.yml",
-    ".github/workflows/staging-readiness-preflight.yml",
     ".github/workflows/story-replay-safety.yml",
-    ".github/workflows/supply-chain-security.yml",
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-946.json",
     "docs/operations/evidence/player-store-live-focus-v1/scope.md",
@@ -59,11 +55,7 @@
     ".github/workflows/exchange-calendar-runtime-v1.yml",
     ".github/workflows/loans-lifecycle-read-v1.yml",
     ".github/workflows/player-response-privacy.yml",
-    ".github/workflows/repository-quality.yml",
-    ".github/workflows/runtime-interaction-wiring.yml",
-    ".github/workflows/staging-readiness-preflight.yml",
     ".github/workflows/story-replay-safety.yml",
-    ".github/workflows/supply-chain-security.yml",
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-946.json",
     "docs/operations/evidence/player-store-live-focus-v1/scope.md",
@@ -326,5 +318,5 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "The owner approved completing workflows and merging bounded repairs after retained checks pass. This separate repair preserves Player Store keyboard focus only across strictly live-only metadata updates. This candidate integrates actual main 773e72cf857165bc73cfcb16adabce40f1b64eb0, whose normal PR945 merge has the exact qualified prerequisite tree 44e01ffdcd040b655fd6fd46b891feccef0d039d. All teacher, refactor, runner and qualified Banking readiness predecessors are preserved. PR946 remains unmerged and requires independent final review and renewed exact-head qualification before merge. Qualification metadata adds only actual PR946 authority-path filters to otherwise untriggered required families and the remaining exact-head PR verification checkout bindings. Existing paths, inherited checkout bindings, commands, jobs, permissions, manual/live guards, all predecessor 143 required and 101 critical checks, and production holds remain unchanged. No production deployment, hosted mutation, schema, SQL, authentication, verifier change or secret handling is authorized."
+  "authorizationNote": "The owner approved completing workflows and merging bounded repairs after retained checks pass. This separate repair preserves Player Store keyboard focus only across strictly live-only metadata updates. This candidate integrates actual main 893641945d38e77e9f9095185ddc43016d1a5e25, whose normal PR951 merge retains frozen prerequisite tree adb079a4b9994c014d12106745ed80ee72f65f22 and parents 773e72cf857165bc73cfcb16adabce40f1b64eb0 plus db2f104abc325dcc7d31bbc971af753c9a6441b6. All prerequisite source, readiness proofs, quote fixes, workflow paths and prior records are preserved. PR946 remains draft and requires final review, serialized publication and renewed exact-head qualification before merge; PR951 postmerge checks remain under audit. Its two failed c72c380c gates remain recorded and were not retried. Qualification metadata adds only the actual PR946 authority path to 17 otherwise untriggered required families; all six formerly owned PR-head checkout bindings are inherited unchanged. Existing paths, commands, jobs, permissions, manual/live guards, ordered 143 required and 101 critical checks, and production holds remain unchanged. No production deployment, hosted mutation, schema, SQL, authentication, verifier change or secret handling is authorized."
 }

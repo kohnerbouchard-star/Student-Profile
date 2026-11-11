@@ -10,6 +10,7 @@ on:
       - "docs/operations/contracts/player-cross-cutting/pr-949.json"
       - "scripts/admin-player-scroll-probe.mjs"
       - "scripts/admin-player-scroll-readiness.test.mjs"
+      - "scripts/lib/admin-player-readiness-fixture.mjs"
       - "docs/operations/contracts/player-cross-cutting/pr-947.json"
       - ".github/workflows/admin-scroll-integrity.yml"
       - "admin/**"
@@ -21,6 +22,7 @@ on:
     paths:
       - "scripts/admin-player-scroll-probe.mjs"
       - "scripts/admin-player-scroll-readiness.test.mjs"
+      - "scripts/lib/admin-player-readiness-fixture.mjs"
       - ".github/workflows/admin-scroll-integrity.yml"
       - "admin/**"
       - "scripts/admin-scroll-integrity-contract.test.mjs"

@@ -5,6 +5,8 @@ import {
   waitForContractCreateReady,
 } from "./admin-quality-smoke-fixture.mjs";
 
+import { waitForPlayerCreateReady } from "./admin-player-scroll-probe.mjs";
+
 const OUT = process.env.ADMIN_SMOKE_ARTIFACT_DIR ||
   "admin-browser-smoke-artifacts/mounted-modal-focus";
 const SURFACES = [
@@ -242,6 +244,8 @@ async function exercise([action, section, key]) {
       const dialog = document.querySelector(".admin-terminal-modal:not([hidden])");
       return dialog instanceof HTMLElement && dialog.contains(document.activeElement);
     }, null, { timeout: 5000 });
+    // Player binding queues display-name focus after bridge focus/visibility.
+    if (action === "add-player") await waitForPlayerCreateReady(page);
     // Visibility and bridge focus precede Contract control binding and title focus.
     if (action === "add-contract") await waitForContractCreateReady(page);
     const initial = await page.evaluate(() => ({
