@@ -65,3 +65,6 @@ test("scroll smoke waits strictly for the current session card rather than a hid
   assert.match(source, /Math\.abs\(before\.cardBottom - before\.leftBottom\) <= 14/);
   assert.match(source, /errors\.length === 0/);
 });
+
+// Run the bounded Player lifecycle regressions with the existing scroll gate.
+import "./admin-player-scroll-readiness.test.mjs";
