@@ -17,6 +17,7 @@ import {
   PlayerProfileForm,
 } from "./PlayerForms.js";
 import { PlayersSkeleton } from "./PlayersSkeleton.js";
+import { openRosterCsvReview } from "./RosterCsvReview.js";
 
 function titleCase(value, fallback = "Not available") {
   const text = String(value || "").trim();
@@ -313,6 +314,9 @@ export function PlayersRoute({
   onFiltersChange = () => {},
   onRefresh = async () => {},
   onCreate = async () => ({ ok: false }),
+  onImportRoster,
+  onImportOpen,
+  onImportClose,
   onEditProfile = async () => ({ ok: false }),
   onUpdateCredentials = async () => ({ ok: false }),
 } = {}) {
@@ -449,7 +453,17 @@ export function PlayersRoute({
   });
   const actions = createElement("div", {
     className: "admin-players-route__page-actions",
-    children: [refreshButton, addButton],
+    children: [refreshButton, routeButton({
+      label: "Import roster CSV",
+      quiet: true,
+      action: "check-roster",
+      disabled: [ADMIN_DATA_STATES.INITIAL_LOADING, ADMIN_DATA_STATES.REFRESHING].includes(state.status),
+      onClick(event) {
+        if (onImportOpen?.() === false) return;
+        destroyDialog();
+        activeDialog = openRosterCsvReview(event.currentTarget, { onImport: onImportRoster, onReviewClose: onImportClose });
+      },
+    }), addButton],
   });
   const route = createElement("div", {
     className: "admin-players-route",

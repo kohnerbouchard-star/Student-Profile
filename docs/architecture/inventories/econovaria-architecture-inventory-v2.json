@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1353,
+    "sourceFiles": 1357,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -2643,7 +2643,7 @@
       },
       {
         "file": "admin/v2/src/api/admin-api-client.js",
-        "lines": 937
+        "lines": 939
       },
       {
         "file": "player-terminal/src/api/read-model.js",
@@ -2930,6 +2930,10 @@
         "lines": 535
       },
       {
+        "file": "admin/v2/src/routes/players/PlayersRoute.js",
+        "lines": 535
+      },
+      {
         "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.ts",
         "lines": 533
       },
@@ -2944,10 +2948,6 @@
       {
         "file": "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
         "lines": 532
-      },
-      {
-        "file": "admin/v2/src/routes/players/PlayersRoute.js",
-        "lines": 521
       },
       {
         "file": "backend/supabase/functions/license-payment-webhook/index.ts",
@@ -3735,6 +3735,7 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/overview/OverviewRoute.js",
           "admin/v2/src/routes/players/PlayersController.js",
+          "admin/v2/src/routes/players/RosterImportController.js",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",

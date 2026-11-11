@@ -1,3 +1,4 @@
+import { createRosterImportRequest } from "./player-roster-import.js";
 import { GAME_LIFECYCLE_ACTIONS, normalizeGameLifecycleResult } from "./game-lifecycle-model.js";
 import { normalizeAdminError } from "../core/error-envelope.js";
 
@@ -928,6 +929,7 @@ export function createAdminApiClient({
     updateStoreItem,
     archiveStoreItem,
     createPlayer,
+    importPlayerRoster: createRosterImportRequest({ mutate: playerMutation, collectionPath: playersCollectionPath }),
     updatePlayerSettings,
     updatePlayerCredentials,
     getRequestVersion: () => activeRequestVersion,
