@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1351,
+    "sourceFiles": 1352,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 94,
+    "oversizedSourceFiles": 93,
     "capabilityStrings": 140
   },
   "domains": [
@@ -1687,7 +1687,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/messages/MessagesRoute.js",
+        "file": "admin/v2/src/routes/messages/MessagesReadPanels.js",
         "markers": [
           "fallback"
         ]
@@ -2956,10 +2956,6 @@
       {
         "file": "backend/src/domains/markets/calculations/fixedIncomeAnalytics.ts",
         "lines": 514
-      },
-      {
-        "file": "admin/v2/src/routes/messages/MessagesRoute.js",
-        "lines": 513
       },
       {
         "file": "backend/supabase/functions/admin-api/readExtensions.ts",
