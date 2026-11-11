@@ -43,11 +43,16 @@ jobs:
           node-version: '22.23.1'
           cache: npm
       - name: Install locked tools
+        id: install_locked_tools
         run: |
           set -euo pipefail
           npm install --global npm@10.9.8
           npm ci
           npx playwright install --with-deps chromium
+      - name: Summarize failed installation without changing it
+        if: ${{ failure() && steps.install_locked_tools.outcome == 'failure' }}
+        timeout-minutes: 2
+        run: node scripts/roster-connected/install-diagnostics.mjs
       - name: Validate isolated gate contracts
         run: node --test scripts/roster-connected/*.test.mjs
       - name: Validate both source conventions with complete harness suites

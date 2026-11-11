@@ -161,3 +161,31 @@ test('canonical provisioning adapter changes only exact SQL transport and reject
   assert.throws(() => adaptProvisioning(original.replace('maxBuffer: 20 * 1024 * 1024','maxBuffer: 21 * 1024 * 1024')),/provisioning-seam-hash/);
   assert.throws(() => adaptProvisioning(original + 'async function runSql('),/provisioning-seam-count/);
 });
+
+
+test('installation diagnostics run only on locked-tools failure without changing any prior workflow byte', async () => {
+  const workflow = await read('../../.github/workflows/roster-connected-e2e.yml');
+  const baseline = execFileSync('git',['-C',root,'show','978b178ac9f21aebf16bd4b3d1ecd2a13b01a966:.github/workflows/roster-connected-e2e.yml'],{encoding:'utf8'});
+  const id = '        id: install_locked_tools\n';
+  const step = `      - name: Summarize failed installation without changing it
+        if: \${{ failure() && steps.install_locked_tools.outcome == 'failure' }}
+        timeout-minutes: 2
+        run: node scripts/roster-connected/install-diagnostics.mjs
+`;
+  assert.equal(workflow.split(id).length,2);assert.equal(workflow.split(step).length,2);
+  assert.equal(workflow.replace(id,'').replace(step,''),baseline);
+  assert.ok(workflow.indexOf(step)>workflow.indexOf('npx playwright install --with-deps chromium'));
+  assert.ok(workflow.indexOf(step)<workflow.indexOf('Validate isolated gate contracts'));
+  assert.ok(!step.includes('continue-on-error'));assert.ok(!step.includes('always()'));
+});
+
+test('diagnostic classification adds exactly two harness files and leaves the guard algorithm unchanged', async () => {
+  const baseline = path => execFileSync('git',['-C',root,'show',`978b178ac9f21aebf16bd4b3d1ecd2a13b01a966:${path}`],{encoding:'utf8'});
+  const policy = await read('./runtime-inputs.mjs');
+  const addition = ",'install-diagnostics.mjs','install-diagnostics.test.mjs'";
+  assert.equal(policy.split(addition).length,2);
+  assert.equal(policy.replace(addition,''),baseline('scripts/roster-connected/runtime-inputs.mjs'));
+  for(const name of ['runtime-equivalence.mjs','prepare.mjs','run.mjs','browser.mjs','student-access.mjs','database.mjs','evidence.mjs','auth-fixture.mjs','provisioning.mjs']) {
+    assert.equal(await read(`./${name}`),baseline(`scripts/roster-connected/${name}`));
+  }
+});

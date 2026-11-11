@@ -14,7 +14,7 @@ export const HARNESS_PATHS = Object.freeze([
     'database.mjs','evidence.mjs','gate.test.mjs','prepare.mjs','provisioning.mjs',
     'run.mjs','sources.json','runtime-inputs.mjs','runtime-equivalence.mjs',
     'runtime-equivalence.test.mjs','mode-fixtures.mjs','student-access.mjs',
-    'student-access.test.mjs'].map(name => `scripts/roster-connected/${name}`),
+    'student-access.test.mjs','install-diagnostics.mjs','install-diagnostics.test.mjs'].map(name => `scripts/roster-connected/${name}`),
 ]);
 // Installed tools are generated only by locked npm ci in CI. These exact roots
 // are not application inputs; ignored .env/config/fixtures elsewhere are checked.

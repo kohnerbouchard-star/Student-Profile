@@ -99,6 +99,31 @@ corrects a source-detected harness mismatch with existing Admin responses, not a
 observed hosted production failure. The strict roster/student UUID boundary and
 all original Admin storage/privacy assertions remain unchanged.
 
+## Failed-install observations
+
+The existing locked-tools install command is unchanged, including Playwright's
+`--with-deps chromium`. Only when that exact step fails does a bounded stdlib-only
+helper emit an allowlisted JSON summary to the job log. Diagnostic success never
+changes the installation failure or qualifies any later test. No diagnostic
+artifact is added, and cleanup and the original artifact allowlist are unchanged.
+
+The summary records UTC, exact checkout SHA, validated OS/image and locked tool
+versions, ordered allowlisted mirror schemes/hosts and numeric effective apt retry/timeout
+keys, resolver classification/count, and bounded NSS/DNS status/count/timing for
+only the three existing Ubuntu hosts and Microsoft package-host control. Native
+Chromium dependency availability is reported as counts from the locked installed
+Playwright source; missing or mismatched tools/configuration report unavailable.
+Only presence booleans for fixed standard proxy variable names are observed;
+their values are never read. The helper has a 25-second observation scheduling
+budget, individual child deadlines and awaited termination; the workflow enforces
+a 2-minute overall step timeout. It does not claim hard filesystem/OS syscall
+latency bounds. No utilities or packages are installed. No raw resolver IP, search domain, proxy,
+environment/configuration dump, response body, raw error or credential is printed.
+It does not change a runner, mirror, DNS configuration or resolver, and it performs
+no apt update/install or repair. Observations cannot identify an upstream root
+cause by themselves. Source-bound tests exercise unavailable/timeout/privacy
+controls without making network probes locally.
+
 ## Privacy and cleanup
 
 No screenshots, HAR, video, trace, response body, TOTP, credential or raw logs are
