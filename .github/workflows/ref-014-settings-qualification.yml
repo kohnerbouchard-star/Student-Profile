@@ -3,6 +3,8 @@ name: REF-014 Settings Qualification
 on:
   pull_request:
     paths:
+      - "scripts/admin-account-controls-dom-fixture.mjs"
+      - "scripts/admin-account-controls.test.mjs"
       - "admin/settings-*.js"
       - "admin/attendance-reward-*.js"
       - "scripts/admin-settings-*.mjs"
