@@ -4,6 +4,10 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-946.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-945.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-950.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-949.json"
       - ".github/workflows/admin-v2-attendance.yml"
       - "admin/v2/**"
       - "scripts/admin-v2-attendance-api.test.mjs"

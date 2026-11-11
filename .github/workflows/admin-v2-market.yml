@@ -1,0 +1,76 @@
+name: Admin V2 Market
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-946.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-945.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-950.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-949.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-944.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-943.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-948.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-942.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-940.json"
+      - ".github/workflows/admin-v2-market.yml"
+      - "admin/v2.html"
+      - "admin/v2/src/app.js"
+      - "admin/v2/src/api/admin-api-client.js"
+      - "admin/v2/src/core/navigation-registry.js"
+      - "admin/v2/src/components/**"
+      - "admin/v2/src/routes/market/**"
+      - "admin/v2/styles/routes/market.css"
+      - "scripts/admin-v2-unit.test.mjs"
+      - "scripts/admin-v2-market-api.test.mjs"
+      - "scripts/admin-v2-market-route.test.mjs"
+      - "scripts/fixtures/admin-market-function-hashes.json"
+      - "scripts/fixtures/admin-market-route-harness.mjs"
+      - "scripts/admin-v2-market-browser-smoke.mjs"
+      - "scripts/admin-v2-browser-fixture-server.mjs"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-v2-market-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  market-v2:
+    name: Market V2 contracts and browser smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out exact pull request head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+
+      - name: Install pinned repository tooling
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci
+
+      - name: Run Admin V2 contract regressions
+        run: npm run test:admin-v2
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Market V2 desktop and mobile smoke
+        env:
+          ADMIN_V2_EVIDENCE_DIR: /tmp/admin-v2-market-evidence
+        run: npm run test:admin-v2:market-browser

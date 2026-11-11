@@ -1,0 +1,58 @@
+{
+  "base": "01af400b7786e151b768d59e4ab0861bbbdb9534",
+  "tree": "4e1d4b08bb57955955e35e4130c523c30885d6e4",
+  "kind": "Deterministic baseline-red harness regression, not a reproduction of the incident browser interleaving",
+  "cases": [
+    {
+      "stage": "core",
+      "scenario": "missing-card",
+      "expectedAuthoritativeBalance": 40,
+      "returnedBalance": 0,
+      "readinessWaitCalls": 0,
+      "regressionFailed": true
+    },
+    {
+      "stage": "core",
+      "scenario": "bootstrap-zero",
+      "expectedAuthoritativeBalance": 40,
+      "returnedBalance": 0,
+      "readinessWaitCalls": 0,
+      "regressionFailed": true
+    },
+    {
+      "stage": "core",
+      "scenario": "authoritative-forty",
+      "expectedAuthoritativeBalance": 40,
+      "returnedBalance": 40,
+      "readinessWaitCalls": 0,
+      "regressionFailed": false
+    },
+    {
+      "stage": "materialized",
+      "scenario": "missing-card",
+      "expectedAuthoritativeBalance": 40,
+      "returnedBalance": 0,
+      "readinessWaitCalls": 0,
+      "regressionFailed": true
+    },
+    {
+      "stage": "materialized",
+      "scenario": "bootstrap-zero",
+      "expectedAuthoritativeBalance": 40,
+      "returnedBalance": 0,
+      "readinessWaitCalls": 0,
+      "regressionFailed": true
+    },
+    {
+      "stage": "materialized",
+      "scenario": "authoritative-forty",
+      "expectedAuthoritativeBalance": 40,
+      "returnedBalance": 40,
+      "readinessWaitCalls": 0,
+      "regressionFailed": false
+    }
+  ],
+  "expectedFailures": 4,
+  "passingControls": 2,
+  "incidentCaveat": "Original artifact cannot distinguish missing-card zero from visible bootstrap zero."
+}

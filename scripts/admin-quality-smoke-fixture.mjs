@@ -353,24 +353,33 @@ export function observeStartupOverviewReads(page, gameId, timeoutMs = 15000) {
 
 // Contract visibility precedes control binding and its queued initial focus.
 // Observe that lifecycle without focusing a field or changing any input value.
-export function waitForContractCreateReady(page, timeoutMs = 5000) {
-  return page.waitForFunction(async () => {
-    const selector = "[data-admin-terminal-contract-console]";
-    const consoles = document.querySelectorAll(selector);
-    if (consoles.length !== 1) return false;
-    const root = consoles[0];
-    if (root.dataset.controlsBound !== "true") return false;
-    const title = root.querySelector("[data-admin-terminal-contract-title]");
-    if (!title?.isConnected) return false;
-    // Binding queues initial focus before this predicate can run. Complete that
-    // frame even if an earlier accessibility controller already focused title.
-    await new Promise((resolve) => window.requestAnimationFrame(resolve));
-    const current = document.querySelectorAll(selector);
-    return current.length === 1 && current[0] === root && root.isConnected &&
-      root.dataset.controlsBound === "true" && title.isConnected &&
-      root.querySelector("[data-admin-terminal-contract-title]") === title &&
-      document.activeElement === title;
-  }, null, { timeout: timeoutMs });
+export async function waitForContractCreateReady(page, timeoutMs = 5000) {
+  // Keep frame state private to this invocation, not on the DOM or window.
+  const observation = await page.evaluateHandle(() => ({ candidate: null }));
+  try {
+    const ready = await page.waitForFunction((state) => {
+      const consoles = document.querySelectorAll("[data-admin-terminal-contract-console]");
+      const root = consoles.length === 1 ? consoles[0] : null;
+      const title = root?.querySelector("[data-admin-terminal-contract-title]");
+      if (!root?.isConnected || root.dataset.controlsBound !== "true" || !title?.isConnected) {
+        state.candidate = null;
+        return false;
+      }
+      if (state.candidate?.root !== root || state.candidate?.title !== title) {
+        const candidate = { root, title, frameCompleted: false };
+        state.candidate = candidate;
+        // Binding has already queued initial focus. Await its frame through
+        // synchronous polling so a Promise resolving false cannot end the wait.
+        window.requestAnimationFrame(() => { candidate.frameCompleted = true; });
+        return false;
+      }
+      // Every poll revalidates the single bound surface and exact title above.
+      return state.candidate.frameCompleted && document.activeElement === title;
+    }, observation, { timeout: timeoutMs });
+    await ready.dispose();
+  } finally {
+    await observation.dispose();
+  }
 }
 
 export async function createQualityHarness(name) {

@@ -875,6 +875,14 @@ export async function startAdminV2FixtureServer({
     const gameId = scenario === "legacy-handoff"
       ? ADMIN_V2_FIXTURE_OPAQUE_GAME_ID
       : ADMIN_V2_FIXTURE_GAME_ID;
+    if (upstreamPath === `/games/${gameId}/lifecycle` && request.method === "GET") {
+      sendJson(response, 200, { data: { lifecycle: {
+        state: "active", operationalStatus: "active", version: 1, joinCodeStatus: "active",
+        allowedActions: ["pause", "end", "revoke_sessions"], activePlayerSessions: 2,
+      } } });
+      return;
+    }
+
     const overviewPath = `/games/${gameId}/dashboard`;
     // Exact read-only World contracts; unknown queries/methods retain the 404 boundary.
     const worldPath = `/games/${gameId}/world/`;

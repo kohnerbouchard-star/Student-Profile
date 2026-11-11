@@ -13,7 +13,7 @@ import {
 import {
   PlayerStorePublicError,
 } from "../contracts/playerStorePublicContracts.ts";
-import { parseBusinessStoreOfferQuote } from "../contracts/storeOfferQuoteContracts.ts";
+import { parseBusinessStoreOfferFundingQuote } from "../contracts/storeOfferQuoteContracts.ts";
 import { parseBusinessStoreOfferReceipt } from "../contracts/storeOfferSettlementContracts.ts";
 import {
   type PlayerStoreOfferClient,
@@ -112,7 +112,7 @@ export class SupabasePlayerStoreFundingPublicRepository
       contextDigest: _contextDigest,
       ...quotePayload
     } = row;
-    const quote = parseBusinessStoreOfferQuote(quotePayload);
+    const quote = parseBusinessStoreOfferFundingQuote(quotePayload);
     assertFundingBinding(
       fundingQuote,
       "store.business-offer",
