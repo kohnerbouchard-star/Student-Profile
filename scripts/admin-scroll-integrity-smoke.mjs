@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
+import { createPlayerScrollProbe } from "./admin-player-scroll-probe.mjs";
 
 const BASE_URL = process.env.ADMIN_SCROLL_BASE_URL || "http://127.0.0.1:4173/admin/";
 const ARTIFACT_DIR = process.env.ADMIN_SCROLL_ARTIFACT_DIR || "admin-scroll-integrity-artifacts";
@@ -390,6 +391,8 @@ async function injectScrollableFiller(locator, height = 900) {
 }
 
 let failure;
+let playerScrollProbe;
+let playerMain;
 try {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
@@ -473,9 +476,14 @@ try {
   await addPlayer.click();
   const modal = page.locator(".admin-terminal-modal.is-player-modal:visible").last();
   await modal.waitFor({ state: "visible", timeout: 10_000 });
-  const playerMain = modal.locator(".admin-terminal-player-main").first();
-  await playerMain.waitFor({ state: "visible", timeout: 10_000 });
+  await modal.locator(".admin-terminal-player-main").first().waitFor({ state: "visible", timeout: 10_000 });
+  report.playerModalDiagnostics = {};
+  playerScrollProbe = await createPlayerScrollProbe(page);
+  await playerScrollProbe.waitUntilReady();
+  report.playerModalDiagnostics.ready = await playerScrollProbe.capture();
+  playerMain = await playerScrollProbe.pane();
   await injectScrollableFiller(playerMain, 900);
+  report.playerModalDiagnostics.before = await playerScrollProbe.capture();
   const modalBefore = await playerMain.evaluate((node) => ({
     overflowY: getComputedStyle(node).overflowY,
     clientHeight: node.clientHeight,
@@ -483,11 +491,18 @@ try {
   }));
   assert(["auto", "scroll"].includes(modalBefore.overflowY), `Add Player pane overflow is ${modalBefore.overflowY}`);
   assert(modalBefore.scrollHeight > modalBefore.clientHeight, "Add Player pane did not contain overflow.");
-  await playerMain.evaluate((node) => { node.scrollTop = 220; });
+  report.playerModalDiagnostics.immediate = await playerMain.evaluate((node, state) => {
+    node.scrollTop = 220;
+    return state.snapshot();
+  }, playerScrollProbe.observation);
   await page.waitForTimeout(100);
+  report.playerModalDiagnostics.after = await playerScrollProbe.capture();
   const modalScrollTop = await playerMain.evaluate((node) => node.scrollTop);
   assert(modalScrollTop > 0, "Add Player pane scrollTop did not advance.");
   assert((await shellGeometry()).windowScrollY === 0, "Modal pane scrolling moved the document.");
+  assert(Object.values(report.playerModalDiagnostics.after.sameNodes).every(Boolean), "Add Player surface was replaced during scroll observation.");
+  assert(report.playerModalDiagnostics.after.filler.retained && report.playerModalDiagnostics.after.filler.connected,
+    "Add Player scroll filler was removed or replaced during observation.");
   report.playerModal = {
     paneScrollable: true,
     documentStayedFrozen: true,
@@ -502,6 +517,13 @@ try {
 } catch (error) {
   failure = error;
   report.failure = String(error?.stack || error);
+  if (playerScrollProbe) {
+    try {
+      report.playerModalDiagnostics.failure = await playerScrollProbe.capture();
+    } catch (diagnosticError) {
+      report.playerModalDiagnostics.captureFailure = String(diagnosticError?.stack || diagnosticError);
+    }
+  }
   await page.screenshot({
     path: `${ARTIFACT_DIR}/admin-scroll-integrity-failure.png`,
     fullPage: false,
@@ -510,6 +532,8 @@ try {
 } finally {
   report.errors = errors;
   writeFileSync(`${ARTIFACT_DIR}/admin-scroll-integrity.json`, `${JSON.stringify(report, null, 2)}\n`);
+  await playerMain?.dispose();
+  await playerScrollProbe?.dispose();
   await context.close();
   await browser.close();
 }

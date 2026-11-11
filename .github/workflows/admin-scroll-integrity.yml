@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "scripts/admin-player-scroll-probe.mjs"
+      - "scripts/admin-player-scroll-readiness.test.mjs"
       - "docs/operations/contracts/player-cross-cutting/pr-947.json"
       - ".github/workflows/admin-scroll-integrity.yml"
       - "admin/**"
@@ -13,6 +15,8 @@ on:
   push:
     branches: [main]
     paths:
+      - "scripts/admin-player-scroll-probe.mjs"
+      - "scripts/admin-player-scroll-readiness.test.mjs"
       - ".github/workflows/admin-scroll-integrity.yml"
       - "admin/**"
       - "scripts/admin-scroll-integrity-contract.test.mjs"
