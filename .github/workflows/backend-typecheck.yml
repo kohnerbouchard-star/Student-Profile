@@ -4,6 +4,7 @@ on:
   # Inventory lifecycle qualification retains the required full backend smoke gate.
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-949.json"
       - "docs/operations/contracts/player-cross-cutting/pr-948.json"
       - "docs/operations/contracts/player-cross-cutting/pr-947.json"
       - "docs/operations/contracts/player-cross-cutting/pr-913.json"

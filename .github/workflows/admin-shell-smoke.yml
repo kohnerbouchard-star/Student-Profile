@@ -3,6 +3,7 @@ name: Admin Shell Smoke
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-949.json"
       - "admin/**"
       - "backend/supabase/functions/admin-api/index.ts"
       - "backend/supabase/functions/admin-api/businessBankingOperations*.ts"
