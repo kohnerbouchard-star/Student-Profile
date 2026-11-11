@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1340,
+    "sourceFiles": 1343,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -2642,16 +2642,16 @@
         "lines": 960
       },
       {
+        "file": "admin/v2/src/api/admin-api-client.js",
+        "lines": 937
+      },
+      {
         "file": "player-terminal/src/api/read-model.js",
         "lines": 933
       },
       {
         "file": "backend/src/domains/contracts/api/staffContractReviewHttpHandler.test.ts",
         "lines": 920
-      },
-      {
-        "file": "admin/v2/src/api/admin-api-client.js",
-        "lines": 908
       },
       {
         "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
@@ -3522,6 +3522,7 @@
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/overview/GameLifecycleController.js",
           "admin/v2/src/routes/overview/OverviewController.js",
           "backend/src/domains/game-sessions/application/readGameJoinCode.test.ts",
           "backend/src/domains/game-sessions/infrastructure/supabaseGameJoinCodeReadRepository.test.ts",
@@ -3549,6 +3550,8 @@
         "locations": [
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
+          "admin/v2/src/routes/overview/GameLifecycleController.js",
+          "admin/v2/src/routes/overview/GameLifecyclePanel.js",
           "backend/src/domains/game-sessions/application/rotateGameJoinCode.test.ts",
           "backend/src/domains/game-sessions/application/updateGameSettings.test.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
