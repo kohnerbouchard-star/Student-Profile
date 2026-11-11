@@ -1,7 +1,7 @@
 # Admin operational Player modal readiness
 
 Roadmap: `CI-ADMIN-OPERATIONAL-MODAL-READINESS-001`.
-Status: `IMPLEMENTED_NOT_MERGED`; local only, not published or runtime-qualified.
+Status: `IMPLEMENTED_NOT_MERGED`; draft [PR #951](https://github.com/kohnerbouchard-star/Student-Profile/pull/951). The source is published; the actual-number amendment below remains local and unpublished. No runtime qualification is claimed.
 Owner: `fix/admin-operational-modal-readiness-v1`.
 Implementation and source-check commit: `babf81a6626b795c05196ef04558264a0aed1eda`, tree `dd797b1ba9e5308d9f2e513c1fd4408b04edd6c9`. The subsequent evidence-only record retains all source and workflow bytes.
 Base: freshly fetched main `773e72cf857165bc73cfcb16adabce40f1b64eb0`, tree `44e01ffdcd040b655fd6fd46b891feccef0d039d`.
@@ -71,4 +71,21 @@ Full Edge typechecking stops on the unchanged frozen Supabase `2.108.2` import a
 
 Preservation review confirms exactly twelve main-relative paths, no runtime changes, the complete prior roadmap and all 143/101 gates unchanged, and exact workflow preservation after removing only the documented path entries and one proof step. Both edited YAML files parse. No independent review or native qualification is claimed yet.
 
-Next exact item: independent source/evidence review of this committed local candidate, then coordinator-controlled draft publication and actual-number authority review. Keep #946 frozen until the prerequisite's exact-head and merged-main audits clear.
+The source-publication plan above is now fulfilled as recorded below. Keep #946 frozen until this prerequisite's exact-head and merged-main audits clear.
+
+
+## Actual PR951 source and local qualification amendment
+
+Draft PR951 publishes source `e069999416c7d92c2d6413cb7d5e08735fa03416`, with sole parent main `773e72cf857165bc73cfcb16adabce40f1b64eb0` and exact reviewed tree `c1ea984a88f444ad8e9b81301458196f0f3361b4`. Public API and fetched Git objects confirm all twelve changed paths, modes, blobs and non-scope entries match the local source candidate. Active-owner and fresh-main checks were repeated; the shared Release Promote slot was empty across queued, in-progress, pending, waiting and requested runs before publication. Initial automatic checks are interim registration evidence, not final qualification.
+
+The actual-number `pr-951.json` amendment locks **56 changed paths / 58 exact paths**, including both unchanged read-only verifier/test paths. It preserves main PR945's ordered **143 required / 101 critical** identities, all 53 required workflow families and all false production/secret flags. Prior manifests and application/runtime bytes remain untouched.
+
+Source scheduling contributes seven exact path entries to each Shell PR/push filter and one shared-fixture entry to each Scroll PR/push filter: **16 entries across two workflows**. Those published workflow bytes and the single Shell Chromium proof step remain unchanged in this amendment. The necessary six PR-head checkout bindings across Lifecycle, Repository Quality, Runtime Wiring, Staging Preflight and Supply Chain retain action versions, commands, permissions and all deliberate merge-candidate certification. Accounting for these required workflow edits, fifteen families naturally schedule. Each of the remaining thirty-eight receives only its exact PR951 authority path in the existing PR filter: **38 additional entries**, or **54 source-plus-authority path entries total**. No prior path is removed and no non-PR scheduling is added by this amendment.
+
+The audit tests necessity against the complete changed-path set, excluding only a filter edit's own self-triggering file. All 38 entries remain necessary; none is replaced by a cross-trigger from another proposed workflow edit. Every required workflow/job/step identity is bound to its existing source, with Attendance's generic `focused` label explicitly bound to Admin V2 Attendance. The source and metadata together edit 45 existing workflow files, without a new job or workflow.
+
+Exact preservation checks remove only those 38 entries and six checkout amendments and recover the published workflows byte-for-byte. All published executable test sources, original source trigger additions, native proof, prior roadmap records, read-only verifiers, architecture inventory and complete predecessor content remain unchanged. No Store focus or separate Admin Browser repair is included. The previous Admin Browser startup failure has an unclassified upstream cause; unchanged source must pass on this legitimately corrected final head and later on reconciled #946, with no speculative repair or historical success credit.
+
+This metadata amendment is **not published**. Require committed-candidate checks and independent review before publication. Then require complete exact-head hosted qualification, including actual delayed-focus Chromium, the full mounted modal sequence, all later Shell steps and Admin Browser, before normal merge and a fresh main audit. Initial missing-authority checks are neither waived nor retried unchanged. No workflow dispatch, production action or #946 functional retry occurs here.
+
+Next exact item: review the committed local PR951 authority/scheduling amendment, publish only its reviewed exact tree with the expected public-source head, then audit final-head qualification. The remaining local SDK, PostgreSQL and native-browser limits above remain explicit.

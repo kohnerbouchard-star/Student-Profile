@@ -2,6 +2,7 @@ name: Business Primary IPO
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-951.json"
       - "docs/operations/contracts/player-cross-cutting/pr-945.json"
       - "docs/operations/contracts/player-cross-cutting/pr-950.json"
       - "docs/operations/contracts/player-cross-cutting/pr-949.json"
