@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-942.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
       - "docs/operations/contracts/player-cross-cutting/pr-940.json"
       - "docs/operations/contracts/player-cross-cutting/pr-927.json"
       - "docs/operations/contracts/player-cross-cutting/pr-936.json"

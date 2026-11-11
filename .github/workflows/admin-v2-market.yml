@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-942.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
       - "docs/operations/contracts/player-cross-cutting/pr-940.json"
       - ".github/workflows/admin-v2-market.yml"
       - "admin/v2.html"
