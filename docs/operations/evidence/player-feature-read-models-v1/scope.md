@@ -36,3 +36,9 @@
 ## Remaining gates and next step
 
 Local source/test review and committed-inventory validation are complete. Preserve and independently restore the recovery artifact, then hand the frozen candidate to the parent for serial integration. Re-fetch main and reconcile generated inventory/shared metadata without overwriting another owner. Actual-number authority and fresh exact-head hosted browser/backend gates are required before merge; no PR number is guessed here. Production remains on hold. The independent Stocks extraction remains separate.
+
+## PR #956 publication and exact-head qualification
+
+The owner now authorizes publication and qualified serial merge; earlier local-only wording describes preparation. Main remains `c59ed0afe1ac794bb5c4788f477020e535c3587b`, and #955's postmerge checks have cleared. Draft [PR #956](https://github.com/kohnerbouchard-star/Student-Profile/pull/956) publishes source `d11c3129428bf5dda81035ca84774a72fcc0037a` with exact reviewed tree `6c26f7d2e7d1e69c28e9627c9f48faf8c6f3e3d0`. Remote tree equality and source bytes were verified. Private recovery was downloaded, hash-checked and independently restored: exact head/tree, all 15 source paths, 36 characterization/Country-News cases and deterministic inventory pass.
+
+Actual-number authority inherits all ordered 147 required / 103 critical identities from #955, including all 55 required workflow families and false production/secret flags. Its exact path locks cover the new source/test/evidence paths and only necessary own-authority PR selectors. No existing check, guard, permission, non-PR trigger or workflow command is removed or weakened. Fresh final-head hosted verification follows publication of this reviewed amendment; initial-source CI is interim only. Production stays on hold.
