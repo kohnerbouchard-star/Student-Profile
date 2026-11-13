@@ -36,3 +36,9 @@ Freeze and restore a private recovery after final source review and local verifi
 ## Serial-lane continuation
 
 The parent confirmed #959 postmerge is clear and roster remains local, and released the serial lane for this bounded batch. The owner authorizes draft publication, fresh exact-head qualification, normal qualified merge and postmerge verification. Coordinate any main-base changes with the roster owner. Earlier local-only wording describes preparation; production remains held.
+
+## PR #960 publication and authority
+
+Draft [PR #960](https://github.com/kohnerbouchard-star/Student-Profile/pull/960) publishes source `ec26ead08027c0aadfa839bd57e9f192dcdb1c39` with the exact reviewed tree `4b3e1a846bb7be2ed23c0a98f1be48bc795bb5b2`. The frozen local source recovery reproduces all 12 changed paths and exact tree from baseline only, with 101 interaction/lifecycle tests and deterministic inventory passing.
+
+Actual-number `pr-960.json` preserves all ordered 147 required and 103 critical identities and all 55 predecessor workflow families. It locks 32 changed paths plus two unchanged read-only verifier/test paths. Nineteen own-authority selectors schedule otherwise-unselected families; the two helper-dependency selector additions remain. Every previous selector, job, command, permission, production denial, non-PR trigger and checkout behavior is preserved. Final-head local gates and independent metadata review precede amendment publication. Fresh exact-head hosted qualification follows; initial-source checks cannot qualify the amended head.
