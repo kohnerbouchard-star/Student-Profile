@@ -1,5 +1,9 @@
 import {
+  readLatestCountrySnapshots,
   SupabaseStockMarketRunnerRepository,
+  toStockMarketAssetInput,
+  toStockMarketCountryInput,
+  toStockMarketMacroInput,
 } from "./supabaseStockMarketRunnerRepository.ts";
 import {
   StockMarketRunnerError,
@@ -588,6 +592,7 @@ Deno.test("stock runner consumes Business observations before loading the game m
 });
 
 class FakeSupabaseClient {
+  readonly operations: string[] = [];
   readonly tableErrors = new Map<
     string,
     { readonly code?: string; readonly message: string }
@@ -612,6 +617,7 @@ class FakeSupabaseClient {
   }
 
   async rpc(functionName: string, args: any) {
+    this.operations.push(`rpc:${functionName}`);
     this.rpcCalls.push({ functionName, args });
     if (functionName === "consume_business_market_events_v1") {
       return {
@@ -711,6 +717,7 @@ class FakeQueryBuilder
   private async execute(): Promise<
     { readonly data: unknown[] | null; readonly error: unknown }
   > {
+    this.client.operations.push(`read:${this.tableName}`);
     const tableError = this.client.tableErrors.get(this.tableName);
 
     if (tableError) {
@@ -764,3 +771,283 @@ function assertEquals(actual: unknown, expected: unknown): void {
     );
   }
 }
+
+// These cases characterize the public adapter before moving its pure row mapping.
+for (
+  const [raw, expected] of [
+    ["12.5", 12.5],
+    ["", 0],
+    ["  ", 0],
+    ["bad", Number.NaN],
+    [null, Number.NaN],
+    [true, Number.NaN],
+    [Infinity, Number.NaN],
+  ] as const
+) {
+  Deno.test(`stock runner row mapping retains numeric conversion for ${String(raw)}`, () => {
+    const input = toStockMarketAssetInput(
+      stockAsset({ current_price: raw }) as any,
+    );
+    if (!Object.is(input.currentPrice, expected)) {
+      throw new Error("Numeric conversion changed");
+    }
+  });
+}
+
+Deno.test("stock runner row mapping preserves optional values and normalized collision order", () => {
+  const row = stockAsset({
+    country_code: "  sOlVeNd  ",
+    previous_close: null,
+    open_price: "",
+    day_high: "bad",
+    recent_returns: ["0.25", null, "bad", 0, ""],
+    country_exposure: { " eldoran ": "0.2", ELDORAN: 0.7, ignored: true },
+    commodity_exposure: { " oil ": "", invalid: null },
+    chart_history: [
+      null,
+      [],
+      { tickIndex: -1, timestamp: "t", label: "l", price: 1 },
+      { tickIndex: 2.5, timestamp: "t", label: "l", price: 1 },
+      { tickIndex: "2", timestamp: "t", label: "l", price: "3", volume: "bad" },
+      {
+        gameSessionId: OTHER_SESSION_ID,
+        tickIndex: 3,
+        timestamp: "t3",
+        label: "l3",
+        price: 4,
+      },
+    ],
+  });
+  const before = JSON.stringify(row);
+  const input = toStockMarketAssetInput(row as any);
+  assertEquals(input.countryCode, "SOLVEND");
+  assertEquals(input.previousClose, undefined);
+  assertEquals(input.openPrice, 0);
+  assertEquals(input.dayHigh, undefined);
+  assertEquals(input.recentReturns, [0.25, 0, 0]);
+  assertEquals(input.countryExposure, { ELDORAN: 0.7 });
+  assertEquals(input.commodityExposure, { OIL: 0 });
+  assertEquals(input.history, [
+    {
+      gameSessionId: GAME_SESSION_ID,
+      tickIndex: 2,
+      timestamp: "t",
+      label: "l",
+      price: 3,
+    },
+    {
+      gameSessionId: OTHER_SESSION_ID,
+      tickIndex: 3,
+      timestamp: "t3",
+      label: "l3",
+      price: 4,
+    },
+  ]);
+  assertEquals(JSON.stringify(row), before);
+});
+
+Deno.test("stock runner row mapping requires exact fundamental keys and keeps finite zeros", () => {
+  const fundamentals = Object.fromEntries([
+    "revenueGrowth",
+    "profitMargin",
+    "debtLevel",
+    "cashReserves",
+    "innovationScore",
+    "supplyChainRisk",
+    "politicalExposure",
+    "commodityExposure",
+  ].map((key) => [key, "0"]));
+  const complete = toStockMarketAssetInput(stockAsset({ fundamentals }) as any);
+  assertEquals(complete.fundamentals?.revenueGrowth, 0);
+  const wrongCase: Record<string, string> = {
+    ...fundamentals,
+    RevenueGrowth: "1",
+  };
+  delete wrongCase.revenueGrowth;
+  assertEquals(
+    toStockMarketAssetInput(stockAsset({ fundamentals: wrongCase }) as any)
+      .fundamentals,
+    undefined,
+  );
+});
+
+Deno.test("stock runner latest snapshots preserve sequence precedence stable ties and country ordering", () => {
+  const early = countrySnapshot({
+    id: "early",
+    snapshot_sequence: "10",
+    effective_at: "2026-01-01",
+  });
+  const later = countrySnapshot({
+    id: "later",
+    snapshot_sequence: 10,
+    effective_at: "2026-02-01",
+  });
+  const tied = { ...later, id: "tied" };
+  const lower = countrySnapshot({
+    id: "lower",
+    snapshot_sequence: 9,
+    effective_at: "2026-12-01",
+  });
+  const other = countrySnapshot({
+    id: "other",
+    country_profile_id: ELDORAN_PROFILE_ID,
+  });
+  const unknown = countrySnapshot({ country_profile_id: "unknown" });
+  const rows = [early, lower, later, tied, other, unknown];
+  const selected = readLatestCountrySnapshots(
+    rows as any,
+    new Map([
+      [SOLVEND_PROFILE_ID, "SOLVEND"],
+      [ELDORAN_PROFILE_ID, "ELDORAN"],
+    ]),
+  );
+  assertEquals(
+    selected.map(({ snapshot, countryCode }) => [snapshot.id, countryCode]),
+    [["other", "ELDORAN"], ["later", "SOLVEND"]],
+  );
+  if (selected[1].snapshot !== later) {
+    throw new Error("Snapshot identity changed");
+  }
+  assertEquals(rows.map((row) => row.id), [
+    "early",
+    "lower",
+    "later",
+    "tied",
+    "other",
+    "snapshot-1",
+  ]);
+});
+
+Deno.test("stock runner country and macro projection retain rounding scaling and empty aggregates", () => {
+  const snapshot = countrySnapshot({
+    gdp_growth_rate: "0.123456789",
+    export_strength_index: "-2",
+  });
+  const country = toStockMarketCountryInput(snapshot as any, "SOLVEND");
+  assertEquals(country.gdpGrowthRate, 0.123456789);
+  const macro = toStockMarketMacroInput(
+    GAME_SESSION_ID,
+    [{ snapshot, countryCode: "SOLVEND" }] as any,
+  );
+  assertEquals(macro.gdpGrowthRate, 0.123457);
+  assertEquals(macro.globalDemandIndex, 0);
+  const empty = toStockMarketMacroInput(GAME_SESSION_ID, []);
+  assertEquals(Object.keys(empty).length, 12);
+  assertEquals(empty.globalDemandIndex, undefined);
+  const invalid = toStockMarketMacroInput(
+    GAME_SESSION_ID,
+    [{
+      snapshot: countrySnapshot({ gdp_growth_rate: "bad" }),
+      countryCode: "SOLVEND",
+    }] as any,
+  );
+  if (!Number.isNaN(invalid.gdpGrowthRate)) {
+    throw new Error("Invalid input was silently repaired");
+  }
+});
+
+Deno.test("stock runner preserves read order inclusive event windows and latest regime tie", async () => {
+  const client = new FakeSupabaseClient({
+    game_sessions: [gameSession()],
+    game_session_stock_assets: [stockAsset()],
+    stock_price_ticks: [],
+    country_profiles: [countryProfile("SOLVEND", SOLVEND_PROFILE_ID)],
+    country_economic_snapshots: [countrySnapshot()],
+    stock_market_events: [
+      stockEvent({ shock_id: "ending", created_tick: 1, expires_tick: 4 }),
+      stockEvent({ shock_id: "starting", created_tick: 4, expires_tick: 4 }),
+      stockEvent({ shock_id: "future", created_tick: 5 }),
+      stockEvent({ shock_id: "expired", expires_tick: 3 }),
+      stockEvent({ shock_id: "other-game", game_session_id: OTHER_SESSION_ID }),
+    ],
+    stock_market_regimes: [
+      stockRegime({ regime: "bear", starts_tick: 4, ends_tick: 4 }),
+      stockRegime({ regime: "bull", starts_tick: 4 }),
+      stockRegime({ regime: "sideways", starts_tick: 3 }),
+    ],
+  });
+  const state = await new SupabaseStockMarketRunnerRepository(client as any)
+    .load({ gameSessionId: GAME_SESSION_ID, tickIndex: 4 });
+  assertEquals(client.operations, [
+    "read:game_sessions",
+    "rpc:consume_business_market_events_v1",
+    "read:stock_price_ticks",
+    "read:game_session_stock_assets",
+    "read:country_profiles",
+    "read:country_economic_snapshots",
+    "read:stock_market_events",
+    "read:stock_market_regimes",
+  ]);
+  assertEquals(state.shocks.map((shock) => shock.shockId), [
+    "ending",
+    "starting",
+  ]);
+  assertEquals(state.regime?.regime, "bear");
+});
+
+for (
+  const [error, code] of [
+    [
+      { code: "42P01", message: "STOCK_TICK_ALREADY_EXISTS" },
+      "stock_market_schema_not_applied",
+    ],
+    [{ message: "stock_tick_already_exists" }, "stock_tick_already_exists"],
+    [{ message: "private database detail" }, "stock_market_tick_apply_failed"],
+  ] as const
+) {
+  Deno.test(`stock runner persistence error retains precedence and safe message for ${code}`, async () => {
+    const client = new FakeSupabaseClient({});
+    client.rpcError = error;
+    let caught: unknown;
+    try {
+      await new SupabaseStockMarketRunnerRepository(client as any).apply({
+        gameSessionId: GAME_SESSION_ID,
+        tickIndex: 1,
+        assetUpdates: [],
+        tickRows: [],
+      });
+    } catch (failure) {
+      caught = failure;
+    }
+    if (!(caught instanceof StockMarketRunnerError)) {
+      throw new Error("Expected domain error");
+    }
+    assertEquals(caught.code, code);
+    assertEquals(
+      caught.status,
+      code === "stock_tick_already_exists" ? 409 : 500,
+    );
+    assertEquals(
+      caught.message,
+      {
+        stock_market_schema_not_applied:
+          "Stock market runner schema is not applied.",
+        stock_tick_already_exists:
+          "A stock price tick already exists for this game session and tick index.",
+        stock_market_tick_apply_failed:
+          "Stock market tick could not be persisted.",
+      }[code],
+    );
+    assertEquals(client.rpcCalls.length, 1);
+  });
+}
+
+Deno.test("stock runner apply empty result and missing game stop at their original boundaries", async () => {
+  const client = new FakeSupabaseClient({});
+  const repository = new SupabaseStockMarketRunnerRepository(client as any);
+  await assertRejectsWithCode(
+    () => repository.load({ gameSessionId: GAME_SESSION_ID }),
+    "game_session_not_found",
+  );
+  assertEquals(client.operations, ["read:game_sessions"]);
+  await assertRejectsWithCode(
+    () =>
+      repository.apply({
+        gameSessionId: GAME_SESSION_ID,
+        tickIndex: 1,
+        assetUpdates: [],
+        tickRows: [],
+      }),
+    "stock_market_tick_apply_failed",
+  );
+});
