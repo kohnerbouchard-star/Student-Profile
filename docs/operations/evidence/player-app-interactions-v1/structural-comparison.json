@@ -1,0 +1,227 @@
+{
+  "baseline": "94d7edc97c0d46b7009e7dbc2fde7e65b0d2c3ea",
+  "functions": [
+    {
+      "name": "readStoredBoolean",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "storeBoolean",
+      "path": "player-terminal/src/core/player-terminal-actions.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "focusableElements",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "initialMarkup",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "selectorForElement",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "rememberFocus",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "restoreFocus",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "focusAfterRender",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "render",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "updateClock",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "showToast",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "openConnectionModal",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "updateUi",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "handleLocalAction",
+      "path": "player-terminal/src/core/player-terminal-actions.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "handleClick",
+      "path": "player-terminal/src/core/player-terminal-actions.js",
+      "identical": false,
+      "approvedFocusDelegation": true,
+      "preserved": true
+    },
+    {
+      "name": "clearFormError",
+      "path": "player-terminal/src/core/player-terminal-forms.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "showFormError",
+      "path": "player-terminal/src/core/player-terminal-forms.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "updateMarketOrderEstimate",
+      "path": "player-terminal/src/core/player-terminal-forms.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "updateMarketplaceEstimate",
+      "path": "player-terminal/src/core/player-terminal-forms.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "handleInput",
+      "path": "player-terminal/src/core/player-terminal-forms.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "handleSubmit",
+      "path": "player-terminal/src/core/player-terminal-forms.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "closeTopOverlay",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "handleKeyDown",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "handleResize",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "handleHashChange",
+      "path": "player-terminal/src/app.js",
+      "identical": false,
+      "approvedFocusDelegation": true,
+      "preserved": true
+    },
+    {
+      "name": "handleOffline",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    },
+    {
+      "name": "handleOnline",
+      "path": "player-terminal/src/app.js",
+      "identical": true,
+      "approvedFocusDelegation": false,
+      "preserved": true
+    }
+  ],
+  "publicTerminalReturnIdentical": true,
+  "bindingDiagnostics": [],
+  "checkJsDiagnosticCounts": {
+    "7006": 1227,
+    "7031": 105,
+    "7053": 72,
+    "2339": 160,
+    "2322": 12,
+    "2551": 1,
+    "7019": 2,
+    "7008": 1,
+    "2741": 2,
+    "2774": 1,
+    "7023": 2,
+    "7024": 2,
+    "7034": 2,
+    "7005": 4,
+    "18048": 8,
+    "2538": 6,
+    "7017": 3,
+    "18047": 7,
+    "18046": 1,
+    "2367": 4,
+    "2345": 3,
+    "2353": 2,
+    "2531": 11
+  },
+  "checkJsNote": "Legacy JS type diagnostics remain; this is a name/module binding audit, not a full checkJs pass.",
+  "sourceSha256": {
+    "player-terminal/src/app.js": "007998a7d66b2643753cc9048c87cc1cc6dd35a845ce1bfdfdb129059f717ea8",
+    "player-terminal/src/core/player-terminal-actions.js": "db814182ab2da0ce326037d0d80e541e5d537ceea6591190dc4744ed4428644d",
+    "player-terminal/src/core/player-terminal-forms.js": "5c458405ded4503f22e900ae05947489e75373b0901ac7b4cfb7b54b064a707d"
+  }
+}

@@ -35,6 +35,8 @@ on:
       - player-terminal/tests/realtime-freshness.mjs
       - player-terminal/src/app.js
       - player-terminal/src/core/player-terminal-lifecycle.js
+      - player-terminal/src/core/player-terminal-actions.js
+      - player-terminal/src/core/player-terminal-forms.js
       - player-terminal/tests/browser/player-route-refresh.spec.mjs
       - player-terminal/src/features/store/**
       - player-terminal/src/pages/store-page.js

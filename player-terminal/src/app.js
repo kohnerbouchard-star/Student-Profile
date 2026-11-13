@@ -5,7 +5,7 @@ import { isRouteEnabled } from "./api/capabilities.js";
 import { renderShell } from "./components/layout.js";
 import { renderModal } from "./components/modal.js";
 import { renderConnectionError, renderSkeletonPage } from "./components/ui.js";
-import { escapeHtml, formatCurrency, serializeForm } from "./core/format.js";
+import { escapeHtml } from "./core/format.js";
 import { navigate, readRoute } from "./core/router.js";
 import { createStore } from "./core/store.js";
 import { createPlayerTerminalLifecycle } from "./core/player-terminal-lifecycle.js";
@@ -13,7 +13,8 @@ import { subscribeTerminalRender } from "./core/terminal-render-subscription.js"
 import { applyCapabilityControls } from "./core/capability-controls.js";
 import { ROUTE_TITLES, renderPlayerRoute } from "./core/route-renderer.js";
 import { handleStoreItemMediaError } from "./features/store/store-artwork.js";
-import { dispatchHostEvent } from "./api/session-handoff.js";
+import { createPlayerTerminalActions } from "./core/player-terminal-actions.js";
+import { createPlayerTerminalForms } from "./core/player-terminal-forms.js";
 
 function readStoredBoolean(key, fallback = false) {
   try {
@@ -22,10 +23,6 @@ function readStoredBoolean(key, fallback = false) {
   } catch {
     return fallback;
   }
-}
-
-function storeBoolean(key, value) {
-  try { globalThis.localStorage?.setItem(key, String(Boolean(value))); } catch { /* Storage can be unavailable in restricted previews. */ }
 }
 
 function focusableElements(root) {
@@ -77,6 +74,11 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
   const lifecycle = createPlayerTerminalLifecycle({ api, store, config, freshness, mount, showToast, openConnectionModal });
   const { capture, current, obsolete, deferEffect, queueFrame, focusCurrent,
     loadData, loadRouteData, connectSession, refreshResources, executeEndpoint } = lifecycle;
+  const { handleClick } = createPlayerTerminalActions({
+    store, mount, config, lifecycle, showToast, updateUi, rememberFocus,
+    restoreFocus, focusElement, prepareRouteFocus
+  });
+  const { handleInput, handleSubmit } = createPlayerTerminalForms({ store, mount, showToast, executeEndpoint });
 
   function selectorForElement(element) {
     if (!(element instanceof HTMLElement)) return "";
@@ -101,6 +103,15 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
     const form = element.closest("[data-player-form]");
     if (form?.dataset.playerForm) return `[data-player-form="${CSS.escape(form.dataset.playerForm)}"] button[type="submit"]`;
     return "";
+  }
+
+  function focusElement(element) {
+    pendingFocusSelector = selectorForElement(element);
+  }
+
+  function prepareRouteFocus() {
+    restoreFocusSelector = "";
+    pendingFocusSelector = "#player-main-content";
   }
 
   function rememberFocus(element) {
@@ -230,469 +241,6 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
     store.setState((state) => ({ ...state, ui: { ...state.ui, ...patch } }));
   }
 
-  async function handleLocalAction(action, target) {
-    const state = store.getState();
-    switch (action) {
-      case "toggle-sidebar": {
-        const nextCollapsed = !state.ui.sidebarCollapsed;
-        storeBoolean("econovaria.player.sidebarCollapsed", nextCollapsed);
-        updateUi({ sidebarCollapsed: nextCollapsed }, target);
-        break;
-      }
-      case "toggle-notifications": {
-        const opening = !state.ui.notificationsOpen;
-        if (opening) rememberFocus(target); else restoreFocus();
-        updateUi({ notificationsOpen: opening, mobileMenuOpen: false });
-        break;
-      }
-      case "toggle-mobile-menu": {
-        const opening = !state.ui.mobileMenuOpen;
-        if (opening) rememberFocus(target); else restoreFocus();
-        updateUi({ mobileMenuOpen: opening, notificationsOpen: false });
-        break;
-      }
-      case "close-modal":
-        restoreFocus();
-        store.setState({ modal: null });
-        break;
-      case "copy-game-code": {
-        const code = target.closest("[data-game-code]")?.dataset.gameCode || state.data.session.gameCode;
-        try {
-          await navigator.clipboard.writeText(code);
-          showToast(`Game code ${code} copied.`, "amber");
-        } catch {
-          showToast(`Game code: ${code}. Clipboard access is unavailable.`, "amber");
-        }
-        break;
-      }
-      case "download-transactions":
-        showToast("Transaction export is not available in this game.", "amber");
-        break;
-      case "market-search":
-        showToast("Market search is not available in this game.", "amber");
-        break;
-      case "message-search":
-        showToast("Message search is not available in this game.", "amber");
-        break;
-      case "message-attachment":
-        showToast("Message attachments are not available in this game.", "amber");
-        break;
-      case "chart-range":
-        showToast(`${target.dataset.range || "Selected"} chart history is not available in this game.`, "amber");
-        break;
-      default:
-        break;
-    }
-  }
-
-  async function handleClick(event) {
-    const stateAtClick = store.getState();
-    const interactiveTarget = event.target.closest("button, a, summary, input, select, textarea");
-
-    if (stateAtClick.modal && event.target.matches("[data-player-modal-backdrop]")) {
-      if (stateAtClick.modal.type === "storyCutscene") {
-        mount.dispatchEvent(new CustomEvent("econovaria:player-story-close-request", {
-          bubbles: true,
-          detail: {
-            deliveryId: stateAtClick.modal.delivery?.deliveryId || "",
-            requiresAcknowledgement: stateAtClick.modal.delivery?.requiresAcknowledgement === true
-          }
-        }));
-      } else {
-        restoreFocus();
-        store.setState({ modal: null });
-      }
-      return;
-    }
-
-    if (stateAtClick.ui.notificationsOpen && !event.target.closest('[data-player-notification-drawer], [data-player-local-action="toggle-notifications"]')) {
-      restoreFocus();
-      updateUi({ notificationsOpen: false });
-    }
-
-    const routeButton = event.target.closest("[data-route]");
-    if (routeButton) {
-      if (!isRouteEnabled(stateAtClick.data?.capabilities, routeButton.dataset.route)) {
-        showToast("That section is not enabled for the current game.", "amber");
-        return;
-      }
-      restoreFocusSelector = "";
-      pendingFocusSelector = "#player-main-content";
-      updateUi({ mobileMenuOpen: false, notificationsOpen: false });
-      navigate(routeButton.dataset.route);
-      return;
-    }
-
-    if (interactiveTarget) pendingFocusSelector = selectorForElement(interactiveTarget);
-
-    const localAction = event.target.closest("[data-player-local-action]");
-    if (localAction) {
-      await handleLocalAction(localAction.dataset.playerLocalAction, localAction);
-      return;
-    }
-
-    const countryButton = event.target.closest("[data-player-country]");
-    if (countryButton) {
-      const current = store.getState();
-      const country = current.data.countries.find((item) => item.id === countryButton.dataset.playerCountry);
-      if (country) {
-        rememberFocus(countryButton);
-        const relatedAssets = current.data.market.assets.filter((asset) => country.relatedAssetIds?.includes(asset.id));
-        const relatedNews = current.data.news.items.filter((item) => country.eventIds?.includes(item.id));
-        const relatedContracts = current.data.contracts.items.filter((item) => item.location === country.name || item.location === "All Nations").slice(0, 3);
-        store.setState((state) => ({ ...state, ui: { ...state.ui, notificationsOpen: false, mobileMenuOpen: false }, modal: { type: "country", country, relatedAssets, relatedNews, relatedContracts } }));
-      }
-      return;
-    }
-
-    const newsCategory = event.target.closest("[data-player-news-category]");
-    if (newsCategory) {
-      updateUi({ newsCategory: newsCategory.dataset.playerNewsCategory, newsId: "" });
-      return;
-    }
-
-    const newsSelect = event.target.closest("[data-player-news-select]");
-    if (newsSelect) {
-      updateUi({ newsId: newsSelect.dataset.playerNewsSelect });
-      return;
-    }
-
-    const newsLink = event.target.closest("[data-player-news-link]");
-    if (newsLink) {
-      updateUi({ newsId: newsLink.dataset.playerNewsLink, newsCategory: "All" });
-      navigate("news");
-      return;
-    }
-
-    const marketLink = event.target.closest("[data-player-market-link]");
-    if (marketLink) {
-      updateUi({ marketAssetId: marketLink.dataset.playerMarketLink });
-      navigate("market");
-      return;
-    }
-
-    const marketAsset = event.target.closest("[data-player-market-select]");
-    if (marketAsset) {
-      updateUi({ marketAssetId: marketAsset.dataset.playerMarketSelect });
-      return;
-    }
-
-    const marketSector = event.target.closest("[data-player-market-sector]");
-    if (marketSector) {
-      updateUi({ marketSector: marketSector.dataset.playerMarketSector });
-      return;
-    }
-
-    const storeCategory = event.target.closest("[data-player-store-category]");
-    if (storeCategory) {
-      updateUi({ storeCategory: storeCategory.dataset.playerStoreCategory });
-      return;
-    }
-
-    const contractTab = event.target.closest("[data-player-contract-tab]");
-    if (contractTab) {
-      updateUi({ contractTab: contractTab.dataset.playerContractTab, contractId: "" });
-      return;
-    }
-
-    const contractSelect = event.target.closest("[data-player-contract-select]");
-    if (contractSelect) {
-      updateUi({ contractId: contractSelect.dataset.playerContractSelect });
-      return;
-    }
-
-    const inventoryCategory = event.target.closest("[data-player-inventory-category]");
-    if (inventoryCategory) {
-      updateUi({ inventoryCategory: inventoryCategory.dataset.playerInventoryCategory });
-      return;
-    }
-
-    const marketplaceCategory = event.target.closest("[data-player-marketplace-category]");
-    if (marketplaceCategory) {
-      updateUi({ marketplaceCategory: marketplaceCategory.dataset.playerMarketplaceCategory, marketplaceListingId: "" });
-      return;
-    }
-
-    const marketplaceListing = event.target.closest("[data-player-marketplace-select]");
-    if (marketplaceListing) {
-      updateUi({ marketplaceListingId: marketplaceListing.dataset.playerMarketplaceSelect });
-      return;
-    }
-
-    const marketplaceCancel = event.target.closest("[data-player-marketplace-cancel]");
-    if (marketplaceCancel) {
-      const listingId = marketplaceCancel.dataset.playerMarketplaceCancel;
-      await executeEndpoint("marketplaceCancel", { gameSessionId: store.getState().data.session.gameSessionId }, { listingId }, marketplaceCancel);
-      return;
-    }
-
-    const messageThread = event.target.closest("[data-player-message-thread]");
-    if (messageThread) {
-      updateUi({ messageThreadId: messageThread.dataset.playerMessageThread });
-      return;
-    }
-
-    const loanOffer = event.target.closest("[data-player-loan-offer]");
-    if (loanOffer) {
-      updateUi({ loanOfferId: loanOffer.dataset.playerLoanOffer });
-      return;
-    }
-
-    const craftingRecipe = event.target.closest("[data-player-crafting-recipe]");
-    if (craftingRecipe) {
-      updateUi({ craftingRecipeId: craftingRecipe.dataset.playerCraftingRecipe });
-      return;
-    }
-
-    const progressionTab = event.target.closest("[data-player-progression-tab]");
-    if (progressionTab) {
-      updateUi({ progressionTab: progressionTab.dataset.playerProgressionTab });
-      return;
-    }
-
-    const skillUnlock = event.target.closest("[data-player-skill-unlock]");
-    if (skillUnlock) {
-      const skillId = skillUnlock.dataset.playerSkillUnlock;
-      await executeEndpoint("progressionUnlock", { gameSessionId: store.getState().data.session.gameSessionId }, { skillId }, skillUnlock);
-      return;
-    }
-
-    const rewardClaim = event.target.closest("[data-player-reward-claim]");
-    if (rewardClaim) {
-      const rewardId = rewardClaim.dataset.playerRewardClaim;
-      await executeEndpoint("progressionClaim", { gameSessionId: store.getState().data.session.gameSessionId }, { rewardId }, rewardClaim);
-      return;
-    }
-
-    const watchlistButton = event.target.closest("[data-player-market-watchlist]");
-    if (watchlistButton) {
-      const assetId = watchlistButton.dataset.playerMarketWatchlist;
-      await executeEndpoint("marketWatchlist", { enabled: watchlistButton.dataset.watchlisted !== "true", gameSessionId: store.getState().data.session.gameSessionId }, { assetId }, watchlistButton);
-      return;
-    }
-
-    const purchaseButton = event.target.closest("[data-player-purchase]");
-    if (purchaseButton) {
-      const storeItemId = purchaseButton.dataset.playerPurchase;
-      await executeEndpoint("storePurchase", { storeItemId, quantity: 1, gameSessionId: store.getState().data.session.gameSessionId }, {}, purchaseButton);
-      return;
-    }
-
-    const contractAccept = event.target.closest("[data-player-contract-accept]");
-    if (contractAccept) {
-      const contractId = contractAccept.dataset.playerContractAccept;
-      await executeEndpoint("contractAccept", { gameSessionId: store.getState().data.session.gameSessionId }, { contractId }, contractAccept);
-      return;
-    }
-
-    const inventoryUse = event.target.closest("[data-player-inventory-use]");
-    if (inventoryUse) {
-      const inventoryItemId = inventoryUse.dataset.playerInventoryUse;
-      await executeEndpoint("inventoryUse", { quantity: 1, gameSessionId: store.getState().data.session.gameSessionId }, { inventoryItemId }, inventoryUse);
-      return;
-    }
-
-    const actionButton = event.target.closest("[data-player-action]");
-    if (actionButton) {
-      const action = actionButton.dataset.playerAction;
-      if (action === "refresh-data") {
-        if (store.getState().status === "ready") await loadRouteData(store.getState().route, { force: true });
-        else await loadData();
-      }
-      if (action === "retry-route") await loadRouteData(store.getState().route, { force: true });
-      if (action === "logout") {
-        lifecycle.prepareForLogout();
-        const detail = {
-          reason: "player_requested",
-          terminal: "player",
-          gameSessionId: config.gameSessionId,
-          playerSessionId: config.playerSessionId
-        };
-        if (typeof config.onLogoutRequested === "function") config.onLogoutRequested(detail);
-        dispatchHostEvent(config.logoutRequestedEvent, detail);
-      }
-      if (action === "notifications-read") await executeEndpoint("notificationsRead", { notificationIds: store.getState().data.notifications.map((item) => item.id) }, {}, actionButton);
-    }
-  }
-
-  function clearFormError(form) {
-    form?.querySelector("[data-player-form-error]")?.remove();
-  }
-
-  function showFormError(form, message) {
-    clearFormError(form);
-    const error = document.createElement("p");
-    error.className = "player-terminal-form-error";
-    error.dataset.playerFormError = "true";
-    error.setAttribute("role", "alert");
-    error.textContent = message;
-    form.prepend(error);
-  }
-
-  function updateMarketOrderEstimate(form) {
-    const state = store.getState();
-    const assetId = form.elements.namedItem("assetId")?.value;
-    const asset = state.data?.market?.assets?.find((item) => item.id === assetId);
-    if (!asset) return;
-    const quantity = Math.max(0, Number(form.elements.namedItem("quantity")?.value) || 0);
-    const orderType = form.elements.namedItem("orderType")?.value || "market";
-    const limitField = form.elements.namedItem("limitPrice");
-    if (limitField) {
-      limitField.required = orderType === "limit";
-      limitField.placeholder = orderType === "limit" ? "Required for limit order" : "Optional for market order";
-    }
-    const price = orderType === "limit" && Number(limitField?.value) > 0 ? Number(limitField.value) : Number(asset.price) || 0;
-    const subtotal = quantity * price;
-    const fees = subtotal * 0.0025;
-    const code = state.data?.session?.currencyCode || "NVC";
-    const valueNode = form.querySelector("[data-player-market-estimated-value]");
-    const feeNode = form.querySelector("[data-player-market-estimated-fees]");
-    if (valueNode) valueNode.textContent = formatCurrency(subtotal, code);
-    if (feeNode) feeNode.textContent = formatCurrency(fees, code);
-  }
-
-  function updateMarketplaceEstimate(form) {
-    const state = store.getState();
-    const listing = state.data?.marketplace?.listings?.find((item) => item.id === form.dataset.listingId);
-    const output = form.querySelector("[data-player-marketplace-estimated-total]");
-    if (!listing || !output) return;
-    const quantity = Math.max(0, Number(form.elements.namedItem("quantity")?.value) || 0);
-    const feeRate = Number(state.data?.marketplace?.feeRate) || 0;
-    output.textContent = formatCurrency(quantity * listing.unitPrice * (1 + feeRate / 100), state.data?.session?.currencyCode);
-  }
-
-  function handleInput(event) {
-    const field = event.target.closest("input, select, textarea");
-    field?.setCustomValidity?.("");
-    const parentForm = field?.closest("[data-player-form]");
-    parentForm?.classList.remove("has-validation-error");
-    clearFormError(parentForm);
-    if (parentForm?.dataset.endpoint === "marketOrder") updateMarketOrderEstimate(parentForm);
-    if (parentForm?.dataset.endpoint === "marketplacePurchase") updateMarketplaceEstimate(parentForm);
-
-    const search = event.target.closest("[data-player-store-search]");
-    if (!search) return;
-    const term = String(search.value || "").trim().toLowerCase();
-    const cards = [...mount.querySelectorAll(".player-terminal-store-card")];
-    cards.forEach((card) => {
-      card.hidden = Boolean(term) && !card.textContent.toLowerCase().includes(term);
-    });
-    const grid = mount.querySelector(".player-terminal-catalog-grid");
-    let empty = grid?.querySelector("[data-player-search-empty]");
-    const visibleCount = cards.filter((card) => !card.hidden).length;
-    if (!visibleCount && grid) {
-      if (!empty) {
-        empty = document.createElement("p");
-        empty.className = "player-terminal-inline-empty player-terminal-search-empty";
-        empty.dataset.playerSearchEmpty = "true";
-        grid.append(empty);
-      }
-      empty.textContent = term ? `No store items match “${search.value.trim()}”.` : "No store items are available.";
-      empty.hidden = false;
-    } else if (empty) {
-      empty.hidden = true;
-    }
-  }
-
-  async function handleSubmit(event) {
-    const form = event.target.closest("[data-player-form]");
-    if (!form) return;
-    event.preventDefault();
-    form.classList.add("was-validated");
-    const endpointKey = form.dataset.endpoint;
-    const state = store.getState();
-    [...form.elements].forEach((control) => control?.setCustomValidity?.(""));
-
-    if (endpointKey === "savingsTransfer") {
-      const from = form.elements.namedItem("fromAccount");
-      const to = form.elements.namedItem("toAccount");
-      const amount = form.elements.namedItem("amount");
-      if (from?.value && from.value === to?.value) to.setCustomValidity("Choose a different destination account.");
-      const available = from?.value === "savings" ? Number(state.data.banking.savings.available ?? state.data.banking.savings.balance) : Number(state.data.banking.checking.available);
-      if (Number(amount?.value) > available) amount?.setCustomValidity("The transfer exceeds the available balance in the source account.");
-    }
-
-    if (endpointKey === "bankTransfer") {
-      const amount = form.elements.namedItem("amount");
-      if (Number(amount?.value) > Number(state.data.banking.checking.available)) amount?.setCustomValidity("The transfer exceeds your available checking balance.");
-    }
-
-    if (endpointKey === "marketOrder") {
-      const asset = state.data.market.assets.find((item) => item.id === form.elements.namedItem("assetId")?.value);
-      const side = form.elements.namedItem("side")?.value;
-      const orderType = form.elements.namedItem("orderType")?.value;
-      const quantityField = form.elements.namedItem("quantity");
-      const limitField = form.elements.namedItem("limitPrice");
-      const quantity = Number(quantityField?.value) || 0;
-      if (orderType === "limit" && !(Number(limitField?.value) > 0)) limitField?.setCustomValidity("Enter a limit price for a limit order.");
-      if (asset) {
-        const price = orderType === "limit" && Number(limitField?.value) > 0 ? Number(limitField.value) : Number(asset.price);
-        if (side === "buy" && quantity * price * 1.0025 > Number(state.data.banking.checking.available)) quantityField?.setCustomValidity("The estimated order total exceeds your available cash.");
-        if (side === "sell" && quantity > Number(asset.owned || 0)) quantityField?.setCustomValidity(`You currently own ${Number(asset.owned || 0)} shares.`);
-      }
-    }
-
-    if (endpointKey === "marketplacePurchase") {
-      const listing = state.data.marketplace.listings.find((item) => item.id === form.dataset.listingId);
-      const quantityField = form.elements.namedItem("quantity");
-      const quantity = Number(quantityField?.value) || 0;
-      if (listing && quantity > Number(listing.quantity)) quantityField?.setCustomValidity("The requested quantity exceeds the available listing quantity.");
-      if (listing && quantity * listing.unitPrice * (1 + Number(state.data.marketplace.feeRate || 0) / 100) > Number(state.data.banking.checking.available)) quantityField?.setCustomValidity("The estimated purchase total exceeds your available cash.");
-    }
-
-    if (endpointKey === "marketplaceListing") {
-      const itemId = form.elements.namedItem("inventoryItemId")?.value;
-      const inventoryItem = state.data.inventory.items.find((item) => item.id === itemId);
-      const quantityField = form.elements.namedItem("quantity");
-      if (inventoryItem && Number(quantityField?.value) > Number(inventoryItem.quantity)) quantityField?.setCustomValidity(`Only ${Number(inventoryItem.quantity)} units are available in inventory.`);
-    }
-
-    if (endpointKey === "loanRepay") {
-      const amount = form.elements.namedItem("amount");
-      if (Number(amount?.value) > Number(state.data.banking.checking.available)) amount?.setCustomValidity("The payment exceeds your available checking balance.");
-    }
-
-    if (endpointKey === "messageSend") {
-      const body = form.elements.namedItem("body");
-      if (!String(body?.value || "").trim()) body?.setCustomValidity("Enter a message before sending.");
-    }
-
-    if (endpointKey === "loanApply") {
-      const source = form.elements.namedItem("repaymentSource");
-      if (!String(source?.value || "").trim()) source?.setCustomValidity("Describe the expected repayment source.");
-    }
-
-    if (!form.checkValidity()) {
-      form.classList.add("has-validation-error");
-      const invalidField = form.querySelector(":invalid");
-      showFormError(form, invalidField?.validationMessage || "Complete the highlighted fields before continuing.");
-      invalidField?.focus();
-      showToast("Complete the highlighted fields before continuing.", "red");
-      return;
-    }
-    clearFormError(form);
-    form.classList.remove("has-validation-error");
-    const payload = serializeForm(form);
-    const button = form.querySelector('button[type="submit"]');
-    const params = {};
-    if (endpointKey === "contractSubmit") params.contractId = form.dataset.contractId || payload.contractId;
-    if (endpointKey === "businessPrice") params.productId = form.dataset.productId;
-    if (endpointKey === "businessManufacturingStart") {
-      params.businessId = form.dataset.businessId || payload.businessId || payload.businessKey;
-    }
-    if (endpointKey === "businessManufacturingCancel") {
-      params.businessId = form.dataset.businessId || payload.businessId || payload.businessKey;
-      params.jobId = form.dataset.jobId || payload.jobId || payload.jobKey;
-    }
-    if (endpointKey === "marketplacePurchase") params.listingId = form.dataset.listingId;
-    if (endpointKey === "craftItem") params.recipeId = form.dataset.recipeId;
-    if (endpointKey === "loanApply") params.offerId = form.dataset.offerId;
-    if (endpointKey === "loanRepay") params.loanId = form.dataset.loanId;
-    if (endpointKey === "messageSend") params.threadId = form.dataset.threadId;
-    payload.gameSessionId = state.data.session.gameSessionId;
-    await executeEndpoint(endpointKey, payload, params, button);
-  }
-
   function closeTopOverlay() {
     const state = store.getState();
     if (state.modal?.type === "storyCutscene") {
@@ -771,8 +319,7 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
       showToast("That section is not enabled for the current game.", "amber");
       return;
     }
-    restoreFocusSelector = "";
-    pendingFocusSelector = "#player-main-content";
+    prepareRouteFocus();
     store.setState((state) => ({ ...state, route, modal: null, ui: { ...state.ui, notificationsOpen: false, mobileMenuOpen: false } }));
     if (current.status === "ready") void loadRouteData(route);
     queueFrame(() => globalThis.scrollTo?.({ top: 0, left: 0, behavior: "auto" }));
