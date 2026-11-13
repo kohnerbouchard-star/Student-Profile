@@ -3,6 +3,7 @@ name: Player Local Currency Authority
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-963.json"
       - "admin/classroom-write-fallback.js"
       - "admin/create-action-adapter.js"
       - "admin/ledger-adjustment-wiring.js"

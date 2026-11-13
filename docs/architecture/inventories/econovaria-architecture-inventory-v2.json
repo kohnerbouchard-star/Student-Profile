@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1387,
+    "sourceFiles": 1392,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 83,
+    "oversizedSourceFiles": 82,
     "capabilityStrings": 140
   },
   "domains": [
@@ -382,7 +382,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 83,
+      "sourceFiles": 88,
       "publicBoundaryFiles": [
         "backend/src/domains/storylines/index.ts"
       ]
@@ -2750,10 +2750,6 @@
       {
         "file": "backend/src/security/adminBffRequestAuth.ts",
         "lines": 643
-      },
-      {
-        "file": "backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.ts",
-        "lines": 639
       },
       {
         "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.ts",
