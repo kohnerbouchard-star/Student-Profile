@@ -3,6 +3,8 @@ name: Admin Shell Smoke
 on:
   pull_request:
     paths:
+      - "package.json"
+      - "package-lock.json"
       - "scripts/admin-account-controls-dom-fixture.mjs"
       - "scripts/admin-account-controls.test.mjs"
       - "docs/operations/contracts/player-cross-cutting/pr-946.json"
@@ -26,6 +28,11 @@ on:
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-local-mutation-ui-contract.test.mjs"
+      - "scripts/admin-v2-test-registration.test.mjs"
+      - "scripts/admin-v2-world-management.test.mjs"
+      - "scripts/admin-v2-inventory-contract.test.mjs"
+      - "scripts/admin-v2-marketplace.test.mjs"
+      - "scripts/admin-v2-marketplace-read-model.test.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-modal-accessibility-source-smoke.mjs"
       - "scripts/admin-modal-accessibility-smoke.mjs"
@@ -72,6 +79,8 @@ on:
     branches:
       - main
     paths:
+      - "package.json"
+      - "package-lock.json"
       - "scripts/admin-account-controls-dom-fixture.mjs"
       - "scripts/admin-account-controls.test.mjs"
       - "admin/**"
@@ -91,6 +100,11 @@ on:
       - "scripts/admin-session-manager-smoke.mjs"
       - "scripts/admin-shell-smoke.mjs"
       - "scripts/admin-local-mutation-ui-contract.test.mjs"
+      - "scripts/admin-v2-test-registration.test.mjs"
+      - "scripts/admin-v2-world-management.test.mjs"
+      - "scripts/admin-v2-inventory-contract.test.mjs"
+      - "scripts/admin-v2-marketplace.test.mjs"
+      - "scripts/admin-v2-marketplace-read-model.test.mjs"
       - "scripts/admin-browser-smoke.mjs"
       - "scripts/admin-modal-accessibility-source-smoke.mjs"
       - "scripts/admin-modal-accessibility-smoke.mjs"

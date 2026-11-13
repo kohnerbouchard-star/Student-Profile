@@ -498,7 +498,7 @@ test("World controller rejects unsupported Arrival Class corrections without mut
   controller.destroy();
 });
 
-test("World Management stays first-class while News & Events remains planned", async () => {
+test("World Management and its neighboring V2 routes keep separate ownership", async () => {
   const world = getAdminNavigationRoute("world-management");
   const news = getAdminNavigationRoute("news-events");
   const market = getAdminNavigationRoute("market");
@@ -508,11 +508,15 @@ test("World Management stays first-class while News & Events remains planned", a
 
   assert.equal(world.migration, "v2");
   assert.deepEqual(world.permission.allOf, ["world.manage"]);
-  assert.equal(news.migration, "planned");
+  assert.equal(news.migration, "v2");
+  assert.deepEqual(news.permission.allOf, ["world.manage"]);
+  assert.equal(news.mode, "monitor");
   assert.equal(market.migration, "v2");
   assert.equal(store.migration, "v2");
   assert.equal(overview.migration, "v2");
-  assert.equal(marketplace.migration, "planned");
+  assert.equal(marketplace.migration, "v2");
+  assert.deepEqual(marketplace.permission.allOf, ["marketplace.moderate"]);
+  assert.equal(marketplace.mode, "moderate");
 
   const routeSource = await readFile(
     new URL("../admin/v2/src/routes/world-management/WorldManagementRoute.js", import.meta.url),
@@ -534,8 +538,10 @@ test("World Management stays first-class while News & Events remains planned", a
   assert.equal(apiSource.includes("/manual-trigger"), false);
   assert.equal(apiSource.includes("publish_news"), false);
   assert.equal(routeSource.includes("manualTrigger"), false);
-  assert.match(routeSource, /News & Events remains a separate Admin route/);
+  assert.match(routeSource, /News & Events remains a separate monitor/);
   assert.match(appSource, /createWorldManagementController/);
+  assert.match(appSource, /createNewsEventsController/);
+  assert.match(appSource, /createMarketplaceController/);
   assert.match(appSource, /createOverviewController/);
   assert.match(appSource, /createStoreController/);
   assert.match(appSource, /createMarketController/);

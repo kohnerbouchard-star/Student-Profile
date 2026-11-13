@@ -7,6 +7,9 @@ import {
   normalizeContractDetail,
   normalizeContractsReadModel,
 } from "../admin/v2/src/routes/contracts/ContractsController.js";
+import { ContractForm } from "../admin/v2/src/routes/contracts/ContractForm.js";
+import { createAccountDocument } from "./admin-account-controls-dom-fixture.mjs";
+import { normalizeContractCreate } from "../backend/supabase/functions/admin-api/mutationAdapters.ts";
 import { ADMIN_DATA_STATES } from "../admin/v2/src/core/data-state.js";
 import { getAdminNavigationRoute, isMigratedAdminRoute } from "../admin/v2/src/core/navigation-registry.js";
 
@@ -279,4 +282,121 @@ test("Contracts controller denies reads and writes without contracts.manage and 
   assert.equal(reads, 1);
   assert.equal(allowed.getState().status, ADMIN_DATA_STATES.EMPTY);
   allowed.destroy();
+});
+
+
+function editForm(t, original, changes = {}, mode = "edit") {
+  const saved = Object.fromEntries(["document", "Node", "HTMLElement"].map((key) => [key, globalThis[key]]));
+  const { document, Element } = createAccountDocument();
+  document.createElementNS = (_namespace, tag) => document.createElement(tag);
+  Object.assign(globalThis, { document, Node: Element, HTMLElement: Element });
+  t.after(() => {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete globalThis[key];
+      else globalThis[key] = value;
+    }
+  });
+  const model = normalizeContractsReadModel({ contracts: [original] }).contracts[0];
+  const form = ContractForm({ mode, contract: model });
+  // This minimal DOM is not a native input implementation. Seed actual control
+  // values explicitly; production validation and payload construction stay real.
+  const values = {
+    title: model.title, description: model.description, instructions: model.instructions,
+    category: model.category, status: model.status, visibility: model.visibility,
+    countryCodes: model.targetCountryCodes.join(", "), completionMode: model.completionMode,
+    requirementsText: model.requirementsText, rewardAmount: String(model.reward.cashAmount ?? ""),
+    difficulty: model.metadata.difficulty, reviewNote: model.metadata.reviewNote,
+    scheduledAt: "", deadlineAt: "", expiresAt: "", ...changes,
+  };
+  for (const [key, value] of Object.entries(values)) form.fields[key].setValue(value);
+  return { model, form };
+}
+
+async function normalizeFormPayload(form, method = "PATCH") {
+  const payload = form.validate();
+  assert.ok(payload, "the unchanged fixture must be a valid contract form");
+  return normalizeContractCreate(new Request("https://example.test/contracts/synthetic", {
+    method, body: JSON.stringify(payload),
+  }), "contracts-edit-regression");
+}
+
+test("UUID-only and mixed player targeting cannot pass the draft/scheduled edit guard", async () => {
+  let writes = 0;
+  const controller = createContractsController({
+    api: Object.fromEntries([
+      "readContracts", "readContractDetail", "createContract", "updateContract", "publishContract",
+      "archiveContract", "duplicateContract", "reviewProgress", "issueRewards",
+    ].map((method) => [method, async () => { writes += 1; return {}; }])),
+    selectedGameId: GAME_ID, hasPermission: () => true,
+  });
+  for (const status of ["draft", "scheduled"]) {
+    for (const targetingPayload of [
+      { playerIds: [PLAYER_ID] },
+      { playerIds: [PLAYER_ID], countryCodes: ["NORTHREACH"] },
+      { rosterLabels: [PLAYER_ID] },
+      { storyFlagConditions: [{ key: "lesson", value: true }] },
+    ]) {
+      const model = normalizeContractsReadModel({ contracts: [contract({ status, targetingPayload })] });
+      assert.equal(model.contracts[0].targetingEditable, false);
+      assert.equal((await controller.updateContract(model.contracts[0], { title: "Unrelated edit" })).ok, false);
+      assert.doesNotMatch(JSON.stringify(displayProjection(model)), new RegExp(PLAYER_ID));
+    }
+  }
+  assert.equal(writes, 0);
+  controller.destroy();
+});
+
+test("an unrelated contract edit preserves cash destination and unrepresented metadata", async (t) => {
+  const original = contract({
+    status: "draft", targetingPayload: { countryCodes: ["NORTHREACH"] },
+    rewardPayload: { cash: { amount: 75, currencyCode: "NRC", accountType: "savings", source: "lesson" }, items: [{ storeItemId: PLAYER_ID, quantity: 2 }] },
+    requirementsPayload: { manualText: "Submit written evidence.", rubric: { minSources: 2 } },
+    metadata: { difficulty: "Advanced", reviewNote: "Use the rubric.", materials: [{ title: "Guide" }], submissionRequirements: ["diagram"], custom: { version: 1 } },
+  });
+  const { form } = editForm(t, original, { title: "Edited title" });
+  const payload = await normalizeFormPayload(form);
+  // Model the existing SQL's shallow JSONB update. Omitted keys must remain
+  // omitted at the API boundary; this is not a live database proof.
+  assert.deepEqual({ ...original.rewardPayload, ...payload.rewardPayload }, original.rewardPayload);
+  assert.deepEqual({ ...original.metadata, ...payload.metadata }, original.metadata);
+  assert.deepEqual({ ...original.requirementsPayload, ...payload.requirementsPayload }, original.requirementsPayload);
+  assert.deepEqual(payload.targetingPayload.countryCodes, ["NORTHREACH"]);
+});
+
+test("changing cash amount retains savings and original currency", async (t) => {
+  const { form } = editForm(t, contract({
+    status: "draft", targetingPayload: { countryCodes: ["NORTHREACH"] },
+    rewardPayload: { cash: { amount: 75, currencyCode: "NRC", accountType: "savings" } },
+  }), { rewardAmount: "90.25" });
+  const payload = await normalizeFormPayload(form);
+  assert.deepEqual(payload.rewardPayload.cash, { amount: 90.25, currencyCode: "NRC", accountType: "savings" });
+});
+
+test("explicit cash removal remains distinct from an unchanged reward", async (t) => {
+  const { form } = editForm(t, contract({ status: "draft", targetingPayload: { allPlayers: true }, visibility: "public" }), { rewardAmount: "0" });
+  const payload = await normalizeFormPayload(form);
+  assert.equal(payload.rewardPayload.cash, null);
+});
+
+test("metadata updates distinguish omitted arrays, nested arrays and deliberate clearing", async () => {
+  for (const method of ["POST", "PATCH"]) {
+    const normalize = (body) => normalizeContractCreate(new Request("https://example.test/contracts", {
+      method, body: JSON.stringify({ title: "Test", instructions: "Do it", ...body }),
+    }), "metadata-test");
+    const nested = { materials: [{ title: "Guide" }], submissionRequirements: ["diagram"], custom: "retained" };
+    assert.deepEqual((await normalize({ metadata: nested })).metadata, nested);
+    assert.deepEqual((await normalize({ metadata: nested, materials: [], submissionRequirements: [] })).metadata,
+      { ...nested, materials: [], submissionRequirements: [] });
+    const omitted = (await normalize({ metadata: { reviewNote: "Updated" } })).metadata;
+    assert.deepEqual(omitted, method === "PATCH" ? { reviewNote: "Updated" }
+      : { reviewNote: "Updated", materials: [], submissionRequirements: [] });
+  }
+});
+
+test("new Contracts keep ECO/checking cash defaults and creation metadata defaults", async (t) => {
+  const { form } = editForm(t, contract({ status: "draft", targetingPayload: { allPlayers: true }, visibility: "public" }), { rewardAmount: "12.34" }, "create");
+  const payload = await normalizeFormPayload(form, "POST");
+  assert.deepEqual(payload.rewardPayload.cash, { amount: 12.34, accountType: "checking", currencyCode: "ECO" });
+  assert.deepEqual(payload.metadata.materials, []);
+  assert.deepEqual(payload.metadata.submissionRequirements, []);
 });

@@ -100,6 +100,7 @@ function rewardSummary(payload) {
   return Object.freeze({
     cashAmount,
     currencyCode,
+    accountType: safeText(cash.accountType || "checking", 16),
     itemCount,
     label: parts.join(" + ") || "No configured reward",
   });
@@ -162,8 +163,9 @@ function normalizeContract(row, index) {
     targetCountryCodes: Object.freeze(
       safeStringArray(rawTargeting.countryCodes).map((value) => value.toUpperCase()),
     ),
-    targetingEditable: safeStringArray(rawTargeting.playerIds).length === 0
-      && safeStringArray(rawTargeting.rosterLabels).length === 0
+    // Targeting capability must use raw presence, not display text that strips UUIDs.
+    targetingEditable: (!Array.isArray(rawTargeting.playerIds) || rawTargeting.playerIds.length === 0)
+      && (!Array.isArray(rawTargeting.rosterLabels) || rawTargeting.rosterLabels.length === 0)
       && (!Array.isArray(rawTargeting.storyFlagConditions) || rawTargeting.storyFlagConditions.length === 0),
     requirementsText: safeText(
       row.requirementsPayload?.manualText || row.requirements_payload?.manualText,

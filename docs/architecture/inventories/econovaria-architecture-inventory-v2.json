@@ -2770,12 +2770,12 @@
         "lines": 650
       },
       {
-        "file": "backend/src/security/adminBffRequestAuth.ts",
+        "file": "admin/v2/src/routes/contracts/ContractsController.js",
         "lines": 643
       },
       {
-        "file": "admin/v2/src/routes/contracts/ContractsController.js",
-        "lines": 641
+        "file": "backend/src/security/adminBffRequestAuth.ts",
+        "lines": 643
       },
       {
         "file": "backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.ts",
@@ -2835,7 +2835,7 @@
       },
       {
         "file": "backend/supabase/functions/admin-api/mutationAdapters.ts",
-        "lines": 595
+        "lines": 597
       },
       {
         "file": "backend/src/domains/storylines/services/storylineRunner.ts",
