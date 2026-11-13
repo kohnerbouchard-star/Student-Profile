@@ -244,11 +244,56 @@ stop when the frozen esm.sh Supabase dependency connection is refused; these
 aggregate checks are not passing or complete. The old-pin connected test
 correctly rejects the staged new inputs (130 passing, one source-identity
 failure). Do not weaken its projection or treat that diagnostic as runtime
-qualification. New-source pin-child checks and exact-pin review are pending.
+qualification. The local source anchor is
+`2b76a1a8c850f7408a8b08bf65167d93acdc213f`, tree
+`a4a84e68a09d45e7e7f7fd07b670216a2e0e9790`, directly parented by the public
+head above. Its distinct local child
+`cfeeda4130b92085a2c219564d60d03fcec1a633` changes only backend SHA/tree;
+frozen F, mode/API inverse, seven overlays and classification remain unchanged.
+Clean projection and all 131 current-pin tests pass. Exact source/pin review
+passes. Both historical modes also pass all 131 tests each after exact archive
+reconstruction and projection verification. The initial shared partial-clone
+fixture omitted historical objects and failed correctly; its evidence remains.
+These are local/synthetic results, not connected or hosted qualification.
 
 Existing connected privacy and hosted capacity limitations remain. No remote
 branch/object write, dispatch, retry, cancellation, live data or production
-operation occurred. Next: create the reviewed local source anchor and separate
-pin child, repeat clean source projection/full harness tests and independent
-exact-pin review, preserve recovery artifacts, then coordinate publication and
-exact-head hosted qualification without replacing old queued runs.
+operation occurred. A metadata-only completion record follows the pin child;
+source bytes and identities stay frozen. Next: preserve the complete recovery
+artifact, coordinate any separately authorized expected-head publication, and
+obtain new exact-head hosted qualification without replacing old queued runs.
+The frozen dependency/network blockage, prior privacy and capacity holds remain
+explicit; the item is not VERIFIED_COMPLETE.
+
+## Authorized manual-context publication tranche (2026-11-13)
+
+The owner authorized publishing this correction on existing PR #938 and allowing
+GitHub to replace matching stuck queued checks with fresh checks. This supersedes
+the local-only/old-queue preservation hold for this bounded publication only.
+There is no manual queue cancellation, production deployment or unrelated ref
+update in this tranche. Completed historical run results remain available.
+
+GitHub source object `5b3ecbe1aede4bf546f60ed76ebbbe858a8226c0` has reviewed tree
+`a4a84e68a09d45e7e7f7fd07b670216a2e0e9790` and sole parent
+`9ea66b11159db13688012ed87e354c6767f71fec`. The tree is byte-identical to the
+reviewed local source `2b76a1a8`; the GitHub API assigns the real commit identity.
+Its separate public pin child `c5290ed0798c1b97883c653202f519a412f8073e`, tree
+`ed33ed69622a6a9ad65815b2efa08cad549a4a01`, changes only backend SHA/tree.
+The frozen frontend F, strict API inverse, seven overlays, classifications and
+all runtime inputs stay unchanged. Local Git fetch and independent remote-object
+review verified both objects without moving a branch or starting a source-only
+CI wave. This successor changes only the three established metadata paths.
+
+Exact-public-pin projection and all 131 current harness tests pass; the 45
+binding/authority tests pass. Prior 37 source commands, root npm test, backend
+TypeScript and both reconstructed historical modes remain recorded, with no
+source bytes changed. Full Edge/smoke still require successful frozen dependency
+access. Existing connected privacy and hosted capacity limits remain explicit.
+Authority remains 75 changed paths under 77 locks, 147 required checks and 103
+critical identities. No protection, guard, check or production hold is weakened.
+
+Publication must use the verified current owner head as the expected ref value.
+After that single owner update, the next exact item is fresh CI on its actual
+head plus connected privacy/capacity qualification; old-head successes are not
+new-head proof. The PR stays draft and IMPLEMENTED_NOT_MERGED. No merge or
+production-readiness claim follows from these local/source-object checks.
