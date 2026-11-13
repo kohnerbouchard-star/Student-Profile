@@ -3,6 +3,7 @@ name: Admin Shell Smoke
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-962.json"
       - "docs/operations/contracts/player-cross-cutting/pr-961.json"
       - "docs/operations/contracts/player-cross-cutting/pr-960.json"
       - "docs/operations/contracts/player-cross-cutting/pr-959.json"

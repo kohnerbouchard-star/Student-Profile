@@ -42,6 +42,10 @@ const playerDashboardRepository = fs.readFileSync(
   "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
   "utf8",
 );
+const playerDashboardProjection = fs.readFileSync(
+  "backend/src/domains/game-dashboard/infrastructure/dashboardReadProjection.ts",
+  "utf8",
+);
 const playerDashboardContracts = fs.readFileSync(
   "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
   "utf8",
@@ -227,9 +231,19 @@ assert.match(
   /const excludedStockMarketValue = valuationCurrencyCode === "ECO"[\s\S]*?: portfolio\.holdingsMarketValue/,
   "Player net worth must mark unconverted ECO holdings as excluded from local-currency valuation.",
 );
-assert.match(playerDashboardRepository, /rankScope: "currency" as const/);
 assert.match(
   playerDashboardRepository,
+  /import \{[^}]*\btoLeaderboard\b[^}]*\} from "\.\/dashboardReadProjection\.ts"/,
+  "Dashboard must import the reviewed leaderboard projection owner.",
+);
+assert.match(
+  playerDashboardRepository,
+  /const leaderboard = toLeaderboard\(\s*players,\s*countryByPlayerId,\s*financialBalances,\s*holdings,\s*stockByAssetId,\s*\)/,
+  "Dashboard must use the reviewed currency-scoped leaderboard with authoritative rows.",
+);
+assert.match(playerDashboardProjection, /rankScope: "currency" as const/);
+assert.match(
+  playerDashboardProjection,
   /const rankByCurrency = new Map<string, number>\(\)/,
   "Leaderboard ranks must be scoped within a comparable currency instead of comparing unlike currencies.",
 );
