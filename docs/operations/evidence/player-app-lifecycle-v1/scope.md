@@ -35,3 +35,9 @@ Local source/test review and nonbrowser gates are complete. Freeze and independe
 ## Serial-lane continuation
 
 The parent independently cleared #958 postmerge and released this lane on 2026-11-13. The owner authorizes continued PR publication, exact-head checks and qualified serial merge; production remains explicitly held. Earlier local-only wording describes preparation. Publish as draft only after recovery is verified, then register the actual returned PR number while preserving all predecessor required/critical identities and production denials. No inherited hosted result certifies this new source.
+
+## PR #959 publication and authority
+
+Draft [PR #959](https://github.com/kohnerbouchard-star/Student-Profile/pull/959) publishes `d2cf415abeb0644e1ad316b06f5dec5756bb35fa`, with exact reviewed tree `e95abef3d6a4e11afa0bc835a3939bf8f4a7a8a2` on #958 main. The local source/review records remain preserved; remote tree equality is verified. Recovery restored from base-only main reproduces all eleven source paths, exact tree, 41 characterization/live-render cases and deterministic inventory.
+
+Actual-number `pr-959.json` preserves all ordered 147 required / 103 critical identities and all 55 workflow families from #958. It locks 31 changed paths plus the two unchanged read-only authority verifier/test paths. Nineteen exact own-authority PR selectors schedule otherwise-unselected families; the two helper dependency selectors remain. All previous selectors, jobs, assertions, checkout behavior, permissions, non-PR triggers and false production/secret flags remain unchanged. Final-head local checks and independent metadata review precede publication of this amendment. Fresh exact-head hosted qualification follows; initial-source checks are interim and not a merge decision.
