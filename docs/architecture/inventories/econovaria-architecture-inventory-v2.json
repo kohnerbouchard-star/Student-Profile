@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1363,
+    "sourceFiles": 1369,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 87,
+    "oversizedSourceFiles": 86,
     "capabilityStrings": 140
   },
   "domains": [
@@ -352,7 +352,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 100,
+      "sourceFiles": 106,
       "publicBoundaryFiles": [
         "backend/src/domains/stocks/index.ts"
       ]
@@ -2061,7 +2061,7 @@
         ]
       },
       {
-        "file": "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
+        "file": "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts",
         "markers": [
           "fallback"
         ]
@@ -2610,10 +2610,6 @@
         "lines": 2536
       },
       {
-        "file": "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
-        "lines": 1371
-      },
-      {
         "file": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
         "lines": 1195
       },
@@ -2655,7 +2651,7 @@
       },
       {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
-        "lines": 895
+        "lines": 896
       },
       {
         "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
@@ -3028,25 +3024,25 @@
       {
         "capability": "asset.beta",
         "locations": [
-          "backend/src/domains/stocks/calculations/stockMarketEngine.ts"
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
         ]
       },
       {
         "capability": "asset.liquidity",
         "locations": [
-          "backend/src/domains/stocks/calculations/stockMarketEngine.ts"
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
         ]
       },
       {
         "capability": "asset.sector",
         "locations": [
-          "backend/src/domains/stocks/calculations/stockMarketEngine.ts"
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
         ]
       },
       {
         "capability": "asset.ticker",
         "locations": [
-          "backend/src/domains/stocks/calculations/stockMarketEngine.ts"
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
         ]
       },
       {
@@ -3841,31 +3837,31 @@
       {
         "capability": "shock.confidence",
         "locations": [
-          "backend/src/domains/stocks/calculations/stockMarketEngine.ts"
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
         ]
       },
       {
         "capability": "shock.decay",
         "locations": [
-          "backend/src/domains/stocks/calculations/stockMarketEngine.ts"
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
         ]
       },
       {
         "capability": "shock.explanation",
         "locations": [
-          "backend/src/domains/stocks/calculations/stockMarketEngine.ts"
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
         ]
       },
       {
         "capability": "shock.headline",
         "locations": [
-          "backend/src/domains/stocks/calculations/stockMarketEngine.ts"
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
         ]
       },
       {
         "capability": "shock.magnitude",
         "locations": [
-          "backend/src/domains/stocks/calculations/stockMarketEngine.ts"
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
         ]
       },
       {
