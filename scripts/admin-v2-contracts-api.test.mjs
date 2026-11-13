@@ -400,3 +400,193 @@ test("new Contracts keep ECO/checking cash defaults and creation metadata defaul
   assert.deepEqual(payload.metadata.materials, []);
   assert.deepEqual(payload.metadata.submissionRequirements, []);
 });
+
+test("Contracts normalization preserves accepted envelopes, rejects malformed responses and freezes bounded projections", () => {
+  const row = contract();
+  const expected = normalizeContractsReadModel([row]);
+  for (const envelope of [
+    { contracts: [row] }, { assignments: [row] }, { value: { contracts: [row] } },
+    { data: { assignments: [row] } }, { data: { data: { contracts: [row] } } },
+    { payload: { assignments: [row] } },
+  ]) assert.deepEqual(normalizeContractsReadModel(envelope), expected);
+  for (const malformed of [null, {}, { data: { contracts: {} } }, { contracts: "invalid" }]) {
+    assert.throws(() => normalizeContractsReadModel(malformed), (error) => error.code === "INVALID_RESPONSE" && error.retryable);
+  }
+  assert.throws(() => normalizeContractDetail({ progress: [] }, expected.contracts[0]), (error) => error.code === "INVALID_RESPONSE");
+  const bounded = normalizeContractsReadModel([...Array(2_001).fill(row), null]);
+  assert.equal(bounded.contracts.length, 2_000);
+  assert.deepEqual(normalizeContractsReadModel([null, 7, [], row]).contracts, [expected.contracts[0]]);
+  for (const value of [expected, expected.contracts, expected.contracts[0], expected.contracts[0].reward,
+    expected.contracts[0].targetCountryCodes, expected.statuses, expected.categories, expected.summary]) assert.ok(Object.isFrozen(value));
+  assert.throws(() => { expected.contracts[0].title = "Changed"; }, TypeError);
+});
+
+test("Contracts display fields retain UUID stripping, identifier normalization and safe defaults", () => {
+  const secret = "ABCDEFAB-ABCD-4ABC-8ABC-ABCDEFABCDEF";
+  const row = normalizeContractsReadModel([contract({
+    id: ` ${secret} `, contractKey: `key ${secret}`, title: secret,
+    description: `Before ${secret} after`, instructions: secret, category: secret,
+    sourceType: " SYSTEM ", status: " PAUSED ", visibility: " HIDDEN ", completionMode: " AUTO_CHECK ",
+    targetingPayload: { countryCodes: [`kr ${secret}`], rosterLabels: [`Class ${secret}`], playerIds: [secret] },
+    requirementsPayload: { manualText: `Task ${secret}` },
+    rewardPayload: { cash: { amount: "12.5", currencyCode: `krw ${secret}` }, items: [{ quantity: 2 }, { quantity: -1 }, { quantity: 1.2 }] },
+    metadata: { difficulty: secret, reviewNote: secret },
+    progressCount: -1, submittedCount: 1.5, completedCount: "2", rewardIssuedCount: Infinity,
+    deadlineAt: "not a date",
+  })]).contracts[0];
+  assert.equal(row.resourceId, secret.toLowerCase());
+  assert.equal(row.title, "Untitled contract");
+  assert.equal(row.description, "Before after");
+  assert.equal(row.category, "general");
+  assert.equal(row.status, "paused");
+  assert.equal(row.sourceType, "system");
+  assert.equal(row.visibility, "hidden");
+  assert.equal(row.completionMode, "auto_check");
+  assert.equal(row.targetingEditable, false);
+  assert.equal(row.reward.label, "12.5 KRW + 2 items");
+  assert.deepEqual([row.progressCount, row.submittedCount, row.completedCount, row.rewardIssuedCount], [0, 0, 2, 0]);
+  assert.equal(row.deadlineAt, "");
+  const { resourceId: _resourceId, ...visible } = row;
+  assert.doesNotMatch(JSON.stringify(visible), /abcdefab/i);
+  const fallback = normalizeContractsReadModel([{ id: "invalid", status: "other", sourceType: "other", visibility: "other", completionMode: "other" }]).contracts[0];
+  assert.equal(fallback.resourceId, null);
+  assert.deepEqual([fallback.status, fallback.sourceType, fallback.visibility, fallback.completionMode], ["draft", "teacher", "public", "manual_review"]);
+});
+
+test("Contracts detail joins only validated matching IDs and retains authoritative progress precedence", () => {
+  const row = normalizeContractsReadModel([contract()]).contracts[0];
+  const detail = normalizeContractDetail({
+    progress: { progress: [
+      { progressId: PROGRESS_ID.toUpperCase(), status: "submitted", playerName: "Do not display", evidencePayload: { writtenResponse: "Progress evidence" }, resultPayload: { feedback: "Authoritative feedback" } },
+      { progressId: "invalid", status: "submitted" },
+      { progressId: "31000000-0000-4000-8000-000000000003", status: "completed" },
+      null,
+    ] },
+    submissions: { data: { contractSubmissions: [
+      { submissionId: PROGRESS_ID, displayName: "First" },
+      { id: PROGRESS_ID, displayName: `Safe ${PLAYER_ID}`, status: "completed", evidence: `Evidence ${PLAYER_ID}`, resultPayload: { feedback: "Projection feedback" } },
+      { progressId: "invalid", displayName: "Must not join", evidence: "Must not join" },
+      { progressId: "32000000-0000-4000-8000-000000000003", displayName: "Unrelated" },
+    ] } },
+  }, row);
+  assert.equal(detail.contract, row);
+  assert.equal(detail.participants.length, 3);
+  const [joined, invalid, unmatched] = detail.participants;
+  assert.equal(joined.playerName, "Safe");
+  assert.equal(joined.status, "submitted");
+  assert.equal(joined.evidence, "Evidence");
+  assert.equal(joined.feedback, "Authoritative feedback");
+  assert.equal(invalid.playerName, "Player");
+  assert.equal(invalid.resourceId, null);
+  assert.equal(invalid.canReview, false);
+  assert.equal(unmatched.playerName, "Player");
+  assert.equal(unmatched.canIssueReward, true);
+  assert.deepEqual(detail.summary, { participantCount: 3, submittedCount: 2, completedCount: 1, rewardIssuedCount: 0 });
+  assert.ok(Object.isFrozen(detail) && Object.isFrozen(detail.participants) && detail.participants.every(Object.isFrozen));
+});
+
+test("Contracts review and reward eligibility follows status, valid ID and issued state across all states", () => {
+  const row = normalizeContractsReadModel([contract()]).contracts[0];
+  const issuedAt = "2026-08-07T03:00:00.000Z";
+  for (const status of ["available", "in_progress", "submitted", "completed", "failed", "expired", "dismissed", "unknown"]) {
+    for (const id of [PROGRESS_ID, "invalid"]) {
+      for (const issued of ["", issuedAt]) {
+        const detail = normalizeContractDetail({
+          progress: { progress: [{ progressId: id, status, rewardIssuedAt: issued }] },
+          submissions: { data: { submissions: [{ progressId: id, status: "completed", rewardIssuedAt: issued }] } },
+        }, row);
+        const item = detail.participants[0];
+        assert.equal(item.canReview, id === PROGRESS_ID && status === "submitted" && !issued, `${status}/${id}/${issued}: review`);
+        assert.equal(item.canIssueReward, id === PROGRESS_ID && status === "completed" && !issued, `${status}/${id}/${issued}: reward`);
+        assert.equal(item.status, status === "unknown" ? "available" : status);
+      }
+    }
+  }
+  const projected = normalizeContractDetail({
+    progress: { progress: [{ progressId: PROGRESS_ID }] },
+    submissions: { data: { submissions: [{ progressId: PROGRESS_ID, status: "completed", rewardIssuedAt: issuedAt }] } },
+  }, row).participants[0];
+  assert.equal(projected.status, "completed");
+  assert.equal(projected.rewardIssuedAt, issuedAt);
+  assert.equal(projected.canIssueReward, false);
+});
+
+test("Contracts evidence fallback retains answer limits, empty defaults and bounded detail rows", () => {
+  const row = normalizeContractsReadModel([contract()]).contracts[0];
+  const evidencePayload = { answers: Array.from({ length: 21 }, (_, index) => ({ prompt: `Question ${index} ${PLAYER_ID}`, answer: `Answer ${index}` })) };
+  const detail = normalizeContractDetail({ progress: { progress: [
+    { id: PROGRESS_ID, evidencePayload }, {},
+  ] } }, row);
+  assert.equal(detail.participants[0].evidence.split(" · ").length, 20);
+  assert.doesNotMatch(detail.participants[0].evidence, /Question 20|40000000/);
+  assert.equal(detail.participants[1].evidence, "No submitted evidence");
+  assert.equal(normalizeContractDetail({ progress: { progress: [] } }, row).isEmpty, true);
+  assert.equal(normalizeContractDetail({ progress: { progress: Array(2_001).fill({}) } }, row).participants.length, 2_000);
+});
+
+test("Contracts extracted read model retains controller exports without a controller dependency", async () => {
+  const model = await import("../admin/v2/src/routes/contracts/ContractsReadModel.js");
+  assert.equal(model.normalizeContractsReadModel, normalizeContractsReadModel);
+  assert.equal(model.normalizeContractDetail, normalizeContractDetail);
+  assert.equal(model.formatContractText(`Created ${PLAYER_ID}`, 280), "Created");
+  assert.equal(model.isContractResourceId(PROGRESS_ID), true);
+  assert.equal(model.isContractResourceId("invalid"), false);
+  for (const status of ["draft", "scheduled", "active", "paused", "completed", "expired", "archived"]) assert.equal(model.isContractStatus(status), true);
+  assert.equal(model.isContractStatus("other"), false);
+});
+
+test("Contracts controller preserves scoped mutations, retry identity and duplicate suppression after extraction", async () => {
+  const calls = [];
+  let resolveFirst;
+  const methods = ["createContract", "updateContract", "publishContract", "archiveContract", "duplicateContract", "reviewProgress", "issueRewards"];
+  const api = Object.fromEntries(methods.map((method) => [method, async (args) => {
+    calls.push({ method, args });
+    return { ok: true };
+  }]));
+  Object.assign(api, {
+    readContracts: async () => ({ contracts: [] }),
+    readContractDetail: async () => ({ progress: { progress: [] } }),
+  });
+  api.createContract = (args) => {
+    calls.push({ method: "createContract", args });
+    if (calls.length === 1) return new Promise((resolve) => { resolveFirst = resolve; });
+    if (calls.length === 2) return Promise.reject({ code: "SERVICE_UNAVAILABLE", retryable: true });
+    return Promise.resolve({ ok: true });
+  };
+  const notifications = [];
+  const controller = createContractsController({
+    api, selectedGameId: GAME_ID, hasPermission: () => true,
+    cryptoObject: { randomUUID: () => "50000000-0000-4000-8000-000000000005" },
+    notify: (notification) => notifications.push(notification),
+  });
+  try {
+    const input = { title: `Draft ${PLAYER_ID}` };
+    const pending = controller.createContract(input);
+    assert.equal((await controller.createContract(input)).busy, true);
+    assert.equal(calls.length, 1);
+    resolveFirst({ ok: true });
+    assert.equal((await pending).ok, true);
+    assert.equal(notifications[0].message, "Draft was created.");
+    assert.equal((await controller.createContract(input)).ok, false);
+    const retryKey = calls.at(-1).args.idempotencyKey;
+    assert.equal((await controller.createContract(input)).ok, true);
+    assert.equal(calls.at(-1).args.idempotencyKey, retryKey);
+    assert.notEqual(retryKey, calls[0].args.idempotencyKey);
+    const row = normalizeContractsReadModel([contract({ status: "draft", targetingPayload: { allPlayers: true } })]).contracts[0];
+    const participant = { resourceId: PROGRESS_ID, playerName: "Player" };
+    for (const method of ["updateContract", "publishContract", "archiveContract", "duplicateContract"]) {
+      assert.equal((await controller[method](row, input)).ok, true);
+      assert.equal(calls.at(-1).args.contractId, CONTRACT_ID);
+    }
+    assert.equal((await controller.reviewProgress(row, participant, "approve", "Good evidence")).ok, true);
+    assert.equal((await controller.issueRewards(row, participant)).ok, true);
+    assert.equal(calls.at(-2).args.progressId, PROGRESS_ID);
+    assert.equal(calls.at(-1).args.progressId, PROGRESS_ID);
+    assert.equal(calls.at(-2).args.feedback, "Good evidence");
+    assert.ok(calls.every(({ args }) => args.gameId === GAME_ID && args.idempotencyKey.startsWith("admin.contracts.")));
+    const writes = calls.length;
+    assert.equal((await controller.updateContract({ ...row, status: "active" }, input)).error.code, "CONFLICT");
+    assert.equal((await controller.publishContract({})).error.code, "NOT_FOUND");
+    assert.equal(calls.length, writes);
+  } finally { controller.destroy(); }
+});

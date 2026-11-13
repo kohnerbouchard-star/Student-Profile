@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import "./admin-v2-attendance-route.test.mjs";
+import "./admin-v2-attendance-read-model.test.mjs";
 
 import { createAttendanceApi } from "../admin/v2/src/routes/attendance/AttendanceApi.js";
 import {

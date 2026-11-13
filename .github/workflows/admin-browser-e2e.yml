@@ -5,6 +5,10 @@ on:
   pull_request:
     branches: [main, feat/player-business-workspace-v2, feat/business-financial-reporting-v2, feat/business-common-equity-v2, feat/business-ipo-issuance-v2]
     paths:
+      - "scripts/admin-v2-attendance-read-model.test.mjs"
+      - "scripts/fixtures/admin-attendance-controller-function-hashes.json"
+      - "scripts/admin-v2-world-read-model.test.mjs"
+      - "scripts/admin-v2-marketplace-read-model.test.mjs"
       - "scripts/admin-account-controls-dom-fixture.mjs"
       - "scripts/admin-account-controls.test.mjs"
       - "scripts/admin-account-controls-browser-check.mjs"
