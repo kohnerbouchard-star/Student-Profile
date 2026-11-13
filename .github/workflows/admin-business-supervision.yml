@@ -2,6 +2,8 @@ name: Admin Business Supervision
 on:
   pull_request:
     paths:
+      - "scripts/manual-pr-context.mjs"
+      - "scripts/manual-pr-context.test.mjs"
       - "docs/operations/contracts/player-cross-cutting/pr-916.json"
       - ".github/workflows/admin-business-supervision.yml"
       - "admin/v2/src/routes/business/**"
@@ -17,6 +19,15 @@ on:
       - "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md"
       - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open PR number for this branch
+        required: true
+        type: string
+      expected_head_sha:
+        description: Exact 40-character current PR head SHA
+        required: true
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -24,6 +35,9 @@ concurrency:
   cancel-in-progress: true
 jobs:
   source:
+    permissions:
+      contents: read
+      pull-requests: read
     name: admin-business-supervision-source
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -39,15 +53,26 @@ jobs:
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
         with:
           deno-version: v2.9.3
+      - name: Validate manual PR identity
+        id: manual_pr
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MANUAL_PR_NUMBER: ${{ inputs.pr_number }}
+          MANUAL_HEAD_SHA: ${{ inputs.expected_head_sha }}
+        run: node scripts/manual-pr-context.mjs
+
       - name: Verify exact head and full-phase authority
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
-          PR_NUMBER: ${{ github.event.pull_request.number || '682' }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || steps.manual_pr.outputs.base_ref || 'main' }}
+          MANUAL_BASE_SHA: ${{ steps.manual_pr.outputs.base_sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number || steps.manual_pr.outputs.pr_number || '682' }}
         run: |
+          node --test scripts/manual-pr-context.test.mjs
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           git fetch --no-tags origin "$BASE_REF"
-          git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/phase13-changed.txt
+          git diff --name-only "${MANUAL_BASE_SHA:-origin/${BASE_REF}}...HEAD" > /tmp/phase13-changed.txt
           node scripts/verify-player-cross-cutting-authority.mjs --changed-files /tmp/phase13-changed.txt --pr-number "$PR_NUMBER" --base-ref "$BASE_REF"
           node scripts/admin-business-supervision-contract.mjs
           node scripts/validate-supabase-migrations.mjs

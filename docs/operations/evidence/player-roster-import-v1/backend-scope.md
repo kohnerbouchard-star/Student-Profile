@@ -196,3 +196,59 @@ Preserve all original guard classifications, commands, permissions, auth/DTO/pri
 ## Fixed service/phase privacy checkpoints
 
 Bounded service/phase privacy checkpoints (2026-11-11), local preparation on public5f69fbb36ab9de78293c8ab3d4384b441b096f57: actual paired run43091296647 completed both representative student-access flows and mounted-receipt staff logout, but failed the final service-log absence assertion with cleanup true. The precise service/value and cause remain unknown. Add only eight fixed before/after-student service labels to the existing checkpoint mechanism; preserve both cumulative log passes, every exact private value, full absence assertion, timing, commands, source pins, runtime projection, guards, cleanup and failed outcome. No value-class or raw log/error/match serialization, log-level/filter change, or production correction. No new harness path/classification or inventory source change; actual-main scope stays63 changed/65 locked paths,147 required/103 critical identities,55 families and42 prerequisite plus19 own filter entries. Exact inverse/source/privacy/preflight/full successor suites, historical/current-pin modes and independent review are required before separately authorized publication. Prior failed artifacts remain; new-head connected/privacy completion and hosted BFF/200-row capacity remain unqualified. No ref update, retry, dispatch, live data/accounts, runtime probe or production action.
+
+
+## Manual PR context correction (2026-11-13)
+
+`CI-MANUAL-PR-CONTEXT-001`, `IMPLEMENTED_NOT_MERGED`, local-only child of existing
+roster owner #938 at `9ea66b11159db13688012ed87e354c6767f71fec`; actual main is
+`7d49ad1db7fb2a45c2413e99672c7c72cee9b4e7`. Fresh manual source jobs selected old
+PR authorities (672/674/675/676/678/679/680/682) and obsolete base branches.
+This is a workflow-event context failure, not evidence of a feature regression.
+
+Eight workflows now require a PR number and complete expected head SHA on
+manual dispatch. A step-local read-only token reads only that PR's metadata.
+The resolver rejects missing/malformed input, closed/merged PRs, fork heads,
+wrong repositories, wrong branches, stale head/checkouts and invalid base refs.
+It fetches the verified immutable base SHA and confirms common ancestry before
+emitting validated outputs. Source lanes retain the complete authority verifier,
+all original tests and triple-dot semantics. Existing PR/push event fallbacks,
+concurrency, permissions outside the source jobs, runtime, database and browser
+jobs are preserved. The source jobs gain only `pull-requests: read`; no write
+permission or live action is added. Release Integrity is byte-for-byte unchanged.
+
+The binding proves an API snapshot at resolution time, not future immutability
+of the PR branch. The current exact head and base must be verified again before
+using results for merge qualification. Manual execution remains distinct from
+PR-event execution, and source failures cannot be ignored just because database
+or browser legs pass.
+
+Twelve exact input paths are added to #938's authority. All existing required and
+critical check identities remain unchanged. This updates workflow/script source
+inputs, so the prior frozen backend source B must not be reused as qualification
+for this candidate. No runtime-equivalence exclusion is widened and no pins are
+silently changed. Prepare a new reviewed source anchor, then a separate pin child
+and independent source/metadata review before any authorized publication.
+
+Local Node 22.23.1/npm 10.9.8 checks pass: the 29 binding tests, 16 retained
+cross-cutting authority tests, complete root `npm test`, backend TypeScript,
+roster source/action-pinning contracts and the eight-workflow static contract
+sweep. Two literal legacy workflow assertions were updated to require the new
+validated manual binding and immutable diff while retaining old PR/push
+fallbacks and authority arguments. Authority accepts 75 actual-main changed
+paths under 77 locks, retaining all 147 required and 103 critical checks.
+Independent workflow/source and metadata reviews found no blocking issue.
+
+Pinned Deno 2.9.3 full edge typecheck and backend smoke were attempted. Both
+stop when the frozen esm.sh Supabase dependency connection is refused; these
+aggregate checks are not passing or complete. The old-pin connected test
+correctly rejects the staged new inputs (130 passing, one source-identity
+failure). Do not weaken its projection or treat that diagnostic as runtime
+qualification. New-source pin-child checks and exact-pin review are pending.
+
+Existing connected privacy and hosted capacity limitations remain. No remote
+branch/object write, dispatch, retry, cancellation, live data or production
+operation occurred. Next: create the reviewed local source anchor and separate
+pin child, repeat clean source projection/full harness tests and independent
+exact-pin review, preserve recovery artifacts, then coordinate publication and
+exact-head hosted qualification without replacing old queued runs.
