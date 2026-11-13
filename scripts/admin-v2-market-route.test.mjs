@@ -281,3 +281,118 @@ test("Market workflow adds exact-head contract and retained browser qualificatio
   assert.match(workflow, /npm run test:admin-v2:market-browser/);
   assert.doesNotMatch(workflow, /continue-on-error|contents: write|pull-requests: write/);
 });
+
+// DTO edge cases stay on the existing registered Market test path so test-only
+// changes still select Market CI without new filters.
+const marketReadModel = await import("../admin/v2/src/routes/market/MarketReadModel.js");
+const marketController = await import("../admin/v2/src/routes/market/MarketController.js");
+const MARKET_PRIVATE_ID = "20000000-0000-4000-8000-000000000002";
+const fulfilledPanel = (data) => ({ status: "fulfilled", value: { data } });
+const modelBatch = (assets = [], panels = {}) => ({ panels: { assets: fulfilledPanel({ assets }), ...panels } });
+const modelAsset = (extra = {}) => ({ ticker: "ABC", id: MARKET_PRIVATE_ID, type: "stock", currentPrice: 0, ...extra });
+
+function assertDeepFrozen(value) {
+  if (!value || typeof value !== "object") return;
+  assert.equal(Object.isFrozen(value), true);
+  Object.values(value).forEach(assertDeepFrozen);
+}
+
+test("Market extraction retains the public entry point and keeps the pure model independent", () => {
+  assert.deepEqual(Object.keys(marketController), ["createMarketController", "normalizeMarketReadModel"]);
+  assert.strictEqual(marketController.normalizeMarketReadModel, marketReadModel.normalizeMarketReadModel);
+  const source = readFileSync("admin/v2/src/routes/market/MarketReadModel.js", "utf8");
+  assert.doesNotMatch(source, /\b(?:window|document|fetch|localStorage|sessionStorage)\b|MarketController|MarketRoute/);
+  assert.deepEqual([...source.matchAll(/from "([^"]+)"/g)].map((match) => match[1]), ["../../core/error-envelope.js"]);
+});
+
+test("Market batch keeps resource identifiers separate, per-call and first-valid-wins", () => {
+  const nextId = "30000000-0000-4000-8000-000000000003";
+  const source = modelBatch([modelAsset({ id: "invalid" }), modelAsset(), modelAsset({ id: nextId })]);
+  const copy = structuredClone(source);
+  const first = marketReadModel.normalizeMarketBatch(source);
+  const second = marketReadModel.normalizeMarketBatch(source);
+  assert.equal(first.resourceIds.get("ABC"), MARKET_PRIVATE_ID);
+  assert.notStrictEqual(first.resourceIds, second.resourceIds);
+  first.resourceIds.clear();
+  assert.equal(second.resourceIds.get("ABC"), MARKET_PRIVATE_ID);
+  assert.equal(first.model.instruments.length, 3);
+  assert.doesNotMatch(JSON.stringify(first.model), /20000000-0000|30000000-0000|resourceIds|assetId/);
+  assertDeepFrozen(first.model);
+  assert.throws(() => { first.model.instruments[0].name = "changed"; }, TypeError);
+  assert.deepEqual(source, copy);
+});
+
+test("Market batch preserves required-panel errors, aliases and optional failure envelopes", () => {
+  for (const result of [null, {}, { panels: { assets: fulfilledPanel([]) } }]) {
+    assert.throws(() => marketReadModel.normalizeMarketReadModel(result), (error) => error.code === "INVALID_RESPONSE");
+  }
+  const result = modelBatch([], {
+    assets: fulfilledPanel({ marketplaceSecurities: [modelAsset()] }),
+    events: { status: "rejected", reason: new Error(`SQL secret ${MARKET_PRIVATE_ID}`) },
+    trades: fulfilledPanel({ marketplaceTrades: [{ symbol: "abc", side: "buy", quantity: "0" }] }),
+  });
+  const model = marketReadModel.normalizeMarketReadModel(result);
+  assert.equal(model.instruments[0].symbol, "ABC");
+  assert.equal(model.trades[0].quantity, 0);
+  assert.equal(model.panels.events.status, "failed");
+  assert.doesNotMatch(JSON.stringify(model), /SQL|secret|20000000-0000/);
+  const empty = marketReadModel.normalizeMarketReadModel(modelBatch([], { assets: fulfilledPanel({ assets: [], marketplaceSecurities: [modelAsset()] }) }));
+  assert.equal(empty.isEmpty, true, "the first array alias remains authoritative even when empty");
+});
+
+test("Market batch preserves input bounds, zero values and finite-number guards", () => {
+  const assets = Array.from({ length: 1_001 }, (_, index) => modelAsset({ ticker: `T${index}`, history: Array.from({ length: 501 }, (_, tickIndex) => ({ tickIndex, price: tickIndex })) }));
+  const result = modelBatch(assets, {
+    events: fulfilledPanel({ news: Array.from({ length: 101 }, (_, i) => ({ title: `Event ${i}`, isActive: i === 0 })) }),
+    trades: fulfilledPanel({ trades: Array.from({ length: 101 }, () => ({ ticker: "ABC", quantity: 0, price: 0 })) }),
+  });
+  const model = marketReadModel.normalizeMarketReadModel(result);
+  assert.equal(model.instruments.length, 1_000);
+  assert.equal(model.events.length, 100);
+  assert.equal(model.trades.length, 100);
+  assert.equal(model.instruments[0].history.length, 500);
+  assert.equal(model.instruments[0].history[0].tickIndex, 1);
+  assert.equal(model.summary.markedActiveEventCount, 1);
+  const invalid = marketReadModel.normalizeMarketReadModel(modelBatch([modelAsset({
+    currentPrice: -1, previousClose: "Infinity", change: "-1.5", changePct: {},
+    marketCap: true, beta: "0", fundamentals: { revenueGrowth: 0, profitMargin: [] },
+  })])).instruments[0];
+  assert.deepEqual([invalid.currentPrice, invalid.previousClose, invalid.change, invalid.changePct, invalid.marketCap, invalid.beta], [null, null, -1.5, null, null, 0]);
+  assert.equal(invalid.fundamentals.revenueGrowth, 0);
+  assert.equal(invalid.fundamentals.profitMargin, null);
+});
+
+test("Market detail preserves fallback identity and partial availability without inventing data", () => {
+  const fallback = marketReadModel.normalizeMarketReadModel(modelBatch([modelAsset()])).instruments[0];
+  const result = { panels: {
+    profile: fulfilledPanel({ profile: modelAsset({ ticker: "OTHER", companyName: "Wrong instrument" }) }),
+    chart: { status: "rejected", reason: new Error("private backend trace") },
+    financials: fulfilledPanel({ financials: { revenueGrowth: "0.25", cashReserves: 0 } }),
+  } };
+  const detail = marketReadModel.normalizeMarketDetail(result, "ABC", fallback);
+  assert.strictEqual(detail.profile, fallback);
+  assert.deepEqual(detail.chart, []);
+  assert.equal(detail.fundamentals.revenueGrowth, 0.25);
+  assert.equal(detail.fundamentals.cashReserves, 0);
+  assert.equal(detail.fundamentals.profitMargin, null);
+  assert.equal(detail.panels.chart.status, "failed");
+  assert.doesNotMatch(JSON.stringify(detail), /private backend trace|Wrong instrument|20000000-0000/);
+  assertDeepFrozen(detail);
+  assert.throws(() => marketReadModel.normalizeMarketDetail({}, "ABC", fallback), (error) => error.code === "REQUEST_FAILED");
+});
+
+test("Market chart preserves trailing bounds and filters invalid prices without private labels", () => {
+  const chart = Array.from({ length: 503 }, (_, tickIndex) => ({ tickIndex, close: tickIndex, timestamp: `t${tickIndex}` }));
+  chart[3].close = -1;
+  chart[4].close = null;
+  chart[5].timestamp = MARKET_PRIVATE_ID;
+  const result = { panels: { chart: fulfilledPanel({ chart }) } };
+  const detail = marketReadModel.normalizeMarketDetail(result, "ABC", null);
+  assert.equal(detail.profile, null);
+  assert.equal(detail.chart.length, 498);
+  assert.equal(detail.chart[0].tickIndex, 5);
+  assert.equal(detail.chart[0].timestamp, "");
+  assert.equal(detail.chart[0].rowKey, "history-5-unknown");
+  assert.equal(detail.chart.at(-1).close, 502);
+  assertDeepFrozen(detail);
+});
