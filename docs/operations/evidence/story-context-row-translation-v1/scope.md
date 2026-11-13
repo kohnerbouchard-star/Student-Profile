@@ -21,3 +21,7 @@ The repository decreases from 638 to 341 physical lines. Adapter-local rows are 
 - Independent source review verifies all 47 original declarations, the byte-identical entire 277-line class and the unchanged sole public export. No stale source assertions or binding/behavior defect was found.
 - Full local Edge typecheck and backend smoke remain incomplete at the unchanged frozen SDK import `https://esm.sh/@supabase/supabase-js@2.108.2/denonext/supabase-js.mjs` (connection refused). The partial smoke run passed 1,160 Deno and 18 Node cases before the failure. No aggregate pass or waiver is claimed; exact-head hosted gates remain mandatory.
 - Recovery review, actual-number draft authority, fresh exact-head hosted qualification and normal postmerge verification remain pending. No staging/runtime or production completion is claimed. Production remains held.
+
+## Draft publication
+
+Draft [PR #963](https://github.com/kohnerbouchard-star/Student-Profile/pull/963) publishes source `fda59157c370c1b5e5017dada30f443fa4034d0b`, identical to independently reviewed/restored tree `02a8fcce43401ac02405f20b34d0efbdf3aec60f`. Actual-number authority preserves all ordered 149 required and 104 critical identities and 56 workflow families from #962. Only missing pull-request path filters receive this tranche's own manifest. No commands, permissions, assertions or production guards are relaxed. Fresh final-head hosted qualification and independent review remain mandatory before a normal serial merge. Production stays held.
