@@ -2887,6 +2887,10 @@
         "lines": 561
       },
       {
+        "file": "backend/src/domains/players/api/playerLoginHttpHandler.ts",
+        "lines": 559
+      },
+      {
         "file": "player-terminal/src/recovery/player-recovery-controller.js",
         "lines": 558
       },
@@ -2921,10 +2925,6 @@
       {
         "file": "backend/src/domains/markets/calculations/bondMath.ts",
         "lines": 547
-      },
-      {
-        "file": "backend/src/domains/players/api/playerLoginHttpHandler.ts",
-        "lines": 545
       },
       {
         "file": "admin/v2/src/routes/market/MarketController.js",

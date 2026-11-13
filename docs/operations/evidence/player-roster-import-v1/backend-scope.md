@@ -297,3 +297,49 @@ After that single owner update, the next exact item is fresh CI on its actual
 head plus connected privacy/capacity qualification; old-head successes are not
 new-head proof. The PR stays draft and IMPLEMENTED_NOT_MERGED. No merge or
 production-readiness claim follows from these local/source-object checks.
+
+## Student login request-URL privacy correction (2026-11-13)
+
+Status: `IMPLEMENTED_NOT_MERGED`. Fresh connected run
+[43353595332](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/43353595332)
+on published head `f4d58a26f337e7e159633c0587ab6365eb41a7b4` passed both 30/40
+representative student journeys, seven security gates and four database gates.
+Its safe aggregate stopped at `privacy-after-student-kong` and cleanup passed.
+The earlier `student-access-40` stage label alone does not identify a login
+failure. Raw service logs and the matched forbidden value were deliberately not
+retained, so the exact raw log line is not claimed.
+
+Source review and a synthetic transport control using the deployed Supabase JS
+2.108.2 reproduce the old downstream GET placing the normalized STU identifier
+in the URL. The replacement uses a service-only POST RPC with server-derived
+game scope and the same active-player/exact-identifier predicates and five-field
+projection. Public, anon and authenticated execution is revoked; the function
+is stable, security invoker and has an empty search path. Null, malformed and
+multiple-row responses fail closed. No credentials are accepted by the RPC.
+The outer limiter, account/device/IP throttle order, credential verification,
+600,000-iteration parameters, legacy upgrade and session creation are preserved.
+
+Local evidence: six retained privacy-handler tests and sixteen transport/negative
+tests pass. The transport tests use the exact 2.108.2 npm distribution through a
+private local import map because this executor cannot fetch the frozen esm.sh
+SDK with Deno. That is supplementary evidence, not a passed frozen-CI claim.
+The new rollback-only SQL fixture passes on a minimal synthetic PostgreSQL
+schema via PGlite, including real-role ACL denials/service access, game isolation,
+active-state and exact-input negatives, exact projection and no writes. Full
+migration replay is still required on the disposable CI database. No Docker or
+psql is available locally. The production database has not been touched.
+
+The existing Player Roster Import workflow adds these tests without removing any
+previous step. The connected browser/privacy harness, all forbidden log values,
+all 147 required checks and 103 critical checks remain unchanged. Exact suffix
+registration preserves the fifteen prior migrations. Fresh corrected-source
+pins and a green connected gate are required before merge; no hosted-capacity,
+maximum-capacity or release qualification is claimed.
+
+Final local preparation also passed the full root `npm test`, backend TypeScript
+check, all 47 registry/authority/roster contracts and the 464-migration audit.
+The generated inventory retains all existing counts, including 93 oversized
+source files, 70 cross-domain deep imports and 52 persistence sites outside
+infrastructure. The SDK-only test lives with the roster qualification scripts,
+not application runtime source. Full Edge typecheck and backend smoke reach the
+existing frozen esm.sh fetch failure and are not counted as complete.

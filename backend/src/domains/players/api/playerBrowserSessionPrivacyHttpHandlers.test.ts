@@ -65,13 +65,6 @@ Deno.test("player login returns a one-time token without internal UUIDs", async 
         status: "active",
         game_join_code_status: "active",
       })],
-      players: [row({
-        id: PLAYER,
-        display_name: "Alex Rivera",
-        roster_label: "Table 4",
-        player_identifier: "CARD-200",
-        status: "active",
-      })],
       player_access_credentials: [row({
         id: CREDENTIAL,
         player_id: PLAYER,
@@ -84,6 +77,13 @@ Deno.test("player login returns a one-time token without internal UUIDs", async 
       })],
     },
     {
+      lookup_player_login_identity_v1: rowList([{
+        id: PLAYER,
+        display_name: "Alex Rivera",
+        roster_label: "Table 4",
+        player_identifier: "CARD-200",
+        status: "active",
+      }]),
       create_player_session_v2: rowList([{
         session_id: SESSION,
         expires_at: EXPIRES_AT,
@@ -135,12 +135,39 @@ Deno.test("player login returns a one-time token without internal UUIDs", async 
   });
   assertNoUuid(JSON.stringify(body));
   assertEquals(verifiedCodes, ["938204"]);
-  assertEquals(fake.filters.includes(JSON.stringify(["game_sessions", "game_join_code_hash", "hash:ABCD-1234"])), true);
-  assertEquals(fake.filters.includes(JSON.stringify(["players", "game_session_id", GAME])), true);
-  assertEquals(fake.filters.includes(JSON.stringify(["players", "player_identifier_normalized", "CARD-200"])), true);
-  assertEquals(fake.filters.includes(JSON.stringify(["player_access_credentials", "game_session_id", GAME])), true);
-  assertEquals(fake.filters.includes(JSON.stringify(["player_access_credentials", "player_id", PLAYER])), true);
+  assertEquals(
+    fake.filters.includes(
+      JSON.stringify([
+        "game_sessions",
+        "game_join_code_hash",
+        "hash:ABCD-1234",
+      ]),
+    ),
+    true,
+  );
+  assertEquals(
+    fake.filters.some((filter) => filter.includes("CARD-200")),
+    false,
+  );
+  assertEquals(
+    fake.filters.includes(
+      JSON.stringify(["player_access_credentials", "game_session_id", GAME]),
+    ),
+    true,
+  );
+  assertEquals(
+    fake.filters.includes(
+      JSON.stringify(["player_access_credentials", "player_id", PLAYER]),
+    ),
+    true,
+  );
   assertEquals(fake.rpcs, [{
+    functionName: "lookup_player_login_identity_v1",
+    args: {
+      p_game_session_id: GAME,
+      p_player_identifier_normalized: "CARD-200",
+    },
+  }, {
     functionName: "create_player_session_v2",
     args: {
       p_game_session_id: GAME,
@@ -193,13 +220,14 @@ Deno.test("player login fails closed when a legacy player lacks a public identif
       status: "active",
       game_join_code_status: "active",
     })],
-    players: [row({
+  }, {
+    lookup_player_login_identity_v1: rowList([{
       id: PLAYER,
       display_name: "Alex Rivera",
       roster_label: null,
       player_identifier: "",
       status: "active",
-    })],
+    }]),
   });
 
   const response = await handlePlayerLoginRequest(
@@ -211,7 +239,9 @@ Deno.test("player login fails closed when a legacy player lacks a public identif
   const serialized = JSON.stringify(await response.json());
   assertEquals(serialized.includes(PLAYER), false);
   assertEquals(serialized.includes("CARD-200"), false);
-  assertEquals(fake.rpcs, []);
+  assertEquals(fake.rpcs.map((rpc) => rpc.functionName), [
+    "lookup_player_login_identity_v1",
+  ]);
 });
 
 Deno.test("player bootstrap derives scope from token and returns no token or UUID", async () => {

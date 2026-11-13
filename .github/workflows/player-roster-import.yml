@@ -38,6 +38,10 @@ jobs:
       - run: |
           cd backend
           deno test --config supabase/functions/admin-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/players/application/importPlayerRoster.test.ts
+      - name: Verify private Player login lookup transport and retained authentication
+        run: |
+          cd backend
+          deno test --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen ../scripts/player-roster-import-login-transport.test.ts src/domains/players/api/playerBrowserSessionPrivacyHttpHandlers.test.ts
       - run: |
           cd backend
           deno test --config supabase/functions/admin-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/admin-api/adminSecurityGuard.test.ts supabase/functions/admin-api/localGameMutations.test.ts supabase/functions/admin-api/controlSurfaceOperations.test.ts
@@ -48,6 +52,7 @@ jobs:
         run: |
           npx supabase db reset --workdir backend --local
           docker exec -i supabase_db_econovaria psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 < scripts/player-roster-import-database.sql
+          docker exec -i supabase_db_econovaria psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 < scripts/player-roster-import-login-privacy-database.sql
           node scripts/player-roster-import-concurrency.mjs
           npx supabase db lint --workdir backend --local --level warning
       - name: Stop disposable database
