@@ -169,7 +169,7 @@ export function ContractForm({
 
     const difficulty = fields.difficulty.getValue();
     const reviewNote = fields.reviewNote.getValue().trim();
-    return {
+    const payload = {
       ...(editing && contract?.contractKey ? { contractKey: contract.contractKey } : {}),
       title,
       description: objective,
@@ -195,6 +195,19 @@ export function ContractForm({
       ...(deadlineAt ? { deadlineAt } : {}),
       ...(expiresAt ? { expiresAt } : {}),
     };
+    // SQL merges reward keys shallowly. Leave unchanged cash untouched, and
+    // retain its server-provided destination when only its amount is edited.
+    if (editing) {
+      if (rewardAmount === (contract?.reward?.cashAmount ?? 0)) {
+        payload.rewardPayload = {};
+      } else if (payload.rewardPayload.cash) {
+        Object.assign(payload.rewardPayload.cash, {
+          currencyCode: contract?.reward?.currencyCode || "ECO",
+          accountType: contract?.reward?.accountType || "checking",
+        });
+      }
+    }
+    return payload;
   }
 
   function syncConditionalFields() {

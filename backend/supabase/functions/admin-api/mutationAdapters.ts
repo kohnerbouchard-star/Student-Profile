@@ -287,18 +287,20 @@ export async function normalizeContractCreate(
       ? "active"
       : "draft";
   const targetingPayload = normalizeTargeting(body);
+  const explicitMetadata = object(body.metadata);
+  const materials = firstDefined(body, ["materials", "attachments", "resources"]);
+  const submissionRequirements = firstDefined(body, [
+    "submissionRequirements", "studentWork", "requiredSubmissions",
+  ]);
+  // PATCH merges metadata with the stored contract. Omission must not become
+  // an empty array; explicitly supplied arrays (including []) still replace it.
   const metadata = {
-    ...object(body.metadata),
-    materials: array(
-      firstDefined(body, ["materials", "attachments", "resources"]),
-    ),
-    submissionRequirements: array(
-      firstDefined(body, [
-        "submissionRequirements",
-        "studentWork",
-        "requiredSubmissions",
-      ]),
-    ),
+    ...(request.method === "POST" ? { materials: [], submissionRequirements: [] } : {}),
+    ...explicitMetadata,
+    ...(materials !== undefined ? { materials: array(materials) } : {}),
+    ...(submissionRequirements !== undefined
+      ? { submissionRequirements: array(submissionRequirements) }
+      : {}),
   };
   const rewardPayload = normalizeContractRewards(body);
   const explicitRequirements = object(
