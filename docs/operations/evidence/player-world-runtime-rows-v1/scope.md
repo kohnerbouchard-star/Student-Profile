@@ -31,3 +31,7 @@ Finish local extraction and characterization, independently review and restore r
 ## Serial-lane release
 
 The parent confirmed the integration lane is clear and roster remains local pending its separate decision. After local and independent qualification and private recovery, this unrelated candidate may be published as draft, receive its actual-number authority and fresh exact-head hosted checks, then merge normally if qualified and undergo full postmerge verification. This does not relax any check or authorize production deployment.
+
+## PR #961 publication and authority
+
+Draft [PR #961](https://github.com/kohnerbouchard-star/Student-Profile/pull/961) publishes source `1f5fcc048aa2fb9ee0859b34a74018d45f8fe9f0` with independently reviewed tree `28e6c01189b9ce895519e56f857e3c388f5098f0`. Frozen recovery reproduces all 13 changed paths and that exact tree from baseline only, verifies 41 checksums, passes 146 restored adapter cases and regenerates inventory byte-identically. Actual-number authority preserves the ordered 147 required and 103 critical identities and all 55 workflow families. The authority locks 39 changed paths plus two unchanged read-only verifier paths. Twenty-five additive own-authority selectors schedule otherwise-unselected families; preserve every job, command, permission, non-PR trigger and production denial. Final-head local gates and independent metadata review precede publication of the qualification amendment. Source-stage checks cannot qualify the amended head.
