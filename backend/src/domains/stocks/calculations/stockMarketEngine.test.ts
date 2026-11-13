@@ -1,3 +1,4 @@
+import "./stockMarketEngine.characterization.test.ts";
 import type {
   StockMarketAssetInput,
   StockMarketChartPoint,
