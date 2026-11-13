@@ -1,0 +1,36 @@
+{
+  "baseline": "19ee89dcd7d02b60f43b0b0ca4477a5c2529f6c7",
+  "blocks": [
+    {
+      "block": "state-and-effects",
+      "lines": 44,
+      "byte_identical_contiguous_move": true
+    },
+    {
+      "block": "session-and-read-functions",
+      "lines": 181,
+      "byte_identical_contiguous_move": true
+    },
+    {
+      "block": "executeEndpoint",
+      "lines": 93,
+      "byte_identical_contiguous_move": true
+    }
+  ],
+  "all_blocks_byte_identical": true,
+  "source_sha256": {
+    "player-terminal/src/app.js": "932d17b71f72e18e8db8d6af34416fa3e9c5bf706c1809f98047f0695bc21173",
+    "player-terminal/src/core/player-terminal-lifecycle.js": "79161a668e17ddf071d603ee4c99fb996d58d8bc32025d4d972964e8e6566d8e",
+    "player-terminal/tests/app-lifecycle-characterization.mjs": "f82822056f52d146c8db2b307620437152aa44518e9b9848a25dc0bc426ab748"
+  },
+  "destroy_sequence_preserved": [
+    "retireEffects()",
+    "destroyed = true",
+    "terminalLoadVersion += 1",
+    "clearInterval(clockTimer)",
+    "remove mount/global listeners",
+    "unsubscribe()",
+    "mount.innerHTML = \"\""
+  ],
+  "null_freshness_guards_preserved": true
+}

@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1371,
+    "sourceFiles": 1372,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -2614,10 +2614,6 @@
         "lines": 1195
       },
       {
-        "file": "player-terminal/src/app.js",
-        "lines": 1172
-      },
-      {
         "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.test.ts",
         "lines": 1132
       },
@@ -2676,6 +2672,10 @@
       {
         "file": "backend/supabase/functions/admin-api/readModels.ts",
         "lines": 851
+      },
+      {
+        "file": "player-terminal/src/app.js",
+        "lines": 848
       },
       {
         "file": "admin/player-identity-wiring.js",

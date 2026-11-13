@@ -36,7 +36,9 @@ for (const marker of ["credentials: \"include\"", "x-econovaria-csrf-token", "x-
 for (const forbidden of ["x-player-session-token", "x-econovaria-player-session-token", "headers.Authorization"]) {
   if (httpSource.includes(forbidden)) throw new Error(`Retired browser credential transport returned: ${forbidden}`);
 }
-const appSource = await readFile(path.join(root, "src/app.js"), "utf8");
+const appSource = (await Promise.all([
+  "src/app.js", "src/core/player-terminal-lifecycle.js"
+].map((file) => readFile(path.join(root, file), "utf8")))).join("\n");
 for (const marker of ["routeLoading", "routeErrors", "loadRouteData", "applyCapabilityControls", "handleInvalidSession", "invalidatedResources", "terminalLoadVersion"]) {
   if (!appSource.includes(marker)) throw new Error(`Route isolation marker is missing: ${marker}`);
 }
