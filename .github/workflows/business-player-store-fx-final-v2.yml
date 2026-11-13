@@ -20,6 +20,11 @@ on:
       - player-terminal/src/api/backend-routes-core.js
       - player-terminal/src/api/preview-transport.js
       - player-terminal/src/api/read-model.js
+      - player-terminal/src/api/market-read-model.js
+      - player-terminal/src/api/banking-read-model.js
+      - player-terminal/src/api/store-inventory-read-model.js
+      - player-terminal/src/api/contracts-read-model.js
+      - player-terminal/src/api/portfolio-read-model.js
       - player-terminal/src/api/resource-plan.js
       - player-terminal/src/api/response-store-validator.js
       - player-terminal/src/components/modal.js
@@ -70,6 +75,11 @@ on:
       - player-terminal/src/api/backend-routes-core.js
       - player-terminal/src/api/preview-transport.js
       - player-terminal/src/api/read-model.js
+      - player-terminal/src/api/market-read-model.js
+      - player-terminal/src/api/banking-read-model.js
+      - player-terminal/src/api/store-inventory-read-model.js
+      - player-terminal/src/api/contracts-read-model.js
+      - player-terminal/src/api/portfolio-read-model.js
       - player-terminal/src/api/resource-plan.js
       - player-terminal/src/api/response-store-validator.js
       - player-terminal/src/components/modal.js

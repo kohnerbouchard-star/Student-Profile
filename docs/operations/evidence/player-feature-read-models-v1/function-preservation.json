@@ -1,0 +1,160 @@
+{
+  "base": "c59ed0afe1ac794bb5c4788f477020e535c3587b",
+  "functions": [
+    {
+      "name": "initials",
+      "owner": "player-terminal/src/api/read-model.js",
+      "sha256": "6ce83c2ca899b866893a7c92fac26868d5c37d4c49b26038b7ece621e7f67e8a"
+    },
+    {
+      "name": "playerFacingId",
+      "owner": "player-terminal/src/api/read-model.js",
+      "sha256": "ec2909621b51a6eb2b493d73711ee84f65795534c2e8095e830a2561659c5346"
+    },
+    {
+      "name": "categoryImage",
+      "owner": "player-terminal/src/api/store-inventory-read-model.js",
+      "sha256": "d951ae165acaf5ce24373ddbec298cc02bdd61e9b96c3a1775282ac20868b70e"
+    },
+    {
+      "name": "emptyTerminalData",
+      "owner": "player-terminal/src/api/read-model.js",
+      "sha256": "e315be8b5ff27512d272f776f6a4da9985b394dbf6aa20f9813aa97beebc3b67"
+    },
+    {
+      "name": "normalizeSession",
+      "owner": "player-terminal/src/api/read-model.js",
+      "sha256": "2568225e0a4026393ef32f5282ebcb27dfedec173575d0e10355a8adb1c530a3"
+    },
+    {
+      "name": "marketHistory",
+      "owner": "player-terminal/src/api/market-read-model.js",
+      "sha256": "183d857267165e05ad7b7cee7a49425e4bb19fa1426d01630e5f62c9086d3fcc"
+    },
+    {
+      "name": "normalizeMarketAsset",
+      "owner": "player-terminal/src/api/market-read-model.js",
+      "sha256": "c52275849863283c56ea4f9a3684c1f418635cadf1dc1e703fcf9a9867a6eec6"
+    },
+    {
+      "name": "normalizeMarket",
+      "owner": "player-terminal/src/api/market-read-model.js",
+      "sha256": "58e655c4dd936e4f1a4e34f3fdcb3ee417fff23ec74698a0b2c67bd03fdcf90b"
+    },
+    {
+      "name": "normalizeMarketRead",
+      "owner": "player-terminal/src/api/market-read-model.js",
+      "sha256": "6610c1808bb16f0902c278e91b5c929f888841e3b31d723da56ef0793e3c53b9"
+    },
+    {
+      "name": "normalizeMarketAssetRead",
+      "owner": "player-terminal/src/api/market-read-model.js",
+      "sha256": "7b495ef49a28c2cbe654352eaea990341f39339500bb1785fefa3e375797942a"
+    },
+    {
+      "name": "transactionDescription",
+      "owner": "player-terminal/src/api/banking-read-model.js",
+      "sha256": "42c404e2d1186a2715d580fb22c642194d98e732d36c4975825b77d67d68fd5c"
+    },
+    {
+      "name": "normalizeBankingRead",
+      "owner": "player-terminal/src/api/banking-read-model.js",
+      "sha256": "404e5539ea0abf246db53b1ce8d608eb45323b41598344708d65cdfd7befb014"
+    },
+    {
+      "name": "inventoryQuantity",
+      "owner": "player-terminal/src/api/store-inventory-read-model.js",
+      "sha256": "f2f781412b0732dc3587a4a19e1a131cb146277f3c293846ea27d792031aac82"
+    },
+    {
+      "name": "publicSellerOffer",
+      "owner": "player-terminal/src/api/store-inventory-read-model.js",
+      "sha256": "266797cfcfa9498d04a91fc7cbc6c984c79c0d4019442cf5915e52417abf173c"
+    },
+    {
+      "name": "normalizedSeededStoreItem",
+      "owner": "player-terminal/src/api/store-inventory-read-model.js",
+      "sha256": "78bbb348f1969a91e26c51ff2caa03796c07e2a8feb29b84c14b7998ca7e480f"
+    },
+    {
+      "name": "normalizedCatalogProduct",
+      "owner": "player-terminal/src/api/store-inventory-read-model.js",
+      "sha256": "260840d8ce04f7a8d980e7075c51f1b540c996dc1dac6b37307b44cd77000ad9"
+    },
+    {
+      "name": "normalizedStoreItems",
+      "owner": "player-terminal/src/api/store-inventory-read-model.js",
+      "sha256": "4d00b79c19ba1260b9f0cff9b8b19a8d1989231e8f519373bbffe2ada913a346"
+    },
+    {
+      "name": "storeItemsFromSnapshot",
+      "owner": "player-terminal/src/api/store-inventory-read-model.js",
+      "sha256": "042dd5cefed082e204feb849345618e9641ea3e32bf763b4f8da336bfca8583e"
+    },
+    {
+      "name": "normalizeStore",
+      "owner": "player-terminal/src/api/store-inventory-read-model.js",
+      "sha256": "950546a6ccd92778eb0381b1908aea02368d3d0a672330a14155e4a7f84b418d"
+    },
+    {
+      "name": "normalizeInventory",
+      "owner": "player-terminal/src/api/store-inventory-read-model.js",
+      "sha256": "32ac49b5b8d7f76a5d96101c1437ef69e292845d3e40c15b01eb168cbccf08c3"
+    },
+    {
+      "name": "normalizeInventoryRead",
+      "owner": "player-terminal/src/api/store-inventory-read-model.js",
+      "sha256": "17fb0ffd39d8933e7a4fc4a8f429bc51c21211ed529a65f1f9bb419399d3788e"
+    },
+    {
+      "name": "contractStatus",
+      "owner": "player-terminal/src/api/contracts-read-model.js",
+      "sha256": "acfd79dfd905baa8481ce1618ff72c79eda5f85bc76ba33c941eada900da46fa"
+    },
+    {
+      "name": "payloadList",
+      "owner": "player-terminal/src/api/contracts-read-model.js",
+      "sha256": "2b3d70fca812671721e846ba6679f60e4f3c53128ccfeb3ffbb9e148dca969a6"
+    },
+    {
+      "name": "normalizeContracts",
+      "owner": "player-terminal/src/api/contracts-read-model.js",
+      "sha256": "49aadf3d151f5a9e2b70fd2dd1a8ec58a0b70ce03ea41feca549d33038cdbf81"
+    },
+    {
+      "name": "normalizePortfolio",
+      "owner": "player-terminal/src/api/portfolio-read-model.js",
+      "sha256": "8c2c3f5c14481ec2869a1f7d8037ce059d7a3dc0581cd73683261077abb5334a"
+    },
+    {
+      "name": "normalizeNotifications",
+      "owner": "player-terminal/src/api/read-model.js",
+      "sha256": "5c3f64d58df461e35d2fd91989d79a225af7ce87570c7d4bcf75a9d8b0238b5f"
+    },
+    {
+      "name": "normalizeNotificationItems",
+      "owner": "player-terminal/src/api/read-model.js",
+      "sha256": "3090a2dc361f2c72160249194b2a02a20085e90bdbfe16dd03832afbcc5811d9"
+    },
+    {
+      "name": "applyDashboardSnapshot",
+      "owner": "player-terminal/src/api/read-model.js",
+      "sha256": "c74243f1efa8ac64a374d9d34a1bffe664ea50b2155d825fe1560814f67b9406"
+    },
+    {
+      "name": "readSessionContext",
+      "owner": "player-terminal/src/api/read-model.js",
+      "sha256": "10a0a528e6d7cbd2aee7b386cebe81c8a8be8c801271365b7e2ee524b87214da"
+    },
+    {
+      "name": "normalizeTerminalBootstrap",
+      "owner": "player-terminal/src/api/read-model.js",
+      "sha256": "86b4c8810c35a140ce096e882e67a684995455b7e3c8ead8f49254996d660c52"
+    },
+    {
+      "name": "mergeTerminalRead",
+      "owner": "player-terminal/src/api/read-model.js",
+      "sha256": "9a35cbdd1b979d068d1ac6ea39900927c0138b872fe9f40b64523158b6faf470"
+    }
+  ]
+}

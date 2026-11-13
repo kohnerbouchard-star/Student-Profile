@@ -33,6 +33,11 @@ on:
       - docs/security/auth-boundary-map-v1.md
       - player-terminal/src/api/business-banking-backend-routes.js
       - player-terminal/src/api/read-model.js
+      - player-terminal/src/api/market-read-model.js
+      - player-terminal/src/api/banking-read-model.js
+      - player-terminal/src/api/store-inventory-read-model.js
+      - player-terminal/src/api/contracts-read-model.js
+      - player-terminal/src/api/portfolio-read-model.js
       - player-terminal/src/data/empty-read-models.js
       - player-terminal/src/data/preview-data.js
       - player-terminal/src/pages/business-page.js
@@ -82,6 +87,11 @@ on:
       - docs/security/auth-boundary-map-v1.md
       - player-terminal/src/api/business-banking-backend-routes.js
       - player-terminal/src/api/read-model.js
+      - player-terminal/src/api/market-read-model.js
+      - player-terminal/src/api/banking-read-model.js
+      - player-terminal/src/api/store-inventory-read-model.js
+      - player-terminal/src/api/contracts-read-model.js
+      - player-terminal/src/api/portfolio-read-model.js
       - player-terminal/src/data/empty-read-models.js
       - player-terminal/src/data/preview-data.js
       - player-terminal/src/pages/business-page.js
