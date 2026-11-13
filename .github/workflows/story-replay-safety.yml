@@ -131,6 +131,8 @@ jobs:
             src/domains/storylines/infrastructure/supabaseStoryImpactWriter.test.ts \
             src/domains/storylines/infrastructure/supabaseStoryContractWriter.test.ts \
             src/domains/storylines/infrastructure/supabaseStoryEventExecutionRepository.test.ts \
+            src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.test.ts \
+            src/domains/storylines/server/playerContextReadQuery.test.ts \
             src/domains/storylines/services/storylineRunnerGameScope.test.ts \
             src/domains/storylines/services/storylineRunnerReplayIdentity.test.ts \
             src/domains/storylines/services/storyConditionEngine.test.ts \
