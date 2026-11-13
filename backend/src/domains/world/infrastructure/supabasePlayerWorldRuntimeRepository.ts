@@ -1,27 +1,11 @@
 import type { PlayerRequestScope } from "../../players/index.ts";
 import type {
-  ArrivalClassAssignment,
-  ArrivalClassId,
-  ArrivalClassScoreResult,
-} from "../../arrival/index.ts";
-import type {
   CampaignHistoryEntry,
   PlayerCampaignProjectionSource,
 } from "../../campaign/index.ts";
 import type {
-  RequestResidencyChangeRequest,
-} from "../api/playerWorldRuntimeContracts.ts";
-import type {
-  PlayerResidencyState,
   PlayerTravelJourney,
-  PlayerTravelState,
-  StoredTravelQuote,
   WorldDefinitionBundle,
-  WorldLocationDefinition,
-  WorldLocationState,
-  WorldRouteDefinition,
-  WorldRouteState,
-  WorldRuntimeState,
 } from "../contracts/worldRuntimeContracts.ts";
 import { WorldRuntimeError } from "../contracts/worldRuntimeContracts.ts";
 import type {
@@ -30,39 +14,49 @@ import type {
   PlayerWorldRuntimeRepository,
   PlayerWorldRuntimeSnapshot,
 } from "../services/playerWorldRuntimeService.ts";
+import type {
+  ArrivalAssignmentRow,
+  CampaignCommandRow,
+  CampaignExecutionRow,
+  CampaignRow,
+  ClassGrantRow,
+  CountryRuntimeRow,
+  DatabaseResult,
+  LocationRow,
+  PlayerCountryRow,
+  PlayerWorldRuntimeSupabaseClient,
+  ResidencyRow,
+  ResidencyRpcRow,
+  RouteRow,
+  TravelCompletionRpcRow,
+  TravelJourneyRow,
+  TravelJourneyRpcRow,
+  TravelQuoteRow,
+  TravelStateRow,
+  WorldRuntimeRow,
+} from "./playerWorldRuntimeRows.ts";
+import {
+  mapWorldRuntime,
+  mapArrivalAssignment,
+  mapTravelState,
+  mapResidency,
+  mapResidencyRpc,
+  mapStoredTravelQuote,
+  mapTravelJourney,
+  mapTravelJourneyRow,
+  mapLocationDefinition,
+  mapRouteDefinition,
+  unavailable,
+  requireCampaignStatus,
+  requirePhase,
+  requireCurrency,
+  requireTimestamp,
+  nullableTimestamp,
+  requireNonnegativeInteger,
+  readStringArray,
+} from "./playerWorldRuntimeRowMapping.ts";
 
-type CampaignPhase = PlayerCampaignProjectionSource["currentPhase"];
-type CampaignStatus = PlayerCampaignProjectionSource["status"];
-
-interface DatabaseError {
-  readonly code?: string;
-  readonly message: string;
-}
-
-interface DatabaseResult<T> {
-  readonly data: T | null;
-  readonly error: DatabaseError | null;
-}
-
-interface QueryBuilder<T = unknown> extends PromiseLike<DatabaseResult<T[]>> {
-  select(columns?: string): QueryBuilder<T>;
-  insert(values: unknown): QueryBuilder<T>;
-  update(values: unknown): QueryBuilder<T>;
-  eq(column: string, value: unknown): QueryBuilder<T>;
-  in(column: string, values: readonly unknown[]): QueryBuilder<T>;
-  order(column: string, options?: { ascending?: boolean }): QueryBuilder<T>;
-  limit(count: number): QueryBuilder<T>;
-  maybeSingle(): Promise<DatabaseResult<T>>;
-  single(): Promise<DatabaseResult<T>>;
-}
-
-export interface PlayerWorldRuntimeSupabaseClient {
-  from<T = Record<string, unknown>>(table: string): QueryBuilder<T>;
-  rpc<T = Record<string, unknown>>(
-    functionName: string,
-    args: Readonly<Record<string, unknown>>,
-  ): Promise<DatabaseResult<T[]>>;
-}
+export type { PlayerWorldRuntimeSupabaseClient } from "./playerWorldRuntimeRows.ts";
 
 export function createSupabasePlayerWorldRuntimeRepository(
   client: PlayerWorldRuntimeSupabaseClient,
@@ -445,267 +439,6 @@ async function readJourneyByInternalId(
   return result.data ? mapTravelJourneyRow(result.data) : null;
 }
 
-function mapWorldRuntime(
-  runtime: WorldRuntimeRow,
-  locations: readonly LocationRow[],
-  routes: readonly RouteRow[],
-  gameId: string,
-): WorldRuntimeState {
-  return Object.freeze({
-    gameId,
-    definition: Object.freeze({
-      packId: runtime.pack_id,
-      packVersion: runtime.pack_version,
-      definitionDigest: runtime.definition_digest,
-    }),
-    locationStates: Object.freeze(locations.map(mapLocationState)),
-    routeStates: Object.freeze(routes.map(mapRouteState)),
-    executedCommandKeys: Object.freeze([]),
-    revision: requireNonnegativeInteger(runtime.revision, "world revision"),
-    updatedAt: requireTimestamp(runtime.updated_at, "world update"),
-  });
-}
-
-function mapArrivalAssignment(
-  row: ArrivalAssignmentRow,
-  scope: PlayerRequestScope,
-): ArrivalClassAssignment {
-  const score = isRecord(row.score_result)
-    ? row.score_result as unknown as ArrivalClassScoreResult
-    : null;
-  return Object.freeze({
-    assignmentId: row.public_id,
-    gameId: scope.gameId,
-    gameSessionId: scope.gameId,
-    playerUuid: scope.playerUuid,
-    countryId: row.country_id,
-    classId: requireClassId(row.class_id),
-    source: row.source === "admin_override" ? "admin_override" : "questionnaire",
-    questionnaireId: row.questionnaire_id,
-    questionnaireVersion: row.questionnaire_version,
-    scoreResult: score,
-    overrideReason: typeof row.override_reason === "string" ? row.override_reason : null,
-    revision: requireNonnegativeInteger(row.revision, "arrival revision"),
-    assignedAt: requireTimestamp(row.assigned_at, "arrival assignment"),
-    updatedAt: requireTimestamp(row.updated_at, "arrival assignment update"),
-    economicRestrictions: Object.freeze([]),
-  });
-}
-
-function mapTravelState(
-  row: TravelStateRow,
-  scope: PlayerRequestScope,
-): PlayerTravelState {
-  return Object.freeze({
-    gameId: scope.gameId,
-    gameSessionId: scope.gameId,
-    playerUuid: scope.playerUuid,
-    currentLocationId: row.current_location_id,
-    status: row.status === "in_transit" ? "in_transit" : "available",
-    activeJourneyId: typeof row.active_journey_id === "string"
-      ? row.active_journey_id
-      : null,
-    arrivalAt: nullableTimestamp(row.arrival_at),
-    revision: requireNonnegativeInteger(row.revision, "travel revision"),
-    updatedAt: requireTimestamp(row.updated_at, "travel update"),
-  });
-}
-
-function mapResidency(
-  row: ResidencyRow,
-  scope: PlayerRequestScope,
-): PlayerResidencyState {
-  return Object.freeze({
-    gameId: scope.gameId,
-    gameSessionId: scope.gameId,
-    playerUuid: scope.playerUuid,
-    currentCountryId: row.current_country_id,
-    currencyCode: requireCurrency(row.currency_code),
-    eligibleCountryIds: Object.freeze(readStringArray(row.eligible_country_ids)),
-    pendingCountryId: typeof row.pending_country_id === "string"
-      ? row.pending_country_id
-      : null,
-    revision: requireNonnegativeInteger(row.revision, "residency revision"),
-    updatedAt: requireTimestamp(row.updated_at, "residency update"),
-  });
-}
-
-function mapResidencyRpc(
-  row: ResidencyRpcRow,
-  scope: PlayerRequestScope,
-): PlayerResidencyState {
-  return Object.freeze({
-    gameId: scope.gameId,
-    gameSessionId: scope.gameId,
-    playerUuid: scope.playerUuid,
-    currentCountryId: row.current_country_id,
-    currencyCode: requireCurrency(row.currency_code),
-    eligibleCountryIds: Object.freeze(readStringArray(row.eligible_country_ids)),
-    pendingCountryId: typeof row.pending_country_id === "string"
-      ? row.pending_country_id
-      : null,
-    revision: requireNonnegativeInteger(row.revision, "residency revision"),
-    updatedAt: requireTimestamp(row.updated_at, "residency update"),
-  });
-}
-
-function mapStoredTravelQuote(
-  row: TravelQuoteRow,
-  scope: PlayerRequestScope,
-): StoredTravelQuote {
-  const legs = Array.isArray(row.legs) ? row.legs : [];
-  return Object.freeze({
-    publicQuoteId: row.public_id,
-    gameId: scope.gameId,
-    playerUuid: scope.playerUuid,
-    fromLocationId: row.from_location_id,
-    toLocationId: row.to_location_id,
-    currencyCode: requireCurrency(row.currency_code),
-    totalCostMinor: requireNonnegativeInteger(row.total_cost_minor, "travel cost"),
-    totalDurationMinutes: requirePositiveInteger(row.total_duration_minutes, "travel duration"),
-    routeStateRevision: requireNonnegativeInteger(row.route_state_revision, "route revision"),
-    legs: Object.freeze(legs.map(mapStoredLeg)),
-    status: row.status === "consumed"
-      ? "consumed"
-      : row.status === "expired"
-      ? "expired"
-      : "created",
-    expiresAt: requireTimestamp(row.expires_at, "quote expiry"),
-  });
-}
-
-function mapStoredLeg(value: unknown): StoredTravelQuote["legs"][number] {
-  if (!isRecord(value)) throw unavailable("Stored travel leg is malformed.");
-  const mode = String(value.mode);
-  if (!["land", "sea", "air", "meridian"].includes(mode)) {
-    throw unavailable("Stored travel leg mode is invalid.");
-  }
-  return Object.freeze({
-    publicRouteId: requireString(value.publicRouteId, "route id"),
-    fromLocationId: requireString(value.fromLocationId, "route origin"),
-    toLocationId: requireString(value.toLocationId, "route destination"),
-    mode: mode as StoredTravelQuote["legs"][number]["mode"],
-    costMinor: requireNonnegativeInteger(value.costMinor, "leg cost"),
-    durationMinutes: requirePositiveInteger(value.durationMinutes, "leg duration"),
-    routeRevision: requireNonnegativeInteger(value.routeRevision, "leg revision"),
-  });
-}
-
-function mapTravelJourney(row: TravelJourneyRpcRow): PlayerTravelJourney {
-  return Object.freeze({
-    publicJourneyId: row.journey_id,
-    publicQuoteId: row.quote_id,
-    fromLocationId: row.from_location_id,
-    toLocationId: row.to_location_id,
-    currencyCode: requireCurrency(row.currency_code),
-    totalCostMinor: requireNonnegativeInteger(row.total_cost_minor, "journey cost"),
-    totalDurationMinutes: requirePositiveInteger(row.total_duration_minutes, "journey duration"),
-    status: row.status === "completed" ? "completed" : "in_transit",
-    departedAt: requireTimestamp(row.departed_at, "journey departure"),
-    arrivalAt: requireTimestamp(row.arrival_at, "journey arrival"),
-    completedAt: nullableTimestamp(row.completed_at),
-  });
-}
-
-function mapTravelJourneyRow(row: TravelJourneyRow): PlayerTravelJourney {
-  return Object.freeze({
-    publicJourneyId: row.public_id,
-    publicQuoteId: requireString(row.quote.public_id, "quote id"),
-    fromLocationId: row.from_location_id,
-    toLocationId: row.to_location_id,
-    currencyCode: requireCurrency(row.currency_code),
-    totalCostMinor: requireNonnegativeInteger(row.total_cost_minor, "journey cost"),
-    totalDurationMinutes: requirePositiveInteger(row.total_duration_minutes, "journey duration"),
-    status: row.status === "completed" ? "completed" : "in_transit",
-    departedAt: requireTimestamp(row.departed_at, "journey departure"),
-    arrivalAt: requireTimestamp(row.arrival_at, "journey arrival"),
-    completedAt: nullableTimestamp(row.completed_at),
-  });
-}
-
-function mapLocationDefinition(row: LocationRow): WorldLocationDefinition {
-  const kind = String(row.location_kind);
-  if (![
-    "capital",
-    "city",
-    "port",
-    "airport",
-    "industrial",
-    "meridian_hub",
-  ].includes(kind)) {
-    throw unavailable(`Location ${row.public_location_id} has no reviewed kind.`);
-  }
-  return Object.freeze({
-    publicLocationId: row.public_location_id,
-    countryId: row.country_id,
-    name: requireString(row.display_name, "location name"),
-    kind: kind as WorldLocationDefinition["kind"],
-    enabled: row.availability !== "closed",
-  });
-}
-
-function mapRouteDefinition(row: RouteRow): WorldRouteDefinition {
-  const mode = String(row.mode);
-  if (!["land", "sea", "air", "meridian"].includes(mode)) {
-    throw unavailable(`Route ${row.public_route_id} has an invalid mode.`);
-  }
-  return Object.freeze({
-    publicRouteId: row.public_route_id,
-    fromLocationId: row.from_location_id,
-    toLocationId: row.to_location_id,
-    mode: mode as WorldRouteDefinition["mode"],
-    bidirectional: Boolean(row.bidirectional),
-    baseCostMinor: requireNonnegativeInteger(row.base_cost_minor, "route base cost"),
-    baseDurationMinutes: requirePositiveInteger(row.base_duration_minutes, "route base duration"),
-  });
-}
-
-function mapLocationState(row: LocationRow): WorldLocationState {
-  const availability = String(row.availability);
-  if (!["normal", "shortage", "conflict", "closed"].includes(availability)) {
-    throw unavailable(`Location ${row.public_location_id} has invalid state.`);
-  }
-  return Object.freeze({
-    publicLocationId: row.public_location_id,
-    availability: availability as WorldLocationState["availability"],
-    revision: requireNonnegativeInteger(row.revision, "location revision"),
-    updatedAt: requireTimestamp(row.updated_at, "location update"),
-  });
-}
-
-function mapRouteState(row: RouteRow): WorldRouteState {
-  const status = String(row.status);
-  const reason = String(row.reason);
-  if (![
-    "open",
-    "restricted",
-    "closed",
-  ].includes(status) || ![
-    "normal",
-    "shortage",
-    "meridian_disruption",
-    "war",
-    "recovery",
-  ].includes(reason)) {
-    throw unavailable(`Route ${row.public_route_id} has invalid state.`);
-  }
-  return Object.freeze({
-    publicRouteId: row.public_route_id,
-    status: status as WorldRouteState["status"],
-    reason: reason as WorldRouteState["reason"],
-    costMultiplierBasisPoints: requirePositiveInteger(
-      row.cost_multiplier_basis_points,
-      "route cost multiplier",
-    ),
-    durationMultiplierBasisPoints: requirePositiveInteger(
-      row.duration_multiplier_basis_points,
-      "route duration multiplier",
-    ),
-    revision: requireNonnegativeInteger(row.revision, "route revision"),
-    updatedAt: requireTimestamp(row.updated_at, "route update"),
-  });
-}
-
 function requireFirst<T>(
   result: DatabaseResult<T[]>,
   label: string,
@@ -739,258 +472,4 @@ function assertNoError(
   if (result.error) {
     throw unavailable(`${label} failed: ${result.error.code ?? "database_error"}.`);
   }
-}
-
-function unavailable(message: string): WorldRuntimeError {
-  return new WorldRuntimeError("world_travel_unavailable", message, true);
-}
-
-function requireClassId(value: unknown): ArrivalClassId {
-  const classId = String(value);
-  if (![
-    "analyst",
-    "builder",
-    "maker",
-    "mediator",
-    "navigator",
-    "operator",
-    "steward",
-    "trader",
-  ].includes(classId)) throw unavailable("Stored arrival class is invalid.");
-  return classId as ArrivalClassId;
-}
-
-function requireCampaignStatus(value: unknown): CampaignStatus {
-  const status = String(value);
-  if (!["active", "paused", "emergency_disabled", "completed"].includes(status)) {
-    throw unavailable("Stored campaign status is invalid.");
-  }
-  return status as CampaignStatus;
-}
-
-function requirePhase(value: unknown): CampaignPhase {
-  const phase = String(value);
-  if (![
-    "arrival",
-    "opportunity",
-    "rivalry",
-    "shortage",
-    "meridian_disruption",
-    "open_conflict",
-    "adaptation",
-    "reconstruction",
-    "continued_conflict",
-  ].includes(phase)) throw unavailable("Stored campaign phase is invalid.");
-  return phase as CampaignPhase;
-}
-
-function requireCurrency(value: unknown): string {
-  const currency = String(value ?? "");
-  if (!/^[A-Z]{3}$/.test(currency)) throw unavailable("Settlement currency is invalid.");
-  return currency;
-}
-
-function requireString(value: unknown, label: string): string {
-  if (typeof value !== "string" || !value.trim()) {
-    throw unavailable(`${label} is invalid.`);
-  }
-  return value;
-}
-
-function requireTimestamp(value: unknown, label: string): string {
-  const timestamp = String(value ?? "");
-  if (!Number.isFinite(Date.parse(timestamp))) throw unavailable(`${label} is invalid.`);
-  return timestamp;
-}
-
-function nullableTimestamp(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  return requireTimestamp(value, "timestamp");
-}
-
-function requireNonnegativeInteger(value: unknown, label: string): number {
-  const number = Number(value);
-  if (!Number.isSafeInteger(number) || number < 0) {
-    throw unavailable(`${label} is invalid.`);
-  }
-  return number;
-}
-
-function requirePositiveInteger(value: unknown, label: string): number {
-  const number = requireNonnegativeInteger(value, label);
-  if (number === 0) throw unavailable(`${label} must be positive.`);
-  return number;
-}
-
-function readStringArray(
-  value: unknown,
-  property?: string,
-): readonly string[] {
-  const candidate = property && isRecord(value) ? value[property] : value;
-  if (!Array.isArray(candidate)) return Object.freeze([]);
-  return Object.freeze(candidate.filter((item): item is string =>
-    typeof item === "string"
-  ));
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-interface PlayerCountryRow { readonly country_id: string; }
-interface CountryRuntimeRow {
-  readonly country_id: string;
-  readonly currency_code: string;
-  readonly arrival_location_id: string;
-  readonly arrival_package_definition_id: string;
-}
-interface ClassGrantRow {
-  readonly class_id: string;
-  readonly grant_definition_id: string;
-}
-interface ArrivalAssignmentRow {
-  readonly public_id: string;
-  readonly country_id: string;
-  readonly class_id: string;
-  readonly source: string;
-  readonly questionnaire_id: string;
-  readonly questionnaire_version: string;
-  readonly score_result: unknown;
-  readonly override_reason: unknown;
-  readonly revision: unknown;
-  readonly assigned_at: unknown;
-  readonly updated_at: unknown;
-}
-interface TravelStateRow {
-  readonly current_location_id: string;
-  readonly status: string;
-  readonly active_journey_id: unknown;
-  readonly arrival_at: unknown;
-  readonly revision: unknown;
-  readonly updated_at: unknown;
-}
-interface ResidencyRow {
-  readonly current_country_id: string;
-  readonly currency_code: unknown;
-  readonly eligible_country_ids: unknown;
-  readonly pending_country_id: unknown;
-  readonly revision: unknown;
-  readonly updated_at: unknown;
-}
-interface WorldRuntimeRow {
-  readonly pack_id: string;
-  readonly pack_version: string;
-  readonly definition_digest: string;
-  readonly revision: unknown;
-  readonly updated_at: unknown;
-}
-interface LocationRow {
-  readonly public_location_id: string;
-  readonly country_id: string;
-  readonly display_name: unknown;
-  readonly location_kind: unknown;
-  readonly availability: string;
-  readonly revision: unknown;
-  readonly updated_at: unknown;
-}
-interface RouteRow {
-  readonly public_route_id: string;
-  readonly from_location_id: string;
-  readonly to_location_id: string;
-  readonly mode: string;
-  readonly bidirectional: unknown;
-  readonly base_cost_minor: unknown;
-  readonly base_duration_minutes: unknown;
-  readonly status: string;
-  readonly reason: string;
-  readonly cost_multiplier_basis_points: unknown;
-  readonly duration_multiplier_basis_points: unknown;
-  readonly revision: unknown;
-  readonly updated_at: unknown;
-}
-interface CampaignRow {
-  readonly id: string;
-  readonly public_id: string;
-  readonly pack_id: string;
-  readonly pack_version: string;
-  readonly definition_id: string;
-  readonly definition_digest: string;
-  readonly status: string;
-  readonly current_phase: string;
-  readonly revision: unknown;
-  readonly event_sequence: unknown;
-  readonly outcome: unknown;
-  readonly scheduled_at: unknown;
-  readonly paused_at: unknown;
-  readonly disabled_at: unknown;
-  readonly completed_at: unknown;
-  readonly created_at: unknown;
-  readonly updated_at: unknown;
-}
-interface CampaignExecutionRow {
-  readonly public_id: string;
-  readonly event_key: string;
-  readonly execution_key: string;
-  readonly to_phase: string;
-  readonly sequence: unknown;
-  readonly occurred_at: unknown;
-}
-interface CampaignCommandRow {
-  readonly idempotency_key: string;
-  readonly payload: unknown;
-  readonly status: string;
-  readonly created_at: unknown;
-}
-interface TravelQuoteRow {
-  readonly public_id: string;
-  readonly from_location_id: string;
-  readonly to_location_id: string;
-  readonly currency_code: string;
-  readonly total_cost_minor: unknown;
-  readonly total_duration_minutes: unknown;
-  readonly route_state_revision: unknown;
-  readonly legs: unknown;
-  readonly status: string;
-  readonly expires_at: unknown;
-}
-interface TravelJourneyRow {
-  readonly public_id: string;
-  readonly quote: { readonly public_id: string };
-  readonly from_location_id: string;
-  readonly to_location_id: string;
-  readonly currency_code: string;
-  readonly total_cost_minor: unknown;
-  readonly total_duration_minutes: unknown;
-  readonly status: string;
-  readonly departed_at: unknown;
-  readonly arrival_at: unknown;
-  readonly completed_at: unknown;
-}
-interface TravelJourneyRpcRow {
-  readonly journey_id: string;
-  readonly quote_id: string;
-  readonly from_location_id: string;
-  readonly to_location_id: string;
-  readonly currency_code: string;
-  readonly total_cost_minor: unknown;
-  readonly total_duration_minutes: unknown;
-  readonly status: string;
-  readonly departed_at: unknown;
-  readonly arrival_at: unknown;
-  readonly completed_at: unknown;
-}
-interface TravelCompletionRpcRow {
-  readonly journey_id: string;
-  readonly current_location_id: string;
-  readonly status: string;
-  readonly completed_at: unknown;
-  readonly travel_state_revision: unknown;
-}
-interface ResidencyRpcRow {
-  readonly current_country_id: string;
-  readonly currency_code: unknown;
-  readonly eligible_country_ids: unknown;
-  readonly pending_country_id: unknown;
-  readonly revision: unknown;
-  readonly updated_at: unknown;
 }
