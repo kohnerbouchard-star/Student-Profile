@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1353,
+    "sourceFiles": 1357,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 93,
+    "oversizedSourceFiles": 89,
     "capabilityStrings": 140
   },
   "domains": [
@@ -1528,7 +1528,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/attendance/AttendanceController.js",
+        "file": "admin/v2/src/routes/attendance/AttendanceReadModel.js",
         "markers": [
           "fallback",
           "fallbackstatus"
@@ -1565,7 +1565,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/contracts/ContractsController.js",
+        "file": "admin/v2/src/routes/contracts/ContractsReadModel.js",
         "markers": [
           "fallback"
         ]
@@ -1754,7 +1754,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/world-management/WorldManagementController.js",
+        "file": "admin/v2/src/routes/world-management/WorldManagementReadModel.js",
         "markers": [
           "fallback"
         ]
@@ -2714,10 +2714,6 @@
         "lines": 777
       },
       {
-        "file": "admin/v2/src/routes/world-management/WorldManagementController.js",
-        "lines": 773
-      },
-      {
         "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.test.ts",
         "lines": 767
       },
@@ -2768,10 +2764,6 @@
       {
         "file": "admin/v2/src/app.js",
         "lines": 650
-      },
-      {
-        "file": "admin/v2/src/routes/contracts/ContractsController.js",
-        "lines": 643
       },
       {
         "file": "backend/src/security/adminBffRequestAuth.ts",
@@ -2906,10 +2898,6 @@
         "lines": 555
       },
       {
-        "file": "admin/v2/src/routes/marketplace/MarketplaceController.js",
-        "lines": 554
-      },
-      {
         "file": "backend/src/domains/contracts/services/contractRewardService.ts",
         "lines": 551
       },
@@ -2932,10 +2920,6 @@
       {
         "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.ts",
         "lines": 533
-      },
-      {
-        "file": "admin/v2/src/routes/attendance/AttendanceController.js",
-        "lines": 532
       },
       {
         "file": "backend/src/domains/notifications/infrastructure/supabasePlayerStoryDeliveryRepository.ts",

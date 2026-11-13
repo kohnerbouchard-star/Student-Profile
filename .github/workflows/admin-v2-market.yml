@@ -4,6 +4,10 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "scripts/admin-v2-attendance-read-model.test.mjs"
+      - "scripts/fixtures/admin-attendance-controller-function-hashes.json"
+      - "scripts/admin-v2-world-read-model.test.mjs"
+      - "scripts/admin-v2-marketplace-read-model.test.mjs"
       - "scripts/admin-account-controls-dom-fixture.mjs"
       - "scripts/admin-account-controls.test.mjs"
       - "docs/operations/contracts/player-cross-cutting/pr-946.json"

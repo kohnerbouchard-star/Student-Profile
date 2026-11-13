@@ -3,6 +3,10 @@ name: Admin Game Lifecycle Controls
 on:
   pull_request:
     paths:
+      - "scripts/admin-v2-attendance-read-model.test.mjs"
+      - "scripts/fixtures/admin-attendance-controller-function-hashes.json"
+      - "scripts/admin-v2-world-read-model.test.mjs"
+      - "scripts/admin-v2-marketplace-read-model.test.mjs"
       - "scripts/admin-account-controls-dom-fixture.mjs"
       - "scripts/admin-account-controls.test.mjs"
       - "docs/operations/contracts/player-cross-cutting/pr-952.json"
@@ -41,6 +45,10 @@ on:
     branches:
       - main
     paths:
+      - "scripts/admin-v2-attendance-read-model.test.mjs"
+      - "scripts/fixtures/admin-attendance-controller-function-hashes.json"
+      - "scripts/admin-v2-world-read-model.test.mjs"
+      - "scripts/admin-v2-marketplace-read-model.test.mjs"
       - "scripts/admin-account-controls-dom-fixture.mjs"
       - "scripts/admin-account-controls.test.mjs"
       - "admin/css/game-lifecycle-controls.css"

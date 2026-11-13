@@ -3,6 +3,9 @@ name: Admin Shell Smoke
 on:
   pull_request:
     paths:
+      - "scripts/admin-v2-attendance-read-model.test.mjs"
+      - "scripts/fixtures/admin-attendance-controller-function-hashes.json"
+      - "scripts/admin-v2-world-read-model.test.mjs"
       - "package.json"
       - "package-lock.json"
       - "scripts/admin-account-controls-dom-fixture.mjs"
@@ -79,6 +82,9 @@ on:
     branches:
       - main
     paths:
+      - "scripts/admin-v2-attendance-read-model.test.mjs"
+      - "scripts/fixtures/admin-attendance-controller-function-hashes.json"
+      - "scripts/admin-v2-world-read-model.test.mjs"
       - "package.json"
       - "package-lock.json"
       - "scripts/admin-account-controls-dom-fixture.mjs"
