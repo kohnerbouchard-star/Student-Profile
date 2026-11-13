@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1369,
+    "sourceFiles": 1371,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 86,
+    "oversizedSourceFiles": 85,
     "capabilityStrings": 140
   },
   "domains": [
@@ -352,7 +352,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 106,
+      "sourceFiles": 108,
       "publicBoundaryFiles": [
         "backend/src/domains/stocks/index.ts"
       ]
@@ -2626,8 +2626,8 @@
         "lines": 1054
       },
       {
-        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.ts",
-        "lines": 1003
+        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.test.ts",
+        "lines": 1031
       },
       {
         "file": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
@@ -2704,10 +2704,6 @@
       {
         "file": "backend/src/domains/contracts/api/playerContractHttpHandler.test.ts",
         "lines": 777
-      },
-      {
-        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.test.ts",
-        "lines": 767
       },
       {
         "file": "backend/src/simulations/economy/deterministicEconomicSimulation.ts",
