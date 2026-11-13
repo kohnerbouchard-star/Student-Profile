@@ -5,6 +5,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-955.json"
       - ".github/workflows/admin-v2-contracts.yml"
       - "admin/v2.html"
       - "admin/v2/src/api/contracts-api-client.js"
