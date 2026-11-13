@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1372,
+    "sourceFiles": 1374,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 85,
+    "oversizedSourceFiles": 84,
     "capabilityStrings": 140
   },
   "domains": [
@@ -2672,10 +2672,6 @@
       {
         "file": "backend/supabase/functions/admin-api/readModels.ts",
         "lines": 851
-      },
-      {
-        "file": "player-terminal/src/app.js",
-        "lines": 848
       },
       {
         "file": "admin/player-identity-wiring.js",
