@@ -4,19 +4,12 @@ import {
   normalizeCurrencyCode,
   round,
   type StockHoldingRow,
-  sum,
   summarizePortfolio,
   toCashDto,
   toHoldingDto,
-  toNumber,
   unique,
 } from "./dashboardFinancialProjection.ts";
 import type {
-  PlayerGameDashboardInventoryItemDto,
-  PlayerGameDashboardLeaderboardEntryDto,
-  PlayerGameDashboardMarketNewsDto,
-  PlayerGameDashboardPublicPlayerDto,
-  PlayerGameDashboardPublicStoreListingDto,
   PlayerGameDashboardReadInput,
   PlayerGameDashboardRepository,
   PlayerGameDashboardSnapshot,
@@ -28,7 +21,6 @@ import {
   type StockMarketBoardStockDto,
   type StockMarketOpenStateReadRepository,
   type StockMarketPlayerOrderDto,
-  type StockMarketPlayerOrderStatus,
   type StockMarketPlayerTradeDto,
   type StockMarketReadRepository,
   StockMarketReadError,
@@ -39,209 +31,40 @@ import {
   type StoreItemDto,
 } from "../../store/dashboardReadModel.ts";
 import type { PlayerContractsReadQuery } from "../../contracts/index.ts";
-import type {
-  StorePurchaseHistoryItemDto,
-  StorePurchaseStatus,
-} from "../../store/purchaseHistoryTypes.ts";
 
-interface DashboardQueryError {
-  readonly message: string;
-  readonly code?: string;
-  readonly details?: string | null;
-  readonly hint?: string | null;
-}
-
-interface DashboardQueryResponse<T = unknown> {
-  readonly data: T | null;
-  readonly error: DashboardQueryError | null;
-}
-
-type DashboardTableName =
-  | "account_balances"
-  | "country_profiles"
-  | "game_session_stock_assets"
-  | "game_sessions"
-  | "inventory_holdings"
-  | "player_country_assignments"
-  | "players"
-  | "stock_market_events"
-  | "stock_price_ticks"
-  | "stock_orders"
-  | "stock_trades"
-  | "store_purchases";
-
-interface SupabasePlayerGameDashboardClient {
-  from(tableName: DashboardTableName): SupabasePlayerGameDashboardQueryBuilder;
-  rpc<Data = unknown>(
-    functionName: string,
-    args?: unknown,
-  ): PromiseLike<DashboardQueryResponse<Data>>;
-}
-
-interface SupabasePlayerGameDashboardQueryBuilder {
-  select(columns: string): SupabasePlayerGameDashboardFilterBuilder;
-}
-
-interface SupabasePlayerGameDashboardFilterBuilder
-  extends PromiseLike<DashboardQueryResponse<unknown[]>> {
-  eq(
-    column: string,
-    value: unknown,
-  ): SupabasePlayerGameDashboardFilterBuilder;
-  in(
-    column: string,
-    values: readonly unknown[],
-  ): SupabasePlayerGameDashboardFilterBuilder;
-  order(
-    column: string,
-    options?: { readonly ascending?: boolean },
-  ): SupabasePlayerGameDashboardFilterBuilder;
-  limit(count: number): SupabasePlayerGameDashboardFilterBuilder;
-  maybeSingle(): PromiseLike<DashboardQueryResponse<unknown>>;
-}
-
-interface GameSessionRow {
-  readonly id: string;
-  readonly name: string;
-  readonly status: string;
-  readonly updated_at?: string | null;
-}
-
-interface PlayerRow {
-  readonly id: string;
-  readonly display_name: string;
-  readonly roster_label?: string | null;
-}
-
-interface CountryAssignmentRow {
-  readonly player_id: string;
-  readonly country_profile_id: string;
-  readonly assigned_at: string;
-}
-
-interface CountryProfileRow {
-  readonly id: string;
-  readonly country_code: string;
-  readonly currency_code?: string | null;
-}
-
-interface StockOrderRow {
-  readonly id: string;
-  readonly player_id: string;
-  readonly stock_asset_id: string;
-  readonly ticker: string;
-  readonly side: string;
-  readonly quantity: number | string;
-  readonly execution_price?: number | string | null;
-  readonly gross_value: number | string;
-  readonly status: string;
-  readonly rejection_reason?: string | null;
-  readonly idempotency_key: string;
-  readonly created_at: string;
-}
-
-interface StockTradeRow {
-  readonly id: string;
-  readonly order_id: string;
-  readonly player_id: string;
-  readonly stock_asset_id: string;
-  readonly ticker: string;
-  readonly side: string;
-  readonly quantity: number | string;
-  readonly execution_price: number | string;
-  readonly gross_value: number | string;
-  readonly created_at: string;
-}
-
-interface InventoryHoldingRow {
-  readonly id: string;
-  readonly store_item_id: string;
-  readonly quantity_owned: number | string;
-  readonly quantity_reserved: number | string;
-  readonly updated_at: string;
-}
-
-interface StorePurchaseRow {
-  readonly id: string;
-  readonly store_item_id: string;
-  readonly quantity: number | string;
-  readonly final_total_price: number | string;
-  readonly currency_code: string;
-  readonly status: StorePurchaseStatus;
-  readonly created_at: string;
-}
-
-interface StockMarketEventRow {
-  readonly id: string;
-  readonly shock_id: string;
-  readonly category?: string | null;
-  readonly sentiment?: string | null;
-  readonly source?: string | null;
-  readonly visibility?: string | null;
-  readonly scope: string;
-  readonly target_key?: string | null;
-  readonly headline: string;
-  readonly explanation: string;
-  readonly created_tick: number | string;
-  readonly expires_tick?: number | string | null;
-  readonly created_at: string;
-}
-
-interface CountryInfo {
-  readonly countryCode: string | null;
-  readonly currencyCode: string | null;
-}
-
-const GAME_SESSION_SELECT = "id,name,status,updated_at";
-const PLAYER_SELECT = "id,display_name,roster_label";
-const COUNTRY_ASSIGNMENT_SELECT = "player_id,country_profile_id,assigned_at";
-const COUNTRY_PROFILE_SELECT = "id,country_code,currency_code";
-const CASH_SELECT = "player_id,account_type,balance,currency_code";
-const ORDER_SELECT = [
-  "id",
-  "player_id",
-  "stock_asset_id",
-  "ticker",
-  "side",
-  "quantity",
-  "execution_price",
-  "gross_value",
-  "status",
-  "rejection_reason",
-  "idempotency_key",
-  "created_at",
-].join(",");
-const TRADE_SELECT = [
-  "id",
-  "order_id",
-  "player_id",
-  "stock_asset_id",
-  "ticker",
-  "side",
-  "quantity",
-  "execution_price",
-  "gross_value",
-  "created_at",
-].join(",");
-const INVENTORY_SELECT =
-  "id,store_item_id,quantity_owned,quantity_reserved,updated_at";
-const STORE_PURCHASE_SELECT =
-  "id,store_item_id,quantity,final_total_price,currency_code,status,created_at";
-const MARKET_NEWS_SELECT = [
-  "id",
-  "shock_id",
-  "category",
-  "sentiment",
-  "source",
-  "visibility",
-  "scope",
-  "target_key",
-  "headline",
-  "explanation",
-  "created_tick",
-  "expires_tick",
-  "created_at",
-].join(",");
+import {
+  CASH_SELECT,
+  COUNTRY_ASSIGNMENT_SELECT,
+  COUNTRY_PROFILE_SELECT,
+  type CountryAssignmentRow,
+  type CountryInfo,
+  type CountryProfileRow,
+  GAME_SESSION_SELECT,
+  type GameSessionRow,
+  INVENTORY_SELECT,
+  type InventoryHoldingRow,
+  MARKET_NEWS_SELECT,
+  ORDER_SELECT,
+  PLAYER_SELECT,
+  type PlayerRow,
+  type StockMarketEventRow,
+  type StockOrderRow,
+  type StockTradeRow,
+  STORE_PURCHASE_SELECT,
+  type StorePurchaseRow,
+  type SupabasePlayerGameDashboardClient,
+  TRADE_SELECT,
+} from "./dashboardReadRows.ts";
+import {
+  toInventoryDto,
+  toLeaderboard,
+  toMarketNewsDto,
+  toOrderDto,
+  toPublicPlayerDto,
+  toPublicStoreListingDto,
+  toPurchaseHistoryDto,
+  toTradeDto,
+} from "./dashboardReadProjection.ts";
 
 export interface PlayerGameDashboardReadDependencies {
   readonly stockMarketReadRepository: StockMarketReadRepository;
@@ -688,199 +511,6 @@ export class SupabasePlayerGameDashboardRepository
 
     return (response.data ?? []) as StockMarketEventRow[];
   }
-}
-
-function toOrderDto(row: StockOrderRow): StockMarketPlayerOrderDto {
-  return {
-    orderId: row.id,
-    stockAssetId: row.stock_asset_id,
-    ticker: row.ticker,
-    side: normalizeSide(row.side),
-    quantity: toNumber(row.quantity),
-    executionPrice: toNumber(row.execution_price),
-    grossValue: toNumber(row.gross_value),
-    status: normalizeOrderStatus(row.status),
-    rejectionReason: row.rejection_reason ?? null,
-    idempotencyKey: row.idempotency_key,
-    createdAt: row.created_at,
-  };
-}
-
-function toTradeDto(row: StockTradeRow): StockMarketPlayerTradeDto {
-  return {
-    tradeId: row.id,
-    orderId: row.order_id,
-    stockAssetId: row.stock_asset_id,
-    ticker: row.ticker,
-    side: normalizeSide(row.side),
-    quantity: toNumber(row.quantity),
-    executionPrice: toNumber(row.execution_price),
-    grossValue: toNumber(row.gross_value),
-    createdAt: row.created_at,
-  };
-}
-
-function toInventoryDto(
-  row: InventoryHoldingRow,
-  storeItemById: ReadonlyMap<string, StoreItemDto>,
-): PlayerGameDashboardInventoryItemDto {
-  const item = storeItemById.get(row.store_item_id);
-
-  return {
-    inventoryId: row.id,
-    itemId: row.store_item_id,
-    itemName: item?.name ?? "Unknown item",
-    quantityOwned: Math.trunc(toNumber(row.quantity_owned)),
-    quantityReserved: Math.trunc(toNumber(row.quantity_reserved)),
-    updatedAt: row.updated_at,
-  };
-}
-
-function toPurchaseHistoryDto(
-  row: StorePurchaseRow,
-  storeItemById: ReadonlyMap<string, StoreItemDto>,
-): StorePurchaseHistoryItemDto {
-  const item = storeItemById.get(row.store_item_id);
-
-  return {
-    purchaseId: row.id,
-    itemId: row.store_item_id,
-    itemName: item?.name ?? "Unknown item",
-    quantity: Math.trunc(toNumber(row.quantity)),
-    finalTotalPrice: toNumber(row.final_total_price),
-    currencyCode: row.currency_code,
-    status: row.status,
-    createdAt: row.created_at,
-  };
-}
-
-function toPublicStoreListingDto(
-  item: StoreItemDto,
-): PlayerGameDashboardPublicStoreListingDto {
-  return {
-    itemId: item.id,
-    itemKey: item.itemKey,
-    name: item.name,
-    description: item.description,
-    category: item.category,
-    stockQuantity: item.stockQuantity,
-    status: item.status,
-    visibility: item.visibility,
-    sortOrder: item.sortOrder,
-    updatedAt: item.updatedAt,
-  };
-}
-
-function toMarketNewsDto(
-  row: StockMarketEventRow,
-): PlayerGameDashboardMarketNewsDto {
-  return {
-    id: row.id,
-    shockId: row.shock_id,
-    category: row.category ?? "sector",
-    sentiment: row.sentiment ?? "neutral",
-    source: row.source ?? "runner",
-    scope: row.scope,
-    targetKey: row.target_key ?? null,
-    headline: row.headline,
-    explanation: row.explanation,
-    createdTick: Math.trunc(toNumber(row.created_tick)),
-    expiresTick: row.expires_tick === null || row.expires_tick === undefined
-      ? null
-      : Math.trunc(toNumber(row.expires_tick)),
-    createdAt: row.created_at,
-  };
-}
-
-function toPublicPlayerDto(
-  player: PlayerRow,
-  country: CountryInfo | undefined,
-): PlayerGameDashboardPublicPlayerDto {
-  return {
-    playerId: player.id,
-    displayName: player.display_name,
-    rosterLabel: player.roster_label ?? null,
-    countryCode: country?.countryCode ?? null,
-  };
-}
-
-function toLeaderboard(
-  players: readonly PlayerRow[],
-  countryByPlayerId: ReadonlyMap<string, CountryInfo>,
-  financialBalances: readonly AccountBalanceRow[],
-  holdings: readonly StockHoldingRow[],
-  stockByAssetId: ReadonlyMap<string, StockMarketBoardStockDto>,
-): readonly PlayerGameDashboardLeaderboardEntryDto[] {
-  const financialByPlayerId = groupBy(
-    financialBalances,
-    (balance) => balance.player_id,
-  );
-  const holdingsByPlayerId = groupBy(holdings, (holding) => holding.player_id);
-  const entries = players.map((player) => {
-    const valuationCurrencyCode = normalizeCurrencyCode(
-      countryByPlayerId.get(player.id)?.currencyCode,
-    );
-    const financialTotal = balanceTotalForCurrency(
-      financialByPlayerId.get(player.id) ?? [],
-      valuationCurrencyCode,
-    );
-    const holdingsMarketValue = sum(
-      (holdingsByPlayerId.get(player.id) ?? []).filter((h) =>
-        h.listing_currency_code === valuationCurrencyCode
-      ),
-      (holding) => {
-        const stock = stockByAssetId.get(holding.stock_asset_id);
-        return toNumber(holding.quantity) * (stock?.currentPrice ?? 0);
-      },
-    );
-
-    return {
-      ...toPublicPlayerDto(player, countryByPlayerId.get(player.id)),
-      rank: 0,
-      netWorth: round(financialTotal + holdingsMarketValue),
-      valuationCurrencyCode,
-      rankScope: "currency" as const,
-    };
-  }).sort((left, right) =>
-    (left.valuationCurrencyCode ?? "~").localeCompare(
-      right.valuationCurrencyCode ?? "~",
-    ) ||
-    right.netWorth - left.netWorth ||
-    left.displayName.localeCompare(right.displayName) ||
-    left.playerId.localeCompare(right.playerId)
-  );
-
-  const rankByCurrency = new Map<string, number>();
-  return entries.map((entry) => {
-    const scopeKey = entry.valuationCurrencyCode ?? "unvalued";
-    const rank = (rankByCurrency.get(scopeKey) ?? 0) + 1;
-    rankByCurrency.set(scopeKey, rank);
-    return { ...entry, rank };
-  });
-}
-
-function normalizeSide(value: string): "buy" | "sell" {
-  return value === "sell" ? "sell" : "buy";
-}
-
-function normalizeOrderStatus(value: string): StockMarketPlayerOrderStatus {
-  return value === "rejected" ? "rejected" : "filled";
-}
-
-function groupBy<T>(
-  values: readonly T[],
-  keyForValue: (value: T) => string,
-): Map<string, T[]> {
-  const groups = new Map<string, T[]>();
-
-  for (const value of values) {
-    const key = keyForValue(value);
-    const group = groups.get(key) ?? [];
-    group.push(value);
-    groups.set(key, group);
-  }
-
-  return groups;
 }
 
 function readFailed(): PlayerGameDashboardError {

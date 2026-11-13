@@ -8,11 +8,11 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1381,
+    "sourceFiles": 1387,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
-    "crossDomainDeepImports": 70,
+    "crossDomainDeepImports": 71,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
@@ -211,7 +211,7 @@
         "infrastructure",
         "realtime"
       ],
-      "sourceFiles": 11,
+      "sourceFiles": 17,
       "publicBoundaryFiles": []
     },
     {
@@ -800,7 +800,13 @@
         "target": "../../storylines/server/notificationCapabilities.ts"
       },
       {
-        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+        "consumer": "backend/src/domains/game-dashboard/infrastructure/dashboardReadRows.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/purchaseHistoryTypes.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.test.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "store",
         "target": "../../store/dashboardReadModel.ts"
@@ -809,7 +815,7 @@
         "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "store",
-        "target": "../../store/purchaseHistoryTypes.ts"
+        "target": "../../store/dashboardReadModel.ts"
       },
       {
         "consumer": "backend/src/domains/game-sessions/application/createGame.ts",
@@ -2607,7 +2613,7 @@
     "oversizedFiles": [
       {
         "file": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
-        "lines": 2536
+        "lines": 2537
       },
       {
         "file": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
@@ -2644,10 +2650,6 @@
       {
         "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
         "lines": 896
-      },
-      {
-        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "lines": 893
       },
       {
         "file": "backend/supabase/functions/classroom-api/index.ts",
@@ -2904,6 +2906,10 @@
       {
         "file": "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
         "lines": 532
+      },
+      {
+        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+        "lines": 523
       },
       {
         "file": "admin/v2/src/routes/players/PlayersRoute.js",

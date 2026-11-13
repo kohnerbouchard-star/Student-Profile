@@ -1,3 +1,4 @@
+import "../infrastructure/supabasePlayerGameDashboardRepository.test.ts";
 import {
   summarizePortfolio,
   toCashDto,
