@@ -179,4 +179,3 @@ export const COUNTRY_SNAPSHOT_SELECT = [
   "supply_constraint_index",
   "import_dependency_index",
 ].join(",");
-

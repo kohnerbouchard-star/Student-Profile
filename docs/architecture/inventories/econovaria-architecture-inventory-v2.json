@@ -2622,12 +2622,12 @@
         "lines": 1132
       },
       {
-        "file": "backend/supabase/functions/web-session-api/index.ts",
+        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.test.ts",
         "lines": 1054
       },
       {
-        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.test.ts",
-        "lines": 1031
+        "file": "backend/supabase/functions/web-session-api/index.ts",
+        "lines": 1054
       },
       {
         "file": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
