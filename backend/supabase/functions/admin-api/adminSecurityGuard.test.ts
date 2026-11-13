@@ -1,9 +1,9 @@
 import {
   ADMIN_PERMISSIONS,
+  type AdminPermission,
   guardAdminRequest,
   normalizedAdminAction,
   requiredAdminPermission,
-  type AdminPermission,
 } from "./adminSecurityGuard.ts";
 import { buildStaffRateLimitBuckets } from "../../../src/security/rateLimitKeying.ts";
 
@@ -336,7 +336,35 @@ function base64Url(value: unknown): string {
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(
-      `Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}.`,
+      `Expected ${JSON.stringify(expected)}, received ${
+        JSON.stringify(actual)
+      }.`,
     );
   }
 }
+
+Deno.test("names-only roster import retains players.manage, AAL2 and write limiter", async () => {
+  const path = `/games/${GAME_ID}/players/imports/csv`;
+  for (
+    const [aal, permissions, allowed] of [
+      ["aal2", ["players.manage"], true],
+      ["aal1", ["players.manage"], false],
+      ["aal2", ["game.read"], false],
+    ] as const
+  ) {
+    let action = "";
+    const result = await guardAdminRequest(
+      new Request(`https://example.test/admin-api${path}`, { method: "POST" }),
+      contextWith({ aal, permissions: [...permissions] }),
+      path,
+      {
+        consumeRateLimit: async (_service, input) => {
+          action = input.action;
+          return allowedDecision();
+        },
+      },
+    );
+    assertEquals(result.ok, allowed);
+    assertEquals(action, allowed ? "staff.admin.write.players" : "");
+  }
+});

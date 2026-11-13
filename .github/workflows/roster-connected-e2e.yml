@@ -1,0 +1,76 @@
+name: Roster Connected E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**'
+      - '!docs/architecture/inventories/econovaria-architecture-inventory-v2.json'
+      - '!docs/roadmaps/econovaria-beta-completion-roadmap-v1.md'
+      - '!docs/operations/contracts/player-cross-cutting/pr-938.json'
+      - '!docs/operations/contracts/player-cross-cutting/pr-933.json'
+      - '!docs/operations/evidence/player-roster-import-v1/backend-scope.md'
+      - '!docs/operations/evidence/classroom-roster-csv-review-v1/scope.md'
+      - 'docs/operations/contracts/player-cross-cutting/pr-938.json'
+      - 'docs/operations/contracts/player-cross-cutting/pr-933.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: roster-connected-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  paired-roster:
+    name: Paired-source disposable roster integration (not hosted capacity)
+    # Fixed supported image, independent of ubuntu-latest changes. Both pinned
+    # Playwright versions in these owners support Ubuntu 24.04.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out exact harness head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify current runtime before installing tools
+        run: node scripts/roster-connected/runtime-equivalence.mjs
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - name: Install locked tools
+        id: install_locked_tools
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.9.8
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Summarize failed installation without changing it
+        if: ${{ failure() && steps.install_locked_tools.outcome == 'failure' }}
+        timeout-minutes: 2
+        run: node scripts/roster-connected/install-diagnostics.mjs
+      - name: Validate isolated gate contracts
+        run: node --test scripts/roster-connected/*.test.mjs
+      - name: Validate both source conventions with complete harness suites
+        run: node scripts/roster-connected/mode-fixtures.mjs
+      - name: Run synthetic connected gate
+        env:
+          ECONOVARIA_ROSTER_EVIDENCE_DIR: ${{ runner.temp }}/roster-safe-evidence
+        run: node scripts/roster-connected/run.mjs
+      - name: Finish disposable cleanup after interruption
+        if: always()
+        run: node scripts/roster-connected/run.mjs --cleanup
+      - name: Upload allowlisted aggregate evidence only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: roster-paired-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ${{ runner.temp }}/roster-safe-evidence/source-manifest.json
+            ${{ runner.temp }}/roster-safe-evidence/result.json
+          if-no-files-found: ignore
+          retention-days: 14

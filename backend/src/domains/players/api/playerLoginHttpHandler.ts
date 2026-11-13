@@ -131,22 +131,36 @@ export async function handlePlayerLoginRequest(
       );
     }
 
-    const playerResponse = await serviceClient
-      .from("players")
-      .select("id,display_name,roster_label,player_identifier,status")
-      .eq("game_session_id", gameSession.id)
-      .eq("player_identifier_normalized", playerIdentifierNormalized)
-      .eq("status", "active")
-      .maybeSingle();
-    if (playerResponse.error) return playerLoginServiceFailure();
+    // RPC arguments travel in a POST body. A table GET filter would put the
+    // student identifier in gateway request URLs and access logs.
+    const playerResponse = await serviceClient.rpc(
+      "lookup_player_login_identity_v1",
+      {
+        p_game_session_id: gameSession.id,
+        p_player_identifier_normalized: playerIdentifierNormalized,
+      },
+    );
+    if (
+      playerResponse.error || !Array.isArray(playerResponse.data) ||
+      playerResponse.data.length > 1
+    ) return playerLoginServiceFailure();
 
-    const player = playerResponse.data as {
+    const player = playerResponse.data[0] as {
       readonly id: string;
       readonly display_name: string;
       readonly roster_label: string | null;
       readonly player_identifier: string;
       readonly status: string;
-    } | null;
+    } | undefined;
+    if (
+      player !== undefined && (
+        !isRecord(player) || typeof player.id !== "string" ||
+        typeof player.display_name !== "string" ||
+        (player.roster_label !== null &&
+          typeof player.roster_label !== "string") ||
+        typeof player.status !== "string"
+      )
+    ) return playerLoginServiceFailure();
     if (
       !player?.id ||
       !isBrowserSafePlayerIdentifier(player.player_identifier) ||

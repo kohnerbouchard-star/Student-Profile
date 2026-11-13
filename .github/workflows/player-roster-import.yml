@@ -1,0 +1,60 @@
+name: Player Roster Import
+on:
+  pull_request:
+    paths:
+      - 'backend/src/domains/players/**'
+      - 'backend/supabase/functions/admin-api/**'
+      - 'backend/supabase/migrations/**'
+      - 'backend/package.json'
+      - 'scripts/player-roster-import*'
+      - '.github/workflows/player-roster-import.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: player-roster-import-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  qualify:
+    name: Atomic roster provisioning and replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: v2.9.3
+      - run: npm install --global npm@10.9.8
+      - run: npm ci
+      - run: npm --prefix backend ci
+      - run: node --test scripts/player-roster-import-contract.test.mjs
+      - run: |
+          cd backend
+          deno test --config supabase/functions/admin-api/deno.json --lock=supabase/functions/deno.lock --frozen src/domains/players/application/importPlayerRoster.test.ts
+      - name: Verify private Player login lookup transport and retained authentication
+        run: |
+          cd backend
+          deno test --config supabase/functions/deno.json --lock=supabase/functions/deno.lock --frozen ../scripts/player-roster-import-login-transport.test.ts src/domains/players/api/playerBrowserSessionPrivacyHttpHandlers.test.ts
+      - run: |
+          cd backend
+          deno test --config supabase/functions/admin-api/deno.json --lock=supabase/functions/deno.lock --frozen supabase/functions/admin-api/adminSecurityGuard.test.ts supabase/functions/admin-api/localGameMutations.test.ts supabase/functions/admin-api/controlSurfaceOperations.test.ts
+      - run: npm --prefix backend run typecheck:all
+      - name: Start disposable database only
+        run: npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta
+      - name: Replay migrations and prove atomic roster import
+        run: |
+          npx supabase db reset --workdir backend --local
+          docker exec -i supabase_db_econovaria psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 < scripts/player-roster-import-database.sql
+          docker exec -i supabase_db_econovaria psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 < scripts/player-roster-import-login-privacy-database.sql
+          node scripts/player-roster-import-concurrency.mjs
+          npx supabase db lint --workdir backend --local --level warning
+      - name: Stop disposable database
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup || true

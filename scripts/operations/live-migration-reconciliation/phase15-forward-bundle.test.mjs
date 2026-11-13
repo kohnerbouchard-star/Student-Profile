@@ -443,7 +443,7 @@ test("application restore normalization preserves exact application schema autho
 });
 
 test("REF025c2-1 is an independently registered fourth suffix without rewriting prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 14);
+  assert.equal(APPROVED_SUFFIXES.length, 16);
   assert.equal(APPROVED_SUFFIXES[3].filename, "20261004221307_prepare_business_loan_bindings_v1.sql");
   assert.equal(APPROVED_SUFFIXES[3].order, 4);
   assert.equal(APPROVED_SUFFIXES[3].statementCount, 1);
@@ -463,7 +463,7 @@ test("REF025c2-2b registers the gated submission sixth suffix", () => {
 
 
 test("system recovery is the sole seventh suffix and preserves all six prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 14);
+  assert.equal(APPROVED_SUFFIXES.length, 16);
   assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 6))).digest("hex"),
     "cb7f435ac309f834abfeace4193b9165c8e843a538a01ca02a1cbaf2fde3780f");
   assert.deepEqual(APPROVED_SUFFIXES[6], {
@@ -491,7 +491,7 @@ test("individual recovery registers eighth suffix without rewriting prior seven 
 
 
 test("REF046c registers ninth suffix and preserves all eight prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 14);
+  assert.equal(APPROVED_SUFFIXES.length, 16);
   assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 8))).digest("hex"),
     "c7a9f4db5d67f975dcb67926d5168abeab8ed31304211b4bd6a94324465c2d39");
   assert.deepEqual(APPROVED_SUFFIXES[8], {
@@ -506,7 +506,7 @@ test("REF046c registers ninth suffix and preserves all eight prior identities", 
 });
 
 test("PR885 registers tenth suffix after Campaign and preserves all eight prior identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 14);
+  assert.equal(APPROVED_SUFFIXES.length, 16);
   assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 8))).digest("hex"),
     "c7a9f4db5d67f975dcb67926d5168abeab8ed31304211b4bd6a94324465c2d39");
   assert.deepEqual(APPROVED_SUFFIXES[9], {
@@ -521,7 +521,7 @@ test("PR885 registers tenth suffix after Campaign and preserves all eight prior 
 });
 
 test("password return correction is the eleventh exact suffix and preserves all original eight", async () => {
-  assert.equal(APPROVED_SUFFIXES.length, 14);
+  assert.equal(APPROVED_SUFFIXES.length, 16);
   assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 8))).digest("hex"),
     "c7a9f4db5d67f975dcb67926d5168abeab8ed31304211b4bd6a94324465c2d39");
   assert.deepEqual(APPROVED_SUFFIXES[10], {
@@ -550,14 +550,28 @@ test("loan review is the twelfth exact suffix with only the intended predicate c
 
 
 test("Business player loop is the thirteenth exact suffix and preserves all ten original identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 14);
+  assert.equal(APPROVED_SUFFIXES.length, 16);
   assert.equal(createHash("sha256").update(JSON.stringify([...APPROVED_SUFFIXES.slice(0, 8), ...APPROVED_SUFFIXES.slice(10, 12).map((suffix) => ({ ...suffix, order: suffix.order - 2 }))])).digest("hex"), "ba77a6dd12b03f596693be9194bf5bd7b44eb3f8cdec8b0a1f4548e9e0c4eb21");
   assert.deepEqual(APPROVED_SUFFIXES[12], {"order":13,"filename":"20261109120000_business_player_loop_commands_v1.sql","version":"20261109120000","name":"business_player_loop_commands_v1","sourceSha256":"8fe5a9af5723340315f01e0fbe844630ea8191c0015efd40deb8c15e5c73bd3d","rawSha256":"92199385e92dfacc6006ef8df21a2d69cb8e67deda538c4182d7f9183818c324","statementCount":1});
 });
 
 
 test("Business manufacturing repair is the fourteenth exact suffix and preserves all eleven original identities", () => {
-  assert.equal(APPROVED_SUFFIXES.length, 14);
+  assert.equal(APPROVED_SUFFIXES.length, 16);
   assert.equal(createHash("sha256").update(JSON.stringify([...APPROVED_SUFFIXES.slice(0, 8), ...APPROVED_SUFFIXES.slice(10, 13).map((suffix) => ({ ...suffix, order: suffix.order - 2 }))])).digest("hex"), "588d34bdbbd1aa1854d44cd894b741d02f5f66edcdd280cb59316284de1d06cc");
   assert.deepEqual(APPROVED_SUFFIXES[13], {"order":14,"filename":"20261109121000_repair_business_manufacturing_runtime_v2.sql","version":"20261109121000","name":"repair_business_manufacturing_runtime_v2","sourceSha256":"9940b224a8adfff4f88fa1259f9b9cdc10e0eeb19c6e249c25210f3c6aee743d","rawSha256":"c1ab9a4321cdc6e371d083687deb4bdca0339900c7be1090fa6e09adf79c68f0","statementCount":1});
+});
+
+
+test("roster suffix preserves all fourteen prior registrations and binds exact SQL", async () => {
+  assert.equal(APPROVED_SUFFIXES.length, 16);
+  assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 14))).digest("hex"), "f0ee6fbd4d82e93f9a7df7ad61ef7cceac102027c46f7a17c388465a2d965cd8");
+  assert.deepEqual(APPROVED_SUFFIXES[14], {"order":15,"filename":"20261110180000_admin_import_player_roster_v1.sql","version":"20261110180000","name":"admin_import_player_roster_v1","sourceSha256":"b9a732c03fd1481f336d17e6a5acdaf676f1922357a58874e42cf5c9a3328575","rawSha256":"3597f9169f0baf98a8a813cb01a14348e081352e47e6b30ed16034af803a956c","statementCount":1});
+});
+
+
+test("private login lookup is the sixteenth exact suffix and preserves every prior identity", () => {
+  assert.equal(APPROVED_SUFFIXES.length, 16);
+  assert.equal(createHash("sha256").update(JSON.stringify(APPROVED_SUFFIXES.slice(0, 15))).digest("hex"), "825039b5a2b5977ac7ae659dc4ddb0ec583c8788d4ea562e18ba00cba33d97e8");
+  assert.deepEqual(APPROVED_SUFFIXES[15], {"order":16,"filename":"20261113025003_player_login_private_lookup_v1.sql","version":"20261113025003","name":"player_login_private_lookup_v1","sourceSha256":"f9d96baed3832c00a88df1580dc803582910a4406e585118e057995716cb7f12","rawSha256":"48ed5a9ed6abd59b69c23bef68a274e6fbe402a61bd35739d26b5b27afb00aa2","statementCount":1});
 });

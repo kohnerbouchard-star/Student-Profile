@@ -3,6 +3,8 @@ name: banking-fx-clearing-v1
 on:
   pull_request:
     paths:
+      - "scripts/manual-pr-context.mjs"
+      - "scripts/manual-pr-context.test.mjs"
       - "docs/operations/contracts/player-cross-cutting/pr-952.json"
       - "docs/operations/contracts/player-cross-cutting/pr-951.json"
       - "docs/operations/contracts/player-cross-cutting/pr-945.json"
@@ -53,6 +55,15 @@ on:
       - scripts/banking-fx-*.sql
       - scripts/business-phase10-atomic-settlement-database-support.mjs
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open PR number for this branch
+        required: true
+        type: string
+      expected_head_sha:
+        description: Exact 40-character current PR head SHA
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -63,6 +74,9 @@ concurrency:
 
 jobs:
   certify:
+    permissions:
+      contents: read
+      pull-requests: read
     name: Certify Banking FX clearing source
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -99,15 +113,26 @@ jobs:
           npm ci --ignore-scripts
           npm ci --prefix backend --ignore-scripts
 
+      - name: Validate manual PR identity
+        id: manual_pr
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MANUAL_PR_NUMBER: ${{ inputs.pr_number }}
+          MANUAL_HEAD_SHA: ${{ inputs.expected_head_sha }}
+        run: node scripts/manual-pr-context.mjs
+
       - name: Run Banking FX certification lanes
         shell: bash
         env:
-          AUTHORITY_PR_NUMBER: ${{ github.event.pull_request.number || 672 }}
-          AUTHORITY_BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/canonical-fx-authority-v1' }}
+          AUTHORITY_PR_NUMBER: ${{ github.event.pull_request.number || steps.manual_pr.outputs.pr_number || 672 }}
+          AUTHORITY_BASE_REF: ${{ github.event.pull_request.base.ref || steps.manual_pr.outputs.base_ref || 'feat/canonical-fx-authority-v1' }}
+          MANUAL_BASE_SHA: ${{ steps.manual_pr.outputs.base_sha }}
         run: |
           set -euo pipefail
+          node --test scripts/manual-pr-context.test.mjs
           node --test scripts/player-cross-cutting-authority.test.mjs
-          git diff --name-only "origin/${AUTHORITY_BASE_REF}...HEAD" | sort -u > /tmp/player-cross-cutting-changed-files.txt
+          git diff --name-only "${MANUAL_BASE_SHA:-origin/${AUTHORITY_BASE_REF}}...HEAD" | sort -u > /tmp/player-cross-cutting-changed-files.txt
           node scripts/verify-player-cross-cutting-authority.mjs \
             --changed-files /tmp/player-cross-cutting-changed-files.txt \
             --pr-number "${AUTHORITY_PR_NUMBER}" \

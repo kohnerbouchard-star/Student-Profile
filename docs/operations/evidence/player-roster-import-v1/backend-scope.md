@@ -1,0 +1,345 @@
+# Names-only roster provisioning backend
+
+Status: published in draft [PR #938](https://github.com/kohnerbouchard-star/Student-Profile/pull/938), not runtime-qualified. Original base: c616ece3e1cebea79fd33c58f5f04ed961121407; current-main integration: 56c72864429f8a27681e4cc01964a582a41e56fa. Initial published source e0745b21276e84d1ab4f3115b12d0e5f46351d27 has exact reviewed tree c7f0b3c5b504c4eb6ebe4ae114c431aafd0fe1e8; actual-number authority is registered in pr-938.json. Existing draft PR933 owns frontend review; this branch adds its separate atomic backend.
+
+## Contract
+
+Authenticated POST /games/:gameId/players/imports/csv accepts application/json with exactly {studentNames: string[]}. Require 1–200 nonblank names, each at most 240 JavaScript UTF-16 units without control/bidi/replacement characters or internal UUIDs, and a stable Idempotency-Key header. Reject unknown fields, raw uploads and bodies above 256,000 bytes. Trim outer whitespace and normalize Unicode to NFC. Repeated names remain distinct students and never match/update/delete existing players.
+
+HTTP201 response: {data:{createdCount,replayed,credentialsAvailable,students:[{row,displayName,playerIdentifier,accessCode?}]}}. Rows are one-based. Identifiers are STU- plus 24 uppercase random hex characters (96 bits). Codes are 32 uppercase random hex characters (128 bits). They use the existing credential pepper/runtime and 600,000 PBKDF2 iterations. No new runtime secret or package dependency.
+
+A successful creating transaction alone receives access codes. An idempotency replay returns the original receipt without codes, including a race where another request commits after the read-only replay check. Preserve the same key after timeouts or uncertain outcomes; do not automatically generate a new import. Lost codes require the existing protected credential-reset flow. Receipts expose no internal UUIDs or credential material. Raw codes are not passed to any RPC, logger, audit event or replay body.
+
+## Persistence and authorization
+
+The existing Admin entrypoint authenticates, checks active/versioned staff, players.manage, AAL2, CSRF, rate limits and owned game before dispatch. The new boundary additionally checks its reviewed staff context. Application/contracts use a narrow repository port; only the infrastructure adapter invokes RPCs.
+
+Forward migration 20261110180000_admin_import_player_roster_v1.sql defines service-role-only admin_import_player_roster_v1. One begin_admin_mutation_v1 claim fingerprints only ordered names, game and operation. One complete_admin_mutation_v1 stores the public receipt and aggregate audit event. All rows call canonical create_player_with_balanced_country_assignment and set_player_identity_and_access_credential_v2 in the same database transaction. Canonical creation owns the per-game advisory transaction lock shared with single-player creation; the import does not introduce a competing game-row lock order. Any row failure rolls back every row and the claim. No raw CSV is retained.
+
+No prior migration is edited. Normal rollout requires review, mandatory disposable database qualification and separately authorized deployment. Roll back application routing only if needed; preserve committed students. Any schema correction must be a new forward migration, not destructive rollback.
+
+## Verification
+
+Passed locally: twelve focused Deno application/adapter/HTTP cases, three Node boundary/source checks, 22 existing-plus-extended Admin guard/dispatcher/control tests, backend TypeScript, migration-source audit (463 unique versions), 27 immutable Phase15 forward-bundle/rehearsal checks, and whitespace checks. New source modules remain below 500 lines. New API/application modules contain no persistence calls.
+
+Full Edge typecheck cannot finish because the frozen Supabase SDK esm.sh fetch is refused in this environment. The dedicated workflow invokes the focused Deno suite directly, leaving the frozen backend package/snapshot intact. Full root validation passes on committed current-main integration 7113ffdd (tree identical to published e0745b21) with the regenerated inventory; all existing architecture, migration, release and source-census guards remain intact. Local psql/Docker are absent, so scripts/player-roster-import-database.sql has NOT executed. The dedicated Player Roster Import workflow requires clean disposable migration replay, real SQL rollback/replay/conflict/scope assertions, and database lint. Static source checks do not replace that SQL gate. Full smoke also stopped at the frozen SDK import. Exact-head hosted results remain required. The added concurrency harness is syntax-checked but unexecuted locally: it starts real separate disposable Docker psql sessions, verifies advisory-lock waiting before release, and proves same-key replay, distinct-import serialization, and import/single-player-create lock-order compatibility. The new migration is the exact-digest fifteenth suffix; all fourteen predecessor registrations and immutable manifests remain unchanged.
+
+## Runtime feasibility hold
+
+Offline Deno2.9.3 synthetic benchmark (benchmarkRosterCredentialHashing.ts, --no-config): 1 row 82ms; 30 rows 2,510ms; 200 rows 17,272ms wall time, each using 600,000 PBKDF2 iterations. No codes or credential material were printed. These are local wall measurements, not Edge CPU evidence. Vercel API maxDuration is 30 seconds; Edge CPU/wall limits may be stricter. Do not activate or mark ready until realistic authorized disposable/staging Edge timing passes. If it cannot, design a separate bounded durable-worker import flow rather than lowering hashing, silently chunking the transaction, or returning fake replay codes.
+
+The BFF uses fetch cache:no-store and returns private,no-store,max-age=0 with Pragma/Expires. Admin API responses also use private,no-store,max-age=0. BFF contains no payload logging. The new HTTP handler catches unknown errors into a fixed message without logging exception objects. Frontend must keep one-time codes only in memory and discard on close/logout/game switch.
+
+
+## Review and integration metadata
+
+Independent parent source review identified the now-corrected canonical lock-order inversion and server/client name-validation mismatch. Source re-review confirms the game-row lock is removed, names are NFC-normalized and invalid controls/UUIDs rejected, public response fields are explicitly projected, and no raw code enters persistence. Real SQL and concurrency execution is still required before source readiness.
+
+The visible-route inventory now marks the names-only JSON endpoint implemented. This does not support the retained legacy bundle's raw-file payload or claim that legacy upload UI is functional: unsupported payloads still fail closed. Native #933 is the sole frontend integration owner. The dedicated unique job is `Atomic roster provisioning and replay` under `Player Roster Import`.
+
+The owner authorized draft publication of this names-only backend source, tests and supporting records, including generated inventory. Initial draft publication is complete with actual-number authority registration in this follow-up. No runtime deployment, merge or real student data action is included.
+
+
+Supplemental cross-layer contract check passed using the actual names-only parser, Admin API client, HTTP handler, application and real 600,000-iteration hashing across the two local owner trees. Synthetic repeated names created three response rows; same-key replay performed no second create and exposed no codes. Its repository was an in-memory test double, so this is protocol agreement only, not PostgreSQL, browser, authorization-boundary or deployed Edge qualification.
+
+
+## Current-main integration
+
+Normal merges through main 56c72864 preserve every merged #932 Crafting guidance and #937 public-ID hashing runtime/test/workflow/authority/evidence byte and their full roadmap intake. Roster implementation bytes are unchanged from reviewed 87f636b4; only integration metadata and deterministic inventory reconciliation change. Native frontend #933 remains separate. Fresh root, focused and TypeScript checks are required for this combined head; predecessor passes do not qualify it. Database/Edge resource holds above remain mandatory.
+
+
+## Exact PR qualification scope
+
+PR938 authority locks the 22 changed paths and two unchanged read-only verifier/test paths. It retains every PR937 required and critical check in original order and adds Player Roster Import / Atomic roster provisioning and replay (131 required / 95 critical). All deployment, production mutation and secret-value grants remain false. Initial hosted runs have started; no SQL, concurrency or deployed resource success is inferred before their exact-head results.
+
+
+## Typical classroom qualification
+
+The owner clarified that a typical roster has about 30 students. Qualification now includes 30 and an above-class margin of 40, while preserving the 200-row maximum and 600,000-iteration credential hash. Two focused application tests verify full ordered receipts, repeated names as distinct identities, unique generated codes, one create and code-free replay without further hashing. The rollback-only SQL fixture adds real 30/40-row canonical assignment/credential counts, one aggregate audit, ordered receipts and unchanged replay. Those SQL assertions remain pending hosted execution; local doubles do not prove atomicity.
+
+Fresh synthetic offline benchmark on the same toolchain: 1 row 91ms, 30 rows 2,658ms, 40 rows 3,464ms, 200 rows 17,247ms wall time. No credential material was printed. These measurements help size the realistic qualification matrix but do not establish hosted Edge CPU accounting or BFF headroom; the existing resource release hold remains unchanged.
+
+
+Hosted initial head fc4f156a passed full Edge typecheck and clean migration reset. Its first SQL import stopped with GAME_SESSION_NOT_FOUND because the synthetic fixture mixed active status with draft lifecycle; the existing lifecycle trigger correctly made it inactive. The corrected fixtures use consistent active/non-joinable state and migration-seeded canonical countries without disabling or changing any guard. Renewed actual SQL/rollback/concurrency execution remains mandatory; no atomicity success is claimed from the failed run.
+
+
+## Scanner and Story main reconciliation
+
+Current-main integration: a44d8e52119b9f2f3e6642dad0caabf845c46b39. Preserve every merged #934 and #936/#929 source/test/workflow/authority/evidence file and complete roadmap intake. The roster runtime, migration (where present), names-only contract, 30/40-row test cases, 200-row limit and credential policy are byte-identical to 6bddb34097bc87b11b7e4ac62ecfbb2ce06f45d5. Only additive scope/roadmap reconciliation and deterministic inventory regeneration are required. All current-main required/critical check identifiers are retained in the unchanged PR938 authority; deployment, mutation and secrets grants remain false.
+
+Prior exact head 6bddb340 passed 49 workflows, including real disposable PostgreSQL rollback/replay/ownership, 30/40-row provisioning, three concurrency races, full Edge checks and connected 30/40-player load. PR361 repair was intentionally skipped; the canceled PR-only promotion contract run could not be retried (GitHub403), with no dispatch or bypass. These results do not certify this new integration.
+
+Fresh root, focused, TypeScript/Edge/smoke and applicable browser/database qualification are required for this combined head. Keep draft while exact-head gates and authorized realistic combined Edge/BFF capacity are unresolved. No production deployment or actual student data is authorized.
+
+## Bounded exact-head CI scheduling amendment
+
+The owner authorized filter updates and workflow qualification. Add only PR938's exact authority path to twelve existing required test-workflow PR filters and bind the three shared test-only Admin Shell, Button Action Coverage and Environment Neutral Browser checkouts to the exact PR head with persisted credentials disabled. This supersedes earlier unchanged-workflow scope only for these bounded scheduling corrections. The active authority locks 34 changed paths plus two unchanged read-only verifier/test paths. All 131 required and 95 critical check identifiers, test commands, permissions, non-PR triggers, PR657-only writer and live-production guards remain unchanged. These mixed repository identifiers are not a branch-protection inventory.
+
+Fresh integrated root, focused and backend TypeScript checks pass. Local full Edge/smoke qualification is blocked by the unchanged pinned SDK network fetch. Local browser execution remains unverified after the pinned Chromium archive download failed; Docker/psql are unavailable. Independent review and renewed exact-head hosted workflow, browser and database evidence remain mandatory. Preserve the combined deployed-path and realistic Edge/BFF capacity release hold, all names-only and 30/40-row assertions, 200-row capacity and 600,000-iteration hashing. No dispatch, gate waiver, production action or real student data is authorized.
+
+
+## Provisional Store/focus source preparation (2026-11-11)
+
+LOCAL ONLY; existing draft #938 remains `IMPLEMENTED_NOT_MERGED`. Actual fetched main is `773e72cf857165bc73cfcb16adabce40f1b64eb0`, tree `44e01ffdcd040b655fd6fd46b891feccef0d039d`, containing runner #949, Banking readiness #950 and quote #945. This local preparation uses frozen but UNMERGED focus #946 `c72c380c09e2b6e7a335b1ac9942c1b88a085aaa`, tree `5c02b658681c04f1e9eb8e4d4129c717c858f1a0`, as a provisional predecessor. Published #938 remains `1ab7aaad04d95c020e5211d69735106a58da31ce`; this is not a publication or new-main claim.
+
+Every original backend roster implementation, migration, SQL/race test, application test, handler, canonical provisioning call and phase15 suffix remains byte-identical to the published source. Preserve names-only ordered input, duplicates as distinct identities, 30/40-row cases, maximum 200, 600,000-iteration PBKDF2, atomic staff/game ownership, same-staff/key conflicts, code-free replay and no sensitive logging. Every frozen predecessor runtime, test, teacher/refactor/scanner/Store/readiness change, existing authority and roadmap byte is retained outside the original roster-owned additions. Frontend #933 stays separate and must preserve whole lifecycle API content during its own reconciliation.
+
+The provisional predecessor-relative delta is 41 paths under 43 exact locks. All 143 required / 101 critical inherited checks are preserved in exact order, followed only by the existing Player Roster Import workflow / Atomic roster provisioning and replay job, giving 145 / 102. Nineteen existing test workflows receive only this owner's exact PR authority path: twelve retained roster filters and seven newly inherited lifecycle, Settings, Attendance, Banking, Market, Messages and News & Events families. The dedicated roster workflow stays unchanged. All 54 required families schedule from the actual provisional delta; commands, permissions, pinned actions, non-PR triggers, guarded skips and production holds are unchanged. These are not branch-protection counts. Regenerated inventory is 1,358 sources / 93 oversized / 52 persistence exceptions, adding only the original five roster domain modules to the frozen focus baseline.
+
+Historical checks above do not certify this combined source. Local full root, focused Deno/Node, backend TypeScript, authority/filter, inventory, secret, syntax, whitespace and exact preservation checks must be renewed against the frozen local commit. Docker/psql remain unavailable; the known frozen SDK and native-browser socket limitations are not waived or disguised as passes. Existing unpublished paired connected gate remains separate, with its old pins and old source evidence not current for this head.
+
+Next: reconcile the separate narrow Admin harness prerequisite and actual #946 merge, verify source/tree preservation, repeat final exact-source checks and independent review, then refresh both reviewed runtime pins and the fail-closed current-runtime provenance guard before any authorized qualification publication. No remote write, dispatch, merge, deployment, trust expansion, production mutation or real student data is included here. Real connected roster execution and hosted Edge/BFF cold-start/network/resource/deadline/200-row capacity remain explicit release holds.
+
+Local provisional validation now passes: full root suite (retaining its explicit PostgreSQL skip), full Player verify, 243 standard Admin V2 cases, 47 focused Node authority/roster/migration-registry/action-pinning cases, 34 focused Deno roster/guard/dispatcher cases, 11 retained funded-quote repository cases, backend TypeScript, secret scan, YAML/syntax/whitespace and deterministic inventory checks. Exact preservation covers all 17 original roster-owned backend/script blobs, the frozen predecessor's other 4,526 paths and complete roadmap bytes after removing only the inserted roster entry. This is local source/test evidence, not connected browser, disposable SQL, full Edge/smoke or hosted-capacity proof. The exact committed-tree root and preservation checks are renewed after freezing; final independent integration review remains required.
+
+
+## Refreshed provisional focus predecessor (2026-11-11)
+
+LOCAL ONLY. Existing draft #938 remains unmerged; no remote source or PR description is changed. Incorporate published but UNMERGED focus #946 `c89e855e2d5c46076f9e49d835f0fa4b4b4dfa3d`, tree `93fe57c79d67d6f7a6a6e38fef1ed7f231a458db`. Actual main is `893641945d38e77e9f9095185ddc43016d1a5e25`, tree `adb079a4b9994c014d12106745ed80ee72f65f22`, including the normal #951 merge. All #951 operational/scroll probes, positive and negative tests, native Chromium proof step, source filters, exact-head checkout bindings, authorities and records are preserved byte-for-byte after removing only this owner's existing authority filter line. Root package/test registrations and full lifecycle API content remain intact. Original roster runtime, names-only contract, duplicate order/identities, stable-key replay, privacy, 30/40 cases, maximum 200 and 600,000-iteration credential policy are unchanged.
+
+Earlier pending-Admin-prerequisite wording is historical for #951. Actual focus remains unmerged, so the owner-relative scope is provisional and cannot authorize publication of the larger actual-main delta. All 143/101 predecessor gates remain an exact ordered prefix before own roster additions for 145/102. All 54 required workflow families and every critical identity must be selected/mapped by the recalculated delta; no missing gate is waived. Inventory is regenerated without changing ceilings or exception allowances.
+
+Prior local and hosted results qualify only their recorded trees. Fresh committed local root/Player, TypeScript, focused roster and inherited readiness/source tests, authority/filter, inventory, secret and exact byte-preservation checks are renewed for this refresh. Docker/psql, native-browser socket and frozen-SDK limits remain explicit; blocked operations are not retried and no connected/runtime/hosted capacity success is claimed. The separately reviewed connected gate `cef595e725680ac56a55649cbf8464a4da9797f9` and its historical source pins remain untouched.
+
+Next: independently review the refreshed frozen local heads, await and reconcile actual #946 merge, repeat final source qualification, then use coordinator-selected public source commits for the reviewed gate's explicit pin convention. No publication, dispatch, runtime/data, trust expansion or production action is included. Hosted Edge/BFF CPU/memory/cold-start/OIDC/network/deadline and 200-row capacity remain release holds.
+
+Refreshed local evidence: 41 predecessor-relative changes / 43 locks, but 51 actual-main changes. All 19 exact own-authority filters remain necessary when evaluated against the substantive delta with filter-only paths removed. All 54 families select and all 102 critical identities map. Generated inventory remains 1358 sources / 93 oversized / 52 persistence exceptions, byte-identical to the prior reviewed roster inventory. All 17 original owned runtime/test/registration blobs and 4513 other predecessor paths pass full byte comparison; the complete predecessor and prior roster intake records are preserved.
+
+Fresh full root and Player verification pass, with the original isolated PostgreSQL skip retained. Backend TypeScript, standard Admin V2, secret scan and all 246 combined inherited route/readiness/scanner cases pass on each owner, including the new #951 controls. Backend also passes 47 focused Node and 45 focused Deno roster/guard/Store cases; all 17 original backend blobs remain exact. Final committed root/preservation checks are renewed after freezing and independent review remains required. Static/source evidence does not execute the retained native browser proof or replace SQL/Edge/connected and hosted capacity qualification.
+
+
+## Actual-main source reconciliation (2026-11-11)
+
+LOCAL SOURCE-ONLY CANDIDATE. Normal focus #946 merge `143f54b308b25870716bfb956c5b6bc202b40f87`, tree `93fe57c79d67d6f7a6a6e38fef1ed7f231a458db`, is now actual main, with parents `893641945d38e77e9f9095185ddc43016d1a5e25` and `c89e855e2d5c46076f9e49d835f0fa4b4b4dfa3d`. The tree equals the reviewed frozen focus tree, so merging actual ancestry introduces no runtime change. Reviewed local backend `700c10abe9822f221ddf29b9a45210bf792789a4` is preserved byte-for-byte outside this authority note, owned scope and roster intake. Prior provisional or unmerged-focus descriptions are historical; #946 was independently qualified before its normal merge, while its postmerge audit remains pending at this checkpoint. No new roster runtime evidence follows from those predecessor results.
+
+Actual-main scope is 41 changed paths / 43 locks, not the historical 51-path provisional delta. All 143 required / 101 critical predecessor identities remain an exact ordered prefix; existing roster identities yield 145 / 102 across 54 selected workflow families. All 19 existing exact owner-authority filters remain necessary. No workflow, command, package, lockfile, source, SQL, seed or configuration is changed by this reconciliation. Generated inventory remains 1,358 sources / 93 oversized / 52 persistence exceptions with no changed ceilings. All 17 original backend runtime/test/registration blobs, #951 readiness/native-proof/filter/head-binding source, full API lifecycle content and all other predecessor inputs are retained. Names-only input, repeated-name order with unique identities, atomic staff/game provisioning, stable-key conflict and code-free replay, privacy, 30/40 scenarios, maximum 200 and 600,000-iteration hashing remain unchanged.
+
+Freeze this source candidate, run committed-tree root/Player, TypeScript, focused roster/guard/Store and inherited readiness/scanner/Admin tests, regenerate inventory, and verify exact authority/filter/preservation evidence for independent review. Existing Docker/psql absence, native-browser socket denial and frozen-SDK limits remain explicit and are not retried. No connected browser, SQL or full Edge execution is claimed here.
+
+Next: final source review and coordinator-selected public source identities, then independently reviewed gate integration/pin refresh and exact-head qualification. Public B and F identities may differ from local commits; verify public trees and ancestry before pinning. Source B must remain a public ancestor of its qualification child, and F must remain reachable through its existing public branch. The separate gate `cef595e725680ac56a55649cbf8464a4da9797f9` and historical pins remain untouched and do not qualify this new source. No publication, PR description update, CI trigger, runtime/data, account/provider action, trust expansion or production action is included. Hosted Edge/BFF CPU/memory/cold-start/OIDC/network/deadline and 200-row capacity remain release holds.
+
+
+## Local paired qualification preparation (2026-11-11)
+
+LOCAL AND UNPUBLISHED. Source B `af51ea62df0ccae95182648dc26336dffcdb34a3` and frontend overlay F `0f3dd4b684a7ce116fb32773cf7fb254b24d58b7` are frozen independently of this qualification child. Both are provisional local identities, not verified public pins. Actual main remains `143f54b308b25870716bfb956c5b6bc202b40f87`. Add exactly the 16 gate paths independently reviewed at `cef595e725680ac56a55649cbf8464a4da9797f9` / tree `b2f3658453ad54399415567f973117a43ea26c64`; only sources.json receives the new provisional identities. Original gate source, security/privacy/cleanup assertions and historical mode fixtures remain unchanged. All source B runtime, root package/lock, commands/helpers, contracts, seeds/config/assets, API/lifecycle and backend/SQL inputs remain exact.
+
+Explicit backend-owned mode retains the exact two-line API inverse and overlays only seven frontend runtime files. It qualifies a paired-source composite only after real successful execution; it does not qualify F's non-overlay package/test/workflow inputs. Preflight must match the actual child HEAD's complete classified input projection to B before installation/runtime and reject dirty, added, deleted or replaced inputs. The existing six explicit metadata and sixteen harness classifications, mode relation, trigger coverage and immutable action/permissions remain unchanged.
+
+Actual-main scope is 57 changed paths / 59 locks. Preserve all ordered source B 145 required / 102 critical identities, append Roster Connected E2E and its paired integration job, and make the latter critical: 147 / 103 across 55 families. The existing 19 own-authority additions remain sufficient; no additional existing-workflow filter or broad unrelated edit is added. The gate's reviewed central paths cover runtime/harness additions and both roster authorities. Regenerate inventory and verify exact scope/filter coverage without changing ceilings.
+
+Static verification must distinguish the actual new-pin candidate suite and preflight from unchanged historical two-mode controls. A separately recorded temporary wrapper may substitute only the matrix root/import paths and source constants to execute the complete harness suites against both new-pin fixture modes. Record exact wrapper bytes/hash, pins, substitution seam, outcomes and cleanup. These synthetic fixture runs do not execute connected Auth/Edge/browser/database assertions and do not certify public pins.
+
+Next: independent source and qualification review, verified public F publication, verified public B as an ancestor of the single final backend qualification branch update, exact public pin refresh and a final narrow metadata/identity review before qualification. GitHub-created source SHAs may differ from reviewed local SHAs even with equal trees and parents; never assume unreachable object fetchability. After backend merge, the frontend owner must freeze an integrated source with both base/frontend pins equal and complete source-input equality. No source B/F changes, publication, CI dispatch, actual accounts/data, trust expansion or production action is included here. Local Docker/psql absence, prior browser socket denial and frozen SDK limitations remain. Hosted Edge/BFF CPU/memory/cold-start/OIDC/network/deadline and 200-row capacity holds remain.
+
+
+## Verified public-source pin preparation (2026-11-11)
+
+Public frontend F `b51da0126e30d178fea52e49afb7025c5806bb5c`, reviewed tree `4f6a02c63b792cff7146fe2a19f7d87857406be7`, is reachable through the existing PR933 branch after one nonforce update requiring the previous head `db4aec4c5203ef44618b8718f871dd400eaa4f48`. Its ordered parents are that previous head and actual main `143f54b308b25870716bfb956c5b6bc202b40f87`. Draft status is unchanged; no PR description or comment was updated. API and fetched Git confirm the exact reviewed tree/modes. Its automatic source-only CI wave is not paired-backend or connected roster qualification.
+
+Public backend B `17ae2c9fab9a912f489c6423964eaf9f605503e0`, reviewed tree `3b607869c1d7d51d9905f0e09c6b96765acaa2af`, was created without moving PR938's branch. Its parents are published backend `1ab7aaad04d95c020e5211d69735106a58da31ce` and actual main. API readback and an exact-SHA fetch confirm the exact source object/tree/modes. This fetch success does not establish long-term branch reachability: PR938 remains at its old head. The local qualification child uses public B as its sole parent and changes sources.json from provisional local identities to these verified public B/F pins. It must not be published until independent public-pin review; any final expected-head update must preserve B's ancestry and be followed by actual ref/fetch/checkout verification.
+
+The independently reviewed local predecessor `c85d148578c9dd4468da03147154e4a4bfa85363` remains frozen. Only sources.json identities and these three owned metadata records change in this public-pin preparation; all fifteen other gate files and complete runtime/input projections remain exact. Ordered 147/103 gates, scope 57/59,55 families,19 necessary filters, explicit backend-owned mode, strict seven-file/full-API relationship and privacy/cleanup guards are unchanged. Repeat the complete actual public-pin suite, historical control matrix and separately recorded public-pin synthetic mode matrix, preservation and final clean preflight; these are not connected execution.
+
+The actual-main focus postmerge hold was cleared separately for `143f54b3` / tree `93fe57c7`; its 24 scheduled runs and 43 exact-main jobs passed. That predecessor qualification does not qualify this roster candidate. All new-head roster CI/SQL/Edge/connected and hosted BFF CPU/memory/cold-start/OIDC/network/deadline plus 200-row capacity holds remain. Final public-pin review is pending, backend branch is unmoved, and no roster merge, workflow dispatch, production, live accounts/data or hosted trust change is included.
+
+
+## Bounded imported-student access qualification (2026-11-11)
+
+LOCAL CORRECTION, NOT CONNECTED EVIDENCE. The prior public-pin child `ce35d88a9c8cdd0be4cb65ae5de325ac23ff20e9` is preserved as an inspectable baseline. Its issuance/metadata assertions did not exercise returned codes in actual student authentication. This is a coverage gap, not an established production defect. Public B `17ae2c9fab9a912f489c6423964eaf9f605503e0` and F `b51da0126e30d178fea52e49afb7025c5806bb5c` remain unchanged; PR938's branch has not moved.
+
+Add a bounded helper and focused tests for two representative accounts, row 1 of the 30 cohort and row 2 of the 40 cohort. They share a display name but have distinct STU identities. Licensed creation and read-only database checks must prove canonical active/ready/joinable state. Wrong-code login uses the same imported STU and target Game Code and must create no authenticated session. Correct returned codes must authenticate through the rendered form and canonical persisted 600,000-iteration verifier, followed by fresh status/bootstrap and exact game/STU/session foreign-key binding. The public student response has no game ID, so no new production DTO is required. Rendered logout must revoke the server session, clear native state and deny both protected access and the genuinely issued old cookie. This covers two credentials, not all 70.
+
+Every original import/replay/no-write/security/privacy snapshot remains unchanged. Authentication's legitimate session/throttle writes occur only in a separate later phase with separately reported timing; the strict import-to-render deadline, 1..200 limit and credential strength remain unchanged. Student storage is restricted to the exact native public session DTO and existing device key, checked before/after logout; all codes, join code, CSRF and observed tokens/cookies remain in the private exact-value leak corpus. No raw logs, traces, credential screenshots or session artifacts are written.
+
+The teacher fixture's former blanket UUID rejection conflicts with existing Admin response identity slots, a source-detected harness blocker rather than a hosted observation. Exact endpoint schemas narrowly admit only existing staff/game identity slots and reject undocumented UUID/private fields. Strict roster/student DTO rejection and blanket Admin storage/privacy assertions remain intact. No production source, migration, auth guard or trust map changes.
+
+The explicit harness allowlist gains only `student-access.mjs` and `student-access.test.mjs`, yielding 18 gate paths. Actual-main scope is 59 changed / 61 locked paths; ordered 147 required / 103 critical gates,55 selected families and19 necessary owner filters are rechecked without broadening exclusions. Historical controls remain unchanged; complete actual-public-pin and both-mode supplemental suites are required with recorded wrapper bytes/pins/cleanup. Source/static controls are not real connected execution. Freeze and independently review the exact correction, privacy schemas and public-pin identities before any backend publication. Docker/psql, prior native-browser denial and frozen SDK limits remain; hosted CPU/memory/cold-start/OIDC/network/deadline/200-row capacity holds remain. No remote write, dispatch, production, live accounts/data or hosted trust change.
+
+
+## Failure-only install diagnostics (2026-11-11)
+
+LOCAL PREPARATION on published qualification head `978b178ac9f21aebf16bd4b3d1ecd2a13b01a966`, tree `7f06f1a864a989ed6a936a226c052b0291df1c00`. Final-head browser setup failed during Ubuntu mirror DNS/apt operations; no connected import/account-access or hosted-capacity success follows. Repeated failures across supported images and regions, including the sole authorized Treasury retry, do not establish an application defect or justify bypassing native dependencies. No further unchanged-source retry is included here.
+
+Preserve the original install commands, runner, permissions, triggers, tests, guards, cleanup, artifacts and failed outcome. Give the existing locked-tools step an ID and run a bounded passive diagnostic only when that exact step fails. A stdlib-only helper emits sanitized allowlisted job-log summaries: UTC and exact Git SHA; validated OS/image/locked Playwright versions; ordered known mirror hosts and numeric apt retry/timeout keys; resolver classification/count; bounded NSS/DNS status, answer counts and duration for three existing Ubuntu hosts plus the Microsoft package-host control; native Chromium dependency counts from the matching locked installed package. Missing tools/configuration or version mismatch report unavailable. No apt operation, utility installation, alternate resolver, network/mirror/DNS setting change, proxy/secret value, raw configuration/error/IP/search domain, student data or new artifact exposure is permitted. A diagnostic pass cannot turn the original install failure into a pass or prove upstream root cause.
+
+Exactly two helper/test paths join the explicit harness allowlist. Actual-main scope is recalculated as61 changed/63 locked paths, retaining147 required/103 critical gates,55 selected families and19 necessary owner filters. PublicB/F pins, production/runtime projection, source-equivalence algorithm and all original roster/import/account-access/privacy assertions remain byte-for-byte. Focused/full harness, historical and public-pin modes, root, ordinary TypeScript, secrets, authority/action, syntax/inventory and preservation checks require renewal, followed by independent privacy/guard review before any publication. No remote write, workflow dispatch, production, live accounts/data or trust expansion is included. Connected/import/account-access and hosted CPU/memory/cold-start/OIDC/network/deadline/200-row capacity remain unqualified.
+
+
+## Privacy-safe attempted checkpoints (2026-11-11)
+
+LOCAL OBSERVABILITY CORRECTION on public `ecbc05c375fe8c52af911f4142f229e6ca5db255`, tree `9a2d881a21c7f474c11231011fc4165401de7006`. Preserve that head and every prior failure. Run43059038023 attempt2 recovered installation and passed93 harness cases plus both93-case modes, then the real paired flow failed at coarse `late-response-and-logout` with cleanup true. Its aggregate records rollback/three races, fresh30 at4513ms and fresh40 at5454ms, replay30 at414ms, lost-response replay40 at243ms and seven security negatives. These partial results are not final lifecycle/privacy/account-access or capacity qualification. The coarse stage includes final privacy and initial student-entry predicates; no exact failure cause is established.
+
+Add only literal allowlisted attempted checkpoints in the existing private harness. Separate main-flow and held-response callback channels prevent callback overwrites. State stays in memory, and a sealed validated snapshot adds only the two fixed enum labels to the existing aggregate. Labels describe the last attempted operation, not a defect or a successful outcome. Never derive them from errors, stacks, DOM, requests, responses, SQL, names, IDs, codes, tokens or any runtime value. Unknown/private inputs fail without echo; valid late callbacks cannot mutate the sealed snapshot. Original operations, assertion expressions, ordering, timeouts, denial checks, privacy scans, cleanup, workflow commands, permissions, artifact names and public B/F pins are unchanged and covered by inverse/full-byte preservation. No speculative join-code or production behavior change.
+
+Only `checkpoints.mjs` and `checkpoints.test.mjs` join the explicit harness allowlist. Recalculated actual-main scope is63 changed/65 locked paths, with147 required/103 critical checks,55 selected families and19 necessary owner filters retained. Application inventory must be regenerated and compared, not assigned old counts. Hermetic checkpoint, ten student-entry negatives plus an empty-code control, full suite, historical/public-pin complete-mode matrices, root, ordinary TypeScript, secrets, authority/action and source preservation require renewal and independent exact-tree review before any publication. Local Docker/psql, prior browser denial and frozen SDK limits remain. No new retry, dispatch, live data/account, trust/network change or deployment. Hosted CPU/memory/cold-start/OIDC/network/deadline/200-row capacity and incomplete connected account-access/privacy/lifecycle remain release holds.
+
+## Local provisional PR952 union
+
+This local preparation combines published roster9de4de27 with exact reviewed, unmerged PR95206c55879/tree29b14497. Actual main remains143f54b3. It preserves six prerequisite source/test blobs, the generated inventory union (including app.js650 lines), all42 prerequisite workflow filter entries, all roster runtime/harness/checkpoints and current public B/F pin bytes. Fifteen workflow insertion conflicts and one roadmap insertion conflict are resolved additively; there is no runtime conflict.
+
+The source pins and scope authority intentionally remain historical until actual-main reconciliation. A current-runtime equivalence or actual-main scope refusal is expected and must not be bypassed. This candidate is unpublishable and unqualified. After the prerequisite merges and main qualifies, verify its actual commit/tree, merge actual ancestry, recalculate exact source/scope/filter evidence, freeze and review new B/F source identities, then prepare a qualification child using verified reachable public pins. Publish B only as the child's ancestor in a single backend ref wave. No source-only backend CI wave, old-job retry, gate weakening, live data/accounts or deployment. All complete connected/privacy/student-login and hosted capacity holds remain.
+
+## Actual account-controls main reconciliation
+
+LOCAL SOURCE ANCHOR, NOT QUALIFICATION. Actual PR952 merge is7d49ad1db7fb2a45c2413e99672c7c72cee9b4e7/tree29b14497c1e58f27aaf276f99c99d12c57bd3e9b, with ordered parents143f54b3 and06c55879. Merge its actual ancestry into preserved local unionb7f4abd7 without changing any runtime or harness byte. Its postmerge qualification is still pending. Earlier unmerged-account-controls wording is historical. Six prerequisite source/test blobs, all42 direct-consumer/authority filter entries, all19 roster entries and canonical inventory1358/64handlers/93oversized/52persistence remain exact. Only this owned scope, roster intake and authority note change from the provisional union. Actual-main scope is63 changes/65 locks, with ordered147/103 checks and55 families; precise filter necessity and full preservation must be checked on the frozen source.
+
+The source anchor retains historical B/F pins, so preflight must refuse it. Freeze this source first, then prepare a separate local qualification child whose provisional B pin points to this immutable source and whose seven frontend overlays remain exact public F b51da012 after whole-API inverse verification. Do not widen exclusions. Full local source/harness/mode/root/type/security checks and independent exact-source/pin review precede public-anchor preparation. Once actual-main postmerge qualification and explicit publication approval arrive, use bounded new-blob uploads plus existing public blob references, verify the public B source object, prepare/review the exact public-pin child, and publish only its final branch wave with B as sole parent and reachable ancestor. Do not assume unreachable object fetchability.
+
+All genuine Overview navigation, mounted receipt logout/confirmation/revocation, strict30/40 import timing, names-only1..200 contract,600000-iteration hashing, no-code replay, privacy cleanup and two representative student-access gates remain unchanged. No browser/SQL/installation probes, remote object/ref changes, old retries, dispatch, live data/accounts, trust expansion or production. Existing failures remain preserved; complete connected/account/privacy/lifecycle and hosted Edge/BFF/200-row capacity remain unqualified.
+
+## Verified public-source qualification child
+
+Verified public-source qualification child (2026-11-11): public B source 064365d41e5833701126e36ab2402955a577afd4/tree e3880052a617fa065f91794b1e7c4c2dc07e73b5 has direct ordered public parents 9de4de27f7245f7bfc3c92e6ce88d2a5cf927ce2 and actual main 7d49ad1db7fb2a45c2413e99672c7c72cee9b4e7. API full tree/modes and exact-SHA fetched Git identity match the independently reviewed source; no provisional local merge is published. Actual main is separately QUALIFIED_POSTMERGE with 25 successful fresh attempt-1 runs, 44 exact-main logs and 15 verified artifacts; that is prerequisite proof only. This local child changes only sources.json and three owned metadata records, with public B as its sole parent. Public frontend F b51da0126e30d178fea52e49afb7025c5806bb5c/tree 4f6a02c63b792cff7146fe2a19f7d87857406be7 remains the exact seven-file overlay under the full two-line shared-API inverse; backend-owned mode does not qualify F non-overlay inputs. Complete classified runtime inputs must equal B, including all prerequisite helpers, workflows and runtime-read records. Repeat pristine public-pin preflight/full 118 tests and both synthetic modes, preservation and independent exact-pin review before separately authorized publication. Source anchor creation moved no ref and triggered no source-only backend CI wave. The eventual single normal expected-head backend update must retain B as reachable ancestor and verify public fetch/pins again. Main clearance does not qualify this new roster head: fresh full CI, SQL/Edge, mounted-receipt logout, student-access/privacy completion and hosted BFF/200-row capacity remain unqualified. No branch update, merge, dispatch, retry, production, live data or account/trust change is included.
+
+Preserve all original guard classifications, commands, permissions, auth/DTO/privacy assertions, checkpoint enums, timing, atomicity and cleanup. Existing source B and every prior candidate stay frozen. Hosted/200-row capacity remains unqualified; no local browser/SQL/install or old-job retry.
+
+## Fixed service/phase privacy checkpoints
+
+Bounded service/phase privacy checkpoints (2026-11-11), local preparation on public5f69fbb36ab9de78293c8ab3d4384b441b096f57: actual paired run43091296647 completed both representative student-access flows and mounted-receipt staff logout, but failed the final service-log absence assertion with cleanup true. The precise service/value and cause remain unknown. Add only eight fixed before/after-student service labels to the existing checkpoint mechanism; preserve both cumulative log passes, every exact private value, full absence assertion, timing, commands, source pins, runtime projection, guards, cleanup and failed outcome. No value-class or raw log/error/match serialization, log-level/filter change, or production correction. No new harness path/classification or inventory source change; actual-main scope stays63 changed/65 locked paths,147 required/103 critical identities,55 families and42 prerequisite plus19 own filter entries. Exact inverse/source/privacy/preflight/full successor suites, historical/current-pin modes and independent review are required before separately authorized publication. Prior failed artifacts remain; new-head connected/privacy completion and hosted BFF/200-row capacity remain unqualified. No ref update, retry, dispatch, live data/accounts, runtime probe or production action.
+
+
+## Manual PR context correction (2026-11-13)
+
+`CI-MANUAL-PR-CONTEXT-001`, `IMPLEMENTED_NOT_MERGED`, local-only child of existing
+roster owner #938 at `9ea66b11159db13688012ed87e354c6767f71fec`; actual main is
+`7d49ad1db7fb2a45c2413e99672c7c72cee9b4e7`. Fresh manual source jobs selected old
+PR authorities (672/674/675/676/678/679/680/682) and obsolete base branches.
+This is a workflow-event context failure, not evidence of a feature regression.
+
+Eight workflows now require a PR number and complete expected head SHA on
+manual dispatch. A step-local read-only token reads only that PR's metadata.
+The resolver rejects missing/malformed input, closed/merged PRs, fork heads,
+wrong repositories, wrong branches, stale head/checkouts and invalid base refs.
+It fetches the verified immutable base SHA and confirms common ancestry before
+emitting validated outputs. Source lanes retain the complete authority verifier,
+all original tests and triple-dot semantics. Existing PR/push event fallbacks,
+concurrency, permissions outside the source jobs, runtime, database and browser
+jobs are preserved. The source jobs gain only `pull-requests: read`; no write
+permission or live action is added. Release Integrity is byte-for-byte unchanged.
+
+The binding proves an API snapshot at resolution time, not future immutability
+of the PR branch. The current exact head and base must be verified again before
+using results for merge qualification. Manual execution remains distinct from
+PR-event execution, and source failures cannot be ignored just because database
+or browser legs pass.
+
+Twelve exact input paths are added to #938's authority. All existing required and
+critical check identities remain unchanged. This updates workflow/script source
+inputs, so the prior frozen backend source B must not be reused as qualification
+for this candidate. No runtime-equivalence exclusion is widened and no pins are
+silently changed. Prepare a new reviewed source anchor, then a separate pin child
+and independent source/metadata review before any authorized publication.
+
+Local Node 22.23.1/npm 10.9.8 checks pass: the 29 binding tests, 16 retained
+cross-cutting authority tests, complete root `npm test`, backend TypeScript,
+roster source/action-pinning contracts and the eight-workflow static contract
+sweep. Two literal legacy workflow assertions were updated to require the new
+validated manual binding and immutable diff while retaining old PR/push
+fallbacks and authority arguments. Authority accepts 75 actual-main changed
+paths under 77 locks, retaining all 147 required and 103 critical checks.
+Independent workflow/source and metadata reviews found no blocking issue.
+
+Pinned Deno 2.9.3 full edge typecheck and backend smoke were attempted. Both
+stop when the frozen esm.sh Supabase dependency connection is refused; these
+aggregate checks are not passing or complete. The old-pin connected test
+correctly rejects the staged new inputs (130 passing, one source-identity
+failure). Do not weaken its projection or treat that diagnostic as runtime
+qualification. The local source anchor is
+`2b76a1a8c850f7408a8b08bf65167d93acdc213f`, tree
+`a4a84e68a09d45e7e7f7fd07b670216a2e0e9790`, directly parented by the public
+head above. Its distinct local child
+`cfeeda4130b92085a2c219564d60d03fcec1a633` changes only backend SHA/tree;
+frozen F, mode/API inverse, seven overlays and classification remain unchanged.
+Clean projection and all 131 current-pin tests pass. Exact source/pin review
+passes. Both historical modes also pass all 131 tests each after exact archive
+reconstruction and projection verification. The initial shared partial-clone
+fixture omitted historical objects and failed correctly; its evidence remains.
+These are local/synthetic results, not connected or hosted qualification.
+
+Existing connected privacy and hosted capacity limitations remain. No remote
+branch/object write, dispatch, retry, cancellation, live data or production
+operation occurred. A metadata-only completion record follows the pin child;
+source bytes and identities stay frozen. Next: preserve the complete recovery
+artifact, coordinate any separately authorized expected-head publication, and
+obtain new exact-head hosted qualification without replacing old queued runs.
+The frozen dependency/network blockage, prior privacy and capacity holds remain
+explicit; the item is not VERIFIED_COMPLETE.
+
+## Authorized manual-context publication tranche (2026-11-13)
+
+The owner authorized publishing this correction on existing PR #938 and allowing
+GitHub to replace matching stuck queued checks with fresh checks. This supersedes
+the local-only/old-queue preservation hold for this bounded publication only.
+There is no manual queue cancellation, production deployment or unrelated ref
+update in this tranche. Completed historical run results remain available.
+
+GitHub source object `5b3ecbe1aede4bf546f60ed76ebbbe858a8226c0` has reviewed tree
+`a4a84e68a09d45e7e7f7fd07b670216a2e0e9790` and sole parent
+`9ea66b11159db13688012ed87e354c6767f71fec`. The tree is byte-identical to the
+reviewed local source `2b76a1a8`; the GitHub API assigns the real commit identity.
+Its separate public pin child `c5290ed0798c1b97883c653202f519a412f8073e`, tree
+`ed33ed69622a6a9ad65815b2efa08cad549a4a01`, changes only backend SHA/tree.
+The frozen frontend F, strict API inverse, seven overlays, classifications and
+all runtime inputs stay unchanged. Local Git fetch and independent remote-object
+review verified both objects without moving a branch or starting a source-only
+CI wave. This successor changes only the three established metadata paths.
+
+Exact-public-pin projection and all 131 current harness tests pass; the 45
+binding/authority tests pass. Prior 37 source commands, root npm test, backend
+TypeScript and both reconstructed historical modes remain recorded, with no
+source bytes changed. Full Edge/smoke still require successful frozen dependency
+access. Existing connected privacy and hosted capacity limits remain explicit.
+Authority remains 75 changed paths under 77 locks, 147 required checks and 103
+critical identities. No protection, guard, check or production hold is weakened.
+
+Publication must use the verified current owner head as the expected ref value.
+After that single owner update, the next exact item is fresh CI on its actual
+head plus connected privacy/capacity qualification; old-head successes are not
+new-head proof. The PR stays draft and IMPLEMENTED_NOT_MERGED. No merge or
+production-readiness claim follows from these local/source-object checks.
+
+## Student login request-URL privacy correction (2026-11-13)
+
+Status: `IMPLEMENTED_NOT_MERGED`. Fresh connected run
+[43353595332](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/43353595332)
+on published head `f4d58a26f337e7e159633c0587ab6365eb41a7b4` passed both 30/40
+representative student journeys, seven security gates and four database gates.
+Its safe aggregate stopped at `privacy-after-student-kong` and cleanup passed.
+The earlier `student-access-40` stage label alone does not identify a login
+failure. Raw service logs and the matched forbidden value were deliberately not
+retained, so the exact raw log line is not claimed.
+
+Source review and a synthetic transport control using the deployed Supabase JS
+2.108.2 reproduce the old downstream GET placing the normalized STU identifier
+in the URL. The replacement uses a service-only POST RPC with server-derived
+game scope and the same active-player/exact-identifier predicates and five-field
+projection. Public, anon and authenticated execution is revoked; the function
+is stable, security invoker and has an empty search path. Null, malformed and
+multiple-row responses fail closed. No credentials are accepted by the RPC.
+The outer limiter, account/device/IP throttle order, credential verification,
+600,000-iteration parameters, legacy upgrade and session creation are preserved.
+
+Local evidence: six retained privacy-handler tests and sixteen transport/negative
+tests pass. The transport tests use the exact 2.108.2 npm distribution through a
+private local import map because this executor cannot fetch the frozen esm.sh
+SDK with Deno. That is supplementary evidence, not a passed frozen-CI claim.
+The new rollback-only SQL fixture passes on a minimal synthetic PostgreSQL
+schema via PGlite, including real-role ACL denials/service access, game isolation,
+active-state and exact-input negatives, exact projection and no writes. Full
+migration replay is still required on the disposable CI database. No Docker or
+psql is available locally. The production database has not been touched.
+
+The existing Player Roster Import workflow adds these tests without removing any
+previous step. The connected browser/privacy harness, all forbidden log values,
+all 147 required checks and 103 critical checks remain unchanged. Exact suffix
+registration preserves the fifteen prior migrations. Fresh corrected-source
+pins and a green connected gate are required before merge; no hosted-capacity,
+maximum-capacity or release qualification is claimed.
+
+Final local preparation also passed the full root `npm test`, backend TypeScript
+check, all 47 registry/authority/roster contracts and the 464-migration audit.
+The generated inventory retains all existing counts, including 93 oversized
+source files, 70 cross-domain deep imports and 52 persistence sites outside
+infrastructure. The SDK-only test lives with the roster qualification scripts,
+not application runtime source. Full Edge typecheck and backend smoke reach the
+existing frozen esm.sh fetch failure and are not counted as complete.

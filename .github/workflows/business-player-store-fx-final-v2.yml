@@ -3,6 +3,8 @@ name: business-player-store-fx-final-v2
 on:
   pull_request:
     paths:
+      - "scripts/manual-pr-context.mjs"
+      - "scripts/manual-pr-context.test.mjs"
       - .github/workflows/business-player-store-fx-final-v2.yml
       - backend/package.json
       - backend/src/domains/store/**
@@ -91,6 +93,15 @@ on:
       - scripts/player-cross-cutting-authority.test.mjs
       - scripts/verify-player-cross-cutting-authority.mjs
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open PR number for this branch
+        required: true
+        type: string
+      expected_head_sha:
+        description: Exact 40-character current PR head SHA
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -101,6 +112,9 @@ concurrency:
 
 jobs:
   source-contract:
+    permissions:
+      contents: read
+      pull-requests: read
     name: business-player-store-fx-final-v2-source
     runs-on: ubuntu-24.04
     timeout-minutes: 75
@@ -140,15 +154,26 @@ jobs:
           npm ci --ignore-scripts
           npm --prefix backend ci --ignore-scripts
 
+      - name: Validate manual PR identity
+        id: manual_pr
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MANUAL_PR_NUMBER: ${{ inputs.pr_number }}
+          MANUAL_HEAD_SHA: ${{ inputs.expected_head_sha }}
+        run: node scripts/manual-pr-context.mjs
+
       - name: Verify PR authority, exact scope, and D source contract
         shell: bash
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number || '679' }}
-          BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/business-multicurrency-treasury-v1' }}
+          PR_NUMBER: ${{ github.event.pull_request.number || steps.manual_pr.outputs.pr_number || '679' }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || steps.manual_pr.outputs.base_ref || 'feat/business-multicurrency-treasury-v1' }}
+          MANUAL_BASE_SHA: ${{ steps.manual_pr.outputs.base_sha }}
         run: |
           set -euo pipefail
           git fetch --no-tags origin "$BASE_REF"
-          git diff --name-only "origin/${BASE_REF}...HEAD" | sort -u > /tmp/business-player-store-fx-final-changed-files.txt
+          git diff --name-only "${MANUAL_BASE_SHA:-origin/${BASE_REF}}...HEAD" | sort -u > /tmp/business-player-store-fx-final-changed-files.txt
+          node --test scripts/manual-pr-context.test.mjs
           node --test scripts/player-cross-cutting-authority.test.mjs
           node scripts/verify-player-cross-cutting-authority.mjs \
             --changed-files /tmp/business-player-store-fx-final-changed-files.txt \
@@ -158,7 +183,7 @@ jobs:
           node --test scripts/business-player-store-fx-final-database-decimal.test.mjs
           node --test scripts/player-local-currency-authority-contract.test.mjs
           node scripts/validate-supabase-migrations.mjs
-          git diff --check "origin/${BASE_REF}...HEAD"
+          git diff --check "${MANUAL_BASE_SHA:-origin/${BASE_REF}}...HEAD"
 
       - name: Verify funded Store handler, repositories, and both Edge roots
         shell: bash

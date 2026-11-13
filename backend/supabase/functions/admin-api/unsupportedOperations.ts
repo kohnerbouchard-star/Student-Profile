@@ -80,15 +80,6 @@ export function handleUnsupportedOperation(input: {
     );
   }
   if (
-    /^\/games\/[^/]+\/players\/imports\/csv$/.test(path) && method === "POST"
-  ) {
-    return disabled(
-      "roster_csv_import_not_configured",
-      "CSV roster import is disabled until the batch player-provisioning endpoint can generate secure access codes atomically.",
-      "roster_csv_import",
-    );
-  }
-  if (
     /^\/integrations\/google-classroom\/connect$/.test(path) &&
     method === "POST"
   ) {
