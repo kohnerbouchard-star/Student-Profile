@@ -346,6 +346,9 @@ export function createPlayerTerminalLifecycle({ api, store, config, freshness, m
     refreshResources,
     executeEndpoint,
     get destroyed() { return destroyed; },
+    prepareForLogout() {
+      if (freshness) { terminalLoadVersion++; retireEffects(); }
+    },
     destroy() {
       retireEffects();
       destroyed = true;

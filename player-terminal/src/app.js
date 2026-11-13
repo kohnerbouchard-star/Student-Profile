@@ -501,7 +501,7 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
       }
       if (action === "retry-route") await loadRouteData(store.getState().route, { force: true });
       if (action === "logout") {
-        if (freshness) { terminalLoadVersion++; retireEffects(); }
+        lifecycle.prepareForLogout();
         const detail = {
           reason: "player_requested",
           terminal: "player",

@@ -267,3 +267,59 @@ for (const retirement of ["destroy", "session"]) for (const failure of [false, t
     assert.deepEqual(f.invalid, []);
   });
 }
+
+function clickLogout(f) {
+  const button = new Element(); button.dataset.playerAction = "logout";
+  button.closest = (selector) => selector === "[data-player-action]" || selector === "button, a, summary, input, select, textarea" ? button : null;
+  const event = new Event("click", { cancelable: true });
+  Object.defineProperty(event, "target", { value: button }); f.mount.dispatchEvent(event);
+}
+
+for (const legacy of [false, true]) {
+  test(`logout announces callback before host event and preserves detail (${legacy ? "null" : "default"} freshness)`, async (t) => {
+    const order = [], f = fixture(t, { legacy, config: {
+      logoutRequestedEvent: "fixture:logout",
+      onLogoutRequested: (detail) => order.push({ source: "callback", detail }),
+    } });
+    await f.ready();
+    f.events.addEventListener("fixture:logout", (event) => order.push({ source: "event", detail: event.detail }));
+    const state = f.terminal.getState(), ticket = f.terminal.freshness?.capture();
+    clickLogout(f); await tick();
+    const detail = { reason: "player_requested", terminal: "player", gameSessionId: "fixture-game", playerSessionId: undefined };
+    assert.deepEqual(order, [{ source: "callback", detail }, { source: "event", detail }]);
+    assert.strictEqual(order[0].detail, order[1].detail, "Callback and host event receive the same detail object.");
+    assert.strictEqual(f.terminal.getState(), state, "Logout requests host action rather than destroying or replacing the terminal state.");
+    if (!legacy) { assert.equal(f.terminal.freshness.isCurrent(ticket), false); assert.equal(f.frames.size, 0); }
+    await f.terminal.connectSession(handoff()); await f.ready();
+    assert.equal(f.config.gameSessionId, "next-game", "Logout retirement must not mark the terminal destroyed.");
+  });
+}
+
+test("logout retires pending read and mutation controls before notifying the host", async (t) => {
+  let callbackState;
+  const f = fixture(t, { config: { logoutRequestedEvent: "fixture:logout", onLogoutRequested: () => {
+    callbackState = { disabled: click.button.disabled, nodes: [...click.button.childNodes], frames: f.frames.size };
+  } } });
+  await f.ready();
+  const write = f.hold("marketWatchlist"), click = clickWatchlist(f); await write.started.promise;
+  const read = f.hold("inventory"), pending = f.terminal.refreshResources(["inventory"]).then(() => null, (error) => error);
+  await read.started.promise;
+  clickLogout(f); await tick(); assertRestored(click);
+  assert.deepEqual(callbackState, { disabled: false, nodes: [click.original], frames: 0 });
+  const state = f.terminal.getState(), markup = f.mount.innerHTML, count = f.calls.length;
+  write.resolve(); read.resolve(); const error = await pending; await tick();
+  assert.equal(error.code, "REQUEST_ABORTED"); assert.strictEqual(f.terminal.getState(), state);
+  assert.equal(f.mount.innerHTML, markup); assert.equal(f.calls.length, count); assert.deepEqual(f.mount.childNodes, []); assert.deepEqual(f.invalid, []);
+  await f.terminal.connectSession(handoff()); await f.ready();
+  assert.equal(f.terminal.getState().status, "ready");
+});
+
+test("logout restores completed mutation controls whose cleanup effect is still deferred", async (t) => {
+  const f = fixture(t, { config: { logoutRequestedEvent: "fixture:logout" } }); await f.ready();
+  const write = f.hold("marketWatchlist"), click = clickWatchlist(f); await write.started.promise;
+  write.resolve(); await until(() => f.mount.childNodes.length > 0);
+  assert.equal(click.button.childNodes.at(-1).textContent, "Completed");
+  clickLogout(f); await tick(); assertRestored(click); assert.equal(f.frames.size, 0);
+  await f.terminal.connectSession(handoff()); await f.ready();
+  assert.equal(f.terminal.getState().status, "ready");
+});
