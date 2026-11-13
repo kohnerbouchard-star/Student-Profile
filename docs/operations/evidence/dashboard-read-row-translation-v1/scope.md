@@ -24,3 +24,9 @@
 - Local full `typecheck:all` and backend smoke stop at the unchanged frozen SDK retrieval `https://esm.sh/@supabase/supabase-js@2.108.2/denonext/supabase-js.mjs` with connection refused. Neither aggregate is claimed as passed; fresh exact-head hosted Backend gates remain required.
 - Independent source review finds no actionable findings and verifies all 40 original declarations, exact public exports, equivalent snapshot-derived types and public-read coverage. Full class, dependency interface and error helper are byte-identical; moved declarations retain identical tokens except internal exports and formatting. Independent expanded suite and core TypeScript pass.
 - Independent recovery review, actual-number draft authority, fresh exact-head hosted qualification and actual postmerge verification remain pending. No staging/runtime or production completion is claimed. Production remains held.
+
+## Draft publication and actual-number qualification
+
+Draft [PR #962](https://github.com/kohnerbouchard-star/Student-Profile/pull/962) publishes source `cb86ca3f9158b8284aadd50a6af6ac023cbc3f74` with the independently reviewed/restored tree `81741fa11d88851d818b11fb9fc77fa958b92949`. Recovery validates every source hash and named ref, three independent restoration routes, 12/62 tests and deterministic inventory.
+
+The actual-number authority preserves all ordered 147 required and 103 critical identities and 55 workflow families from current main. It locks 36 changed paths and two unchanged read-only verifier paths. 24 additive literal own-authority path selectors schedule otherwise-unselected families; every job, command, assertion, permission, checkout, non-PR trigger and production guard remains unchanged. The final qualification amendment requires its own local checks, independent metadata review and fresh exact-head hosted results. Source-stage results do not qualify the amended head.
