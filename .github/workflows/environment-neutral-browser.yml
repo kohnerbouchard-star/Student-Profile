@@ -3,6 +3,7 @@ name: Environment Neutral Browser
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-961.json"
       - "docs/operations/contracts/player-cross-cutting/pr-958.json"
       - "docs/operations/contracts/player-cross-cutting/pr-957.json"
       - "docs/operations/contracts/player-cross-cutting/pr-951.json"

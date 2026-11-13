@@ -2,6 +2,9 @@ import { createSupabasePlayerWorldRuntimeRepository } from "./supabasePlayerWorl
 import { createPlayerWorldRuntimeService } from "../services/playerWorldRuntimeService.ts";
 import { handlePlayerWorldRuntimeRequest } from "../api/playerWorldRuntimeHttpHandler.ts";
 import { resolveActivePlayerSession, resolvePlayerRequestScope, type PlayerRequestScope } from "../../players/index.ts";
+import "./supabasePlayerWorldRuntimeRepository.read.test.ts";
+import "./supabasePlayerWorldRuntimeRepository.campaign.test.ts";
+import "./supabasePlayerWorldRuntimeRepository.write.test.ts";
 
 declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
 type Row = Record<string, any>;

@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1374,
+    "sourceFiles": 1381,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 84,
+    "oversizedSourceFiles": 83,
     "capabilityStrings": 140
   },
   "domains": [
@@ -396,7 +396,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 19,
+      "sourceFiles": 26,
       "publicBoundaryFiles": []
     }
   ],
@@ -2624,10 +2624,6 @@
       {
         "file": "backend/supabase/functions/web-session-api/index.ts",
         "lines": 1054
-      },
-      {
-        "file": "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
-        "lines": 997
       },
       {
         "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
