@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1358,
+    "sourceFiles": 1363,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 88,
+    "oversizedSourceFiles": 87,
     "capabilityStrings": 140
   },
   "domains": [
@@ -2453,13 +2453,13 @@
         ]
       },
       {
-        "file": "player-terminal/src/api/read-model.js",
+        "file": "player-terminal/src/api/resource-status.js",
         "markers": [
           "fallback"
         ]
       },
       {
-        "file": "player-terminal/src/api/resource-status.js",
+        "file": "player-terminal/src/api/store-inventory-read-model.js",
         "markers": [
           "fallback"
         ]
@@ -2644,10 +2644,6 @@
       {
         "file": "admin/v2/src/api/admin-api-client.js",
         "lines": 937
-      },
-      {
-        "file": "player-terminal/src/api/read-model.js",
-        "lines": 933
       },
       {
         "file": "backend/src/domains/contracts/api/staffContractReviewHttpHandler.test.ts",

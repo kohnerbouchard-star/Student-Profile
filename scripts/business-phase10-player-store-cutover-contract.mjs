@@ -44,6 +44,7 @@ const files = {
   endpoints: "player-terminal/src/api/endpoints.js",
   backendRoutes: "player-terminal/src/api/backend-routes-core.js",
   readModel: "player-terminal/src/api/read-model.js",
+  storeInventoryReadModel: "player-terminal/src/api/store-inventory-read-model.js",
   responseNormalizer: "player-terminal/src/api/response-normalizer.js",
   responseStoreValidator: "player-terminal/src/api/response-store-validator.js",
   resourcePlan: "player-terminal/src/api/resource-plan.js",
@@ -78,6 +79,7 @@ const source = Object.fromEntries(
   }),
 );
 
+source.readModel = [source.readModel, source.storeInventoryReadModel].join("\n");
 source.publicRepository = [
   source.publicRepository,
   source.publicRepositoryReadStore,
