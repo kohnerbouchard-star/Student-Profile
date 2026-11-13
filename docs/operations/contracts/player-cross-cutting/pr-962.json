@@ -31,6 +31,7 @@
     ".github/workflows/environment-neutral-browser.yml",
     ".github/workflows/loans-lifecycle-read-v1.yml",
     ".github/workflows/player-button-click-safety.yml",
+    ".github/workflows/player-local-currency-authority.yml",
     ".github/workflows/story-replay-safety.yml",
     ".github/workflows/world-runtime.yml",
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
@@ -46,6 +47,7 @@
     "docs/operations/evidence/dashboard-read-row-translation-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/player-local-currency-authority-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
@@ -71,6 +73,7 @@
     ".github/workflows/environment-neutral-browser.yml",
     ".github/workflows/loans-lifecycle-read-v1.yml",
     ".github/workflows/player-button-click-safety.yml",
+    ".github/workflows/player-local-currency-authority.yml",
     ".github/workflows/story-replay-safety.yml",
     ".github/workflows/world-runtime.yml",
     "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
@@ -84,7 +87,8 @@
     "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
     "docs/operations/contracts/player-cross-cutting/pr-962.json",
     "docs/operations/evidence/dashboard-read-row-translation-v1/scope.md",
-    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md"
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/player-local-currency-authority-contract.test.mjs"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -233,7 +237,9 @@
     "Admin V2 Contracts",
     "Contracts source-owned route",
     "Admin API Check",
-    "admin-api-check"
+    "admin-api-check",
+    "Player Local Currency Authority",
+    "Checking, Savings, and local-currency contract"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -338,7 +344,8 @@
     "focused",
     "Messages moderation contract and browser smoke",
     "Contracts source-owned route",
-    "admin-api-check"
+    "admin-api-check",
+    "Checking, Savings, and local-currency contract"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
