@@ -49,3 +49,7 @@ Pinned local qualification passes all 15 release-platform/neutrality/determinism
 This correction stays local until PR966's existing promotion check completes. It does not authorize deployment, release dispatch, cancellation or bypass of any required check. After permitted publication, fresh exact-head hosted qualification remains required.
 
 Primary references: [GitHub concurrency behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency) and [GitHub expression operators/format](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions).
+
+## Final registration audit
+
+The initial actual-number registration copied PR964 qualification families, but that refactor also naturally triggered Workforce Payroll through its architecture inventory change. This source-only workflow correction does not change inventory, so final identity auditing found the retained Workforce Payroll workflow/job missing. One additive PR967 authority-path trigger now schedules that existing workflow; its file is added to the exact scope locks. All 153 required/106 critical identities, existing jobs and conditions remain unchanged. No missing check is waived.
