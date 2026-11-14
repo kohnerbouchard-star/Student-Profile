@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1392,
+    "sourceFiles": 1395,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 82,
+    "oversizedSourceFiles": 81,
     "capabilityStrings": 140
   },
   "domains": [
@@ -145,7 +145,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 48,
+      "sourceFiles": 51,
       "publicBoundaryFiles": [
         "backend/src/domains/contracts/index.ts"
       ]
@@ -2708,10 +2708,6 @@
         "lines": 730
       },
       {
-        "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.ts",
-        "lines": 727
-      },
-      {
         "file": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts",
         "lines": 716
       },
@@ -3249,7 +3245,8 @@
       {
         "capability": "contract.title",
         "locations": [
-          "backend/src/domains/contracts/contracts/contractContracts.ts"
+          "backend/src/domains/contracts/contracts/contractContracts.ts",
+          "backend/src/domains/contracts/infrastructure/contractRepositoryRowCharacterization.test.ts"
         ]
       },
       {

@@ -85,6 +85,13 @@ jobs:
         id: tooling
         run: npm ci
 
+      - name: Verify Contract repository row compatibility
+        run: >-
+          deno test --config supabase/functions/deno.json
+          --lock=supabase/functions/deno.lock --frozen --deny-net
+          src/domains/contracts/infrastructure/supabaseContractRepository.test.ts
+          src/domains/contracts/infrastructure/contractRepositoryRowCharacterization.test.ts
+
       - name: Run backend typecheck
         shell: bash
         run: |
