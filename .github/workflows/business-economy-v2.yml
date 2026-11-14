@@ -16,6 +16,8 @@ on:
       - "backend/src/domains/business-banking/**"
       - "backend/src/domains/players/contracts/playerCapabilityManifestContracts*.ts"
       - "backend/src/domains/store/infrastructure/supabaseStorePurchaseRepository.ts"
+      - "backend/src/domains/store/infrastructure/storePurchaseRowMapping.ts"
+      - "backend/src/domains/store/infrastructure/supabaseStorePurchaseRepository.test.ts"
       - "backend/src/security/playerRateLimitDispatch.ts"
       - "backend/supabase/functions/_shared/playerBusinessDispatch.ts"
       - "backend/supabase/functions/player-api/runtime.ts"
@@ -118,3 +120,9 @@ jobs:
             src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository.test.ts \
             src/domains/players/contracts/playerCapabilityManifestContracts.test.ts \
             src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts
+      - name: Verify Store purchase row projections
+        working-directory: backend
+        run: >-
+          deno test --config supabase/functions/deno.json
+          --lock=supabase/functions/deno.lock --frozen
+          src/domains/store/infrastructure/supabaseStorePurchaseRepository.test.ts
