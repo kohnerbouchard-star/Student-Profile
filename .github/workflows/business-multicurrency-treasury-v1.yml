@@ -3,6 +3,7 @@ name: business-multicurrency-treasury-v1
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-964.json"
       - .github/workflows/business-multicurrency-treasury-v1.yml
       - backend/src/domains/banking-fx/**
       - backend/src/domains/business-banking/**

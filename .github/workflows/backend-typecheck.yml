@@ -4,6 +4,7 @@ on:
   # Inventory lifecycle qualification retains the required full backend smoke gate.
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-964.json"
       - "docs/operations/contracts/player-cross-cutting/pr-956.json"
       - "docs/operations/contracts/player-cross-cutting/pr-951.json"
       - "docs/operations/contracts/player-cross-cutting/pr-950.json"
@@ -84,6 +85,13 @@ jobs:
       - name: Install backend dependencies
         id: tooling
         run: npm ci
+
+      - name: Verify Contract repository row compatibility
+        run: >-
+          deno test --config supabase/functions/deno.json
+          --lock=supabase/functions/deno.lock --frozen --deny-net
+          src/domains/contracts/infrastructure/supabaseContractRepository.test.ts
+          src/domains/contracts/infrastructure/contractRepositoryRowCharacterization.test.ts
 
       - name: Run backend typecheck
         shell: bash

@@ -3,6 +3,7 @@ name: business-player-store-fx-final-v2
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-964.json"
       - .github/workflows/business-player-store-fx-final-v2.yml
       - backend/package.json
       - backend/src/domains/store/**

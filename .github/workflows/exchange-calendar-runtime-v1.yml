@@ -3,6 +3,7 @@ name: Exchange Calendar Runtime
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-964.json"
       - "docs/operations/contracts/player-cross-cutting/pr-960.json"
       - "docs/operations/contracts/player-cross-cutting/pr-959.json"
       - "docs/operations/contracts/player-cross-cutting/pr-956.json"

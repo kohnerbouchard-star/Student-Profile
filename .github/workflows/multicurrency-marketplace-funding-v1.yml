@@ -3,6 +3,7 @@ name: multicurrency-marketplace-funding-v1
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-964.json"
       - "docs/operations/contracts/player-cross-cutting/pr-951.json"
       - "docs/operations/contracts/player-cross-cutting/pr-950.json"
       - "docs/operations/contracts/player-cross-cutting/pr-949.json"
