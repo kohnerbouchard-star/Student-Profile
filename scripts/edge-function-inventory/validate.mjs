@@ -79,7 +79,7 @@ function sourceOnlyEntries(manifest) {
   return sourceOnly;
 }
 
-function validateManifest(manifest) {
+export function validateManifest(manifest) {
   assert(manifest?.schemaVersion === 1, "Unsupported Edge Function manifest version.");
   assert(
     manifest?.manifestId === "econovaria.edge-functions.v2",

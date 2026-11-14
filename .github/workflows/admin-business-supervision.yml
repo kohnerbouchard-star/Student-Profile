@@ -3,7 +3,11 @@ on:
   pull_request:
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-968.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-965.json"
       - "docs/operations/contracts/player-cross-cutting/pr-964.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-967.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-966.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-970.json"
       - "docs/operations/contracts/player-cross-cutting/pr-916.json"
       - ".github/workflows/admin-business-supervision.yml"
       - "admin/v2/src/routes/business/**"

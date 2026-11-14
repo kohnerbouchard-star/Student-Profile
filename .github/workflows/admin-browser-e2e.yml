@@ -6,7 +6,11 @@ on:
     branches: [main, feat/player-business-workspace-v2, feat/business-financial-reporting-v2, feat/business-common-equity-v2, feat/business-ipo-issuance-v2]
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-968.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-965.json"
       - "docs/operations/contracts/player-cross-cutting/pr-964.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-967.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-966.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-970.json"
       - "docs/operations/contracts/player-cross-cutting/pr-963.json"
       - "docs/operations/contracts/player-cross-cutting/pr-962.json"
       - "docs/operations/contracts/player-cross-cutting/pr-961.json"
