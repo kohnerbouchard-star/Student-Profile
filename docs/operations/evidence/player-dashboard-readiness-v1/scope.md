@@ -92,3 +92,13 @@ No staging/live runtime evidence is claimed. Next: independent source review,
 recovery verification, current-main union with the navigation correction,
 actual-number authority registration, fresh exact-head hosted gates and normal
 coordinator-controlled merge. This evidence does not mark beta readiness complete.
+
+## Combined frontend PR970 qualification
+
+Both independently reviewed source tranches are combined in [PR970](https://github.com/kohnerbouchard-star/Student-Profile/pull/970). Published source `23cd327416949eff01a8f0707a7430dfa0e6225f` has tree `0d23c80a74e7548436626b4031984a38781527d1`, exactly matching local source `29af110b2c5cb041006a147a47671d7bb73e912c` on merged main `1bfaf07dd9cc40a4152db2df0cf3139f5a22bed7`. The complete session #966 and release #967 source, tests, authority, workflow guards and earlier registrations are preserved. No live-state or production action occurred.
+
+Independent integration review verifies all 61 incoming release files, the unchanged 20-file frontend delta, and independently regenerated inventory. Combined release/session/navigation/Dashboard regressions pass 129/129. Fresh full pinned Player/root suites, core TypeScript, architecture and secrets checks pass. Current locked Playwright 1.59.1 is installed; official Chromium download was truncated, so no local browser assertion is claimed. Frozen SDK retrieval still prevents full local Edge/backend completion.
+
+Actual-number authority retains the ordered 149 required/104 critical common Player identities and both read-only verifier locks from #966. Fifty existing qualification workflows receive only one additive PR970 path registration each, including explicit retained Workforce scheduling. All existing jobs, assertions, action pins, permissions, manual release locks and deployment guards remain unchanged. Full exact-head hosted qualification remains mandatory; initial draft-head checks are not final evidence.
+
+Fresh path inventories for ten other active PRs show no frontend source/test ownership overlap. Only the deterministic architecture inventory is shared and will be regenerated after predecessor merges. Marketplace #965 has first merge priority; reconcile actual main and requalify before this PR's normal serial merge. These records remain IMPLEMENTED_NOT_MERGED and do not certify staging, production or beta readiness.
