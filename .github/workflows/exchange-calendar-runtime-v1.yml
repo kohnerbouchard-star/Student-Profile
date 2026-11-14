@@ -5,6 +5,7 @@ on:
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-964.json"
       - "docs/operations/contracts/player-cross-cutting/pr-967.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-966.json"
       - "docs/operations/contracts/player-cross-cutting/pr-960.json"
       - "docs/operations/contracts/player-cross-cutting/pr-959.json"
       - "docs/operations/contracts/player-cross-cutting/pr-956.json"

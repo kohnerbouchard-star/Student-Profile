@@ -53,3 +53,7 @@ Primary references: [GitHub concurrency behavior](https://docs.github.com/en/act
 ## Final registration audit
 
 The initial actual-number registration copied PR964 qualification families, but that refactor also naturally triggered Workforce Payroll through its architecture inventory change. This source-only workflow correction does not change inventory, so final identity auditing found the retained Workforce Payroll workflow/job missing. One additive PR967 authority-path trigger now schedules that existing workflow; its file is added to the exact scope locks. All 153 required/106 critical identities, existing jobs and conditions remain unchanged. No missing check is waived.
+
+## Integration onto merged PR966
+
+PR966 merged as `dc5cdd52d5332c83bd39a35b048fce9428c48250`, with the exact qualified tree `5dad0605cd4417a67d53dd6dd720eaa3c7cfb881`. Normal main integration preserves its complete session runtime, production-handler regressions, root registration, inventory, authority and evidence. The only conflicts were 49 adjacent PR966/PR967 path registrations, resolved by retaining both exact lines. The earlier local concurrency hold is historical: PR966 promotion contract `43604958652` succeeded before reviewed concurrency tree `ad9290d90a5f79c33a86895b3639793dfd930081` was published at `a08cd02fd236e91b8c66085d4eac911509a0aa80`. Final qualification includes the missing Workforce registration and will use the new exact integrated head. All deployment holds remain in effect.
