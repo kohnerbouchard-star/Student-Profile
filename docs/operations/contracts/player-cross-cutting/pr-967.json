@@ -67,6 +67,7 @@
     "scripts/edge-function-inventory/deployment-plan.test.mjs",
     "scripts/edge-function-inventory/validate.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/release-platform.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
@@ -128,6 +129,7 @@
     "scripts/edge-function-inventory/deployment-plan.test.mjs",
     "scripts/edge-function-inventory/validate.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/release-platform.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredChecks": [

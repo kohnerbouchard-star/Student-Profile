@@ -52,7 +52,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: release-promote-${{ inputs.target_environment || 'contract' }}
+  group: release-promote-${{ github.event_name == 'pull_request' && format('contract-pr-{0}', github.event.pull_request.number) || inputs.target_environment || 'contract' }}
   cancel-in-progress: false
 
 jobs:

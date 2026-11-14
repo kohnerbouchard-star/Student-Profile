@@ -35,3 +35,17 @@ Publish a draft, record its exact head and actual PR number, qualify applicable 
 Draft [PR #967](https://github.com/kohnerbouchard-star/Student-Profile/pull/967) published reviewed source `341fca499f4d0eb83b2c7e6c959339debb3a5f16`, tree `8ebacf4d58d1891c91c4a8e84e0e09abae7790c6`, identical to local source `9eec46c653e43a27ad5bbbb26a2e2022b754aabf`. GitHub connector publication was used because the restored shell lacks push credentials.
 
 The mandatory roadmap update triggers the existing Admin Business authority gate. The actual-numbered PR967 authority therefore preserves the complete ordered PR964 prefix of 149 required and 104 critical identities, adds the Edge inventory and production Git release static contracts for 153 required/106 critical identities, and retains the read-only verifier/test locks. Forty-nine existing qualification workflows receive only a PR967 trigger-path registration. No assertion, job, deployment guard or existing trigger is removed. Final exact-head hosted qualification is required; initial-head results are not final evidence.
+
+## Bounded PR contract concurrency correction
+
+The exact-head PR967 promotion-contract run `43605373700` was cancelled while pending, before any jobs existed. GitHub's annotation says a higher-priority waiting request for `release-promote-contract` exists. Every PR previously shared that group; `cancel-in-progress: false` protects a running workflow but does not preserve all older pending workflows.
+
+A one-line group expression now selects `release-promote-contract-pr-<number>` only for `pull_request` events. Actual manual promotions keep the exact existing `release-promote-staging` and `release-promote-production` groups. `cancel-in-progress: false`, job conditions, protected environments, immutable-artifact/source checks, approval/staging/rollback validation, permissions and action pins remain unchanged. Different PRs no longer replace one another's pending contract runs; repeated updates to the same PR retain the existing concurrency policy.
+
+The existing registered `scripts/release-platform.test.mjs` now pins the complete concurrency expression, non-cancellation policy and independent PR/manual-promotion job boundaries. The new concurrency regression fails on the original workflow; its companion authorization regression passes there and on the corrected workflow. No new package or workflow family is needed. The actual PR authority adds only this test path and preserves all 153 required/106 critical identities.
+
+Pinned local qualification passes all 15 release-platform/neutrality/determinism cases, all 16 authority regressions, the retained Vercel release guard contract, full root tests, secrets and whitespace checks. Independent read-only review found no actionable issue and reran all 9 release-platform cases. An exact before/after comparison confirms the workflow differs by only the concurrency group line.
+
+This correction stays local until PR966's existing promotion check completes. It does not authorize deployment, release dispatch, cancellation or bypass of any required check. After permitted publication, fresh exact-head hosted qualification remains required.
+
+Primary references: [GitHub concurrency behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency) and [GitHub expression operators/format](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions).
