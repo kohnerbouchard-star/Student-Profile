@@ -6,6 +6,7 @@ on:
       - "docs/operations/contracts/player-cross-cutting/pr-964.json"
       - "docs/operations/contracts/player-cross-cutting/pr-967.json"
       - "docs/operations/contracts/player-cross-cutting/pr-966.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-970.json"
       - "docs/operations/contracts/player-cross-cutting/pr-962.json"
       - "docs/operations/contracts/player-cross-cutting/pr-961.json"
       - "docs/operations/contracts/player-cross-cutting/pr-960.json"
