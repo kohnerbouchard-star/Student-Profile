@@ -2657,7 +2657,7 @@
       },
       {
         "file": "backend/supabase/functions/player-web-session-api/runtime.ts",
-        "lines": 867
+        "lines": 883
       },
       {
         "file": "backend/src/domains/storylines/services/storylineRunner.test.ts",

@@ -17,6 +17,7 @@ on:
       - "scripts/security-audit-remediation-contract.test.mjs"
       - "scripts/player-api-read-resilience.test.mjs"
       - "scripts/player-bff-retry-classification.test.mjs"
+      - "scripts/player-session-status-runtime.test.mjs"
       - "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs"
       - "scripts/player-production-secret-provision-contract.test.mjs"
       - "scripts/player-cross-cutting-authority.test.mjs"
@@ -48,6 +49,7 @@ on:
       - "scripts/security-audit-remediation-contract.test.mjs"
       - "scripts/player-api-read-resilience.test.mjs"
       - "scripts/player-bff-retry-classification.test.mjs"
+      - "scripts/player-session-status-runtime.test.mjs"
       - "scripts/player-edge-trusted-ip-entrypoint-contract.test.mjs"
       - "scripts/player-production-secret-provision-contract.test.mjs"
       - "scripts/player-cross-cutting-authority.test.mjs"
@@ -127,6 +129,9 @@ jobs:
             scripts/player-api-read-resilience.test.mjs \
             scripts/player-bff-retry-classification.test.mjs \
             scripts/local-edge-runtime-isolation.test.mjs
+
+      - name: Validate Player status session preservation
+        run: node --experimental-transform-types --test scripts/player-session-status-runtime.test.mjs
 
       - name: Install package dependencies
         working-directory: player-terminal

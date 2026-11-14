@@ -263,11 +263,10 @@ async function handleStatus(
   }
   const clientIp = trustedClientIp(request);
   if (!clientIp) {
-    return clearPlayerSessionResponse(
-      request,
-      401,
+    return json(request, 400, errorBody(
       "trusted_client_ip_unavailable",
-    );
+      "Trusted client network metadata is unavailable.",
+    ));
   }
   const bootstrap = await loadPlayerBootstrap(
     supabaseUrl,
@@ -277,7 +276,16 @@ async function handleStatus(
     clientIp,
   );
   if (!bootstrap.ok) {
-    return clearPlayerSessionResponse(request, 401, "player_session_invalid");
+    if (bootstrap.status === 401) {
+      return clearPlayerSessionResponse(request, 401, "player_session_invalid");
+    }
+    const response = json(request, bootstrap.status, errorBody(
+      "player_session_bootstrap_failed",
+      "The Player session could not be loaded.",
+      bootstrap.status === 429 || bootstrap.status >= 500,
+    ));
+    if (bootstrap.retryAfter) response.headers.set("Retry-After", bootstrap.retryAfter);
+    return response;
   }
   return playerSessionJson(
     request,
@@ -425,7 +433,7 @@ async function loadPlayerBootstrap(
   clientIp: string,
 ): Promise<
   | { readonly ok: true; readonly body: RequiredPlayerBootstrapBody }
-  | { readonly ok: false }
+  | { readonly ok: false; readonly status: number; readonly retryAfter?: string | null }
 > {
   const request = new Request(
     `${supabaseUrl}/functions/v1/player-api/players/me`,
@@ -443,9 +451,17 @@ async function loadPlayerBootstrap(
     },
   );
   const response = await fetch(request).catch(() => null);
-  if (!response?.ok) return { ok: false };
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength > MAX_BODY_BYTES) return { ok: false };
+  if (!response) return { ok: false, status: 502 };
+  if (!response.ok) {
+    // A failed read is not proof of a revoked session. Never forward diagnostics.
+    return {
+      ok: false,
+      status: response.status >= 400 ? response.status : 502,
+      retryAfter: normalizeRetryAfter(response.headers.get("retry-after")),
+    };
+  }
+  const bytes = await response.arrayBuffer().then((value) => new Uint8Array(value)).catch(() => null);
+  if (!bytes || bytes.byteLength > MAX_BODY_BYTES) return { ok: false, status: 502 };
   const body = parseJsonBytes<PlayerBootstrapBody>(bytes);
   if (
     body?.ok !== true ||
@@ -455,7 +471,7 @@ async function loadPlayerBootstrap(
     !Array.isArray(body.balances) ||
     !Array.isArray(body.availableActions)
   ) {
-    return { ok: false };
+    return { ok: false, status: 502 };
   }
   return { ok: true, body: body as RequiredPlayerBootstrapBody };
 }
