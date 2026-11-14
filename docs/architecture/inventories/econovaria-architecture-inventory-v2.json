@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1396,
+    "sourceFiles": 1401,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 81,
+    "oversizedSourceFiles": 80,
     "capabilityStrings": 140
   },
   "domains": [
@@ -272,7 +272,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 23,
+      "sourceFiles": 28,
       "publicBoundaryFiles": []
     },
     {
@@ -1945,7 +1945,7 @@
         ]
       },
       {
-        "file": "backend/src/domains/marketplace/infrastructure/supabasePlayerMarketplaceRepository.ts",
+        "file": "backend/src/domains/marketplace/infrastructure/marketplaceRepositoryRowMapping.ts",
         "markers": [
           "fallback"
         ]
@@ -2818,10 +2818,6 @@
       {
         "file": "backend/src/domains/markets/calculations/financialStatements.ts",
         "lines": 590
-      },
-      {
-        "file": "backend/src/domains/marketplace/infrastructure/supabasePlayerMarketplaceRepository.ts",
-        "lines": 581
       },
       {
         "file": "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",
