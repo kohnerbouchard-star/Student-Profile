@@ -62,7 +62,7 @@ jobs:
 
       - name: Validate manifest, config parity, and inventory behavior
         run: |
-          node --test scripts/edge-function-inventory/validate.test.mjs
+          node --test scripts/edge-function-inventory/validate.test.mjs scripts/edge-function-inventory/deployment-plan.test.mjs
           node --test scripts/local-edge-runtime-contract.test.mjs
           node --test scripts/runtime-config-contract.test.mjs
 
