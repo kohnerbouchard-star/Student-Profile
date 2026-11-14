@@ -40,3 +40,7 @@ Qualification was rerun for this new source. Pinned tools are Node 22.23.1, npm 
 Revert the repository imports, two helpers, characterization files, additive test discovery and generated inventory together. There is no database rollback. Recovery must retain exact source/base identities, Git bundle, complete source archive, binary patch, changed-file hashes and validation/review evidence, and restore the exact tree independently.
 
 No push, PR creation, merge, deployment, staging mutation or service setting change has been performed. Later publication remains the coordinator's responsibility and requires appropriate external-check safety clearance, actual-number authority and fresh exact-head hosted qualification. This source refactor does not certify a live Marketplace capability or production readiness.
+
+## PR 965 publication and qualification
+
+Published reviewed tree `28672ff4c91c4d1a3d966167e2a82bf017fcd965` as source commit `c3acbe9e2c1d0fc85802bfc37f27c0d32651cf0f` in [PR #965](https://github.com/kohnerbouchard-star/Student-Profile/pull/965). Actual-number authority preserves all 149 required and 104 critical check identities from PR #964 in their original order, with additive PR-path registration in the same 49 workflows. No production trigger, permission, workflow command or runtime source changes are part of qualification metadata. Final-head hosted checks, normal serial merge and postmerge verification remain pending; production is held.
