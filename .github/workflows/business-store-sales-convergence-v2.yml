@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-964.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-967.json"
       - "docs/operations/contracts/player-cross-cutting/pr-966.json"
       - .github/workflows/business-store-sales-convergence-v2.yml
       - .github/workflows/admin-v2-loans.yml
@@ -173,6 +174,7 @@ jobs:
             --pr-number "$PR_NUMBER" \
             --base-ref "$BASE_REF"
           node scripts/business-store-sales-convergence-contract.mjs
+          node --test scripts/business-store-sales-convergence-edge-deployment.test.mjs
           node scripts/validate-supabase-migrations.mjs
           node --check scripts/business-store-sales-convergence-database.mjs
           node --check scripts/business-store-sales-convergence-concurrency.mjs
