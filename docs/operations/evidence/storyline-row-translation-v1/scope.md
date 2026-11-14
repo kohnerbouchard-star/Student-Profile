@@ -45,3 +45,7 @@ The current Vercel file explicitly disables automatic deployment for `main`, ena
 Before publication, obtain coordinator clearance based on verified provider behavior and backend binding, including Vercel feature-branch and Supabase PR-preview integration. If provider evidence or an authorized pre-existing narrow guard is unavailable, remain local. Do not attempt to solve this by a blind first push or by editing unrelated production release workflows.
 
 After that boundary is resolved: reconcile current main and active owners, independently verify recovery, publish one draft, register actual-number cross-cutting authority while preserving every inherited required/critical check, qualify the exact final head, and merge serially only after all required gates pass. Production remains held.
+
+## PR 968 publication and qualification
+
+Published exact independently reviewed tree `a98c1cbf6554a7ed52401e2bab700cd46a486d8d` as source `46ddf74b15375aa9465df9e5f8841f93aeb78287` in [PR #968](https://github.com/kohnerbouchard-star/Student-Profile/pull/968). Actual-number authority retains all ordered 149 required and 104 critical identities from PR #964. Additive path registration in the same 49 workflows changes no production trigger, permission, command or runtime source. Fresh root, core TypeScript and 112 focused tests pass on recovered source. Exact-final-head hosted gates, latest-main integration and postmerge verification remain pending. Production is held.
