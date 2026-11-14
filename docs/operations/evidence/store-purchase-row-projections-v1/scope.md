@@ -35,3 +35,7 @@ Add two source/test trigger paths and a separate frozen Deno test step to existi
 Revert the adapter, extracted helper, characterization tests/fixtures, additive workflow registration and inventory together. There is no database rollback.
 
 Frozen recovery must include exact source commit/tree and baseline, full tracked-tree archive, binary patch, thin exact-commit bundle with baseline prerequisite, changed-path hashes, ownership, preservation and qualification logs. Verify all checksums, independently reconstruct the same tree and rerun characterization. The parent owns publication and integration; current Supabase, migration parity and production holds are not relaxed by local passing tests.
+
+## PR 969 publication and qualification
+
+Published exact reviewed tree `af9820138e119ed4f3aa24cc45c19354b3563c78` as source `aa9be18db8c197b66101f87e4f16bee91cd299b2` in [PR #969](https://github.com/kohnerbouchard-star/Student-Profile/pull/969). Actual-number authority retains all ordered 149 required and 104 critical identities from PR #964, with additive PR-path registrations in the same 49 workflows. Runtime source, production triggers, permissions and workflow commands are unchanged by this qualification metadata. Final-head hosted qualification, latest-main reconciliation, normal serial merge and postmerge verification remain pending. Production is held.
