@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1416,
+    "sourceFiles": 1418,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 76,
+    "oversizedSourceFiles": 75,
     "capabilityStrings": 140
   },
   "domains": [
@@ -130,7 +130,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 15,
+      "sourceFiles": 17,
       "publicBoundaryFiles": [
         "backend/src/domains/campaign/index.ts"
       ]
@@ -2830,10 +2830,6 @@
       {
         "file": "backend/src/domains/contracts/tests/playerContractFullLifecycleIntegration.test.ts",
         "lines": 569
-      },
-      {
-        "file": "backend/src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts",
-        "lines": 564
       },
       {
         "file": "admin/game-code-wiring.js",
