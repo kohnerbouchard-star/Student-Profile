@@ -3,7 +3,7 @@ import { normalizeBankingRead } from "./banking-read-model.js";
 import { normalizeStore, normalizeInventory, normalizeInventoryRead } from "./store-inventory-read-model.js";
 import { normalizeContracts } from "./contracts-read-model.js";
 import { normalizePortfolio } from "./portfolio-read-model.js";
-import { list, object, text, number } from "./read-model-values.js";
+import { list, object, text, number, optionalNumber } from "./read-model-values.js";
 import {
   normalizeMarketNews,
   normalizeCountriesRead,
@@ -54,15 +54,15 @@ function emptyTerminalData() {
       nextLevelXp: 1
     },
     dashboard: {
-      netWorth: 0,
-      liquidBalance: 0,
+      netWorth: null,
+      liquidBalance: null,
       savingsBalance: null,
-      portfolioValue: 0,
-      inventoryValue: 0,
+      portfolioValue: null,
+      inventoryValue: null,
       liabilities: null,
-      dailyChange: 0,
-      contractsActive: 0,
-      contractsDueSoon: 0,
+      dailyChange: null,
+      contractsActive: null,
+      contractsDueSoon: null,
       unreadNotifications: 0,
       marketStatus: "CLOSED",
       economyPhase: "Unavailable",
@@ -210,6 +210,20 @@ function normalizeNotificationItems(items) {
   }));
 }
 
+function snapshotInventoryValue(snapshot) {
+  const store = object(object(snapshot.me).store);
+  if (!Array.isArray(store.inventory)) return null;
+  const prices = new Map(list(store.listings).map((item) => [item.id || item.itemId, optionalNumber(item.price)]));
+  let total = 0;
+  for (const holding of store.inventory) {
+    const price = prices.get(holding.itemId);
+    const quantity = optionalNumber(holding.quantityOwned);
+    if (!Number.isFinite(price) || quantity === null) return null;
+    total += price * quantity;
+  }
+  return Number.isFinite(total) ? total : null;
+}
+
 function applyDashboardSnapshot(data, rawDashboard) {
   const snapshot = object(rawDashboard);
   if (!snapshot.gameSession || !snapshot.me || !snapshot.public) {
@@ -253,12 +267,14 @@ function applyDashboardSnapshot(data, rawDashboard) {
   }));
   data.dashboard = {
     ...data.dashboard,
-    netWorth: number(object(snapshot.me).netWorth, data.portfolio.netWorth),
-    liquidBalance: available,
-    portfolioValue: number(object(object(object(snapshot.me).stocks).portfolio).holdingsMarketValue),
-    inventoryValue: data.inventory.items.reduce((sum, item) => sum + number(item.value), 0),
-    contractsActive: activeContracts.length,
-    contractsDueSoon: activeContracts.filter((contract) => contract.urgency === "high").length,
+    netWorth: optionalNumber(object(snapshot.me).netWorth),
+    liquidBalance: optionalNumber(primaryBalance.balance) ?? optionalNumber(cash.totalBalance),
+    portfolioValue: optionalNumber(object(object(object(snapshot.me).stocks).portfolio).holdingsMarketValue),
+    // Only estimate when every owned item has a published price and quantity.
+    inventoryValue: snapshotInventoryValue(snapshot),
+    dailyChange: null,
+    contractsActive: Array.isArray(object(object(snapshot.me).contracts).progress) ? activeContracts.length : null,
+    contractsDueSoon: Array.isArray(object(object(snapshot.me).contracts).progress) ? activeContracts.filter((contract) => contract.urgency === "high").length : null,
     unreadNotifications: data.notifications.length,
     marketStatus: text(object(snapshot.gameSession).marketStatus, "closed").toUpperCase(),
     marketPulse,

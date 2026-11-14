@@ -219,7 +219,7 @@ export class PlayerApi {
     const requestId = createRequestId();
     const mergedSignal = mergeAbortSignals(signal, this.sessionController.signal);
     const context = { endpointKey, method: endpoint.method, path, payload, params: resolvedParams, requestId, signal: mergedSignal.signal };
-    const key = stableRequestKey(context) + (this.freshness ? JSON.stringify([resolvedParams, payload]) : "");
+    const key = stableRequestKey(context);
     const sessionVersion = this.sessionVersion;
     const ticket = this.freshness?.capture(endpoint.method === "GET" ? [endpointKey] : []);
     const readGeneration = endpoint.method === "GET" ? this.currentReadGeneration(endpointKey) : 0;
