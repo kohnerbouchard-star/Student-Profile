@@ -1,3 +1,6 @@
+import "./supabaseStorylineCharacterizationReads.test.ts";
+import "./supabaseStorylineCharacterizationWrites.test.ts";
+
 import type { JsonValue } from "../../../supabase/tableTypes.ts";
 import { SupabaseStorylineRepository } from "./supabaseStorylineRepository.ts";
 
