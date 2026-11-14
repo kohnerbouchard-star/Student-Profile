@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1406,
+    "sourceFiles": 1408,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 79,
+    "oversizedSourceFiles": 78,
     "capabilityStrings": 140
   },
   "domains": [
@@ -367,7 +367,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 63,
+      "sourceFiles": 65,
       "publicBoundaryFiles": [
         "backend/src/domains/store/index.ts"
       ]
@@ -2858,10 +2858,6 @@
       {
         "file": "admin/v2/src/routes/world-management/WorldManagementApi.js",
         "lines": 556
-      },
-      {
-        "file": "backend/src/domains/store/infrastructure/supabaseStorePurchaseRepository.ts",
-        "lines": 555
       },
       {
         "file": "backend/src/domains/contracts/services/contractRewardService.ts",
