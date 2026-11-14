@@ -106,3 +106,31 @@ reviewed implementation. Its exact commit/tree and final verification logs live
 in the new integration recovery manifest. Independent review, actual-number
 authority, exact published-head qualification and normal serial integration are
 still required; earlier qualification does not certify a later published head.
+
+## Actual-number draft qualification
+
+The coordinator published reviewed source as draft [PR #974](https://github.com/kohnerbouchard-star/Student-Profile/pull/974),
+source `e020924899d7e27588433039ec9b3e0b67ebb3f2`, with exact reviewed tree
+`63e1152b299522322250657f903d3ec9c2d94a7c` and sole actual-main parent
+`b7e37658f1f5cbbc64a9a19fd011f0996fbcadd9`. Initial automatic checks are interim.
+
+Local actual-number metadata retains the predecessor's ordered 149 required and
+104 critical checks, appending Full Financial Markets Expansion and its exact
+safe-hold job for 151/105. All production, mutation and secret-value permissions
+remain false. The manifest locks 56 changed paths plus three unchanged read-only
+paths: the two existing authority verifiers and Full Financial Markets workflow.
+Only the exact PR974 authority path is added to 49 existing pull-request filters.
+Every other workflow byte, push filter, job, command, action pin and release guard
+is unchanged. The Financial Markets workflow already discovers the Market source
+and remains byte-identical. Package/census, runtime, tests and prior authorities
+are unchanged. This is local preparation, not metadata publication or hosted
+qualification. Fresh committed-head checks, independent metadata/recovery review,
+then exact published-head qualification are required before normal serial merge.
+Known Edge/smoke limits remain explicit; no deployment or production action.
+
+Hosted qualification also requires a separate mandatory exact-family audit:
+all 64 expected pull-request workflows must succeed, and both funding-core jobs
+must report success on the exact published head. Mere presence, neutral or skipped
+conclusions are insufficient for these obligations. The independent reviewer owns
+this additional evidence audit without modifying either locked source verifier,
+the authority baseline or import guards. The 151/105 authority remains unchanged.
