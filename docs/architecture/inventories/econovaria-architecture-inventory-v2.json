@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1418,
+    "sourceFiles": 1419,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 75,
+    "oversizedSourceFiles": 74,
     "capabilityStrings": 140
   },
   "domains": [
@@ -284,7 +284,7 @@
         "state",
         "validation"
       ],
-      "sourceFiles": 58,
+      "sourceFiles": 59,
       "publicBoundaryFiles": []
     },
     {
@@ -2810,10 +2810,6 @@
       {
         "file": "admin/interaction-quality.js",
         "lines": 591
-      },
-      {
-        "file": "backend/src/domains/markets/calculations/financialStatements.ts",
-        "lines": 590
       },
       {
         "file": "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",
