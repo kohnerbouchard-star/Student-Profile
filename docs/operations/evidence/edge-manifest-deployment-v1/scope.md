@@ -29,3 +29,9 @@ The plan rejects duplicate/overlapping categories, unsafe slugs, mismatched entr
 ## Remaining qualification
 
 Publish a draft, record its exact head and actual PR number, qualify applicable hosted checks, and merge normally only after gates pass. Current source preparation is `IMPLEMENTED_NOT_MERGED`; it is not live release or runtime completion evidence. `BETA-LIVE-MIGRATION-PARITY-001` remains separately blocked. A future deployment requires a separate owner-authorized release under production change control.
+
+## Actual PR qualification registration
+
+Draft [PR #967](https://github.com/kohnerbouchard-star/Student-Profile/pull/967) published reviewed source `341fca499f4d0eb83b2c7e6c959339debb3a5f16`, tree `8ebacf4d58d1891c91c4a8e84e0e09abae7790c6`, identical to local source `9eec46c653e43a27ad5bbbb26a2e2022b754aabf`. GitHub connector publication was used because the restored shell lacks push credentials.
+
+The mandatory roadmap update triggers the existing Admin Business authority gate. The actual-numbered PR967 authority therefore preserves the complete ordered PR964 prefix of 149 required and 104 critical identities, adds the Edge inventory and production Git release static contracts for 153 required/106 critical identities, and retains the read-only verifier/test locks. Forty-nine existing qualification workflows receive only a PR967 trigger-path registration. No assertion, job, deployment guard or existing trigger is removed. Final exact-head hosted qualification is required; initial-head results are not final evidence.
