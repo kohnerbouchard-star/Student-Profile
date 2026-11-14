@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1397,
+    "sourceFiles": 1408,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 80,
+    "oversizedSourceFiles": 78,
     "capabilityStrings": 140
   },
   "domains": [
@@ -272,7 +272,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 23,
+      "sourceFiles": 28,
       "publicBoundaryFiles": []
     },
     {
@@ -382,7 +382,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 88,
+      "sourceFiles": 93,
       "publicBoundaryFiles": [
         "backend/src/domains/storylines/index.ts"
       ]
@@ -1945,7 +1945,7 @@
         ]
       },
       {
-        "file": "backend/src/domains/marketplace/infrastructure/supabasePlayerMarketplaceRepository.ts",
+        "file": "backend/src/domains/marketplace/infrastructure/marketplaceRepositoryRowMapping.ts",
         "markers": [
           "fallback"
         ]
@@ -2657,7 +2657,7 @@
       },
       {
         "file": "backend/supabase/functions/player-web-session-api/runtime.ts",
-        "lines": 867
+        "lines": 883
       },
       {
         "file": "backend/src/domains/storylines/services/storylineRunner.test.ts",
@@ -2748,10 +2748,6 @@
         "lines": 643
       },
       {
-        "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.ts",
-        "lines": 637
-      },
-      {
         "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
         "lines": 632
       },
@@ -2820,10 +2816,6 @@
         "lines": 590
       },
       {
-        "file": "backend/src/domains/marketplace/infrastructure/supabasePlayerMarketplaceRepository.ts",
-        "lines": 581
-      },
-      {
         "file": "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",
         "lines": 577
       },
@@ -2852,6 +2844,10 @@
         "lines": 561
       },
       {
+        "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.test.ts",
+        "lines": 558
+      },
+      {
         "file": "player-terminal/src/recovery/player-recovery-controller.js",
         "lines": 558
       },
@@ -2862,10 +2858,6 @@
       {
         "file": "admin/v2/src/routes/world-management/WorldManagementApi.js",
         "lines": 556
-      },
-      {
-        "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.test.ts",
-        "lines": 555
       },
       {
         "file": "backend/src/domains/contracts/services/contractRewardService.ts",

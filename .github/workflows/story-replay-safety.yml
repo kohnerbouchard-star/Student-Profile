@@ -4,7 +4,12 @@ on:
   pull_request:
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-969.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-968.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-965.json"
       - "docs/operations/contracts/player-cross-cutting/pr-964.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-967.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-966.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-970.json"
       - "docs/operations/contracts/player-cross-cutting/pr-962.json"
       - "docs/operations/contracts/player-cross-cutting/pr-961.json"
       - "docs/operations/contracts/player-cross-cutting/pr-960.json"
@@ -133,6 +138,7 @@ jobs:
             src/domains/storylines/infrastructure/supabaseStoryImpactWriter.test.ts \
             src/domains/storylines/infrastructure/supabaseStoryContractWriter.test.ts \
             src/domains/storylines/infrastructure/supabaseStoryEventExecutionRepository.test.ts \
+            src/domains/storylines/infrastructure/supabaseStorylineRepository.test.ts \
             src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.test.ts \
             src/domains/storylines/server/playerContextReadQuery.test.ts \
             src/domains/storylines/services/storylineRunnerGameScope.test.ts \

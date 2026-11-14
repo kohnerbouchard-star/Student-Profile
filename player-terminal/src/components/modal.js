@@ -236,12 +236,12 @@ export function renderModal(modal, config = {}) {
         <div class="player-terminal-modal-body">
           <div class="player-terminal-country-hero"><span class="is-${escapeHtml(country.tone)}">${icon("globe")}</span><div><small>CAPITAL</small><h4>${escapeHtml(country.capital)}</h4><p>${escapeHtml(country.market)} economy · ${escapeHtml(country.condition)} · ${escapeHtml(country.risk)} risk</p></div>${renderStatusPill(`${country.index.toFixed(1)} INDEX`, country.tone)}</div>
           <div class="player-terminal-country-indicators">
-            <span><small>GROWTH</small><strong class="${country.growth >= 0 ? "is-good" : "is-bad"}">${escapeHtml(formatPercent(country.growth))}</strong></span>
-            <span><small>INFLATION</small><strong>${escapeHtml(country.inflation.toFixed(1))}%</strong></span>
+            <span><small>GROWTH</small><strong class="${Number.isFinite(country.growth) ? (country.growth >= 0 ? "is-good" : "is-bad") : ""}">${escapeHtml(Number.isFinite(country.growth) ? formatPercent(country.growth) : "Unavailable")}</strong></span>
+            <span><small>INFLATION</small><strong>${escapeHtml(Number.isFinite(country.inflation) ? `${country.inflation.toFixed(1)}%` : "Unavailable")}</strong></span>
             <span><small>UNEMPLOYMENT</small><strong>${escapeHtml(country.unemployment.toFixed(1))}%</strong></span>
             <span><small>BASE RATE</small><strong>${escapeHtml(country.baseRate.toFixed(2))}%</strong></span>
             <span><small>CURRENCY</small><strong class="${country.currencyTrend >= 0 ? "is-good" : "is-bad"}">${escapeHtml(formatPercent(country.currencyTrend))}</strong></span>
-            <span><small>STABILITY</small><strong>${escapeHtml(country.stability)}/100</strong></span>
+            <span><small>STABILITY</small><strong>${escapeHtml(Number.isFinite(country.stability) ? `${country.stability}/100` : "Unavailable")}</strong></span>
           </div>
           <div class="player-terminal-country-intel-grid">
             <section><small>POLICY SIGNAL</small><p>${escapeHtml(country.policy)}</p></section>
