@@ -3,6 +3,7 @@ name: business-store-sales-convergence-v2
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-964.json"
       - .github/workflows/business-store-sales-convergence-v2.yml
       - .github/workflows/admin-v2-loans.yml
       - .github/workflows/edge-function-inventory-converge.yml

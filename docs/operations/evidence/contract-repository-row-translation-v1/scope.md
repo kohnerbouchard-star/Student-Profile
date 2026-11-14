@@ -36,3 +36,9 @@ Architecture inventory changes from 1,392 to 1,395 source files and from 82 to 8
 Revert the two helper modules, repository imports/re-exports, characterization registration and generated inventory as one source unit. There is no database rollback.
 
 Local recovery must preserve source commit/tree, source archive, patch, changed-path hashes, baseline prerequisite and test/review logs, and be restored independently. Publication remains held until the coordinator establishes preview safety and releases the serial lane. Any later publication needs an actual-number authority manifest and fresh exact-head hosted qualification. This tranche does not certify live Contract capability or production readiness.
+
+## Authorized publication and exact-head qualification
+
+Draft PR #964 publishes the independently reviewed source tree `36c02f9940eca7dab3ba3a897f2faa6163633592` as source commit `73b203586df32a1e236d7fc73450fe5e2cd8ace9`. Git transport had no write credentials, so publication used the connected GitHub API and verified identical tree identity. The owner approved temporarily disabling automatic project-wide Preview deployments; Vercel's audit event confirms Preview branch tracking disabled. No deployment, production change or permission change was requested or performed.
+
+Actual-number authority preserves all 149 required and 104 critical predecessor check identities in their original order, with unchanged production/mutation/secret denials and read-only verifier/test locks. Additive path registrations trigger the retained suites on this PR. Hosted checks and independent final-head review remain pending; no missing or inherited test result is credited as passing. Shared global roadmap remains with its existing owner; the proposed scope intake above is the source record for reconciliation.
