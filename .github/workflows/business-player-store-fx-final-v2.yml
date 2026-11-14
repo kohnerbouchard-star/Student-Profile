@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-973.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-972.json"
       - "docs/operations/contracts/player-cross-cutting/pr-969.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-971.json"
       - "docs/operations/contracts/player-cross-cutting/pr-968.json"
       - "docs/operations/contracts/player-cross-cutting/pr-965.json"
       - "docs/operations/contracts/player-cross-cutting/pr-964.json"
