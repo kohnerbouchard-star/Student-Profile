@@ -25,10 +25,10 @@ export function renderNewsPage(data, ui) {
   }
   const category = ui.newsCategory || "All";
   const filtered = allItems.filter((item) => category === "All" || item.category === category);
-  const selectedId = ui.newsId && filtered.some((item) => item.id === ui.newsId) ? ui.newsId : filtered[0]?.id || data.news.selectedId || allItems[0].id;
-  const selected = allItems.find((item) => item.id === selectedId) || allItems[0];
-  const countries = selected.countryIds.map((id) => data.countries.find((country) => country.id === id)).filter(Boolean);
-  const assets = selected.assetIds.map((id) => data.market.assets.find((asset) => asset.id === id)).filter(Boolean);
+  const selectedId = ui.newsId && filtered.some((item) => item.id === ui.newsId) ? ui.newsId : filtered[0]?.id;
+  const selected = filtered.find((item) => item.id === selectedId);
+  const countries = (selected?.countryIds || []).map((id) => data.countries.find((country) => country.id === id)).filter(Boolean);
+  const assets = data.market.assets.filter((asset) => selected?.assetIds.includes(asset.id) || selected?.assetSymbols?.some((symbol) => symbol.toLowerCase() === asset.symbol.toLowerCase()));
   const highImpact = allItems.filter((item) => item.severity === "High").length;
 
   return `<section class="player-terminal-page player-terminal-news-page" data-page="news">
@@ -55,14 +55,14 @@ export function renderNewsPage(data, ui) {
       </section>
 
       <section class="player-terminal-panel player-terminal-news-detail">
-        <header><div><small>${escapeHtml(selected.category)} · ${escapeHtml(selected.time)}</small><h3>${escapeHtml(selected.title)}</h3></div>${renderStatusPill(selected.severity, severityTone(selected))}</header>
+        ${selected ? `<header><div><small>${escapeHtml(selected.category)} · ${escapeHtml(selected.time)}</small><h3>${escapeHtml(selected.title)}</h3></div>${renderStatusPill(selected.severity, severityTone(selected))}</header>
         <p class="player-terminal-news-lead">${escapeHtml(selected.summary)}</p>
         <div class="player-terminal-news-analysis"><small>PLAYER ANALYSIS</small><p>${escapeHtml(selected.analysis)}</p></div>
         <div class="player-terminal-news-effects"><small>EXPECTED EFFECTS</small><div>${selected.effects.map((effect) => `<span>${icon("pulse")} ${escapeHtml(effect)}</span>`).join("")}</div></div>
         <div class="player-terminal-news-links">
           <section><small>AFFECTED COUNTRIES</small><div>${countries.map((country) => `<button type="button" data-player-country="${escapeHtml(country.id)}">${icon("globe")}<span>${escapeHtml(country.name)}</span></button>`).join("") || "<span>None listed</span>"}</div></section>
           <section><small>RELATED ASSETS</small><div>${assets.map((asset) => `<button type="button" data-player-market-link="${escapeHtml(asset.id)}">${icon("market")}<span>${escapeHtml(asset.symbol)}</span><b>${escapeHtml(asset.change > 0 ? "+" : "")}${escapeHtml(asset.change.toFixed(2))}%</b></button>`).join("") || "<span>None listed</span>"}</div></section>
-        </div>
+        </div>` : renderEmptyState({ title: "No story selected", detail: "Choose a category with active stories.", iconName: "news" })}
       </section>
     </div>
   </section>`;

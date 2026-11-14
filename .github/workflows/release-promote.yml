@@ -5,6 +5,9 @@ on:
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-965.json"
       - "docs/operations/contracts/player-cross-cutting/pr-964.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-967.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-966.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-970.json"
       - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - ".github/workflows/release-promote.yml"
       - ".github/workflows/release-artifact-build.yml"
@@ -52,7 +55,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: release-promote-${{ inputs.target_environment || 'contract' }}
+  group: release-promote-${{ github.event_name == 'pull_request' && format('contract-pr-{0}', github.event.pull_request.number) || inputs.target_environment || 'contract' }}
   cancel-in-progress: false
 
 jobs:

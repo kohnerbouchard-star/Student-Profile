@@ -22,8 +22,8 @@ const countryRead = (items, data = seed()) => mergeTerminalRead(data, "countries
 const defaultCountry = {
   id: "", profileId: "", name: "Unknown country", capital: "Not available", currencyCode: "",
   mapRegion: "", mapColor: "", tone: "cyan", market: "Unavailable", condition: "No live snapshot",
-  index: 0, growth: 0, inflation: 0, unemployment: 0, baseRate: 0, currencyTrend: 0,
-  stability: 50, risk: "Unavailable", resources: [], exports: [], tradePartners: [],
+  index: 0, growth: null, inflation: null, unemployment: 0, baseRate: 0, currencyTrend: 0,
+  stability: null, risk: "Unavailable", resources: [], exports: [], tradePartners: [],
   policy: "No live economic policy snapshot is available.", isPlayerCountry: false,
   economy: null, relatedAssetIds: [], eventIds: []
 };
@@ -205,7 +205,7 @@ test("Country colors, risk and stability preserve exact thresholds and coercion"
   for (const [marketRiskIndex, risk] of [[1.4, "High"], [1.399, "Moderate"], [0.9, "Moderate"], [0.899, "Low"], [undefined, "Moderate"], ["bad", "Moderate"], [null, "Low"], [false, "Low"]]) {
     assert.equal(countryRead([{ economy: { marketRiskIndex } }]).countries[0].risk, risk);
   }
-  for (const [politicalStabilityIndex, stability] of [[3, 100], [-1, 0], [1.01, 51], [undefined, 50], ["bad", 50], [null, 0], ["", 0]]) {
+  for (const [politicalStabilityIndex, stability] of [[3, 100], [-1, 0], [1.01, 51], [undefined, null], ["bad", null], [null, null], ["", null]]) {
     assert.equal(countryRead([{ economy: { politicalStabilityIndex } }]).countries[0].stability, stability);
   }
 });
@@ -338,7 +338,7 @@ test("full dashboard merge retains the established nested mutation and stale cou
   assert.deepEqual(data.banking.checking, { accountId: "CHECKING", balance: 77, available: 77, pending: 0 });
   assert.equal(data.progression.playerName, "Changed Player");
   assert.notStrictEqual(next.dashboard, oldDashboard);
-  assert.equal(oldDashboard.liquidBalance, 0);
+  assert.equal(oldDashboard.liquidBalance, null);
   assert.equal(next.dashboard.liquidBalance, 77);
   assert.strictEqual(next.countries[0], oldCountry);
   assert.deepEqual(next.countries[0].eventIds, []);

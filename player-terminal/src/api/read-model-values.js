@@ -26,3 +26,12 @@ export function shortDate(value, defaultValue = "No deadline") {
     minute: "2-digit"
   }).format(new Date(timestamp));
 }
+
+// Missing readings are not measured zero. Accept the same finite numeric strings
+// as number(), but reject absent, blank and nonnumeric scalar values.
+export function optionalNumber(value) {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && !value.trim()) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
