@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-964.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-966.json"
       - .github/workflows/business-store-sales-convergence-v2.yml
       - .github/workflows/admin-v2-loans.yml
       - .github/workflows/edge-function-inventory-converge.yml

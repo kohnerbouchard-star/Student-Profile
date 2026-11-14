@@ -12,9 +12,9 @@
 
 The 25-case Node suite imports the actual production runtime, seals real synthetic cookies and captures its registered handler. Only the unused remote Supabase SDK is replaced; request authorization, crypto, public projection and response handling execute unchanged. No external request or real player data is used.
 
-Untouched main reproduces 20 failing cases and five passing security/cleanup cases. The candidate passes all 25. The suite is registered in root validation and the Player workflow. Existing BFF retry, security-remediation and trusted-IP contracts pass 35/35. Core backend TypeScript and the secret scan pass. Local Node is 24.22.1 rather than the repository-pinned 22.23.1, so the hosted pinned/runtime gates remain mandatory.
+Untouched main reproduces 20 failing cases and five passing security/cleanup cases. The candidate passes all 25. The suite is registered in root validation and the Player workflow. Existing BFF retry, security-remediation and trusted-IP contracts pass 35/35. Core backend TypeScript and the secret scan pass. The final 60-case suite passes with pinned Node 22.23.1; the first root pass used Node 24.22.1 and a fresh pinned root run follows. Independent source review is clear and independently reruns all 25 new cases with pinned Node.
 
-Full root verification, independent review and fresh exact-head hosted checks must pass before merge. No hosted or production availability claim follows from unit coverage. Full Edge and backend smoke depend on an available Deno runtime and frozen upstream SDK; limits will be recorded without weakening gates.
+Fresh exact-head hosted checks must pass before merge. No hosted or production availability claim follows from unit coverage. Deno 2.9.3 full Edge validation stops at the frozen Supabase SDK import with connection refused; backend smoke is also subject to that external dependency. No aggregate Edge pass is claimed.
 
 ## Proposed global roadmap reconciliation
 
@@ -23,3 +23,7 @@ Full root verification, independent review and fresh exact-head hosted checks mu
 ## Rollback
 
 Revert this bounded runtime correction and its regression registration together. No database rollback is needed. Production deployment remains separately held.
+
+## Publication
+
+Draft [PR #966](https://github.com/kohnerbouchard-star/Student-Profile/pull/966) publishes source `b438e006756968d392f29d61a78fc1c0015219fe`, exact reviewed tree `34314fab54e5d2a9b27c8c842a20218077087d1f`. The actual-number authority preserves every ordered predecessor required/critical identity and unchanged production/mutation/secret denials. Only additive PR trigger registrations are made for retained workflow families; no existing gate is changed or waived. Final-head CI remains pending.
