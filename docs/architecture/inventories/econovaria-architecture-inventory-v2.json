@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1408,
+    "sourceFiles": 1413,
     "edgeEntrypoints": 28,
     "handlerFiles": 63,
     "persistenceOutsideInfrastructure": 52,
@@ -16,7 +16,7 @@
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 78,
+    "oversizedSourceFiles": 77,
     "capabilityStrings": 140
   },
   "domains": [
@@ -310,7 +310,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 21,
+      "sourceFiles": 26,
       "publicBoundaryFiles": []
     },
     {
@@ -2002,7 +2002,7 @@
         ]
       },
       {
-        "file": "backend/src/domains/notifications/infrastructure/supabasePlayerStoryDeliveryRepository.ts",
+        "file": "backend/src/domains/notifications/infrastructure/playerStoryDeliveryProjection.ts",
         "markers": [
           "fallback"
         ]
@@ -2878,10 +2878,6 @@
       {
         "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.ts",
         "lines": 533
-      },
-      {
-        "file": "backend/src/domains/notifications/infrastructure/supabasePlayerStoryDeliveryRepository.ts",
-        "lines": 532
       },
       {
         "file": "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
