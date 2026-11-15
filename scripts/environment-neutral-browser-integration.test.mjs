@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
+import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 import path from "node:path";
 import test from "node:test";
 

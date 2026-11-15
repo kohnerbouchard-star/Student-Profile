@@ -1,7 +1,7 @@
 import "./codeql-security-remediation.test.mjs";
 import "./codeql-security-reader-regression.test.mjs";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readEdgeRuntimeSource as readFile } from "./helpers/edge-runtime-source.mjs";
 import test from "node:test";
 
 const ROOT = new URL("../", import.meta.url);

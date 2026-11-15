@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 import { runInNewContext } from "node:vm";
 
 const GAME_ID = "00000000-0000-4000-8000-000000000001";

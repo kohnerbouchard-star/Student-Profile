@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 import { spawnSync } from "node:child_process";
 
 const paths = [

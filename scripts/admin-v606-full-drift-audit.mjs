@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 import { resolve } from "node:path";
 import { normalizeScannerFocusSource } from "./admin-scanner-focus-patch-contract.mjs";
 
@@ -32,12 +32,12 @@ const styleSources = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^
 const expectedScripts = [
   "../runtime-config.env.js", "../frontend/src/core/runtime-config.js",
   "../frontend/src/core/admin-game-selection.js",
-  "./auth-session-manager.js", "./session-gate.js", "./admin-auth.js",
+  "./auth-session-manager.js", "./session-gate.js", "./admin-request-normalization.js", "./admin-auth.js",
   "./dist/admin-overview-terminal.js", "./asset-wiring.js", "./classroom-write-fallback.js",
   "./create-action-adapter.js", "./player-access-code-bridge.js", "./modal-accessibility.js",
-  "./player-create-lifecycle.js", "./player-drawer-wiring.js", "./player-identity-wiring.js",
-  "./player-create-ux.js", "./game-code-wiring.js", "./logout-confirmation.js", "./game-session-controls.js", "./admin-stabilization.js",
-  "./interaction-quality.js", "./data-state-contracts.js", "./interaction-quality-control-reset.js",
+  "./player-create-lifecycle.js", "./player-drawer-wiring.js", "./player-identity-reset-scope.js", "./player-identity-roster.js", "./player-identity-profile.js", "./player-identity-wiring.js",
+  "./player-create-ux.js", "./game-code-share-presentation.js", "./game-code-wiring.js", "./logout-confirmation.js", "./game-session-context.js", "./game-session-share-surface.js", "./game-session-controls.js", "./admin-stabilization.js",
+  "./interaction-form-validation.js", "./interaction-quality.js", "./data-state-contracts.js", "./interaction-quality-control-reset.js",
   "./dist/admin-overview-boot.js", "./admin-bootstrap.js",
 ];
 assert(JSON.stringify(scriptSources) === JSON.stringify(expectedScripts), `Admin script order drifted: ${JSON.stringify(scriptSources)}.`);

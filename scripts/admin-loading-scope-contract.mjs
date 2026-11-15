@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readBrowserSource as readFile } from "./lib/browser-module-source.mjs";
 
 const compatibility = await readFile(new URL("../admin/overview-quick-actions.js", import.meta.url), "utf8");
 const bootstrap = await readFile(new URL("../admin/admin-bootstrap.js", import.meta.url), "utf8");

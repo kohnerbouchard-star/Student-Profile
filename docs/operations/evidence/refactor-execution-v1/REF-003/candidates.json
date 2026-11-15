@@ -58,7 +58,7 @@
     },
     {
       "path": "admin/admin-bootstrap.js",
-      "blobSha": "677933300249725e146cf7d79a5b44d0e35f60e6",
+      "blobSha": "8954778cfd05818bf26dc23e0f2e47b9cd1ec01b",
       "disposition": "compatibility_required",
       "owner": "Retained Admin bootstrap",
       "symbols": ["bootstrapAdminCompatibilityModules"],
@@ -79,8 +79,8 @@
       "owner": "Messaging / Player composition",
       "symbols": ["dispatchClassroomMessagingRequest"],
       "reason": "REF-006 retains this path as explicit one-way value/type exports of the single Messaging-owned dispatcher. Classroom still imports this module; canonical Player imports the domain owner directly. The domain implementation preserves lifecycle-first parsing and reviewed Player rate-limit dispatch without a Classroom HTTP hop or duplicated wrapper.",
-      "sourceEvidence": ["backend/supabase/functions/player-api/runtime.ts", "backend/supabase/functions/classroom-api/index.ts", "backend/src/domains/messaging/api/playerMessagingDispatch.ts"],
-      "sourceEvidenceBlobs": {"backend/supabase/functions/player-api/runtime.ts":"440f507730057034f34c70d4eb2883869636b290", "backend/supabase/functions/classroom-api/index.ts":"1b4691f278b8fea057851de520fdfe4773be46f7", "backend/src/domains/messaging/api/playerMessagingDispatch.ts":"643e6971d4b4bfd2980d58dc6a3ed4ec796c3e7e"},
+      "sourceEvidence": ["backend/supabase/functions/player-api/dispatchPlayerWorldRoutes.ts", "backend/supabase/functions/player-api/runtime.ts", "backend/supabase/functions/classroom-api/index.ts", "backend/src/domains/messaging/api/playerMessagingDispatch.ts"],
+      "sourceEvidenceBlobs": {"backend/supabase/functions/player-api/runtime.ts": "eee60f487c139b503864f95351af1eb5b3ea2a71", "backend/supabase/functions/classroom-api/index.ts": "1b4691f278b8fea057851de520fdfe4773be46f7", "backend/src/domains/messaging/api/playerMessagingDispatch.ts": "643e6971d4b4bfd2980d58dc6a3ed4ec796c3e7e", "backend/supabase/functions/player-api/dispatchPlayerWorldRoutes.ts": "c412fe54c78671367431d6aae73cdabc2e5c5190"},
       "inboundRoots": ["Retained Classroom composition root imports this compatibility export", "Canonical Player imports the same domain implementation directly, not this path"],
       "consumerAudit": {"HTTP": "Routes are invoked through composition roots; this module itself does not serve", "SQL_RPC": "Delegates to existing Messaging handlers; no consumer-absence claim", "jobs": "External consumers not certified"},
       "externalUsage": "UNKNOWN; no hosted Classroom retirement proof",
@@ -162,7 +162,7 @@
       "symbols": ["initEconovariaAttendanceRewardSettingsRouteBridgeCompatibility", "EconovariaAttendanceRewardSettingsRouteBridge"],
       "reason": "Compatibility-only forwarding path for historical/direct consumers. The active bootstrap loads attendance-reward-request-adapter.js; this file no longer intercepts fetch and delegates its retained getCurrentAttendanceWindow read to the same source-owned adapter.",
       "sourceEvidence": ["admin/admin-bootstrap.js", "admin/attendance-reward-request-adapter.js"],
-      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"677933300249725e146cf7d79a5b44d0e35f60e6","admin/attendance-reward-request-adapter.js":"169c132788e8b02f71719eae96b40999636b4554"},
+      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"8954778cfd05818bf26dc23e0f2e47b9cd1ec01b","admin/attendance-reward-request-adapter.js":"169c132788e8b02f71719eae96b40999636b4554"},
       "inboundRoots": ["Historical/direct consumers of the old source path", "Retained generated Settings idempotency reader uses the compatibility global name supplied by the canonical adapter"],
       "consumerAudit": {"HTTP":"No transport interception or Edge handler; compatibility import forwards to the canonical Attendance request adapter","SQL_RPC":"No direct persistence; existing Settings authority remains downstream","jobs":"No server job; browser event consumers remain owned by the canonical adapter/controller lifecycle","dynamic_HTML_build":"Active retained bootstrap loads the canonical adapter directly; this path remains only for unverified historical/direct consumers"},
       "externalUsage": "UNKNOWN; retained or separately hosted clients have no observed quiet window",
@@ -180,7 +180,7 @@
       "referenceTerms": ["econovaria:player-access-code-issued"],
       "reason": "REF-013 removed existing-player reset ownership from this bridge. The retained fetch wrapper still handles Player creation responses, emits the one-time creation credential event, and may issue the historical conditional follow-up reset when a create response omits the code. Those creation responsibilities remain live and separately protected.",
       "sourceEvidence": ["admin/index.html", "admin/player-create-lifecycle.js"],
-      "sourceEvidenceBlobs": {"admin/index.html":"0af4aed709b1a1e35c6f036716f272cf854ea02e", "admin/player-create-lifecycle.js":"1f0eba13316bfdcceee90b970e3ffc848ea80f95"},
+      "sourceEvidenceBlobs": {"admin/index.html":"12d13c7330c4962a7d9ef9fc483e7cbdae392178", "admin/player-create-lifecycle.js":"1f0eba13316bfdcceee90b970e3ffc848ea80f95"},
       "inboundRoots": ["Direct retained HTML script", "POST /api/admin/games/:gameId/players passing through the wrapper", "Player creation credential-event consumers"],
       "consumerAudit": {"HTTP":"Creation interception plus the create-only conditional POST access-code/reset follow-up through delegated same-origin transport", "SQL_RPC":"No direct database write in browser; downstream identity authority is separate", "jobs":"Window creation credential event; no server scheduler", "dynamic_HTML_build":"Raw HTML is a positive source caller; built-default and hosted usage are separate"},
       "externalUsage": "UNKNOWN; complete hosted/client retirement not observed",
@@ -197,7 +197,7 @@
       "symbols": ["EconovariaPlayerCreateLifecycle", "guardDelegatedCreateAction", "closeOpenPlayerCreateModal"],
       "reason": "Consumes player-access-code-issued to close creation UI, decorates inserted forms via MutationObserver, and validates delegated Contract, Player and Store create actions. Its responsibility is broader than Player reset; no whole-module disposal is exposed.",
       "sourceEvidence": ["admin/index.html", "admin/player-access-code-bridge.js"],
-      "sourceEvidenceBlobs": {"admin/index.html":"0af4aed709b1a1e35c6f036716f272cf854ea02e", "admin/player-access-code-bridge.js":"b48bcfef6921cab7c52a5ff23861bce7fae4f8fb"},
+      "sourceEvidenceBlobs": {"admin/index.html":"12d13c7330c4962a7d9ef9fc483e7cbdae392178", "admin/player-access-code-bridge.js":"b48bcfef6921cab7c52a5ff23861bce7fae4f8fb"},
       "inboundRoots": ["Direct retained HTML script", "Window player-access-code-issued event", "Captured document clicks and added Player forms"],
       "consumerAudit": {"HTTP":"No request is sent by this module", "SQL_RPC":"No direct persistence", "jobs":"requestAnimationFrame and delayed form decoration; no server job", "dynamic_HTML_build":"Retained HTML and DOM/event consumers, not a V2 default-page dependency"},
       "externalUsage": "UNKNOWN; no raw/hosted-client retirement proof",
@@ -265,7 +265,7 @@
       "symbols": [],
       "reason": "Explicit strict=true configuration is used by stock/FX Edge checks, existing neutral tests and the nineteen canonical suites migrated by REF-011 in backend/package.json. No compiler setting or dependency identity changed.",
       "sourceEvidence": ["backend/package.json", "backend/supabase/functions/admin-api/deno.json"],
-      "sourceEvidenceBlobs": {"backend/package.json":"e19742ae59d2a5c20ceb729afff3ef75d556a329", "backend/supabase/functions/admin-api/deno.json":"047f75f99e372c7d82e52b3f88ccba90a60141a0"},
+      "sourceEvidenceBlobs": {"backend/package.json": "0f7120c77024841e4a97d325470a8b9f1dff0fc7", "backend/supabase/functions/admin-api/deno.json": "047f75f99e372c7d82e52b3f88ccba90a60141a0"},
       "inboundRoots": ["backend package typecheck:stock-edge, typecheck:fx-edge, existing neutral tests and all nineteen REF-011 canonical suites"],
       "consumerAudit": {"HTTP":"Compiler configuration, not a request handler", "SQL_RPC":"No persistence", "jobs":"Package/CI command consumers; external invocations unknown", "dynamic_HTML_build":"Compile-time configuration; no browser lifecycle"},
       "externalUsage": "UNKNOWN outside recorded package commands",
@@ -282,7 +282,7 @@
       "symbols": [],
       "reason": "strict=true and the local deno check index.ts task remain. REF-011 moved nineteen canonical package suites to the neutral owner; the Classroom root check, explicit old/neutral parity runs and existing workflow-direct invocations still consume this configuration. No Classroom runtime retirement is established.",
       "sourceEvidence": ["backend/package.json", "backend/supabase/functions/deno.json"],
-      "sourceEvidenceBlobs": {"backend/package.json":"e19742ae59d2a5c20ceb729afff3ef75d556a329", "backend/supabase/functions/deno.json":"9e32c1494cfa7c58853a2c75333c8d790ba4c0db"},
+      "sourceEvidenceBlobs": {"backend/package.json": "0f7120c77024841e4a97d325470a8b9f1dff0fc7", "backend/supabase/functions/deno.json": "9e32c1494cfa7c58853a2c75333c8d790ba4c0db"},
       "inboundRoots": ["backend package typecheck:edge for the Classroom root; REF-011's explicit old/neutral parity runner", "Classroom-local check task and retained workflow-direct invocations"],
       "consumerAudit": {"HTTP":"No HTTP dispatch in configuration", "SQL_RPC":"No persistence", "jobs":"Compiler/test command references are active source consumers", "dynamic_HTML_build":"No browser import; local task path resolution is distinct from compiler-option parity"},
       "externalUsage": "UNKNOWN outside recorded package and local commands",
@@ -299,7 +299,7 @@
       "symbols": [],
       "reason": "Admin commands explicitly use strict=false, noImplicitAny=false and useUnknownInCatchVariables=false. These observed settings are not authorization to weaken the strict neutral or Classroom checks during REF-011.",
       "sourceEvidence": ["backend/package.json", "backend/supabase/functions/deno.json"],
-      "sourceEvidenceBlobs": {"backend/package.json":"e19742ae59d2a5c20ceb729afff3ef75d556a329", "backend/supabase/functions/deno.json":"9e32c1494cfa7c58853a2c75333c8d790ba4c0db"},
+      "sourceEvidenceBlobs": {"backend/package.json": "0f7120c77024841e4a97d325470a8b9f1dff0fc7", "backend/supabase/functions/deno.json": "9e32c1494cfa7c58853a2c75333c8d790ba4c0db"},
       "inboundRoots": ["backend package test:admin-api, test:admin-local-mutations, test:game-sessions and typecheck:admin-edge"],
       "consumerAudit": {"HTTP":"No runtime handler in JSON", "SQL_RPC":"No persistence", "jobs":"Existing Admin compiler/test commands", "dynamic_HTML_build":"Compile-time scope only"},
       "externalUsage": "UNKNOWN outside repository commands",
@@ -348,14 +348,14 @@
     },
     {
       "path": "admin/player-identity-wiring.js",
-      "blobSha": "e3e7fe94ad0d57d33087670dc216e286f962f786",
+      "blobSha": "2b052eac1efeabde174eebbea82b3426e8161968",
       "disposition": "compatibility_required",
       "owner": "Retained Admin Player profile and identity UI",
       "symbols": ["EconovariaPlayerIdentityWiring", "saveProfileSettings", "loadPlayers", "decorateCreateForms", "decorateProfileModal"],
-      "referenceTerms": ["confirm-player-settings-save", "EconovariaAdminAuth"],
+      "referenceTerms": ["confirm-player-settings-save"],
       "reason": "Raw HTML loads the module as the retained Player profile/identity UI owner. Profile saving PATCHes profile settings, then a scoped reset action calls the canonical authenticated Admin transport directly. The reset scope snapshots game, Player and modal identity, rejects stale responses and is explicitly disposed after each action. The module also decorates creation fields, caches roster reads by game and exposes selection helpers, so it remains broader than reset alone.",
-      "sourceEvidence": ["admin/index.html", "admin/admin-auth.js", "admin/player-create-lifecycle.js"],
-      "sourceEvidenceBlobs": {"admin/index.html":"0af4aed709b1a1e35c6f036716f272cf854ea02e", "admin/admin-auth.js":"1f27c1d2ce4d1864ff8a475564d414f065287b0f", "admin/player-create-lifecycle.js":"1f0eba13316bfdcceee90b970e3ffc848ea80f95"},
+      "sourceEvidence": ["admin/player-identity-reset-scope.js", "admin/player-identity-roster.js", "admin/player-identity-profile.js", "admin/admin-request-normalization.js", "admin/index.html", "admin/admin-auth.js", "admin/player-create-lifecycle.js"],
+      "sourceEvidenceBlobs": {"admin/player-identity-reset-scope.js":"74e9e1faaf5b0dfc7398d62be3ae82a13a984fc4", "admin/player-identity-roster.js":"cb607c08365f58f3309441322f21ef583aaf4b2c", "admin/player-identity-profile.js":"d331fd3438b4ffb4520976c83c1cecdb92b49590", "admin/admin-request-normalization.js":"010a1b81df806461211c5cab46aa69482b213787", "admin/index.html":"12d13c7330c4962a7d9ef9fc483e7cbdae392178", "admin/admin-auth.js":"27f473859e4493f47a1bd0eb9bdaab5f381ef038", "admin/player-create-lifecycle.js":"1f0eba13316bfdcceee90b970e3ffc848ea80f95"},
       "inboundRoots": ["Raw retained admin/index.html defer script", "Player settings modal capture listener", "PlayerCreateLifecycle.decoratePlayerCreateForm -> exposed decorateCreateForm", "Document navigation clicks, load callback and MutationObserver"],
       "consumerAudit": {"HTTP":"GET /api/admin/games/:gameId/players; PATCH /api/admin/games/:gameId/players/:playerId/settings; explicit authenticated POST access-code/reset", "SQL_RPC":"No browser persistence authority; profile and credential writes remain two remote mutations rather than one atomic transaction", "jobs":"Delayed decoration timers and document/modal listeners, not server cron", "dynamic_HTML_build":"Direct retained script and global helper consumers; built-default V2 usage remains separate"},
       "sourceTrace": ["Initial save validates current game, Player and modal identity; blank replacement code keeps the existing credential unchanged", "Reset scope snapshots game/Player/modal context before the write and rejects a late response after context replacement", "Each confirmed reset scope is explicitly disposed in finally; detached or non-Players navigation also disposes active reset ownership", "The broader module observer/timers/document listener remain retained behavior outside this reset-only convergence"],
@@ -374,7 +374,7 @@
       "referenceTerms": ["econovaria:attendance-reward-saved", "econovaria:settings-context-changed"],
       "reason": "REF-014 keeps the existing explicit adapter, verification GET, one PATCH and generated combined-save delegation. Promise success/failure is bound to the Settings page, active route and game generation. Named listeners and the completion timer have an idempotent disposer; reinstalling removes the previous owner. Matching-key cleanup cannot discard a newer payload retry identity.",
       "sourceEvidence": ["admin/admin-bootstrap.js", "admin/attendance-reward-settings-route-bridge-v2.js", "admin/attendance-reward-settings-v4.js", "admin/settings-save-error-bridge.js"],
-      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"677933300249725e146cf7d79a5b44d0e35f60e6", "admin/attendance-reward-settings-route-bridge-v2.js":"997c57a13c2fed2aa5b138c57e7714b1e499efa0", "admin/attendance-reward-settings-v4.js":"50c807ae4b6e5349fa4e4fce36ed4b8937203381", "admin/settings-save-error-bridge.js":"73aa406b9c21fcebb99982acccbd52bc83cf50ca"},
+      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"8954778cfd05818bf26dc23e0f2e47b9cd1ec01b", "admin/attendance-reward-settings-route-bridge-v2.js":"997c57a13c2fed2aa5b138c57e7714b1e499efa0", "admin/attendance-reward-settings-v4.js":"50c807ae4b6e5349fa4e4fce36ed4b8937203381", "admin/settings-save-error-bridge.js":"73aa406b9c21fcebb99982acccbd52bc83cf50ca"},
       "inboundRoots": ["Raw HTML -> serial attendance-settings bootstrap phase", "Captured save-settings clicks when Attendance is dirty and core settings are not dirty", "Settings-context-changed and combined attendance-reward-saved events"],
       "consumerAudit": {"HTTP":"Verification GET then PATCH /api/admin/games/:gameId/settings through the explicit authenticated adapter; the prior captured-transport fallback remains only when the adapter is absent", "SQL_RPC":"No direct SQL; authoritative Settings mutation remains downstream", "jobs":"Owned 900ms cleanup timer, page/route/game generation and in-flight promise identity", "dynamic_HTML_build":"Dynamic bootstrap and event consumers, not an independent default V2 controller"},
       "sourceTrace": ["settingsMutation reuses a valid key for identical serialized payload in memory/session storage; both X-Idempotency-Key and X-Request-Id use that key and the body also carries it", "Only successful PATCH clears its matching retry key; failure retains identity and an old completion cannot erase a newer key", "Current-generation success emits attendance-reward-saved before completed state; generation mismatch suppresses owned UI/event updates", "Generation checking is not request cancellation. REF-012 now rechecks the context after verification GET and before reading the draft or issuing PATCH, and exposes the context identity for combined-save acknowledgement", "An exported idempotent disposer removes all owned listeners and the completion timer; page/route changes invalidate the old flight while permitting a new context to save"],
@@ -393,7 +393,7 @@
       "referenceTerms": ["econovaria:attendance-reward-saved"],
       "reason": "Owns per-game load sequence, draft/persisted attendance state, validation, card rendering and successful-save acknowledgement. Its getters are consumed by the bridge/save controller; removing the fetch wrapper alone would not retire this state and event owner.",
       "sourceEvidence": ["admin/admin-bootstrap.js", "admin/attendance-reward-save-controller-v3.js", "admin/attendance-reward-settings-route-bridge-v2.js"],
-      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"677933300249725e146cf7d79a5b44d0e35f60e6", "admin/attendance-reward-save-controller-v3.js":"415399df52b4d2833361d2b3ac51cf1005c6d1ce", "admin/attendance-reward-settings-route-bridge-v2.js":"997c57a13c2fed2aa5b138c57e7714b1e499efa0"},
+      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"8954778cfd05818bf26dc23e0f2e47b9cd1ec01b", "admin/attendance-reward-save-controller-v3.js":"415399df52b4d2833361d2b3ac51cf1005c6d1ce", "admin/attendance-reward-settings-route-bridge-v2.js":"997c57a13c2fed2aa5b138c57e7714b1e499efa0"},
       "inboundRoots": ["Serial attendance-settings bootstrap after save controller", "Save-controller and request-bridge global getters", "Attendance-reward-saved event and DOM mutation/render scheduling"],
       "consumerAudit": {"HTTP":"GET /api/admin/games/:gameId/settings through captured transport; this module sends no mutation", "SQL_RPC":"None directly; display state is not reward issuance", "jobs":"Animation-frame render queue and DOM observer", "dynamic_HTML_build":"Dynamic retained bootstrap, dynamically inserted stylesheet/card and global getters"},
       "sourceTrace": ["loadSequence and selected-game comparison reject stale load results; load failure sets loaded plus loadError and keeps normalized state", "acknowledgeSaved accepts only matching state.gameId, clears draft/dirty state and renders saved values", "normalizedWindow forces player_country currency mode and difficulty adjustment true; this behavior is preserved, not redesigned", "Observer/listener cleanup is not exported; loaded/error state does not prove authoritative settings verification"],
@@ -412,7 +412,7 @@
       "referenceTerms": ["econovaria:admin-settings-mounted", "econovaria:admin-request-lifecycle", "econovaria:settings-context-changed", "econovaria:attendance-reward-saved"],
       "reason": "Converges navigation, completed/failed/cancelled Settings reads, context changes and Attendance saves into a bounded frame-settle lifecycle. It waits for a Settings page, loaded Attendance card and simplified controller, then publishes a bubbling mounted event. This is a live source event bridge, not merely an obsolete filename.",
       "sourceEvidence": ["admin/admin-bootstrap.js", "admin/attendance-reward-save-controller-v3.js", "admin/attendance-reward-settings-v4.js"],
-      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"677933300249725e146cf7d79a5b44d0e35f60e6", "admin/attendance-reward-save-controller-v3.js":"415399df52b4d2833361d2b3ac51cf1005c6d1ce", "admin/attendance-reward-settings-v4.js":"50c807ae4b6e5349fa4e4fce36ed4b8937203381"},
+      "sourceEvidenceBlobs": {"admin/admin-bootstrap.js":"8954778cfd05818bf26dc23e0f2e47b9cd1ec01b", "admin/attendance-reward-save-controller-v3.js":"415399df52b4d2833361d2b3ac51cf1005c6d1ce", "admin/attendance-reward-settings-v4.js":"50c807ae4b6e5349fa4e4fce36ed4b8937203381"},
       "inboundRoots": ["Raw HTML -> serial bootstrap after settings-simplified and Attendance state", "Captured Settings navigation click", "Document request-lifecycle/context/save events, window load and explicit reconcile helper"],
       "consumerAudit": {"HTTP":"Consumes pageRead request-lifecycle metadata; sends no HTTP request", "SQL_RPC":"No persistence", "jobs":"At most 120 requestAnimationFrame settle iterations per generation", "dynamic_HTML_build":"Dynamic retained module; event-only consumers are enumerated separately from filename references"},
       "sourceTrace": ["A newer reconcile generation invalidates older settle callbacks", "After controller.reconcile, the next frame checks generation and page.isConnected before refresh and bubbling mounted event", "The loaded Attendance attribute may coexist with loadError, so readiness is a UI lifecycle signal, not a successful server-read certificate", "No full listener/timer disposer is exported; do not infer removal from absence of fetch assignment"],
@@ -420,6 +420,57 @@
       "replacement": "REF-014 explicit Settings lifecycle and REF-015 retirement checks; retain mounted-event producer until consumers are replaced",
       "confidence": "High for complete bridge source and known state/save producers; emitted event reachability remains literal evidence",
       "removalConditions": ["Preserve bounded settling, superseded-generation suppression and connected-page checks", "Retain all mounted-event consumers and failed/cancelled-read recovery", "Do not replace UI readiness with a claim of data freshness", "Establish disposal and retained-client gates before deletion"],
+      "safeToDelete": false
+    },
+    {
+      "path": "admin/player-identity-reset-scope.js",
+      "blobSha": "74e9e1faaf5b0dfc7398d62be3ae82a13a984fc4",
+      "disposition": "compatibility_required",
+      "owner": "Retained Admin Player profile and identity UI",
+      "symbols": [
+        "createPlayerIdentityResetScope"
+      ],
+      "referenceTerms": [
+        "EconovariaAdminAuth"
+      ],
+      "reason": "Extracted retained identity reset-scope implementation, called by the original Player identity UI owner. Preserves the authenticated Admin request, current game/Player/modal checks, generation rejection, disposal, and existing error semantics. The moved transport reference remains explicitly reviewed and protected.",
+      "sourceEvidence": [
+        "admin/player-identity-wiring.js",
+        "admin/index.html",
+        "admin/admin-auth.js",
+        "admin/player-identity-profile.js",
+        "admin/admin-request-normalization.js"
+      ],
+      "sourceEvidenceBlobs": {
+        "admin/player-identity-wiring.js": "2b052eac1efeabde174eebbea82b3426e8161968",
+        "admin/index.html": "12d13c7330c4962a7d9ef9fc483e7cbdae392178",
+        "admin/admin-auth.js": "27f473859e4493f47a1bd0eb9bdaab5f381ef038",
+        "admin/player-identity-profile.js": "d331fd3438b4ffb4520976c83c1cecdb92b49590",
+        "admin/admin-request-normalization.js": "010a1b81df806461211c5cab46aa69482b213787"
+      },
+      "inboundRoots": [
+        "Raw retained admin/index.html defer helper before identity owner",
+        "player-identity-wiring.js -> createPlayerIdentityResetScope; profile save uses injected resetScopeFor"
+      ],
+      "consumerAudit": {
+        "HTTP": "GET /api/admin/games/:gameId/players; PATCH /api/admin/games/:gameId/players/:playerId/settings; explicit authenticated POST access-code/reset",
+        "SQL_RPC": "No browser persistence authority; profile and credential writes remain two remote mutations rather than one atomic transaction",
+        "jobs": "Delayed decoration timers and document/modal listeners, not server cron",
+        "dynamic_HTML_build": "Direct retained script and global helper consumers; built-default V2 usage remains separate"
+      },
+      "sourceTrace": [
+        "Original reset-scope implementation extracted with ownerScope access preserving live state.",
+        "Profile-first ordering remains in player-identity-profile.js; reset scope still owns authenticated credential reset and stale-context rejection."
+      ],
+      "externalUsage": "UNKNOWN; source loading is not proof of hosted execution or retirement",
+      "replacement": "REF-013 converges existing-player reset inside this source owner on the explicit authenticated Admin transport while preserving adjacent creation/profile behavior",
+      "confidence": "High for the inspected module, direct source consumers and scoped reset ownership; exact-head browser/CI acceptance remains a separate task gate",
+      "removalConditions": [
+        "Preserve creation fields and profile-first ordering",
+        "Preserve reset busy/error semantics, identifier-only mode and stale-context rejection",
+        "Resolve the broader timers, observer and capture listeners before retirement",
+        "Do not label the two-request profile/reset save atomic"
+      ],
       "safeToDelete": false
     }
   ],
@@ -500,6 +551,137 @@
       "sourceInspectionSha": "e31349cead6db5b23de5be1e3a2e60c6677887d6",
       "evidence": "docs/operations/evidence/story-roleplay-persistence-v1/scope.md",
       "review": "One additive Story parity-test path in the existing Contract acceptance script. All original tests, strict configuration, permissions, frozen lock, dependencies and other scripts remain unchanged. Refresh only three supporting package hashes; preserve every reviewed disposition, historical measurement, safeToDelete=false and retirement gate. The stale-source assertion remains enforced, with no test waiver or legacy removal."
+    },
+    {
+      "task": "BROWSER-ADMIN-BATCH-20261115",
+      "sourceInspectionSha": "36af8cb7cb93e8b9cc26d9365ef5589e692345a0",
+      "previousRegisterBlobSha": "c78cd2668010c46446fb154c9e492f56a52e6d50",
+      "evidence": "docs/operations/evidence/refactor-execution-v1/REF-003/local-extraction-bindings-20261115.md",
+      "bindings": [
+        {
+          "reviewPath": "admin/admin-bootstrap.js",
+          "sourcePath": "admin/admin-bootstrap.js",
+          "previousBlobSha": "677933300249725e146cf7d79a5b44d0e35f60e6",
+          "reviewedBlobSha": "8954778cfd05818bf26dc23e0f2e47b9cd1ec01b"
+        },
+        {
+          "reviewPath": "admin/attendance-reward-settings-route-bridge-v2.js",
+          "sourcePath": "admin/admin-bootstrap.js",
+          "previousBlobSha": "677933300249725e146cf7d79a5b44d0e35f60e6",
+          "reviewedBlobSha": "8954778cfd05818bf26dc23e0f2e47b9cd1ec01b"
+        },
+        {
+          "reviewPath": "admin/player-access-code-bridge.js",
+          "sourcePath": "admin/index.html",
+          "previousBlobSha": "0af4aed709b1a1e35c6f036716f272cf854ea02e",
+          "reviewedBlobSha": "12d13c7330c4962a7d9ef9fc483e7cbdae392178"
+        },
+        {
+          "reviewPath": "admin/player-create-lifecycle.js",
+          "sourcePath": "admin/index.html",
+          "previousBlobSha": "0af4aed709b1a1e35c6f036716f272cf854ea02e",
+          "reviewedBlobSha": "12d13c7330c4962a7d9ef9fc483e7cbdae392178"
+        },
+        {
+          "reviewPath": "admin/player-identity-wiring.js",
+          "sourcePath": "admin/player-identity-wiring.js",
+          "previousBlobSha": "e3e7fe94ad0d57d33087670dc216e286f962f786",
+          "reviewedBlobSha": "2b052eac1efeabde174eebbea82b3426e8161968"
+        },
+        {
+          "reviewPath": "admin/player-identity-wiring.js",
+          "sourcePath": "admin/index.html",
+          "previousBlobSha": "0af4aed709b1a1e35c6f036716f272cf854ea02e",
+          "reviewedBlobSha": "12d13c7330c4962a7d9ef9fc483e7cbdae392178"
+        },
+        {
+          "reviewPath": "admin/player-identity-wiring.js",
+          "sourcePath": "admin/admin-auth.js",
+          "previousBlobSha": "1f27c1d2ce4d1864ff8a475564d414f065287b0f",
+          "reviewedBlobSha": "27f473859e4493f47a1bd0eb9bdaab5f381ef038"
+        },
+        {
+          "reviewPath": "admin/attendance-reward-save-controller-v3.js",
+          "sourcePath": "admin/admin-bootstrap.js",
+          "previousBlobSha": "677933300249725e146cf7d79a5b44d0e35f60e6",
+          "reviewedBlobSha": "8954778cfd05818bf26dc23e0f2e47b9cd1ec01b"
+        },
+        {
+          "reviewPath": "admin/attendance-reward-settings-v4.js",
+          "sourcePath": "admin/admin-bootstrap.js",
+          "previousBlobSha": "677933300249725e146cf7d79a5b44d0e35f60e6",
+          "reviewedBlobSha": "8954778cfd05818bf26dc23e0f2e47b9cd1ec01b"
+        },
+        {
+          "reviewPath": "admin/settings-lifecycle-bridge.js",
+          "sourcePath": "admin/admin-bootstrap.js",
+          "previousBlobSha": "677933300249725e146cf7d79a5b44d0e35f60e6",
+          "reviewedBlobSha": "8954778cfd05818bf26dc23e0f2e47b9cd1ec01b"
+        }
+      ],
+      "preservedHistoricalPrimaryReview": {
+        "path": "admin/player-identity-wiring.js",
+        "blobSha": "e3e7fe94ad0d57d33087670dc216e286f962f786",
+        "disposition": "compatibility_required",
+        "owner": "Retained Admin Player profile and identity UI",
+        "symbols": [
+          "EconovariaPlayerIdentityWiring",
+          "saveProfileSettings",
+          "loadPlayers",
+          "decorateCreateForms",
+          "decorateProfileModal"
+        ],
+        "referenceTerms": [
+          "confirm-player-settings-save",
+          "EconovariaAdminAuth"
+        ],
+        "reason": "Raw HTML loads the module as the retained Player profile/identity UI owner. Profile saving PATCHes profile settings, then a scoped reset action calls the canonical authenticated Admin transport directly. The reset scope snapshots game, Player and modal identity, rejects stale responses and is explicitly disposed after each action. The module also decorates creation fields, caches roster reads by game and exposes selection helpers, so it remains broader than reset alone.",
+        "sourceEvidence": [
+          "admin/index.html",
+          "admin/admin-auth.js",
+          "admin/player-create-lifecycle.js"
+        ],
+        "sourceEvidenceBlobs": {
+          "admin/index.html": "0af4aed709b1a1e35c6f036716f272cf854ea02e",
+          "admin/admin-auth.js": "1f27c1d2ce4d1864ff8a475564d414f065287b0f",
+          "admin/player-create-lifecycle.js": "1f0eba13316bfdcceee90b970e3ffc848ea80f95"
+        },
+        "inboundRoots": [
+          "Raw retained admin/index.html defer script",
+          "Player settings modal capture listener",
+          "PlayerCreateLifecycle.decoratePlayerCreateForm -> exposed decorateCreateForm",
+          "Document navigation clicks, load callback and MutationObserver"
+        ],
+        "consumerAudit": {
+          "HTTP": "GET /api/admin/games/:gameId/players; PATCH /api/admin/games/:gameId/players/:playerId/settings; explicit authenticated POST access-code/reset",
+          "SQL_RPC": "No browser persistence authority; profile and credential writes remain two remote mutations rather than one atomic transaction",
+          "jobs": "Delayed decoration timers and document/modal listeners, not server cron",
+          "dynamic_HTML_build": "Direct retained script and global helper consumers; built-default V2 usage remains separate"
+        },
+        "sourceTrace": [
+          "Initial save validates current game, Player and modal identity; blank replacement code keeps the existing credential unchanged",
+          "Reset scope snapshots game/Player/modal context before the write and rejects a late response after context replacement",
+          "Each confirmed reset scope is explicitly disposed in finally; detached or non-Players navigation also disposes active reset ownership",
+          "The broader module observer/timers/document listener remain retained behavior outside this reset-only convergence"
+        ],
+        "externalUsage": "UNKNOWN; source loading is not proof of hosted execution or retirement",
+        "replacement": "REF-013 converges existing-player reset inside this source owner on the explicit authenticated Admin transport while preserving adjacent creation/profile behavior",
+        "confidence": "High for the inspected module, direct source consumers and scoped reset ownership; exact-head browser/CI acceptance remains a separate task gate",
+        "removalConditions": [
+          "Preserve creation fields and profile-first ordering",
+          "Preserve reset busy/error semantics, identifier-only mode and stale-context rejection",
+          "Resolve the broader timers, observer and capture listeners before retirement",
+          "Do not label the two-request profile/reset save atomic"
+        ],
+        "safeToDelete": false
+      },
+      "referenceTermTransfer": {
+        "term": "EconovariaAdminAuth",
+        "from": "admin/player-identity-wiring.js",
+        "to": "admin/player-identity-reset-scope.js",
+        "retainedRootTerm": "confirm-player-settings-save"
+      },
+      "review": "Exact source-binding maintenance after reviewed local extraction. Original 23 reviews and removal targets remain protected; extracted reset helper adds one compatibility_required review/removal target with the same owner and retirement conditions. All dispositions, safeToDelete=false, original review symbols, external-use limits and historical measurements remain. Existing invalidation checks are unchanged. No published or hosted qualification claimed."
     }
   ]
 }

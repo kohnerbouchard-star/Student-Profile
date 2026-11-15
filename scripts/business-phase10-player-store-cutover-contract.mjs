@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 
 const files = {
   publicContracts:
@@ -75,7 +76,7 @@ const source = Object.fromEntries(
     if (!fs.existsSync(path)) {
       throw new Error(`Missing Phase 10A.4 ${name}: ${path}`);
     }
-    return [name, fs.readFileSync(path, "utf8")];
+    return [name, readEdgeRuntimeSource(path, "utf8")];
   }),
 );
 

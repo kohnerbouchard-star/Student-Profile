@@ -91,6 +91,8 @@ try {
   for (const mode of ["resolve", "reject", "none"]) {
     const fixture = await page.context().newPage();
     await fixture.setContent('<main id="adminPreview"><aside></aside></main>');
+    await fixture.addScriptTag({ url: new URL("./game-session-context.js", BASE_URL).href });
+    await fixture.addScriptTag({ url: new URL("./game-session-share-surface.js", BASE_URL).href });
     await fixture.addScriptTag({ url: new URL("./game-session-controls.js", BASE_URL).href });
     report.bootstrapCompletion.push(await fixture.evaluate(async mode => {
       const frame = () => new Promise(requestAnimationFrame);
@@ -249,6 +251,8 @@ try {
   for (const mode of ["fallback", "early-close", "late-native", "late-close", "reopen", "modal-event", "unrelated-close"]) {
     const fixture = await page.context().newPage();
     await fixture.setContent('<button id="open" data-admin-terminal-action="share-current-game">Share</button>');
+    await fixture.addScriptTag({ url: new URL("./game-session-context.js", BASE_URL).href });
+    await fixture.addScriptTag({ url: new URL("./game-session-share-surface.js", BASE_URL).href });
     await fixture.addScriptTag({ url: new URL("./game-session-controls.js", BASE_URL).href });
     report.shareRepair.push(await fixture.evaluate(async (mode) => {
       const frame = () => new Promise(requestAnimationFrame);
