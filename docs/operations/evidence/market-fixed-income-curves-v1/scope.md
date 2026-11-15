@@ -160,3 +160,33 @@ archive, actual-main-relative patch and full-history Git bundle before draft
 publication and actual-number authority registration. No PR number is guessed.
 Statement postmerge audit must clear before the next normal main merge. No
 remote mutation, deployment or production action occurs in this local work.
+
+## Actual-number draft qualification
+
+Verified draft
+[PR #975](https://github.com/kohnerbouchard-star/Student-Profile/pull/975)
+publishes reviewed source head `44239f1d2b559ff9cd9ab5dccb06bf311fc25f2a`, tree
+`ba41860942d73989442a76be2e292dcdd7d49db9`, against actual Statement main
+`4f62ab63247cd71f44ab4bff583ba16db8fc1cd4`. This metadata remains local until
+independent review and coordinator publication.
+
+Own PR #975 authority preserves the exact ordered 151 required and 105 critical
+identities from main's PR #974 authority, including Full Financial Markets. All
+production, mutation and secret-value permissions remain false. Exactly 49
+inherited pull-request filters gain only this authority path. The complete
+main-relative delta is 58 files, locked by 61 allowed/required paths including
+three unchanged read-only locks: both authority verifier files and Full
+Financial Markets workflow. Source, package scripts, census and all prior
+authorities and workflow bytes are retained.
+
+Event-action-aware qualification requires 63 opened/synchronize/reopened PR
+workflow families successful, plus separate dynamic CodeQL and both exact-head
+funding-core jobs. Closed-only Branch Hygiene is not an opened PR family. The
+main push set remains 28 families with separately reviewed guarded skips. Any
+changed head/base/pathset requires re-derivation rather than a relaxed gate. All
+original 151/105 identities and Player logical steps remain mandatory.
+
+Committed metadata gates and recovery are reviewed separately from initial
+source evidence. Full hosted qualification, normal expected-head merge and
+postmerge audit remain pending. Statement #974 postmerge clearance is required
+before this batch can merge. No production action is authorized.
