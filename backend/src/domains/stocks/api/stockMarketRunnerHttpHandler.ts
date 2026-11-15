@@ -9,7 +9,6 @@ import {
   jsonError,
   jsonResponse,
 } from "../../../platform/supabase/edgeResponse.ts";
-import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
 import {
   type SupabaseRealtimeBroadcastClient,
   SupabaseRealtimeBroadcastTransport,
@@ -35,7 +34,6 @@ import {
   type StockMarketRunnerPostMarketNewsRequestBody,
   type StockMarketRunnerPostMarketNewsSuccessBody,
   type StockMarketRunnerRepository,
-  type StockMarketRunnerRequestBody,
   type StockMarketRunnerResult,
   type StockMarketRunnerSuccessBody,
 } from "../contracts/stockMarketRunnerContracts.ts";
@@ -43,7 +41,6 @@ import {
   SupabaseStockMarketRunnerRepository,
 } from "../infrastructure/supabaseStockMarketRunnerRepository.ts";
 import {
-  parseStockMarketNewsCreateRequest,
   type StockMarketNewsCreateResult,
   StockMarketNewsError,
   type StockMarketNewsRepository,
@@ -51,12 +48,11 @@ import {
 import {
   SupabaseStockMarketNewsRepository,
 } from "../infrastructure/supabaseStockMarketNewsRepository.ts";
-import {
-  createGameSessionContractWriter,
-} from "../../contracts/index.ts";
+import { createGameSessionContractWriter } from "../../contracts/index.ts";
 import {
   createStockTickStorylineRunner,
 } from "../../storylines/server/stockTickStorylineRunner.ts";
+import { readStockMarketRunnerRequestBody } from "./stockMarketRunnerRequestParser.ts";
 
 declare const Deno: {
   readonly env: {
@@ -442,119 +438,10 @@ function logStorylineRunnerFailure(
   });
 }
 
-async function readStockMarketRunnerRequestBody(
-  request: Request,
-): Promise<StockMarketRunnerRequestBody> {
-  let value: unknown;
-
-  try {
-    value = await request.json();
-  } catch (_error) {
-    throw new StockMarketRunnerError(
-      "invalid_stock_market_runner_request",
-      "Request body must be valid JSON.",
-      400,
-    );
-  }
-
-  if (!isRecord(value)) {
-    throw new StockMarketRunnerError(
-      "invalid_stock_market_runner_request",
-      "Request body must be a JSON object.",
-      400,
-    );
-  }
-
-  if (
-    Array.isArray(value.gameSessionId) ||
-    Array.isArray(value.gameSessionIds) ||
-    Array.isArray(value.gameSessions) ||
-    Array.isArray(value.sessions)
-  ) {
-    throw new StockMarketRunnerError(
-      "invalid_stock_market_runner_request",
-      "Stock market runner accepts exactly one gameSessionId per request.",
-      400,
-    );
-  }
-
-  const action = typeof value.action === "string"
-    ? value.action.trim()
-    : "run_tick";
-
-  if (action === "post_market_news") {
-    return {
-      action,
-      ...parseStockMarketNewsCreateRequest(value),
-    };
-  }
-
-  if (action !== "run_tick") {
-    throw new StockMarketRunnerError(
-      "invalid_stock_market_runner_request",
-      "Unsupported stock market runner action.",
-      400,
-    );
-  }
-
-  const gameSessionId = typeof value.gameSessionId === "string"
-    ? value.gameSessionId.trim()
-    : "";
-
-  if (!gameSessionId) {
-    throw new StockMarketRunnerError(
-      "invalid_stock_market_runner_request",
-      "gameSessionId is required.",
-      400,
-    );
-  }
-
-  return {
-    action: "run_tick",
-    gameSessionId,
-    tickIndex: readOptionalTickIndex(value.tickIndex),
-    seed: readOptionalSeed(value.seed),
-  };
-}
-
 function readConfiguredRunnerSecret(
   dependencies: StockMarketRunnerHttpDependencies,
 ): string | undefined {
   return dependencies.readRunnerSecret
     ? dependencies.readRunnerSecret()
     : Deno.env.get("STOCK_MARKET_RUNNER_SECRET");
-}
-
-function readOptionalTickIndex(value: unknown): number | undefined {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
-    throw new StockMarketRunnerError(
-      "invalid_stock_market_runner_request",
-      "tickIndex must be a non-negative integer when provided.",
-      400,
-    );
-  }
-
-  return value;
-}
-
-function readOptionalSeed(value: unknown): string | undefined {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-
-  const seed = typeof value === "string" ? value.trim() : "";
-
-  if (!seed) {
-    throw new StockMarketRunnerError(
-      "invalid_stock_market_runner_request",
-      "seed must be a non-empty string when provided.",
-      400,
-    );
-  }
-
-  return seed;
 }

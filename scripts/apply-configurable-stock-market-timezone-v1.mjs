@@ -567,7 +567,7 @@ await patch(
 );
 
 await patch(
-  "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+  "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.fixtures.support.ts",
   (source) => {
     let expected = source;
 
@@ -583,11 +583,20 @@ await patch(
     if (!expected.includes("readMarketOpenState: options.readMarketOpenState")) {
       expected = replaceRequired(
         expected,
-        `    now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),\n    createRepository: () => repository,`,
-        `    now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),\n    readMarketOpenState: options.readMarketOpenState ?? (async () => true),\n    createRepository: () => repository,`,
+        `    now: options.now ?? (() => new Date(WALL_CLOCK_TIME)),\n    createRepository: () => repository,`,
+        `    now: options.now ?? (() => new Date(WALL_CLOCK_TIME)),\n    readMarketOpenState: options.readMarketOpenState ?? (async () => true),\n    createRepository: () => repository,`,
         "runner test default market-state reader",
       );
     }
+
+    return expected;
+  },
+);
+
+await patch(
+  "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.authorizationAndPublication.cases.ts",
+  (source) => {
+    let expected = source;
 
     expected = expected.replace(
       `      now: () => new Date("2026-07-19T00:00:00.000Z"),`,

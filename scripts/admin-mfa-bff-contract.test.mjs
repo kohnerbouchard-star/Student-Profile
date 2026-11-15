@@ -9,7 +9,12 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 test("web-session BFF owns Staff MFA and exact Admin service authority", async () => {
   const [source, authSource, staffLoginSource] = await Promise.all([
     read("backend/supabase/functions/web-session-api/index.ts"),
-    read("backend/src/security/adminBffRequestAuth.ts"),
+    Promise.all([
+      read("backend/src/security/adminBffRequestAuth.ts"),
+      read("backend/src/security/adminBffOidcVerification.ts"),
+      read("backend/src/security/adminBffTargetPolicy.ts"),
+      read("backend/src/security/adminBffCrypto.ts"),
+    ]).then((sources) => sources.join("\n")),
     read("backend/src/domains/auth/api/staffLoginHttpHandler.ts"),
   ]);
 

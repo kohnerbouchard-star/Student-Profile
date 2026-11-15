@@ -10,7 +10,12 @@ test("CodeQL remediation removes the flagged security patterns", () => {
   const qr = source("backend/supabase/functions/staff-mfa-api/mfaQrCode.ts");
   assert.doesNotMatch(qr, /SAFE_ROOT_TAG|stripComments\([^)]*\)\s*\{\s*return[^;]*\.replace/s);
 
-  const auth = source("backend/src/security/adminBffRequestAuth.ts");
+  const auth = [
+    "backend/src/security/adminBffRequestAuth.ts",
+    "backend/src/security/adminBffOidcVerification.ts",
+    "backend/src/security/adminBffTargetPolicy.ts",
+    "backend/src/security/adminBffCrypto.ts",
+  ].map(source).join("\n");
   assert.doesNotMatch(auth, /audience\.includes\(/);
 
   const player = source("backend/src/domains/players/api/playerLoginHttpHandler.ts");

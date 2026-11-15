@@ -1,3 +1,5 @@
+import { readFailed } from "./dashboardReadFailure.ts";
+import { readDashboardCountryAssignments } from "./dashboardCountryAssignmentRead.ts";
 import {
   type AccountBalanceRow,
   balanceTotalForCurrency,
@@ -7,7 +9,6 @@ import {
   summarizePortfolio,
   toCashDto,
   toHoldingDto,
-  unique,
 } from "./dashboardFinancialProjection.ts";
 import type {
   PlayerGameDashboardReadInput,
@@ -34,11 +35,7 @@ import type { PlayerContractsReadQuery } from "../../contracts/index.ts";
 
 import {
   CASH_SELECT,
-  COUNTRY_ASSIGNMENT_SELECT,
-  COUNTRY_PROFILE_SELECT,
-  type CountryAssignmentRow,
   type CountryInfo,
-  type CountryProfileRow,
   GAME_SESSION_SELECT,
   type GameSessionRow,
   INVENTORY_SELECT,
@@ -326,54 +323,7 @@ export class SupabasePlayerGameDashboardRepository
   private async readCountryAssignments(
     gameSessionId: string,
   ): Promise<ReadonlyMap<string, CountryInfo>> {
-    const response = await this.client
-      .from("player_country_assignments")
-      .select(COUNTRY_ASSIGNMENT_SELECT)
-      .eq("game_session_id", gameSessionId)
-      .eq("status", "active")
-      .order("assigned_at", { ascending: false });
-
-    if (response.error) {
-      throw readFailed();
-    }
-
-    const assignments = (response.data ?? []) as CountryAssignmentRow[];
-    const countryProfileIds = unique(
-      assignments.map((assignment) => assignment.country_profile_id),
-    );
-
-    if (countryProfileIds.length === 0) {
-      return new Map();
-    }
-
-    const countriesResponse = await this.client
-      .from("country_profiles")
-      .select(COUNTRY_PROFILE_SELECT)
-      .in("id", countryProfileIds);
-
-    if (countriesResponse.error) {
-      throw readFailed();
-    }
-
-    const countryById = new Map(
-      ((countriesResponse.data ?? []) as CountryProfileRow[])
-        .map((country) => [country.id, country] as const),
-    );
-    const countryByPlayerId = new Map<string, CountryInfo>();
-
-    for (const assignment of assignments) {
-      if (countryByPlayerId.has(assignment.player_id)) {
-        continue;
-      }
-
-      const country = countryById.get(assignment.country_profile_id);
-      countryByPlayerId.set(assignment.player_id, {
-        countryCode: country?.country_code ?? null,
-        currencyCode: normalizeCurrencyCode(country?.currency_code),
-      });
-    }
-
-    return countryByPlayerId;
+    return await readDashboardCountryAssignments(this.client, gameSessionId);
   }
 
   private async readFinancialBalances(
@@ -511,12 +461,4 @@ export class SupabasePlayerGameDashboardRepository
 
     return (response.data ?? []) as StockMarketEventRow[];
   }
-}
-
-function readFailed(): PlayerGameDashboardError {
-  return new PlayerGameDashboardError(
-    "game_dashboard_read_failed",
-    "Player game dashboard could not be loaded.",
-    500,
-  );
 }
