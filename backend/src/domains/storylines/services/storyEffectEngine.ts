@@ -1,38 +1,29 @@
-import type { JsonObject } from "../../../supabase/tableTypes.ts";
 import type { PlayerStoryContext } from "../contracts/playerStoryContext.ts";
 import type { StoryEffect } from "../contracts/storyEffectContracts.ts";
 import type {
   StoryCashAdjustmentWriteInput,
-  StoryCurrencyVolatilityWriteInput,
   StoryEffectBatchExecutionInput,
   StoryEffectBatchExecutionResult,
   StoryEffectExecutionInput,
   StoryEffectExecutionResult,
   StoryFlagWriteInput,
-  StoryMarketNewsWriteInput,
-  StoryPlayerImpactWriteInput,
-  StoryPolicyEffectScope,
-  StoryPolicyWriteInput,
-  StoryWorldLocationStateWriteInput,
-  StoryWorldRouteStateWriteInput,
-  StoryWriteResult,
 } from "../contracts/storyEffectExecutionContracts.ts";
 
+import {
+  executeCurrencyVolatilityEffect,
+  executeMarketNewsEffect,
+  executeWorldLocationStateEffect,
+  executeWorldRouteStateEffect,
+} from "./storyGameEffectExecutors.ts";
+import {
+  buildIdempotencyKey,
+  collectWriteIds,
+} from "./storyEffectWriteSupport.ts";
+import {
+  executePolicyEffect,
+  resolvePolicyScope,
+} from "./storyPolicyEffectExecutor.ts";
 import { prepareStoryContractEffect } from "./prepareStoryEffects.ts";
-
-const OFFICIAL_CURRENCY_CODES = new Set([
-  "ECO",
-  "NRC",
-  "YRC",
-  "THD",
-  "SLV",
-  "ELD",
-  "VAL",
-  "LUM",
-  "SYN",
-  "XAL",
-  "DRV",
-]);
 
 export async function executeStoryEffect(
   input: StoryEffectExecutionInput,
@@ -325,177 +316,6 @@ async function executeCharacterMessageEffect(
   return collectWriteIds(impactResult);
 }
 
-async function executeMarketNewsEffect(
-  input: StoryEffectExecutionInput,
-  effect: Extract<StoryEffect, { type: "market_news_post" }>,
-): Promise<readonly string[]> {
-  if (!input.dependencies.marketNews) {
-    return [];
-  }
-
-  const shockKey = readRequiredTextPayload(
-    effect.payload,
-    "shockKey",
-    "market_news_post",
-  );
-  const marketNewsInput: StoryMarketNewsWriteInput = {
-    gameSessionId: input.gameSessionId,
-    storylineEventId: input.storylineEventId,
-    shockKey,
-    payload: effect.payload,
-    idempotencyKey: [
-      "story_market_news",
-      input.gameSessionId,
-      input.storylineEventId,
-      shockKey,
-    ].join(":"),
-  };
-  const result = await input.dependencies.marketNews.createMarketNews(
-    marketNewsInput,
-  );
-
-  return collectWriteIds(result);
-}
-
-async function executeWorldRouteStateEffect(
-  input: StoryEffectExecutionInput,
-  effect: Extract<StoryEffect, { type: "world_route_state_change" }>,
-): Promise<readonly string[]> {
-  if (!input.dependencies.world) return [];
-
-  const worldInput: StoryWorldRouteStateWriteInput = {
-    gameSessionId: input.gameSessionId,
-    storylineEventId: input.storylineEventId,
-    routeIds: readStringArrayPayload(
-      effect.payload,
-      "routeIds",
-      "world_route_state_change",
-      /^rte_[a-z0-9_]+$/,
-      100,
-    ),
-    status: readEnumTextPayload(
-      effect.payload,
-      "status",
-      "world_route_state_change",
-      ["open", "restricted", "closed"] as const,
-    ),
-    reason: readEnumTextPayload(
-      effect.payload,
-      "reason",
-      "world_route_state_change",
-      ["normal", "shortage", "meridian_disruption", "war", "recovery"] as const,
-    ),
-    costMultiplierBasisPoints: readIntegerPayload(
-      effect.payload,
-      "costMultiplierBasisPoints",
-      "world_route_state_change",
-      1000,
-      50000,
-    ),
-    durationMultiplierBasisPoints: readIntegerPayload(
-      effect.payload,
-      "durationMultiplierBasisPoints",
-      "world_route_state_change",
-      1000,
-      50000,
-    ),
-    appliedAt: input.now,
-    idempotencyKey: `story_route:${input.storylineEventId}:${
-      input.effectIndex ?? 0
-    }`,
-  };
-
-  return collectWriteIds(
-    await input.dependencies.world.applyRouteState(worldInput),
-  );
-}
-
-async function executeWorldLocationStateEffect(
-  input: StoryEffectExecutionInput,
-  effect: Extract<StoryEffect, { type: "world_location_state_change" }>,
-): Promise<readonly string[]> {
-  if (!input.dependencies.world) return [];
-
-  const worldInput: StoryWorldLocationStateWriteInput = {
-    gameSessionId: input.gameSessionId,
-    storylineEventId: input.storylineEventId,
-    locationIds: readStringArrayPayload(
-      effect.payload,
-      "locationIds",
-      "world_location_state_change",
-      /^loc_[a-z0-9_]+$/,
-      100,
-    ),
-    availability: readEnumTextPayload(
-      effect.payload,
-      "availability",
-      "world_location_state_change",
-      ["normal", "shortage", "conflict", "closed"] as const,
-    ),
-    appliedAt: input.now,
-    idempotencyKey: `story_location:${input.storylineEventId}:${
-      input.effectIndex ?? 0
-    }`,
-  };
-
-  return collectWriteIds(
-    await input.dependencies.world.applyLocationState(worldInput),
-  );
-}
-
-async function executeCurrencyVolatilityEffect(
-  input: StoryEffectExecutionInput,
-  effect: Extract<StoryEffect, { type: "currency_volatility" }>,
-): Promise<readonly string[]> {
-  if (!input.dependencies.currency) return [];
-
-  const currencyInput: StoryCurrencyVolatilityWriteInput = {
-    gameSessionId: input.gameSessionId,
-    storylineEventId: input.storylineEventId,
-    adjustmentsBasisPoints: readCurrencyAdjustments(effect.payload),
-    appliedAt: input.now,
-    idempotencyKey: `story_fx:${input.storylineEventId}:${
-      input.effectIndex ?? 0
-    }`,
-  };
-
-  return collectWriteIds(
-    await input.dependencies.currency.applyCurrencyVolatility(currencyInput),
-  );
-}
-
-async function executePolicyEffect(
-  input: StoryEffectExecutionInput,
-  effect: Extract<StoryEffect, { type: "tax_modifier" | "immigration_lock" }>,
-  policyScope: StoryPolicyEffectScope,
-): Promise<readonly string[]> {
-  const baseKey = buildIdempotencyKey(input, policyScope.scopeKey);
-  const policyInput: StoryPolicyWriteInput = {
-    gameSessionId: input.gameSessionId,
-    policyKey: effect.policyKey,
-    policyType: effect.type,
-    scopeType: policyScope.scopeType,
-    scopeKey: policyScope.scopeKey,
-    startsAt: input.now,
-    expiresAt: readExpiresAt(input.now, effect.durationSeconds),
-    durationSeconds: effect.durationSeconds,
-    payload: buildPolicyPayload(effect),
-    sourceStoryEventId: input.storylineEventId,
-    idempotencyKey: `${baseKey}:policy`,
-  };
-  const policyResult = await input.dependencies.policies.upsertPolicy(
-    policyInput,
-  );
-  const impactResult = await maybeWritePlayerPolicyImpact(
-    input,
-    effect,
-    policyScope,
-    `${baseKey}:impact`,
-  );
-
-  return collectWriteIds(policyResult, impactResult);
-}
-
 async function executeContractUnlockEffect(
   input: StoryEffectExecutionInput,
   effect: Extract<StoryEffect, { type: "contract_unlock" }>,
@@ -511,7 +331,6 @@ async function executeContractUnlockEffect(
   return collectWriteIds(contractResult);
 }
 
-
 async function executeFlagEffect(
   input: StoryEffectExecutionInput,
   effect: Extract<StoryEffect, { type: "story_flag_set" }>,
@@ -526,211 +345,6 @@ async function executeFlagEffect(
   const flagResult = await input.dependencies.flags.setStoryFlag(flagInput);
 
   return collectWriteIds(flagResult);
-}
-
-async function maybeWritePlayerPolicyImpact(
-  input: StoryEffectExecutionInput,
-  effect: Extract<StoryEffect, { type: "tax_modifier" | "immigration_lock" }>,
-  policyScope: StoryPolicyEffectScope,
-  idempotencyKey: string,
-): Promise<StoryWriteResult | null> {
-  if (
-    policyScope.scopeType !== "player" ||
-    !input.playerContext ||
-    !effect.label ||
-    !effect.reason
-  ) {
-    return null;
-  }
-
-  const impactInput: StoryPlayerImpactWriteInput = {
-    gameSessionId: input.gameSessionId,
-    playerId: input.playerContext.playerId,
-    storylineEventId: input.storylineEventId,
-    effectType: effect.type,
-    impactLabel: effect.label,
-    impactReason: effect.reason,
-    amount: null,
-    payload: buildPolicyPayload(effect),
-    idempotencyKey,
-  };
-
-  return await input.dependencies.impacts.createPlayerImpact(impactInput);
-}
-
-function resolvePolicyScope(
-  explicitScope: StoryPolicyEffectScope | null | undefined,
-  playerContext: PlayerStoryContext | null | undefined,
-): StoryPolicyEffectScope | null {
-  if (explicitScope) {
-    return explicitScope;
-  }
-
-  if (!playerContext) {
-    return null;
-  }
-
-  return {
-    scopeType: "player",
-    scopeKey: playerContext.playerId,
-  };
-}
-
-function buildPolicyPayload(
-  effect: Extract<StoryEffect, { type: "tax_modifier" | "immigration_lock" }>,
-): JsonObject {
-  return {
-    ...effect.payload,
-    label: effect.label,
-    reason: effect.reason,
-  };
-}
-
-function readRequiredTextPayload(
-  payload: JsonObject,
-  key: string,
-  effectType: string,
-): string {
-  const value = payload[key];
-
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`${effectType} payload ${key} must be a non-empty string.`);
-  }
-
-  return value.trim();
-}
-
-
-function readStringArrayPayload(
-  payload: JsonObject,
-  key: string,
-  effectType: string,
-  pattern: RegExp,
-  maxItems: number,
-): readonly string[] {
-  const value = payload[key];
-  if (
-    !Array.isArray(value) ||
-    value.length < 1 ||
-    value.length > maxItems ||
-    value.some((item) => typeof item !== "string" || !pattern.test(item))
-  ) {
-    throw new Error(`${effectType} payload ${key} is invalid.`);
-  }
-
-  const unique = [...new Set(value as string[])];
-  if (unique.length !== value.length) {
-    throw new Error(`${effectType} payload ${key} contains duplicates.`);
-  }
-  return Object.freeze(unique);
-}
-
-function readEnumTextPayload<const T extends readonly string[]>(
-  payload: JsonObject,
-  key: string,
-  effectType: string,
-  values: T,
-): T[number] {
-  const value = payload[key];
-  if (typeof value !== "string" || !values.includes(value)) {
-    throw new Error(`${effectType} payload ${key} is invalid.`);
-  }
-  return value as T[number];
-}
-
-function readIntegerPayload(
-  payload: JsonObject,
-  key: string,
-  effectType: string,
-  minimum: number,
-  maximum: number,
-): number {
-  const value = payload[key];
-  if (
-    !Number.isInteger(value) || Number(value) < minimum ||
-    Number(value) > maximum
-  ) {
-    throw new Error(`${effectType} payload ${key} is invalid.`);
-  }
-  return Number(value);
-}
-
-function readCurrencyAdjustments(payload: JsonObject): JsonObject {
-  const value = payload.adjustmentsBasisPoints;
-  if (!isJsonObject(value)) {
-    throw new Error(
-      "currency_volatility payload adjustmentsBasisPoints must be a JSON object.",
-    );
-  }
-
-  let hasNonzero = false;
-  const result: Record<string, number> = {};
-  for (const [currencyCode, basisPoints] of Object.entries(value)) {
-    if (
-      !OFFICIAL_CURRENCY_CODES.has(currencyCode) ||
-      !Number.isInteger(basisPoints) ||
-      Number(basisPoints) < -1500 ||
-      Number(basisPoints) > 1500
-    ) {
-      throw new Error(
-        "currency_volatility adjustments must use official currency codes and integer basis points between -1500 and 1500.",
-      );
-    }
-    if (currencyCode === "ECO" && basisPoints !== 0) {
-      throw new Error(
-        "currency_volatility keeps ECO as the zero-adjustment numeraire.",
-      );
-    }
-    hasNonzero ||= Number(basisPoints) !== 0;
-    result[currencyCode] = Number(basisPoints);
-  }
-
-  if (!hasNonzero) {
-    throw new Error(
-      "currency_volatility requires at least one nonzero adjustment.",
-    );
-  }
-
-  return Object.freeze(result);
-}
-
-function isJsonObject(value: unknown): value is JsonObject {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value)
-  );
-}
-
-function readExpiresAt(
-  now: string,
-  durationSeconds: number | null,
-): string | null {
-  if (durationSeconds === null) {
-    return null;
-  }
-
-  const timestamp = Date.parse(now);
-
-  if (Number.isNaN(timestamp)) {
-    throw new Error("now must be an ISO date string.");
-  }
-
-  return new Date(timestamp + durationSeconds * 1000).toISOString();
-}
-
-function buildIdempotencyKey(
-  input: StoryEffectExecutionInput,
-  scopeKey: string | null | undefined,
-): string {
-  return [
-    "story_effect",
-    input.gameSessionId,
-    input.storylineEventId,
-    input.effectIndex ?? 0,
-    input.effect.type,
-    scopeKey ?? "game",
-  ].join(":");
 }
 
 function isGameEffect(effect: StoryEffect): boolean {
@@ -768,10 +382,4 @@ function skipped(
     playerId,
     reason,
   };
-}
-
-function collectWriteIds(
-  ...results: readonly (StoryWriteResult | null)[]
-): readonly string[] {
-  return results.flatMap((result) => result?.id ? [result.id] : []);
 }
