@@ -1,0 +1,19 @@
+# Permitted Backend29 local candidate
+
+Status: IMPLEMENTED_NOT_MERGED. Roadmap item ARCH-LARGE-PARALLEL-BACKEND29-001.
+
+## Current actual-main source integration
+
+This local candidate includes actual main `41c9ad20303bbb93c68f4a10443ca0829a79e565`, the normal Market #976 merge with tree `44f2a45e435f082d8f14ad59c77e03251bcaf66c` and parents `d2d951e542b12e9e47f6db1783bdf4ef9993e930` and `5bfa07f50478a2fe7bb2e0e1b7152a9fc457c722`. The fetched commit was normally merged into independently reviewed provisional Backend head `67607c475a578118c5a798df2d2261d2a4aa6ba0`, producing source checkpoint `7ee6d0105f58bc25a3ca88c0a8f71ef8e11ae9d6` without conflicts or source changes. Market postmerge/runtime clearance remains pending; source integration is not runtime completion.
+
+The batch selects 29 original Backend targets from reviewed union `3253f12cc009d3ca5477e8ecc99aeb2b62021430`; six Market originals are already in the merged predecessor. All Edge and Browser source changes are excluded from this Backend batch. The current unconditional policy holds cover 14 originals: 11 Admin/Classroom originals, one capability manifest original and two simulation originals. Eight other Edge originals are permitted in the separate Client24 batch; their exclusion here is batch ownership, not an unconditional hold. Held capability and simulation originals/helpers, and all excluded Edge/Browser paths, remain at main bytes.
+
+All selected Backend source/test helpers preserve reviewed union bytes. The independently reviewed standalone BFF source reader uses the Backend donor variant without future Edge imports. The two calendar correction/regression scripts preserve reviewed `51b732c7831d065352c90410bf0e99b95313e479` bytes, paired with the split Stock tests. The finite BFF CodeQL source-reader correction and mandatory regressions from `64cd946edd8ed58312c45d1466172203229583e9` remain intact. Inventory changes from 67 to 38 oversized files against actual merged Market main; this is not a no-oversized-files claim.
+
+Backend29 has no PR identity or own authority manifest and is not ready to merge. Preserve the actual merged Market authority and workflow bytes, including its source-reader correction and 33 regressions. Every inherited 151 required / 105 critical check and every actual triggered family remains mandatory; no isolation guard is waived. Full Financial Markets can receive a Backend own-manifest trigger only after an actual future PR number exists. No routes, RPCs, migrations, deployment or live data changes are included.
+
+Local qualification and recovery evidence: `parallel-publication-20261115/permitted-backend29`. Parent alone chooses publication. Next exact item: independently review the corrected scope checkpoint, obtain the actual future draft PR identity if publication is chosen, publish the full reviewed source and exact bound authority, and complete final committed-head qualification. The next main merge remains strictly held until Market postmerge clearance and Backend full qualification. No production deployment, runtime mutation or external publication occurred in this preparation.
+
+## Historical preparation provenance
+
+Initial assembly used provisional Market-only head `9eaeac4510cab60eb21c532a735f0e761e32df9b` while actual main was `d2d951e542b12e9e47f6db1783bdf4ef9993e930`. Those identifiers describe historical preparation, not the current actual-main baseline. Published Market head `5bfa07f50478a2fe7bb2e0e1b7152a9fc457c722` was subsequently normally merged with reviewed Backend correction `64cd946edd8ed58312c45d1466172203229583e9` into provisional `67607c475a578118c5a798df2d2261d2a4aa6ba0`, retaining both histories. Actual-main integration then produced `7ee6d0105f58bc25a3ca88c0a8f71ef8e11ae9d6` as described above. Earlier recovery packets remain preserved.
