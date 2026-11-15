@@ -1,0 +1,105 @@
+{
+  "economy2": {
+    "originals": [
+      "backend/src/simulations/economy/creditRecoveryScenarioSimulation.ts",
+      "backend/src/simulations/economy/deterministicEconomicSimulation.ts"
+    ],
+    "paths": [
+      "backend/src/simulations/economy/creditRecoveryScenarioSimulation.ts",
+      "backend/src/simulations/economy/creditRecoveryScenarioValidation.ts",
+      "backend/src/simulations/economy/deterministicEconomicSimulation.ts",
+      "backend/src/simulations/economy/economicSimulationActions.ts",
+      "backend/src/simulations/economy/economicSimulationState.ts",
+      "backend/src/simulations/economy/economicSimulationValidation.ts"
+    ],
+    "sourceReaderPaths": [],
+    "evidencePaths": [
+      "docs/simulations/held-economy-refactor-v1.md"
+    ]
+  },
+  "admin12": {
+    "originals": [
+      "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+      "backend/supabase/functions/classroom-api/index.ts",
+      "backend/supabase/functions/admin-api/readModels.ts",
+      "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
+      "backend/supabase/functions/admin-api/gameRoutes.ts",
+      "backend/supabase/functions/admin-api/messagingOperationsCore.ts",
+      "backend/supabase/functions/admin-api/mutationAdapters.ts",
+      "backend/supabase/functions/admin-api/index.ts",
+      "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
+      "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
+      "backend/supabase/functions/admin-api/readExtensions.ts",
+      "backend/supabase/functions/admin-api/playerOperations.ts"
+    ],
+    "paths": [
+      "backend/src/domains/players/contracts/playerBusinessCapabilityEndpoints.ts",
+      "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+      "backend/src/domains/players/contracts/playerGameplayCapabilityEndpoints.ts",
+      "backend/src/domains/players/contracts/playerSocialCapabilityEndpoints.ts",
+      "backend/src/domains/players/contracts/playerWorldBankingCapabilityEndpoints.ts",
+      "backend/supabase/functions/admin-api/adminGlobalRoutes.ts",
+      "backend/supabase/functions/admin-api/adminLocalMutationFixtures.test.support.ts",
+      "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
+      "backend/supabase/functions/admin-api/attendanceReadModels.ts",
+      "backend/supabase/functions/admin-api/attendanceWealthReadSupport.ts",
+      "backend/supabase/functions/admin-api/businessBankingOperations.test.businessRead.cases.ts",
+      "backend/supabase/functions/admin-api/businessBankingOperations.test.loanMutations.cases.ts",
+      "backend/supabase/functions/admin-api/businessBankingOperations.test.loanSupervision.cases.ts",
+      "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
+      "backend/supabase/functions/admin-api/campaignOperations.ts",
+      "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
+      "backend/supabase/functions/admin-api/gameReadSupport.ts",
+      "backend/supabase/functions/admin-api/gameResourceReadModels.ts",
+      "backend/supabase/functions/admin-api/gameRoutes.ts",
+      "backend/supabase/functions/admin-api/gameWriteRoutes.ts",
+      "backend/supabase/functions/admin-api/index.ts",
+      "backend/supabase/functions/admin-api/messagingOperationContracts.ts",
+      "backend/supabase/functions/admin-api/messagingOperationValidation.ts",
+      "backend/supabase/functions/admin-api/messagingOperationsCore.ts",
+      "backend/supabase/functions/admin-api/mutationAdapters.ts",
+      "backend/supabase/functions/admin-api/mutationValues.ts",
+      "backend/supabase/functions/admin-api/playerHistoryAudit.ts",
+      "backend/supabase/functions/admin-api/playerLedgerCurrency.ts",
+      "backend/supabase/functions/admin-api/playerOperationSupport.ts",
+      "backend/supabase/functions/admin-api/playerOperations.ts",
+      "backend/supabase/functions/admin-api/playerReadModel.ts",
+      "backend/supabase/functions/admin-api/playerReadSupport.ts",
+      "backend/supabase/functions/admin-api/readExtensions.ts",
+      "backend/supabase/functions/admin-api/readModels.ts",
+      "backend/supabase/functions/admin-api/settingsMutationNormalization.ts",
+      "backend/supabase/functions/admin-api/storeMutationNormalization.ts",
+      "backend/supabase/functions/admin-api/worldRuntimeContracts.ts",
+      "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
+      "backend/supabase/functions/admin-api/worldRuntimeValidation.ts",
+      "backend/supabase/functions/admin-api/worldTravelOperations.ts",
+      "backend/supabase/functions/classroom-api/classroomClients.ts",
+      "backend/supabase/functions/classroom-api/dispatchPlayerEconomyRoutes.ts",
+      "backend/supabase/functions/classroom-api/dispatchPlayerWorldRoutes.ts",
+      "backend/supabase/functions/classroom-api/dispatchStaffRoutes.ts",
+      "backend/supabase/functions/classroom-api/index.ts"
+    ],
+    "sourceReaderPaths": [
+      "backend/package.json",
+      "backend/src/domains/game-sessions/api/gameSessionsSharedRootComposition.test.ts",
+      "backend/src/security/classroomApiRateLimitDispatch.test.ts",
+      "backend/src/security/edgeCompositionSource.test.support.ts",
+      "scripts/admin-local-handler-architecture-contract.test.mjs",
+      "scripts/admin-v2-teacher-safety-contract.test.mjs",
+      "scripts/admin-world-runtime-console-contract.mjs",
+      "scripts/business-banking-runtime-contract.mjs",
+      "scripts/business-input-purchase-retirement-contract.mjs",
+      "scripts/business-multicurrency-treasury-contract.mjs",
+      "scripts/business-phase4c-player-recovery-contract.mjs",
+      "scripts/business-workforce-hiring-contract.mjs",
+      "scripts/edge-runtime-source.test.mjs",
+      "scripts/finite-source-contract-readers.test.mjs",
+      "scripts/helpers/edge-runtime-source.mjs",
+      "scripts/player-local-currency-authority-contract.test.mjs"
+    ],
+    "evidenceDirectory": "docs/operations/evidence/held-admin-refactor-v1/",
+    "evidencePaths": [
+      "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json"
+    ]
+  }
+}
