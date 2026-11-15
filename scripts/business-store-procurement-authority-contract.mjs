@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readEdgeRuntimeSource as readFile } from "./helpers/edge-runtime-source.mjs";
 
 const paths = Object.freeze({
   migration: "backend/supabase/migrations/20260821060000_business_store_procurement_v2.sql",

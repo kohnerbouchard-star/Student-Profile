@@ -50,6 +50,8 @@ const BOOTSTRAP_PHASES = Object.freeze([
       "./attendance-reward-request-adapter.js",
       "./attendance-reward-save-controller-v3.js",
       "./attendance-reward-settings-v4.js",
+      "./settings-copy.js",
+      "./settings-presentation.js",
       "./settings-simplified.js",
       "./settings-lifecycle-bridge.js",
       "./settings-save-error-bridge.js",

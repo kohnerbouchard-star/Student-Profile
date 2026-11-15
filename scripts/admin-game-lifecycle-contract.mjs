@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 
 const source = readFileSync("admin/game-lifecycle-controls.js", "utf8");
 const css = readFileSync("admin/css/game-lifecycle-controls.css", "utf8");

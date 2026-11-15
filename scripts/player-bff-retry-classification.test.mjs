@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import test from "node:test";
-import { readFile } from "node:fs/promises";
+import { readEdgeRuntimeSource as readFile } from "./helpers/edge-runtime-source.mjs";
 import {
   recoverRetiredPlayerRead,
 } from "../backend/supabase/functions/player-web-session-api/retiredWorkerReadRecovery.ts";

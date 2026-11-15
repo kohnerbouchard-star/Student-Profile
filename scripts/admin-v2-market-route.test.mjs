@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
+import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 import { createMarketRouteHarness, marketModel } from "./fixtures/admin-market-route-harness.mjs";
 
 function ready({ model = marketModel(), status = "ready", ...options } = {}) {
