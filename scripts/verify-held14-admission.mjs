@@ -48,6 +48,80 @@ export const ROOTS = [
   "frontend/src",
   "player-terminal/src",
 ];
+// One independently reviewed successor, never an extensible registration mechanism.
+export const AMENDMENT_BASE = "023ca4d70948bebf8cdc71460cbe8c6141af6934";
+export const AMENDMENT_REASON = "retained-history-and-admin-formatting-pr981";
+export const AMENDMENT_PATHS = [
+  ".github/workflows/admin-api-check.yml",
+  ".github/workflows/admin-browser-e2e.yml",
+  ".github/workflows/admin-game-lifecycle-controls-v1.yml",
+  ".github/workflows/admin-scroll-integrity.yml",
+  ".github/workflows/admin-v2-attendance.yml",
+  ".github/workflows/admin-v2-banking.yml",
+  ".github/workflows/admin-v2-contracts.yml",
+  ".github/workflows/admin-v2-crafting.yml",
+  ".github/workflows/admin-v2-market.yml",
+  ".github/workflows/admin-v2-messages.yml",
+  ".github/workflows/admin-v2-news-events.yml",
+  ".github/workflows/admin-v2-settings-check.yml",
+  ".github/workflows/backend-typecheck.yml",
+  ".github/workflows/banking-fx-clearing-v1.yml",
+  ".github/workflows/business-economy-v2.yml",
+  ".github/workflows/business-equipment-capacity-v2.yml",
+  ".github/workflows/business-financial-market.yml",
+  ".github/workflows/business-manufacturing-completion-v2.yml",
+  ".github/workflows/business-manufacturing-recovery-v2.yml",
+  ".github/workflows/business-manufacturing-resource-hold-v2.yml",
+  ".github/workflows/business-player-store-cutover-v2.yml",
+  ".github/workflows/business-primary-ipo.yml",
+  ".github/workflows/business-store-atomic-settlement-v2.yml",
+  ".github/workflows/business-store-listing-inventory-v2.yml",
+  ".github/workflows/business-store-seller-offers-v2.yml",
+  ".github/workflows/business-store-withdrawal-safety-v2.yml",
+  ".github/workflows/business-timed-manufacturing-v2.yml",
+  ".github/workflows/business-workforce-hiring-v2.yml",
+  ".github/workflows/business-workforce-payroll-v2.yml",
+  ".github/workflows/business-workforce-production-payroll-v2.yml",
+  ".github/workflows/button-action-coverage.yml",
+  ".github/workflows/configurable-stock-market-timezone-v1.yml",
+  ".github/workflows/crafting-item-runtime.yml",
+  ".github/workflows/database-replay.yml",
+  ".github/workflows/economic-core-request-claims.yml",
+  ".github/workflows/environment-neutral-browser.yml",
+  ".github/workflows/exchange-calendar-runtime-v1.yml",
+  ".github/workflows/full-financial-markets-expansion.yml",
+  ".github/workflows/loans-lifecycle-read-v1.yml",
+  ".github/workflows/multicurrency-marketplace-funding-v1.yml",
+  ".github/workflows/multicurrency-stock-funding-v1.yml",
+  ".github/workflows/multicurrency-store-funding-v1.yml",
+  ".github/workflows/player-button-click-safety.yml",
+  ".github/workflows/player-local-currency-authority.yml",
+  ".github/workflows/player-multiplayer-load-e2e.yml",
+  ".github/workflows/player-response-privacy.yml",
+  ".github/workflows/ref-009-contract-reward-qualification.yml",
+  ".github/workflows/ref-010-access-reset-qualification.yml",
+  ".github/workflows/ref-018-attendance-qualification.yml",
+  ".github/workflows/repository-quality.yml",
+  ".github/workflows/runtime-interaction-wiring.yml",
+  ".github/workflows/story-replay-safety.yml",
+  ".github/workflows/world-runtime.yml",
+  "docs/operations/contracts/held14/admissions.json",
+  "docs/operations/contracts/player-cross-cutting/pr-982.json",
+  "docs/operations/evidence/held14-history-amendment-v1/scope.md",
+  "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+  "scripts/held14-admission.test.mjs",
+  "scripts/verify-held14-admission.mjs",
+];
+const ORIGINAL_BOOTSTRAP = {
+  path: BOOTSTRAP_DATA,
+  mode: "100644",
+  oid: "e15ba9360faf53540bcfe353209dbf19f0f7526e",
+};
+const ORIGINAL_REGISTRY = {
+  path: REGISTRY,
+  mode: "100644",
+  oid: "a4cc33efaf27df8a9651655523d96f125508a7a1",
+};
 const SHA = /^[a-f0-9]{40}$/u;
 const REPOSITORY = "kohnerbouchard-star/Student-Profile";
 const fail = (condition, message) => assert.ok(condition, message);
@@ -199,6 +273,150 @@ export function validateRegistry(policy) {
     );
   }
 }
+// This validates provenance consumed from the EVENT BASE. Independent review of
+// that exact control tree establishes trust; its self-authored hashes do not.
+// Source changes are still checked against the complete base-owned manifest.
+export function verifyControlProvenance(base, cwd) {
+  const bootstrap = json(base, BOOTSTRAP_DATA, cwd);
+  fail(
+    bootstrap.schemaVersion === 1 && bootstrap.pullRequestNumber === 979 &&
+      bootstrap.baseSha === "f5db830bca8aab9fad2b04c028563b32dfd38ef2" &&
+      bootstrap.repository === REPOSITORY,
+    "Invalid base bootstrap provenance",
+  );
+  const registryEntry = tree(base, cwd).find((x) => x.path === REGISTRY);
+  fail(
+    tree(base, cwd).find((x) => x.path === BOOTSTRAP_DATA)?.mode === "100644",
+    "Bootstrap data must remain a regular non-executable file",
+  );
+  if (Object.hasOwn(bootstrap, "amendment")) {
+    const predecessorEntries = tree(AMENDMENT_BASE, cwd);
+    for (const expected of [ORIGINAL_BOOTSTRAP, ORIGINAL_REGISTRY]) {
+      same(
+        predecessorEntries.find((x) => x.path === expected.path),
+        expected,
+        "Immutable amendment predecessor data identity changed",
+      );
+    }
+    const original = json(AMENDMENT_BASE, BOOTSTRAP_DATA, cwd);
+    same(
+      Object.keys(bootstrap),
+      [...Object.keys(original), "amendment"],
+      "Unexpected successor bootstrap fields or order",
+    );
+    const { amendment, ...preserved } = bootstrap;
+    same(preserved, original, "Original PR979 bootstrap provenance changed");
+    same(
+      original.changes.filter((x) => x.path === REGISTRY).map((x) => ({
+        path: x.path,
+        mode: x.newMode,
+        oid: x.newOid,
+      })),
+      [ORIGINAL_REGISTRY],
+      "Original registry binding changed",
+    );
+    same(
+      Object.keys(amendment),
+      [
+        "schemaVersion",
+        "pullRequestNumber",
+        "repository",
+        "baseRef",
+        "baseSha",
+        "reason",
+        "originalBootstrap",
+        "originalRegistry",
+        "changes",
+      ],
+      "Unexpected amendment fields or order",
+    );
+    fail(
+      amendment.schemaVersion === 1 && amendment.pullRequestNumber === 982 &&
+        amendment.repository === REPOSITORY && amendment.baseRef === "main" &&
+        amendment.baseSha === AMENDMENT_BASE &&
+        amendment.reason === AMENDMENT_REASON,
+      "Only the exact PR982 predecessor transition is permitted",
+    );
+    same(
+      amendment.originalBootstrap,
+      ORIGINAL_BOOTSTRAP,
+      "Wrong original bootstrap identity",
+    );
+    same(
+      amendment.originalRegistry,
+      ORIGINAL_REGISTRY,
+      "Wrong original registry identity",
+    );
+    same(
+      git(["merge-base", AMENDMENT_BASE, base], cwd).trim(),
+      AMENDMENT_BASE,
+      "Amended base must descend from the exact predecessor",
+    );
+    fail(
+      Array.isArray(amendment.changes) && amendment.changes.length > 0,
+      "Missing complete amendment manifest",
+    );
+    same(
+      amendment.changes.map((x) => x.path),
+      AMENDMENT_PATHS,
+      "Amendment differs from the exact finite control path set",
+    );
+    for (const change of amendment.changes) {
+      same(Object.keys(change), [
+        "path",
+        "oldOid",
+        "newOid",
+        "oldMode",
+        "newMode",
+      ], "Unexpected amendment manifest fields or order");
+      fail(
+        SHA.test(change.newOid ?? "") &&
+          (change.oldOid === null || SHA.test(change.oldOid ?? "")) &&
+          change.newMode === "100644" &&
+          (change.oldMode === null || change.oldMode === "100644"),
+        "Amendment deletion, symlink, submodule or mode change forbidden",
+      );
+    }
+    same(
+      changes(AMENDMENT_BASE, base, cwd).filter((x) =>
+        x.path !== BOOTSTRAP_DATA
+      ),
+      amendment.changes,
+      "Complete reviewed control amendment snapshot mismatch",
+    );
+    const pinnedRegistry = amendment.changes.filter((x) => x.path === REGISTRY);
+    fail(
+      pinnedRegistry.length === 1 &&
+        pinnedRegistry[0].oldOid === ORIGINAL_REGISTRY.oid &&
+        pinnedRegistry[0].oldMode === ORIGINAL_REGISTRY.mode &&
+        pinnedRegistry[0].newOid === registryEntry?.oid &&
+        pinnedRegistry[0].newMode === registryEntry?.mode,
+      "Amended base registry no longer matches reviewed amendment payload",
+    );
+    const policy = json(base, REGISTRY, cwd);
+    validateRegistry(policy);
+    const expectedPolicy = json(AMENDMENT_BASE, REGISTRY, cwd);
+    const admin = policy.records.find((x) => x.pullRequestNumber === 981);
+    fail(admin, "Amendment requires the existing Admin record");
+    expectedPolicy.records[1].baseTreeDigest = admin.baseTreeDigest;
+    expectedPolicy.records[1].changes = admin.changes;
+    same(
+      policy,
+      expectedPolicy,
+      "Only PR981 base digest and complete snapshot may be re-pinned",
+    );
+    return bootstrap;
+  }
+  const pinnedRegistry = bootstrap.changes?.filter((x) => x.path === REGISTRY);
+  fail(
+    pinnedRegistry?.length === 1 &&
+      pinnedRegistry[0].newOid === registryEntry.oid &&
+      pinnedRegistry[0].newMode === registryEntry.mode,
+    "Base registry no longer matches reviewed bootstrap payload",
+  );
+  return bootstrap;
+}
+
 export function verifyAdmission(
   {
     event,
@@ -239,21 +457,7 @@ export function verifyAdmission(
   );
   const policy = json(base, REGISTRY, cwd);
   validateRegistry(policy);
-  const bootstrap = json(base, BOOTSTRAP_DATA, cwd);
-  fail(
-    bootstrap.schemaVersion === 1 && bootstrap.pullRequestNumber === 979 &&
-      bootstrap.baseSha === "f5db830bca8aab9fad2b04c028563b32dfd38ef2" &&
-      bootstrap.repository === REPOSITORY,
-    "Invalid base bootstrap provenance",
-  );
-  const registryEntry = tree(base, cwd).find((x) => x.path === REGISTRY);
-  const pinnedRegistry = bootstrap.changes?.filter((x) => x.path === REGISTRY);
-  fail(
-    pinnedRegistry?.length === 1 &&
-      pinnedRegistry[0].newOid === registryEntry.oid &&
-      pinnedRegistry[0].newMode === registryEntry.mode,
-    "Base registry no longer matches reviewed bootstrap payload",
-  );
+  verifyControlProvenance(base, cwd);
   const records = policy.records.filter((r) =>
     r.pullRequestNumber === event.number
   );
