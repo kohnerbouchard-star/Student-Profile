@@ -517,3 +517,363 @@ test("both excluded base DATA files are immovable in source and code remains dig
   put(f.cwd, VALIDATOR, "tampered code");
   assert.notEqual(baseDigest(commit(f.cwd), f.cwd), digest);
 });
+
+// Successor provenance uses the immutable, already merged predecessor, not a
+// caller-supplied trust root. These index-only fixtures never alter that history.
+import {
+  AMENDMENT_BASE,
+  AMENDMENT_PATHS,
+  AMENDMENT_REASON,
+  BOOTSTRAP_DATA,
+  verifyControlProvenance,
+} from "./verify-held14-admission.mjs";
+
+function amendmentFixture(t) {
+  const cwd = mkdtempSync(path.join(tmpdir(), "held14-amendment-test-"));
+  t.after(() => rmSync(cwd, { recursive: true, force: true }));
+  execFileSync("git", ["clone", "--shared", "--no-checkout", ROOT, cwd], {
+    stdio: "pipe",
+  });
+  git(cwd, "config", "user.name", "Fixture");
+  git(cwd, "config", "user.email", "fixture@example.invalid");
+  git(cwd, "read-tree", AMENDMENT_BASE);
+  const read = (ref, file) =>
+    execFileSync("git", ["show", `${ref}:${file}`], {
+      cwd,
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+  const write = (file, content, mode = "100644") => {
+    const oid = execFileSync("git", ["hash-object", "-w", "--stdin"], {
+      cwd,
+      input: content,
+      encoding: "utf8",
+    }).trim();
+    git(cwd, "update-index", "--add", "--cacheinfo", `${mode},${oid},${file}`);
+  };
+  const remove = (file) => git(cwd, "update-index", "--force-remove", file);
+  const original = JSON.parse(read(AMENDMENT_BASE, BOOTSTRAP_DATA));
+  const policy = JSON.parse(read(AMENDMENT_BASE, REGISTRY));
+  for (const file of AMENDMENT_PATHS) {
+    if (file === REGISTRY) continue;
+    let content;
+    try {
+      content = read(AMENDMENT_BASE, file);
+    } catch {
+      content = "reviewed finite addition\n";
+    }
+    write(file, `${content}\n`);
+  }
+  policy.records.find((r) => r.pullRequestNumber === 981).baseTreeDigest = "a"
+    .repeat(64);
+  write(REGISTRY, JSON.stringify(policy));
+  const bootstrap = {
+    ...original,
+    amendment: {
+      schemaVersion: 1,
+      pullRequestNumber: 982,
+      repository: REPO,
+      baseRef: "main",
+      baseSha: AMENDMENT_BASE,
+      reason: AMENDMENT_REASON,
+      originalBootstrap: {
+        path: BOOTSTRAP_DATA,
+        mode: "100644",
+        oid: "e15ba9360faf53540bcfe353209dbf19f0f7526e",
+      },
+      originalRegistry: {
+        path: REGISTRY,
+        mode: "100644",
+        oid: "a4cc33efaf27df8a9651655523d96f125508a7a1",
+      },
+      changes: [],
+    },
+  };
+  const repin = () => {
+    bootstrap.amendment.changes = changes(
+      AMENDMENT_BASE,
+      git(cwd, "write-tree"),
+      cwd,
+    ).filter((entry) => entry.path !== BOOTSTRAP_DATA);
+  };
+  const finish = (parent = AMENDMENT_BASE, bootstrapMode = "100644") => {
+    write(BOOTSTRAP_DATA, JSON.stringify(bootstrap), bootstrapMode);
+    return git(
+      cwd,
+      "commit-tree",
+      git(cwd, "write-tree"),
+      "-p",
+      parent,
+      "-m",
+      "Synthetic independently reviewed successor fixture",
+    );
+  };
+  repin();
+  return {
+    cwd,
+    read,
+    write,
+    remove,
+    original,
+    policy,
+    bootstrap,
+    repin,
+    finish,
+  };
+}
+
+test("successor accepts one complete PR982 control transition and retains original979 provenance", (t) => {
+  const f = amendmentFixture(t);
+  assert.doesNotThrow(() => verifyControlProvenance(f.finish(), f.cwd));
+  assert.deepEqual(
+    Object.fromEntries(
+      Object.entries(f.bootstrap).filter(([key]) => key !== "amendment"),
+    ),
+    f.original,
+  );
+});
+
+test("original merged bootstrap remains consumable without a successor object", () => {
+  assert.doesNotThrow(() => verifyControlProvenance(AMENDMENT_BASE, ROOT));
+});
+
+for (
+  const [name, mutate] of [
+    ["wrong amendment PR", (a) => a.pullRequestNumber = 983],
+    ["wrong repository", (a) => a.repository = "attacker/Student-Profile"],
+    ["wrong target ref", (a) => a.baseRef = "other"],
+    ["wrong exact predecessor", (a) => a.baseSha = "f".repeat(40)],
+    ["wrong schema", (a) => a.schemaVersion = 2],
+    ["wrong reason", (a) => a.reason = "generic-registration"],
+    ["extra field", (a) => a.approved = true],
+    ["missing field", (a) => delete a.reason],
+    ["amendment list", (a, f) => f.bootstrap.amendment = [a]],
+    ["reordered fields", (a, f) => {
+      f.bootstrap.amendment = Object.fromEntries(Object.entries(a).reverse());
+    }],
+    [
+      "original bootstrap identity",
+      (a) => a.originalBootstrap.oid = "0".repeat(40),
+    ],
+    [
+      "original registry identity",
+      (a) => a.originalRegistry.oid = "0".repeat(40),
+    ],
+    ["original bootstrap mode", (a) => a.originalBootstrap.mode = "100755"],
+    ["original registry mode", (a) => a.originalRegistry.mode = "120000"],
+    ["original registry path", (a) => a.originalRegistry.path = BOOTSTRAP_DATA],
+    ["original identity extra field", (a) => a.originalRegistry.extra = true],
+    ["missing manifest", (a) => delete a.changes],
+    ["empty manifest", (a) => a.changes = []],
+    ["omitted manifest entry", (a) => a.changes.pop()],
+    ["duplicate manifest entry", (a) => a.changes.push(a.changes[0])],
+    ["reordered manifest", (a) => a.changes.reverse()],
+    ["false new hash", (a) => a.changes[0].newOid = "0".repeat(40)],
+    ["false old hash", (a) => a.changes[0].oldOid = "0".repeat(40)],
+    ["false old mode", (a) => a.changes[0].oldMode = "100755"],
+    ["false new mode", (a) => a.changes[0].newMode = "100755"],
+    ["manifest entry extra field", (a) => a.changes[0].approved = true],
+    ["manifest entry missing field", (a) => delete a.changes[0].oldOid],
+    ["self-hash entry", (a) =>
+      a.changes.push({
+        path: BOOTSTRAP_DATA,
+        oldOid: "e15ba9360faf53540bcfe353209dbf19f0f7526e",
+        newOid: "0".repeat(40),
+        oldMode: "100644",
+        newMode: "100644",
+      })],
+  ]
+) {
+  test(`successor rejects ${name}`, (t) => {
+    const f = amendmentFixture(t);
+    mutate(f.bootstrap.amendment, f);
+    assert.throws(() => verifyControlProvenance(f.finish(), f.cwd));
+  });
+}
+
+for (
+  const [name, mutate] of [
+    ["original bootstrap schema", (b) => b.schemaVersion = 2],
+    ["original bootstrap PR", (b) => b.pullRequestNumber = 982],
+    ["original bootstrap predecessor", (b) => b.baseSha = AMENDMENT_BASE],
+    ["original bootstrap repository", (b) => b.repository = "attacker/repo"],
+    [
+      "original bootstrap manifest",
+      (b) => b.changes[0].newOid = "0".repeat(40),
+    ],
+    ["original registry binding", (b) => {
+      b.changes.find((entry) => entry.path === REGISTRY).newOid = "0".repeat(
+        40,
+      );
+    }],
+    ["extra top-level bootstrap field", (b) => b.extra = true],
+  ]
+) {
+  test(`successor cannot rewrite ${name}`, (t) => {
+    const f = amendmentFixture(t);
+    mutate(f.bootstrap);
+    assert.throws(() => verifyControlProvenance(f.finish(), f.cwd));
+  });
+}
+
+test("changed registry without successor provenance fails original binding", (t) => {
+  const f = amendmentFixture(t);
+  delete f.bootstrap.amendment;
+  assert.throws(() => verifyControlProvenance(f.finish(), f.cwd));
+});
+
+for (
+  const [name, mutate] of [
+    [
+      "third source record",
+      (p) => p.records.push({ ...p.records[1], pullRequestNumber: 983 }),
+    ],
+    [
+      "Economy record mutation",
+      (p) => p.records[0].baseTreeDigest = "b".repeat(64),
+    ],
+    [
+      "Economy complete manifest mutation",
+      (p) => p.records[0].changes[0].newOid = "0".repeat(40),
+    ],
+    [
+      "Admin support permission",
+      (p) => p.records[1].sourceReaderPaths.push("arbitrary.ts"),
+    ],
+    [
+      "Admin evidence permission",
+      (p) => p.records[1].evidencePaths.push("docs/arbitrary.md"),
+    ],
+    ["Admin record identity", (p) => p.records[1].pullRequestNumber = 982],
+    ["removed Economy record", (p) => p.records.shift()],
+    ["reordered registry", (p) => p.records.reverse()],
+  ]
+) {
+  test(`successor rejects repinned ${name}`, (t) => {
+    const f = amendmentFixture(t);
+    mutate(f.policy);
+    f.write(REGISTRY, JSON.stringify(f.policy));
+    f.repin();
+    assert.throws(() => verifyControlProvenance(f.finish(), f.cwd));
+  });
+}
+
+for (
+  const [name, mutate] of [
+    [
+      "extra runtime addition",
+      (f) =>
+        f.write("backend/src/amendment-injection.ts", "export const x = 1;\n"),
+    ],
+    [
+      "extra metadata addition",
+      (f) => f.write("docs/amendment-extra.md", "extra\n"),
+    ],
+    [
+      "Seed addition",
+      (f) => f.write("docs/seed-content/amendment.json", "{}\n"),
+    ],
+    ["control deletion", (f) => f.remove(VALIDATOR)],
+    ["control rename", (f) => {
+      f.remove(VALIDATOR);
+      f.write("scripts/renamed-held14-admission.mjs", "export {};\n");
+    }],
+    [
+      "control executable mode",
+      (f) => f.write(VALIDATOR, "export {};\n", "100755"),
+    ],
+    ["control symlink", (f) => f.write(VALIDATOR, "/etc/passwd", "120000")],
+    [
+      "missing finite path",
+      (f) => f.write(VALIDATOR, f.read(AMENDMENT_BASE, VALIDATOR)),
+    ],
+  ]
+) {
+  test(`even a repinned successor manifest rejects ${name}`, (t) => {
+    const f = amendmentFixture(t);
+    mutate(f);
+    f.repin();
+    assert.throws(() => verifyControlProvenance(f.finish(), f.cwd));
+  });
+}
+
+for (const file of [REGISTRY, VALIDATOR, ROADMAP, SCOPE, GENERATOR]) {
+  test(`successor detects unrepinned base drift in ${file}`, (t) => {
+    const f = amendmentFixture(t);
+    f.write(file, "unreviewed drift\n");
+    assert.throws(() => verifyControlProvenance(f.finish(), f.cwd));
+  });
+}
+
+for (const mode of ["100755", "120000"]) {
+  test(`successor bootstrap itself must remain regular100644, not ${mode}`, (t) => {
+    const f = amendmentFixture(t);
+    assert.throws(() =>
+      verifyControlProvenance(f.finish(AMENDMENT_BASE, mode), f.cwd)
+    );
+  });
+}
+
+test("successor rejects a matching tree without exact predecessor ancestry", (t) => {
+  const f = amendmentFixture(t);
+  f.finish();
+  const unrelated = git(
+    f.cwd,
+    "commit-tree",
+    git(f.cwd, "write-tree"),
+    "-m",
+    "Unrelated root",
+  );
+  assert.throws(() => verifyControlProvenance(unrelated, f.cwd));
+});
+
+test("successor rejects reordered manifest entry fields", (t) => {
+  const f = amendmentFixture(t);
+  f.bootstrap.amendment.changes[0] = Object.fromEntries(
+    Object.entries(f.bootstrap.amendment.changes[0]).reverse(),
+  );
+  assert.throws(() => verifyControlProvenance(f.finish(), f.cwd));
+});
+
+for (
+  const file of [
+    "scripts/held14-admission-contracts.mjs",
+    "scripts/verify-held14-control-bootstrap.mjs",
+    "scripts/held14-admission.test.mjs",
+    "scripts/held14-control-bootstrap.test.mjs",
+    SCOPE,
+  ]
+) {
+  test(`source cannot supply its own control bytes in ${file}`, (t) => {
+    const f = fixture(t);
+    f.modify(file, "unapproved source-side control\n");
+    assert.throws(() => verifyAdmission(f.options));
+  });
+}
+
+for (const file of [VALIDATOR, "scripts/held14-admission-contracts.mjs"]) {
+  test(`actual Lab shell does not execute malicious source copy of ${file}`, (t) => {
+    const f = fixture(t);
+    git(f.cwd, "remote", "add", "origin", f.cwd);
+    f.modify(
+      file,
+      'process.stdout.write("SOURCE_SELF_APPROVED\\n"); process.exit(0);\n',
+    );
+    const eventPath = path.join(f.cwd, ".git", "malicious-event.json");
+    writeFileSync(eventPath, JSON.stringify(f.event));
+    const result = spawnSync("bash", ["-c", guardCommand(lab)], {
+      cwd: f.cwd,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        GITHUB_EVENT_NAME: "pull_request",
+        GITHUB_REPOSITORY: REPO,
+        GITHUB_EVENT_PATH: eventPath,
+        HELD14_EVENT_BASE: f.base,
+      },
+    });
+    assert.notEqual(result.status, 0, result.stderr + result.stdout);
+    assert.doesNotMatch(result.stdout, /SOURCE_SELF_APPROVED/);
+    assert.match(result.stderr, /snapshot mismatch/);
+  });
+}

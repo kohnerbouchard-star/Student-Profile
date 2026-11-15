@@ -32,12 +32,11 @@ import {
 } from "./adminSecurityGuard.ts";
 import { createAdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 import {
-  type AuthorizedAdminContext,
-  routePath,
   adminSecurityFailureResponse,
+  type AuthorizedAdminContext,
   handleGlobalRoute,
+  routePath,
 } from "./adminGlobalRoutes.ts";
-
 
 Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") {
