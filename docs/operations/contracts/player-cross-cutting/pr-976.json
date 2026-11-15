@@ -87,6 +87,7 @@
     "docs/operations/evidence/parallel-market-six-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/validate-full-market-universe-source-reader.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
@@ -168,6 +169,7 @@
     "docs/operations/evidence/parallel-market-six-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/validate-full-market-universe-source-reader.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredChecks": [
@@ -432,7 +434,6 @@
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs",
-    ".github/workflows/full-financial-markets-expansion.yml"
+    "scripts/player-cross-cutting-authority.test.mjs"
   ]
 }
