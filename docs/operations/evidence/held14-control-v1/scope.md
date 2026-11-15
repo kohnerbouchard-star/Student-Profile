@@ -1,11 +1,23 @@
-# ci: bound held refactor scope admission
+# Finite held-refactor control correction
 
-Status: SCOPE SEED / SOURCE PENDING / UNQUALIFIED.
+Status: IMPLEMENTED_NOT_MERGED / EXACT-HEAD QUALIFICATION PENDING.
 
-Baseline main: `f5db830bca8aab9fad2b04c028563b32dfd38ef2`.
+Control PR: #979. Baseline: f5db830bca8aab9fad2b04c028563b32dfd38ef2. Roadmap: ARCH-LARGE-PARALLEL-LOCAL-001 and ARCH-LARGE-EDGE-ADMIN-BATCH-001.
 
-Prepare the explicitly approved narrow Full Markets and Economic Lab CI-control corrections. Retain original restrictions by default and all existing regression checks. Only independently reviewed exact structural refactor files and their required inventory and verification metadata may be admitted. No broad path exemption, production deployment, live mutation, secret handling or feature activation.
+The owner explicitly approved updating the two conflicting CI scope rules for the remaining structural refactors, retaining existing restrictions by default and all tests. This is a reviewed policy change, not a claim that the old unconditional guards accept the new scope.
 
-Separately review and qualify this control tranche before either source batch may use it.
+## Narrow policy and trust boundary
 
-This draft seed obtains the real pull-request number for exact PR-bound scope registration. It is not source qualification, acceptance or permission to merge incomplete work. Every final source and metadata head requires independent review and genuine exact-head CI before normal merge. Production remains held.
+Full Financial Markets retains its original forbidden categories by default. Economic Lab retains isolated simulation source and Seed/catalog rejection. Both retain all original non-guard job fields and regression commands. The only added route is finite exact-source admission for PR #980 (two Economy owners) and PR #981 (twelve Admin/Classroom/capability owners), plus their reviewed bounded source-reader and required metadata corrections. Complete old/new blob and mode manifests bind every changed path. Unknown PR, source, metadata, baseline, mode, rename, activation or production scope fails closed.
+
+The initial control PR is a new independently reviewed trust root. Its bootstrap is confined to #979, this repository/main and exact f5db predecessor, excludes runtime paths, and pins the complete control/authority/trigger/roadmap/evidence payload. Its own data record is excluded only to avoid self-reference; a self-authored digest is not itself approval. Independent review of the exact final control tree and real hosted results is mandatory before merge.
+
+Later source PRs execute the validator and registry only from the exact event base, verify checkout equals event head, and cannot modify the checker, scope, registry or bootstrap record. The source baseline digest excludes exactly two base-owned data records, admissions.json and control-bootstrap.json, to remove their circular reference. All other tracked paths, contents and modes remain bound. The bootstrap pins registry bytes, and source admission verifies that provenance. No executable, workflow, generator, source, threshold or test is omitted from baseline identity. Any other main drift requires fresh review and records.
+
+## Qualification and serial integration
+
+The original ordered 151 required /105 critical identities from PR #978 remain unchanged prefixes. Control #979 and Economy #980 additionally require the naturally applicable Economic Lab workflow/job (153/106). Admin #981 retains 151/105 and every naturally applicable gate; it does not include an unrelated simulation tranche. Each candidate's actual event/job census, not merely manifest strings, determines coverage. No missing, skipped, stale, seed-only or postmerge-empty-diff result substitutes for required execution.
+
+Planned order is controls #979, Economy #980, then Admin #981. Records bind predicted source trees; normal actual-main integration must reproduce those trees and pass fresh exact-head gates. The whole source diff remains visible; source and required generated inventory change atomically. No source or feature is activated by this control-only PR. No migration, live mutation, credentials, deployment or production permission changes.
+
+Local implementation has 52 adversarial passing tests and preserves all 17 original Markets and 13 original Lab validation steps. Final populated-record tests, root/architecture checks, independent control/source review and hosted exact-head qualification remain required. Existing frozen SDK/browser limits are not passes. Do not mark this complete before all acceptance evidence and serial merges.
