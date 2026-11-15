@@ -1,0 +1,13 @@
+# Six-file Market source extraction
+
+Roadmap: ARCH-LARGE-PARALLEL-MARKETS-001. Status: IMPLEMENTED_NOT_MERGED.
+
+This is a local corrective preparation for existing draft PR #976 and its existing owner refactor/large-file-backend-batch-20261115. It descends normally from published 08e60f3ac4c860d911bbdd8f46660f22d0db165c. It has not been published, merged or deployed. Current-main baseline is d2d951e542b12e9e47f6db1783bdf4ef9993e930.
+
+Only six reviewed originals are included: calculations/bondMath.ts, calculations/collectiveInvestmentAnalytics.ts, calculations/financialStatementAnalytics.ts, contracts/financialMarketContracts.ts, state/orderReservationStateMachine.ts and state/priceTimeOrderBookStateMachine.ts, under backend/src/domains/markets. Associated cohesive helpers, characterization tests and donor scope documents are preserved. Every source/test blob matches independently reviewed donors 3df2b0a24361e955edacd578ca2a259fd9769661 and c689b118431cd1bc22264bf0d6e21722f7074fb2 and final local union 3253f12cc009d3ca5477e8ecc99aeb2b62021430. Inventory is regenerated for this bounded union: 73 to 67 oversized originals, with thresholds and all other debt counts unchanged.
+
+The prior broader Backend preparation remains held and preserved locally at 51b732c7831d065352c90410bf0e99b95313e479, including its unpublished authority and separate calendar correction. This normal corrective commit removes unrelated additions from this PR candidate, not their preserved history. Edge, Browser/Admin, other Backend refactors and the calendar correction are not in this candidate and are not complete. All pre-existing main files and roadmap content remain preserved except the six originals and regenerated inventory.
+
+Actual PR976 authority inherits all ordered 151 required and 105 critical checks from PR975, with false production/mutation/secret permissions. Only the own authority path is added to 49 inherited pull-request filters. Full Financial Markets is naturally triggered by Market paths and remains byte-identical/read-only; Economic Lab guards and both authority verifiers remain unchanged. No controller hold, deployment guard, dependency, schema, migration, RPC, economic policy or runtime authority changes.
+
+Fresh exact-head local checks and independent recovery/metadata review are required. Full SDK/Edge/smoke attempts must retain any dependency failures as blockers, not passes. Parent-controlled publication and fresh hosted qualification remain required; no merge readiness is claimed. Next: independent Market-only candidate review, coordinator publication if approved, and all inherited exact-head checks without bypassing holds.

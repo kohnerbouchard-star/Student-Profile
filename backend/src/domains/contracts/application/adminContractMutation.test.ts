@@ -1,5 +1,3 @@
-import "../api/staffContractHttpCharacterization.test.ts";
-import "../api/staffContractHttpBindings.test.ts";
 import {
   AdminMutationError,
   type AdminMutationRpcClient,

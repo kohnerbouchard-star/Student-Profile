@@ -1,49 +1,32 @@
-import type { HostedEnvironment } from "./adminBffOidcVerification.ts";
-import { verifyVercelOidcToken, MAX_OIDC_TOKEN_BYTES } from "./adminBffOidcVerification.ts";
-import type { DeploymentEnvironment } from "./adminBffTargetPolicy.ts";
-import {
-  expectedDeploymentEnvironment,
-  isLocalRequest,
-  canonicalAdminBffTargetUrl,
-} from "./adminBffTargetPolicy.ts";
-import {
-  sha256Hex,
-  TEXT_ENCODER,
-  ownedArrayBuffer,
-  decodeBase64Url,
-  deriveSigningKey,
-} from "./adminBffCrypto.ts";
-
+const TEXT_ENCODER = new TextEncoder();
+const TEXT_DECODER = new TextDecoder("utf-8", { fatal: true });
 const MAX_BODY_BYTES = 1_048_576;
-
+const MAX_OIDC_TOKEN_BYTES = 16_384;
 const MAX_CLOCK_SKEW_SECONDS = 120;
-
 const NONCE_TTL_SECONDS = 300;
-
 const SIGNATURE_VERSION = "econovaria-admin-bff-request-v1";
-
+const SIGNING_KEY_CONTEXT = "econovaria-admin-bff-signing-key-v1";
 const LOCAL_SIGNING_MATERIAL =
   "econovaria-local-admin-bff-public-development-material-v1";
-
+const VERCEL_ISSUER = "https://oidc.vercel.com/econovaria";
+const VERCEL_AUDIENCE = "https://vercel.com/econovaria";
+const VERCEL_OWNER_ID = "team_PRsNkw4DHrGsUHl6ikKw2XyJ";
+const VERCEL_PROJECT_ID = "prj_xdyYj6NclqUD8XwTrXX6ueXJseV9";
+const VERCEL_OWNER_SLUG = "econovaria";
+const VERCEL_PROJECT_NAME = "econovaria";
+const PRODUCTION_PROJECT_REF = "cgiukdjwicykrmtkhudh";
+const STAGING_PROJECT_REF = "eecvbssdvarfcykcfrny";
 const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
-
 const SIGNATURE_PATTERN = /^v1=([A-Za-z0-9_-]{43})$/u;
-
 const TIMESTAMP_PATTERN = /^\d{10}$/u;
-
+const JWT_SEGMENT_PATTERN = /^[A-Za-z0-9_-]+$/u;
 const BFF_TIMESTAMP_HEADER = "x-econovaria-bff-timestamp";
-
 const BFF_NONCE_HEADER = "x-econovaria-bff-nonce";
-
 const BFF_CLIENT_IP_HEADER = "x-econovaria-bff-client-ip";
-
 const BFF_SIGNATURE_HEADER = "x-econovaria-bff-signature";
-
 const BFF_MODE_HEADER = "x-econovaria-bff-mode";
-
 const INTERNAL_CLIENT_IP_HEADER = "x-real-ip";
-
 const FORWARDED_IP_HEADERS = [
   "cf-connecting-ip",
   "x-real-ip",
@@ -53,7 +36,6 @@ const FORWARDED_IP_HEADERS = [
   "true-client-ip",
   "x-client-ip",
 ] as const;
-
 const SIGNED_CONTEXT_HEADERS = [
   "content-type",
   "cookie",
@@ -63,6 +45,9 @@ const SIGNED_CONTEXT_HEADERS = [
   "idempotency-key",
   "x-request-id",
 ] as const;
+
+type HostedEnvironment = "production" | "preview";
+type DeploymentEnvironment = HostedEnvironment | "local";
 
 export interface AdminBffNonceClaim {
   readonly runnerName: string;
@@ -97,6 +82,41 @@ export type AdminBffRequestAuthResult =
     readonly ok: false;
     readonly response: Response;
   };
+
+interface JwtHeader {
+  readonly alg?: unknown;
+  readonly kid?: unknown;
+  readonly typ?: unknown;
+}
+
+interface JwtPayload {
+  readonly iss?: unknown;
+  readonly aud?: unknown;
+  readonly sub?: unknown;
+  readonly exp?: unknown;
+  readonly nbf?: unknown;
+  readonly iat?: unknown;
+  readonly owner_id?: unknown;
+  readonly project_id?: unknown;
+  readonly environment?: unknown;
+}
+
+interface VercelJsonWebKey extends JsonWebKey {
+  readonly kid?: string;
+  readonly alg?: string;
+  readonly use?: string;
+}
+
+interface JsonWebKeySet {
+  readonly keys?: readonly VercelJsonWebKey[];
+}
+
+interface CachedJwks {
+  readonly expiresAtMs: number;
+  readonly value: JsonWebKeySet;
+}
+
+let cachedJwks: CachedJwks | null = null;
 
 export async function authorizeAdminBffRequest(
   request: Request,
@@ -342,6 +362,103 @@ async function verifyAdminBffSignature(
   );
 }
 
+async function deriveSigningKey(signingMaterial: string): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    ownedArrayBuffer(TEXT_ENCODER.encode(signingMaterial)),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  return new Uint8Array(await crypto.subtle.sign(
+    "HMAC",
+    key,
+    ownedArrayBuffer(TEXT_ENCODER.encode(SIGNING_KEY_CONTEXT)),
+  ));
+}
+
+async function verifyVercelOidcToken(
+  token: string,
+  expectedEnvironment: HostedEnvironment,
+  nowSeconds: number,
+): Promise<boolean> {
+  if (new TextEncoder().encode(token).byteLength > MAX_OIDC_TOKEN_BYTES) return false;
+  const parts = token.split(".");
+  if (parts.length !== 3 || parts.some((part) => !JWT_SEGMENT_PATTERN.test(part))) {
+    return false;
+  }
+
+  const header = decodeJwtJson<JwtHeader>(parts[0]);
+  const payload = decodeJwtJson<JwtPayload>(parts[1]);
+  if (!header || !payload || header.alg !== "RS256") return false;
+  const kid = typeof header.kid === "string" ? header.kid : "";
+  if (!/^[A-Za-z0-9._:-]{1,256}$/u.test(kid)) return false;
+
+  const jwks = await readVercelJwks();
+  const jwk = jwks.keys?.find((candidate) =>
+    candidate.kid === kid &&
+    candidate.kty === "RSA" &&
+    (candidate.alg === undefined || candidate.alg === "RS256") &&
+    (candidate.use === undefined || candidate.use === "sig")
+  );
+  if (!jwk) return false;
+  const publicKey = await crypto.subtle.importKey(
+    "jwk",
+    jwk,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+  const signature = decodeBase64Url(parts[2]);
+  const verified = await crypto.subtle.verify(
+    "RSASSA-PKCS1-v1_5",
+    publicKey,
+    ownedArrayBuffer(signature),
+    ownedArrayBuffer(TEXT_ENCODER.encode(`${parts[0]}.${parts[1]}`)),
+  );
+  if (!verified) return false;
+
+  const expectedSubject =
+    `owner:${VERCEL_OWNER_SLUG}:project:${VERCEL_PROJECT_NAME}:environment:${expectedEnvironment}`;
+  const audience = Array.isArray(payload.aud)
+    ? payload.aud
+    : [payload.aud];
+  const exp = Number(payload.exp);
+  const nbf = payload.nbf === undefined ? null : Number(payload.nbf);
+  const iat = payload.iat === undefined ? null : Number(payload.iat);
+  return payload.iss === VERCEL_ISSUER &&
+    audience.some((candidate) => typeof candidate === "string" && candidate === VERCEL_AUDIENCE) &&
+    payload.sub === expectedSubject &&
+    payload.owner_id === VERCEL_OWNER_ID &&
+    payload.project_id === VERCEL_PROJECT_ID &&
+    payload.environment === expectedEnvironment &&
+    Number.isSafeInteger(exp) && exp > nowSeconds - 30 &&
+    (nbf === null || (Number.isSafeInteger(nbf) && nbf <= nowSeconds + 30)) &&
+    (iat === null || (Number.isSafeInteger(iat) && iat <= nowSeconds + 60));
+}
+
+async function readVercelJwks(): Promise<JsonWebKeySet> {
+  const now = Date.now();
+  if (cachedJwks && cachedJwks.expiresAtMs > now) return cachedJwks.value;
+  const response = await fetch(`${VERCEL_ISSUER}/.well-known/jwks`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+    redirect: "error",
+  });
+  if (!response.ok) throw new Error("Vercel OIDC key set unavailable");
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength === 0 || bytes.byteLength > 64 * 1024) {
+    throw new Error("Vercel OIDC key set invalid");
+  }
+  const value = JSON.parse(TEXT_DECODER.decode(bytes)) as JsonWebKeySet;
+  if (!Array.isArray(value.keys) || value.keys.length < 1 || value.keys.length > 20) {
+    throw new Error("Vercel OIDC key set invalid");
+  }
+  cachedJwks = { value, expiresAtMs: now + 5 * 60 * 1000 };
+  return value;
+}
+
 function overwriteTrustedClientIpHeaders(
   source: HeadersInit,
   trustedHeader: typeof INTERNAL_CLIENT_IP_HEADER,
@@ -378,6 +495,59 @@ function normalizeIpAddress(value: string): string {
   return hostname.slice(1, -1).toLowerCase();
 }
 
+function canonicalAdminBffTargetUrl(
+  requestUrlValue: string,
+  supabaseUrlValue: string,
+): string {
+  const requestUrl = new URL(requestUrlValue);
+  const supabaseUrl = new URL(supabaseUrlValue);
+  const prefixes = [
+    "/functions/v1/web-session-api",
+    "/web-session-api",
+  ] as const;
+  const prefix = prefixes.find((candidate) =>
+    requestUrl.pathname.startsWith(candidate)
+  );
+  if (!prefix) throw new Error("invalid Admin BFF path");
+  const suffix = requestUrl.pathname.slice(prefix.length);
+  if (
+    !suffix.startsWith("/") ||
+    suffix.includes("\\") ||
+    suffix.split("/").includes("..")
+  ) throw new Error("invalid Admin BFF path");
+  return `${supabaseUrl.origin}/functions/v1/web-session-api${suffix}${requestUrl.search}`;
+}
+
+function expectedDeploymentEnvironment(value: string): DeploymentEnvironment | null {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (
+    ["localhost", "127.0.0.1"].includes(url.hostname) &&
+    ["http:", "https:"].includes(url.protocol)
+  ) return "local";
+  if (url.protocol === "http:" && url.hostname === "kong") return "local";
+  if (url.protocol !== "https:") return null;
+  if (url.hostname === `${PRODUCTION_PROJECT_REF}.supabase.co`) return "production";
+  if (url.hostname === `${STAGING_PROJECT_REF}.supabase.co`) return "preview";
+  return null;
+}
+
+function isLocalRequest(request: Request): boolean {
+  try {
+    const target = new URL(request.url);
+    const origin = new URL(String(request.headers.get("origin") || ""));
+    return ["localhost", "127.0.0.1", "kong"].includes(target.hostname) &&
+      ["localhost", "127.0.0.1"].includes(origin.hostname) &&
+      origin.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 function bearerToken(value: string | null): string {
   const match = String(value || "").match(/^Bearer\s+(.+)$/iu);
   const token = match?.[1]?.trim() || "";
@@ -386,10 +556,40 @@ function bearerToken(value: string | null): string {
     : "";
 }
 
+function decodeJwtJson<T>(value: string): T | null {
+  try {
+    return JSON.parse(TEXT_DECODER.decode(decodeBase64Url(value))) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function sha256Hex(value: Uint8Array): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest(
+    "SHA-256",
+    ownedArrayBuffer(value),
+  ));
+  return [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function decodeBase64Url(value: string): Uint8Array {
+  if (!JWT_SEGMENT_PATTERN.test(value)) throw new Error("invalid base64url");
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
 function normalizedNow(now: (() => Date) | undefined): Date {
   const value = now?.() ?? new Date();
   if (!Number.isFinite(value.getTime())) throw new Error("invalid clock");
   return value;
+}
+
+function ownedArrayBuffer(value: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(value.byteLength);
+  copy.set(value);
+  return copy.buffer;
 }
 
 function malformedEnvelopeFailure(): AdminBffRequestAuthResult {
@@ -439,5 +639,4 @@ export const ADMIN_BFF_AUTH_HEADERS = Object.freeze({
   signature: BFF_SIGNATURE_HEADER,
   mode: BFF_MODE_HEADER,
 });
-
 export const ADMIN_BFF_LOCAL_SIGNING_MATERIAL = LOCAL_SIGNING_MATERIAL;
