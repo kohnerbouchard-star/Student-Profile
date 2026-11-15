@@ -8,15 +8,15 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1423,
+    "sourceFiles": 1546,
     "edgeEntrypoints": 28,
-    "handlerFiles": 63,
+    "handlerFiles": 65,
     "persistenceOutsideInfrastructure": 52,
     "crossDomainDeepImports": 71,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 73,
+    "oversizedSourceFiles": 35,
     "capabilityStrings": 140
   },
   "domains": [
@@ -54,7 +54,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 15,
+      "sourceFiles": 19,
       "publicBoundaryFiles": []
     },
     {
@@ -145,7 +145,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 51,
+      "sourceFiles": 74,
       "publicBoundaryFiles": [
         "backend/src/domains/contracts/index.ts"
       ]
@@ -211,7 +211,7 @@
         "infrastructure",
         "realtime"
       ],
-      "sourceFiles": 17,
+      "sourceFiles": 33,
       "publicBoundaryFiles": []
     },
     {
@@ -248,7 +248,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 29,
+      "sourceFiles": 31,
       "publicBoundaryFiles": []
     },
     {
@@ -284,7 +284,7 @@
         "state",
         "validation"
       ],
-      "sourceFiles": 63,
+      "sourceFiles": 78,
       "publicBoundaryFiles": []
     },
     {
@@ -295,7 +295,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 18,
+      "sourceFiles": 20,
       "publicBoundaryFiles": []
     },
     {
@@ -323,7 +323,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 38,
+      "sourceFiles": 43,
       "publicBoundaryFiles": [
         "backend/src/domains/players/index.ts"
       ]
@@ -352,7 +352,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 111,
+      "sourceFiles": 137,
       "publicBoundaryFiles": [
         "backend/src/domains/stocks/index.ts"
       ]
@@ -367,7 +367,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 65,
+      "sourceFiles": 66,
       "publicBoundaryFiles": [
         "backend/src/domains/store/index.ts"
       ]
@@ -382,7 +382,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 93,
+      "sourceFiles": 112,
       "publicBoundaryFiles": [
         "backend/src/domains/storylines/index.ts"
       ]
@@ -450,6 +450,8 @@
       "backend/src/domains/contracts/api/playerContractPublicListHttpHandler.ts",
       "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
       "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
+      "backend/src/domains/contracts/api/staffContractProgressHttpHandler.ts",
+      "backend/src/domains/contracts/api/staffContractRewardHttpHandler.ts",
       "backend/src/domains/countries/api/playerWorldReadHttpHandler.ts",
       "backend/src/domains/crafting/api/playerCraftingHttpHandler.ts",
       "backend/src/domains/economy/api/initialBalanceSeedHttpHandler.ts",
@@ -758,16 +760,16 @@
         "target": "../../contracts/services/contractRewardService.ts"
       },
       {
-        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
-        "ownerDomain": "game-dashboard",
-        "importedDomain": "store",
-        "target": "../../store/dashboardReadModel.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
+        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.repositoryFakes.support.ts",
         "ownerDomain": "game-dashboard",
         "importedDomain": "storylines",
         "target": "../../storylines/server/notificationCapabilities.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.requestFixtures.support.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/dashboardReadModel.ts"
       },
       {
         "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
@@ -1070,7 +1072,7 @@
         "target": "../../progression/api/playerProgressionRoutePaths.ts"
       },
       {
-        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.fixtures.support.ts",
         "ownerDomain": "stocks",
         "importedDomain": "game-dashboard",
         "target": "../../game-dashboard/publicRealtime.ts"
@@ -1124,25 +1126,25 @@
         "target": "../../notifications/public/storyNotifications.ts"
       },
       {
-        "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
+        "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.eventFixtures.support.ts",
         "ownerDomain": "storylines",
         "importedDomain": "game-dashboard",
         "target": "../../game-dashboard/publicRealtime.ts"
       },
       {
-        "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
-        "ownerDomain": "storylines",
-        "importedDomain": "stocks",
-        "target": "../../stocks/api/stockMarketRunnerHttpHandler.ts"
-      },
-      {
-        "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
+        "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.eventFixtures.support.ts",
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
         "target": "../../stocks/contracts/stockMarketEngineContracts.ts"
       },
       {
-        "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
+        "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.lifecycle.cases.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/stockMarketRunnerHttpHandler.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.stockRunnerFixture.support.ts",
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
         "target": "../../stocks/contracts/stockMarketRunnerContracts.ts"
@@ -1812,7 +1814,7 @@
         "markers": []
       },
       {
-        "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
+        "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.scanner.cases.ts",
         "markers": [
           "legacy",
           "legacydigest",
@@ -1990,7 +1992,7 @@
         ]
       },
       {
-        "file": "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
+        "file": "backend/src/domains/messaging/api/playerMessagingRequestParser.ts",
         "markers": [
           "fallback"
         ]
@@ -2612,44 +2614,12 @@
     ],
     "oversizedFiles": [
       {
-        "file": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.ts",
-        "lines": 2537
-      },
-      {
-        "file": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
-        "lines": 1195
-      },
-      {
-        "file": "backend/src/domains/contracts/infrastructure/supabaseContractRepository.test.ts",
-        "lines": 1132
-      },
-      {
-        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketRunnerRepository.test.ts",
-        "lines": 1054
-      },
-      {
         "file": "backend/supabase/functions/web-session-api/index.ts",
         "lines": 1054
       },
       {
-        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-        "lines": 960
-      },
-      {
         "file": "admin/v2/src/api/admin-api-client.js",
         "lines": 937
-      },
-      {
-        "file": "backend/src/domains/contracts/api/staffContractReviewHttpHandler.test.ts",
-        "lines": 920
-      },
-      {
-        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
-        "lines": 908
-      },
-      {
-        "file": "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
-        "lines": 896
       },
       {
         "file": "backend/supabase/functions/classroom-api/index.ts",
@@ -2660,14 +2630,6 @@
         "lines": 883
       },
       {
-        "file": "backend/src/domains/storylines/services/storylineRunner.test.ts",
-        "lines": 866
-      },
-      {
-        "file": "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
-        "lines": 860
-      },
-      {
         "file": "backend/supabase/functions/admin-api/readModels.ts",
         "lines": 851
       },
@@ -2676,64 +2638,24 @@
         "lines": 845
       },
       {
-        "file": "backend/src/domains/contracts/api/staffContractHttpHandler.test.ts",
-        "lines": 834
-      },
-      {
         "file": "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
         "lines": 821
-      },
-      {
-        "file": "backend/src/supabase/tableTypes.ts",
-        "lines": 810
       },
       {
         "file": "admin/world-runtime-console.js",
         "lines": 809
       },
       {
-        "file": "backend/src/domains/storylines/services/storyEffectEngine.ts",
-        "lines": 778
-      },
-      {
-        "file": "backend/src/domains/contracts/api/playerContractHttpHandler.test.ts",
-        "lines": 777
-      },
-      {
-        "file": "backend/src/simulations/economy/deterministicEconomicSimulation.ts",
-        "lines": 748
-      },
-      {
         "file": "backend/supabase/functions/license-email-worker/index.ts",
         "lines": 730
-      },
-      {
-        "file": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.test.ts",
-        "lines": 716
       },
       {
         "file": "frontend/src/core/login.js",
         "lines": 715
       },
       {
-        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketPlayerReadRepository.test.ts",
-        "lines": 706
-      },
-      {
-        "file": "backend/src/domains/markets/state/priceTimeOrderBookStateMachine.ts",
-        "lines": 697
-      },
-      {
-        "file": "backend/src/domains/markets/contracts/financialMarketContracts.ts",
-        "lines": 683
-      },
-      {
         "file": "admin/admin-auth.js",
         "lines": 676
-      },
-      {
-        "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.ts",
-        "lines": 656
       },
       {
         "file": "admin/settings-simplified.js",
@@ -2744,20 +2666,8 @@
         "lines": 650
       },
       {
-        "file": "backend/src/security/adminBffRequestAuth.ts",
-        "lines": 643
-      },
-      {
         "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
         "lines": 632
-      },
-      {
-        "file": "backend/src/domains/markets/calculations/collectiveInvestmentAnalytics.ts",
-        "lines": 627
-      },
-      {
-        "file": "backend/src/domains/markets/state/orderReservationStateMachine.ts",
-        "lines": 621
       },
       {
         "file": "backend/supabase/functions/player-api/runtime.ts",
@@ -2784,36 +2694,16 @@
         "lines": 608
       },
       {
-        "file": "backend/src/platform/supabase/edgeStaffSession.ts",
-        "lines": 603
-      },
-      {
         "file": "frontend/src/core/admin-mfa.js",
         "lines": 603
-      },
-      {
-        "file": "backend/src/domains/contracts/contracts/contractContracts.ts",
-        "lines": 600
       },
       {
         "file": "backend/supabase/functions/admin-api/mutationAdapters.ts",
         "lines": 597
       },
       {
-        "file": "backend/src/domains/storylines/services/storylineRunner.ts",
-        "lines": 592
-      },
-      {
-        "file": "backend/src/simulations/economy/creditRecoveryScenarioSimulation.ts",
-        "lines": 592
-      },
-      {
         "file": "admin/interaction-quality.js",
         "lines": 591
-      },
-      {
-        "file": "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",
-        "lines": 577
       },
       {
         "file": "backend/supabase/functions/admin-api/index.ts",
@@ -2824,56 +2714,24 @@
         "lines": 569
       },
       {
-        "file": "backend/src/domains/contracts/tests/playerContractFullLifecycleIntegration.test.ts",
-        "lines": 569
-      },
-      {
         "file": "admin/game-code-wiring.js",
         "lines": 563
-      },
-      {
-        "file": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
-        "lines": 561
-      },
-      {
-        "file": "backend/src/domains/storylines/infrastructure/supabaseStorylineRepository.test.ts",
-        "lines": 558
       },
       {
         "file": "player-terminal/src/recovery/player-recovery-controller.js",
         "lines": 558
       },
       {
-        "file": "backend/src/domains/markets/calculations/financialStatementAnalytics.ts",
-        "lines": 557
-      },
-      {
         "file": "admin/v2/src/routes/world-management/WorldManagementApi.js",
         "lines": 556
-      },
-      {
-        "file": "backend/src/domains/contracts/services/contractRewardService.ts",
-        "lines": 551
       },
       {
         "file": "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
         "lines": 550
       },
       {
-        "file": "backend/src/domains/markets/calculations/bondMath.ts",
-        "lines": 547
-      },
-      {
-        "file": "backend/src/domains/players/api/playerLoginHttpHandler.ts",
-        "lines": 545
-      },
-      {
         "file": "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
         "lines": 532
-      },
-      {
-        "file": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
-        "lines": 523
       },
       {
         "file": "admin/v2/src/routes/players/PlayersRoute.js",
@@ -2888,16 +2746,8 @@
         "lines": 513
       },
       {
-        "file": "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
-        "lines": 509
-      },
-      {
         "file": "backend/supabase/functions/admin-api/playerOperations.ts",
         "lines": 506
-      },
-      {
-        "file": "backend/src/domains/store/api/playerStorePurchaseHttpHandler.ts",
-        "lines": 504
       },
       {
         "file": "admin/v2/src/routes/marketplace/MarketplaceRoute.js",
@@ -3396,7 +3246,8 @@
       {
         "capability": "financial-markets.v1",
         "locations": [
-          "backend/src/domains/markets/contracts/financialMarketContracts.ts"
+          "backend/src/domains/markets/contracts/financialMarketContracts.ts",
+          "backend/src/domains/markets/state/marketOrderExtractionCharacterization.test.ts"
         ]
       },
       {
@@ -3522,7 +3373,7 @@
           "admin/v2/src/routes/inventory/InventoryController.js",
           "backend/src/domains/inventory/services/playerInventoryReadService.ts",
           "backend/src/domains/inventory/services/playerInventoryRedemptionPolicy.test.ts",
-          "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.ts",
+          "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.fixtures.support.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
