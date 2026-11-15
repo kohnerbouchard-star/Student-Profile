@@ -57,12 +57,20 @@ import { readFileSync } from "node:fs";
 import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 import { readBrowserSourceSync } from "./lib/browser-module-source.mjs";
 
-for (const file of [
-  "backend/supabase/functions/classroom-api/index.ts",
-  "backend/supabase/functions/admin-api/index.ts",
-  "backend/supabase/functions/admin-api/readModels.ts",
+for (const [file, fragments] of [
+  ["backend/supabase/functions/classroom-api/index.ts", ["dispatchPlayerWorldRoutes", "dispatchPlayerEconomyRoutes", "dispatchStaffRoutes", "createServiceClient"]],
+  ["backend/supabase/functions/admin-api/index.ts", ["handleGlobalRoute"]],
+  ["backend/supabase/functions/admin-api/readModels.ts", ["loadPlayers", "loadAttendance", "loadStore", "loadSettings", "pushByKey"]],
 ]) {
-  test(`held source remains an ordinary raw read: ${file}`, () => {
+  test(`reviewed root composes its value-connected extraction: ${file}`, () => {
+    const url = new URL(`../${file}`, import.meta.url);
+    const source = readEdgeRuntimeSource(url);
+    assert.notEqual(source, readFileSync(url, "utf8"));
+    for (const fragment of fragments) assert.ok(source.includes(fragment));
+  });
+}
+for (const file of ["backend/supabase/functions/admin-api/common.ts", "backend/supabase/functions/classroom-api/classroomClients.ts", "backend/supabase/functions/player-api/index.ts"]) {
+  test(`unregistered root remains an ordinary raw read: ${file}`, () => {
     const url = new URL(`../${file}`, import.meta.url);
     assert.equal(readEdgeRuntimeSource(url), readFileSync(url, "utf8"));
   });

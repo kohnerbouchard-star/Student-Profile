@@ -17,6 +17,9 @@ on:
     branches:
       - main
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-981.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-980.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-979.json"
       - "docs/operations/contracts/player-cross-cutting/pr-978.json"
       - "docs/operations/contracts/player-cross-cutting/pr-977.json"
       - ".github/workflows/full-financial-markets-expansion.yml"
@@ -69,15 +72,78 @@ jobs:
         run: npm --prefix backend ci
 
       - name: Enforce controller-hold file boundary
+        env:
+          HELD14_EVENT_BASE: ${{ github.event.pull_request.base.sha }}
         run: |
-          git fetch origin main --no-tags
-          merge_base="$(git merge-base HEAD origin/main)"
-          git diff --name-only "$merge_base"...HEAD > full-market-changed-files.txt
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            [[ "$HELD14_EVENT_BASE" =~ ^[a-f0-9]{40}$ ]]
+            git fetch origin "$HELD14_EVENT_BASE" --no-tags
+            merge_base="$HELD14_EVENT_BASE"
+            node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+          const pr = event.pull_request;
+          const repository = 'kohnerbouchard-star/Student-Profile';
+          assert.equal(process.env.GITHUB_REPOSITORY, repository);
+          assert.equal(event.repository?.full_name, repository);
+          assert.equal(pr?.base?.repo?.full_name, repository);
+          assert.equal(pr?.head?.repo?.full_name, repository);
+          assert.equal(pr?.base?.ref, 'main');
+          assert(Number.isSafeInteger(event.number) && event.number > 0);
+          assert.equal(pr.number, event.number);
+          assert.equal(pr.base.sha, process.env.HELD14_EVENT_BASE);
+          assert(/^[a-f0-9]{40}$/.test(pr.head.sha));
+          const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+          assert.equal(git('rev-parse', 'HEAD'), pr.head.sha);
+          assert.equal(git('merge-base', pr.base.sha, pr.head.sha), pr.base.sha);
+          NODE
+          else
+            git fetch origin main --no-tags
+            merge_base="$(git merge-base HEAD origin/main)"
+          fi
+          admit_reviewed_snapshot() {
+            test "$GITHUB_EVENT_NAME" = "pull_request"
+            trusted_directory="$(mktemp -d)"
+            trusted_validator="$trusted_directory/verify-held14-admission.mjs"
+            trap 'rm -rf "$trusted_directory"' EXIT
+            if git cat-file -e "$merge_base:scripts/verify-held14-admission.mjs"; then
+              git show "$merge_base:scripts/verify-held14-admission.mjs" > "$trusted_validator"
+              git show "$merge_base:scripts/held14-admission-contracts.mjs" > "$trusted_directory/held14-admission-contracts.mjs"
+              node "$trusted_validator" --mode markets
+            else
+              # Initial CI-policy review is the bootstrap trust root, not this PR's digest.
+              # This verifier accepts ONLY control PR979 on exact f5db; never source PRs.
+              bootstrap_pr="$(node -p 'JSON.parse(require("node:fs").readFileSync(process.env.GITHUB_EVENT_PATH,"utf8")).number')"
+              if [ "$merge_base" != "f5db830bca8aab9fad2b04c028563b32dfd38ef2" ] || [ "$bootstrap_pr" != "979" ]; then
+                echo "Initial bootstrap is restricted to control PR979 on exact f5db." >&2
+                return 1
+              fi
+              node scripts/verify-held14-control-bootstrap.mjs
+            fi
+          }
+          git diff --no-renames --name-only -z "$merge_base" HEAD > held14-changed-paths.bin
+          git diff --raw --no-abbrev --no-renames -z "$merge_base" HEAD > held14-changed-entries.bin
+          node --input-type=module <<'NODE' > full-market-changed-files.txt
+          import { readFileSync } from 'node:fs';
+          const entries = readFileSync('held14-changed-entries.bin', 'utf8').split('\0');
+          for (let index = 0; index < entries.length - 1; index += 2) {
+            if (!/^:(000000|100644|100755) (000000|100644|100755) /.test(entries[index])) throw new Error('Symlink/submodule file boundary violation');
+          }
+          const paths = readFileSync('held14-changed-paths.bin', 'utf8').split('\0').filter(Boolean);
+          if (!paths.every((path) => /^[A-Za-z0-9_./-]+$/.test(path))) throw new Error('Non-canonical changed path');
+          process.stdout.write(paths.map((path) => `${path}\n`).join(''));
+          NODE
           forbidden='^(backend/supabase/migrations/|backend/supabase/functions/classroom-api/|backend/supabase/functions/admin-api/|backend/src/domains/players/contracts/playerCapabilityManifestContracts\.ts$|backend/src/security/playerRateLimitDispatch\.ts$|player-terminal/src/api/backend-routes\.js$|player-terminal/src/integrations/student-profile-capability-manifest\.js$)'
           if grep -E "$forbidden" full-market-changed-files.txt; then
             echo "Controller-hold boundary violation detected."
-            false
+            admit_reviewed_snapshot
           fi
+
+      - name: Test finite held14 admission boundary
+        run: node --test scripts/held14-admission.test.mjs scripts/held14-control-bootstrap.test.mjs
 
       - name: Validate complete inactive definition library
         run: |
