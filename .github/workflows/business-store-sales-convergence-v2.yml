@@ -3,6 +3,7 @@ name: business-store-sales-convergence-v2
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-980.json"
       - "docs/operations/contracts/player-cross-cutting/pr-979.json"
       - "docs/operations/contracts/player-cross-cutting/pr-978.json"
       - "docs/operations/contracts/player-cross-cutting/pr-977.json"
