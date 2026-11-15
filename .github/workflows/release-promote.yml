@@ -3,6 +3,7 @@ name: Release Promote Exact Artifacts
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-976.json"
       - "docs/operations/contracts/player-cross-cutting/pr-973.json"
       - "docs/operations/contracts/player-cross-cutting/pr-974.json"
       - "docs/operations/contracts/player-cross-cutting/pr-975.json"

@@ -1,4 +1,29 @@
-export const FINANCIAL_MARKET_CONTRACT_VERSION = "financial-markets.v1" as const;
+export type {
+  FinancialMarketBenchmarkDefinition,
+  FinancialMarketBondDefinition,
+  FinancialMarketConversionPolicyDefinition,
+  FinancialMarketCouponScheduleEntry,
+  FinancialMarketFundDefinition,
+  FinancialMarketFundHoldingDefinition,
+  FinancialMarketIndexConstituentDefinition,
+  FinancialMarketIndexMethodologyDefinition,
+  FinancialMarketPreferredEquityDefinition,
+  FinancialMarketTrustDefinition,
+} from "./financialMarketInvestmentContracts.ts";
+export type {
+  FinancialMarketEarlyClose,
+  FinancialMarketExchangeCalendarPolicy,
+  FinancialMarketFeeRecord,
+  FinancialMarketFillRecord,
+  FinancialMarketOrderCommand,
+  FinancialMarketOrderRecord,
+  FinancialMarketReservationRecord,
+  FinancialMarketTradeRecord,
+  FinancialMarketTradingRulePolicy,
+  FinancialMarketWeeklySession,
+} from "./financialMarketTradingContracts.ts";
+export const FINANCIAL_MARKET_CONTRACT_VERSION =
+  "financial-markets.v1" as const;
 
 export const FINANCIAL_MARKET_PUBLIC_ID_PATTERN =
   /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)+\.v[1-9][0-9]*$/;
@@ -232,146 +257,14 @@ export interface FinancialMarketCommodityDefinition
   readonly benchmarkMethodologyPublicId: FinancialMarketPublicId;
   readonly supplyDriverKeys: readonly string[];
   readonly demandDriverKeys: readonly string[];
-  readonly countryExposure: Readonly<Record<FinancialMarketCountryCode, number>>;
+  readonly countryExposure: Readonly<
+    Record<FinancialMarketCountryCode, number>
+  >;
   readonly eventExposureProfilePublicId: FinancialMarketPublicId;
   readonly minimumAnnualizedVolatility: number;
   readonly maximumAnnualizedVolatility: number;
   readonly carryingEffectPolicyPublicId: FinancialMarketPublicId | null;
   readonly physicalDeliverySupported: false;
-  readonly status: FinancialMarketDefinitionStatus;
-}
-
-export interface FinancialMarketBenchmarkDefinition
-  extends FinancialMarketSourceIdentity {
-  readonly benchmarkPublicId: FinancialMarketPublicId;
-  readonly administratorIssuerPublicId: FinancialMarketPublicId;
-  readonly displayName: string;
-  readonly benchmarkType:
-    | "broad_market"
-    | "country"
-    | "sector"
-    | "industry"
-    | "commodity"
-    | "economic_reference";
-  readonly quotationCurrencyCode: string;
-  readonly methodologyPublicId: FinancialMarketPublicId;
-  readonly tradable: false;
-  readonly status: FinancialMarketDefinitionStatus;
-}
-
-export interface FinancialMarketIndexMethodologyDefinition
-  extends FinancialMarketSourceIdentity {
-  readonly methodologyPublicId: FinancialMarketPublicId;
-  readonly weightingMethod: FinancialMarketWeightingMethod;
-  readonly eligibilityRuleVersion: string;
-  readonly baseDate: string;
-  readonly baseValue: string;
-  readonly initialDivisor: string;
-  readonly rebalanceRulePublicId: FinancialMarketPublicId;
-  readonly continuityRulePublicId: FinancialMarketPublicId;
-  readonly maximumConstituentWeight: number;
-  readonly status: FinancialMarketDefinitionStatus;
-}
-
-export interface FinancialMarketIndexConstituentDefinition
-  extends FinancialMarketSourceIdentity {
-  readonly indexPublicId: FinancialMarketPublicId;
-  readonly componentInstrumentPublicId: FinancialMarketPublicId;
-  readonly targetWeight: number | null;
-  readonly effectiveAt: string;
-  readonly retiredAt: string | null;
-}
-
-export interface FinancialMarketFundDefinition
-  extends FinancialMarketSourceIdentity {
-  readonly fundPublicId: FinancialMarketPublicId;
-  readonly administratorIssuerPublicId: FinancialMarketPublicId;
-  readonly benchmarkPublicId: FinancialMarketPublicId | null;
-  readonly expenseRatioAnnual: number;
-  readonly rebalanceRulePublicId: FinancialMarketPublicId;
-  readonly navMethodologyPublicId: FinancialMarketPublicId;
-  readonly trackingDifferenceAnnual: number;
-  readonly status: FinancialMarketDefinitionStatus;
-}
-
-export interface FinancialMarketFundHoldingDefinition
-  extends FinancialMarketSourceIdentity {
-  readonly fundPublicId: FinancialMarketPublicId;
-  readonly componentPublicId: FinancialMarketPublicId;
-  readonly componentKind: "instrument" | "benchmark";
-  readonly targetWeight: number;
-  readonly effectiveAt: string;
-  readonly retiredAt: string | null;
-}
-
-export interface FinancialMarketTrustDefinition
-  extends FinancialMarketSourceIdentity {
-  readonly trustPublicId: FinancialMarketPublicId;
-  readonly administratorIssuerPublicId: FinancialMarketPublicId;
-  readonly compositionVersion: string;
-  readonly distributionPolicyPublicId: FinancialMarketPublicId;
-  readonly navMethodologyPublicId: FinancialMarketPublicId;
-  readonly benchmarkPublicId: FinancialMarketPublicId | null;
-  readonly status: FinancialMarketDefinitionStatus;
-}
-
-export interface FinancialMarketBondDefinition
-  extends FinancialMarketSourceIdentity {
-  readonly bondPublicId: FinancialMarketPublicId;
-  readonly instrumentPublicId: FinancialMarketPublicId;
-  readonly issuerPublicId: FinancialMarketPublicId;
-  readonly bondKind: "corporate" | "sovereign" | "agency";
-  readonly issueDate: string;
-  readonly settlementDate: string;
-  readonly maturityDate: string;
-  readonly faceValue: string;
-  readonly denominationCurrencyCode: string;
-  readonly couponType: FinancialMarketCouponType;
-  readonly couponRateAnnual: number;
-  readonly couponFrequency: FinancialMarketCouponFrequency;
-  readonly dayCountConvention: FinancialMarketDayCountConvention;
-  readonly businessDayConvention: FinancialMarketBusinessDayConvention;
-  readonly creditRating: string;
-  readonly callable: boolean;
-  readonly callSchedulePublicId: FinancialMarketPublicId | null;
-  readonly recoveryPolicyPublicId: FinancialMarketPublicId;
-  readonly status: FinancialMarketDefinitionStatus;
-}
-
-export interface FinancialMarketCouponScheduleEntry {
-  readonly couponSchedulePublicId: FinancialMarketPublicId;
-  readonly bondPublicId: FinancialMarketPublicId;
-  readonly sequence: number;
-  readonly accrualStartDate: string;
-  readonly accrualEndDate: string;
-  readonly paymentDate: string;
-  readonly couponAmountPerFaceUnit: string;
-  readonly principalAmountPerFaceUnit: string;
-  readonly sourceVersion: string;
-}
-
-export interface FinancialMarketPreferredEquityDefinition
-  extends FinancialMarketSourceIdentity {
-  readonly preferredPublicId: FinancialMarketPublicId;
-  readonly instrumentPublicId: FinancialMarketPublicId;
-  readonly liquidationPreferencePerUnit: string;
-  readonly dividendRateAnnual: number;
-  readonly cumulative: boolean;
-  readonly seniorityRank: number;
-  readonly conversionPolicyPublicId: FinancialMarketPublicId | null;
-  readonly status: FinancialMarketDefinitionStatus;
-}
-
-export interface FinancialMarketConversionPolicyDefinition
-  extends FinancialMarketSourceIdentity {
-  readonly conversionPolicyPublicId: FinancialMarketPublicId;
-  readonly sourceInstrumentPublicId: FinancialMarketPublicId;
-  readonly targetCommonInstrumentPublicId: FinancialMarketPublicId;
-  readonly conversionRatio: string;
-  readonly minimumSourceQuantity: string;
-  readonly conversionIncrement: string;
-  readonly eligibleAt: string;
-  readonly complexPricingSupported: false;
   readonly status: FinancialMarketDefinitionStatus;
 }
 
@@ -466,126 +359,6 @@ export interface FinancialMarketCorporateAction {
   readonly payableAt: string | null;
   readonly termsVersion: string;
   readonly idempotencyKey: string;
-}
-
-export interface FinancialMarketExchangeCalendarPolicy
-  extends FinancialMarketSourceIdentity {
-  readonly calendarPolicyPublicId: FinancialMarketPublicId;
-  readonly timezone: string;
-  readonly weeklySessions: readonly FinancialMarketWeeklySession[];
-  readonly holidayDates: readonly string[];
-  readonly earlyCloses: readonly FinancialMarketEarlyClose[];
-  readonly status: FinancialMarketDefinitionStatus;
-}
-
-export interface FinancialMarketWeeklySession {
-  readonly isoWeekday: 1 | 2 | 3 | 4 | 5 | 6 | 7;
-  readonly opensAtLocal: string;
-  readonly closesAtLocal: string;
-}
-
-export interface FinancialMarketEarlyClose {
-  readonly date: string;
-  readonly closesAtLocal: string;
-}
-
-export interface FinancialMarketTradingRulePolicy
-  extends FinancialMarketSourceIdentity {
-  readonly tradingRulePolicyPublicId: FinancialMarketPublicId;
-  readonly transactionFeeRate: number;
-  readonly exchangeFeeRate: number;
-  readonly fixedFee: string;
-  readonly minimumOrderQuantity: string;
-  readonly quantityIncrement: string;
-  readonly priceIncrement: string;
-  readonly settlementConvention: FinancialMarketSettlementConvention;
-  readonly shortSellingSupported: false;
-  readonly derivativesSupported: false;
-  readonly status: FinancialMarketDefinitionStatus;
-}
-
-export interface FinancialMarketOrderCommand {
-  readonly gameSessionId: string;
-  readonly playerSessionId: string;
-  readonly listingPublicId: FinancialMarketPublicId;
-  readonly side: FinancialMarketOrderSide;
-  readonly orderType: FinancialMarketOrderType;
-  readonly quantity: string;
-  readonly limitPrice: string | null;
-  readonly reviewedQuoteVersion: number;
-  readonly reviewedPrice: string;
-  readonly expiresAt: string | null;
-  readonly idempotencyKey: string;
-  readonly requestDigestSha256: string;
-}
-
-export interface FinancialMarketOrderRecord {
-  readonly orderPublicId: FinancialMarketPublicId;
-  readonly listingPublicId: FinancialMarketPublicId;
-  readonly side: FinancialMarketOrderSide;
-  readonly orderType: FinancialMarketOrderType;
-  readonly originalQuantity: string;
-  readonly remainingQuantity: string;
-  readonly cumulativeFilledQuantity: string;
-  readonly limitPrice: string | null;
-  readonly averageFillPrice: string | null;
-  readonly status: FinancialMarketOrderStatus;
-  readonly quoteVersion: number;
-  readonly feePolicyPublicId: FinancialMarketPublicId;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly terminalAt: string | null;
-}
-
-export interface FinancialMarketReservationRecord {
-  readonly reservationPublicId: FinancialMarketPublicId;
-  readonly orderPublicId: FinancialMarketPublicId;
-  readonly kind: FinancialMarketReservationKind;
-  readonly currencyCode: string | null;
-  readonly instrumentPublicId: FinancialMarketPublicId | null;
-  readonly originalAmount: string;
-  readonly remainingAmount: string;
-  readonly status: FinancialMarketReservationStatus;
-  readonly version: number;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly releasedAt: string | null;
-}
-
-export interface FinancialMarketFillRecord {
-  readonly fillPublicId: FinancialMarketPublicId;
-  readonly orderPublicId: FinancialMarketPublicId;
-  readonly listingPublicId: FinancialMarketPublicId;
-  readonly sequence: number;
-  readonly quantity: string;
-  readonly price: string;
-  readonly grossValue: string;
-  readonly quoteVersion: number;
-  readonly executedAt: string;
-  readonly idempotencyKey: string;
-}
-
-export interface FinancialMarketTradeRecord {
-  readonly tradePublicId: FinancialMarketPublicId;
-  readonly fillPublicId: FinancialMarketPublicId;
-  readonly orderPublicId: FinancialMarketPublicId;
-  readonly listingPublicId: FinancialMarketPublicId;
-  readonly side: FinancialMarketOrderSide;
-  readonly quantity: string;
-  readonly price: string;
-  readonly grossValue: string;
-  readonly settlementDate: string;
-  readonly createdAt: string;
-}
-
-export interface FinancialMarketFeeRecord {
-  readonly feePublicId: FinancialMarketPublicId;
-  readonly tradePublicId: FinancialMarketPublicId;
-  readonly feePolicyPublicId: FinancialMarketPublicId;
-  readonly feeKind: "transaction" | "exchange" | "fixed";
-  readonly currencyCode: string;
-  readonly amount: string;
-  readonly createdAt: string;
 }
 
 export interface FinancialMarketHoldingDto {
