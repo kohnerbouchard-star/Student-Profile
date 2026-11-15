@@ -7,7 +7,7 @@
       "baseRef": "main",
       "purpose": "held14-structural-refactor",
       "tranche": "economy2",
-      "baseTreeDigest": "0e9a45085911eed83f70f9b84eb1e16bbaeff12ce52b21d4c33d458c864d3b6f",
+      "baseTreeDigest": "dc205920cbaf841090b2e205ce74ff60256be3c55f38a95532d6f3476613072f",
       "sourceReaderPaths": [],
       "evidencePaths": [
         "docs/simulations/held-economy-refactor-v1.md"
@@ -428,8 +428,8 @@
         },
         {
           "path": "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
-          "oldOid": "045f708d6205537d9590bead68702c01dcb020a3",
-          "newOid": "7a71cfe306079010f4cc3f29a88ac31ea01e4172",
+          "oldOid": "068b0c93a7e7c185bde660862019045866090abb",
+          "newOid": "6ed40627e05127bbef8e4e7d24e2644aabda0e6d",
           "oldMode": "100644",
           "newMode": "100644"
         },
@@ -448,7 +448,7 @@
       "baseRef": "main",
       "purpose": "held14-structural-refactor",
       "tranche": "admin12",
-      "baseTreeDigest": "b99c91a24a0e3087ce06c7b688f5f051ada815db0f341037b8c2f6489f349bd7",
+      "baseTreeDigest": "546b7cc4e2a8f144f5c9ca456998abccfb50187a24aa872451eea13ecba2a7e2",
       "sourceReaderPaths": [
         "backend/package.json",
         "backend/src/domains/game-sessions/api/gameSessionsSharedRootComposition.test.ts",
@@ -456,9 +456,16 @@
         "backend/src/security/edgeCompositionSource.test.support.ts",
         "scripts/admin-local-handler-architecture-contract.test.mjs",
         "scripts/admin-v2-teacher-safety-contract.test.mjs",
+        "scripts/admin-world-runtime-console-contract.mjs",
+        "scripts/business-banking-runtime-contract.mjs",
+        "scripts/business-input-purchase-retirement-contract.mjs",
+        "scripts/business-multicurrency-treasury-contract.mjs",
+        "scripts/business-phase4c-player-recovery-contract.mjs",
+        "scripts/business-workforce-hiring-contract.mjs",
         "scripts/edge-runtime-source.test.mjs",
         "scripts/finite-source-contract-readers.test.mjs",
-        "scripts/helpers/edge-runtime-source.mjs"
+        "scripts/helpers/edge-runtime-source.mjs",
+        "scripts/player-local-currency-authority-contract.test.mjs"
       ],
       "evidencePaths": [
         "docs/operations/evidence/held-admin-refactor-v1/scope.md",
@@ -1168,14 +1175,14 @@
         {
           "path": "docs/operations/contracts/player-cross-cutting/pr-981.json",
           "oldOid": null,
-          "newOid": "1dcffd19ba7076cfd40eaf75538e600c8f603a48",
+          "newOid": "a754a96352bc8319935eca5a22d15e51c2216ca8",
           "oldMode": null,
           "newMode": "100644"
         },
         {
           "path": "docs/operations/evidence/held-admin-refactor-v1/scope.md",
           "oldOid": null,
-          "newOid": "c113479c048a70385b60ca3f09293ac10d112f53",
+          "newOid": "7fd27427f8b26db5a7a9255b969ba93eaca98d85",
           "oldMode": null,
           "newMode": "100644"
         },
@@ -1188,8 +1195,8 @@
         },
         {
           "path": "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
-          "oldOid": "7a71cfe306079010f4cc3f29a88ac31ea01e4172",
-          "newOid": "88062d7df0761ba8c8ae9b3fb0eb54e1a2a3c300",
+          "oldOid": "6ed40627e05127bbef8e4e7d24e2644aabda0e6d",
+          "newOid": "a5bcd5d8dddc37467b11ecce789f2bb3bd94f0d5",
           "oldMode": "100644",
           "newMode": "100644"
         },
@@ -1208,6 +1215,48 @@
           "newMode": "100644"
         },
         {
+          "path": "scripts/admin-world-runtime-console-contract.mjs",
+          "oldOid": "0fc902da751d84a8be48aadc30e1f88547cba302",
+          "newOid": "b9e35538fcabdf9366f7b1de96de11eff03ea329",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/business-banking-runtime-contract.mjs",
+          "oldOid": "768d27336f79d8ef718703d08ed63d6c156f1623",
+          "newOid": "60f1d9847374208b7c6029f64fb630dec4b7c71c",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/business-input-purchase-retirement-contract.mjs",
+          "oldOid": "af22d0cdec78c962b9f0cf93f150c88e841e03f6",
+          "newOid": "c25c85e921c9629096ce32e633eac3af2aeedcdf",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/business-multicurrency-treasury-contract.mjs",
+          "oldOid": "c53496fb6ffb74b2fc1f57d7ac4cfa8d6b1ee08d",
+          "newOid": "e46b1fef3f1ee515eb14fd9cf869e3cd7153cd8c",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/business-phase4c-player-recovery-contract.mjs",
+          "oldOid": "ff07b3549ae8c244f4a3fd67f410517603456d69",
+          "newOid": "9a1e8de7d86e9cf7190e37e7098ba5ef532f81a5",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/business-workforce-hiring-contract.mjs",
+          "oldOid": "36c5e46533706e01d95c7fbbc282f31483c36fc3",
+          "newOid": "78f3fe94d16a291acbe05a519ccb32932daca063",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
           "path": "scripts/edge-runtime-source.test.mjs",
           "oldOid": "260eb949e51b5c70bbfaaebfbd2f5df3a533803b",
           "newOid": "f46a574e392fe454f561c4bf89c5fed52272490a",
@@ -1217,7 +1266,7 @@
         {
           "path": "scripts/finite-source-contract-readers.test.mjs",
           "oldOid": "fe124392e0fbac58547001a35664b812cb6bf0bf",
-          "newOid": "f8fdd95fecfa8009fd15042b6116b0416daf75e8",
+          "newOid": "609f7e29ab832f884725bcff250bcd641cf94bae",
           "oldMode": "100644",
           "newMode": "100644"
         },
@@ -1225,6 +1274,13 @@
           "path": "scripts/helpers/edge-runtime-source.mjs",
           "oldOid": "829a2044a9bc42f0ba5ed9a9b4eea39c1c77f111",
           "newOid": "6f662cffdd610ecf7693e1137e3817329e443a3f",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/player-local-currency-authority-contract.test.mjs",
+          "oldOid": "08f20e17068cebf1a3e65fe913265abd0ebb892d",
+          "newOid": "3263dc8df03e19b35a92142959529f2d723ade8d",
           "oldMode": "100644",
           "newMode": "100644"
         }

@@ -4,7 +4,7 @@ Status: IMPLEMENTED_NOT_MERGED / EXACT-HEAD QUALIFICATION PENDING.
 
 Control PR: #979. Baseline: f5db830bca8aab9fad2b04c028563b32dfd38ef2. Roadmap: ARCH-LARGE-PARALLEL-LOCAL-001 and ARCH-LARGE-EDGE-ADMIN-BATCH-001.
 
-The owner explicitly approved updating the two conflicting CI scope rules for the remaining structural refactors, retaining existing restrictions by default and all tests. This is a reviewed policy change, not a claim that the old unconditional guards accept the new scope.
+The owner explicitly approved the full CI-registration scope needed for the remaining structural refactors, including the two conflicting scope rules, exact qualification triggers, and the finite Admin/Classroom test-source read update, retaining existing restrictions by default and all tests. This is a reviewed policy change, not a claim that the old unconditional guards accept the new scope.
 
 ## Narrow policy and trust boundary
 
@@ -20,4 +20,12 @@ The original ordered 151 required /105 critical identities from PR #978 remain u
 
 Planned order is controls #979, Economy #980, then Admin #981. Records bind predicted source trees; normal actual-main integration must reproduce those trees and pass fresh exact-head gates. The whole source diff remains visible; source and required generated inventory change atomically. No source or feature is activated by this control-only PR. No migration, live mutation, credentials, deployment or production permission changes.
 
-Local implementation has 52 adversarial passing tests and preserves all 17 original Markets and 13 original Lab validation steps. Final populated-record tests, root/architecture checks, independent control/source review and hosted exact-head qualification remain required. Existing frozen SDK/browser limits are not passes. Do not mark this complete before all acceptance evidence and serial merges.
+Local implementation has 54 adversarial passing tests and preserves all 17 original Markets and 13 original Lab validation steps. Final populated-record tests, root/architecture checks, independent control/source review and hosted exact-head qualification remain required. Existing frozen SDK/browser limits are not passes. Do not mark this complete before all acceptance evidence and serial merges.
+
+## Required Payroll qualification registration
+
+The first published control head preserved the inherited Business Workforce Payroll V2 workflow and critical payroll authority job identities but did not trigger them: earlier source batches naturally matched the generated architecture inventory, while this control-only batch does not change it. One exact pr-979.json path insertion now schedules that already-required workflow. Control qualification has 52 own-authority workflow registrations and 64 applicable PR workflow families. All Payroll commands and permissions, including the unrelated PR657-only inventory-write guard, remain byte-identical. Economy and Admin retain their original 51/50 own-authority registrations and naturally trigger Payroll through generated inventory. No dispatch, check waiver, or missing-gate success is used.
+
+This correction requires re-pinned finite source baseline records, fresh independent review and a new exact published-head qualification. Prior head results remain historical evidence only.
+
+The complete Admin workflow audit additionally identified seven existing source contracts requiring the same finite import-aware composition: Business banking, multicurrency treasury, Player recovery, workforce hiring, retired input purchase, Admin World and Player local currency. Their original positive and forbidden-action assertions remain unchanged. The exact Admin support-path list adds only these seven script paths; regression additions remain in the already-listed finite reader test file. No reader map, runtime, workflow permission or default guard expansion is included. The pinned Admin record must include their independently reviewed exact blobs before this control can merge.

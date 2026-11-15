@@ -86,9 +86,16 @@
       "backend/src/security/edgeCompositionSource.test.support.ts",
       "scripts/admin-local-handler-architecture-contract.test.mjs",
       "scripts/admin-v2-teacher-safety-contract.test.mjs",
+      "scripts/admin-world-runtime-console-contract.mjs",
+      "scripts/business-banking-runtime-contract.mjs",
+      "scripts/business-input-purchase-retirement-contract.mjs",
+      "scripts/business-multicurrency-treasury-contract.mjs",
+      "scripts/business-phase4c-player-recovery-contract.mjs",
+      "scripts/business-workforce-hiring-contract.mjs",
       "scripts/edge-runtime-source.test.mjs",
       "scripts/finite-source-contract-readers.test.mjs",
-      "scripts/helpers/edge-runtime-source.mjs"
+      "scripts/helpers/edge-runtime-source.mjs",
+      "scripts/player-local-currency-authority-contract.test.mjs"
     ],
     "evidenceDirectory": "docs/operations/evidence/held-admin-refactor-v1/",
     "evidencePaths": [

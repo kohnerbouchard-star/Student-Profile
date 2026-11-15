@@ -201,6 +201,13 @@
       "newMode": "100644"
     },
     {
+      "path": ".github/workflows/business-workforce-payroll-v2.yml",
+      "oldOid": "17d6d1fcf5e292e2b2b832bc94b5c4dd8cbfa130",
+      "newOid": "254d1a6e75e0f860eee26907938fdbc2071b34eb",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
       "path": ".github/workflows/button-action-coverage.yml",
       "oldOid": "3506921516086ee2515456b1a6d3e57e18557848",
       "newOid": "e49b80315780b4f96fc4013971803d84d871e922",
@@ -364,35 +371,35 @@
     {
       "path": "docs/operations/contracts/held14/admissions.json",
       "oldOid": null,
-      "newOid": "774473d2063fc2e0397eb48274fb0bca0fe1403f",
+      "newOid": "a4cc33efaf27df8a9651655523d96f125508a7a1",
       "oldMode": null,
       "newMode": "100644"
     },
     {
       "path": "docs/operations/contracts/held14/source-scope.json",
       "oldOid": null,
-      "newOid": "f2dda7620d930cee06065f1379df6df9c2e68c75",
+      "newOid": "4e1fe74b65340bb2d1ecf5c4042b57aefdb11eaf",
       "oldMode": null,
       "newMode": "100644"
     },
     {
       "path": "docs/operations/contracts/player-cross-cutting/pr-979.json",
       "oldOid": null,
-      "newOid": "619eaa4d4cb667c9e1a8776883aaaa18695ff0fd",
+      "newOid": "146bd3102245942d285418c816ad491ce5c35b47",
       "oldMode": null,
       "newMode": "100644"
     },
     {
       "path": "docs/operations/evidence/held14-control-v1/scope.md",
       "oldOid": null,
-      "newOid": "66696a8f7285e22188ec24761e587ef44ceb9ee4",
+      "newOid": "e4efcececaf469dd854ad9c658a26b39c9838039",
       "oldMode": null,
       "newMode": "100644"
     },
     {
       "path": "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
       "oldOid": "51d226547536059ab95ee4155884e9016bd60941",
-      "newOid": "045f708d6205537d9590bead68702c01dcb020a3",
+      "newOid": "068b0c93a7e7c185bde660862019045866090abb",
       "oldMode": "100644",
       "newMode": "100644"
     },
