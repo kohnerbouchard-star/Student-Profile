@@ -39,12 +39,6 @@ import {
   readPlayerContractPublicSubmitRoutePath,
 } from "../../../src/domains/contracts/api/playerContractPublicSubmitRoutePaths.ts";
 import {
-  readPlayerContractRoutePath,
-} from "../../../src/domains/contracts/api/playerContractRoutePaths.ts";
-import {
-  handlePlayerContractRequest,
-} from "../../../src/domains/contracts/api/playerContractHttpHandler.ts";
-import {
   handlePlayerStorePublicRequest,
 } from "../../../src/domains/store/api/playerStorePublicHttpHandler.ts";
 import {
@@ -177,13 +171,6 @@ export async function dispatchPlayerEconomyRoutes(request: Request, url: URL): P
     );
   }
 
-  const playerContractRoute = readPlayerContractRoutePath(url.pathname);
-
-  if (playerContractRoute) {
-    return handlePlayerContractRequest(request, playerContractRoute, {
-      createServiceClient,
-    });
-  }
 
   if (url.pathname.endsWith("/players/me/stocks/portfolio")) {
     return dispatchRateLimitedReviewedPlayerRequest(

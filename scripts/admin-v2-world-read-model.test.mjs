@@ -44,3 +44,14 @@ test("World read model retains input bounds and fallback row keys", () => {
   assert.equal(model.campaign.campaigns.length, 20);
   assert.equal(model.campaign.current.rowKey, "campaign-1");
 });
+
+test("retired standalone country-profile scaffold stays absent and current World contract remains", async () => {
+  const { access, readFile } = await import("node:fs/promises");
+  const root = new URL("../", import.meta.url);
+  await assert.rejects(access(new URL("backend/src/domains/countries/contracts/countryProfileContracts.ts", root)), { code: "ENOENT" });
+  const current = await readFile(new URL("backend/src/domains/countries/contracts/playerWorldReadContracts.ts", root), "utf8");
+  assert.match(current, /interface PlayerWorldReadScope/);
+  const routes = await readFile(new URL("backend/src/domains/countries/api/playerWorldRoutePaths.ts", root), "utf8");
+  assert.match(routes, /contracts\/playerWorldReadContracts\.ts/);
+  assert.match(routes, /players.*me.*world.*countries/);
+});

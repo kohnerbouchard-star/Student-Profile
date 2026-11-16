@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import assert from "node:assert/strict";
 import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 
@@ -54,4 +55,7 @@ assert.match(migration, /update public[.]player_sessions/);
 assert.match(migration, /game_join_code_status = case/);
 assert.match(migration, /insert into public[.]audit_log/);
 
+assert.equal(existsSync("backend/src/domains/game-sessions/api/createGameHandler.ts"), false);
+assert.match(readFileSync("backend/supabase/functions/admin-api/adminGlobalRoutes.ts", "utf8"), /handleGameProvisioningOperation/);
+assert.match(readFileSync("backend/supabase/functions/admin-api/gameProvisioningOperations.ts", "utf8"), /activation/);
 console.log("Admin game lifecycle source contract passed.");

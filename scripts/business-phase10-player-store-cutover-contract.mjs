@@ -7,15 +7,13 @@ const files = {
   publicContracts:
     "backend/src/domains/store/contracts/playerStoreOfferPublicContracts.ts",
   publicRepository:
-    "backend/src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepository.ts",
+    "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts",
   publicRepositoryReadStore:
     "backend/src/domains/store/infrastructure/playerStoreOfferPublicReadStore.ts",
   publicRepositoryErrors:
     "backend/src/domains/store/infrastructure/playerStoreOfferPublicRepositoryErrors.ts",
   retainedContracts:
     "backend/src/domains/store/contracts/playerStorePublicContracts.ts",
-  retainedRepository:
-    "backend/src/domains/store/infrastructure/supabasePlayerStorePublicRepository.ts",
   routes: "backend/src/domains/store/api/playerStorePublicRoutePaths.ts",
   handler: "backend/src/domains/store/api/playerStorePublicHttpHandler.ts",
   handlerRequestValidation:
@@ -83,6 +81,8 @@ const source = Object.fromEntries(
 source.readModel = [source.readModel, source.storeInventoryReadModel].join("\n");
 source.publicRepository = [
   source.publicRepository,
+  readEdgeRuntimeSource("backend/src/domains/store/infrastructure/playerStoreFundingPublicErrors.ts", "utf8"),
+  readEdgeRuntimeSource("backend/src/domains/store/infrastructure/supabasePlayerStoreOfferProductPublicRepository.ts", "utf8"),
   source.publicRepositoryReadStore,
   source.publicRepositoryErrors,
 ].join("\n");
@@ -312,29 +312,11 @@ for (const [label, dto] of [["Buyer quote DTO", quoteDto], ["Buyer receipt DTO",
   ]);
 }
 
-requireTokens(source.publicRepository, "public Store offer repository", [
-  "SupabaseStoreSellerOfferRepository",
-  "SupabaseStoreOfferQuoteRepository",
-  "SupabaseStoreOfferSettlementRepository",
-  "listOfferProducts",
-  "createBusinessOfferQuote",
-  "purchaseBusinessOffer",
-  "readBusinessOfferReceipt",
-  'from("economic_parties")',
-  'from("player_country_assignments")',
-  'from("country_profiles")',
-  'from("business_ownership_positions")',
-  'from("store_seller_offers")',
-  'from("inventory_holdings")',
-  'from("store_offer_purchase_receipts")',
-  "owner_player_id",
-  "currency_code",
-  "quantity_reserved",
-  "requireActive: false",
-  '.eq("game_session_id", scope.gameSessionId)',
-  '.eq("buyer_player_id", scope.playerId)',
-  '.eq("public_key", receiptKey)',
-  "store_offer_receipt_not_found",
+requireTokens(source.publicRepository, "current funded Store authority", [
+  "listOfferProducts", "createBusinessOfferQuote", "settleBusinessOfferPurchase", "readBusinessOfferReceipt",
+  "create_business_store_offer_funding_quote_v1", "settle_business_store_offer_funding_v2",
+  "read_business_store_offer_funding_receipt_v1", "p_game_session_id", "p_buyer_player_id", "p_receipt_key",
+  "requireActive: false", "store_offer_receipt_not_found",
 ]);
 forbidTokens(source.publicRepository, "public Store repository writes", [
   '.insert(',
@@ -1069,9 +1051,8 @@ forbidTokens(source.retainedContracts, "retained seeded public contract", [
   "BusinessStoreOfferQuoteDto",
   "BusinessStoreOfferReceiptDto",
 ]);
-forbidTokens(source.retainedRepository, "retained seeded authority", [
-  "settle_business_store_offer_v2",
-  "create_business_store_offer_quote_v2",
-]);
+for (const retired of ["supabasePlayerStorePublicRepository.ts", "supabasePlayerStoreOfferPublicRepository.ts"]) {
+  if (fs.existsSync(`backend/src/domains/store/infrastructure/${retired}`)) throw new Error(`Retired Store adapter reintroduced: ${retired}`);
+}
 
 console.log("Business Phase 10A.4 Player Store cutover contract passed.");

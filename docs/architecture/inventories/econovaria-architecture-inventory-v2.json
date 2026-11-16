@@ -8,13 +8,13 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1631,
+    "sourceFiles": 1596,
     "edgeEntrypoints": 28,
-    "handlerFiles": 65,
-    "persistenceOutsideInfrastructure": 62,
-    "crossDomainDeepImports": 69,
-    "browserTransportShimFiles": 26,
-    "compatibilityMarkerFiles": 210,
+    "handlerFiles": 60,
+    "persistenceOutsideInfrastructure": 60,
+    "crossDomainDeepImports": 68,
+    "browserTransportShimFiles": 27,
+    "compatibilityMarkerFiles": 206,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 0,
     "capabilityStrings": 144
@@ -145,7 +145,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 74,
+      "sourceFiles": 68,
       "publicBoundaryFiles": [
         "backend/src/domains/contracts/index.ts"
       ]
@@ -158,7 +158,7 @@
         "infrastructure",
         "services"
       ],
-      "sourceFiles": 13,
+      "sourceFiles": 12,
       "publicBoundaryFiles": []
     },
     {
@@ -232,7 +232,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 34,
+      "sourceFiles": 28,
       "publicBoundaryFiles": [
         "backend/src/domains/game-sessions/index.ts"
       ]
@@ -269,7 +269,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 26,
+      "sourceFiles": 25,
       "publicBoundaryFiles": []
     },
     {
@@ -375,7 +375,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 66,
+      "sourceFiles": 55,
       "publicBoundaryFiles": [
         "backend/src/domains/store/index.ts"
       ]
@@ -454,7 +454,6 @@
       "backend/src/domains/business/api/businessOperationsWorkerHttpHandler.ts",
       "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
       "backend/src/domains/contracts/api/playerContractAcceptanceHttpHandler.ts",
-      "backend/src/domains/contracts/api/playerContractHttpHandler.ts",
       "backend/src/domains/contracts/api/playerContractPublicListHttpHandler.ts",
       "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
       "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
@@ -464,12 +463,10 @@
       "backend/src/domains/crafting/api/playerCraftingHttpHandler.ts",
       "backend/src/domains/economy/api/initialBalanceSeedHttpHandler.ts",
       "backend/src/domains/economy/api/playerBankingPublicHttpHandler.ts",
-      "backend/src/domains/economy/api/playerLedgerHistoryHttpHandler.ts",
       "backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts",
       "backend/src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts",
       "backend/src/domains/fx/api/fxOrchestratorHttpHandler.ts",
       "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
-      "backend/src/domains/game-sessions/api/createGameHandler.ts",
       "backend/src/domains/game-sessions/api/gameJoinCodeResetHttpHandler.ts",
       "backend/src/domains/game-sessions/api/gameSettingsHttpHandler.ts",
       "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
@@ -498,9 +495,7 @@
       "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
       "backend/src/domains/stocks/api/stockMarketSeedCopyHttpHandler.ts",
       "backend/src/domains/stocks/api/stockMarketTradingHttpHandler.ts",
-      "backend/src/domains/store/api/playerStoreCatalogHttpHandler.ts",
       "backend/src/domains/store/api/playerStorePublicHttpHandler.ts",
-      "backend/src/domains/store/api/playerStorePurchaseHttpHandler.ts",
       "backend/src/domains/store/api/storeCatalogHttpHandler.ts",
       "backend/src/domains/store/api/storeCatalogRouteHandler.ts",
       "backend/src/domains/storylines/api/staffDemoStorylineInitializationHttpHandler.ts",
@@ -550,10 +545,6 @@
         "layer": "api"
       },
       {
-        "file": "backend/src/domains/economy/api/playerLedgerHistoryHttpHandler.ts",
-        "layer": "api"
-      },
-      {
         "file": "backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts",
         "layer": "api"
       },
@@ -579,10 +570,6 @@
       },
       {
         "file": "backend/src/domains/players/api/playerSessionHttpHelpers.ts",
-        "layer": "api"
-      },
-      {
-        "file": "backend/src/domains/store/api/playerStorePurchaseHttpHandler.ts",
         "layer": "api"
       },
       {
@@ -872,12 +859,6 @@
         "ownerDomain": "game-dashboard",
         "importedDomain": "store",
         "target": "../../store/dashboardReadModel.ts"
-      },
-      {
-        "consumer": "backend/src/domains/game-sessions/application/createGame.ts",
-        "ownerDomain": "game-sessions",
-        "importedDomain": "stocks",
-        "target": "../../stocks/marketWindow.ts"
       },
       {
         "consumer": "backend/src/domains/game-sessions/application/updateGameSettings.ts",
@@ -1286,6 +1267,12 @@
       },
       {
         "file": "backend/src/domains/economy/api/ledgerHistoryReadRepository.test.ts",
+        "patterns": [
+          "globalThis.fetch="
+        ]
+      },
+      {
+        "file": "backend/src/domains/economy/api/playerBankingSessionBoundary.test.ts",
         "patterns": [
           "globalThis.fetch="
         ]
@@ -1889,19 +1876,6 @@
         ]
       },
       {
-        "file": "backend/src/domains/contracts/api/playerContractRoutePaths.test.ts",
-        "markers": [
-          "legacy"
-        ]
-      },
-      {
-        "file": "backend/src/domains/contracts/api/playerContractRoutePaths.ts",
-        "markers": [
-          "compatibility",
-          "legacy"
-        ]
-      },
-      {
         "file": "backend/src/domains/contracts/contracts/contractContracts.ts",
         "markers": [
           "fallback"
@@ -1930,12 +1904,6 @@
         "file": "backend/src/domains/game-sessions/api/gameJoinCodeResetHttpHandler.test.ts",
         "markers": [
           "legacy"
-        ]
-      },
-      {
-        "file": "backend/src/domains/game-sessions/application/createGame.ts",
-        "markers": [
-          "fallback"
         ]
       },
       {
@@ -2126,12 +2094,6 @@
         "file": "backend/src/domains/store/application/adminStoreItemMutation.test.ts",
         "markers": [
           "compatibility"
-        ]
-      },
-      {
-        "file": "backend/src/domains/store/infrastructure/supabasePlayerStorePublicRepository.ts",
-        "markers": [
-          "legacyrepository"
         ]
       },
       {
@@ -2997,8 +2959,6 @@
       {
         "capability": "curriculum.apple",
         "locations": [
-          "backend/src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepositoryCatalogSuite.ts",
-          "backend/src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepositoryCommandSuite.ts",
           "backend/src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepositoryTestFixtures.ts"
         ]
       },
