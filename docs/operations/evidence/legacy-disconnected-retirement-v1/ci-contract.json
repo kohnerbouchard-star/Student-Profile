@@ -1,7 +1,7 @@
 {
   "sourceHead": "34c28a2937411c7524b55569e0c9433426a7cb8e",
   "base": "1327a2602a08fe8b5c4cac7d1205d9cfe73de460",
-  "derivation": "Current pull_request workflow path filters against complete PR changed paths, including deletions; job names and existing conditions read from current YAML. Only jobs applicable to PR989 are qualification gates. No workflow job, condition, permission or trigger changed. CodeQL is a dynamic GitHub analysis.",
+  "derivation": "Current pull_request branch and path filters against complete PR changed paths, including deletions; job names and existing conditions read from current YAML. Only jobs applicable to PR989 targeting main are qualification gates. No workflow job, condition, permission or trigger changed. CodeQL is a dynamic GitHub analysis.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-api-check.yml",
@@ -394,24 +394,6 @@
       "checkName": "Backend typecheck"
     },
     {
-      "workflow": ".github/workflows/canonical-fx-authority-v1.yml",
-      "workflowName": "Canonical FX Authority V1",
-      "job": "exact-head-static",
-      "checkName": "Exact-head static authority"
-    },
-    {
-      "workflow": ".github/workflows/canonical-fx-authority-v1.yml",
-      "workflowName": "Canonical FX Authority V1",
-      "job": "backend-compatibility",
-      "checkName": "FX and adjacent-domain compatibility"
-    },
-    {
-      "workflow": ".github/workflows/canonical-fx-authority-v1.yml",
-      "workflowName": "Canonical FX Authority V1",
-      "job": "disposable-database",
-      "checkName": "Disposable migration replay and lint"
-    },
-    {
       "workflow": ".github/workflows/configurable-stock-market-timezone-v1.yml",
       "workflowName": "Required Game Market Timezone",
       "job": "apply-and-validate",
@@ -740,5 +722,11 @@
     "player-edge-trusted-ip-entrypoint-contract",
     "player-production-secret-provision-contract",
     "player-api-read-resilience"
+  ],
+  "excludedWorkflows": [
+    {
+      "workflow": ".github/workflows/canonical-fx-authority-v1.yml",
+      "reason": "pull_request.branches admits only feat/business-player-store-cutover-v2, not main; all three jobs fail closed outside exact PR671. No dispatch or waiver is appropriate for PR989."
+    }
   ]
 }

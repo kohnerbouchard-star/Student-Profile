@@ -32,3 +32,7 @@ Draft [PR #989](https://github.com/kohnerbouchard-star/Student-Profile/pull/989)
 ## Explicit exclusions
 
 Story fallback migration, alternate staging entrypoints, browser/Attendance compatibility bridges, historical SQL and credential-version compatibility remain separate. Their deletion needs semantic/deployed/client evidence, not zero-import assumptions.
+
+## Final CI applicability correction
+
+Independent final review found three Canonical FX job tuples incorrectly included by path-only derivation. Its workflow admits only PRs targeting `feat/business-player-store-cutover-v2` and all jobs bind PR671, so it cannot apply to PR989 targeting main. Remove only those three tuples and their workflow label from this PR authority; preserve the workflow, all executable checks, path locks, verifier hashes and production/secret denials. The corrected contract contains 106 applicable job tuples plus dynamic CodeQL. Renew exact-head hosted qualification after this documentation/control correction. The prior head had one connected Marketplace fixture failure (Player 2 portfolio read HTTP500); its unchanged-head bounded retry is not evidence for the next head. No failure is waived.
