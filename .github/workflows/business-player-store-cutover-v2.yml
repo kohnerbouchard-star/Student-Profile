@@ -269,7 +269,6 @@ jobs:
             --config supabase/functions/classroom-api/deno.json \
             --lock=supabase/functions/deno.lock \
             --frozen \
-            src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepository.test.ts \
             src/domains/business/infrastructure/supabasePlayerBusinessRepository.test.ts
 
       - name: Verify capabilities and reviewed Store rate limits

@@ -34,6 +34,11 @@ on:
       - "admin/v2/src/routes/store/StoreController.js"
       - "backend/src/domains/contracts/application/adminContractMutation.test.ts"
       - "backend/src/domains/contracts/application/adminContractMutation.ts"
+      - "scripts/player-ledger-retirement.test.mjs"
+      - "backend/src/domains/economy/api/playerLedgerHistoryHttpHandler.ts"
+      - "backend/src/domains/economy/api/playerBankingSessionBoundary.test.ts"
+      - "backend/src/domains/economy/api/playerBankingPublicHttpHandler.test.ts"
+      - "backend/src/domains/economy/api/ledgerHistoryReadRepository.test.ts"
       - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts"
       - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.test.ts"
       - "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts"
@@ -76,6 +81,11 @@ on:
       - "admin/v2/src/routes/store/StoreController.js"
       - "backend/src/domains/contracts/application/adminContractMutation.test.ts"
       - "backend/src/domains/contracts/application/adminContractMutation.ts"
+      - "scripts/player-ledger-retirement.test.mjs"
+      - "backend/src/domains/economy/api/playerLedgerHistoryHttpHandler.ts"
+      - "backend/src/domains/economy/api/playerBankingSessionBoundary.test.ts"
+      - "backend/src/domains/economy/api/playerBankingPublicHttpHandler.test.ts"
+      - "backend/src/domains/economy/api/ledgerHistoryReadRepository.test.ts"
       - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts"
       - "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.test.ts"
       - "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts"
@@ -158,6 +168,9 @@ jobs:
 
       - name: Validate Player Banking alias aggregation
         run: npm --prefix backend run test:player-banking-public
+
+      - name: Preserve Player ledger retirement and Banking test registration
+        run: node --test scripts/player-ledger-retirement.test.mjs
 
       - name: Check browser adapter syntax
         run: |

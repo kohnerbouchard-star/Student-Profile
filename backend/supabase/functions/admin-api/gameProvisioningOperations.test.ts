@@ -1,3 +1,5 @@
+// Keep current Stock-window parser and pre-write boundary coverage in the registered game suite.
+import "../../../src/domains/licensing/contracts/activationRequestParser.test.ts";
 import { handleGameProvisioningOperation } from "./gameProvisioningOperations.ts";
 
 declare const Deno: {

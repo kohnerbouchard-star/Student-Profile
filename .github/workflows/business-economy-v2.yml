@@ -46,6 +46,10 @@ on:
       - "player-terminal/tests/business-banking-surface.mjs"
       - "player-terminal/tests/current-capability-manifest.mjs"
       - "scripts/business-banking-player-business-browser-acceptance.core.mjs"
+      - "scripts/store-legacy-purchase-retirement.test.mjs"
+      - "backend/src/domains/store/api/playerStoreCatalogHttpHandler.ts"
+      - "backend/src/domains/store/api/playerStorePurchaseHttpHandler.ts"
+      - "backend/src/domains/store/api/playerStorePurchaseRequestParser.ts"
       - "scripts/business-banking-runtime-contract.mjs"
       - "scripts/business-input-purchase-retirement-contract.mjs"
       - "scripts/business-*-authority-contract.mjs"
@@ -143,4 +147,8 @@ jobs:
         run: >-
           deno test --config supabase/functions/deno.json
           --lock=supabase/functions/deno.lock --frozen
-          src/domains/store/infrastructure/supabaseStorePurchaseRepository.test.ts
+          src/domains/store/infrastructure/supabasePlayerStorePublicReadRepository.test.ts
+          src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.test.ts
+          src/domains/store/infrastructure/supabasePlayerStoreOfferProductPublicRepository.test.ts
+      - name: Preserve retired Store wiring and current authority
+        run: node --test scripts/store-legacy-purchase-retirement.test.mjs

@@ -4,7 +4,7 @@ Purchase-code redemption and entitlement activation code lives here.
 
 ## Structure
 
-- `domain/purchaseCodeRules.ts` contains pure purchase-code redemption validation rules.
+- `domain/` owns purchase-code normalization and hashing. The unconsumed pre-RPC redemption-rules scaffold is retired; authoritative redemption decisions remain in the transaction-safe activation RPC.
 - `infrastructure/licensingRepository.ts` contains the Supabase persistence adapter boundary for `purchase_codes` and `entitlements`.
 - `application/redeemPurchaseCode.ts` validates activation input and calls the transaction-safe activation repository boundary.
 - `contracts/` is reserved for future request/response DTOs.
