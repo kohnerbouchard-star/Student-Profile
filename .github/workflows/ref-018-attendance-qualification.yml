@@ -334,7 +334,7 @@ jobs:
         run: npm run audit:architecture
       - name: Upload exact-head qualification evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ref018-attendance-qualification-${{ github.event.pull_request.head.sha || github.sha }}
           path: /tmp/ref018/
@@ -381,7 +381,7 @@ jobs:
         run: for phase in events leases; do node scripts/ref-046-disposable-qualification.mjs finalize "$phase"; done
       - name: Upload exact-head Campaign receipts and teardown evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ref046-owned-phases-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: /tmp/ref018/
