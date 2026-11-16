@@ -23,7 +23,8 @@ Proposed intake IDs, coordinated with the reserved #668 ledger owner:
 - `MAINT-PLAYER-LOAN-REPAYMENT-ACCOUNT-001`
 - `MAINT-ADMIN-CONTRACT-GAME-TIMEZONE-001`
 
-No global-ledger status is changed or completion claimed here.
+The actual PR986 tranche adds only these two scoped intake rows, preserving
+all prior ledger text and #668 ownership. No completion is claimed.
 
 ## Correctness changes
 
@@ -147,6 +148,37 @@ Rollback is a revert of this bounded frontend correction; no schema/data
 rollback is introduced. Final qualification and coordinated merge remain
 pending; this record is not release approval.
 
+## Actual PR986 metadata and publication
+
+Draft [PR #986](https://github.com/kohnerbouchard-star/Student-Profile/pull/986)
+initially published source head `bb452225021b89155e6e33e8c8974e5401cc8490`.
+All 16 sequential contents-API commits preserve ordinary ancestry from qualified
+main `eb6ccf77af2cab514c300ed6a05f3ddd37bc67f5`. The resulting full Git tree is
+`1817f78cf504ca8210ae1695aa8599f500c628d1`, byte-identical to independently
+reviewed local source `5a886eaf5c95951873234ac5e15ae4e2cb1a806d`; no force
+update or main write occurred. This is fresh reconstructed source, not recovery
+of the earlier lost unpublished tree.
+
+Actual metadata includes `pr-986.json`, the standalone scope evidence and two
+additive intake rows. Final scope is 18 changed / 20 locked paths, including
+both unchanged read-only verifier files. It requires all 46 naturally applicable
+ordinary PR families / 91 declared tuples / 86 executing tuples and 5 guarded
+zero-credit jobs, plus separately accounted dynamic CodeQL. The actual authority
+binds 131 required unique labels / 82 critical labels without composite names.
+
+Independent planning review verified the prior source tree, exact predicates,
+88-row source table, guards, all COEs and their enforcers. Final actual-number
+metadata must be independently reviewed and exact final-head hosted execution
+must still qualify. No earlier head's green status is credited to a later head.
+The original local full backend smoke process became unavailable while retained
+Contract suites were typechecking; completion cannot be recovered from the log,
+so that run is incomplete, not a pass. Both new loan regressions were separately
+confirmed to fail against unchanged main and pass with this correction.
+
+The owner deferred Supabase quota investigation while retaining automatic sync.
+Live services are restricted with 402, and no live verification is claimed or
+substituted by repository tests. Keep deployment/data-safety review separate.
+
 ## Exact scoped CI preparation
 
 Source diff has 16 paths. An in-memory numeric-shaped actual-PR authority adds
@@ -183,7 +215,7 @@ A source-only forms edit now selects Loans Lifecycle Read; a source-only helper
 edit now selects Required Game Market Timezone. The pre-change path lists did
 not select these two cases. No unrelated per-PR workflow selector is introduced.
 
-### Immutable tuple inventory
+### Actual 91-tuple inventory (including additive intake)
 
 `required` means execution/assertions must succeed. `guarded` means the current
 ordinary PR predicate is false, receives zero assertion credit, and is not run
@@ -191,6 +223,9 @@ by weakening that guard. Matrix identity is `none` throughout this source set.
 
 | Workflow file (`.github/workflows/`) | YAML job ID | Display name | Ordinary PR requirement |
 | --- | --- | --- | --- |
+| `admin-business-supervision.yml` | `source` | admin-business-supervision-source | required |
+| `admin-business-supervision.yml` | `database` | admin-business-supervision-database | required |
+| `admin-business-supervision.yml` | `browser` | admin-business-supervision-browser | required |
 | `admin-browser-e2e.yml` | `rendered-admin` | Rendered Admin browser and secure mutation journey | required |
 | `admin-scroll-integrity.yml` | `rendered-scroll-ownership` | Rendered viewport and drawer scrolling | required |
 | `admin-shell-smoke.yml` | `admin-shell-smoke` | admin-shell-smoke | required |
