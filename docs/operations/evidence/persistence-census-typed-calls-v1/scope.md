@@ -1,3 +1,18 @@
+# Reconciliation after #668: 2026-11-16
+
+PR #991 retains its existing owner branch and is reconciled with merged #668
+main `41792bd9ea1b5b7e196dbdf489dda22f4e9b7b8e`. The only textual merge conflict
+was the generated inventory; it was regenerated, not hand-combined. Current
+same-root counts are 1,611 source files: predecessor detector 59 persistence
+candidate files, corrected detector 86, exactly 27 additions and no removals.
+All other inventory counts and all ceilings are unchanged. The immutable
+`e71a92a2` regression remains historical coverage, not a current-main assertion.
+Earlier qualification belongs to head `b7e8d64a`; renewed local checks,
+independent review and exact-head hosted qualification are required for this
+union. No runtime, migration, route, RPC, permission or deployment change.
+Production parity remains unresolved independently of this tooling correction.
+Next: qualify and serially merge #991, then reconcile #990 against actual main.
+
 # Current integration checkpoint: 2026-11-16
 
 Supersedes the historical local-preparation status below. Existing owner branch

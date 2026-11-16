@@ -21,6 +21,8 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+- **`PERSISTENCE-CENSUS-TYPED-001` / `ARCH-401` — PR #991 post-#668 reconciliation (2026-11-16):** `IN_PROGRESS`; existing owner branch reconciled with actual main `41792bd9ea1b5b7e196dbdf489dda22f4e9b7b8e`, which contains merged #668. Regenerated the sole conflicted inventory using the reviewed scanner: 1,611 sources, 59 to 86 persistence candidates, exactly 27 additions and no removals; other measurements and ceilings unchanged. Prior qualification at `b7e8d64a` is historical, not qualification of this union. Source files, migrations/routes/RPC exclusions and verification limits remain in [scope](../operations/evidence/persistence-census-typed-calls-v1/scope.md). Fresh local checks, independent review and exact-head hosted qualification remain required before serial merge; #990 follows actual merged main. Production/database parity and live acceptance remain unresolved and are not claimed by this tooling tranche.
+
 - **`PERSISTENCE-CENSUS-TYPED-001` / `ARCH-401` — Typed persistence census integration (2026-11-16):** `IN_PROGRESS`; existing local branch `fix/persistence-census-typed-calls-39685`, reconciled with fetched main `e71a92a2df85bc359a480570b20882603c9df1b9`. Correct the lexical detector for typed `.rpc<T>`/`.from<T>` candidates, register its regressions in the existing architecture/root aggregate and regenerate identical-root inventory (60 to 87 candidate files, not defects). Two finite qualification checkouts retain history for the newly aggregated immutable regression; no runtime, migration, route, RPC, workflow-command, ceiling or deployment change. [Scope and limitations](../operations/evidence/persistence-census-typed-calls-v1/scope.md). Next: independent exact-head review and hosted qualification; runtime extraction remains separately owned.
 
 - **Architecture merge reconciliation (2026-11-16):** Supersedes only the unmerged-status descriptions for the bounded tranches below; preserves all historical evidence and global ledger/#668 ownership. #985 ratchets merged `eb6ccf77`, #986 loan-account/timezone fixes merged `192b5de8`, #987 write policies merged `03ae8d94`, #988 Story/realtime boundary merged `1327a260`, and #989 legacy retirement merged `e71a92a2` from qualified head `6aad220f`. For #989, 63 applicable PR workflows passed with three guarded workflow skips; post-merge 25 passed/one guarded skip, zero failures or pending checks. Its tokenless release-contract validation is not production publication: live-parity, publication and Edge convergence steps were guarded skips. These are merged bounded code tranches, not whole-domain completion or live-app acceptance. #989 removes 27 runtime modules, one SVG and ten test/support files while preserving useful current coverage. Next: corrected persistence census, separate persistence/Messaging ownership batches and #668 multi-game qualification; do not infer a deployment or erase historical failed/blocked evidence.
@@ -627,3 +629,40 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 - **`ARCH-LARGE-PARALLEL-LOCAL-001` / `ARCH-LARGE-EDGE-ADMIN-BATCH-001` — Held-control Payroll coverage correction (2026-11-15):** `IMPLEMENTED_NOT_MERGED`; existing draft [PR #979](https://github.com/kohnerbouchard-star/Student-Profile/pull/979). Published control head `45fd1987ff13a9b2d8a32b8e572ea639b288d159` exposed one inherited required workflow that did not run: Business Workforce Payroll V2. Add only the exact PR979 authority path to its PR filter, retaining all tests, permissions and the PR657-only write guard. Control coverage becomes 52 registrations / 64 PR families, with ordered 153 required / 106 critical identities unchanged. Re-pin the two finite source baselines and freshly re-review/requalify; no missing gate waiver, merge completion or production claim. Source #980/#981 remain held until predecessor and postmerge qualification. Next: publish the reviewed corrective descendant, then pass every exact-head gate.
 
 - **`ARCH-LARGE-PARALLEL-LOCAL-001` / `ARCH-LARGE-EDGE-ADMIN-BATCH-001` — Complete held Admin contract-reader coverage (2026-11-15):** `IMPLEMENTED_NOT_MERGED`; existing draft [PR #981](https://github.com/kohnerbouchard-star/Student-Profile/pull/981), source remains local. Seven existing contracts now follow only the already-reviewed finite import-aware backend composition. All original assertions, Browser reads, lifecycle ordering, reader maps, runtime and permissions remain unchanged; 59 finite/adversarial reader tests pass and inventory regeneration is unchanged. [Exact support scope and audit](../operations/evidence/held-admin-refactor-v1/scope.md#complete-retained-contract-reader-qualification). Re-pin the exact Admin admission before control #979 publication; fresh integration review and hosted gates remain required. No completed merge or production claim. Next: qualify controls, Economy and Admin serially against actual main.
+
+
+## ARCH-100F current-main reconciliation — 2026-11-16
+
+Status: `IN_PROGRESS`. Existing draft PR #668 and branch
+`refactor/multi-game-bootstrap-context-hydration-v1` remain the sole source
+owner; no replacement branch or donor implementation was introduced.
+Main `e71a92a2df85bc359a480570b20882603c9df1b9` is integrated normally.
+
+The bounded implementation creates distinct immutable Staff/Admin contexts per
+server-owned game, hydrates DTO rows only after authorization, and reuses the
+selected game's exact context. Staff bootstrap remains active-only; Admin retains
+all-status discovery and existing response envelopes. No migration, RPC, UI,
+economic write, permission, dependency or manual deployment is changed.
+
+Reconciliation preserves the newer split Admin root/global-route modules,
+retired Business settlement guard, all newer routes and main tests. All 38 focused
+Staff bootstrap tests and Admin bootstrap/denial/parity tests are retained; root source
+contracts now inspect the value-import-connected extracted modules. Persisted
+nonblank display strings retain their exact bytes; identity keys remain strict. The
+historical branch ledger at `faaf908bdd5131b451c7e87e91ed4991ad8f839d` remains
+recoverable, but its old Business/FX stack and already-merged statuses do not
+replace current-main ledger entries.
+
+The owner explicitly requested finishing and merging #668 on 2026-11-16.
+This grants work and qualified merge intent, not waiver of the historical
+F-specific live-parity merge hold. Current source/deployment policy separates
+manual release from source merge; the retained automatic Supabase integration
+requires reconciliation before treating that separation as sufficient here.
+Keep the draft unmerged until the applicable gate is resolved, every exact-head
+check and independent review pass, and main/head are rechecked. Do not claim
+`VERIFIED_COMPLETE`, deployment or live parity from local/hosted source tests.
+
+Next: complete current-main qualification and independent source/security
+review, reconcile the explicit live-parity merge gate, then normal merge only
+when permitted and collect exact-merge evidence. Later context owners and
+broader ARCH-100 closure remain separately unqualified.

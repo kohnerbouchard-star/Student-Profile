@@ -1,7 +1,7 @@
 {
   "sourceHead": "5e7b39876b42cd92a4cff7a2941b5615b896c934",
-  "base": "e71a92a2df85bc359a480570b20882603c9df1b9",
-  "derivation": "Current PR991 targeting main branch/path filters and complete diff including own manifest; exact job names and conditions from unchanged workflows. Only REF009/REF018 checkout history changed. No permissions, commands or guards changed.",
+  "base": "41792bd9ea1b5b7e196dbdf489dda22f4e9b7b8e",
+  "derivation": "Current PR991 targeting main branch/path filters and complete diff including own manifest; exact job names and conditions from unchanged workflows. Only REF009/REF018 checkout history changed. No permissions, commands or guards changed. Reconciled with merged #668 main 41792bd9; sourceHead records prior source provenance, not new union qualification. Required tuples and guards are retained; final exact-head results must be checked anew.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-business-supervision.yml",
