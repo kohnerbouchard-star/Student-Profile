@@ -56,7 +56,7 @@ function targetFor(dataset, selectors = []) {
 }
 const tick = () => new Promise(setImmediate);
 async function until(predicate) { for (let i = 0; i < 100; i++) { if (predicate()) return; await tick(); } assert.fail("Terminal did not settle"); }
-async function fixture(t, { routes = {}, actions = {}, bankBalance } = {}) {
+async function fixture(t, { routes = {}, actions = {}, bankBalance, writeError } = {}) {
   const keys = ["HTMLElement", "HTMLButtonElement", "document", "location", "CSS", "navigator", "localStorage", "FormData", "CustomEvent", "HashChangeEvent", "addEventListener", "removeEventListener", "dispatchEvent", "requestAnimationFrame", "cancelAnimationFrame", "setInterval", "clearInterval", "ECONOVARIA_PLAYER_SESSION", "Econovaria"];
   const saved = new Map(keys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   const events = new Element(), mount = new Element(), storage = new Map(), requests = [], calls = [], clipboard = [], frames = new Map(); let frameId = 0, clipboardFails = false;
@@ -77,6 +77,7 @@ async function fixture(t, { routes = {}, actions = {}, bankBalance } = {}) {
     sessionReadyEvent: "fixture:ready", sessionRequiredEvent: "fixture:required", sessionInvalidEvent: "fixture:invalid", logoutRequestedEvent: "fixture:logout",
     apiCall: async (context) => {
       calls.push(context);
+      if (context.method !== "GET" && writeError) throw writeError;
       const value = structuredClone(previewData[context.endpointKey]);
       if (context.endpointKey === "banking" && bankBalance !== undefined) value.checking.available = bankBalance;
       return context.method === "GET" ? value : { ok: true };
@@ -172,7 +173,6 @@ for (const [name, endpoint, values, field, message, data] of [
   ["sell holdings", "marketOrder", { assetId: "nova", side: "sell", orderType: "market", quantity: "999999" }, "quantity", /You currently own .* shares/],
   ["listing stock", "marketplacePurchase", { quantity: "13" }, "quantity", "The requested quantity exceeds the available listing quantity.", { listingId: "listing-1" }],
   ["inventory stock", "marketplaceListing", { inventoryItemId: "inv-1", quantity: "999999" }, "quantity", /Only .* units are available/],
-  ["loan payment balance", "loanRepay", { amount: "999999" }, "amount", "The payment exceeds your available checking balance."],
   ["blank message", "messageSend", { body: "  " }, "body", "Enter a message before sending."],
   ["blank repayment source", "loanApply", { repaymentSource: "  " }, "repaymentSource", "Describe the expected repayment source."],
 ]) test(`form rejects ${name}, focuses the field, then input clears the error`, async (t) => {
@@ -184,6 +184,38 @@ for (const [name, endpoint, values, field, message, data] of [
   if (message instanceof RegExp) assert.match(invalid.validationMessage, message); else assert.equal(invalid.validationMessage, message);
   assert.strictEqual(document.activeElement, invalid); assert.equal(form.querySelector("[data-player-form-error]").textContent, invalid.validationMessage); assert.deepEqual(f.requests, []);
   await f.mount.emit("input", invalid); assert.equal(invalid.validationMessage, ""); assert.equal(form.classes.has("has-validation-error"), false); assert.equal(form.querySelector("[data-player-form-error]"), undefined);
+});
+
+test("loan repayments do not gate the server-bound account against unrelated Checking", async (t) => {
+  const f = await fixture(t, { bankBalance: 0 });
+  for (const loanId of ["savings-backed-loan", "business-backed-loan", "foreign-currency-loan"]) {
+    const form = formFor("loanRepay", { amount: "10" }, { loanId });
+    await f.submit(form);
+    assert.equal(form.elements.namedItem("amount").validationMessage, "");
+    const request = f.requests.at(-1);
+    assert.equal(request.endpointKey, "loanRepay");
+    assert.deepEqual(request.params, { loanId });
+    assert.equal(request.payload.amount, 10);
+    assert.equal(request.payload.gameSessionId, previewData.session.gameSessionId);
+  }
+  assert.equal(f.requests.length, 3);
+});
+
+test("repayment amount validation and rejected bound-account commands do not mutate balances", async (t) => {
+  const f = await fixture(t, { bankBalance: 0, writeError: { status: 409, code: "INSUFFICIENT_FUNDS" } });
+  for (const amount of ["0", "-1", "not-a-number"]) {
+    await f.submit(formFor("loanRepay", { amount }, { loanId: "savings-loan" }));
+    assert.equal(f.requests.length, 0);
+  }
+  const before = structuredClone(f.state().data.loans);
+  const reads = f.calls.filter((call) => call.method === "GET").length;
+  const form = formFor("loanRepay", { amount: "10" }, { loanId: "savings-loan" });
+  await f.submit(form);
+  assert.equal(f.requests.length, 1);
+  assert.equal(f.calls.filter((call) => call.method === "GET").length, reads);
+  assert.deepEqual(f.state().data.loans, before);
+  assert.equal(f.toast(), "This action conflicts with a newer update. Refresh this section and try again.");
+  assert.equal(form.querySelector('button[type="submit"]').childNodes[0].textContent, "Submit");
 });
 
 for (const [endpoint, values, data, params, expected] of [

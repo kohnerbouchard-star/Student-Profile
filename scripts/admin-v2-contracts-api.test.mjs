@@ -8,6 +8,7 @@ import {
   normalizeContractsReadModel,
 } from "../admin/v2/src/routes/contracts/ContractsController.js";
 import { ContractForm } from "../admin/v2/src/routes/contracts/ContractForm.js";
+import { formatContractDateTime, normalizeContractTimeZone, resolveContractLocalDateTime } from "../admin/v2/src/core/contract-time-zone.js";
 import { createAccountDocument } from "./admin-account-controls-dom-fixture.mjs";
 import { normalizeContractCreate } from "../backend/supabase/functions/admin-api/mutationAdapters.ts";
 import { ADMIN_DATA_STATES } from "../admin/v2/src/core/data-state.js";
@@ -285,19 +286,26 @@ test("Contracts controller denies reads and writes without contracts.manage and 
 });
 
 
-function editForm(t, original, changes = {}, mode = "edit") {
-  const saved = Object.fromEntries(["document", "Node", "HTMLElement"].map((key) => [key, globalThis[key]]));
+const formGlobalSnapshots = new WeakMap();
+
+function editForm(t, original, changes = {}, mode = "edit", timeZone = "Asia/Seoul") {
+  if (!formGlobalSnapshots.has(t)) {
+    const saved = Object.fromEntries(["document", "Node", "HTMLElement"].map((key) => [key, globalThis[key]]));
+    formGlobalSnapshots.set(t, saved);
+    t.after(() => {
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete globalThis[key];
+        else globalThis[key] = value;
+      }
+      formGlobalSnapshots.delete(t);
+    });
+  }
   const { document, Element } = createAccountDocument();
   document.createElementNS = (_namespace, tag) => document.createElement(tag);
   Object.assign(globalThis, { document, Node: Element, HTMLElement: Element });
-  t.after(() => {
-    for (const [key, value] of Object.entries(saved)) {
-      if (value === undefined) delete globalThis[key];
-      else globalThis[key] = value;
-    }
-  });
   const model = normalizeContractsReadModel({ contracts: [original] }).contracts[0];
-  const form = ContractForm({ mode, contract: model });
+  const form = ContractForm({ mode, contract: model, timeZone });
+  const initialDates = Object.fromEntries(["scheduledAt", "deadlineAt", "expiresAt"].map((key) => [key, form.fields[key].control.getAttribute("value") || ""]));
   // This minimal DOM is not a native input implementation. Seed actual control
   // values explicitly; production validation and payload construction stay real.
   const values = {
@@ -309,7 +317,7 @@ function editForm(t, original, changes = {}, mode = "edit") {
     scheduledAt: "", deadlineAt: "", expiresAt: "", ...changes,
   };
   for (const [key, value] of Object.entries(values)) form.fields[key].setValue(value);
-  return { model, form };
+  return { model, form, initialDates };
 }
 
 async function normalizeFormPayload(form, method = "PATCH") {
@@ -589,4 +597,180 @@ test("Contracts controller preserves scoped mutations, retry identity and duplic
     assert.equal((await controller.publishContract({})).error.code, "NOT_FOUND");
     assert.equal(calls.length, writes);
   } finally { controller.destroy(); }
+});
+
+test("Contracts use scoped stock-market timezone, not attendance, without a permission expansion", async () => {
+  const urls = [];
+  const api = createContractsApiClient({ fetchImpl: async (url) => {
+    urls.push(url);
+    return response({ data: url.endsWith('/settings')
+      ? { settings: { stockMarketWindow: { timezone: 'America/New_York' }, attendanceWindow: { timezone: 'Asia/Seoul' } } }
+      : { contracts: [contract()] } });
+  } });
+  assert.equal(normalizeContractsReadModel(await api.readContracts({ gameId: GAME_ID })).timeZone, 'America/New_York');
+  assert.deepEqual(urls.sort(), [`/api/admin/games/${GAME_ID}/contracts`, `/api/admin/games/${GAME_ID}/settings`]);
+  urls.length = 0;
+  assert.equal((await api.readContracts({ gameId: GAME_ID, includeTimeZone: false })).data.timeZone, null);
+  assert.deepEqual(urls, [`/api/admin/games/${GAME_ID}/contracts`]);
+});
+
+test("Intl-supported persisted timezone aliases are accepted, invalid values never default to Seoul", () => {
+  for (const value of ['UTC', 'Asia/Seoul', 'America/New_York', 'EST5EDT', 'CST6CDT', 'GMT0', 'Etc/GMT+9']) {
+    assert.equal(normalizeContractTimeZone(value), new Intl.DateTimeFormat('en-US', { timeZone: value }).resolvedOptions().timeZone);
+  }
+  for (const value of [null, '', 'invalid/timezone', {}, 'x'.repeat(81)]) assert.equal(normalizeContractTimeZone(value), null);
+});
+
+test("missing, invalid, denied and unavailable settings preserve reads without inventing a timezone", async () => {
+  for (const settings of [{}, { stockMarketWindow: { timezone: '' } }, { stockMarketWindow: { timezone: 'invalid/timezone' } }, { attendanceWindow: { timezone: 'Asia/Seoul' } }]) {
+    const api = createContractsApiClient({ fetchImpl: async (url) => response({ data: url.endsWith('/settings') ? { settings } : { contracts: [contract()] } }) });
+    const result = await api.readContracts({ gameId: GAME_ID });
+    assert.equal(result.data.contracts.length, 1);
+    assert.equal(normalizeContractsReadModel(result).timeZone, null);
+  }
+  for (const status of [403, 500]) {
+    const api = createContractsApiClient({ fetchImpl: async (url) => url.endsWith('/settings') ? response({ code: 'staff_permission_denied' }, status) : response({ data: { contracts: [contract()] } }) });
+    const result = await api.readContracts({ gameId: GAME_ID });
+    assert.equal(result.data.contracts.length, 1);
+    assert.equal(result.data.timeZone, null);
+  }
+});
+
+test("timezone lookup preserves session expiry, MFA and cancellation", async () => {
+  for (const [status, code, expected] of [[401, 'SESSION_EXPIRED', 'SESSION_REQUIRED'], [403, 'staff_mfa_required', 'MFA_REQUIRED']]) {
+    const api = createContractsApiClient({ fetchImpl: async (url) => url.endsWith('/settings') ? response({ code }, status) : response({ data: { contracts: [contract()] } }) });
+    await assert.rejects(api.readContracts({ gameId: GAME_ID }), (error) => error.code === expected);
+  }
+  const signals = [];
+  const api = createContractsApiClient({ fetchImpl: (_url, options) => new Promise((_resolve, reject) => {
+    signals.push(options.signal);
+    options.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
+  }) });
+  const pending = api.readContracts({ gameId: GAME_ID });
+  api.cancelContractsRequest();
+  await assert.rejects(pending, (error) => error.code === 'REQUEST_ABORTED');
+  assert.equal(signals.length, 2);
+  assert.ok(signals.every((signal) => signal.aborted));
+});
+
+test("Contracts controller requests settings only with its grant and discards a destroyed game's late result", async () => {
+  const methods = ['readContractDetail', 'createContract', 'updateContract', 'publishContract', 'archiveContract', 'duplicateContract', 'reviewProgress', 'issueRewards'];
+  for (const allowed of [true, false]) {
+    const calls = [];
+    const api = Object.fromEntries(methods.map((method) => [method, async () => ({})]));
+    api.readContracts = async (args) => { calls.push(args); return { data: { contracts: [], timeZone: allowed ? 'America/New_York' : null } }; };
+    const controller = createContractsController({ api, selectedGameId: GAME_ID, hasPermission: (permission) => permission === 'contracts.manage' || allowed });
+    const state = await controller.load();
+    assert.deepEqual(calls, [{ gameId: GAME_ID, includeTimeZone: allowed }]);
+    assert.equal(state.data.timeZone, allowed ? 'America/New_York' : null);
+    controller.destroy();
+  }
+  let finish;
+  const api = Object.fromEntries(methods.map((method) => [method, async () => ({})]));
+  api.readContracts = () => new Promise((resolve) => { finish = resolve; });
+  const changes = [];
+  const controller = createContractsController({ api, selectedGameId: GAME_ID, hasPermission: () => true, onChange: (state) => changes.push(state) });
+  const pending = controller.load(); controller.destroy();
+  finish({ data: { contracts: [], timeZone: 'Asia/Seoul' } });
+  await pending;
+  assert.equal(changes.length, 1);
+});
+
+test("Contract create/edit conversion and prefilling use UTC, Seoul, New York, Los Angeles and London", (t) => {
+  for (const [timeZone, expected] of [['UTC', '2026-11-16T09:00:00.000Z'], ['Asia/Seoul', '2026-11-16T00:00:00.000Z'], ['America/New_York', '2026-11-16T14:00:00.000Z'], ['America/Los_Angeles', '2026-11-16T17:00:00.000Z'], ['Europe/London', '2026-11-16T09:00:00.000Z']]) {
+    for (const mode of ['create', 'edit']) {
+      const { form } = editForm(t, contract({ status: 'scheduled', targetingPayload: { allPlayers: true }, visibility: 'public' }), { scheduledAt: '2026-11-16T09:00', deadlineAt: '2026-11-16T09:00', expiresAt: '2026-11-16T09:00' }, mode, timeZone);
+      const value = form.validate(); assert.ok(value, `${mode}/${timeZone}`);
+      assert.deepEqual([value.scheduledAt, value.deadlineAt, value.expiresAt], Array(3).fill(expected));
+      assert.ok(form.element.textContent.includes(timeZone));
+    }
+    const { form, initialDates } = editForm(t, contract({ status: 'scheduled', targetingPayload: { allPlayers: true }, visibility: 'public', publishedAt: expected, deadlineAt: expected, expiresAt: expected }), {}, 'edit', timeZone);
+    assert.deepEqual(Object.values(initialDates), Array(3).fill('2026-11-16T09:00'));
+    for (const [key, value] of Object.entries(initialDates)) form.fields[key].setValue(value);
+    const value = form.validate(); assert.ok(value, timeZone);
+    assert.deepEqual([value.scheduledAt, value.deadlineAt, value.expiresAt], Array(3).fill(expected));
+  }
+});
+
+test("Contract dates honor DST boundaries, reject skipped times and preserve both repeated-hour instants", (t) => {
+  for (const [local, expected] of [['2026-03-07T09:00', '2026-03-07T14:00:00.000Z'], ['2026-03-09T09:00', '2026-03-09T13:00:00.000Z'], ['2026-10-31T09:00', '2026-10-31T13:00:00.000Z'], ['2026-11-02T09:00', '2026-11-02T14:00:00.000Z']]) {
+    const { form } = editForm(t, contract({ status: 'scheduled' }), { scheduledAt: local }, 'edit', 'America/New_York');
+    assert.equal(form.validate()?.scheduledAt, expected);
+  }
+  assert.equal(editForm(t, contract({ status: 'scheduled' }), { scheduledAt: '2026-03-08T02:30' }, 'edit', 'America/New_York').form.validate(), null);
+  for (const instant of ['2026-11-01T05:30:12.345Z', '2026-11-01T06:30:12.345Z']) {
+    const { form, initialDates } = editForm(t, contract({ status: 'scheduled', targetingPayload: { allPlayers: true }, visibility: 'public', publishedAt: instant, deadlineAt: instant, expiresAt: instant }), {}, 'edit', 'America/New_York');
+    assert.deepEqual(Object.values(initialDates), Array(3).fill('2026-11-01T01:30'));
+    for (const [key, value] of Object.entries(initialDates)) form.fields[key].setValue(value);
+    const value = form.validate(); assert.ok(value);
+    assert.deepEqual([value.scheduledAt, value.deadlineAt, value.expiresAt], Array(3).fill(instant));
+  }
+});
+
+test("dated Contract actions fail closed without a confirmed zone in create and edit modes", (t) => {
+  for (const timeZone of [null, '', 'invalid/timezone']) {
+    for (const mode of ['create', 'edit']) {
+      const { form } = editForm(t, contract({ status: 'draft' }), { deadlineAt: '2026-11-16T09:00' }, mode, timeZone);
+      assert.equal(form.validate(), null);
+      assert.equal(form.footer.children[1].disabled, mode === 'edit', 'existing dated contracts must not have dates silently cleared');
+      assert.ok(['scheduledAt', 'deadlineAt', 'expiresAt'].every((key) => form.fields[key].control.disabled));
+      assert.match(form.element.textContent, /timezone could not be confirmed/i);
+    }
+  }
+});
+
+test("dateless create, publish-now and draft edit stay available without settings permission", async (t) => {
+  const apiCalls = [];
+  const methods = ['readContractDetail', 'createContract', 'updateContract', 'publishContract', 'archiveContract', 'duplicateContract', 'reviewProgress', 'issueRewards'];
+  const api = Object.fromEntries(methods.map((method) => [method, async (args) => { apiCalls.push({ method, args }); return {}; }]));
+  api.readContracts = async (args) => { apiCalls.push({ method: 'readContracts', args }); return { data: { contracts: [], timeZone: null } }; };
+  const controller = createContractsController({ api, selectedGameId: GAME_ID, hasPermission: (permission) => permission === 'contracts.manage' });
+  t.after(() => controller.destroy());
+  await controller.load();
+  assert.deepEqual(apiCalls[0], { method: 'readContracts', args: { gameId: GAME_ID, includeTimeZone: false } });
+  for (const [mode, status] of [['create', 'draft'], ['create', 'active'], ['edit', 'draft']]) {
+    const original = contract({ status: 'draft', publishedAt: null, deadlineAt: null, expiresAt: null, visibility: 'public', targetingPayload: { allPlayers: true } });
+    const { form, model } = editForm(t, original, { status }, mode, null);
+    const payload = form.validate();
+    assert.ok(payload, `${mode}/${status} dateless flow must remain authorized`);
+    assert.equal(form.footer.children[1].disabled, false);
+    assert.ok(['scheduledAt', 'deadlineAt', 'expiresAt'].every((key) => form.fields[key].control.disabled));
+    const result = mode === 'edit' ? await controller.updateContract(model, payload) : await controller.createContract(payload);
+    assert.equal(result.ok, true);
+    const write = apiCalls.findLast((call) => call.method === (mode === 'edit' ? 'updateContract' : 'createContract'));
+    assert.equal(write.args.gameId, GAME_ID);
+  }
+});
+
+test("new DST-overlap values are rejected for create/edit publication, due and expiry, including half-hour folds", (t) => {
+  for (const [zone, local] of [['America/New_York', '2026-11-01T01:30'], ['Europe/London', '2026-10-25T01:30'], ['Australia/Lord_Howe', '2026-04-05T01:45']]) {
+    assert.equal(resolveContractLocalDateTime(local, zone).problem, 'ambiguous');
+    for (const mode of ['create', 'edit']) {
+      for (const field of ['scheduledAt', 'deadlineAt', 'expiresAt']) {
+        const original = contract({ status: 'draft', publishedAt: null, deadlineAt: null, expiresAt: null, visibility: 'public', targetingPayload: { allPlayers: true } });
+        const { form } = editForm(t, original, { [field]: local, status: field === 'scheduledAt' ? 'scheduled' : 'draft' }, mode, zone);
+        assert.equal(form.validate(), null, `${mode}/${field}/${zone} must not choose a repeated instant`);
+        assert.match(form.fields[field].element.textContent, /occurs twice.*Choose a different time/);
+      }
+    }
+  }
+  assert.equal(resolveContractLocalDateTime('2026-11-01T03:00', 'America/New_York').instant, '2026-11-01T08:00:00.000Z');
+  assert.equal(resolveContractLocalDateTime('2026-04-05T02:15', 'Australia/Lord_Howe').instant, '2026-04-04T15:45:00.000Z');
+});
+
+test("Contract presentation uses the selected zone regardless of host zone and labels unknown-zone UTC explicitly", () => {
+  const saved = process.env.TZ;
+  try {
+    process.env.TZ = 'UTC';
+    const selected = formatContractDateTime('2026-11-16T14:00:00.000Z', 'America/New_York');
+    process.env.TZ = 'Asia/Seoul';
+    assert.equal(formatContractDateTime('2026-11-16T14:00:00.000Z', 'America/New_York'), selected);
+    assert.match(selected, /America\/New_York/);
+    assert.match(selected, /09:00/);
+    const unavailable = formatContractDateTime('2026-11-16T14:00:00.000Z', null);
+    assert.match(unavailable, /UTC.*game timezone unavailable/);
+    assert.equal(formatContractDateTime('not-a-date', 'America/New_York'), '—');
+  } finally {
+    if (saved === undefined) delete process.env.TZ; else process.env.TZ = saved;
+  }
 });

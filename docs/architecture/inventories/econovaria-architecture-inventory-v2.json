@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1628,
+    "sourceFiles": 1629,
     "edgeEntrypoints": 28,
     "handlerFiles": 65,
     "persistenceOutsideInfrastructure": 62,
@@ -3546,6 +3546,7 @@
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/contracts/ContractsController.js",
           "admin/v2/src/routes/settings/SettingsController.js",
           "backend/src/domains/game-sessions/application/readGameSettings.test.ts",
           "backend/src/domains/game-sessions/infrastructure/supabaseGameSessionMutationRepository.test.ts",
