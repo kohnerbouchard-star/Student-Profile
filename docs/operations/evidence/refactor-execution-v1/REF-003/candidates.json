@@ -107,11 +107,11 @@
     },
     {
       "path": "scripts/architecture/build-architecture-inventory.mjs",
-      "blobSha": "375e6d971cf150251fc94372440ff768fd3b9467",
+      "blobSha": "cf51b23eb1790e054c127c9c20e240a990d4f52b",
       "disposition": "canonical",
       "owner": "Architecture tooling",
       "symbols": ["filesBelow"],
-      "reason": "Existing generator scans five source roots, excludes generated segments and records lexical debt candidates. Historical baseline metadata and matching markers are not dead-code evidence. Generator, output and ceilings are unchanged.",
+      "reason": "Original REF-003 review: Existing generator scans five source roots, excludes generated segments and records lexical debt candidates. Historical baseline metadata and matching markers are not dead-code evidence. Generator, output and ceilings are unchanged. Follow-up: The separately reviewed typed-member census correction recognizes generic from/rpc candidates and excludes generic collection constructors; only the persistence file measurement and its caveats change, with roots, other measurements, ceilings and deletion holds preserved.",
       "sourceEvidence": ["package.json", "scripts/architecture/architecture-ratchet-v2.mjs"],
       "inboundRoots": ["npm audit:architecture-inventory -> architecture audit -> repository tests"],
       "consumerAudit": {"HTTP": "Local/CI tool, no service handler", "SQL_RPC": "Static source scan only", "jobs": "Repository Quality through npm test; external executions unknown"},
