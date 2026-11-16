@@ -57,3 +57,13 @@ changes; existing automatic sync stays untouched.
   system Chromium also could not launch under executor socket restrictions.
   The desktop/mobile browser contract is registered as a hosted gate, not
   represented as locally passed. No live acceptance/deployment credit.
+- Fresh backend smoke completed its preceding domain groups, then stopped at
+  game-sessions imports on the same esm.sh SDK connection-refused error; the
+  complete smoke aggregate is not qualified locally.
+
+Draft PR [#992](https://github.com/kohnerbouchard-star/Student-Profile/pull/992)
+publishes source `84dd2c3e004ddf2849e9383b148ef66f6c43ae31`, tree
+`3e7880621306604f51b9de77214d32fb4a1a8fa7`, exactly matching independently
+reviewed local source. PR-number authority and CI contract registration are
+qualification metadata; no merge/live acceptance is implied. Reconcile after
+#991/#990 and require final exact-head hosted checks before serial merge.
