@@ -80,3 +80,10 @@ test("Edge reader preserves installed Browser extraction fallback", () => {
   assert.equal(readEdgeRuntimeSource(url), readBrowserSourceSync(url, "utf8"));
   assert.notEqual(readEdgeRuntimeSource(url), readFileSync(url, "utf8"));
 });
+
+test("Admin player operations retain value-connected history query and projection coverage", () => {
+  const source = readEdgeRuntimeSource(new URL("../backend/supabase/functions/admin-api/playerOperations.ts", import.meta.url));
+  for (const fragment of ["readAdminPlayerHistory", "class SupabaseAdminPlayerHistoryReadRepository", 'service.from("audit_log")', "const timeline =", 'flagsResult.error || settingsResult.error']) {
+    assert.ok(source.includes(fragment), `Missing history coverage: ${fragment}`);
+  }
+});
