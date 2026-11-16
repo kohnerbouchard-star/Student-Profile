@@ -148,6 +148,10 @@ async function createRuntime(browser, fixture) {
     const request = route.request();
     const url = new URL(request.url());
     const pathname = url.pathname;
+    if (request.method() === "GET" && pathname.endsWith(`/games/${ADMIN_V2_FIXTURE_GAME_ID}/settings`)) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { settings: { stockMarketWindow: { timezone: "Asia/Seoul" } } } }) });
+      return;
+    }
     if (!pathname.includes(`/games/${ADMIN_V2_FIXTURE_GAME_ID}/contracts`)) {
       await route.continue();
       return;
