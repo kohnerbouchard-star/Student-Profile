@@ -11,7 +11,7 @@
     "correctness": "node tests/v751-correctness.mjs",
     "adapter": "node tests/student-profile-adapter.mjs",
     "transport-retry": "node tests/adapter-transport-retry.mjs && node tests/adapter-session-provider-timeout.mjs",
-    "idempotency-header-parity": "node tests/idempotency-header-parity.mjs",
+    "idempotency-header-parity": "node tests/idempotency-header-parity.mjs && node --experimental-strip-types tests/business-formation-write-policy.mjs",
     "session-browser-safe": "node tests/browser-safe-session-bootstrap.mjs",
     "capability-manifest-current": "node --experimental-strip-types tests/current-capability-manifest.mjs",
     "mutation-control-regressions": "node tests/mutation-control-regressions.mjs",
