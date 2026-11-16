@@ -58,6 +58,7 @@ on:
       - 'scripts/loans-repayment-forecast.test.ts'
       - 'backend/src/domains/business-banking/domain/loanRepaymentForecast.ts'
       - 'player-terminal/src/api/loans-read-model.js'
+      - 'player-terminal/src/core/player-terminal-forms.js'
       - 'player-terminal/src/pages/loans*.js'
       - 'player-terminal/tests/loans-lifecycle*.mjs'
       - 'docs/operations/evidence/loans-lifecycle-read-v1/**'
