@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1596,
+    "sourceFiles": 1604,
     "edgeEntrypoints": 28,
     "handlerFiles": 60,
     "persistenceOutsideInfrastructure": 60,
@@ -300,10 +300,11 @@
       "layers": [
         "api",
         "application",
+        "contracts",
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 20,
+      "sourceFiles": 28,
       "publicBoundaryFiles": []
     },
     {

@@ -15,6 +15,7 @@ import {
   resolveActivePlayerSession,
   resolvePlayerRequestScope,
 } from "../../players/index.ts";
+import { readPlayerMessagePolicy } from "../application/readPlayerMessagePolicy.ts";
 import { createPlayerMessageThread } from "../application/createPlayerMessageThread.ts";
 import { createSupabasePlayerMessageThreadRepository } from "../infrastructure/supabasePlayerMessageThreadRepository.ts";
 import type { PlayerMessageThreadLifecycleRoute } from "./playerMessageThreadLifecycleRoutePaths.ts";
@@ -69,9 +70,9 @@ export async function handlePlayerMessageThreadLifecycleRequest(
     });
 
     if (route.kind === "policy") {
-      const result = await client.rpc<Record<string, unknown>>(
-        "read_player_message_policy_v1",
-        { p_game_session_id: scope.gameId, p_player_id: scope.playerUuid },
+      const result = await readPlayerMessagePolicy(
+        scope,
+        createSupabasePlayerMessageThreadRepository(client),
       );
       if (result.error) return mapRpcError(result.error);
       const policy = normalizePolicy(result.data);

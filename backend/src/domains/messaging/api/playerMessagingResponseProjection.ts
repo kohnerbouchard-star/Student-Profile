@@ -1,3 +1,5 @@
+import type { RawInbox } from "../contracts/playerMessageInboxRead.ts";
+export type { RawInbox } from "../contracts/playerMessageInboxRead.ts";
 import { jsonError, jsonResponse } from "../../../platform/supabase/edgeResponse.ts";
 
 interface RpcError { readonly code?: string; readonly message: string }
@@ -25,13 +27,6 @@ export interface RawThread {
   readonly updatedAt?: unknown;
   readonly retentionUntil?: unknown;
   readonly messages?: unknown;
-}
-
-export interface RawInbox {
-  readonly unreadCount?: unknown;
-  readonly pageUnreadCount?: unknown;
-  readonly nextCursor?: unknown;
-  readonly threads?: unknown;
 }
 
 export interface SendRow {
