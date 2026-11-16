@@ -1,6 +1,6 @@
 import type {
   GamePublicRealtimeEvent,
-} from "../contracts/playerGameDashboardContracts.ts";
+} from "./gamePublicRealtimeEvents.ts";
 
 export const GAME_PUBLIC_REALTIME_PUBLISHER_EVENTS = [
   "stock_tick",

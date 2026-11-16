@@ -48,6 +48,7 @@ on:
       - "scripts/business-financial-market-*.mjs"
       - "backend/src/domains/stocks/**"
       - "backend/src/domains/game-dashboard/**"
+      - "backend/src/domains/game-realtime/**"
       - "backend/src/domains/business/infrastructure/supabaseBusinessStockroomReadRepository*"
       - "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts"
       - "backend/src/security/playerRateLimitOperationRegistry.ts"

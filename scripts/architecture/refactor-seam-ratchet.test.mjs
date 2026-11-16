@@ -178,3 +178,6 @@ test("REF005: a reviewed exact size exception is bounded without weakening the o
   f.write("docs/architecture/inventories/econovaria-architecture-inventory-v2.json", inventory);
   const grown = run(); assert.equal(grown.status, 1); assert.match(grown.stderr, /grew to 501/);
 });
+
+// Preserve the existing CI path coverage of the relocated game-public realtime files.
+import "./game-realtime-workflow-coverage.test.mjs";

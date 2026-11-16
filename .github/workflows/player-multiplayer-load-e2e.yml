@@ -50,6 +50,7 @@ on:
       - "player-terminal/**"
       - "backend/src/domains/players/**"
       - "backend/src/domains/game-dashboard/**"
+      - "backend/src/domains/game-realtime/**"
       - "backend/src/domains/countries/**"
       - "backend/src/domains/world/**"
       - "backend/src/domains/economy/**"
