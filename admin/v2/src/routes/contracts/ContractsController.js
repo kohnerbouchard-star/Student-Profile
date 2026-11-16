@@ -78,7 +78,10 @@ export function createContractsController({
     state = beginAdminDataLoad(state, { requestVersion: version });
     publish();
     try {
-      const result = await api.readContracts({ gameId: selectedGameId });
+      const result = await api.readContracts({
+        gameId: selectedGameId,
+        includeTimeZone: hasPermission("settings.manage"),
+      });
       if (destroyed || version !== requestVersion) return state;
       const model = normalizeContractsReadModel(result);
       state = resolveAdminDataLoad(state, model, {
@@ -284,6 +287,7 @@ export function createContractsController({
     currentView?.destroy?.();
     currentView = ContractsRoute({
       state,
+      timeZone: [ADMIN_DATA_STATES.READY, ADMIN_DATA_STATES.EMPTY].includes(state.status) ? state.data?.timeZone : null,
       filters,
       onFiltersChange: updateFilters,
       onRefresh: load,
