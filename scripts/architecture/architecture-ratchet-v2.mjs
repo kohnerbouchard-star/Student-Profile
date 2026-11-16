@@ -1,12 +1,21 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { auditRefactorSeams } from "./refactor-seam-ratchet.mjs";
+import { auditRuntimeSourceSize, POLICY_PATH as SIZE_POLICY_PATH } from "./runtime-source-size-ratchet.mjs";
 
 const root = process.cwd();
 const readJson = async (file) => JSON.parse(await readFile(path.join(root, file), "utf8"));
 const inventory = await readJson("docs/architecture/inventories/econovaria-architecture-inventory-v2.json");
 const baseline = await readJson("scripts/architecture/architecture-ratchet-v2-baseline.json");
 const failures = [];
+// Keep the original zero ceiling for unexcepted inventory entries. A reviewed
+// size exception is subtracted only after the independent path/cap/evidence
+// guard validates it; the source-size guard is never replaced or bypassed.
+const sizePolicy = await readJson(SIZE_POLICY_PATH);
+const sizeAudit = auditRuntimeSourceSize({ root, policy: sizePolicy });
+failures.push(...sizeAudit.failures);
+const sizeExceptions = new Set(sizeAudit.approvedExceptionPaths);
+const unexceptedOversized = inventory.measuredDebt.oversizedFiles.filter(({ file }) => !sizeExceptions.has(file));
 const measurements = {
   persistenceOutsideInfrastructure: inventory.counts.persistenceOutsideInfrastructure,
   crossDomainDeepImports: inventory.counts.crossDomainDeepImports,
@@ -14,8 +23,8 @@ const measurements = {
   browserTransportMonkeyPatchFiles: inventory.measuredDebt.browserTransportShims.filter(({ file, patterns }) =>
     !/\.(?:test|spec)\./u.test(file) && patterns.some((pattern) => ["window.fetch=", "window.XMLHttpRequest=", "globalThis.fetch="].includes(pattern))).length,
   compatibilityMarkerFiles: inventory.counts.compatibilityMarkerFiles,
-  oversizedSourceFiles: inventory.counts.oversizedSourceFiles,
-  oversizedHttpHandlers: inventory.measuredDebt.oversizedFiles.filter(({ file }) => /(?:HttpHandler|handler)\.(?:ts|js)$/iu.test(file)).length,
+  oversizedSourceFiles: unexceptedOversized.length,
+  oversizedHttpHandlers: unexceptedOversized.filter(({ file }) => /(?:HttpHandler|handler)\.(?:ts|js)$/iu.test(file)).length,
   directBalanceMutationOutsideEconomy: 0,
   directInventoryMutationOutsideInventory: 0,
   unscopedLiveSimulationPersistence: 0,
