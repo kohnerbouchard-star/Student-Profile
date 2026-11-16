@@ -49,6 +49,7 @@ on:
       - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - backend/**
       - frontend/**
+      - admin/v2/src/core/contract-time-zone.js
       - index.html
       - scripts/apply-configurable-stock-market-timezone-v1.mjs
       - scripts/fix-required-timezone-rpc-fixture-v1.mjs
