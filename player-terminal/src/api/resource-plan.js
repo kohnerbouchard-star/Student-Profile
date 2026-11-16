@@ -36,6 +36,9 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   travelExecute: Object.freeze(["worldRuntime", "dashboard", "banking"]),
   travelComplete: Object.freeze(["worldRuntime", "dashboard"]),
   residencyRequest: Object.freeze(["worldRuntime", "dashboard"]),
+  businessFormationPropose: Object.freeze(["business"]),
+  businessFormationRespond: Object.freeze(["business"]),
+  businessFormationActivate: Object.freeze(["dashboard", "business", "banking", "businessTreasury"]),
   businessCreate: Object.freeze(["dashboard", "business", "banking", "businessTreasury"]),
   businessProductCreate: Object.freeze(["business"]),
   businessProduction: Object.freeze(["dashboard", "business", "banking", "inventory"]),
@@ -67,6 +70,8 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   businessStoreWithdrawal: Object.freeze(["business", "store"]),
   marketOrder: Object.freeze(["dashboard", "market", "portfolio", "banking", "bankingFx"]),
   marketWatchlist: Object.freeze(["market"]),
+  storeQuote: Object.freeze([]),
+  storeOfferQuote: Object.freeze([]),
   storePurchase: Object.freeze(["dashboard", "store", "inventory", "banking", "bankingFx"]),
   storeOfferPurchase: Object.freeze(["dashboard", "store", "inventory", "banking", "bankingFx"]),
   marketplaceActivate: Object.freeze(["marketplace", "inventory"]),
@@ -103,8 +108,6 @@ export const WRITE_INVALIDATIONS = Object.freeze({
 
 export const IDEMPOTENT_WRITE_ENDPOINTS = Object.freeze(new Set([
   ...Object.keys(WRITE_INVALIDATIONS),
-  "storeQuote",
-  "storeOfferQuote",
 ]));
 
 export function resourcesForRoute(route) {
