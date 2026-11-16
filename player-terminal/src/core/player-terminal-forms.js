@@ -135,10 +135,9 @@ export function createPlayerTerminalForms({ store, mount, showToast, executeEndp
       if (inventoryItem && Number(quantityField?.value) > Number(inventoryItem.quantity)) quantityField?.setCustomValidity(`Only ${Number(inventoryItem.quantity)} units are available in inventory.`);
     }
 
-    if (endpointKey === "loanRepay") {
-      const amount = form.elements.namedItem("amount");
-      if (Number(amount?.value) > Number(state.data.banking.checking.available)) amount?.setCustomValidity("The payment exceeds your available checking balance.");
-    }
+    // Repayments use the facility's server-bound account and currency, not
+    // necessarily home Checking. This read model has no authoritative bound-
+    // account availability; retain amount validation and let the command check funds.
 
     if (endpointKey === "messageSend") {
       const body = form.elements.namedItem("body");
