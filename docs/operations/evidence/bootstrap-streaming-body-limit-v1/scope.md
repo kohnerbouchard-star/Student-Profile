@@ -11,9 +11,11 @@ all 116 incoming changed paths retain main's blobs. The initial integration
 had only the two source/test files and this note as main-relative changes.
 PR #981 postmerge qualification was cleared by the coordinator. Draft PR #984
 began with a scope-only seed; this candidate adds the reviewed source and the
-exact PR-bound authority as its fourth main-relative path. Final-head
-qualification remains pending; no merge into main, deployment, production
-mutation or release is claimed.
+exact PR-bound authority as its fourth main-relative path. The subsequent
+additive Scope Intake entry is the fifth path, coordinated in PR #668 without
+changing its branch or other ledger text. Final-head qualification remains
+pending; no merge into main, deployment, production mutation or release is
+claimed.
 
 The existing `bootstrap-api` applies a 32,768-byte body policy before its
 publishable-key validation. A request without a trustworthy `Content-Length`
@@ -48,7 +50,8 @@ On the fresh-main union with Node 22.23.1, npm 10.9.8 and Deno 2.9.3:
 - Independent source/integration review verified both merge parents, every
   incoming #981 blob and the source/test blobs; it independently reran the 16
   boundary tests and format/lint/diff checks. A separate review tested 150
-  size/chunk combinations. No hosted gateway, database or browser was tested.
+  size/chunk combinations. No live hosted gateway, persistent database or
+  production browser environment was tested.
 
 ## Scope-specific CI and intake plan
 
@@ -56,41 +59,41 @@ This section supersedes the earlier, conservative proposal to copy PR #981's
 151/105 check lists and add 43 workflow selectors. Those were not a generic
 requirement, and no such filters are proposed. Preserve the existing validators,
 permissions, U1/held14 guards and all naturally applicable checks without adding
-unrelated workflows. The global roadmap remains untouched here; its owner must
-coordinate intake. Recompute the plan if main, the final diff or GitHub rules
-change.
+unrelated workflows. The global roadmap has one additive intake entry; the
+separate #668 owner was notified to preserve it on later reconciliation. No
+other ledger text is changed. Recompute the plan if main, the final diff or
+GitHub rules change.
 
-The three current paths select 17 PR workflow families on the usual
-opened/synchronize/reopened events. A real `pr-<number>.json` authority also
-selects Player Terminal Verify, for **18 predicted families**. Seventeen have
-active PR jobs; the PR361-only deployment job is expected to be skipped. Job
-conditions and actual results, not these source-derived counts, determine
+The four source, evidence and intake paths select 21 PR workflow families on
+the usual opened/synchronize/reopened events. The actual `pr-984.json`
+authority also selects Player Terminal Verify, for **22 predicted families**.
+Twenty-one have active PR jobs; the PR361-only deployment job is expected to
+be skipped. Job conditions and actual results, not these source-derived counts, determine
 qualification. Dynamic CodeQL and GitHub branch-protection checks must be
 independently discovered and reconciled; do not infer that this list is the
 repository's protection configuration.
 
 A real PR-number-bound cross-cutting authority is necessary because the
 naturally selected Banking FX source job invokes the existing verifier with the
-actual PR number. Its proposed exact allowlist comprises the three paths above,
-the eventual actual-number authority path, and the two existing verifier/test
-paths. The latter two remain unchanged and are independently compared to main;
-`readOnlyPaths` is descriptive and the generic verifier alone does not enforce
+actual PR number. Its exact allowlist comprises the four source, evidence and
+intake paths above, the actual-number authority path, and the two existing
+verifier/test paths. The latter two remain unchanged and are independently
+compared to main; `readOnlyPaths` is descriptive and the generic verifier alone does not enforce
 that restriction. Preserve the four required Player check literals, set all
 production-deployment, production-mutation and secret-value flags to false,
 and account for every applicable workflow/job below. Explicitly distinguish
 `Beta Security Contract / verify` from `Player Terminal Verify / verify`; the
-same bare job label cannot prove both outcomes. An **in-memory hypothetical**
-actual-number shape passed the unchanged verifier with four changed paths, six
-allowed paths, 46 unique required strings and 25 critical strings. It included
-the four mandatory literals, the active workflow/job names below and `CodeQL`;
-those counts are a proposed metadata shape, not GitHub-required check counts
-or a substitute for checking real job pairs. The earlier hypothetical shape
-was computed only in memory; this candidate includes the actual-number
-`pr-984.json` authority.
+same bare job label cannot prove both outcomes. The earlier four-path
+actual-number authority had 46 unique required strings and 25 critical strings.
+The five-path authority includes the four newly selected workflow families and
+their 14 job names, with 64 unique required strings and 39 critical strings.
+Those are scope metadata, not GitHub-required check counts or a substitute for
+checking real workflow/job pairs. Both shapes retain the four mandatory
+literals and `CodeQL`.
 
 PR #984 was opened after #981 postmerge clearance with a scope-only seed.
 Independently review its actual-number authority against the exact final
-four-path diff, verify both verifier/test files and every other control against
+five-path diff, verify both verifier/test files and every other control against
 main, then qualify all naturally triggered final-head workflows and their jobs;
 seed-head checks are not final-head qualification.
 Record guarded skips separately. Where a retained workflow checks out the PR
@@ -102,10 +105,14 @@ by this note.
 ### Predicted PR workflow and job selection
 
 - `.github/workflows/admin-browser-e2e.yml` (Admin Browser E2E): PR jobs `rendered-admin`.
+- `.github/workflows/admin-business-supervision.yml` (Admin Business Supervision): PR jobs `source`, `database`, `browser`.
 - `.github/workflows/backend-typecheck.yml` (Backend Typecheck): PR jobs `backend-typecheck`.
 - `.github/workflows/banking-fx-clearing-v1.yml` (banking-fx-clearing-v1): PR jobs `certify`, `database-acceptance`, `chromium-acceptance`.
 - `.github/workflows/beta-security-contract.yml` (Beta Security Contract): PR jobs `verify`.
+- `.github/workflows/business-multicurrency-treasury-v1.yml` (business-multicurrency-treasury-v1): PR jobs `source-contract`, `disposable-database`, `player-browser`.
 - `.github/workflows/business-player-store-cutover-v2.yml` (Business Player Store Cutover V2): PR jobs `verify-cutover-authority`, `verify-backend-store-runtime`, `verify-database-settlement`, `verify-database-replay`, `verify-player-terminal-and-chromium`, `verify-connected-player-store`.
+- `.github/workflows/business-player-store-fx-final-v2.yml` (business-player-store-fx-final-v2): PR jobs `source-contract`, `disposable-database`, `player-browser`, `connected-two-browser`.
+- `.github/workflows/business-store-sales-convergence-v2.yml` (business-store-sales-convergence-v2): PR jobs `source-contract`, `disposable-database`, `worker-contract`, `player-admin-contract`.
 - `.github/workflows/configurable-stock-market-timezone-v1.yml` (Required Game Market Timezone): PR jobs `apply-and-validate`.
 - `.github/workflows/exchange-calendar-runtime-v1.yml` (Exchange Calendar Runtime): PR jobs `validate`.
 - `.github/workflows/player-multiplayer-load-e2e.yml` (Player Multiplayer and Load E2E): PR jobs `connected-player-runtime`.
@@ -122,7 +129,7 @@ by this note.
 
 ### Predicted main-push workflow selection, if later merged
 
-The same four-path scenario selects nine main-push families. Edge Function
+The same five-path scenario selects nine main-push families. Edge Function
 Inventory Convergence jobs remain manual-dispatch-only; Production Git
 Release's live evidence and release-branch publication remain manual-dispatch-
 only. These source conditions are not authorization to merge or deploy, and
@@ -144,9 +151,11 @@ conclusion, branch protection and expected guarded skips after any authorized
 publication; refresh if the final changed paths differ. Separately authorized
 release, recovery and live-parity work remains outside this tranche.
 
-Independent read-only review of the scope-specific plan separately reproduced
-the 18 PR and nine main-push families at `8092e8fc`, confirmed that Backend
-Typecheck retains full Edge and smoke checks and Beta Security runs the boundary
-suite, and verified that all workflows, authority files, held14 controls and
-verifier/test files remain identical to main. This does not qualify an actual
-PR number, final metadata, a published head or any hosted outcome.
+Independent read-only review of the original four-path plan separately
+reproduced 18 PR and nine main-push families at `8092e8fc`, confirmed that
+Backend Typecheck retains full Edge and smoke checks and Beta Security runs
+the boundary suite, and verified that all workflows, inherited authority files,
+held14 controls and verifier/test files remain identical to main. The five-path
+plan adds four PR families and no main-push family; it requires fresh
+independent review and exact-head hosted qualification. Earlier head results
+are historical and do not qualify this revised candidate.
