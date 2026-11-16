@@ -8,10 +8,10 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1611,
+    "sourceFiles": 1619,
     "edgeEntrypoints": 28,
     "handlerFiles": 60,
-    "persistenceOutsideInfrastructure": 86,
+    "persistenceOutsideInfrastructure": 85,
     "crossDomainDeepImports": 68,
     "browserTransportShimFiles": 27,
     "compatibilityMarkerFiles": 206,
@@ -300,10 +300,11 @@
       "layers": [
         "api",
         "application",
+        "contracts",
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 20,
+      "sourceFiles": 28,
       "publicBoundaryFiles": []
     },
     {
@@ -570,10 +571,6 @@
       },
       {
         "file": "backend/src/domains/game-sessions/api/gameSettingsHttpHandler.ts",
-        "layer": "api"
-      },
-      {
-        "file": "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.ts",
         "layer": "api"
       },
       {

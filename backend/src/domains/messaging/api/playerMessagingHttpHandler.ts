@@ -1,3 +1,5 @@
+import { readPlayerMessageInbox } from "../application/readPlayerMessageInbox.ts";
+import { createSupabasePlayerMessageInboxReadRepository } from "../infrastructure/supabasePlayerMessageInboxReadRepository.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import { EdgeActivationError, jsonError } from "../../../platform/supabase/edgeResponse.ts";
 import {
@@ -6,13 +8,13 @@ import {
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
+  type PlayerRequestScope,
   resolveActivePlayerSession,
   resolvePlayerRequestScope,
 } from "../../players/index.ts";
 import type { PlayerMessagingRoute } from "./playerMessagingRoutePaths.ts";
 import type {
   RawThread,
-  RawInbox,
   SendRow,
   ReadRow,
 } from "./playerMessagingResponseProjection.ts";
@@ -75,7 +77,7 @@ export async function handlePlayerMessagingRequest(
       case "list":
       case "search":
       case "thread":
-        return await handleRead(request, route, client, scope.gameId, scope.playerUuid);
+        return await handleRead(request, route, client, scope);
       case "send":
         return await handleSend(request, route.threadId, client, scope.gameId, scope.playerUuid);
       case "markRead":
@@ -102,16 +104,15 @@ async function handleRead(
   request: Request,
   route: ReadRoute,
   client: EdgeSupabaseClient,
-  gameId: string,
-  playerId: string,
+  scope: PlayerRequestScope,
 ): Promise<Response> {
   const readRequest = parseReadRequest(request, route);
   if (!readRequest.ok) return readRequest.response;
 
   if (route.kind === "thread") {
     const response = await client.rpc<RawThread>("read_player_message_thread_v1", {
-      p_game_session_id: gameId,
-      p_player_id: playerId,
+      p_game_session_id: scope.gameId,
+      p_player_id: scope.playerUuid,
       p_thread_public_id: route.threadId,
       p_message_limit: readRequest.limits.messageLimit,
     });
@@ -122,15 +123,13 @@ async function handleRead(
     });
   }
 
-  const response = await client.rpc<RawInbox>("read_player_messages_v2", {
-    p_game_session_id: gameId,
-    p_player_id: playerId,
-    p_thread_limit: readRequest.limits.threadLimit,
-    p_message_limit: readRequest.limits.messageLimit,
-    p_query: route.kind === "search" ? readRequest.query : null,
-    p_before_updated_at: readRequest.cursor?.beforeUpdatedAt ?? null,
-    p_before_thread_public_id: readRequest.cursor?.beforeThreadId ?? null,
-  });
+  const response = await readPlayerMessageInbox(scope, {
+    threadLimit: readRequest.limits.threadLimit,
+    messageLimit: readRequest.limits.messageLimit,
+    query: route.kind === "search" ? readRequest.query : null,
+    beforeUpdatedAt: readRequest.cursor?.beforeUpdatedAt ?? null,
+    beforeThreadId: readRequest.cursor?.beforeThreadId ?? null,
+  }, createSupabasePlayerMessageInboxReadRepository(client));
   if (response.error) return mapRpcError(response.error);
   const inbox = normalizeInbox(response.data);
 
