@@ -43,7 +43,8 @@
     "scripts/admin-local-handler-architecture-contract.test.mjs",
     "scripts/persisted-game-code-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "backend/tests/admin/ref004RequestParity.test.ts"
   ],
   "requiredFiles": [
     "backend/package.json",
@@ -80,7 +81,8 @@
     "scripts/admin-local-handler-architecture-contract.test.mjs",
     "scripts/persisted-game-code-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "backend/tests/admin/ref004RequestParity.test.ts"
   ],
   "requiredChecks": [
     "player-terminal-verify",
