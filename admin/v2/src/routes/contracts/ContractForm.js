@@ -3,8 +3,8 @@ import {
   AdminValidationSummary,
 } from "../../components/index.js";
 import { createElement } from "../../components/dom.js";
+import { normalizeContractTimeZone, resolveContractLocalDateTime } from "../../core/contract-time-zone.js";
 import {
-  fromAdminDateTimeLocalValue,
   toAdminDateTimeLocalValue,
 } from "../../core/date-time.js";
 
@@ -37,10 +37,23 @@ function button(label, { quiet = false, onClick, action = "" } = {}) {
 export function ContractForm({
   mode = "create",
   contract = null,
+  timeZone = null,
   onCancel = () => {},
   onSubmit = async () => ({ ok: false }),
 } = {}) {
   const editing = mode === "edit";
+  const gameTimeZone = normalizeContractTimeZone(timeZone);
+  const dateOptions = { timeZone: gameTimeZone };
+  const localDate = (value) => gameTimeZone ? toAdminDateTimeLocalValue(value, dateOptions) : "";
+  const utcDate = (value, original) => {
+    // Preserve seconds and either persisted instant of a repeated DST hour.
+    if (gameTimeZone && editing && value && original && localDate(original) === value) return { instant: new Date(original).toISOString(), problem: null };
+    return resolveContractLocalDateTime(value, gameTimeZone);
+  };
+  const hasStoredDates = editing && Boolean(contract?.publishedAt || contract?.deadlineAt || contract?.expiresAt);
+  const timeZoneNotice = gameTimeZone
+    ? `All contract times use ${gameTimeZone}, the selected game timezone.`
+    : "Game timezone could not be confirmed. Dateless contracts remain available; dated changes require a confirmed game timezone.";
   const advancedTargeting = editing && contract?.targetingEditable === false;
   const initialStatus = editing && ["draft", "scheduled"].includes(contract?.status) ? contract.status : "draft";
   const initialVisibility = contract?.visibility || "public";
@@ -55,19 +68,19 @@ export function ContractForm({
       type: "select",
       value: initialStatus,
       options: editing
-        ? [{ value: "draft", label: "Draft" }, { value: "scheduled", label: "Scheduled" }]
+        ? [{ value: "draft", label: "Draft" }, { value: "scheduled", label: "Scheduled", disabled: !gameTimeZone }]
         : [
           { value: "draft", label: "Draft" },
           { value: "active", label: "Publish now" },
-          { value: "scheduled", label: "Scheduled" },
+          { value: "scheduled", label: "Scheduled", disabled: !gameTimeZone },
         ],
     }),
     scheduledAt: field({
       name: "scheduledAt",
       label: "Scheduled publish time",
       type: "datetime-local",
-      value: initialStatus === "scheduled" ? toAdminDateTimeLocalValue(contract?.publishedAt) : "",
-      hint: "Required only for a scheduled contract. Times are interpreted in the Admin game timezone.",
+      value: initialStatus === "scheduled" ? localDate(contract?.publishedAt) : "",
+      hint: `Required only for a scheduled contract. ${timeZoneNotice}`,
     }),
     visibility: field({
       name: "visibility",
@@ -101,8 +114,8 @@ export function ContractForm({
         { value: "story_flag_check", label: "Story flag check" },
       ],
     }),
-    deadlineAt: field({ name: "deadlineAt", label: "Due time", type: "datetime-local", value: toAdminDateTimeLocalValue(contract?.deadlineAt) }),
-    expiresAt: field({ name: "expiresAt", label: "Expiration time", type: "datetime-local", value: toAdminDateTimeLocalValue(contract?.expiresAt), hint: "Optional hard expiration after the due time." }),
+    deadlineAt: field({ name: "deadlineAt", label: "Due time", type: "datetime-local", value: localDate(contract?.deadlineAt) }),
+    expiresAt: field({ name: "expiresAt", label: "Expiration time", type: "datetime-local", value: localDate(contract?.expiresAt), hint: "Optional hard expiration after the due time." }),
     requirementsText: field({ name: "requirementsText", label: "Evidence / submission requirements", type: "textarea", rows: 4, required: true, hint: "What evidence the player must submit or satisfy.", value: contract?.requirementsText || "" }),
     rewardAmount: field({ name: "rewardAmount", label: "Cash reward", type: "number", min: 0, step: 0.01, value: contract?.reward?.cashAmount ?? "", placeholder: "0" }),
     difficulty: field({
@@ -137,11 +150,14 @@ export function ContractForm({
     const instructions = fields.instructions.getValue().trim();
     const requirementsText = fields.requirementsText.getValue().trim();
     const status = fields.status.getValue();
-    const scheduledAt = fromAdminDateTimeLocalValue(fields.scheduledAt.getValue());
+    const scheduled = utcDate(fields.scheduledAt.getValue(), contract?.publishedAt);
+    const scheduledAt = scheduled.instant;
     const visibility = fields.visibility.getValue();
     const codes = countryCodes(fields.countryCodes.getValue());
-    const deadlineAt = fromAdminDateTimeLocalValue(fields.deadlineAt.getValue());
-    const expiresAt = fromAdminDateTimeLocalValue(fields.expiresAt.getValue());
+    const deadline = utcDate(fields.deadlineAt.getValue(), contract?.deadlineAt);
+    const expiry = utcDate(fields.expiresAt.getValue(), contract?.expiresAt);
+    const deadlineAt = deadline.instant;
+    const expiresAt = expiry.instant;
     const rewardText = fields.rewardAmount.getValue().trim();
     const rewardAmount = rewardText === "" ? 0 : Number(rewardText);
 
@@ -149,15 +165,20 @@ export function ContractForm({
       fields[fieldName].setError(message);
       errors.push({ field: fieldName, fieldId: fields[fieldName].control.id, label, message });
     };
+    const needsZone = hasStoredDates || status === "scheduled" || ["scheduledAt", "deadlineAt", "expiresAt"].some((key) => fields[key].getValue());
+    if (!gameTimeZone && needsZone) addError("title", "Game timezone", timeZoneNotice);
+    const dateError = (result, invalidMessage) => result.problem === "ambiguous"
+      ? `This local time occurs twice in ${gameTimeZone}. Choose a different time outside the repeated hour. Unchanged saved timestamps are preserved.`
+      : invalidMessage;
     if (!title) addError("title", "Title", "Contract title is required.");
     if (!objective) addError("description", "Objective", "Objective is required.");
     if (!instructions) addError("instructions", "Instructions", "Instructions are required.");
     if (!requirementsText) addError("requirementsText", "Evidence / submission requirements", "Evidence or submission requirements are required.");
-    if (status === "scheduled" && !scheduledAt) addError("scheduledAt", "Scheduled publish time", "Scheduled contracts need a valid publish time.");
+    if (status === "scheduled" && !scheduledAt) addError("scheduledAt", "Scheduled publish time", dateError(scheduled, "Scheduled contracts need a valid publish time."));
     if (!advancedTargeting && visibility === "targeted" && codes.length === 0) addError("countryCodes", "Target country codes", "Targeted contracts need at least one target country.");
     if (codes.some((code) => !COUNTRY_CODE_PATTERN.test(code))) addError("countryCodes", "Target country codes", "Use letters, numbers, underscores, or hyphens only.");
-    if (fields.deadlineAt.getValue() && !deadlineAt) addError("deadlineAt", "Due time", "The due time is invalid.");
-    if (fields.expiresAt.getValue() && !expiresAt) addError("expiresAt", "Expiration time", "The expiration time is invalid.");
+    if (fields.deadlineAt.getValue() && !deadlineAt) addError("deadlineAt", "Due time", dateError(deadline, "The due time is invalid."));
+    if (fields.expiresAt.getValue() && !expiresAt) addError("expiresAt", "Expiration time", dateError(expiry, "The expiration time is invalid."));
     if (deadlineAt && expiresAt && Date.parse(expiresAt) < Date.parse(deadlineAt)) addError("expiresAt", "Expiration time", "Expiration must be at or after the due time.");
     if (!Number.isFinite(rewardAmount) || rewardAmount < 0) addError("rewardAmount", "Cash reward", "Cash reward must be zero or greater.");
 
@@ -212,8 +233,10 @@ export function ContractForm({
 
   function syncConditionalFields() {
     const scheduled = fields.status.getValue() === "scheduled";
+    submit.disabled = !gameTimeZone && (hasStoredDates || scheduled);
     fields.scheduledAt.element.hidden = !scheduled;
     fields.scheduledAt.control.required = scheduled;
+    for (const key of ["scheduledAt", "deadlineAt", "expiresAt"]) fields[key].setDisabled(!gameTimeZone);
     if (!scheduled) fields.scheduledAt.setValue("");
     const targeted = fields.visibility.getValue() === "targeted";
     fields.countryCodes.element.hidden = !targeted;
@@ -243,7 +266,7 @@ export function ContractForm({
   const element = createElement("form", {
     className: "admin-contract-form",
     attrs: { novalidate: true },
-    children: [validation.element, ...groups],
+    children: [validation.element, createElement("p", { attrs: { role: "status" }, text: timeZoneNotice }), ...groups],
   });
 
   const cancel = button("Cancel", { quiet: true, onClick: onCancel, action: "cancel" });
