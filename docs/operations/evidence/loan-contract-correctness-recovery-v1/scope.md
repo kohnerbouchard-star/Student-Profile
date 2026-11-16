@@ -160,7 +160,8 @@ update or main write occurred. This is fresh reconstructed source, not recovery
 of the earlier lost unpublished tree.
 
 Actual metadata includes `pr-986.json`, the standalone scope evidence and two
-additive intake rows. Final scope is 18 changed / 20 locked paths, including
+additive intake rows. After the bounded shared-browser follow-up below, final scope is 19 changed /
+21 locked paths, including
 both unchanged read-only verifier files. It requires all 46 naturally applicable
 ordinary PR families / 91 declared tuples / 86 executing tuples and 5 guarded
 zero-credit jobs, plus separately accounted dynamic CodeQL. The actual authority
@@ -181,7 +182,7 @@ substituted by repository tests. Keep deployment/data-safety review separate.
 
 ## Exact scoped CI preparation
 
-Source diff has 16 paths. An in-memory numeric-shaped actual-PR authority adds
+The initial source diff had 16 paths. An in-memory numeric-shaped actual-PR authority added
 one path (17 changed / 19 locked including both unchanged verifier files).
 A coordinated roadmap intake, if authorized, adds one further changed/locked
 path and requires recomputation. A guessed authority file is not written.
@@ -189,7 +190,9 @@ The source-only and numeric-authority projection both select 45 ordinary
 PR-open/synchronize/reopen workflow families: 88 declared tuples, 83 applicable
 and 5 guarded zero-credit jobs. With roadmap intake, the projection is 46
 families / 91 declared / 86 applicable, adding Admin Business Supervision's three existing jobs.
-These are projections, not hosted execution results.
+These are initial projections, not hosted execution results. The later shared
+browser-harness follow-up adds one source path, leaving the same 46-family /
+91-tuple / 86-applicable plan; final scope is 19 changed / 21 locked paths.
 
 The actual authority keeps unique display-name strings supported by the current
 schema. Before dynamic CodeQL, the projection is 126 required / 78 critical
@@ -344,3 +347,32 @@ The other four COE steps are Repository Quality's two optional package-signature
 probes and the guarded live-parity job's two comparisons. They do not provide
 success credit for failed assertions. Exact hosted review must identify their
 actual outcomes separately; optional nonblocking policy is not rewritten.
+
+## Bounded hosted-browser follow-up
+
+Head `5df4530c5294c0b90c9c7aa7da7c2cf562c7b704` passed the focused Contracts
+Chromium job, including all 19 responsive checks, lifecycle mutations and
+sanitization. That is not a full-PR pass. Its retained Admin Browser E2E run
+`43805896997`, attempt 1, job `133096489354` failed earlier in the generic
+`auditAuthoritativeUuidHandoffExposure` fixture: the exact read inventory still
+expected only `/contracts`, while the implementation legitimately also reads
+`/settings` for a fixture already granted `settings.manage`. Connected Admin
+and ledger steps were consequently skipped and receive no assertion credit.
+
+Update only that Contracts expected array in
+`scripts/admin-v2-browser-smoke.mjs` to `["contracts", "settings"]`, with an
+explanatory permission comment. Every response wait, exact request-set equality,
+GET-only assertion, scoped game/device/publishable-key check, no-bearer assertion,
+privacy assertion and all other route inventories remain unchanged. No wildcard,
+blanket tolerance, timeout, guard, test or runtime policy is weakened. The shared
+fixture's absent timezone still exercises the safe read-only unavailable-zone
+path; it does not authorize a broader settings grant or a new endpoint.
+
+The actual PR986 authority adds exactly that source path to allowed/required
+files: 19 changed / 21 locked paths. Recomputed natural selection remains 46
+families / 91 declared / 86 applicable tuples plus five guarded jobs, with the
+same 131 required / 82 critical unique labels including CodeQL. All other
+metadata and prior ledger text remain unchanged. New-head syntax/source-map,
+focused and aggregate checks, independent follow-up review and full exact-head
+hosted qualification are required. Do not rerun the failed old head as a fix or
+carry earlier head successes forward as new-head qualification.
