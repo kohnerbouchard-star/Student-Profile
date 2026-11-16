@@ -1,7 +1,7 @@
 {
   "sourceHead": "84dd2c3e004ddf2849e9383b148ef66f6c43ae31",
-  "base": "41792bd9ea1b5b7e196dbdf489dda22f4e9b7b8e",
-  "derivation": "Current pull_request branch, open/synchronize/reopen event and path filters against complete PR992 changed paths, including both new metadata paths. Job names and existing conditions read from current YAML. Only jobs applicable to PR992 targeting main are qualification gates. Guarded non-PR or other-number jobs remain excluded without dispatch or waiver. This metadata adds no job, condition, permission or trigger changes; source adds scoped scanner path registration and browser steps only. CodeQL is a dynamic GitHub analysis. Re-derive after serial prerequisite integration; sourceHead records the reviewed source publication, not a claim that metadata or future CI ran on it.",
+  "base": "9193d4e9865cc591d9d4a3c7289b48b6721574c4",
+  "derivation": "Current pull_request branch, open/synchronize/reopen event and path filters against complete PR992 changed paths, including both new metadata paths. Job names and existing conditions read from current YAML. Only jobs applicable to PR992 targeting main are qualification gates. Guarded non-PR or other-number jobs remain excluded without dispatch or waiver. This metadata adds no job, condition, permission or trigger changes; source adds scoped scanner path registration and browser steps only. CodeQL is a dynamic GitHub analysis. Re-derive after serial prerequisite integration; sourceHead records the reviewed source publication, not a claim that metadata or future CI ran on it. Reconciled against actual main 9193d4e9 after merged #991/#990; sourceHead retains original reviewed runtime publication; new merge head requires fresh exact-head checks.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-browser-e2e.yml",
