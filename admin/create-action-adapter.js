@@ -401,7 +401,8 @@
 
     if (
       method !== "POST" ||
-      !url.pathname.startsWith(`${LOCAL_API_PREFIX}/games/`)
+      !url.pathname.startsWith(`${LOCAL_API_PREFIX}/games/`) ||
+      !/\/(?:players|contracts|store\/items)$/.test(url.pathname)
     ) {
       return delegatedFetch(input, init);
     }

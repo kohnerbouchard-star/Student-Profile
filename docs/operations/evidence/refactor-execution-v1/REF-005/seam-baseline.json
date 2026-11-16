@@ -42,8 +42,6 @@
     {"file":"admin/create-action-adapter.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"039e29f8646b65c351825a2604e80384ab3c1bbd"},
     {"file":"admin/game-creation-runtime-bridge.js","kind":"browser_interception","signature":"window . fetch = function","maximum":1,"sourceBlobSha":"0ce82e842290de45faad789d98f643601b1c2787"},
     {"file":"admin/player-access-code-bridge.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"0a64de2377b88f94119413fa09b2cc7c41bab230"},
-    {"file":"admin/scanner-auto-refresh.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"542c0f9472a3cd441107438a89ead0a0aff200c5"},
-    {"file":"admin/scanner-reward-localization.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"977d19d17e596387d0969c550b5bd270f6b7445a"},
     {"file":"backend/src/domains/business/api/playerBusinessRoutePaths.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"bc8856d482bcd67a84bbfb85db8cd08f1aadb257"},
     {"file":"backend/src/platform/supabase/playerApiRouteSegments.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"ce9f92f39ce1af9a37170ea5b80ae7e7fe749c5d"},
     {"file":"backend/src/domains/players/api/playerCapabilityManifestRoutePaths.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":2,"sourceBlobSha":"e79e5acaa69a8fb148202b91378a715d8528312c"},
