@@ -27,13 +27,13 @@ import {
   handleGameLifecycleOperation,
 } from "./gameLifecycleOperations.ts";
 import {
-  type AdminSecurityGuardResult,
-  guardAdminRequest,
-} from "./adminSecurityGuard.ts";
-import { createAdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
+  type AdminBootstrapAuthorizedContext,
+  AdminBootstrapCompositionError,
+  applicationContextForAdminGame,
+  authorizeAndHydrateAdminBootstrapContext,
+} from "./adminBootstrapComposition.ts";
 import {
   adminSecurityFailureResponse,
-  type AuthorizedAdminContext,
   handleGlobalRoute,
   routePath,
 } from "./adminGlobalRoutes.ts";
@@ -57,21 +57,32 @@ Deno.serve(async (request: Request) => {
       message: context.message,
     });
   }
-  const authorizedContext = context as AuthorizedAdminContext;
+  const authorizedContext = context as AdminBootstrapAuthorizedContext;
 
   const url = new URL(request.url);
   const path = routePath(url);
 
   try {
-    const security = await guardAdminRequest(
-      request,
-      authorizedContext,
-      path,
-    );
-    if (security.ok === false) {
-      return adminSecurityFailureResponse(request, security);
+    let securedContext;
+    try {
+      const authorization = await authorizeAndHydrateAdminBootstrapContext(
+        request,
+        authorizedContext,
+        path,
+      );
+      if (authorization.ok === false) {
+        return adminSecurityFailureResponse(request, authorization);
+      }
+      securedContext = authorization.context;
+    } catch (error) {
+      if (error instanceof AdminBootstrapCompositionError) {
+        return json(request, error.status, {
+          code: "auth_failed",
+          message: error.responseMessage,
+        });
+      }
+      throw error;
     }
-    const securedContext = { ...authorizedContext, security };
 
     const retiredBusinessSettlement = preDispatchRetiredBusinessSettlement({
       request,
@@ -116,12 +127,10 @@ Deno.serve(async (request: Request) => {
         message: "That game is not available to this administrator.",
       });
     }
-    const applicationContext = createAdminRequestApplicationContext({
-      ownedGame: game,
-      staffUserId: securedContext.staff.id,
-      security,
-      requestId: crypto.randomUUID(),
-    });
+    const applicationContext = applicationContextForAdminGame(
+      securedContext.gameBootstrapEntries,
+      game,
+    );
 
     const lifecycleOperation = await handleGameLifecycleOperation(
       securedContext.service,

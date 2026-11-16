@@ -1,4 +1,8 @@
-import type { RequestApplicationContext } from "../../../src/shared/requestApplicationContext.ts";
+import type {
+  StaffRequestApplicationActor,
+  StaffRequestApplicationContext,
+} from "../../../src/shared/staffRequestApplicationContext.ts";
+import { createStaffRequestApplicationContext } from "../../../src/shared/staffRequestApplicationContextFactory.ts";
 import type { AdminPermission } from "./adminPermissions.ts";
 
 interface ReviewedAdminSecurity {
@@ -8,19 +12,10 @@ interface ReviewedAdminSecurity {
   readonly requiredPermission: AdminPermission;
 }
 
-export interface AdminRequestApplicationActor {
-  readonly kind: "staff";
-  readonly staffUserId: string;
-}
+export type AdminRequestApplicationActor = StaffRequestApplicationActor;
 
 export interface AdminRequestApplicationContext
-  extends
-    RequestApplicationContext<
-      AdminRequestApplicationActor,
-      "game_admin",
-      AdminPermission
-    > {
-  readonly assuranceLevel: ReviewedAdminSecurity["assuranceLevel"];
+  extends StaffRequestApplicationContext<AdminPermission> {
   readonly requiredPermission: AdminPermission;
 }
 
@@ -39,8 +34,6 @@ export function createAdminRequestApplicationContext(
   input: CreateAdminRequestApplicationContextInput,
 ): AdminRequestApplicationContext {
   const gameSessionId = requiredText(input.ownedGame.id, "owned game ID");
-  const staffUserId = requiredText(input.staffUserId, "Staff user ID");
-  const requestId = requiredText(input.requestId, "request ID");
   const permissions = Object.freeze([...input.security.permissions]);
 
   if (!permissions.includes(input.security.requiredPermission)) {
@@ -49,16 +42,19 @@ export function createAdminRequestApplicationContext(
     );
   }
 
-  return Object.freeze({
-    gameSessionId,
-    actor: Object.freeze({
-      kind: "staff" as const,
-      staffUserId,
-    }),
-    role: "game_admin" as const,
-    permissions,
-    requestId,
+  const staffContext = createStaffRequestApplicationContext<AdminPermission>({
+    ownedGame: { id: gameSessionId },
+    staff: {
+      id: input.staffUserId,
+      role: "game_admin",
+    },
     assuranceLevel: input.security.assuranceLevel,
+    requestId: input.requestId,
+    permissions,
+  });
+
+  return Object.freeze({
+    ...staffContext,
     requiredPermission: input.security.requiredPermission,
   });
 }
