@@ -2,7 +2,7 @@
 
 Roadmap: `ARCH-401`, bounded tranche `PERSISTENCE-PLAYER-HISTORY-READ-001`.
 Baseline: main `9193d4e9865cc591d9d4a3c7289b48b6721574c4` (merged #990).
-Status: local implementation, not merged or live-qualified.
+Status: implemented in draft [PR #993](https://github.com/kohnerbouchard-star/Student-Profile/pull/993), not merged or live-qualified. Source publication `ea277b64b0dd43cd1e911e3605ad74e5756810ad` has tree `120993ce377f9b7a78f23ed63d029d8a4dff5429`, identical to locally qualified source plus evidence.
 
 ## Scope
 
@@ -44,3 +44,20 @@ The finite playerOperations source reader follows only the new value-connected a
 exact-head hosted qualification and coordinator approval are required before merge.
 No migration, staging, production or complete application acceptance is claimed.
 Rollback is a source-only revert of this bounded tranche.
+
+
+## Actual-PR qualification authority
+
+The exact PR993 allowlist contains 12 changed files and two read-only verifier/test
+locks. Both existing denial controls remain unchanged: no production deployment,
+production mutation or secret values. The current YAML derivation records 37
+applicable workflow families, 74 active job tuples and six guarded skips; no selected
+matrix expansion. Closed-only Branch Hygiene is not a PR-open gate. Dynamic CodeQL
+is required separately. Duplicate check labels are disambiguated using workflow/job
+tuples, not waived. The Admin API Check wildcard and Backend Typecheck full smoke
+retain the focused history suite; no workflow changes are needed.
+
+The authority CLI passes and all 16 existing authority regressions pass. Fresh
+exact-head hosted results, independent metadata review and serial main reconciliation
+after PR992 are still required. Source-stage hosted results do not qualify a later
+metadata or integrated commit.
