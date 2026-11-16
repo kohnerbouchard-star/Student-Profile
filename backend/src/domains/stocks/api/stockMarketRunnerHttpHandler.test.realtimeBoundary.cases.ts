@@ -9,9 +9,27 @@ import {
   GAME_SESSION_ID,
   WALL_CLOCK_TIME,
 } from "./stockMarketRunnerHttpHandler.test.fixtures.support.ts";
+import {
+  buildGamePublicRealtimeEnvelope as canonicalBuildEnvelope,
+  buildGamePublicRealtimeStockTickEnvelope as canonicalBuildStockTick,
+  GamePublicRealtimePublisher as CanonicalPublisher,
+  GAME_PUBLIC_REALTIME_EVENTS,
+} from "../../game-realtime/index.ts";
+import {
+  GAME_PUBLIC_REALTIME_EVENTS as dashboardEvents,
+} from "../../game-dashboard/contracts/playerGameDashboardContracts.ts";
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
+
+Deno.test("Dashboard public realtime exports retain canonical identities", () => {
+  if (
+    buildGamePublicRealtimeEnvelope !== canonicalBuildEnvelope ||
+    buildGamePublicRealtimeStockTickEnvelope !== canonicalBuildStockTick ||
+    GamePublicRealtimePublisher !== CanonicalPublisher ||
+    dashboardEvents !== GAME_PUBLIC_REALTIME_EVENTS
+  ) throw new Error("Dashboard realtime entrypoint identity changed");
+});
 
 Deno.test("public realtime boundary projects only the canonical game tick envelope", async () => {
   const envelope = buildGamePublicRealtimeStockTickEnvelope({

@@ -2,13 +2,13 @@
 export {
   buildGamePublicRealtimeEnvelope,
   GamePublicRealtimePublisher,
-} from "./realtime/gamePublicRealtimePublisher.ts";
+} from "../game-realtime/index.ts";
 export type {
   GamePublicRealtimeBroadcastMessage,
   GamePublicRealtimeEnvelope,
   GamePublicRealtimePublishResult,
   GamePublicRealtimeTransport,
-} from "./realtime/gamePublicRealtimePublisher.ts";
+} from "../game-realtime/index.ts";
 export {
   buildGamePublicRealtimeStockTickEnvelope,
-} from "./realtime/gamePublicRealtimeStockTick.ts";
+} from "../game-realtime/index.ts";

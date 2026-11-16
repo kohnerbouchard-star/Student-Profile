@@ -23,7 +23,7 @@ import {
   type GamePublicRealtimeEnvelope,
   GamePublicRealtimePublisher,
   type GamePublicRealtimePublishResult,
-} from "../../game-dashboard/publicRealtime.ts";
+} from "../../game-realtime/index.ts";
 import { calculateNextStockMarketTick } from "../calculations/stockMarketEngine.ts";
 import {
   readStockMarketOpenState,
