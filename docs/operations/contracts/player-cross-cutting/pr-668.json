@@ -44,7 +44,8 @@
     "scripts/persisted-game-code-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "backend/tests/admin/ref004RequestParity.test.ts"
+    "backend/tests/admin/ref004RequestParity.test.ts",
+    "scripts/business-store-sales-convergence-contract.mjs"
   ],
   "requiredFiles": [
     "backend/package.json",
@@ -82,7 +83,8 @@
     "scripts/persisted-game-code-contract.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "backend/tests/admin/ref004RequestParity.test.ts"
+    "backend/tests/admin/ref004RequestParity.test.ts",
+    "scripts/business-store-sales-convergence-contract.mjs"
   ],
   "requiredChecks": [
     "player-terminal-verify",
