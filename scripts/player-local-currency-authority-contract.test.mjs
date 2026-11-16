@@ -1,3 +1,4 @@
+import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 import { readBrowserSourceSync } from "./lib/browser-module-source.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -19,7 +20,7 @@ const adminContractMutation = readBrowserSourceSync(
   "backend/src/domains/contracts/application/adminContractMutation.ts",
   "utf8",
 );
-const adminBackend = readBrowserSourceSync(
+const adminBackend = readEdgeRuntimeSource(
   "backend/supabase/functions/admin-api/playerOperations.ts",
   "utf8",
 );
@@ -31,11 +32,11 @@ const adminAttendanceOperations = readBrowserSourceSync(
   "backend/supabase/functions/admin-api/attendanceOperations.ts",
   "utf8",
 );
-const adminReadExtensions = readBrowserSourceSync(
+const adminReadExtensions = readEdgeRuntimeSource(
   "backend/supabase/functions/admin-api/readExtensions.ts",
   "utf8",
 );
-const adminGameRoutes = readBrowserSourceSync(
+const adminGameRoutes = readEdgeRuntimeSource(
   "backend/supabase/functions/admin-api/gameRoutes.ts",
   "utf8",
 );

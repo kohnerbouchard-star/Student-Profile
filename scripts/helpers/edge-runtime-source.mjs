@@ -8,6 +8,54 @@ import { fileURLToPath } from "node:url";
 // Unknown files retain ordinary readFileSync behavior. Assertions remain unchanged.
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
 const extractedModules = {
+  "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts": [
+    "backend/src/domains/players/contracts/playerWorldBankingCapabilityEndpoints.ts",
+    "backend/src/domains/players/contracts/playerBusinessCapabilityEndpoints.ts",
+    "backend/src/domains/players/contracts/playerGameplayCapabilityEndpoints.ts",
+    "backend/src/domains/players/contracts/playerSocialCapabilityEndpoints.ts"
+  ],
+  "backend/supabase/functions/classroom-api/index.ts": [
+    "backend/supabase/functions/classroom-api/dispatchPlayerWorldRoutes.ts",
+    "backend/supabase/functions/classroom-api/classroomClients.ts",
+    "backend/supabase/functions/classroom-api/dispatchPlayerEconomyRoutes.ts",
+    "backend/supabase/functions/classroom-api/dispatchStaffRoutes.ts"
+  ],
+  "backend/supabase/functions/admin-api/readModels.ts": [
+    "backend/supabase/functions/admin-api/playerReadModel.ts",
+    "backend/supabase/functions/admin-api/playerReadSupport.ts",
+    "backend/supabase/functions/admin-api/attendanceReadModels.ts",
+    "backend/supabase/functions/admin-api/gameResourceReadModels.ts"
+  ],
+  "backend/supabase/functions/admin-api/worldRuntimeOperations.ts": [
+    "backend/supabase/functions/admin-api/worldRuntimeContracts.ts",
+    "backend/supabase/functions/admin-api/worldRuntimeValidation.ts",
+    "backend/supabase/functions/admin-api/campaignOperations.ts",
+    "backend/supabase/functions/admin-api/worldTravelOperations.ts"
+  ],
+  "backend/supabase/functions/admin-api/gameRoutes.ts": [
+    "backend/supabase/functions/admin-api/gameReadSupport.ts",
+    "backend/supabase/functions/admin-api/gameWriteRoutes.ts"
+  ],
+  "backend/supabase/functions/admin-api/messagingOperationsCore.ts": [
+    "backend/supabase/functions/admin-api/messagingOperationContracts.ts",
+    "backend/supabase/functions/admin-api/messagingOperationValidation.ts"
+  ],
+  "backend/supabase/functions/admin-api/mutationAdapters.ts": [
+    "backend/supabase/functions/admin-api/mutationValues.ts",
+    "backend/supabase/functions/admin-api/storeMutationNormalization.ts",
+    "backend/supabase/functions/admin-api/settingsMutationNormalization.ts"
+  ],
+  "backend/supabase/functions/admin-api/index.ts": [
+    "backend/supabase/functions/admin-api/adminGlobalRoutes.ts"
+  ],
+  "backend/supabase/functions/admin-api/readExtensions.ts": [
+    "backend/supabase/functions/admin-api/attendanceWealthReadSupport.ts"
+  ],
+  "backend/supabase/functions/admin-api/playerOperations.ts": [
+    "backend/supabase/functions/admin-api/playerLedgerCurrency.ts",
+    "backend/supabase/functions/admin-api/playerOperationSupport.ts",
+    "backend/supabase/functions/admin-api/playerHistoryAudit.ts"
+  ],
   "backend/supabase/functions/web-session-api/index.ts": [
     "backend/supabase/functions/web-session-api/sessionHttp.ts",
     "backend/supabase/functions/web-session-api/sessionContracts.ts",

@@ -1,4 +1,4 @@
-export {};
+import { readEdgeCompositionSource } from "../../../security/edgeCompositionSource.test.support.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -18,7 +18,7 @@ const ROOTS = [
 
 for (const root of ROOTS) {
   Deno.test(`${root.name} composes both reviewed Game Sessions handlers`, async () => {
-    const source = await Deno.readTextFile(root.path);
+    const source = await readEdgeCompositionSource(root.path);
 
     assertMatch(
       source,

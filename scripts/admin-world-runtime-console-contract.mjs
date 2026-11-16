@@ -1,5 +1,6 @@
 import { readBrowserSourceSync } from "./lib/browser-module-source.mjs";
 import assert from "node:assert/strict";
+import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -9,7 +10,7 @@ const loader = readBrowserSourceSync(path.join(root, "admin/world-runtime-consol
 const index = readBrowserSourceSync(path.join(root, "admin/index.html"), "utf8");
 const bootstrap = readBrowserSourceSync(path.join(root, "admin/admin-bootstrap.js"), "utf8");
 const css = readBrowserSourceSync(path.join(root, "admin/css/world-runtime-console.css"), "utf8");
-const operations = readBrowserSourceSync(path.join(root, "backend/supabase/functions/admin-api/worldRuntimeOperations.ts"), "utf8");
+const operations = readEdgeRuntimeSource(path.join(root, "backend/supabase/functions/admin-api/worldRuntimeOperations.ts"), "utf8");
 
 for (const route of [
   "/campaign",

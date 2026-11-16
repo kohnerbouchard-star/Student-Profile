@@ -1,3 +1,4 @@
+import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
@@ -21,7 +22,7 @@ const validation = fs.readFileSync(
   "backend/src/domains/business/api/playerBusinessRequestValidation.ts",
   "utf8",
 );
-const serverManifest = fs.readFileSync(
+const serverManifest = readEdgeRuntimeSource(
   "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
   "utf8",
 );

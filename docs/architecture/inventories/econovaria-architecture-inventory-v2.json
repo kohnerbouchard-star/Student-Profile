@@ -8,16 +8,16 @@
   },
   "counts": {
     "domains": 29,
-    "sourceFiles": 1595,
+    "sourceFiles": 1628,
     "edgeEntrypoints": 28,
     "handlerFiles": 65,
-    "persistenceOutsideInfrastructure": 54,
+    "persistenceOutsideInfrastructure": 62,
     "crossDomainDeepImports": 71,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
-    "oversizedSourceFiles": 12,
-    "capabilityStrings": 141
+    "oversizedSourceFiles": 0,
+    "capabilityStrings": 144
   },
   "domains": [
     {
@@ -323,7 +323,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 39,
+      "sourceFiles": 43,
       "publicBoundaryFiles": [
         "backend/src/domains/players/index.ts"
       ]
@@ -606,6 +606,14 @@
         "layer": "outside-domain"
       },
       {
+        "file": "backend/supabase/functions/admin-api/attendanceReadModels.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/attendanceWealthReadSupport.ts",
+        "layer": "outside-domain"
+      },
+      {
         "file": "backend/supabase/functions/admin-api/bankingOperations.ts",
         "layer": "outside-domain"
       },
@@ -615,6 +623,10 @@
       },
       {
         "file": "backend/supabase/functions/admin-api/businessBankingOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/campaignOperations.ts",
         "layer": "outside-domain"
       },
       {
@@ -631,6 +643,14 @@
       },
       {
         "file": "backend/supabase/functions/admin-api/gameProvisioningOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/gameReadSupport.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/gameResourceReadModels.ts",
         "layer": "outside-domain"
       },
       {
@@ -654,7 +674,15 @@
         "layer": "outside-domain"
       },
       {
-        "file": "backend/supabase/functions/admin-api/mutationAdapters.ts",
+        "file": "backend/supabase/functions/admin-api/playerHistoryAudit.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/playerLedgerCurrency.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/playerOperationSupport.ts",
         "layer": "outside-domain"
       },
       {
@@ -662,11 +690,11 @@
         "layer": "outside-domain"
       },
       {
-        "file": "backend/supabase/functions/admin-api/readExtensions.ts",
+        "file": "backend/supabase/functions/admin-api/playerReadModel.ts",
         "layer": "outside-domain"
       },
       {
-        "file": "backend/supabase/functions/admin-api/readModels.ts",
+        "file": "backend/supabase/functions/admin-api/readExtensions.ts",
         "layer": "outside-domain"
       },
       {
@@ -674,11 +702,15 @@
         "layer": "outside-domain"
       },
       {
-        "file": "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
+        "file": "backend/supabase/functions/admin-api/settingsMutationNormalization.ts",
         "layer": "outside-domain"
       },
       {
-        "file": "backend/supabase/functions/classroom-api/index.ts",
+        "file": "backend/supabase/functions/admin-api/worldTravelOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/classroom-api/classroomClients.ts",
         "layer": "outside-domain"
       },
       {
@@ -2252,7 +2284,26 @@
         ]
       },
       {
+        "file": "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
+        "markers": [
+          "compatibility",
+          "compatibilityoperations"
+        ]
+      },
+      {
         "file": "backend/supabase/functions/admin-api/attendanceOperations.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/attendanceReadModels.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/attendanceWealthReadSupport.ts",
         "markers": [
           "fallback"
         ]
@@ -2288,13 +2339,6 @@
         "markers": [
           "fallback",
           "fallbackid"
-        ]
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
-        "markers": [
-          "compatibility",
-          "compatibilityoperations"
         ]
       },
       {
@@ -2354,7 +2398,7 @@
         ]
       },
       {
-        "file": "backend/supabase/functions/admin-api/messagingOperationsCore.ts",
+        "file": "backend/supabase/functions/admin-api/messagingOperationValidation.ts",
         "markers": [
           "fallback"
         ]
@@ -2366,7 +2410,7 @@
         ]
       },
       {
-        "file": "backend/supabase/functions/admin-api/mutationAdapters.ts",
+        "file": "backend/supabase/functions/admin-api/mutationValues.ts",
         "markers": [
           "fallback"
         ]
@@ -2379,7 +2423,7 @@
         ]
       },
       {
-        "file": "backend/supabase/functions/admin-api/playerOperations.ts",
+        "file": "backend/supabase/functions/admin-api/playerOperationSupport.ts",
         "markers": [
           "fallback"
         ]
@@ -2391,25 +2435,13 @@
         ]
       },
       {
-        "file": "backend/supabase/functions/admin-api/readExtensions.ts",
-        "markers": [
-          "fallback"
-        ]
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/readModels.ts",
-        "markers": [
-          "fallback"
-        ]
-      },
-      {
         "file": "backend/supabase/functions/admin-api/unsupportedOperations.ts",
         "markers": [
           "fallback"
         ]
       },
       {
-        "file": "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
+        "file": "backend/supabase/functions/admin-api/worldRuntimeValidation.ts",
         "markers": [
           "fallback"
         ]
@@ -2620,56 +2652,7 @@
         ]
       }
     ],
-    "oversizedFiles": [
-      {
-        "file": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
-        "lines": 960
-      },
-      {
-        "file": "backend/supabase/functions/classroom-api/index.ts",
-        "lines": 888
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/readModels.ts",
-        "lines": 851
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
-        "lines": 821
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
-        "lines": 632
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/messagingOperationsCore.ts",
-        "lines": 609
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/mutationAdapters.ts",
-        "lines": 597
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/index.ts",
-        "lines": 570
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
-        "lines": 550
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
-        "lines": 532
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/readExtensions.ts",
-        "lines": 513
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/playerOperations.ts",
-        "lines": 506
-      }
-    ],
+    "oversizedFiles": [],
     "capabilityStrings": [
       {
         "capability": "account.balance",
@@ -2856,6 +2839,12 @@
         ]
       },
       {
+        "capability": "client.ts",
+        "locations": [
+          "backend/src/security/classroomApiRateLimitDispatch.test.ts"
+        ]
+      },
+      {
         "capability": "collective.v1",
         "locations": [
           "backend/src/domains/markets/calculations/collectiveInvestmentAnalytics.test.ts"
@@ -2997,9 +2986,9 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/contracts/ContractsController.js",
           "admin/v2/src/routes/overview/OverviewRoute.js",
+          "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
-          "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
           "backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts",
           "backend/supabase/functions/admin-api/contractProgressReadOperation.ts",
           "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
@@ -3028,6 +3017,12 @@
         "capability": "data.price",
         "locations": [
           "backend/supabase/functions/stripe-license-webhook/stripeCheckoutValidation.ts"
+        ]
+      },
+      {
+        "capability": "dispatch.ts",
+        "locations": [
+          "backend/src/security/classroomApiRateLimitDispatch.test.ts"
         ]
       },
       {
@@ -3318,7 +3313,7 @@
       {
         "capability": "item.png",
         "locations": [
-          "backend/supabase/functions/admin-api/compatibilityOperations.test.ts"
+          "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts"
         ]
       },
       {
@@ -3430,12 +3425,12 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/overview/OverviewRoute.js",
           "admin/v2/src/routes/players/PlayersController.js",
+          "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
           "backend/supabase/functions/admin-api/bankingOperations.test.ts",
-          "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
           "backend/supabase/functions/admin-api/localGameMutations.test.ts",
           "backend/supabase/functions/admin-api/playerAccessCodeResetOperation.ts"
         ]
@@ -3555,10 +3550,10 @@
           "backend/src/domains/game-sessions/application/readGameSettings.test.ts",
           "backend/src/domains/game-sessions/infrastructure/supabaseGameSessionMutationRepository.test.ts",
           "backend/src/domains/game-sessions/infrastructure/supabaseGameSettingsReadRepository.test.ts",
+          "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
-          "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
           "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts",
           "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
@@ -3617,9 +3612,9 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/store/StoreController.js",
+          "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
-          "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
           "backend/supabase/functions/admin-api/localGameMutations.test.ts"
         ]
       },
@@ -3678,6 +3673,12 @@
         "capability": "summary.opportunity",
         "locations": [
           "backend/src/domains/campaign/services/campaignCoordinator.test.ts"
+        ]
+      },
+      {
+        "capability": "unlisted.ts",
+        "locations": [
+          "backend/src/security/classroomApiRateLimitDispatch.test.ts"
         ]
       },
       {
