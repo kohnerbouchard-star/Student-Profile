@@ -8,13 +8,13 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1619,
+    "sourceFiles": 1623,
     "edgeEntrypoints": 28,
     "handlerFiles": 60,
-    "persistenceOutsideInfrastructure": 85,
+    "persistenceOutsideInfrastructure": 84,
     "crossDomainDeepImports": 68,
     "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 206,
+    "compatibilityMarkerFiles": 207,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 0,
     "capabilityStrings": 144
@@ -332,7 +332,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 43,
+      "sourceFiles": 46,
       "publicBoundaryFiles": [
         "backend/src/domains/players/index.ts"
       ]
@@ -727,10 +727,6 @@
       },
       {
         "file": "backend/supabase/functions/admin-api/messagingParticipantOperations.ts",
-        "layer": "outside-domain"
-      },
-      {
-        "file": "backend/supabase/functions/admin-api/playerHistoryAudit.ts",
         "layer": "outside-domain"
       },
       {
@@ -2479,6 +2475,13 @@
         "markers": [
           "compatible",
           "legacy"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/playerHistoryAudit.test.ts",
+        "markers": [
+          "fallback",
+          "fallbacks"
         ]
       },
       {

@@ -54,7 +54,9 @@ const extractedModules = {
   "backend/supabase/functions/admin-api/playerOperations.ts": [
     "backend/supabase/functions/admin-api/playerLedgerCurrency.ts",
     "backend/supabase/functions/admin-api/playerOperationSupport.ts",
-    "backend/supabase/functions/admin-api/playerHistoryAudit.ts"
+    "backend/supabase/functions/admin-api/playerHistoryAudit.ts",
+    "backend/src/domains/players/application/readAdminPlayerHistory.ts",
+    "backend/src/domains/players/infrastructure/supabaseAdminPlayerHistoryReadRepository.ts"
   ],
   "backend/supabase/functions/web-session-api/index.ts": [
     "backend/supabase/functions/web-session-api/sessionHttp.ts",
