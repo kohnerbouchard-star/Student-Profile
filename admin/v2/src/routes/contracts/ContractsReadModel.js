@@ -1,4 +1,5 @@
 import { createAdminErrorEnvelope } from "../../core/error-envelope.js";
+import { normalizeContractTimeZone } from "../../core/contract-time-zone.js";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UUID_IN_TEXT_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
@@ -188,6 +189,7 @@ export function normalizeContractsReadModel(result) {
   const categories = [...new Set(contracts.map((item) => item.category))].sort((a, b) => a.localeCompare(b));
   return deepFreeze({
     contracts,
+    timeZone: normalizeContractTimeZone(result?.data?.timeZone),
     statuses,
     categories,
     summary: {
