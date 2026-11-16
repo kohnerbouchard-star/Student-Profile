@@ -50,8 +50,6 @@ const evidence = {
     productPersisted: false,
     productApproved: false,
     productApprovalPersisted: false,
-    inputPurchased: false,
-    inputPersisted: false,
     productionRun: false,
     productionPersisted: false,
     priceUpdated: false,
@@ -361,18 +359,64 @@ async function openRoute(page, route, selector) {
   await page.locator(selector).waitFor({ state: "visible", timeout: 30_000 });
 }
 
+function readyCurrencyBalance(currencyCode) {
+  const state = globalThis.Econovaria?.playerTerminal?.getState?.();
+  const bank = state?.data?.banking;
+  if (state?.routeLoading?.banking !== false || state?.routeErrors?.banking ||
+      state?.data?.resourceStatus?.banking?.state !== "ready" || bank?.stale || !Array.isArray(bank?.balances)) return false;
+  const rows = bank.balances.length ? bank.balances : [{ ...bank.checking, accountType: "checking",
+    currencyCode: bank.checking?.currencyCode || state.data.session?.currencyCode }];
+  if (rows.some((row) => typeof row.currencyCode !== "string" || !row.currencyCode.trim())) return false;
+  const row = rows.find((item) => item.currencyCode.trim().toUpperCase() === currencyCode &&
+    ["checking", "cash"].includes(String(item.accountKind || item.accountType || "checking").trim().toLowerCase()));
+  const card = document.querySelector(`[data-player-banking-balance="checking:${currencyCode}"], [data-player-banking-balance="cash:${currencyCode}"]`);
+  if (!row) return card ? false : { cardPresent: false, balance: 0 };
+  const amount = row.postedAmount ?? row.balance;
+  const text = card?.querySelector("h3")?.textContent?.replace(currencyCode, "").trim();
+  const expected = Number(amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  if (!card?.getClientRects().length || getComputedStyle(card).visibility !== "visible" || amount === null || amount === undefined || amount === "" ||
+      !Number.isFinite(Number(amount)) || text !== expected) return false;
+  return { cardPresent: true, balance: Number(text.replace(/,/g, "")) };
+}
+
+
+// Only allowlisted flags leave this failure-only browser snapshot.
+function bankingReadinessSnapshot(currencyCode) {
+  const state = globalThis.Econovaria?.playerTerminal?.getState?.();
+  const bank = state?.data?.banking;
+  const card = document.querySelector(`[data-player-banking-balance="checking:${currencyCode}"], [data-player-banking-balance="cash:${currencyCode}"]`);
+  return {
+    routeSettled: state?.routeLoading?.banking === false,
+    routeError: Boolean(state?.routeErrors?.banking),
+    resourceReady: state?.data?.resourceStatus?.banking?.state === "ready",
+    stale: Boolean(bank?.stale),
+    balancesPresent: Array.isArray(bank?.balances),
+    cardPresent: Boolean(card),
+    cardVisible: Boolean(card?.getClientRects().length && getComputedStyle(card).visibility === "visible"),
+  };
+}
+
 async function checkingBalance(page, currencyCode, { optional = false } = {}) {
   await openRoute(page, "banking", ".player-terminal-banking-page");
-  const card = page.locator(`[data-player-banking-balance="checking:${currencyCode}"]`).first();
-  if (!(await card.count())) {
-    if (optional) return 0;
-    throw new Error(`The Player Banking page did not render the ${currencyCode} checking balance.`);
+  let snapshot;
+  try {
+    snapshot = await page.waitForFunction(readyCurrencyBalance, currencyCode, { timeout: 30_000 });
+    const { cardPresent, balance } = await snapshot.jsonValue();
+    if (!cardPresent && !optional) throw new Error("The authoritative Banking data has no requested checking balance.");
+    return balance;
+  } catch (error) {
+    let timer;
+    try {
+      evidence.bankingReadinessFailure = await Promise.race([
+        page.evaluate(bankingReadinessSnapshot, currencyCode),
+        new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("Readiness snapshot unavailable.")), 1000); }),
+      ]);
+    } catch { evidence.bankingReadinessFailure = { unavailable: true }; }
+    finally { clearTimeout(timer); }
+    throw new Error("Banking checking balance did not become authoritative within 30 seconds.", { cause: error });
+  } finally {
+    await snapshot?.dispose();
   }
-  await card.waitFor({ state: "visible", timeout: 30_000 });
-  const text = String(await card.locator("h3").innerText()).replace(/,/g, "");
-  const amount = Number(text.match(/-?[0-9]+(?:\.[0-9]{1,2})?/)?.[0]);
-  if (!Number.isFinite(amount)) throw new Error(`Could not parse the ${currencyCode} checking balance from ${redact(text)}.`);
-  return amount;
 }
 
 async function openBusiness(page) {
@@ -521,10 +565,9 @@ async function createProduct(page, admin) {
     await target.locator('[name="name"]').fill(PRODUCT_NAME);
     await target.locator('[name="category"]').fill("classroom_equipment");
     await target.locator('[name="unitPrice"]').fill("12");
-    await target.locator('[name="unitInputCost"]').fill("1");
+    await target.locator('[name="unitInputCost"]').fill("0");
     await target.locator('[name="unitLaborCost"]').fill("0");
     await target.locator('[name="capacityUnits"]').fill("100");
-    await target.locator('[name="baseDemandUnits"]').fill("20");
     await target.locator('[name="qualityScore"]').fill("60");
   });
   await requireText(page, PRODUCT_NAME);
@@ -537,17 +580,6 @@ async function createProduct(page, admin) {
   await approveProduct(admin, productKey);
   await reloadBusiness(page);
   await requireText(page, PRODUCT_NAME);
-}
-
-async function purchaseInputs(page) {
-  await submitMutation(page, "businessInputPurchase", /\/players\/me\/business\/inputs\/purchases$/, async (target) => {
-    await target.locator('[name="quantity"]').fill("50");
-  });
-  evidence.mutations.inputPurchased = true;
-  await reloadBusiness(page);
-  const inventoryRows = page.locator(".player-terminal-business-suppliers article");
-  if ((await inventoryRows.count()) < 1) throw new Error("Purchased Business inputs were not rendered.");
-  evidence.mutations.inputPersisted = true;
 }
 
 async function runProduction(page) {
@@ -680,7 +712,6 @@ try {
     throw new Error(`Business request capitalization was ${evidence.businessRequest?.capitalization} instead of ${CAPITALIZATION}.`);
   }
   await createProduct(player.page, admin);
-  await purchaseInputs(player.page);
   await runProduction(player.page);
   await updatePrice(player.page);
   await hireEmployee(player.page);

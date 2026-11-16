@@ -217,8 +217,8 @@ function isStaffBootstrapProfile(
       isRequiredText(value.id) &&
       (value.supabaseAuthUserId === null ||
         isRequiredText(value.supabaseAuthUserId)) &&
-      isRequiredText(value.email) &&
-      isRequiredText(value.displayName) &&
+      isDisplayText(value.email) &&
+      isDisplayText(value.displayName) &&
       isRequiredText(value.createdAt) &&
       isRequiredText(value.updatedAt),
   );
@@ -231,7 +231,7 @@ function isStaffGameSessionBootstrapRecord(
     value &&
       isRequiredText(value.id) &&
       isRequiredText(value.ownerStaffUserId) &&
-      isRequiredText(value.name) &&
+      isDisplayText(value.name) &&
       isRequiredText(value.status) &&
       (value.gameJoinCode === null || typeof value.gameJoinCode === "string") &&
       isRequiredText(value.gameJoinCodeStatus) &&
@@ -246,6 +246,10 @@ function isDistinctRequiredTextArray(
   return Array.isArray(value) &&
     value.every(isRequiredText) &&
     new Set(value).size === value.length;
+}
+
+function isDisplayText(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 function isRequiredText(value: unknown): value is string {

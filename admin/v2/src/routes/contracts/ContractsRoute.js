@@ -12,7 +12,9 @@ import {
 } from "../../components/index.js";
 import { createElement } from "../../components/dom.js";
 import { ADMIN_DATA_STATES } from "../../core/data-state.js";
+import { formatContractDateTime } from "../../core/contract-time-zone.js";
 import { ContractForm } from "./ContractForm.js";
+import { ContractSubmissionDetail } from "./ContractSubmissionDetail.js";
 import { ContractsSkeleton } from "./ContractsSkeleton.js";
 
 function titleCase(value, fallback = "Not available") {
@@ -20,11 +22,6 @@ function titleCase(value, fallback = "Not available") {
   return text ? text.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : fallback;
 }
 function displayCount(value) { return Number.isFinite(Number(value)) ? Number(value).toLocaleString("en-US") : "0"; }
-function displayDate(value) {
-  const date = new Date(String(value || ""));
-  if (!Number.isFinite(date.getTime())) return "—";
-  return date.toLocaleString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-}
 function metric(label, value, detail) {
   return createElement("article", { className: "admin-contracts-route__metric", children: [
     createElement("span", { text: label }), createElement("output", { text: displayCount(value) }), createElement("small", { text: detail }),
@@ -58,7 +55,7 @@ function definition(label, value, { pre = false, note = "" } = {}) {
     note ? createElement("small", { text: note }) : null,
   ] });
 }
-function detailSummary(contract) {
+function detailSummary(contract, displayDate) {
   return createElement("section", { className: "admin-contracts-detail__overview", attrs: { "aria-label": "Contract details" }, children: [
     createElement("div", { className: "admin-contracts-detail__headline", children: [
       statusBadge(contract.status), createElement("span", { text: contract.sourceLabel }), createElement("span", { text: titleCase(contract.visibility) }),
@@ -80,21 +77,15 @@ function detailSummary(contract) {
     contract.metadata.reviewNote ? createElement("div", { className: "admin-contracts-detail__note", children: [createElement("strong", { text: "Reviewer note" }), createElement("p", { text: contract.metadata.reviewNote })] }) : null,
   ] });
 }
-function participantIdentity(progress) {
-  return createElement("div", { className: "admin-contracts-detail__participant", children: [
-    createElement("strong", { text: progress.playerName }),
-    createElement("small", { text: [progress.rosterLabel, progress.country].filter(Boolean).join(" · ") || "Participant" }),
-  ] });
-}
-function loadingDetail(contract) {
-  return createElement("div", { className: "admin-contracts-detail__loading", attrs: { role: "status", "aria-live": "polite" }, children: [detailSummary(contract), createElement("p", { text: "Loading participant progress…" })] });
+function loadingDetail(contract, displayDate) {
+  return createElement("div", { className: "admin-contracts-detail__loading", attrs: { role: "status", "aria-live": "polite" }, children: [detailSummary(contract, displayDate), createElement("p", { text: "Loading participant progress…" })] });
 }
 function detailError(error, retry) {
   return AdminErrorState({ title: "Contract details could not be loaded", message: error?.userMessage, requestId: error?.requestId, retryAfterSeconds: error?.retryAfterSeconds, retry: error?.retryable ? { label: "Retry details", onClick: retry } : null });
 }
-function detailContent({ detail, onReview, onIssueRewards }) {
+function detailContent({ detail, onReview, onIssueRewards, displayDate }) {
   const root = createElement("div", { className: "admin-contracts-detail", children: [
-    detailSummary(detail.contract),
+    detailSummary(detail.contract, displayDate),
     createElement("section", { className: "admin-contracts-detail__progress-summary", attrs: { "aria-label": "Participant progress summary" }, children: [
       metric("Participants", detail.summary.participantCount, "Assigned or participating"),
       metric("Submitted", detail.summary.submittedCount, "Awaiting a decision"),
@@ -102,42 +93,11 @@ function detailContent({ detail, onReview, onIssueRewards }) {
       metric("Rewards issued", detail.summary.rewardIssuedCount, "Reward lifecycle complete"),
     ] }),
   ] });
-  if (detail.isEmpty) {
-    root.append(AdminEmptyState({ title: "No participant progress yet", message: "This contract has no participant progress records for the selected game.", compact: true }));
-    return root;
-  }
-  function participantActions(progress) {
-    const actions = createElement("div", { className: "admin-contracts-detail__participant-actions" });
-    if (progress.canReview) {
-      actions.append(
-        contractButton({ label: "Approve", icon: "success", quiet: true, action: "approve", onClick: (event) => onReview(progress, "approve", event.currentTarget) }),
-        contractButton({ label: "Revision", icon: "refresh", quiet: true, action: "request-revision", onClick: (event) => onReview(progress, "request_revision", event.currentTarget) }),
-        contractButton({ label: "Reject", icon: "warning", quiet: true, tone: "danger", action: "reject", onClick: (event) => onReview(progress, "reject", event.currentTarget) }),
-      );
-    } else if (progress.canIssueReward) {
-      actions.append(contractButton({ label: "Issue rewards", icon: "plus", quiet: true, action: "issue-rewards", onClick: (event) => onIssueRewards(progress, event.currentTarget) }));
-    } else {
-      actions.append(createElement("span", { className: "admin-contracts-detail__action-note", text: progress.rewardIssuedAt ? "Rewards issued" : titleCase(progress.status) }));
-    }
-    return actions;
-  }
-  const table = AdminDataTable({
-    caption: `Participant progress for ${detail.contract.title}`,
-    rowKey: (progress) => progress.rowKey,
-    rows: detail.participants,
-    columns: [
-      { key: "playerName", label: "Participant", rowHeader: true, render: (_value, progress) => participantIdentity(progress) },
-      { key: "status", label: "Status", render: (value) => statusBadge(value) },
-      { key: "evidence", label: "Evidence", sortable: false, render: (value, progress) => createElement("div", { className: "admin-contracts-detail__evidence", children: [createElement("span", { text: value }), progress.feedback ? createElement("small", { text: `Review: ${progress.feedback}` }) : null] }) },
-      { key: "submittedAt", label: "Submitted", sortValue: (value) => Date.parse(value || "") || 0, render: (value) => displayDate(value) },
-      { key: "actions", label: "Actions", align: "end", sortable: false, render: (_value, progress) => participantActions(progress) },
-    ],
-  });
-  root.append(createElement("section", { className: "admin-contracts-detail__participants", attrs: { "aria-label": "Participant progress" }, children: table.element }));
+  root.append(ContractSubmissionDetail({ detail, onReview, onIssueRewards, contractButton, statusBadge, titleCase, displayDate }));
   return root;
 }
 
-function catalog({ model, filters, onFiltersChange, onOpenDetail, onEdit, onPublish, onArchive, onDuplicate, onAdd }) {
+function catalog({ model, filters, onFiltersChange, onOpenDetail, onEdit, onPublish, onArchive, onDuplicate, onAdd, displayDate }) {
   const categoryValue = filters.category === "all" || model.categories.includes(filters.category) ? filters.category : "all";
   if (categoryValue !== filters.category) onFiltersChange({ ...filters, category: categoryValue });
   const search = AdminField({ name: "search", label: "Search contracts", type: "search", value: filters.query, placeholder: "Title, instructions, category, or status", autocomplete: "off", prefix: AdminIcon({ name: "search", size: 16 }) });
@@ -199,6 +159,7 @@ function catalog({ model, filters, onFiltersChange, onOpenDetail, onEdit, onPubl
 
 export function ContractsRoute({
   state,
+  timeZone = null,
   filters = { query: "", status: "all", category: "all" },
   onFiltersChange = () => {},
   onRefresh = async () => {},
@@ -211,6 +172,7 @@ export function ContractsRoute({
   onReview = async () => ({ ok: false }),
   onIssueRewards = async () => ({ ok: false }),
 } = {}) {
+  const displayDate = (value) => formatContractDateTime(value, timeZone);
   let destroyed = false;
   let formDialog = null;
   let detailDrawer = null;
@@ -226,7 +188,7 @@ export function ContractsRoute({
     destroyLayer(formDialog);
     let dialog;
     const form = ContractForm({
-      mode, contract,
+      mode, contract, timeZone,
       onCancel: () => dialog.close("cancelled"),
       async onSubmit(payload) {
         dialog.setBusy(true);
@@ -254,11 +216,11 @@ export function ContractsRoute({
   async function loadDetailIntoDrawer(contract) {
     const sequence = ++detailSequence;
     selectedContract = contract;
-    detailDrawer?.setContent(loadingDetail(contract));
+    detailDrawer?.setContent(loadingDetail(contract, displayDate));
     try {
       const detail = await onLoadDetail(contract);
       if (destroyed || sequence !== detailSequence || selectedContract !== contract || !detailDrawer?.isOpen()) return;
-      detailDrawer.setContent(detailContent({ detail, onReview: (progress, action, opener) => openReview(contract, progress, action, opener), onIssueRewards: (progress, opener) => openReward(contract, progress, opener) }));
+      detailDrawer.setContent(detailContent({ detail, displayDate, onReview: (progress, action, opener) => openReview(contract, progress, action, opener), onIssueRewards: (progress, opener) => openReward(contract, progress, opener) }));
     } catch (error) {
       if (destroyed || sequence !== detailSequence || selectedContract !== contract || !detailDrawer?.isOpen()) return;
       detailDrawer.setContent(detailError(error, () => loadDetailIntoDrawer(contract)));
@@ -267,7 +229,7 @@ export function ContractsRoute({
   function openDetail(contract, opener) {
     destroyLayer(detailDrawer);
     selectedContract = contract;
-    detailDrawer = AdminDrawer({ title: contract.title, description: `${contract.sourceLabel} · ${titleCase(contract.status)}`, content: loadingDetail(contract), size: "large", className: "admin-contracts-detail-drawer", onClose() { detailSequence += 1; selectedContract = null; } });
+    detailDrawer = AdminDrawer({ title: contract.title, description: `${contract.sourceLabel} · ${titleCase(contract.status)}`, content: loadingDetail(contract, displayDate), size: "large", className: "admin-contracts-detail-drawer", onClose() { detailSequence += 1; selectedContract = null; } });
     detailDrawer.open(opener);
     void loadDetailIntoDrawer(contract);
   }
@@ -333,7 +295,7 @@ export function ContractsRoute({
   if (state.status === ADMIN_DATA_STATES.INITIAL_LOADING) route.append(ContractsSkeleton());
   else if (state.status === ADMIN_DATA_STATES.FAILED) route.append(AdminErrorState({ title: "Contracts could not be loaded", message: state.error?.userMessage, requestId: state.error?.requestId, retryAfterSeconds: state.error?.retryAfterSeconds, retry: state.error?.retryable ? { label: "Retry Contracts", onClick: onRefresh } : null }));
   else if (state.data) {
-    const content = catalog({ model: state.data, filters, onFiltersChange, onOpenDetail: openDetail, onEdit: openEdit, onPublish: openPublish, onArchive: openArchive, onDuplicate: duplicate, onAdd: (event) => openCreate(event?.currentTarget) });
+    const content = catalog({ model: state.data, displayDate, filters, onFiltersChange, onOpenDetail: openDetail, onEdit: openEdit, onPublish: openPublish, onArchive: openArchive, onDuplicate: duplicate, onAdd: (event) => openCreate(event?.currentTarget) });
     if (state.status === ADMIN_DATA_STATES.STALE) route.append(AdminStaleState({ message: state.error?.userMessage || "Showing the last contract snapshot. Refresh before changing a contract.", retry: { label: "Retry", onClick: onRefresh }, content }));
     else { if (state.status === ADMIN_DATA_STATES.REFRESHING) route.append(createElement("div", { className: "admin-contracts-route__refresh-state", attrs: { role: "status" }, children: [AdminIcon({ name: "refresh", size: 17 }), "Refreshing contracts…"] })); route.append(content); }
   }

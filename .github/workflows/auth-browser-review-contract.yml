@@ -8,6 +8,10 @@ on:
       - "auth/security-review.js"
       - "auth/recovery-start.js"
       - "auth/reset-password.js"
+      - "auth/reset-password.html"
+      - "auth/reset-password.css"
+      - "scripts/password-recovery-mfa-browser.test.mjs"
+      - ".github/workflows/auth-browser-review-contract.yml"
       - "backend/supabase/auth-email-template-manifest.json"
       - "scripts/auth-email-template-contract.test.mjs"
       - "scripts/password-recovery-frontend-contract.test.mjs"
@@ -20,6 +24,10 @@ on:
       - "auth/security-review.js"
       - "auth/recovery-start.js"
       - "auth/reset-password.js"
+      - "auth/reset-password.html"
+      - "auth/reset-password.css"
+      - "scripts/password-recovery-mfa-browser.test.mjs"
+      - ".github/workflows/auth-browser-review-contract.yml"
       - "backend/supabase/auth-email-template-manifest.json"
       - "scripts/auth-email-template-contract.test.mjs"
       - "scripts/password-recovery-frontend-contract.test.mjs"
@@ -56,3 +64,9 @@ jobs:
             scripts/auth-browser-review-contract.test.mjs \
             scripts/vercel-auth-proxy-contract.test.mjs
           node scripts/build-supabase-auth-email-config.mjs --check
+      - name: Verify disposable recovery MFA in Chromium
+        run: |
+          npm install --global npm@10.9.8
+          npm ci
+          npx playwright install --with-deps chromium
+          node --test scripts/password-recovery-mfa-browser.test.mjs

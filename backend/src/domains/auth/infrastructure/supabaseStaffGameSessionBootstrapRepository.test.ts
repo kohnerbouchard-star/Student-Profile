@@ -250,6 +250,50 @@ Deno.test("Supabase Staff bootstrap fails closed on query and row errors", async
   );
 });
 
+Deno.test("Supabase bootstrap preserves valid display whitespace and rejects malformed identities", async () => {
+  const profile = {
+    id: STAFF_ID,
+    supabase_auth_user_id: "auth-1",
+    email: " staff@example.test ",
+    display_name: " Staff One ",
+    created_at: "2026-08-01",
+    updated_at: "2026-08-02",
+  };
+  const client = fakeClient({
+    staff_users: [{ data: profile, error: null }],
+    game_sessions: [{
+      data: [row("game-1", { name: " Class A " })],
+      error: null,
+    }],
+  });
+  const repository = createSupabaseStaffGameSessionBootstrapRepository(client);
+  const result = await repository.readStaffBootstrapProfile({
+    staffUserId: STAFF_ID,
+  });
+  assertEquals(result?.displayName, " Staff One ");
+  assertEquals(result?.email, " staff@example.test ");
+  const input = {
+    applicationContexts: [context("game-1")],
+    visibility: "all" as const,
+  };
+  const games = await repository.hydrateOwnedGameSessions(input);
+  assertEquals(games[0].name, " Class A ");
+  for (
+    const data of [
+      row(" game-1 "),
+      row("game-1", { name: "   " }),
+      row("game-1", { owner_staff_user_id: " staff-1 " }),
+    ]
+  ) {
+    const invalid = createSupabaseStaffGameSessionBootstrapRepository(
+      fakeClient({ game_sessions: [{ data: [data], error: null }] }),
+    );
+    await assertPersistenceFailure(() =>
+      invalid.hydrateOwnedGameSessions(input)
+    );
+  }
+});
+
 interface QueryResponse {
   readonly data: unknown;
   readonly error: { readonly message?: string } | null;

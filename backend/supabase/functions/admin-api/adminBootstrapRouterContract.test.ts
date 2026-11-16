@@ -3,6 +3,7 @@ import compositionSource from "./adminBootstrapComposition.ts" with {
 };
 import commonSource from "./common.ts" with { type: "text" };
 import indexSource from "./index.ts" with { type: "text" };
+import globalSource from "./adminGlobalRoutes.ts" with { type: "text" };
 import routesSource from "./adminBootstrapRoutes.ts" with { type: "text" };
 
 Deno.test("Admin preguard resolution discovers only Staff and owned-game identities", () => {
@@ -144,9 +145,9 @@ Deno.test("Admin composition keeps exact contexts paired with persistence-shaped
 });
 
 Deno.test("Admin bootstrap routes are executable outside the Edge root", () => {
-  assertIncludes(indexSource, "handleAdminBootstrapGlobalRoute(");
+  assertIncludes(globalSource, "handleAdminBootstrapGlobalRoute(");
   assertEquals(
-    indexSource.match(/handleAdminBootstrapGlobalRoute\(/g)?.length,
+    globalSource.match(/handleAdminBootstrapGlobalRoute\(/g)?.length,
     1,
   );
   for (

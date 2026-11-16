@@ -194,3 +194,54 @@ test("rejects an API proxy in production", () => {
     /ECONOVARIA_RUNTIME_CONFIG_API_PROXY_PROHIBITED_IN_PRODUCTION/,
   );
 });
+for (const environment of ["staging", "production", "development"]) {
+  test(`explicit BFF transport selects all six routes in ${environment}`, () => {
+    const { runtime, meta } = execute({
+      ...stagingConfig, environment, apiTransport: "same-origin-bff",
+    });
+    assert.equal(runtime.environment, environment);
+    assert.equal(runtime.projectRef, stagingConfig.projectRef);
+    assert.equal(runtime.supabaseUrl, stagingConfig.supabaseUrl);
+    assert.equal(runtime.supabasePublishableKey, stagingConfig.supabasePublishableKey);
+    assert.equal(runtime.apiTransport, "same-origin-bff");
+    assert.equal(runtime.apiProxyUrl, "");
+    for (const [key, route] of Object.entries({
+      playerWebSessionApiUrl: "/api/player-session", playerApiUrl: "/api/player",
+      webSessionApiUrl: "/api/admin-session", adminBffApiUrl: "/api/admin",
+      adminLogoutApiUrl: "/api/admin-logout", passwordResetApiUrl: "/api/password-reset",
+    })) assert.equal(runtime[key], route);
+    assert.equal(runtime.staffApiUrl, `${stagingConfig.supabaseUrl}/functions/v1/staff-api`);
+    assert.equal(runtime.bootstrapApiUrl, `${stagingConfig.supabaseUrl}/functions/v1/bootstrap-api`);
+    assert.equal(runtime.adminApiUrl, `${stagingConfig.supabaseUrl}/functions/v1/admin-api`);
+    assert.equal(meta.content, "/api/admin");
+    assert.equal(Object.isFrozen(runtime), true);
+  });
+}
+
+test("non-Vercel development retains its direct local endpoints", () => {
+  const { runtime } = execute({
+    ...stagingConfig, environment: "development", projectRef: "localdevelopment0000",
+    supabaseUrl: "http://127.0.0.1:54321",
+  });
+  assert.equal(runtime.playerApiUrl, "http://127.0.0.1:54321/functions/v1/player-web-session-api/proxy");
+  assert.equal(runtime.webSessionApiUrl, "http://127.0.0.1:54321/functions/v1/web-session-api");
+});
+
+test("unknown or conflicting explicit transports fail closed", () => {
+  for (const apiTransport of ["direct", "https://elsewhere.example", true]) {
+    assert.throws(() => execute({ ...stagingConfig, apiTransport }), /INVALID_API_TRANSPORT/);
+  }
+  for (const apiProxyUrl of ["http://127.0.0.1:4173", "https://preview.example.app"]) {
+    assert.throws(() => execute({ ...stagingConfig, apiTransport: "same-origin-bff", apiProxyUrl }),
+      /CONFLICTING_API_TRANSPORT/);
+  }
+});
+
+test("explicit BFF transport preserves project and key validation", () => {
+  for (const [override, error] of [
+    [{ supabaseUrl: "https://cgiukdjwicykrmtkhudh.supabase.co" }, /PROJECT_URL_MISMATCH/],
+    [{ supabasePublishableKey: "sb_secret_invalid" }, /SECRET_KEY_PROHIBITED/],
+    [{ supabasePublishableKey: "" }, /PUBLISHABLE_KEY_REQUIRED/],
+    [{ supabaseUrl: "http://eecvbssdvarfcykcfrny.supabase.co" }, /REQUIRES_HTTPS/],
+  ]) assert.throws(() => execute({ ...stagingConfig, apiTransport: "same-origin-bff", ...override }), error);
+});

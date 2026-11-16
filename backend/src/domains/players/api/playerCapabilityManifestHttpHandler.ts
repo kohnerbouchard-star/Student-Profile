@@ -11,7 +11,7 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { buildPlayerCraftingCapabilityResponse } from "../../crafting/contracts/playerCraftingCapabilityManifest.ts";
+import { buildPlayerCraftingCapabilityResponse } from "../../crafting/index.ts";
 import {
   buildPlayerCapabilityManifest,
   type PlayerCapabilityManifestResponseBody,

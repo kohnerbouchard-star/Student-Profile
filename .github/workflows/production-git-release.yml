@@ -1,10 +1,18 @@
 name: Production Git Release
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_authorized:
+        description: "Explicit owner-authorized production release of current main after Edge convergence"
+        required: true
+        type: boolean
+        default: false
   pull_request:
     branches: [main]
     paths:
       - ".github/workflows/production-git-release.yml"
+      - ".github/workflows/edge-function-inventory-converge.yml"
       - ".github/workflows/vercel-git-production-verify.yml"
       - "scripts/release-integrity-v2/**"
       - "scripts/vercel-git-release-contract.test.mjs"
@@ -65,7 +73,7 @@ jobs:
 
   staging-evidence:
     name: Capture exact staging live parity evidence
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.release_authorized == true && github.ref == 'refs/heads/main'
     needs: static-contract
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -131,7 +139,7 @@ jobs:
 
   production-evidence:
     name: Capture exact production live parity evidence
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.release_authorized == true && github.ref == 'refs/heads/main'
     needs: static-contract
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -178,7 +186,7 @@ jobs:
 
   enforce-parity:
     name: Enforce exact bounded live parity
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.release_authorized == true && github.ref == 'refs/heads/main'
     needs: [staging-evidence, production-evidence]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -250,7 +258,7 @@ jobs:
 
   publish-release-branch:
     name: Publish parity-verified source to release/production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.release_authorized == true && github.ref == 'refs/heads/main'
     needs: enforce-parity
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -298,7 +306,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/edge-function-inventory-converge.yml/runs?head_sha=$SOURCE_COMMIT&event=push&per_page=20"
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/edge-function-inventory-converge.yml/runs?head_sha=$SOURCE_COMMIT&event=workflow_dispatch&per_page=20"
           for attempt in $(seq 1 90); do
             response="$(curl --fail --silent --show-error \
               -H 'Accept: application/vnd.github+json' \

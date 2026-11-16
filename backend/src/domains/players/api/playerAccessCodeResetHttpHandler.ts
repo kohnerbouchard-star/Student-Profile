@@ -113,7 +113,7 @@ export async function handleResetPlayerAccessCodeRequest(
       gameSessionId,
       staffResult.staff.id,
     );
-    if (!ownershipResult.ok) {
+    if ("status" in ownershipResult) {
       return jsonError(ownershipResult.status, ownershipResult.error);
     }
 

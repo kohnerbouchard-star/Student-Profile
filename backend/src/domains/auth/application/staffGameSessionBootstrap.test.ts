@@ -210,6 +210,41 @@ Deno.test("Staff bootstrap normalizes repository errors", async () => {
   );
 });
 
+Deno.test("Staff bootstrap preserves persisted display whitespace without weakening IDs", async () => {
+  const repository = new StubRepository();
+  repository.profile = {
+    ...PROFILE,
+    email: " staff@example.test ",
+    displayName: " Staff One ",
+  };
+  const profile = await readStaffBootstrapProfile(repository, {
+    staffUserId: STAFF_ID,
+  });
+  assertEquals(profile.displayName, " Staff One ");
+  assertEquals(profile.email, " staff@example.test ");
+  repository.rows = [game("game-1", { name: " Class A " })];
+  const input = {
+    applicationContexts: [context("game-1")],
+    visibility: "all" as const,
+  };
+  const entries = await hydrateStaffGameSessionBootstrap(repository, input);
+  assertEquals(entries[0].gameSession.name, " Class A ");
+  for (const name of ["", "   "]) {
+    repository.rows = [game("game-1", { name })];
+    await assertBootstrapFailure(() =>
+      hydrateStaffGameSessionBootstrap(repository, input)
+    );
+  }
+  repository.rows = [game(" game-1 ")];
+  await assertBootstrapFailure(() =>
+    hydrateStaffGameSessionBootstrap(repository, input)
+  );
+  repository.profile = { ...PROFILE, id: " staff-1 " };
+  await assertBootstrapFailure(() =>
+    readStaffBootstrapProfile(repository, { staffUserId: STAFF_ID })
+  );
+});
+
 class StubRepository implements StaffGameSessionBootstrapRepository {
   ids: readonly string[] = [];
   profile: StaffBootstrapProfile | null = PROFILE;

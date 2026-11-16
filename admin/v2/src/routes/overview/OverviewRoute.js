@@ -420,6 +420,7 @@ function refreshButton(state, onRefresh) {
 /** Renders a complete Overview route from the shared six-state data contract. */
 export function OverviewRoute({
   state,
+  lifecyclePanel = null,
   hasPermission = () => false,
   onOpenLegacy = () => {},
   onRefresh = () => {},
@@ -429,6 +430,8 @@ export function OverviewRoute({
     dataset: { adminV2State: state.status },
     attrs: { "aria-busy": state.status === ADMIN_DATA_STATES.INITIAL_LOADING || state.status === ADMIN_DATA_STATES.REFRESHING },
   });
+
+  if (lifecyclePanel) route.append(lifecyclePanel);
 
   if (state.status === ADMIN_DATA_STATES.INITIAL_LOADING) {
     route.append(OverviewSkeleton());

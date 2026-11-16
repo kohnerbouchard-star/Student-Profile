@@ -46,7 +46,8 @@ assert.ok(previewData.contracts.items.some((item) => item.status === "Submitted"
 assert.ok(previewData.inventory.items.length > 0, "Inventory preview cannot be empty.");
 
 assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.businessPrice, { productId: "prod-scanner" }), "/business/products/prod-scanner/pricing");
-assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.marketplacePurchase, { listingId: "listing-1" }), "/marketplace/listings/listing-1/purchase");
+assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.marketplacePurchase, { listingId: "listing-1" }), "/marketplace/listings/listing-1/quotes");
+assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.marketplaceSettlement, { reservationId: "mpr_" + "1".repeat(32) }), "/marketplace/reservations/mpr_11111111111111111111111111111111/settlements");
 assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.craftItem, { recipeId: "recipe-1" }), "/crafting/jobs");
 assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.loanRepay, { loanId: "LN-8804" }), "/banking/loans/LN-8804/payments");
 assert.equal(resolveEndpoint(PLAYER_ENDPOINTS.messageSend, { threadId: "thread-1" }), "/messages/threads/thread-1/messages");
@@ -167,7 +168,8 @@ for (const request of [
   { endpointKey: "marketOrder", method: "POST", path: "/market/orders", payload: { assetId: "asset-1", quantity: 1 } },
   { endpointKey: "bankTransfer", method: "POST", path: "/banking/transfers", payload: { amount: 100 } },
   { endpointKey: "businessProduction", method: "POST", path: "/business/production-runs", payload: { quantity: 10 } },
-  { endpointKey: "marketplacePurchase", method: "POST", path: "/marketplace/listings/listing-1/purchase", payload: { quantity: 1 } },
+  { endpointKey: "marketplacePurchase", method: "POST", path: "/marketplace/listings/listing-1/quotes", payload: { quantity: 1, expectedVersion: 1, allocations: [{ sourceAccountKey: `bac_${"1".repeat(32)}`, targetAmount: 1 }] } },
+  { endpointKey: "marketplaceSettlement", method: "POST", path: `/marketplace/reservations/mpr_${"1".repeat(32)}/settlements`, payload: { reservationId: `mpr_${"1".repeat(32)}` } },
   { endpointKey: "craftItem", method: "POST", path: "/crafting/jobs", payload: { recipeKey: "recipe-1", quantity: 1 } },
   { endpointKey: "loanApply", method: "POST", path: "/banking/loans/applications/loan-offer-1", payload: { amount: 5000 } },
   { endpointKey: "messageSend", method: "POST", path: "/messages/threads/thread-1/messages", payload: { body: "Test" } },

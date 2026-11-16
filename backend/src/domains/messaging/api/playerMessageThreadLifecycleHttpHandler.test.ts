@@ -162,16 +162,85 @@ Deno.test("Player thread creation preserves session expiry and hides cross-game 
   assertEquals(JSON.stringify(deniedBody).includes("OTHER-GAME-PLAYER"), false);
 });
 
+// Capture the real HTTP-to-RPC boundary before and after the application extraction.
+Deno.test("REF035 thread creation calls one scoped atomic command per applied/replayed request", async () => {
+  for (const outcome of ["applied", "replayed"]) {
+    const calls: unknown[] = [];
+    const response = await handlePlayerMessageThreadLifecycleRequest(
+      request("/players/me/messages/threads", { method: "POST", body: {
+        recipientPlayerId: " PLAYER-002 ", title: " Title ", body: " Hello ", idempotencyKey: " key:35 ",
+      } }), { kind: "createThread" }, dependencies({
+        create_player_message_thread_atomic_v1: [{ create_outcome: outcome, thread_id: THREAD,
+          message_id: MESSAGE, thread_title: "Title", recipient_reference: "PLAYER-002", created_at: NOW.toISOString() }],
+      }, null, calls),
+    );
+    assertEquals(calls, [{ name: "create_player_message_thread_atomic_v1", args: {
+      p_game_session_id: GAME, p_player_id: PLAYER, p_recipient_player_identifier: "PLAYER-002",
+      p_title: "Title", p_initial_body: "Hello", p_idempotency_key: "key:35",
+    } }]);
+    assertEquals(response.status, outcome === "applied" ? 201 : 200);
+    assertEquals(response.headers.get("cache-control"), "private, no-store");
+    assertEquals(response.headers.get("vary"), "authorization, x-player-session-token");
+  }
+});
+
+Deno.test("REF035 create errors retain safe status mapping without a second command", async () => {
+  for (const [message, status, code] of [
+    ["PLAYER_MESSAGE_RECIPIENT_NOT_FOUND", 404, "player_message_recipient_not_found"],
+    ["SCOPE_FORBIDDEN", 404, "player_message_recipient_not_found"],
+    ["IDEMPOTENCY_CONFLICT", 409, "player_message_idempotency_conflict"],
+    ["GAME_NOT_ACTIVE", 409, "game_not_active"],
+    ["THREADS_DISABLED", 423, "player_message_threads_disabled"],
+    ["42883", 503, "player_messaging_schema_not_applied"],
+    ["VALUE_INVALID", 400, "invalid_player_message_request"],
+    ["private database detail", 500, "player_messaging_failed"],
+  ] as const) {
+    const calls: unknown[] = [];
+    const response = await handlePlayerMessageThreadLifecycleRequest(
+      request("/players/me/messages/threads", { method: "POST", body: {
+        recipientPlayerId: "PLAYER-002", title: "Title", body: "Hello", idempotencyKey: "key:35",
+      } }), { kind: "createThread" }, dependencies({}, { message }, calls),
+    );
+    assertEquals(calls.length, 1);
+    assertEquals(response.status, status);
+    assertEquals((await response.json()).error.code, code);
+  }
+});
+
+Deno.test("REF035 invalid transport, session and parser branches execute no command", async () => {
+  const body = { recipientPlayerId: "PLAYER-002", title: "Title", body: "Hello", idempotencyKey: "key:35" };
+  const cases: { path: string; options: Parameters<typeof request>[1]; status: number }[] = [
+    { path: "/players/me/messages/threads?game=other", options: { method: "POST", body }, status: 400 },
+    { path: "/players/me/messages/threads", options: { method: "GET" }, status: 405 },
+    { path: "/players/me/messages/threads", options: { method: "POST", body, headers: { "x-stock-market-runner-secret": "invalid" } }, status: 400 },
+    { path: "/players/me/messages/threads", options: { method: "POST", body, token: null }, status: 401 },
+    { path: "/players/me/messages/threads", options: { method: "POST", body, headers: { "idempotency-key": "conflict" } }, status: 400 },
+    { path: "/players/me/messages/threads", options: { method: "POST", body: { ...body, recipientPlayerId: PLAYER } }, status: 400 },
+  ];
+  for (const test of cases) {
+    const calls: unknown[] = [];
+    const response = await handlePlayerMessageThreadLifecycleRequest(
+      request(test.path, test.options), { kind: "createThread" }, dependencies({}, null, calls),
+    );
+    assertEquals(response.status, test.status);
+    assertEquals(calls, []);
+  }
+});
+
 function dependencies(
   responses: Record<string, unknown>,
   rpcError: { readonly code?: string; readonly message: string } | null = null,
+  calls: unknown[] = [],
 ) {
   return {
     createServiceClient: () => ({
-      rpc: (name: string) => Promise.resolve({
+      rpc: (name: string, args: unknown) => {
+        calls.push({ name, args });
+        return Promise.resolve({
         data: Object.hasOwn(responses, name) ? responses[name] : null,
         error: rpcError,
-      }),
+      });
+      },
     }) as never,
     readSupabaseEnv: () => ({
       ok: true as const,

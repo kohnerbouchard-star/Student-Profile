@@ -25,25 +25,51 @@ export function installInventoryActionFlow({ mount, terminal, config }) {
     throw new TypeError("The inventory action flow requires an active player terminal.");
   }
 
-  const api = new PlayerApi(config);
+  const freshness = terminal.freshness;
+  const api = new PlayerApi(config, { freshness });
+  const controls = new Set();
+  let destroyed = false;
+
+  async function runAction(button, label, endpoint, payload, success, fallback) {
+    const restore = setButtonProcessing(button, label);
+    const restoreButton = () => {
+      if (freshness && !controls.delete(restoreButton)) return;
+      restore();
+    };
+    if (freshness) controls.add(restoreButton);
+    let ticket;
+    const current = () => !freshness || (!destroyed && freshness.isCurrent(ticket));
+    try {
+      api.setSession(config);
+      ticket = freshness?.capture();
+      const operation = await api.execute(endpoint, payload);
+      if (!current()) return;
+      if (!freshness) {
+        notify(terminal, success, "success");
+        await terminal.refresh();
+        return;
+      }
+      const pending = terminal.refreshResources(operation.invalidatedResources);
+      ticket = freshness.capture(operation.invalidatedResources);
+      const result = await pending;
+      if (!current() || !freshness.isCurrent(freshness.ticketFor(result))) return;
+      notify(terminal, success, "success");
+    } catch (error) {
+      if (current() && !(freshness && ["REQUEST_ABORTED", "REQUEST_SUPERSEDED"].includes(error?.code))) {
+        notify(terminal, safeInventoryMessage(error, fallback), "error");
+      }
+    } finally {
+      restoreButton();
+    }
+  }
 
   async function useItem(button) {
     const itemKey = String(button.dataset.playerInventoryEffectUse || "").trim();
     if (!itemKey) return;
-    const restoreButton = setButtonProcessing(button, "Using");
-    try {
-      api.setSession(config);
-      await api.execute("itemEffectUse", {
-        itemKey,
-        idempotencyKey: `item-use-${itemKey}-${Date.now()}`
-      });
-      notify(terminal, "Item used.", "success");
-      await terminal.refresh();
-    } catch (error) {
-      notify(terminal, safeInventoryMessage(error, "The item could not be used."), "error");
-    } finally {
-      restoreButton();
-    }
+    await runAction(button, "Using", "itemEffectUse", {
+      itemKey,
+      idempotencyKey: `item-use-${itemKey}-${Date.now()}`
+    }, "Item used.", "The item could not be used.");
   }
 
   async function requestRedemption(button) {
@@ -59,22 +85,12 @@ export function installInventoryActionFlow({ mount, terminal, config }) {
     }
 
     const note = globalThis.prompt?.("Optional note for the teacher:", "") || "";
-    const restoreButton = setButtonProcessing(button, "Requesting");
-    try {
-      api.setSession(config);
-      await api.execute("inventoryUse", {
-        inventoryItemId,
-        quantity,
-        note,
-        idempotencyKey: `redemption-${inventoryItemId}-${Date.now()}`
-      });
-      notify(terminal, "Redemption request submitted.", "success");
-      await terminal.refresh();
-    } catch (error) {
-      notify(terminal, safeInventoryMessage(error, "The redemption request could not be submitted."), "error");
-    } finally {
-      restoreButton();
-    }
+    await runAction(button, "Requesting", "inventoryUse", {
+      inventoryItemId,
+      quantity,
+      note,
+      idempotencyKey: `redemption-${inventoryItemId}-${Date.now()}`
+    }, "Redemption request submitted.", "The redemption request could not be submitted.");
   }
 
   function handleClick(event) {
@@ -102,6 +118,10 @@ export function installInventoryActionFlow({ mount, terminal, config }) {
   return {
     destroy() {
       mount.removeEventListener("click", handleClick, true);
+      if (freshness) {
+        destroyed = true;
+        for (const restore of controls) restore();
+      }
     }
   };
 }

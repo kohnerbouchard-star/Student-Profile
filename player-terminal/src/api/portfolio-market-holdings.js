@@ -13,6 +13,11 @@ export function normalizePortfolioHoldings(response) {
     .map((holding) => ({
       stockAssetId: boundedText(holding?.stockAssetId),
       ticker: boundedText(holding?.ticker).toUpperCase(),
+      companyName: boundedText(holding?.companyName),
+      currencyCode: boundedText(holding?.currencyCode).toUpperCase() || "UNKNOWN",
+      countryCode: boundedText(holding?.countryCode),
+      sector: boundedText(holding?.sector),
+      costBasis: finiteNumber(holding?.costBasis, finiteNumber(holding?.quantity) * finiteNumber(holding?.averageCost)),
       quantity: Math.max(0, finiteNumber(holding?.quantity)),
       averageCost: Math.max(0, finiteNumber(holding?.averageCost)),
       currentPrice: Math.max(0, finiteNumber(holding?.currentPrice)),

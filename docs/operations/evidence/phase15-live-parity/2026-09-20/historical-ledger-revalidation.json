@@ -1,0 +1,309 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-20",
+  "status": "BLOCKED",
+  "approval": "No effective equivalence approved.",
+  "priorReview": "docs/operations/evidence/live-migration-reconciliation-v1/live-renumbered-identity-review.json",
+  "environments": {
+    "staging": {
+      "ledgerEntryCount": 316,
+      "entriesWithoutStoredSql": 45,
+      "priorAliases": [
+        {
+          "name": "create_admin_audit_log_flags_v1",
+          "oldLiveVersion": "20260713144033",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260713193000",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "issue_contract_rewards_atomic_v1",
+          "oldLiveVersion": "20260713144209",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260713194500",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "harden_admin_data_api_tables_v1",
+          "oldLiveVersion": "20260713223157",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260714224000",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "complete_admin_control_surfaces_v1",
+          "oldLiveVersion": "20260713223526",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260713223000",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "harden_security_definer_rpc_privileges_v1",
+          "oldLiveVersion": "20260713224905",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260714233000",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "index_admin_control_surface_foreign_keys_v1",
+          "oldLiveVersion": "20260713225007",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260714234500",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "add_configurable_player_identity_v1",
+          "oldLiveVersion": "20260714072030",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260714235950",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "harden_configurable_player_identity_rpc_grants_v1",
+          "oldLiveVersion": "20260714072127",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260715001000",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "fix_player_identity_rpc_column_ambiguity_v1",
+          "oldLiveVersion": "20260714073723",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260715002000",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "add_story_notification_tables_v1",
+          "oldLiveVersion": "20260714113345",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260715003000",
+          "canonicalIdentityPresent": true
+        }
+      ],
+      "byteIdenticalRenumberedCandidates": [
+        {
+          "liveVersion": "20260818045533",
+          "liveName": "add_story_character_reply_engine_v1",
+          "repositoryVersion": "20260818135000",
+          "repositoryName": "add_story_character_reply_engine_v1",
+          "sha256": "e8205a44855ad5b89021f0d29fb8f0a8ef931dc1dac999310a250b08021c25cb",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        },
+        {
+          "liveVersion": "20260818045638",
+          "liveName": "refine_story_character_reply_intents_v1",
+          "repositoryVersion": "20260818140500",
+          "repositoryName": "refine_story_character_reply_intents_v1",
+          "sha256": "32753b0a3242faa5c4187534c7610d56fcffb3026c750385fd968bc80c6ce99b",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        },
+        {
+          "liveVersion": "20260818045851",
+          "liveName": "scale_story_character_reply_worker_v1",
+          "repositoryVersion": "20260818142000",
+          "repositoryName": "scale_story_character_reply_worker_v1",
+          "sha256": "3ebb70489ce3856f2e4050e27e09bb1ffb81cefb76c8327beb230860ed04b238",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        }
+      ],
+      "archivedLedgerMetadata": [
+        {
+          "archive_batch_id": "release007-final-v3-b8216e23877746bb2bc430262a3712ee0a4f59c6",
+          "environment": "staging",
+          "source_commit": "b8216e23877746bb2bc430262a3712ee0a4f59c6",
+          "workflow_run_id": "31437741072",
+          "migration_count": 200,
+          "first_version": "20260615161835",
+          "last_version": "20260810130000"
+        },
+        {
+          "archive_batch_id": "story_trigger_privileges_staging_20260812",
+          "environment": "staging",
+          "source_commit": "b6a830a09c373b9e79c7b824fabe93bff605f681",
+          "workflow_run_id": "chatgpt-story-trigger-privileges-staging",
+          "migration_count": 229,
+          "first_version": "20260615161835",
+          "last_version": "20260812092500"
+        }
+      ]
+    },
+    "production": {
+      "ledgerEntryCount": 294,
+      "entriesWithoutStoredSql": 13,
+      "priorAliases": [
+        {
+          "name": "create_admin_audit_log_flags_v1",
+          "oldLiveVersion": "20260713144033",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260713193000",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "issue_contract_rewards_atomic_v1",
+          "oldLiveVersion": "20260713144209",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260713194500",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "harden_admin_data_api_tables_v1",
+          "oldLiveVersion": "20260713223157",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260714224000",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "complete_admin_control_surfaces_v1",
+          "oldLiveVersion": "20260713223526",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260713223000",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "harden_security_definer_rpc_privileges_v1",
+          "oldLiveVersion": "20260713224905",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260714233000",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "index_admin_control_surface_foreign_keys_v1",
+          "oldLiveVersion": "20260713225007",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260714234500",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "add_configurable_player_identity_v1",
+          "oldLiveVersion": "20260714072030",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260714235950",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "harden_configurable_player_identity_rpc_grants_v1",
+          "oldLiveVersion": "20260714072127",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260715001000",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "fix_player_identity_rpc_column_ambiguity_v1",
+          "oldLiveVersion": "20260714073723",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260715002000",
+          "canonicalIdentityPresent": true
+        },
+        {
+          "name": "add_story_notification_tables_v1",
+          "oldLiveVersion": "20260714113345",
+          "oldLiveIdentityPresent": false,
+          "canonicalVersion": "20260715003000",
+          "canonicalIdentityPresent": true
+        }
+      ],
+      "byteIdenticalRenumberedCandidates": [
+        {
+          "liveVersion": "20260818063418",
+          "liveName": "fix_campaign_event_trigger_key_v2",
+          "repositoryVersion": "20260818121200",
+          "repositoryName": "fix_campaign_event_trigger_key_v2",
+          "sha256": "ea89d559d4d5c8b2a1dee1a02c6c18a47dd9330e506dfd1fd55af859a9e117aa",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        },
+        {
+          "liveVersion": "20260818063448",
+          "liveName": "fix_campaign_event_revision_ambiguity_v2",
+          "repositoryVersion": "20260818121300",
+          "repositoryName": "fix_campaign_event_revision_ambiguity_v2",
+          "sha256": "96f20d1a1e48446ce437cc1c0ed4617621d0f2c9fd4916afc1198a17afe247c3",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        },
+        {
+          "liveVersion": "20260818063521",
+          "liveName": "harden_campaign_program_digest_v1",
+          "repositoryVersion": "20260818121400",
+          "repositoryName": "harden_campaign_program_digest_v1",
+          "sha256": "dadd2f1808f38db3836208412d6ba636b9736f3b30b78af61f33591578fc707a",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        },
+        {
+          "liveVersion": "20260818063551",
+          "liveName": "add_campaign_runtime_scheduler_v1",
+          "repositoryVersion": "20260818121500",
+          "repositoryName": "add_campaign_runtime_scheduler_v1",
+          "sha256": "73559ea8111c4d26b4a727e1b8eb984f2a63f0f67fe58030cc224b3d26ec1dc9",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        },
+        {
+          "liveVersion": "20260818063616",
+          "liveName": "harden_campaign_trigger_permissions_v1",
+          "repositoryVersion": "20260818121600",
+          "repositoryName": "harden_campaign_trigger_permissions_v1",
+          "sha256": "af927b0fcf5fda56e3535305a87ab4acab97f70547e2c736797e57d335696bac",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        },
+        {
+          "liveVersion": "20260818063652",
+          "liveName": "fix_game_provisioning_preflight_source_selection_v2",
+          "repositoryVersion": "20260818121700",
+          "repositoryName": "fix_game_provisioning_preflight_source_selection_v2",
+          "sha256": "0fed5d4342c114efa5c1a9afa3a9f686e6a5a809c2b25ecef8ef008bfd0ae78c",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        },
+        {
+          "liveVersion": "20260818063719",
+          "liveName": "add_game_provisioning_failure_observability_v1",
+          "repositoryVersion": "20260818121800",
+          "repositoryName": "add_game_provisioning_failure_observability_v1",
+          "sha256": "a6d766e58c0c2a1ee814e0ba90b4561b4f3d2ebb0c45a07290d13c5601cec8f2",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        },
+        {
+          "liveVersion": "20260818063747",
+          "liveName": "add_private_game_provisioning_failure_log_v1",
+          "repositoryVersion": "20260818121900",
+          "repositoryName": "add_private_game_provisioning_failure_log_v1",
+          "sha256": "2586b4b05007c05dacf9138af55a125a3dbc70215ed16380ba0a7bc97e2cb805",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        },
+        {
+          "liveVersion": "20260818063816",
+          "liveName": "inherit_canonical_stock_market_window_v2",
+          "repositoryVersion": "20260818122000",
+          "repositoryName": "inherit_canonical_stock_market_window_v2",
+          "sha256": "a7892bbffc2f837247aeeb3c7442f22dc396ff1e0f8ec0354f5ebf51556b7fe4",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        },
+        {
+          "liveVersion": "20260818063851",
+          "liveName": "keep_pinned_retired_campaign_programs_valid_v1",
+          "repositoryVersion": "20260818122100",
+          "repositoryName": "keep_pinned_retired_campaign_programs_valid_v1",
+          "sha256": "6d2e2040432a8d0f9b8353ad17adb670ff133e07358e6eb4bcf5faf140e23fa7",
+          "classification": "STATEMENT_BYTES_EQUAL_EFFECT_REVIEW_PENDING"
+        }
+      ],
+      "archivedLedgerMetadata": [
+        {
+          "archive_batch_id": "pr567_story_prod_reconcile_20260812_0813kst",
+          "environment": "production",
+          "source_commit": "3a697a5420e72323e8d38facc9f15e285bd94b60",
+          "workflow_run_id": "chatgpt-pr-567-production-story-reconcile",
+          "migration_count": 222,
+          "first_version": "20260615161835",
+          "last_version": "20260811231144"
+        },
+        {
+          "archive_batch_id": "release007-final-v3-b8216e23877746bb2bc430262a3712ee0a4f59c6",
+          "environment": "production",
+          "source_commit": "b8216e23877746bb2bc430262a3712ee0a4f59c6",
+          "workflow_run_id": "31437741072",
+          "migration_count": 243,
+          "first_version": "20260615161835",
+          "last_version": "20260810130000"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref041-inventory-lifecycle-pr-803.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 803,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/backend-typecheck.yml",
+    "player-terminal/tests/inventory-read-model.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-041/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-041.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/operations/contracts/player-cross-cutting/pr-803.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    ".github/workflows/backend-typecheck.yml",
+    "player-terminal/tests/inventory-read-model.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-041/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-041.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/operations/contracts/player-cross-cutting/pr-803.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Repository Quality",
+    "verify-cutover-authority",
+    "verify-backend-store-runtime",
+    "verify-database-settlement",
+    "verify-database-replay",
+    "verify-player-terminal-and-chromium",
+    "verify-connected-player-store",
+    "backend-typecheck"
+  ],
+  "criticalJobChecks": [
+    "verify-cutover-authority",
+    "verify-backend-store-runtime",
+    "verify-database-settlement",
+    "verify-database-replay",
+    "verify-player-terminal-and-chromium",
+    "verify-connected-player-store",
+    "backend-typecheck"
+  ],
+  "affectedDomains": [
+    "player-inventory"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-041/preflight.md",
+  "authorizationNote": "Owner-authorized REF-041 verification-only qualification of the existing Inventory read lifecycle. No runtime, cache, normalization, capability, auth, UI, package, SQL, release or production change."
+}

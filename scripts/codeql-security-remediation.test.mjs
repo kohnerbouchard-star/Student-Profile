@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFileSync } from "node:fs";
+import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 
 function source(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -10,7 +10,12 @@ test("CodeQL remediation removes the flagged security patterns", () => {
   const qr = source("backend/supabase/functions/staff-mfa-api/mfaQrCode.ts");
   assert.doesNotMatch(qr, /SAFE_ROOT_TAG|stripComments\([^)]*\)\s*\{\s*return[^;]*\.replace/s);
 
-  const auth = source("backend/src/security/adminBffRequestAuth.ts");
+  const auth = [
+    "backend/src/security/adminBffRequestAuth.ts",
+    "backend/src/security/adminBffOidcVerification.ts",
+    "backend/src/security/adminBffTargetPolicy.ts",
+    "backend/src/security/adminBffCrypto.ts",
+  ].map(source).join("\n");
   assert.doesNotMatch(auth, /audience\.includes\(/);
 
   const player = source("backend/src/domains/players/api/playerLoginHttpHandler.ts");

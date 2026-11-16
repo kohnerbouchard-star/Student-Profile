@@ -3,6 +3,36 @@ name: Environment Neutral Browser
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-981.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-982.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-980.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-979.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-978.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-977.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-976.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-973.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-974.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-975.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-972.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-969.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-971.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-968.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-965.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-964.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-967.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-966.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-970.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-963.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-962.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-961.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-958.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-957.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-951.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-945.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-949.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-948.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-916.json"
       - "index.html"
       - "frontend/**"
       - "auth/**"
@@ -36,6 +66,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22.23.1

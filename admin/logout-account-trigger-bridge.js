@@ -1,6 +1,12 @@
 (function installEconovariaLogoutAccountTriggerBridge() {
   "use strict";
 
+  const owner = window.EconovariaAdminLogoutConfirmation;
+  if (typeof owner?.installAccountTriggerBridge === "function") {
+    owner.installAccountTriggerBridge();
+    return;
+  }
+
   const CONTROL_SELECTOR = "button, [role='button'], a, [data-admin-terminal-action]";
   const LOGOUT_PATTERN = /(?:^|[\s_-])(?:sign[\s_-]*out|log[\s_-]*out|logout)(?:$|[\s_-])/i;
 

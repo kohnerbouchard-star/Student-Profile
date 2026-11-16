@@ -1,0 +1,1052 @@
+{
+  "schemaVersion": "econovaria.release-integrity-v2.live-parity.v1",
+  "policyId": "econovaria-live-parity-2026-08-17",
+  "mode": "enforce",
+  "ledger": {
+    "cutoff": "20260816120013",
+    "historical": {
+      "status": "PASS",
+      "stagingCount": 295,
+      "productionCount": 273,
+      "stagingSha256": "133ec56ec85a1f5adc766ee7721f133079f320cf97ad5aa5fb62a32ed3562763",
+      "productionSha256": "3d3ef73cad648d4d9d89ec142aca5c823c0c469064e663cbf4dead8bb676c0e3",
+      "expectedStagingSha256": "133ec56ec85a1f5adc766ee7721f133079f320cf97ad5aa5fb62a32ed3562763",
+      "expectedProductionSha256": "3d3ef73cad648d4d9d89ec142aca5c823c0c469064e663cbf4dead8bb676c0e3"
+    },
+    "postCutoff": {
+      "status": "UNAPPROVED_DRIFT",
+      "staging": [
+        {
+          "version": "20260817122000",
+          "name": "require_teacher_approval_redemption_mode_v1"
+        },
+        {
+          "version": "20260817130000",
+          "name": "add_story_decision_microdetail_v1"
+        },
+        {
+          "version": "20260817130100",
+          "name": "harden_meridian_ending_decision_predicates_v1"
+        },
+        {
+          "version": "20260817130200",
+          "name": "add_story_decision_callbacks_v1"
+        },
+        {
+          "version": "20260818032252",
+          "name": "activate_campaign_runtime_provisioning_v3"
+        },
+        {
+          "version": "20260818032749",
+          "name": "add_campaign_runtime_scheduler_v1"
+        },
+        {
+          "version": "20260818033344",
+          "name": "fix_campaign_event_trigger_key_v2"
+        },
+        {
+          "version": "20260818033549",
+          "name": "fix_campaign_event_revision_ambiguity_v2"
+        },
+        {
+          "version": "20260818033613",
+          "name": "fix_campaign_event_revision_ambiguity_v2b"
+        },
+        {
+          "version": "20260818034021",
+          "name": "harden_campaign_program_digest_v1"
+        },
+        {
+          "version": "20260818034217",
+          "name": "harden_campaign_trigger_permissions_v1"
+        },
+        {
+          "version": "20260818034755",
+          "name": "fix_game_provisioning_preflight_source_selection_v2"
+        },
+        {
+          "version": "20260818034914",
+          "name": "add_game_provisioning_failure_observability_v1"
+        },
+        {
+          "version": "20260818035017",
+          "name": "add_private_game_provisioning_failure_log_v1"
+        },
+        {
+          "version": "20260818035134",
+          "name": "inherit_canonical_stock_market_window_v2"
+        },
+        {
+          "version": "20260818035437",
+          "name": "keep_pinned_retired_campaign_programs_valid_v1"
+        },
+        {
+          "version": "20260818045533",
+          "name": "add_story_character_reply_engine_v1"
+        },
+        {
+          "version": "20260818045638",
+          "name": "refine_story_character_reply_intents_v1"
+        },
+        {
+          "version": "20260818045851",
+          "name": "scale_story_character_reply_worker_v1"
+        },
+        {
+          "version": "20260818082728",
+          "name": "reconcile_campaign_terminal_program_definition_v1"
+        },
+        {
+          "version": "20260818084557",
+          "name": "backfill_ready_game_campaigns_v1"
+        }
+      ],
+      "production": [
+        {
+          "version": "20260817122000",
+          "name": "require_teacher_approval_redemption_mode_v1"
+        },
+        {
+          "version": "20260817130000",
+          "name": "add_story_decision_microdetail_v1"
+        },
+        {
+          "version": "20260817130100",
+          "name": "harden_meridian_ending_decision_predicates_v1"
+        },
+        {
+          "version": "20260817130200",
+          "name": "add_story_decision_callbacks_v1"
+        },
+        {
+          "version": "20260818055229",
+          "name": "add_story_character_reply_engine_v1"
+        },
+        {
+          "version": "20260818055247",
+          "name": "refine_story_character_reply_intents_v1"
+        },
+        {
+          "version": "20260818055255",
+          "name": "scale_story_character_reply_worker_v1"
+        },
+        {
+          "version": "20260818055351",
+          "name": "reconcile_story_character_reply_body_main_parity_v1"
+        },
+        {
+          "version": "20260818063320",
+          "name": "activate_campaign_runtime_provisioning_v3"
+        },
+        {
+          "version": "20260818063418",
+          "name": "fix_campaign_event_trigger_key_v2"
+        },
+        {
+          "version": "20260818063448",
+          "name": "fix_campaign_event_revision_ambiguity_v2"
+        },
+        {
+          "version": "20260818063521",
+          "name": "harden_campaign_program_digest_v1"
+        },
+        {
+          "version": "20260818063551",
+          "name": "add_campaign_runtime_scheduler_v1"
+        },
+        {
+          "version": "20260818063616",
+          "name": "harden_campaign_trigger_permissions_v1"
+        },
+        {
+          "version": "20260818063652",
+          "name": "fix_game_provisioning_preflight_source_selection_v2"
+        },
+        {
+          "version": "20260818063719",
+          "name": "add_game_provisioning_failure_observability_v1"
+        },
+        {
+          "version": "20260818063747",
+          "name": "add_private_game_provisioning_failure_log_v1"
+        },
+        {
+          "version": "20260818063816",
+          "name": "inherit_canonical_stock_market_window_v2"
+        },
+        {
+          "version": "20260818063851",
+          "name": "keep_pinned_retired_campaign_programs_valid_v1"
+        },
+        {
+          "version": "20260818083110",
+          "name": "reconcile_campaign_terminal_program_definition_v1"
+        },
+        {
+          "version": "20260818084712",
+          "name": "backfill_ready_game_campaigns_v1"
+        }
+      ]
+    }
+  },
+  "approvedStagingOnlyTables": [
+    "private.license_email_outbox",
+    "private.license_issuance_jobs",
+    "private.license_payment_events",
+    "private.license_products"
+  ],
+  "approvedStagingOnlyRoutines": [
+    {
+      "signature": "public.claim_license_email_jobs_v1(p_batch_size integer, p_lease_seconds integer)",
+      "sha256": "753088eb2d9b1676b7c9d15fe04abebe83e6c62bf6bdf92eba424cd20e5e9a5e"
+    },
+    {
+      "signature": "public.claim_license_issuance_jobs_v1(p_batch_size integer, p_lease_seconds integer)",
+      "sha256": "561abf54816432064114c09e6f9ae6e19f152f149f07e42ffa24c9a54b1b2aef"
+    },
+    {
+      "signature": "public.claim_license_materialization_jobs_v2(p_batch_size integer, p_lease_seconds integer)",
+      "sha256": "5eab2d8b8ddb708978a9286dedc48c4131aff9084ebe5cc6f2c0b332dc87379e"
+    },
+    {
+      "signature": "public.complete_license_email_delivery_v1(p_email_job_id uuid, p_lease_token uuid, p_email_provider_message_id text)",
+      "sha256": "55fce17012631f6c4eb84fd35b07e480690e46c4a5c18c2739efdd39cfac0025"
+    },
+    {
+      "signature": "public.complete_license_issuance_job_v1(p_job_id uuid, p_lease_token uuid, p_email_provider_message_id text)",
+      "sha256": "30f7c453aac583166fd760b55fac5a14b96da0a5cf9d57da99434523ac3a2b9e"
+    },
+    {
+      "signature": "public.configure_license_email_scheduler_v1(p_function_url text)",
+      "sha256": "5c850b2683d6cf7e0ac4322e8b3b362194b4d65c4189291e16cb39ca2f11b5ab"
+    },
+    {
+      "signature": "public.configure_license_issuance_scheduler_v1(p_function_url text)",
+      "sha256": "4ef83b47f8277b36ae73f21bcd370f05631b3a86c9cb1639694cdae64e336d6a"
+    },
+    {
+      "signature": "public.configure_license_product_v1(p_provider text, p_provider_price_ref text, p_product_sku text, p_currency text, p_amount_minor bigint, p_license_duration_days integer, p_purchase_code_expires_after_days integer, p_status text)",
+      "sha256": "7067d2bc37ede0f7518be2c323478f29f52e46a7627fa170c5da4d1ca7f8f58f"
+    },
+    {
+      "signature": "public.disable_license_email_scheduler_v1()",
+      "sha256": "3df320e1ce83f4d9d14ae580f6903039d9dc6cbfa8b132f0a893e2aa78542dff"
+    },
+    {
+      "signature": "public.disable_license_issuance_scheduler_v1()",
+      "sha256": "1d123c0e5aa0eebbb6e57243e76806598cc3874b614fd8c38758e1f2d5c85aef"
+    },
+    {
+      "signature": "public.enqueue_paid_license_v1(p_provider text, p_provider_event_id text, p_provider_payment_id text, p_provider_price_ref text, p_recipient_email text, p_amount_minor bigint, p_currency text, p_occurred_at timestamp with time zone, p_payload_sha256 text)",
+      "sha256": "db2fb5eb70df58332456377c09b7b3da29cda44acaa1ef4213c2645ddd009c3c"
+    },
+    {
+      "signature": "public.materialize_issued_purchase_code_v1(p_job_id uuid, p_lease_token uuid, p_code_hash text, p_code_hash_version text, p_code_generation_nonce integer)",
+      "sha256": "d89167f9c2e61b883d63b9f5c504d80aff22b0f2436e9a623873f46e58728245"
+    },
+    {
+      "signature": "public.materialize_license_and_enqueue_email_v2(p_job_id uuid, p_lease_token uuid, p_code_hash text, p_code_hash_version text, p_code_generation_nonce integer, p_template_version text)",
+      "sha256": "5ff865c9e03d3fcee80389d13b8985f3044352a04d4f7ba10ca7debcc54d1690"
+    },
+    {
+      "signature": "public.read_license_fulfillment_reconciliation_v1()",
+      "sha256": "0742fde29e895fbb596bb81278f632dfa19526a183c18ce925661def504113c4"
+    },
+    {
+      "signature": "public.read_license_issuance_queue_health_v1()",
+      "sha256": "a9824131f3097df8db674f7ebf99d5b2e3f3a04822d7613298a9ba13c88a77dc"
+    },
+    {
+      "signature": "public.read_license_issuance_secret_rotation_guard_v1()",
+      "sha256": "8855d6e5ed86997000b840af0917cf7e9d5801775da91a8fe759d693c3875cc7"
+    },
+    {
+      "signature": "public.retry_license_email_job_v1(p_email_job_id uuid, p_lease_token uuid, p_error_code text, p_error_detail text, p_retry_after_seconds integer, p_terminal boolean)",
+      "sha256": "271b87445f50aaf1368e5cb76f4218ab3b484c68bd0a525dfe9a4ad9e12246ca"
+    },
+    {
+      "signature": "public.retry_license_issuance_job_v1(p_job_id uuid, p_lease_token uuid, p_error_code text, p_error_detail text, p_retry_after_seconds integer, p_terminal boolean)",
+      "sha256": "176aa87e26f728c77ff7840fbfa9682cbeebb0d44cdf7023178d1b667f3f8284"
+    }
+  ],
+  "approvedProductionOnlyRoutines": [
+    {
+      "signature": "public.configure_stock_tick_archive_retention_v2(p_function_url text)",
+      "sha256": "1d3cf0c7d779acaabd80f7d94c0a5545d6fa631981a6e9afa8c9294d17b0cd7b"
+    }
+  ],
+  "approvedStagingOnlyRoutineGrants": [
+    {
+      "schema": "private",
+      "grantee": "PUBLIC",
+      "grantor": "postgres",
+      "routine": "apply_entitlement_license_expiration_v1",
+      "arguments": "",
+      "grantable": false,
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "private",
+      "grantee": "PUBLIC",
+      "grantor": "postgres",
+      "routine": "assert_game_purge_authority_v1",
+      "arguments": "p_staff_user_id uuid",
+      "grantable": false,
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "private",
+      "grantee": "PUBLIC",
+      "grantor": "postgres",
+      "routine": "build_game_data_purge_review_v2",
+      "arguments": "p_request_id uuid",
+      "grantable": false,
+      "privilege": "EXECUTE"
+    }
+  ],
+  "rawRoutineDifferences": {
+    "stagingOnly": [
+      {
+        "signature": "public.claim_license_email_jobs_v1(p_batch_size integer, p_lease_seconds integer)",
+        "definitionSha256": "753088eb2d9b1676b7c9d15fe04abebe83e6c62bf6bdf92eba424cd20e5e9a5e"
+      },
+      {
+        "signature": "public.claim_license_issuance_jobs_v1(p_batch_size integer, p_lease_seconds integer)",
+        "definitionSha256": "561abf54816432064114c09e6f9ae6e19f152f149f07e42ffa24c9a54b1b2aef"
+      },
+      {
+        "signature": "public.claim_license_materialization_jobs_v2(p_batch_size integer, p_lease_seconds integer)",
+        "definitionSha256": "5eab2d8b8ddb708978a9286dedc48c4131aff9084ebe5cc6f2c0b332dc87379e"
+      },
+      {
+        "signature": "public.complete_license_email_delivery_v1(p_email_job_id uuid, p_lease_token uuid, p_email_provider_message_id text)",
+        "definitionSha256": "55fce17012631f6c4eb84fd35b07e480690e46c4a5c18c2739efdd39cfac0025"
+      },
+      {
+        "signature": "public.complete_license_issuance_job_v1(p_job_id uuid, p_lease_token uuid, p_email_provider_message_id text)",
+        "definitionSha256": "30f7c453aac583166fd760b55fac5a14b96da0a5cf9d57da99434523ac3a2b9e"
+      },
+      {
+        "signature": "public.configure_license_email_scheduler_v1(p_function_url text)",
+        "definitionSha256": "5c850b2683d6cf7e0ac4322e8b3b362194b4d65c4189291e16cb39ca2f11b5ab"
+      },
+      {
+        "signature": "public.configure_license_issuance_scheduler_v1(p_function_url text)",
+        "definitionSha256": "4ef83b47f8277b36ae73f21bcd370f05631b3a86c9cb1639694cdae64e336d6a"
+      },
+      {
+        "signature": "public.configure_license_product_v1(p_provider text, p_provider_price_ref text, p_product_sku text, p_currency text, p_amount_minor bigint, p_license_duration_days integer, p_purchase_code_expires_after_days integer, p_status text)",
+        "definitionSha256": "7067d2bc37ede0f7518be2c323478f29f52e46a7627fa170c5da4d1ca7f8f58f"
+      },
+      {
+        "signature": "public.disable_license_email_scheduler_v1()",
+        "definitionSha256": "3df320e1ce83f4d9d14ae580f6903039d9dc6cbfa8b132f0a893e2aa78542dff"
+      },
+      {
+        "signature": "public.disable_license_issuance_scheduler_v1()",
+        "definitionSha256": "1d123c0e5aa0eebbb6e57243e76806598cc3874b614fd8c38758e1f2d5c85aef"
+      },
+      {
+        "signature": "public.enqueue_paid_license_v1(p_provider text, p_provider_event_id text, p_provider_payment_id text, p_provider_price_ref text, p_recipient_email text, p_amount_minor bigint, p_currency text, p_occurred_at timestamp with time zone, p_payload_sha256 text)",
+        "definitionSha256": "db2fb5eb70df58332456377c09b7b3da29cda44acaa1ef4213c2645ddd009c3c"
+      },
+      {
+        "signature": "public.materialize_issued_purchase_code_v1(p_job_id uuid, p_lease_token uuid, p_code_hash text, p_code_hash_version text, p_code_generation_nonce integer)",
+        "definitionSha256": "d89167f9c2e61b883d63b9f5c504d80aff22b0f2436e9a623873f46e58728245"
+      },
+      {
+        "signature": "public.materialize_license_and_enqueue_email_v2(p_job_id uuid, p_lease_token uuid, p_code_hash text, p_code_hash_version text, p_code_generation_nonce integer, p_template_version text)",
+        "definitionSha256": "5ff865c9e03d3fcee80389d13b8985f3044352a04d4f7ba10ca7debcc54d1690"
+      },
+      {
+        "signature": "public.read_license_fulfillment_reconciliation_v1()",
+        "definitionSha256": "0742fde29e895fbb596bb81278f632dfa19526a183c18ce925661def504113c4"
+      },
+      {
+        "signature": "public.read_license_issuance_queue_health_v1()",
+        "definitionSha256": "a9824131f3097df8db674f7ebf99d5b2e3f3a04822d7613298a9ba13c88a77dc"
+      },
+      {
+        "signature": "public.read_license_issuance_secret_rotation_guard_v1()",
+        "definitionSha256": "8855d6e5ed86997000b840af0917cf7e9d5801775da91a8fe759d693c3875cc7"
+      },
+      {
+        "signature": "public.retry_license_email_job_v1(p_email_job_id uuid, p_lease_token uuid, p_error_code text, p_error_detail text, p_retry_after_seconds integer, p_terminal boolean)",
+        "definitionSha256": "271b87445f50aaf1368e5cb76f4218ab3b484c68bd0a525dfe9a4ad9e12246ca"
+      },
+      {
+        "signature": "public.retry_license_issuance_job_v1(p_job_id uuid, p_lease_token uuid, p_error_code text, p_error_detail text, p_retry_after_seconds integer, p_terminal boolean)",
+        "definitionSha256": "176aa87e26f728c77ff7840fbfa9682cbeebb0d44cdf7023178d1b667f3f8284"
+      }
+    ],
+    "productionOnly": [
+      {
+        "signature": "public.configure_stock_tick_archive_retention_v2(p_function_url text)",
+        "definitionSha256": "1d3cf0c7d779acaabd80f7d94c0a5545d6fa631981a6e9afa8c9294d17b0cd7b"
+      }
+    ],
+    "definitionDrift": [
+      {
+        "signature": "private.assert_game_purge_authority_v1(p_staff_user_id uuid)",
+        "stagingSha256": "2f264ac2dec690c4ef4a8bade4686e16ec90646631edeaee849a729f2d66fd0c",
+        "productionSha256": "f5f50eb83c02c8f2aa9096da470a9bfe77986d169ad2b11d269da57c9ff333f7"
+      },
+      {
+        "signature": "private.build_game_data_purge_review_v2(p_request_id uuid)",
+        "stagingSha256": "d62ff79e9c8ed0b65cec0954c81674cd541e589e52b2a1e75782dc63703e3c26",
+        "productionSha256": "7669a2da7af283939b9c66a15be65c26bd2e6f32f1feb906273fedaa28e21f6a"
+      },
+      {
+        "signature": "private.purge_verified_stock_tick_archive(p_archive_id uuid)",
+        "stagingSha256": "50ddcc809a67abd0e71ec87c584e8dba23d02367e5a3a17f3d7db8e8dd6fcce5",
+        "productionSha256": "2c0a0d9f216a3a4c506da26f55b1c47dfcb2963e9158ffd038c546a925c4a4b6"
+      },
+      {
+        "signature": "private.upsert_stock_price_candles(p_game_session_id uuid, p_range_start timestamp with time zone, p_range_end timestamp with time zone)",
+        "stagingSha256": "f16d7afa4f1b947e7935923c19d8e4159d79e6c364e3d3d617a7dd633665ac45",
+        "productionSha256": "1efaa9ffc8bde4859cfe1af021ce78595a493905c76bfe02abfa2275c74e9831"
+      },
+      {
+        "signature": "private.upsert_stock_price_candles(p_game_session_id uuid, p_range_start timestamp with time zone, p_range_end timestamp with time zone, p_min_tick_index integer, p_max_tick_index integer)",
+        "stagingSha256": "22e9e9427e0e1153655aab2aa1991b089c0bae4ad206ea105e1f6aa2ec8796f7",
+        "productionSha256": "dd29cb983c165dee31cf9f7252732ef809ec546fff1a4581fbe5e9c387339c78"
+      },
+      {
+        "signature": "public.activate_meridian_competing_models_from_full_game_v1()",
+        "stagingSha256": "b94f762b1c10290e495f5685b3cd6fe079207b79b4654f4797f22014c16f87c2",
+        "productionSha256": "47373c3551acb0c4c3683159004f72c396eae71f9066610adff809e1203e1770"
+      },
+      {
+        "signature": "public.activate_meridian_fortune_during_war_from_full_game_v1()",
+        "stagingSha256": "7353ead84769bcafcc1839f8a0c79f9fb41126c0bada9e65aa3f654496630a32",
+        "productionSha256": "6955d1e7d1ca4712839a973dac06f41b767cfd2a2ce9ad9a8d2e836b70471e98"
+      },
+      {
+        "signature": "public.activate_meridian_outbreak_of_war_from_full_game_v1()",
+        "stagingSha256": "87e4a8599056ab241777e88e4916754b6b6182c3102886cc8537c700e8f030db",
+        "productionSha256": "7c1c7ead9c06eee4590a6e60ba7e0baf2a69c75678e3a2e38cbefc1198a50710"
+      },
+      {
+        "signature": "public.activate_meridian_question_of_belonging_from_full_game_v1()",
+        "stagingSha256": "5b44667fac5c761f152974a08373858cf601a194f1f7c1f915c0fde352009159",
+        "productionSha256": "ab382c0afe16684286a962431df52725a90493640710da523998df9a83493034"
+      },
+      {
+        "signature": "public.activate_meridian_reckoning_from_full_game_v1()",
+        "stagingSha256": "0baa86f02ffc12c3bc0e83aeb5464186c09ae11d33c42de3d867b9b89c992bff",
+        "productionSha256": "acaf46f2d762b129d959a0b0adcd08fe80b4791a7bc83bc03f1c3cb3e39bbc77"
+      },
+      {
+        "signature": "public.admin_mutate_store_item_v1(p_game_session_id uuid, p_staff_user_id uuid, p_operation text, p_item_id uuid, p_item_payload jsonb, p_request_payload jsonb, p_idempotency_key text, p_request_id text)",
+        "stagingSha256": "1f70d622d8e7ecdd1a0230f65f0cfd41ffd917afb1063b5e057bb2b65691ae34",
+        "productionSha256": "57f8c4d23aa56412f8def555264efc8e63bb725e660aa5f8fb839fa3594d8b1a"
+      },
+      {
+        "signature": "public.apply_campaign_store_scarcity_v1(p_game_session_id uuid, p_idempotency_key text, p_definition_id text, p_item_keys text[], p_scarcity_band text, p_event_multiplier numeric, p_expires_at timestamp with time zone, p_applied_at timestamp with time zone)",
+        "stagingSha256": "4f01f54bcb177cb59ce666e3668034bb5f0253d59d5bcb3270ba9ef0ea235f09",
+        "productionSha256": "9886dfd10efdde475cf3c1d68fb1a2c732c444ccd21d0172e9e905da271644ce"
+      },
+      {
+        "signature": "public.arm_game_data_purge_v1(p_actor_staff_user_id uuid, p_confirmation_phrase text)",
+        "stagingSha256": "e4f9ace85cf102b5a3a9832016b930b28c9d75b04e9b42648dc19f319d7f1cd5",
+        "productionSha256": "117ff06312d159281ebf01165c702cb00da0be26cfa4e95b066e644055988433"
+      },
+      {
+        "signature": "public.cancel_game_data_purge_v1(p_request_id uuid, p_actor_staff_user_id uuid)",
+        "stagingSha256": "90104965dcbf40b9bc396d4877c62c0ac977be12bdbe5101e6daba2bcab3fc7e",
+        "productionSha256": "c706248e0c5b7e808fbf9dc7923d90ddbdd4723d231f69a8274dcae8ae753582"
+      },
+      {
+        "signature": "public.capture_stock_market_checkpoint_v2(p_game_session_id uuid, p_checkpoint_kind text)",
+        "stagingSha256": "42f8ecbea59297cfdb11d31072e4695e29d43f35af9def058802b0519dc01b79",
+        "productionSha256": "62214fc6854686ce5a43731f11177761eab097b6ff68e24b9c0b349347eae239"
+      },
+      {
+        "signature": "public.claim_confirmed_game_data_purge_v1()",
+        "stagingSha256": "f79299d7c18c978dcc664f2d5912a032581e9299da0c61120af022c9a09e1db6",
+        "productionSha256": "042f40b4b2212f6fb23bacfd9daa0855775571a7ea8d7a5807e1a1eadf7e2f5f"
+      },
+      {
+        "signature": "public.configure_campaign_runtime_scheduler_v1(p_function_url text)",
+        "stagingSha256": "62e2378ae0c19bdbb4710bf9dac53eac84068279119fad46b5b85c27907bfcf8",
+        "productionSha256": "086c693e9a16a918d1eb39c0bfc01a7bc13bb5024c07a9d1b1eaef029f2a047d"
+      },
+      {
+        "signature": "public.configure_game_data_purge_scheduler_v1(p_function_url text)",
+        "stagingSha256": "8e1899886b43fc10a9bfef200c25f6b21c58b20a84508b68d6d7618e61957694",
+        "productionSha256": "0b5317a95661feebad4da28e6530a74098d95d9a1a38175fbcdf2d5dc1475c98"
+      },
+      {
+        "signature": "public.configure_game_license_expiration_scheduler_v1()",
+        "stagingSha256": "34bca2fb976ca429dd9bb0a9deeb86af9b7a2fa4c557e944476a7a44af094b18",
+        "productionSha256": "5eba13e78dd8f9a350a8793d3eaac7752b4fc47db38ef78580040bb5b6cfce45"
+      },
+      {
+        "signature": "public.configure_platform_storage_health_scheduler_v1(p_environment_name text)",
+        "stagingSha256": "8fcd1a9f3bab9fd6ec3c05b564e1405460fd963fe6eb94e0b507c31db0802769",
+        "productionSha256": "21ee859c81550a408704fd23ccc0f47d3db53406fef5fee436a0839dffe65b8e"
+      },
+      {
+        "signature": "public.configure_stock_candle_retention_scheduler_v1()",
+        "stagingSha256": "4d0685063961e4ed7a397949dc9ad93442923aab28dd0bba54ae654affb24ca3",
+        "productionSha256": "d25ec634dcc91be5670800a09c8b494e420c7314399657dda8dbf6251833300f"
+      },
+      {
+        "signature": "public.confirm_game_data_purge_v2(p_request_id uuid, p_actor_staff_user_id uuid, p_confirmation_phrase text)",
+        "stagingSha256": "c46685c46222d223e0ad24e52352e3b596eb29e34893418cc74ce06760b7440a",
+        "productionSha256": "014f98e3a0f1e153f7c67d786293b8f266ab86fe33a0f66c4f99f1f1093a5eae"
+      },
+      {
+        "signature": "public.disarm_game_data_purge_v1(p_actor_staff_user_id uuid)",
+        "stagingSha256": "f8c738205bf4970d26ff9b28f4f453c1e747fe76d247504e872af7841479c8e6",
+        "productionSha256": "b4988b78eff05366808071bd71b2f8fa0cca13d95a397e1f9756d79017b1de93"
+      },
+      {
+        "signature": "public.enable_meridian_campaign_continuation_after_arrival_v1()",
+        "stagingSha256": "87d5ac9f5a836f8a2816e41430fd30676f8e3d4beb457cf1f28f40247ba06f0a",
+        "productionSha256": "29f1b12ebae2cc39a159d1b30dbf5ae2432942ed56249306ca9da573bdfbb8b2"
+      },
+      {
+        "signature": "public.enable_relationship_followups_after_arrival_contact_v1()",
+        "stagingSha256": "b44d5ac87a12f295d6fad8f4d84f5b5245570951d52506d666bbbe796646e71a",
+        "productionSha256": "b101b123d4f05c437eb1282526e1726166d5aa499f13aa5d6cfb07aab278c559"
+      },
+      {
+        "signature": "public.ensure_ready_game_campaign_v1()",
+        "stagingSha256": "166a33f3a8fa87f75d5e5b947b16d3638ea98d672ebaed60fa27a2c8861aa5b8",
+        "productionSha256": "0adac4f2bd01fe701388bc5bb315ae5f8412f49abd259ab5fca01e800b1d9d24"
+      },
+      {
+        "signature": "public.execute_game_data_purge_db_batch_v2(p_request_id uuid, p_batch_size integer)",
+        "stagingSha256": "d37ae27bff5a545b29c82a0cdeccd585862ef23f671e55e5b4b24dfd4aa4ac2f",
+        "productionSha256": "f59de3e33b9e53f58c3e1924c7dd7778128b726880a8cb00c9a8aac1067a5eb8"
+      },
+      {
+        "signature": "public.finalize_game_data_purge_v1(p_request_id uuid)",
+        "stagingSha256": "c20946894bcd85fe656e9bd05680cea0113545b60e4860b0707bb179b08bf9bb",
+        "productionSha256": "b853d1926de46ca5a1933052609033a677179d2b9dd08d903124f2e79a907925"
+      },
+      {
+        "signature": "public.game_provisioning_preflight_v1(p_pack_id text)",
+        "stagingSha256": "038f2523bc635db01c89080d5c18baa1de050822fe8b5a2458f47b3270a94dbc",
+        "productionSha256": "148a2e06759de5cc83f9c8680e2334095b4954375e3b0a0232a7611e5fa3af64"
+      },
+      {
+        "signature": "public.get_current_stock_market_tick_index_v2(p_game_session_id uuid)",
+        "stagingSha256": "2614fb3c8871b8f4e22b37f86c863998e0ece54bb783838dc15fff22d5508d3d",
+        "productionSha256": "69bdc7daaefa7e71ea4da29863ef3762332126bb761f8718bb30a4e6d7cfd55e"
+      },
+      {
+        "signature": "public.get_game_data_purge_delete_order_digest_v1()",
+        "stagingSha256": "26e45121ae4432fe08de65964db7b381f7b721dde11a1f74025e8a9598e52c6f",
+        "productionSha256": "79bccbc3d24d4f275401691437f5796973f8e6696bd06347e3eaac333a10c0f7"
+      },
+      {
+        "signature": "public.get_game_data_purge_fk_graph_digest_v1()",
+        "stagingSha256": "4e3cbe985814f9f80aa82d4408691011d3910dd26a14ea21954de87dc69350c7",
+        "productionSha256": "f12b40bf50debabd553241c4751dd9b9f11627edb06f65ba3886b9ff7160e74c"
+      },
+      {
+        "signature": "public.get_game_data_purge_preflight_v1(p_request_id uuid)",
+        "stagingSha256": "18abfb0bb97f77096d3f33e514da78e2469e63c766887a95703f5498e28e3374",
+        "productionSha256": "a96eed2310120dd9f3ab7d9d4e6602fe688e595acc538f07efafbe505a32bcd8"
+      },
+      {
+        "signature": "public.get_game_data_purge_registry_digest_v1()",
+        "stagingSha256": "2e38618e1b7607566dc35f678d97e0af0cca9f16f89619c65e041384fe3e46e1",
+        "productionSha256": "6ad899f5e5e91427499e431474a39029aeaf28454090e433b0631ec3530990cb"
+      },
+      {
+        "signature": "public.get_game_data_purge_review_v2(p_request_id uuid)",
+        "stagingSha256": "d6d5a2f7efcfb0d6a5be30a2fd8304f02cb7a93ef76b3c83810b126623bee78a",
+        "productionSha256": "f035eb3b5e66215bb4ea7b95d84de823922864e0c10c7f033ede5832aef8f9c3"
+      },
+      {
+        "signature": "public.get_platform_storage_health_v1()",
+        "stagingSha256": "b0b8301bc907f423d2b05205d6533a74816d52eefe08123afdbbc10f998c9e14",
+        "productionSha256": "36ebaec342c8a04e2b3b8be8bb97f92d02927f5e9722592327b39c16650a0fbb"
+      },
+      {
+        "signature": "public.initialize_default_campaign_for_game_v1(p_game_session_id uuid, p_scheduled_at timestamp with time zone)",
+        "stagingSha256": "73fe3ab722e153755e1bc202e8f86a64c0dd20b4496e31b2366697fd511047ad",
+        "productionSha256": "cc4e1ef979be48d5a510c7c1720e381f88271071460688cbdda8002ee03ca320"
+      },
+      {
+        "signature": "public.initialize_meridian_competing_models_v1(p_game_session_id uuid)",
+        "stagingSha256": "f778c74dc9739ff8d2f041f0e6239bb0cac0fd98eae653a37172c6e4b69268e9",
+        "productionSha256": "6e2e2acd82fcc36cef8c781446426c3d13f38ffaafe63380b134d55d0d4c1028"
+      },
+      {
+        "signature": "public.initialize_meridian_fortune_during_war_v1(p_game_session_id uuid)",
+        "stagingSha256": "c412244512f1fda162370e95fbff8e9ed41d6649beb3708f543522c60a9f41e6",
+        "productionSha256": "c7ca039f3a4e074e7fc38553a9e5726609c34858b5607f8767573ea509a11400"
+      },
+      {
+        "signature": "public.initialize_meridian_local_friend_relationships_v1(p_game_session_id uuid)",
+        "stagingSha256": "2f07b589bf5a22b82a428ec486f11924178d82015300f71542050891da1fdad0",
+        "productionSha256": "58690dd366d05b7d3ea09fdaef929ff49fae20074eda9eb3857b4925345ec0d9"
+      },
+      {
+        "signature": "public.initialize_meridian_outbreak_of_war_v1(p_game_session_id uuid)",
+        "stagingSha256": "e7508b07044d8aa636ef970c2822695f17dd46bc76f0d3a773244acc286f1116",
+        "productionSha256": "9b66e3d9c35591cbc72f51e0f9ceda50dd3af0707a34c5fc4bfdea4200d409b9"
+      },
+      {
+        "signature": "public.initialize_meridian_question_of_belonging_v1(p_game_session_id uuid)",
+        "stagingSha256": "2edeef9983c4d0936e250d0e5b383c77557d71cecbc0efd1c0c60bcd3df08dba",
+        "productionSha256": "09ca41f03d9716e30984376f148e766f00a21bfb8e12a6b492c317af855353a8"
+      },
+      {
+        "signature": "public.initialize_meridian_reckoning_v1(p_game_session_id uuid)",
+        "stagingSha256": "84113e38cabead6d86f014cbb7418fbf5925d7351ec195ad21805f25dc618de1",
+        "productionSha256": "b8c202407af389b66b2841d23fdd9f4dcec825b56592fe19fe83e438c0e51a42"
+      },
+      {
+        "signature": "public.issue_game_data_purge_confirmation_v2(p_game_session_id uuid, p_actor_staff_user_id uuid)",
+        "stagingSha256": "752b8653d49e8b1e9e9883efd65b53b1ee0dab82337cadab9008dc0be23a17c6",
+        "productionSha256": "b8086d96ce9abd60d32e44011872c5ece89ebb98ca09c909e4fd300144bc53a0"
+      },
+      {
+        "signature": "public.list_stock_tick_archive_candidates_v2()",
+        "stagingSha256": "ecd02414ff695ca259ef77e8f3c9bcdaeb668adffb185d4476c187efae5b2b9d",
+        "productionSha256": "a7848e0e889435dd73a5c4e898759c0309bf1f49dac342d2911f012852c62465"
+      },
+      {
+        "signature": "public.maintain_stock_candle_retention_v1(p_now timestamp with time zone)",
+        "stagingSha256": "3c2450a2f7249109dae39da2c87710e3818b4a56cbcc51ac64a64e409f07cec0",
+        "productionSha256": "b2fb96cf3e0d2121a3c0bb29d73f497c93ac323958737378a0253e14d6b61e9e"
+      },
+      {
+        "signature": "public.prepare_next_stock_tick_archive(p_game_session_id uuid)",
+        "stagingSha256": "462d6328f8c5e5c6d757078f2408645f1d72178e16c6a002730d0754b8ca260d",
+        "productionSha256": "617e4cc3971f7704eba87df7d3e1253637bc9a232af4150638e585b72d6c89db"
+      },
+      {
+        "signature": "public.publish_campaign_market_event_v1(p_game_session_id uuid, p_idempotency_key text, p_headline text, p_explanation text, p_category text, p_scope text, p_target_key text, p_sentiment text, p_magnitude_basis_points integer, p_duration_ticks integer, p_published_at timestamp with time zone)",
+        "stagingSha256": "6a9e94f682fd023f4dff9baa3308017b27df11578dd900c1d337ba26c809ba07",
+        "productionSha256": "1445364e6275abbf0044b2923658941b6fa0215d9aa9656c4d3cb580bda52562"
+      },
+      {
+        "signature": "public.publish_campaign_notification_v1(p_game_session_id uuid, p_idempotency_key text, p_title text, p_summary text, p_priority text, p_display_mode text, p_notification_type text, p_published_at timestamp with time zone)",
+        "stagingSha256": "0945183e235dcd1f38dc8259efcb65e469dd1b0a4329e062a9b5e69c11114ebe",
+        "productionSha256": "3c860ca8d925a3a5ade70bfc0045c156cad6d1911ae376a0a6a8443cc522f81e"
+      },
+      {
+        "signature": "public.purge_verified_stock_tick_archive(p_archive_id uuid)",
+        "stagingSha256": "507a57c57d53c2c93f281f217a6f6830bd7f3f3281f38e9675dd400153315c63",
+        "productionSha256": "18cca215c799758497e5e0449e394277e26e694d00e9e36dd7d1cd7094362818"
+      },
+      {
+        "signature": "public.read_latest_stock_market_ticks_for_game(p_game_session_id uuid, p_ticker text)",
+        "stagingSha256": "e05869b381e49efe8c4b7dd49fafd9e1538f16f08d6567a24d35ec51bc35f8e1",
+        "productionSha256": "e66ed4518623a5d083b0c028bce6d0dd0f3bc8cc59ec2e94ee09e1a0373c1d15"
+      },
+      {
+        "signature": "public.read_stock_market_history_v2(p_game_session_id uuid, p_stock_asset_id uuid, p_ticker text, p_limit integer)",
+        "stagingSha256": "02a0f383b056d6adca063e78bf96ec82d30126890845f35df79d991dbeffb459",
+        "productionSha256": "18e8a3b0133eda1fe76d7ea75d19b6b812980bf5b0c0189d53acd60ebe25dcfd"
+      },
+      {
+        "signature": "public.record_campaign_outcome_evidence_v1(p_game_session_id uuid, p_recovery_readiness_basis_points integer, p_evidence_digest text, p_observed_at timestamp with time zone)",
+        "stagingSha256": "946abb640fa38547231c6e556091c462ed12fb245c08333e15b83b8dc7c44bdb",
+        "productionSha256": "0e15a19ceb50224512420941de293584a0c9b501ba7e69b0aabc0fc38a2c6e28"
+      },
+      {
+        "signature": "public.record_game_data_purge_failure_v1(p_request_id uuid, p_stage text, p_error text)",
+        "stagingSha256": "bd0d9ef87d5d93fa6c424576e31efc275142715c56688d554b4de2b9fb8bbf85",
+        "productionSha256": "891257bb3753c8eefadf60a8c818bc4556ac9a535357fbb86e5ec563ff2503bc"
+      },
+      {
+        "signature": "public.record_game_data_purge_r2_progress_v1(p_request_id uuid, p_r2_prefix text, p_deleted_objects bigint, p_deleted_bytes bigint, p_complete boolean)",
+        "stagingSha256": "5f1e4c134bdcdea52bd14b0b871446da154a3cbee42f6ebd25eb64f12d64eb49",
+        "productionSha256": "9be118abfeabc7352388aba2d766c00bb752a7af03fb9db0261931293890d18b"
+      },
+      {
+        "signature": "public.register_verified_stock_tick_archive(p_game_session_id uuid, p_range_start timestamp with time zone, p_range_end timestamp with time zone, p_min_tick_index integer, p_max_tick_index integer, p_row_count bigint, p_object_key text, p_object_etag text, p_sha256 text, p_compressed_bytes bigint)",
+        "stagingSha256": "be2ec15447ef8619c83b951c2642a71bbd3a2b91ff73eaf4d29b9e7bf65926e6",
+        "productionSha256": "aa54aa2a9e2e4ad4198cbbffed6aab73b7b6e4770ad7b89893cc5ae196a7088c"
+      },
+      {
+        "signature": "public.run_due_game_license_expirations_v1(p_now timestamp with time zone)",
+        "stagingSha256": "1c79ff0e405064b84bffe5bd03cbfdf0f02e2ae826c38686b81d245a006922d9",
+        "productionSha256": "f2e6cd64f24c3296d81e1f9528969a8bc554c885d7e417c0c1ae481e5697e5e5"
+      },
+      {
+        "signature": "public.run_platform_storage_health_check_v1(p_environment_name text)",
+        "stagingSha256": "6069083baf57ec33be6340a95e09df8b369da62b38fa49319c62735607cdc44b",
+        "productionSha256": "fe6971b6c12384cda2f8be5f2033810e20b6cf17518df457e811568877b74ec8"
+      },
+      {
+        "signature": "public.set_game_license_expiration_v1(p_game_session_id uuid, p_actor_staff_user_id uuid, p_license_expires_at timestamp with time zone)",
+        "stagingSha256": "0efaf6d1f37e19866dd2cfd5b32d515af8fba401ed85e820aef7df1ccb82af98",
+        "productionSha256": "b299e6806b7c9e628b4e5777f0c90850222779a69c147c6e3438994b4d63f618"
+      },
+      {
+        "signature": "public.verify_provisioned_game_v1(p_game_session_id uuid, p_staff_user_id uuid)",
+        "stagingSha256": "ee2cf89279709353b190881d3d15be60cd2c162d18b29ebdaa508392f46278a5",
+        "productionSha256": "fed9379f5d0943d54ef05ac760a5e3b437f789ee6556912cc53b115370321565"
+      },
+      {
+        "signature": "public.verify_runtime_scheduler_token_v1(p_scheduler_name text, p_token_sha256 text)",
+        "stagingSha256": "c292581f8fd51da28f3e6e40cfc36fd3c944b21f4e29cf9f54bd4c9eb538ff77",
+        "productionSha256": "2db1ecf0e2c6956f3bb954c8df37de374bc651b4a5207de7f0f967f626fb53a9"
+      }
+    ]
+  },
+  "unapprovedDifferenceCount": 11,
+  "differences": [
+    {
+      "scope": "structural",
+      "category": "routines",
+      "key": "public.apply_campaign_store_scarcity_v1(p_game_session_id uuid, p_idempotency_key text, p_definition_id text, p_item_keys text[], p_scarcity_band text, p_event_multiplier numeric, p_expires_at timestamp with time zone, p_applied_at timestamp with time zone)",
+      "kind": "different",
+      "staging": {
+        "kind": "f",
+        "name": "apply_campaign_store_scarcity_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_idempotency_key text, p_definition_id text, p_item_keys text[], p_scarcity_band text, p_event_multiplier numeric, p_expires_at timestamp with time zone, p_applied_at timestamp with time zone",
+        "configuration": [
+          "search_path=pg_catalog, public, extensions, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "4f01f54bcb177cb59ce666e3668034bb5f0253d59d5bcb3270ba9ef0ea235f09"
+      },
+      "production": {
+        "kind": "f",
+        "name": "apply_campaign_store_scarcity_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_idempotency_key text, p_definition_id text, p_item_keys text[], p_scarcity_band text, p_event_multiplier numeric, p_expires_at timestamp with time zone, p_applied_at timestamp with time zone",
+        "configuration": [
+          "search_path=pg_catalog, public, extensions, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "9886dfd10efdde475cf3c1d68fb1a2c732c444ccd21d0172e9e905da271644ce"
+      }
+    },
+    {
+      "scope": "structural",
+      "category": "routines",
+      "key": "public.configure_campaign_runtime_scheduler_v1(p_function_url text)",
+      "kind": "different",
+      "staging": {
+        "kind": "f",
+        "name": "configure_campaign_runtime_scheduler_v1",
+        "result": "bigint",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_function_url text",
+        "configuration": [
+          "search_path=pg_catalog, public, private, vault, cron, net, extensions"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "62e2378ae0c19bdbb4710bf9dac53eac84068279119fad46b5b85c27907bfcf8"
+      },
+      "production": {
+        "kind": "f",
+        "name": "configure_campaign_runtime_scheduler_v1",
+        "result": "bigint",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_function_url text",
+        "configuration": [
+          "search_path=pg_catalog, public, private, vault, cron, net, extensions"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "086c693e9a16a918d1eb39c0bfc01a7bc13bb5024c07a9d1b1eaef029f2a047d"
+      }
+    },
+    {
+      "scope": "structural",
+      "category": "routines",
+      "key": "public.ensure_ready_game_campaign_v1()",
+      "kind": "different",
+      "staging": {
+        "kind": "f",
+        "name": "ensure_ready_game_campaign_v1",
+        "result": "trigger",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "166a33f3a8fa87f75d5e5b947b16d3638ea98d672ebaed60fa27a2c8861aa5b8"
+      },
+      "production": {
+        "kind": "f",
+        "name": "ensure_ready_game_campaign_v1",
+        "result": "trigger",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "",
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "0adac4f2bd01fe701388bc5bb315ae5f8412f49abd259ab5fca01e800b1d9d24"
+      }
+    },
+    {
+      "scope": "structural",
+      "category": "routines",
+      "key": "public.execute_game_data_purge_db_batch_v2(p_request_id uuid, p_batch_size integer)",
+      "kind": "different",
+      "staging": {
+        "kind": "f",
+        "name": "execute_game_data_purge_db_batch_v2",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_request_id uuid, p_batch_size integer",
+        "configuration": [
+          "search_path=pg_catalog, public, private, extensions"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "d37ae27bff5a545b29c82a0cdeccd585862ef23f671e55e5b4b24dfd4aa4ac2f"
+      },
+      "production": {
+        "kind": "f",
+        "name": "execute_game_data_purge_db_batch_v2",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_request_id uuid, p_batch_size integer",
+        "configuration": [
+          "search_path=pg_catalog, public, private, extensions"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "approved-drift:public.execute_game_data_purge_db_batch_v2(p_request_id uuid, p_batch_size integer)"
+      }
+    },
+    {
+      "scope": "structural",
+      "category": "routines",
+      "key": "public.finalize_game_data_purge_v1(p_request_id uuid)",
+      "kind": "different",
+      "staging": {
+        "kind": "f",
+        "name": "finalize_game_data_purge_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_request_id uuid",
+        "configuration": [
+          "search_path=pg_catalog, public, private, extensions"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "c20946894bcd85fe656e9bd05680cea0113545b60e4860b0707bb179b08bf9bb"
+      },
+      "production": {
+        "kind": "f",
+        "name": "finalize_game_data_purge_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_request_id uuid",
+        "configuration": [
+          "search_path=pg_catalog, public, private, extensions"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "approved-drift:public.finalize_game_data_purge_v1(p_request_id uuid)"
+      }
+    },
+    {
+      "scope": "structural",
+      "category": "routines",
+      "key": "public.game_provisioning_preflight_v1(p_pack_id text)",
+      "kind": "different",
+      "staging": {
+        "kind": "f",
+        "name": "game_provisioning_preflight_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_pack_id text",
+        "configuration": [
+          "search_path=public, extensions, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "038f2523bc635db01c89080d5c18baa1de050822fe8b5a2458f47b3270a94dbc"
+      },
+      "production": {
+        "kind": "f",
+        "name": "game_provisioning_preflight_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_pack_id text",
+        "configuration": [
+          "search_path=public, extensions, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "148a2e06759de5cc83f9c8680e2334095b4954375e3b0a0232a7611e5fa3af64"
+      }
+    },
+    {
+      "scope": "structural",
+      "category": "routines",
+      "key": "public.initialize_default_campaign_for_game_v1(p_game_session_id uuid, p_scheduled_at timestamp with time zone)",
+      "kind": "different",
+      "staging": {
+        "kind": "f",
+        "name": "initialize_default_campaign_for_game_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_scheduled_at timestamp with time zone",
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "73fe3ab722e153755e1bc202e8f86a64c0dd20b4496e31b2366697fd511047ad"
+      },
+      "production": {
+        "kind": "f",
+        "name": "initialize_default_campaign_for_game_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_scheduled_at timestamp with time zone",
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "cc4e1ef979be48d5a510c7c1720e381f88271071460688cbdda8002ee03ca320"
+      }
+    },
+    {
+      "scope": "structural",
+      "category": "routines",
+      "key": "public.publish_campaign_market_event_v1(p_game_session_id uuid, p_idempotency_key text, p_headline text, p_explanation text, p_category text, p_scope text, p_target_key text, p_sentiment text, p_magnitude_basis_points integer, p_duration_ticks integer, p_published_at timestamp with time zone)",
+      "kind": "different",
+      "staging": {
+        "kind": "f",
+        "name": "publish_campaign_market_event_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_idempotency_key text, p_headline text, p_explanation text, p_category text, p_scope text, p_target_key text, p_sentiment text, p_magnitude_basis_points integer, p_duration_ticks integer, p_published_at timestamp with time zone",
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "6a9e94f682fd023f4dff9baa3308017b27df11578dd900c1d337ba26c809ba07"
+      },
+      "production": {
+        "kind": "f",
+        "name": "publish_campaign_market_event_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_idempotency_key text, p_headline text, p_explanation text, p_category text, p_scope text, p_target_key text, p_sentiment text, p_magnitude_basis_points integer, p_duration_ticks integer, p_published_at timestamp with time zone",
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "1445364e6275abbf0044b2923658941b6fa0215d9aa9656c4d3cb580bda52562"
+      }
+    },
+    {
+      "scope": "structural",
+      "category": "routines",
+      "key": "public.publish_campaign_notification_v1(p_game_session_id uuid, p_idempotency_key text, p_title text, p_summary text, p_priority text, p_display_mode text, p_notification_type text, p_published_at timestamp with time zone)",
+      "kind": "different",
+      "staging": {
+        "kind": "f",
+        "name": "publish_campaign_notification_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_idempotency_key text, p_title text, p_summary text, p_priority text, p_display_mode text, p_notification_type text, p_published_at timestamp with time zone",
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "0945183e235dcd1f38dc8259efcb65e469dd1b0a4329e062a9b5e69c11114ebe"
+      },
+      "production": {
+        "kind": "f",
+        "name": "publish_campaign_notification_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_idempotency_key text, p_title text, p_summary text, p_priority text, p_display_mode text, p_notification_type text, p_published_at timestamp with time zone",
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "3c860ca8d925a3a5ade70bfc0045c156cad6d1911ae376a0a6a8443cc522f81e"
+      }
+    },
+    {
+      "scope": "structural",
+      "category": "routines",
+      "key": "public.record_campaign_outcome_evidence_v1(p_game_session_id uuid, p_recovery_readiness_basis_points integer, p_evidence_digest text, p_observed_at timestamp with time zone)",
+      "kind": "different",
+      "staging": {
+        "kind": "f",
+        "name": "record_campaign_outcome_evidence_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_recovery_readiness_basis_points integer, p_evidence_digest text, p_observed_at timestamp with time zone",
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "946abb640fa38547231c6e556091c462ed12fb245c08333e15b83b8dc7c44bdb"
+      },
+      "production": {
+        "kind": "f",
+        "name": "record_campaign_outcome_evidence_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_recovery_readiness_basis_points integer, p_evidence_digest text, p_observed_at timestamp with time zone",
+        "configuration": [
+          "search_path=pg_catalog, public, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "0e15a19ceb50224512420941de293584a0c9b501ba7e69b0aabc0fc38a2c6e28"
+      }
+    },
+    {
+      "scope": "structural",
+      "category": "routines",
+      "key": "public.verify_provisioned_game_v1(p_game_session_id uuid, p_staff_user_id uuid)",
+      "kind": "different",
+      "staging": {
+        "kind": "f",
+        "name": "verify_provisioned_game_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_staff_user_id uuid",
+        "configuration": [
+          "search_path=public, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "ee2cf89279709353b190881d3d15be60cd2c162d18b29ebdaa508392f46278a5"
+      },
+      "production": {
+        "kind": "f",
+        "name": "verify_provisioned_game_v1",
+        "result": "jsonb",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_game_session_id uuid, p_staff_user_id uuid",
+        "configuration": [
+          "search_path=public, pg_temp"
+        ],
+        "securityDefiner": true,
+        "definitionSha256": "fed9379f5d0943d54ef05ac760a5e3b437f789ee6556912cc53b115370321565"
+      }
+    }
+  ],
+  "status": "BLOCKED"
+}

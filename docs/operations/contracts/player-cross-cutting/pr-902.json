@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.route-world-campaign-boundaries-pr-902.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 902,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/campaign/index.ts",
+    "backend/src/domains/campaign/playerContextReadModel.ts",
+    "backend/src/domains/campaign/services/campaignCoordinator.test.ts",
+    "backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts",
+    "backend/src/domains/notifications/api/playerNotificationRoutePaths.ts",
+    "backend/src/domains/notifications/api/playerStoryDeliveryRoutePaths.ts",
+    "backend/src/domains/progression/api/playerProgressionRoutePaths.ts",
+    "backend/src/domains/stocks/api/playerStockAssetListRoutePaths.ts",
+    "backend/src/domains/stocks/api/playerStockWatchlistRoutePaths.ts",
+    "backend/src/domains/store/api/playerStorePublicRoutePaths.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeRoutePaths.ts",
+    "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-902.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/campaign/index.ts",
+    "backend/src/domains/campaign/playerContextReadModel.ts",
+    "backend/src/domains/campaign/services/campaignCoordinator.test.ts",
+    "backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts",
+    "backend/src/domains/notifications/api/playerNotificationRoutePaths.ts",
+    "backend/src/domains/notifications/api/playerStoryDeliveryRoutePaths.ts",
+    "backend/src/domains/progression/api/playerProgressionRoutePaths.ts",
+    "backend/src/domains/stocks/api/playerStockAssetListRoutePaths.ts",
+    "backend/src/domains/stocks/api/playerStockWatchlistRoutePaths.ts",
+    "backend/src/domains/store/api/playerStorePublicRoutePaths.ts",
+    "backend/src/domains/world/api/playerWorldRuntimeRoutePaths.ts",
+    "backend/src/domains/world/infrastructure/supabasePlayerWorldRuntimeRepository.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.test.ts",
+    "backend/src/domains/world/services/playerWorldRuntimeService.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-902.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "World Runtime",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Player Multiplayer and Load E2E",
+    "REF-018 and REF-022 Staff Mutation Qualification"
+  ],
+  "criticalJobChecks": [
+    "World Runtime",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Player Multiplayer and Load E2E"
+  ],
+  "readOnlyPaths": [
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "authorizationNote": "This manifest binds the reviewed route-parser and World\u2013Campaign read-contract changes, tests and architecture inventory to PR 902 verification. It permits no production deployment, hosted mutation, secret handling, or release-hold change."
+}

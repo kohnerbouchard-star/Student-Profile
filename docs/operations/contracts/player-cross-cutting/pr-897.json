@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.crafting-inventory-bridge-pr-897.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 897,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/backend-typecheck.yml",
+    "backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts",
+    "backend/src/domains/crafting/api/playerCraftingInventoryBridge.ts",
+    "backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.ts",
+    "backend/src/domains/crafting/index.ts",
+    "backend/src/domains/crafting/server.ts",
+    "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
+    "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts",
+    "backend/src/domains/inventory/contracts/playerInventoryReadContracts.ts",
+    "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts",
+    "backend/src/domains/players/index.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-897.json",
+    "docs/operations/evidence/crafting-inventory-bridge-main-v1/scope.md",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    ".github/workflows/backend-typecheck.yml",
+    "backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts",
+    "backend/src/domains/crafting/api/playerCraftingInventoryBridge.ts",
+    "backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.ts",
+    "backend/src/domains/crafting/index.ts",
+    "backend/src/domains/crafting/server.ts",
+    "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
+    "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts",
+    "backend/src/domains/inventory/contracts/playerInventoryReadContracts.ts",
+    "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts",
+    "backend/src/domains/players/index.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-897.json",
+    "docs/operations/evidence/crafting-inventory-bridge-main-v1/scope.md",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Player Terminal Verify",
+    "Player Multiplayer and Load E2E",
+    "Crafting Item Runtime",
+    "REF-018 and REF-022 Staff Mutation Qualification"
+  ],
+  "criticalJobChecks": [
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "readOnlyPaths": [
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "authorizationNote": "This draft binds the Crafting-owned Inventory dispatch bridge, its callers and tests, the existing backend verification step, generated inventory and scope record. The existing verifier requires its own script and test in the allowlist; readOnlyPaths records intent but is not enforced by that verifier, so their unchanged state must be checked against main at the final PR head. Exact-head CI and Preview are required. This manifest does not authorize production deployment, production mutation, or secret-value handling."
+}

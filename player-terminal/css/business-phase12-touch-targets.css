@@ -1,0 +1,8 @@
+/* Phase 12 retained-browser compatibility: preserve the >=40px mobile touch target
+   contract after Chromium device-scale rounding. */
+@media (max-width: 760px) {
+  .player-terminal-page .player-terminal-filter-row button,
+  .player-terminal-page .player-terminal-chart-toolbar button {
+    min-height: 41px !important;
+  }
+}

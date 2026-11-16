@@ -4,14 +4,32 @@ export const PLAYER_ACTION_CAPABILITIES = Object.freeze([
   "arrivalClassSubmit",
   "bankingExport",
   "bankTransfer",
+  "bankingFxCancel",
+  "bankingFxInstant",
+  "bankingFxQuote",
+  "bankingFxStandard",
   "businessCreate",
+  "businessEquipmentInstall",
+  "businessStoreOfferCreate",
+  "businessStoreOfferStock",
+  "businessStoreOfferPublish",
   "businessEmployeeTerminate",
-  "businessHire",
-  "businessInputPurchase",
+  "businessIpoPropose",
+  "businessIpoVote",
+  "businessIpoSubscribe",
+  "businessFormationActivate",
+  "businessFormationPropose",
+  "businessFormationRespond",
+  "businessCandidateHire",
   "businessPrice",
   "businessProductCreate",
   "businessProduction",
   "businessStatus",
+  "businessTreasuryAccountOpen",
+  "businessTreasuryFxCancel",
+  "businessTreasuryFxInstant",
+  "businessTreasuryFxQuote",
+  "businessTreasuryFxStandard",
   "chartRange",
   "contractAccept",
   "contractSubmit",
@@ -62,10 +80,32 @@ const ENDPOINT_ACTIONS = Object.freeze({
   ),
   arrivalClass: "arrivalClassSubmit",
   businessTerminate: "businessEmployeeTerminate",
+  businessManufacturingStart: "businessProduction",
+  businessManufacturingCancel: "businessProduction",
+  businessStoreQuote: "storePurchase",
+  businessStorePurchase: "storePurchase",
+  businessStoreWithdrawal: "storePurchase",
+  marketplaceSettlement: "marketplacePurchase",
   messageThreadCreate: "messageSend",
   messageRead: "messageSend",
   storeQuote: "storePurchase",
+  storeOfferQuote: "storePurchase",
+  storeOfferPurchase: "storePurchase",
+  storeOfferReceipt: "storePurchase",
   storyDeliveries: "storyDeliveryState"
+});
+
+// Some public workflows expose more than one client operation beneath a
+// single server-advertised capability descriptor. Keep the manifest check
+// bound to that authoritative descriptor instead of requiring a synthetic
+// client operation key that the server never advertises.
+const ENDPOINT_MANIFEST_KEYS = Object.freeze({
+  businessStoreWithdrawal: "businessStorePurchase",
+  craftItem: "crafting",
+  craftCancel: "craftingJobCancel",
+  craftClaim: "craftingJobClaim",
+  itemSalvage: "equipmentSalvage",
+  marketplaceSettlement: "marketplacePurchase"
 });
 
 function capabilitySource(value) {
@@ -106,8 +146,18 @@ export function resolveCapabilities({ config, session, dashboard }) {
     action,
     LOCAL_ACTION_CAPABILITIES.has(action) || preview || mergedCapability(sources, action, "actions")
   ]));
+  const manifestBound = Array.isArray(session?.capabilityEndpointKeys);
+  const endpointKeys = manifestBound
+    ? Object.freeze(Object.fromEntries(session.capabilityEndpointKeys
+      .filter((key) => typeof key === "string" && key.trim())
+      .map((key) => [key.trim(), true])))
+    : null;
 
-  return Object.freeze({ routes: Object.freeze(routes), actions: Object.freeze(actions) });
+  return Object.freeze({
+    routes: Object.freeze(routes),
+    actions: Object.freeze(actions),
+    endpointKeys,
+  });
 }
 
 export function isRouteEnabled(capabilities, route) {
@@ -120,5 +170,8 @@ export function isActionEnabled(capabilities, action) {
 
 export function isEndpointEnabled(capabilities, endpointKey) {
   const action = ENDPOINT_ACTIONS[endpointKey];
-  return action ? isActionEnabled(capabilities, action) : false;
+  if (!action || !isActionEnabled(capabilities, action)) return false;
+  const manifestKey = ENDPOINT_MANIFEST_KEYS[endpointKey] || endpointKey;
+  return capabilities?.endpointKeys === null || capabilities?.endpointKeys === undefined ||
+    capabilities.endpointKeys?.[manifestKey] === true;
 }

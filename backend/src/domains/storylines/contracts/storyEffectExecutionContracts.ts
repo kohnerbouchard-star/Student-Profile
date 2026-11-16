@@ -1,4 +1,4 @@
-import type { CreateGameSessionContractInput } from "../../contracts/contracts/contractRepositoryContracts.ts";
+import type { CreateGameSessionContractInput } from "../../contracts/index.ts";
 import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import type { PlayerStoryContext } from "./playerStoryContext.ts";
 import type {

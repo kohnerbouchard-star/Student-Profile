@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref025-game-pause-race-pr-877.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 877,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "scripts/ref025-business-loan-concurrency.mjs",
+    "scripts/ref025-business-loan-concurrency.sql",
+    "scripts/ref025-business-loan-concurrency.test.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md",
+    "docs/operations/contracts/player-cross-cutting/pr-877.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": ["scripts/player-cross-cutting-authority.test.mjs"],
+  "requiredChecks": ["player-terminal-verify", "player-edge-trusted-ip-entrypoint-contract", "player-production-secret-provision-contract", "player-api-read-resilience", "Backend Typecheck", "Repository Quality", "Verify Banking FX database acceptance"],
+  "criticalJobChecks": ["Verify Banking FX database acceptance"],
+  "readOnlyPaths": ["scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "nonblankChangedLineLimit": 380,
+  "editablePathLineLimits": {
+    "scripts/ref025-business-loan-concurrency.mjs": 180,
+    "scripts/ref025-business-loan-concurrency.sql": 55,
+    "scripts/ref025-business-loan-concurrency.test.mjs": 70,
+    "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md": 35,
+    "docs/operations/contracts/player-cross-cutting/pr-877.json": 40
+  }
+}

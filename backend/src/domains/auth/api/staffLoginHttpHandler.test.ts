@@ -72,9 +72,20 @@ Deno.test("rejects a valid password when controlled Auth claims are stale", asyn
   assertEquals(dependencies.calls.successes, 0);
 });
 
+Deno.test("direct bootstrap login never returns a session for a restricted recovery account", async () => {
+  const dependencies = createDependencies({ aal: "aal2", stagingRestricted: true });
+  const response = await handleStaffLoginRequest(loginRequest(), dependencies);
+  const body = await response.json();
+  assertEquals(response.status, 403);
+  assertEquals(body.error.code, "staff_recovery_restricted");
+  assertEquals(body.session, undefined);
+  assertEquals(dependencies.calls.successes, 0);
+});
+
 function createDependencies(options: {
   readonly aal: "aal1" | "aal2";
   readonly authFailure?: boolean;
+  readonly stagingRestricted?: boolean;
   readonly failureRetryAfterSeconds?: number;
   readonly metadataSecurityVersion?: number;
 }) {
@@ -141,7 +152,7 @@ function createDependencies(options: {
       };
       return query;
     },
-    rpc: async () => ({ data: null, error: null }),
+    rpc: async () => ({ data: options.stagingRestricted ? false : null, error: null }),
   } as unknown as EdgeSupabaseClient;
 
   return {
@@ -151,7 +162,7 @@ function createDependencies(options: {
     readEnvironment: () => ({
       ok: true as const,
       value: {
-        supabaseUrl: "https://example.supabase.co",
+        supabaseUrl: options.stagingRestricted ? "https://eecvbssdvarfcykcfrny.supabase.co" : "https://example.supabase.co",
         supabaseAnonKey: "sb_publishable_test",
         supabaseServiceRoleKey: "sb_secret_test",
       },
@@ -205,7 +216,7 @@ function loginRequest(overrides: Record<string, unknown> = {}): Request {
 function jwt(aal: "aal1" | "aal2"): string {
   return [
     base64Url({ alg: "none", typ: "JWT" }),
-    base64Url({ aal }),
+    base64Url({ aal, sub: "auth-user", session_id: "00000000-0000-4000-8000-000000000002" }),
     "signature",
   ].join(".");
 }

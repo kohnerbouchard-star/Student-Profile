@@ -192,8 +192,8 @@ function readStaffProfile(value: unknown): StaffBootstrapProfile {
   return {
     id: requireText(row.id),
     supabaseAuthUserId: nullableText(row.supabase_auth_user_id),
-    email: requireText(row.email),
-    displayName: requireText(row.display_name),
+    email: requireDisplayText(row.email),
+    displayName: requireDisplayText(row.display_name),
     createdAt: requireText(row.created_at),
     updatedAt: requireText(row.updated_at),
   };
@@ -204,7 +204,7 @@ function readGameSession(value: unknown): StaffGameSessionBootstrapRecord {
   return {
     id: requireText(row.id),
     ownerStaffUserId: requireText(row.owner_staff_user_id),
-    name: requireText(row.name),
+    name: requireDisplayText(row.name),
     status: requireText(row.status),
     gameJoinCode: nullableText(row.game_join_code),
     gameJoinCodeStatus: requireText(row.game_join_code_status),
@@ -218,6 +218,13 @@ function requireRecord(value: unknown): Record<string, unknown> {
     throw new StaffGameSessionBootstrapPersistenceError();
   }
   return value as Record<string, unknown>;
+}
+
+function requireDisplayText(value: unknown): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new StaffGameSessionBootstrapPersistenceError();
+  }
+  return value;
 }
 
 function requireText(value: unknown): string {

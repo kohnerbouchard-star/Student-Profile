@@ -1,42 +1,31 @@
 import type {
   PlayerContractDto,
   PlayerContractProgressDto,
-} from "../../contracts/contracts/contractHttpContracts.ts";
+} from "../../contracts/index.ts";
 import type {
   StockMarketBoardStockDto,
-} from "../../stocks/contracts/stockMarketReadContracts.ts";
-import type {
   StockMarketPlayerHoldingDto,
   StockMarketPlayerOrderDto,
   StockMarketPlayerPortfolioSummaryDto,
   StockMarketPlayerTradeDto,
-} from "../../stocks/contracts/stockMarketPlayerReadContracts.ts";
+} from "../../stocks/index.ts";
 import type {
   StoreItemDto,
-} from "../../store/contracts/storeCatalogContracts.ts";
+} from "../../store/dashboardReadModel.ts";
 import type {
   StorePurchaseHistoryItemDto,
-} from "../../store/contracts/storePurchaseContracts.ts";
+} from "../../store/purchaseHistoryTypes.ts";
 import type {
   MarkNotificationDeliveryInput,
   StoryNotificationDeliveryRecord,
-} from "../../storylines/contracts/storyNotificationContracts.ts";
+} from "../../storylines/server/notificationCapabilities.ts";
 
-export const GAME_PUBLIC_REALTIME_EVENTS = [
-  "stock_tick",
-  "market_news_posted",
-  "leaderboard_updated",
-  "contract_posted",
-  "contract_updated",
-  "store_item_posted",
-  "store_item_updated",
-  "store_prices_updated",
-  "store_status_changed",
-  "market_status_changed",
-] as const;
-
-export type GamePublicRealtimeEvent =
-  typeof GAME_PUBLIC_REALTIME_EVENTS[number];
+import {
+  GAME_PUBLIC_REALTIME_EVENTS,
+  type GamePublicRealtimeEvent,
+} from "../../game-realtime/gamePublicRealtimeEvents.ts";
+export { GAME_PUBLIC_REALTIME_EVENTS };
+export type { GamePublicRealtimeEvent };
 
 export interface GamePublicRealtimeEventEnvelope<
   TEvent extends GamePublicRealtimeEvent = GamePublicRealtimeEvent,
@@ -151,6 +140,10 @@ export interface PlayerGameDashboardNetWorthValuationDto {
   readonly currencyCode: string | null;
   readonly status: "complete" | "partial_unconverted";
   readonly excludedStockMarketValue: number;
+  readonly excludedStocksByCurrency?: readonly {
+    readonly currencyCode: string;
+    readonly marketValue: number;
+  }[];
 }
 
 export interface PlayerGameDashboardPublicStoreListingDto {

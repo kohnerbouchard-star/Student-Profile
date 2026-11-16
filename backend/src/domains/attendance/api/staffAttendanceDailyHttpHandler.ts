@@ -1,3 +1,5 @@
+import type { AttendancePlayerRow, AttendanceRecordRow } from "../contracts/staffAttendanceDailyReadRepository.ts";
+import { SupabaseStaffAttendanceDailyReadRepository } from "../infrastructure/supabaseStaffAttendanceDailyReadRepository.ts";
 import {
   EdgeActivationError,
   type EdgeErrorBody,
@@ -71,21 +73,6 @@ export interface StaffAttendanceDailyBody {
   }[];
 }
 
-interface AttendanceRecordRow {
-  readonly id: string;
-  readonly player_id: string;
-  readonly attendance_date: string;
-  readonly status: string;
-  readonly clocked_in_at: string;
-}
-
-interface AttendancePlayerRow {
-  readonly id: string;
-  readonly display_name: string;
-  readonly roster_label: string | null;
-  readonly status: string;
-}
-
 export async function handleStaffAttendanceDailyRequest(
   request: Request,
   gameSessionId: string,
@@ -128,12 +115,9 @@ export async function handleStaffAttendanceDailyRequest(
       return jsonError(ownershipResult.status, ownershipResult.error);
     }
 
+    const repository = new SupabaseStaffAttendanceDailyReadRepository(staffResult.serviceClient);
     const url = new URL(request.url);
-    const settingsResponse = await staffResult.serviceClient
-      .from("game_settings")
-      .select("attendance_window")
-      .eq("game_session_id", gameSessionId)
-      .maybeSingle();
+    const settingsResponse = await repository.readWindow(gameSessionId);
 
     if (settingsResponse.error) {
       return jsonError(500, {
@@ -152,12 +136,7 @@ export async function handleStaffAttendanceDailyRequest(
       attendanceConfig.timezone,
     );
 
-    const playersResponse = await staffResult.serviceClient
-      .from("players")
-      .select("id,display_name,roster_label,status")
-      .eq("game_session_id", gameSessionId)
-      .eq("status", "active")
-      .order("display_name", { ascending: true });
+    const playersResponse = await repository.readPlayers(gameSessionId);
 
     if (playersResponse.error) {
       return jsonError(500, {
@@ -167,12 +146,7 @@ export async function handleStaffAttendanceDailyRequest(
       });
     }
 
-    const attendanceResponse = await staffResult.serviceClient
-      .from("player_attendance_records")
-      .select("id,player_id,attendance_date,status,clocked_in_at")
-      .eq("game_session_id", gameSessionId)
-      .eq("attendance_date", attendanceDate)
-      .order("clocked_in_at", { ascending: true });
+    const attendanceResponse = await repository.readRecords(gameSessionId, attendanceDate);
 
     if (attendanceResponse.error) {
       return jsonError(500, {

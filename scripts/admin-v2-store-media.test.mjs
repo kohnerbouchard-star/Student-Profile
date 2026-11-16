@@ -117,3 +117,12 @@ test("placeholder is square graphical artwork without a letter or glyph stand-in
   assert.equal(/<image\b/iu.test(source), false);
   assert.equal(/font-family|font-size|unicode/iu.test(source), false);
 });
+
+// The canonical branded placeholder above replaces the unreferenced generic asset.
+test("retired generic Store fallback stays absent", async () => {
+  await assert.rejects(
+    readFile(new URL("../player-terminal/assets/store-items/store-item-fallback.svg", import.meta.url)),
+    { code: "ENOENT" },
+  );
+  assert.equal(STORE_ITEM_MEDIA_PLACEHOLDER_SRC, "/player-terminal/assets/store-item-placeholder.svg");
+});

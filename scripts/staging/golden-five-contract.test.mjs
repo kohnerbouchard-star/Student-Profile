@@ -29,6 +29,14 @@ test("Golden Five scripts parse under the repository Node runtime", () => {
   }
 });
 
+test("Golden Five auth gate preserves device identity and private evidence contracts", () => {
+  const result = spawnSync(process.execPath, ["scripts/staging/player-auth-gate.mjs", "--self-test"], {
+    encoding: "utf8", timeout: 10_000,
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Player auth gate mocked contracts passed/u);
+});
+
 test("Golden Five package commands remain registered", async () => {
   const packageJson = JSON.parse(await readFile("package.json", "utf8"));
   for (const name of [
@@ -39,6 +47,83 @@ test("Golden Five package commands remain registered", async () => {
   ]) {
     assert.equal(typeof packageJson.scripts?.[name], "string", `Missing package command ${name}.`);
   }
+});
+
+test("Golden Five verifier matches the current canonical fixture and lifecycle", async () => {
+  const verifier = await readFile("scripts/staging/golden-five-verify.mjs", "utf8");
+  const workflow = await readFile(
+    ".github/workflows/phase15-controlled-staging.yml",
+    "utf8",
+  );
+  const databaseReplayWorkflow = await readFile(
+    ".github/workflows/database-replay.yml",
+    "utf8",
+  );
+  assert.match(verifier, /contracts: 35,/u);
+  assert.match(verifier, /storyEvents: 15,/u);
+  assert.match(workflow, /transition_game_lifecycle_atomic_v1/u);
+  assert.match(workflow, /initialize_fx_authority_for_game_v1/u);
+  assert.match(workflow, /verify_provisioned_game_v1/u);
+  assert.match(workflow, /'resume'/u);
+  assert.match(workflow, /fixtureLifecycleState: 'active'/u);
+  assert.match(workflow, /fxAuthorityState: 'ready'/u);
+  assert.match(workflow, /bankingFxReadiness: 'ready'/u);
+  assert.match(workflow, /phase15-staging-golden-fx-alignment-v1/u);
+  assert.match(workflow, /bounded-latest-snapshot-copy-v1/u);
+  assert.match(workflow, /set game_join_code_status = 'active'/u);
+  assert.match(workflow, /fixtureJoinCodeStatus: 'active'/u);
+  assert.match(verifier, /joinCodeStatus/u);
+  assert.match(verifier, /joinCodeHashMatches/u);
+  assert.match(workflow, /phase15_validate_golden_news_identifiers/u);
+  assert.match(workflow, /newsIdentifierAuthority: 'bounded-sha256-v1'/u);
+  assert.match(verifier, /newsIdentifiersValid/u);
+  assert.match(verifier, /fxAuthorityReady/u);
+  assert.match(verifier, /balance_row\.currency_code = country_row\.currency_code/u);
+  assert.match(workflow, /Production database selection is prohibited\./u);
+  assert.match(workflow, /PGSSLMODE: verify-full/u);
+  assert.match(workflow, /sslmode', 'verify-full'/u);
+  assert.doesNotMatch(workflow, /PGSSLMODE=require/u);
+  assert.ok(
+    workflow.includes("group: phase15-controlled-staging-${{ github.event_name }}-${{ github.ref }}"),
+    "Controlled staging must isolate PR concurrency and supersede stale main runs.",
+  );
+  assert.match(workflow, /cancel-in-progress: true/u);
+  for (const path of [
+    "scripts/staging/golden-five-contract.test.mjs",
+    "scripts/staging/golden-five-verify.mjs",
+  ]) {
+    assert.equal(
+      databaseReplayWorkflow.split(`- \"${path}\"`).length - 1,
+      2,
+      `${path} must trigger Database Replay for both pull requests and main pushes.`,
+    );
+  }
+});
+
+test("Golden Five browser acceptance handles authoritative story briefings", async () => {
+  const source = await readFile(
+    "scripts/staging/golden-five-browser-acceptance.mjs",
+    "utf8",
+  );
+  assert.match(source, /dismissPendingStoryCutscenes/u);
+  assert.match(source, /data-player-story-action/u);
+  assert.match(source, /pendingAction\.disabled/u);
+  assert.match(source, /storyCutscenesHandled/u);
+  assert.match(source, /assertNoFailedRequests/u);
+});
+
+test("Golden Five browser acceptance traverses grouped Player navigation", async () => {
+  const source = await readFile(
+    "scripts/staging/golden-five-browser-acceptance.mjs",
+    "utf8",
+  );
+  assert.match(source, /ROUTE_GROUP_ENTRY/u);
+  assert.match(source, /banking: "market"/u);
+  assert.match(source, /inventory: "store"/u);
+  assert.match(source, /progression: "profile"/u);
+  assert.match(source, /revealRouteControl/u);
+  assert.match(source, /visitRoute\(session, "profile"\)/u);
+  assert.match(source, /journey\.routes\.pop/u);
 });
 
 test("Golden Five source never commits plaintext fixture access codes", async () => {

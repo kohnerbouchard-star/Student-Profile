@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.production-web-session-canonical-origin-pr-735.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 735,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/production-web-session-deploy.yml",
+    ".github/workflows/production-web-session-final-verify.yml",
+    ".github/workflows/production-web-session-hotfix.yml",
+    ".github/workflows/production-web-session-post-deploy-verify.yml",
+    ".github/workflows/production-web-session-release.yml",
+    ".github/workflows/production-web-session-route-observer.yml",
+    ".github/workflows/production-web-session-secrets.yml",
+    ".github/workflows/production-web-session-vercel-proxy-verify.yml",
+    "docs/operations/contracts/player-cross-cutting/pr-735.json",
+    "docs/operations/evidence/production-web-session-recovery-v1.json",
+    "docs/operations/release-requests/production-web-session-release-v1.json",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/production-web-session-release-orchestrator.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/web-session-release-contract.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-735.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience"
+  ],
+  "sharedWorkflowOwnership": {
+    "workflowPath": ".github/workflows/production-web-session-vercel-proxy-verify.yml",
+    "guardOwnerPullRequest": 871,
+    "canonicalOriginOwnerPullRequest": 735,
+    "guardScope": "Bounded manual-trigger, inert-input, approved-commit/current-main authorization safety and synthetic regression tests only.",
+    "canonicalOriginScope": "Canonical origin, CORS, release-request and recovery-authorization convergence remain exclusively PR #735; no implementation is imported by #871.",
+    "mergeAuthorized": false,
+    "releaseHolds": [
+      "REF-019",
+      "REF-020",
+      "existing production release holds"
+    ]
+  },
+  "authorizationNote": "Bounded production-authentication recovery control-plane repair. Canonical production is https://www.econovaria.com, while the retired https://econovaria.vercel.app alias returns DEPLOYMENT_NOT_FOUND. This PR changes only repository-owned production-origin constants, the exact CORS allowlist, the active release request and recovery authorization, and their regression tests. Historical completed-deployment evidence is retained unchanged. Pull-request validation performs no deployment or production mutation. Merging the approved release-request path remains a separately protected release trigger and must be coordinated only after the Admin and Player authentication source repairs are merged and exact-head checks pass. Exact-main identity, immutable source packaging, staging deployment, protected production approval, project binding, database preconditions, deployed-source equality, and fail-closed response validation remain mandatory. Owner-approved boundary clarification (2026-10-07): PR #871 separately owns only bounded manual-trigger/authorization safety and its synthetic tests in the shared Vercel proxy verification workflow. PR #735 retains canonical-origin ownership and must preserve #871 safety when later reconciled from actual merged main. Recording this scope contract in #871 imports no #735 implementation, does not merge or qualify #735, and changes none of this manifest's original allowed paths, required files/checks or production/secret prohibition flags. REF-019/020 and all existing release holds remain intact. No merge, dispatch, deployment, Auth/recovery/factor/credential operation or lending activation is authorized by this clarification."
+}

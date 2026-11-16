@@ -1,33 +1,35 @@
 import {
+  type CreateStockBuyQuoteRpcArgs,
   type ExecuteStockMarketOrderRpcArgs,
   type ExecuteStockMarketOrderRpcRow,
+  type PlayerStockMarketTradingRepository,
+  type SettleStockBuyQuoteRpcArgs,
+  type SettleStockSellRpcArgs,
+  type StockMarketBuyQuoteDto,
+  type StockMarketBuyQuoteInput,
+  type StockMarketBuySettlementDto,
+  type StockMarketBuySettlementInput,
   type StockMarketOrderExecuteInput,
+  type StockMarketSellSettlementDto,
+  type StockMarketSellSettlementInput,
   StockMarketTradingError,
   type StockMarketTradingExecuteResult,
   type StockMarketTradingRepository,
 } from "../contracts/stockMarketTradingContracts.ts";
-
-interface SupabaseTradingQueryError {
-  readonly message: string;
-  readonly code?: string;
-  readonly details?: string | null;
-  readonly hint?: string | null;
-}
-
-interface SupabaseTradingQueryResponse<T = unknown> {
-  readonly data: T | null;
-  readonly error: SupabaseTradingQueryError | null;
-}
-
-interface SupabaseStockMarketTradingClient {
-  rpc<Data = unknown>(
-    functionName: string,
-    args?: unknown,
-  ): PromiseLike<SupabaseTradingQueryResponse<Data>>;
-}
+import { mapStockTradingRpcError } from "./stockMarketTradingErrorMapper.ts";
+import {
+  type SupabaseStockMarketTradingClient,
+  type SupabaseTradingQueryError,
+  unwrapStockTradingRpcJson,
+} from "./stockMarketTradingRpc.ts";
+import {
+  parseStockBuyQuote,
+  parseStockBuySettlement,
+  parseStockSellSettlement,
+} from "./stockMarketTradingResponse.ts";
 
 export class SupabaseStockMarketTradingRepository
-  implements StockMarketTradingRepository {
+  implements StockMarketTradingRepository, PlayerStockMarketTradingRepository {
   constructor(private readonly client: SupabaseStockMarketTradingClient) {}
 
   async executeOrder(
@@ -44,13 +46,9 @@ export class SupabaseStockMarketTradingRepository
     const response = await this.client.rpc<
       readonly ExecuteStockMarketOrderRpcRow[]
     >("execute_stock_market_order_calendar_gated", args);
-
-    if (response.error) {
-      throw mapTradingError(response.error);
-    }
+    if (response.error) throw mapRetainedTradingError(response.error);
 
     const row = response.data?.[0];
-
     if (!row) {
       throw new StockMarketTradingError(
         "stock_market_trading_failed",
@@ -58,10 +56,7 @@ export class SupabaseStockMarketTradingRepository
         500,
       );
     }
-
-    if (row.status === "rejected") {
-      throw mapRejectedOrder(row.rejection_reason);
-    }
+    if (row.status === "rejected") throw mapRejectedOrder(row.rejection_reason);
 
     return {
       order: {
@@ -88,11 +83,66 @@ export class SupabaseStockMarketTradingRepository
       },
     };
   }
+
+  async createBuyQuote(
+    input: StockMarketBuyQuoteInput,
+  ): Promise<StockMarketBuyQuoteDto> {
+    const args: CreateStockBuyQuoteRpcArgs = {
+      p_game_session_id: input.gameSessionId,
+      p_player_id: input.playerId,
+      p_ticker: input.ticker,
+      p_quantity: input.quantity,
+      p_expected_price: input.expectedPrice,
+      p_expected_tick_index: input.expectedTickIndex,
+      p_allocations: input.allocations.map((allocation) => ({
+        sourceAccountKey: allocation.sourceAccountKey,
+        targetAmount: allocation.targetAmount,
+      })),
+      p_idempotency_key: input.idempotencyKey,
+    };
+    const response = await this.client.rpc("create_stock_buy_quote_v1", args);
+    if (response.error) throw mapStockTradingRpcError(response.error, "buy_quote");
+    return parseStockBuyQuote(unwrapStockTradingRpcJson(response.data));
+  }
+
+  async settleBuyQuote(
+    input: StockMarketBuySettlementInput,
+  ): Promise<StockMarketBuySettlementDto> {
+    const args: SettleStockBuyQuoteRpcArgs = {
+      p_game_session_id: input.gameSessionId,
+      p_player_id: input.playerId,
+      p_quote_key: input.quoteKey,
+      p_idempotency_key: input.idempotencyKey,
+    };
+    const response = await this.client.rpc("settle_stock_buy_quote_v1", args);
+    if (response.error) {
+      throw mapStockTradingRpcError(response.error, "buy_settlement");
+    }
+    return parseStockBuySettlement(unwrapStockTradingRpcJson(response.data));
+  }
+
+  async settleSell(
+    input: StockMarketSellSettlementInput,
+  ): Promise<StockMarketSellSettlementDto> {
+    const args: SettleStockSellRpcArgs = {
+      p_game_session_id: input.gameSessionId,
+      p_player_id: input.playerId,
+      p_ticker: input.ticker,
+      p_quantity: input.quantity,
+      p_expected_price: input.expectedPrice,
+      p_expected_tick_index: input.expectedTickIndex,
+      p_destination_account_key: input.destinationAccountKey,
+      p_idempotency_key: input.idempotencyKey,
+    };
+    const response = await this.client.rpc("settle_stock_sell_v1", args);
+    if (response.error) {
+      throw mapStockTradingRpcError(response.error, "sell_settlement");
+    }
+    return parseStockSellSettlement(unwrapStockTradingRpcJson(response.data));
+  }
 }
 
-function mapRejectedOrder(
-  rejectionReason: string | null,
-): StockMarketTradingError {
+function mapRejectedOrder(rejectionReason: string | null): StockMarketTradingError {
   if (rejectionReason === "insufficient_cash") {
     return new StockMarketTradingError(
       "insufficient_cash",
@@ -100,7 +150,6 @@ function mapRejectedOrder(
       409,
     );
   }
-
   if (rejectionReason === "insufficient_shares") {
     return new StockMarketTradingError(
       "insufficient_shares",
@@ -108,7 +157,6 @@ function mapRejectedOrder(
       409,
     );
   }
-
   return new StockMarketTradingError(
     "invalid_stock_market_trading_state",
     "Stock market order was rejected.",
@@ -116,19 +164,17 @@ function mapRejectedOrder(
   );
 }
 
-function mapTradingError(
+function mapRetainedTradingError(
   error: SupabaseTradingQueryError,
 ): StockMarketTradingError {
-  const upperMessage = error.message.toUpperCase();
-
-  if (isSchemaNotAppliedError(error)) {
+  const upperMessage = String(error.message ?? "").toUpperCase();
+  if (isRetainedSchemaNotAppliedError(error)) {
     return new StockMarketTradingError(
       "stock_market_trading_schema_not_applied",
       "Stock market trading schema is not applied.",
       500,
     );
   }
-
   if (upperMessage.includes("STOCK_TRADING_GAME_SESSION_NOT_FOUND")) {
     return new StockMarketTradingError(
       "game_session_not_found",
@@ -136,7 +182,6 @@ function mapTradingError(
       404,
     );
   }
-
   if (upperMessage.includes("STOCK_TRADING_PLAYER_SESSION_NOT_FOUND")) {
     return new StockMarketTradingError(
       "player_session_not_found",
@@ -144,7 +189,6 @@ function mapTradingError(
       404,
     );
   }
-
   if (upperMessage.includes("STOCK_TRADING_STOCK_ASSET_NOT_FOUND")) {
     return new StockMarketTradingError(
       "stock_asset_not_found",
@@ -152,7 +196,6 @@ function mapTradingError(
       404,
     );
   }
-
   if (upperMessage.includes("STOCK_TRADING_MARKET_CLOSED")) {
     return new StockMarketTradingError(
       "stock_market_closed",
@@ -160,7 +203,6 @@ function mapTradingError(
       409,
     );
   }
-
   if (
     upperMessage.includes("STOCK_TRADING_INVALID") ||
     upperMessage.includes("STOCK_TRADING_IDEMPOTENCY_KEY_REQUIRED")
@@ -171,7 +213,6 @@ function mapTradingError(
       400,
     );
   }
-
   return new StockMarketTradingError(
     "stock_market_trading_failed",
     "Stock market trading could not be completed.",
@@ -179,25 +220,17 @@ function mapTradingError(
   );
 }
 
-function isSchemaNotAppliedError(error: SupabaseTradingQueryError): boolean {
-  const message = error.message.toLowerCase();
-
-  return error.code === "42P01" ||
-    error.code === "42703" ||
-    message.includes("does not exist") ||
-    message.includes("schema cache");
+function isRetainedSchemaNotAppliedError(error: SupabaseTradingQueryError): boolean {
+  const message = String(error.message ?? "").toLowerCase();
+  return error.code === "42P01" || error.code === "42703" ||
+    message.includes("does not exist") || message.includes("schema cache");
 }
 
 function toNumber(value: number | string | null | undefined): number {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : 0;
-  }
-
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
   if (typeof value === "string") {
     const parsed = Number(value);
-
     return Number.isFinite(parsed) ? parsed : 0;
   }
-
   return 0;
 }

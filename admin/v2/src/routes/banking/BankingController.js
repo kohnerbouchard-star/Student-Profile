@@ -11,6 +11,7 @@ import {
   normalizeAdminError,
 } from "../../core/error-envelope.js";
 import { BankingRoute } from "./BankingRoute.js";
+import { readBankingResponseRows } from "./BankingResponse.js";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UUID_IN_TEXT_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
@@ -96,17 +97,6 @@ function normalizeAccounts(rows) {
     .map((account) => Object.freeze(account));
 }
 
-function playerRows(result) {
-  if (Array.isArray(result)) return result;
-  const candidates = [result, result?.value, result?.data, result?.data?.data, result?.payload]
-    .filter(isRecord);
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate.players)) return candidate.players;
-    if (Array.isArray(candidate.roster)) return candidate.roster;
-  }
-  return null;
-}
-
 function normalizePlayer(row, index) {
   if (!isRecord(row)) return null;
   const accounts = normalizeAccounts(row.balances ?? row.accounts);
@@ -125,7 +115,7 @@ function normalizePlayer(row, index) {
 
 /** Normalize the authoritative player balance projection without exposing private identifiers. */
 export function normalizeBankingReadModel(result) {
-  const rows = playerRows(result);
+  const rows = readBankingResponseRows(result, ["players", "roster"], true);
   if (!rows) throw createAdminErrorEnvelope({ code: "INVALID_RESPONSE", retryable: true });
   const players = rows.slice(0, 2_000).map(normalizePlayer).filter(Boolean);
   const accounts = players.flatMap((player) => player.accounts);
@@ -166,18 +156,9 @@ function historyDescription(sourceDomain, sourceAction) {
   return titleCase(sourceAction || sourceDomain);
 }
 
-function historyRows(result) {
-  const candidates = [result, result?.value, result?.data, result?.data?.data, result?.payload]
-    .filter(isRecord);
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate.ledgerEntries)) return candidate.ledgerEntries;
-  }
-  return null;
-}
-
 /** Normalize player ledger history to Checking/Savings-only, UUID-free presentation rows. */
 export function normalizeBankingHistory(result) {
-  const rows = historyRows(result);
+  const rows = readBankingResponseRows(result, ["ledgerEntries"]);
   if (!rows) throw createAdminErrorEnvelope({ code: "INVALID_RESPONSE", retryable: true });
   const entries = rows.slice(0, 250).map((row, index) => {
     if (!isRecord(row)) return null;

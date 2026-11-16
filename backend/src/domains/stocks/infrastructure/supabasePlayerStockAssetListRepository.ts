@@ -1,7 +1,8 @@
+import { projectBusinessStockListing } from "../services/businessStockListingProjection.ts";
 import {
+  PlayerStockAssetListPersistenceError,
   type PlayerStockAssetListRepository,
   type PlayerStockAssetListRepositoryResult,
-  PlayerStockAssetListPersistenceError,
   type PlayerStockAssetRecord,
   type PlayerStockLatestTickRecord,
 } from "../contracts/playerStockAssetListContracts.ts";
@@ -49,6 +50,11 @@ const ASSET_SELECT = [
   "company_name",
   "sector_key",
   "country_code",
+  "listing_currency_code",
+  "business_public_key",
+  "business_ipo_key",
+  "business_financials",
+  "business_market_policy",
   "description",
   "current_price",
   "previous_close",
@@ -121,7 +127,9 @@ export class SupabasePlayerStockAssetListRepository
         if (!assetIdSet.has(assetUuid)) throw readFailed();
         return assetUuid;
       });
-      if (new Set(watchlistedAssetUuids).size !== watchlistedAssetUuids.length) {
+      if (
+        new Set(watchlistedAssetUuids).size !== watchlistedAssetUuids.length
+      ) {
         throw readFailed();
       }
     }
@@ -146,7 +154,11 @@ function toAssetRecord(row: Record<string, unknown>): PlayerStockAssetRecord {
     companyName: requireText(row.company_name),
     sector: requireText(row.sector_key),
     countryCode: requireCountryCode(row.country_code),
+    listingCurrencyCode: requireCurrencyCode(row.listing_currency_code),
     description: optionalText(row.description),
+    ...(row.business_public_key == null
+      ? {}
+      : { commonEquity: projectBusinessStockListing(row) }),
     currentPrice: requireFiniteNumber(row.current_price),
     previousClose: requireFiniteNumber(row.previous_close),
     openPrice: requireFiniteNumber(row.open_price),
@@ -169,7 +181,9 @@ function toLatestTickRecord(
   };
 }
 
-function mapPersistenceError(error: QueryError): PlayerStockAssetListPersistenceError {
+function mapPersistenceError(
+  error: QueryError,
+): PlayerStockAssetListPersistenceError {
   const message = error.message.toLowerCase();
   const schemaMissing = error.code === "42P01" ||
     error.code === "42703" ||
@@ -203,9 +217,10 @@ function optionalText(value: unknown): string | null {
 function requireUuid(value: unknown): string {
   const text = requireText(value).toLowerCase();
   if (
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(
-      text,
-    )
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+      .test(
+        text,
+      )
   ) {
     throw readFailed();
   }
@@ -221,6 +236,12 @@ function requireTicker(value: unknown): string {
 function requireCountryCode(value: unknown): string {
   const text = requireText(value).toUpperCase();
   if (!/^[A-Z][A-Z0-9_]{2,31}$/.test(text)) throw readFailed();
+  return text;
+}
+
+function requireCurrencyCode(value: unknown): string {
+  const text = requireText(value).toUpperCase();
+  if (!/^[A-Z][A-Z0-9_]{1,15}$/.test(text)) throw readFailed();
   return text;
 }
 

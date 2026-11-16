@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 import test from "node:test";
+import "./admin-v2-messages-route.test.mjs";
 
 import { createMessagesAdminClient } from "../admin/v2/src/routes/messages/MessagesApi.js";
 import {

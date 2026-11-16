@@ -1,0 +1,1266 @@
+[
+  {
+    "version": "20260615161835",
+    "name": "create_core_tables_v1"
+  },
+  {
+    "version": "20260615220305",
+    "name": "add_rls_policies_v1"
+  },
+  {
+    "version": "20260616142000",
+    "name": "add_licensing_activation_rpc_v1"
+  },
+  {
+    "version": "20260617072000",
+    "name": "fix_licensing_activation_rpc_column_refs_v1"
+  },
+  {
+    "version": "20260617113000",
+    "name": "add_ledger_transaction_rpc_v1"
+  },
+  {
+    "version": "20260617114500",
+    "name": "add_initial_balance_seed_rpc_v1"
+  },
+  {
+    "version": "20260617120000",
+    "name": "add_player_attendance_clock_in_v1"
+  },
+  {
+    "version": "20260617133000",
+    "name": "create_store_items_v1"
+  },
+  {
+    "version": "20260621002500",
+    "name": "create_store_purchase_foundation_v1"
+  },
+  {
+    "version": "20260621004500",
+    "name": "create_country_profiles_v1"
+  },
+  {
+    "version": "20260621015000",
+    "name": "add_store_purchase_execution_rpc_v1"
+  },
+  {
+    "version": "20260621021000",
+    "name": "add_balanced_player_country_assignment_v1"
+  },
+  {
+    "version": "20260621023000",
+    "name": "patch_balanced_player_country_assignment_lock_v1"
+  },
+  {
+    "version": "20260623093000",
+    "name": "add_stock_market_schema_foundation_v1"
+  },
+  {
+    "version": "20260623103000",
+    "name": "add_stock_market_runner_apply_rpc_v1"
+  },
+  {
+    "version": "20260623113000",
+    "name": "seed_default_stock_templates_v1"
+  },
+  {
+    "version": "20260623114000",
+    "name": "add_stock_market_seed_copy_rpc_v1"
+  },
+  {
+    "version": "20260623115000",
+    "name": "add_stock_market_latest_ticks_read_rpc_v1"
+  },
+  {
+    "version": "20260623123000",
+    "name": "add_stock_market_trading_foundation_v1"
+  },
+  {
+    "version": "20260623123500",
+    "name": "harden_stock_market_trading_active_session_v1"
+  },
+  {
+    "version": "20260623124500",
+    "name": "fix_stock_market_seed_copy_ambiguous_columns_v1"
+  },
+  {
+    "version": "20260623125000",
+    "name": "fix_country_snapshot_initializer_conflict_v1"
+  },
+  {
+    "version": "20260623125500",
+    "name": "fix_country_snapshot_default_baseline_v1"
+  },
+  {
+    "version": "20260624051000",
+    "name": "repair_store_purchase_foundation_schema"
+  },
+  {
+    "version": "20260624064500",
+    "name": "repair_store_purchase_execution_rpc"
+  },
+  {
+    "version": "20260624065500",
+    "name": "fix_store_purchase_rpc_digest_schema"
+  },
+  {
+    "version": "20260624070500",
+    "name": "fix_store_purchase_rpc_ambiguous_columns"
+  },
+  {
+    "version": "20260624072000",
+    "name": "add_multi_currency_foundation_v1"
+  },
+  {
+    "version": "20260624073500",
+    "name": "seed_initial_currency_exchange_rates_v1"
+  },
+  {
+    "version": "20260624075000",
+    "name": "align_country_profiles_with_country_currencies_v1"
+  },
+  {
+    "version": "20260624075500",
+    "name": "fix_official_country_currencies_v1"
+  },
+  {
+    "version": "20260624081500",
+    "name": "repair_country_profile_currency_codes_v1"
+  },
+  {
+    "version": "20260624082000",
+    "name": "delete_invalid_country_currencies_v1"
+  },
+  {
+    "version": "20260624083500",
+    "name": "cleanup_currency_metadata_v1"
+  },
+  {
+    "version": "20260624084500",
+    "name": "add_store_country_currency_purchase_fields_v1"
+  },
+  {
+    "version": "20260624123000",
+    "name": "remove_legacy_eco_store_defaults_v1"
+  },
+  {
+    "version": "20260624130000",
+    "name": "stock_country_cash_currency_v1"
+  },
+  {
+    "version": "20260624131500",
+    "name": "fix_stock_market_order_country_cash_rpc_v1"
+  },
+  {
+    "version": "20260624132500",
+    "name": "drop_unused_stock_order_rpc_v1"
+  },
+  {
+    "version": "20260625103000",
+    "name": "extend_stock_market_events_news_metadata_v1"
+  },
+  {
+    "version": "20260625120000",
+    "name": "add_storyline_schema_v1"
+  },
+  {
+    "version": "20260625123000",
+    "name": "add_contracts_schema_v1"
+  },
+  {
+    "version": "20260625143000",
+    "name": "add_demo_storyline_seed_rpc_v1"
+  },
+  {
+    "version": "20260713085704",
+    "name": "repair_player_attendance_clock_in_v1"
+  },
+  {
+    "version": "20260713085743",
+    "name": "repair_contracts_schema_v1"
+  },
+  {
+    "version": "20260713193000",
+    "name": "create_admin_audit_log_flags_v1"
+  },
+  {
+    "version": "20260713194500",
+    "name": "issue_contract_rewards_atomic_v1"
+  },
+  {
+    "version": "20260713223000",
+    "name": "complete_admin_control_surfaces_v1"
+  },
+  {
+    "version": "20260714034518",
+    "name": "post_merge_admin_performance_cleanup_v1"
+  },
+  {
+    "version": "20260714224000",
+    "name": "harden_admin_data_api_tables_v1"
+  },
+  {
+    "version": "20260714233000",
+    "name": "harden_security_definer_rpc_privileges_v1"
+  },
+  {
+    "version": "20260714234500",
+    "name": "index_admin_control_surface_foreign_keys_v1"
+  },
+  {
+    "version": "20260714235950",
+    "name": "add_configurable_player_identity_v1"
+  },
+  {
+    "version": "20260715001000",
+    "name": "harden_configurable_player_identity_rpc_grants_v1"
+  },
+  {
+    "version": "20260715002000",
+    "name": "fix_player_identity_rpc_column_ambiguity_v1"
+  },
+  {
+    "version": "20260715003000",
+    "name": "add_story_notification_tables_v1"
+  },
+  {
+    "version": "20260717090000",
+    "name": "harden_story_notification_scope_v1"
+  },
+  {
+    "version": "20260718064000",
+    "name": "add_player_stock_watchlist_v1"
+  },
+  {
+    "version": "20260718083500",
+    "name": "add_player_notification_public_ids_v1"
+  },
+  {
+    "version": "20260718112000",
+    "name": "accept_player_contract_by_key_v2"
+  },
+  {
+    "version": "20260718113000",
+    "name": "add_inventory_redemption_player_workflow_v1"
+  },
+  {
+    "version": "20260718123000",
+    "name": "add_inventory_redemption_admin_review_v1"
+  },
+  {
+    "version": "20260718173000",
+    "name": "add_shared_request_rate_limits_v1"
+  },
+  {
+    "version": "20260718190000",
+    "name": "add_pre_auth_rate_limit_rpc_v1"
+  },
+  {
+    "version": "20260719120000",
+    "name": "add_stock_exchange_calendar_runtime_v1"
+  },
+  {
+    "version": "20260719133000",
+    "name": "require_stock_market_timezone_v1"
+  },
+  {
+    "version": "20260719150000",
+    "name": "add_player_store_public_keys_v1"
+  },
+  {
+    "version": "20260719170000",
+    "name": "gate_public_store_purchase_by_game_state_v1"
+  },
+  {
+    "version": "20260719193000",
+    "name": "add_idempotent_staff_ledger_adjustment_v1"
+  },
+  {
+    "version": "20260719200000",
+    "name": "add_game_lifecycle_controls_v1"
+  },
+  {
+    "version": "20260720235900",
+    "name": "harden_canonical_database_exposure_v1"
+  },
+  {
+    "version": "20260721002625",
+    "name": "harden_request_rate_limit_operations_v3"
+  },
+  {
+    "version": "20260721003228",
+    "name": "repair_request_rate_limit_jsonb_object_length_v1"
+  },
+  {
+    "version": "20260721093000",
+    "name": "add_transactional_seed_content_release_v1"
+  },
+  {
+    "version": "20260721094000",
+    "name": "harden_transactional_seed_release_rollback_v1"
+  },
+  {
+    "version": "20260721095000",
+    "name": "accept_current_service_role_claims_for_seed_release_v1"
+  },
+  {
+    "version": "20260721100000",
+    "name": "add_campaign_arrival_world_runtime_v1"
+  },
+  {
+    "version": "20260721101000",
+    "name": "enforce_campaign_game_lifecycle_v1"
+  },
+  {
+    "version": "20260721102000",
+    "name": "add_world_runtime_metadata_v1"
+  },
+  {
+    "version": "20260721103000",
+    "name": "add_player_travel_execution_v1"
+  },
+  {
+    "version": "20260721104000",
+    "name": "add_world_country_onboarding_v1"
+  },
+  {
+    "version": "20260721105000",
+    "name": "bind_world_country_and_class_grants_v1"
+  },
+  {
+    "version": "20260721106000",
+    "name": "add_player_residency_requests_v1"
+  },
+  {
+    "version": "20260721107000",
+    "name": "add_campaign_control_and_outbox_v1"
+  },
+  {
+    "version": "20260721108000",
+    "name": "add_campaign_event_atomic_v2"
+  },
+  {
+    "version": "20260721120000",
+    "name": "add_business_banking_credit_runtime_v1"
+  },
+  {
+    "version": "20260721121000",
+    "name": "complete_business_operating_controls_v1"
+  },
+  {
+    "version": "20260721122000",
+    "name": "harden_business_banking_invariants_v1"
+  },
+  {
+    "version": "20260721122100",
+    "name": "fix_business_banking_rpc_signatures_v1"
+  },
+  {
+    "version": "20260721122200",
+    "name": "fix_business_connected_banking_v1"
+  },
+  {
+    "version": "20260721122300",
+    "name": "fix_business_connected_operations_v1"
+  },
+  {
+    "version": "20260721122400",
+    "name": "fix_business_connected_settlement_v1"
+  },
+  {
+    "version": "20260721122500",
+    "name": "pin_business_account_function_search_path_v1"
+  },
+  {
+    "version": "20260721130000",
+    "name": "add_crafting_item_definitions_v1"
+  },
+  {
+    "version": "20260721130100",
+    "name": "add_crafting_recipe_definitions_v1"
+  },
+  {
+    "version": "20260721130200",
+    "name": "add_game_physical_economy_scope_v1"
+  },
+  {
+    "version": "20260721130300",
+    "name": "add_crafting_job_reservations_v1"
+  },
+  {
+    "version": "20260721130400",
+    "name": "add_equipment_and_item_effect_state_v1"
+  },
+  {
+    "version": "20260721130500",
+    "name": "add_crafting_salvage_admin_security_v1"
+  },
+  {
+    "version": "20260721131000",
+    "name": "add_crafting_pack_import_v1"
+  },
+  {
+    "version": "20260721131200",
+    "name": "harden_crafting_pack_import_identity_v1"
+  },
+  {
+    "version": "20260721131300",
+    "name": "harden_crafting_pack_version_identity_v1"
+  },
+  {
+    "version": "20260721131500",
+    "name": "add_crafting_pack_activation_v1"
+  },
+  {
+    "version": "20260721132000",
+    "name": "add_player_crafting_read_v1"
+  },
+  {
+    "version": "20260721132500",
+    "name": "add_player_crafting_job_start_v1"
+  },
+  {
+    "version": "20260721133000",
+    "name": "add_player_crafting_cancel_v1"
+  },
+  {
+    "version": "20260721133500",
+    "name": "add_player_crafting_claim_v1"
+  },
+  {
+    "version": "20260721133700",
+    "name": "add_player_equipment_slots_v1"
+  },
+  {
+    "version": "20260721134000",
+    "name": "add_player_item_effects_v1"
+  },
+  {
+    "version": "20260721134500",
+    "name": "add_player_equipment_salvage_v1"
+  },
+  {
+    "version": "20260721135000",
+    "name": "add_admin_crafting_read_v1"
+  },
+  {
+    "version": "20260721135500",
+    "name": "add_admin_crafting_recovery_v1"
+  },
+  {
+    "version": "20260721135700",
+    "name": "add_admin_crafting_supply_and_grants_v1"
+  },
+  {
+    "version": "20260721140000",
+    "name": "add_marketplace_reference_scopes_v1"
+  },
+  {
+    "version": "20260721141000",
+    "name": "add_player_marketplace_lifecycle_v2"
+  },
+  {
+    "version": "20260721142000",
+    "name": "harden_marketplace_resolution_replay_v1"
+  },
+  {
+    "version": "20260721142500",
+    "name": "add_marketplace_inventory_event_types_v1"
+  },
+  {
+    "version": "20260721142600",
+    "name": "fix_marketplace_listing_item_lookup_v1"
+  },
+  {
+    "version": "20260721142700",
+    "name": "fix_marketplace_listing_currency_lookup_v1"
+  },
+  {
+    "version": "20260721142800",
+    "name": "restore_marketplace_listing_reservation_wrapper_v1"
+  },
+  {
+    "version": "20260721142900",
+    "name": "fix_marketplace_listing_legacy_lookups_v1"
+  },
+  {
+    "version": "20260721143000",
+    "name": "harden_marketplace_legacy_projection_conflicts_v1"
+  },
+  {
+    "version": "20260721143100",
+    "name": "harden_marketplace_table_return_conflicts_v1"
+  },
+  {
+    "version": "20260721150000",
+    "name": "add_messaging_communication_v2"
+  },
+  {
+    "version": "20260721151000",
+    "name": "harden_messaging_retention_and_audit_v2"
+  },
+  {
+    "version": "20260721152000",
+    "name": "complete_messaging_lifecycle_v1"
+  },
+  {
+    "version": "20260721153000",
+    "name": "compat_messaging_player_status_v1"
+  },
+  {
+    "version": "20260721160000",
+    "name": "add_progression_reputation_runtime_v1"
+  },
+  {
+    "version": "20260721161000",
+    "name": "fix_progression_read_volatility_v1"
+  },
+  {
+    "version": "20260721162000",
+    "name": "harden_progression_event_idempotency_v1"
+  },
+  {
+    "version": "20260721163000",
+    "name": "rebalance_progression_curve_v1"
+  },
+  {
+    "version": "20260723213038",
+    "name": "restore_player_country_assignment_compatibility_v1"
+  },
+  {
+    "version": "20260724013000",
+    "name": "repair_game_lifecycle_version_ambiguity_v1"
+  },
+  {
+    "version": "20260724030000",
+    "name": "add_game_creation_provisioning_orchestrator_v1"
+  },
+  {
+    "version": "20260724053000",
+    "name": "add_seed_release_revision_ledger_v1"
+  },
+  {
+    "version": "20260724080000",
+    "name": "fix_attendance_world_runtime_staging_v1"
+  },
+  {
+    "version": "20260724120000",
+    "name": "add_full_game_feature_activation_v2"
+  },
+  {
+    "version": "20260724123000",
+    "name": "bind_crafting_activation_authority_v2"
+  },
+  {
+    "version": "20260724124000",
+    "name": "repair_demo_storyline_activation_conflict_v1"
+  },
+  {
+    "version": "20260724125000",
+    "name": "bind_full_game_v2_to_active_crafting_source_v1"
+  },
+  {
+    "version": "20260724234454",
+    "name": "restore_rate_limit_jsonb_object_length_compat_v1"
+  },
+  {
+    "version": "20260725021239",
+    "name": "qualify_purchase_code_redemption_columns_v1"
+  },
+  {
+    "version": "20260725090000",
+    "name": "harden_game_creation_provisioning_integrity_v3"
+  },
+  {
+    "version": "20260725091000",
+    "name": "restore_rate_limit_json_compat_and_grants_v1"
+  },
+  {
+    "version": "20260725092000",
+    "name": "refine_joinable_game_provisioning_guard_v1"
+  },
+  {
+    "version": "20260725093000",
+    "name": "qualify_purchase_code_redemption_columns_canonical_v1"
+  },
+  {
+    "version": "20260725100000",
+    "name": "repair_arrival_grant_scope_ambiguity_v3"
+  },
+  {
+    "version": "20260725113000",
+    "name": "restore_staff_users_service_role_access_v1"
+  },
+  {
+    "version": "20260725120000",
+    "name": "restore_admin_control_service_role_access_v1"
+  },
+  {
+    "version": "20260725123000",
+    "name": "persist_memorable_game_join_codes_v1"
+  },
+  {
+    "version": "20260725130000",
+    "name": "restore_player_auth_service_role_access_v1"
+  },
+  {
+    "version": "20260725131000",
+    "name": "restore_crafting_service_role_execute_v1"
+  },
+  {
+    "version": "20260726084000",
+    "name": "add_player_stock_watchlist_mutation_rpc_v1"
+  },
+  {
+    "version": "20260726090000",
+    "name": "add_authentication_throttle_v2"
+  },
+  {
+    "version": "20260726091000",
+    "name": "add_staff_security_state_v2"
+  },
+  {
+    "version": "20260726092000",
+    "name": "revoke_player_sessions_on_credential_rotation_v2"
+  },
+  {
+    "version": "20260726093000",
+    "name": "create_single_active_player_session_v2"
+  },
+  {
+    "version": "20260726094000",
+    "name": "add_versioned_player_access_credentials_v2"
+  },
+  {
+    "version": "20260726095000",
+    "name": "add_staff_permission_grants_v2"
+  },
+  {
+    "version": "20260726095100",
+    "name": "exempt_default_staff_grants_from_version_bump_v2"
+  },
+  {
+    "version": "20260726096000",
+    "name": "add_staff_password_reset_security_transition_v2"
+  },
+  {
+    "version": "20260726097000",
+    "name": "add_internal_runner_nonce_replay_v2"
+  },
+  {
+    "version": "20260726113000",
+    "name": "reload_authentication_throttle_rpc_schema_v2"
+  },
+  {
+    "version": "20260726114500",
+    "name": "expose_authentication_throttle_rpc_wrappers_v2"
+  },
+  {
+    "version": "20260726120000",
+    "name": "expose_auth_throttle_wrappers_to_postgrest_v2"
+  },
+  {
+    "version": "20260726121000",
+    "name": "finalize_authentication_throttle_postgrest_contract_v2"
+  },
+  {
+    "version": "20260726193000",
+    "name": "restore_store_quote_service_role_access_v1"
+  },
+  {
+    "version": "20260726194500",
+    "name": "initialize_complete_game_fx_matrix_v1"
+  },
+  {
+    "version": "20260726220000",
+    "name": "restore_player_contract_progress_service_role_access_v1"
+  },
+  {
+    "version": "20260727090000",
+    "name": "bound_arrival_class_grant_idempotency_v1"
+  },
+  {
+    "version": "20260727091000",
+    "name": "reconcile_arrival_residency_eligibility_v1"
+  },
+  {
+    "version": "20260727102000",
+    "name": "fix_player_travel_checking_account_v1"
+  },
+  {
+    "version": "20260727103000",
+    "name": "fix_arrival_grant_checking_account_v1"
+  },
+  {
+    "version": "20260727130000",
+    "name": "harden_purchase_code_hmac_upgrade_v1"
+  },
+  {
+    "version": "20260728033000",
+    "name": "skip_zero_marketplace_settlement_postings_v1"
+  },
+  {
+    "version": "20260728054000",
+    "name": "replay_marketplace_purchase_before_resource_checks_v1"
+  },
+  {
+    "version": "20260729123000",
+    "name": "reconcile_admin_bootstrap_join_code_v1"
+  },
+  {
+    "version": "20260731130000",
+    "name": "add_verified_staff_onboarding_v1"
+  },
+  {
+    "version": "20260731131000",
+    "name": "harden_onboarding_cleanup_and_license_replay_v1"
+  },
+  {
+    "version": "20260731132000",
+    "name": "wire_expired_signup_cleanup_into_claim_v1"
+  },
+  {
+    "version": "20260731133000",
+    "name": "schedule_expired_staff_signup_cleanup_v1"
+  },
+  {
+    "version": "20260731133100",
+    "name": "resolve_player_contract_public_key_v3"
+  },
+  {
+    "version": "20260731134000",
+    "name": "align_supabase_verification_link_authority_v1"
+  },
+  {
+    "version": "20260801084000",
+    "name": "harden_browser_role_default_privileges_v1"
+  },
+  {
+    "version": "20260805023228",
+    "name": "admin_local_application_mutations_v1"
+  },
+  {
+    "version": "20260806070000",
+    "name": "canonicalize_player_checking_wallet_v1"
+  },
+  {
+    "version": "20260806093000",
+    "name": "provision_player_banking_and_credit_v1"
+  },
+  {
+    "version": "20260806120000",
+    "name": "add_economic_asset_identity_and_accounts_v2"
+  },
+  {
+    "version": "20260806120010",
+    "name": "add_economic_asset_context_resolvers_v2"
+  },
+  {
+    "version": "20260806120020",
+    "name": "backfill_economic_asset_catalog_v2"
+  },
+  {
+    "version": "20260806120030",
+    "name": "enforce_economic_asset_constraints_v2"
+  },
+  {
+    "version": "20260806120040",
+    "name": "add_economic_asset_projection_context_triggers_v2"
+  },
+  {
+    "version": "20260806120050",
+    "name": "add_economic_asset_runtime_compatibility_triggers_v2"
+  },
+  {
+    "version": "20260806120055",
+    "name": "repair_store_source_identity_resolution_v2"
+  },
+  {
+    "version": "20260806120060",
+    "name": "add_economic_asset_sync_gate_v2"
+  },
+  {
+    "version": "20260806120100",
+    "name": "add_canonical_inventory_posting_v2"
+  },
+  {
+    "version": "20260806120110",
+    "name": "cutover_store_settlement_v2"
+  },
+  {
+    "version": "20260806120120",
+    "name": "cutover_crafting_read_v2"
+  },
+  {
+    "version": "20260806120125",
+    "name": "decouple_inventory_reservations_from_store_identity_v2"
+  },
+  {
+    "version": "20260806120130",
+    "name": "cutover_crafting_start_v2"
+  },
+  {
+    "version": "20260806120140",
+    "name": "cutover_crafting_cancel_claim_v2"
+  },
+  {
+    "version": "20260806120150",
+    "name": "cutover_inventory_effects_salvage_v2"
+  },
+  {
+    "version": "20260806120200",
+    "name": "add_business_material_flow_foundation_v2"
+  },
+  {
+    "version": "20260806120210",
+    "name": "cutover_business_production_v2"
+  },
+  {
+    "version": "20260806120220",
+    "name": "add_business_cogs_helper_v2"
+  },
+  {
+    "version": "20260806120230",
+    "name": "cutover_business_settlement_v2"
+  },
+  {
+    "version": "20260806120300",
+    "name": "integrate_seed_catalog_with_economic_core_v2"
+  },
+  {
+    "version": "20260806120400",
+    "name": "add_marketplace_redemption_canonical_context_v2"
+  },
+  {
+    "version": "20260806120410",
+    "name": "add_economic_asset_integrity_validator_v2"
+  },
+  {
+    "version": "20260806120420",
+    "name": "harden_inventory_journal_append_only_v2"
+  },
+  {
+    "version": "20260806120430",
+    "name": "repair_seed_and_supply_canonical_identity_v2"
+  },
+  {
+    "version": "20260806120440",
+    "name": "repair_seed_store_rollback_compatibility_v2"
+  },
+  {
+    "version": "20260806120450",
+    "name": "finalize_seed_store_rollback_ordering_v2"
+  },
+  {
+    "version": "20260806120460",
+    "name": "rebind_store_settlement_to_checking_v2"
+  },
+  {
+    "version": "20260810070000",
+    "name": "converge_browser_role_acl_live_v1"
+  },
+  {
+    "version": "20260810073000",
+    "name": "add_stock_market_runtime_scheduler_v1"
+  },
+  {
+    "version": "20260810083500",
+    "name": "configure_stock_market_runtime_scheduler_every_minute_v1"
+  },
+  {
+    "version": "20260810120000",
+    "name": "add_daily_country_macro_runtime_v1"
+  },
+  {
+    "version": "20260810123500",
+    "name": "add_autonomous_timed_services_runtime_v1"
+  },
+  {
+    "version": "20260810130000",
+    "name": "archive_legacy_runtime_and_migration_history_v1"
+  },
+  {
+    "version": "20260811072424",
+    "name": "admin_v2_teacher_safety_v1"
+  },
+  {
+    "version": "20260811110000",
+    "name": "story_character_messaging_v1"
+  },
+  {
+    "version": "20260811111000",
+    "name": "story_character_message_render_v1"
+  },
+  {
+    "version": "20260811112000",
+    "name": "northreach_character_opening_seed_v1"
+  },
+  {
+    "version": "20260811231144",
+    "name": "optimize_latest_stock_market_ticks_read_v2"
+  },
+  {
+    "version": "20260812043956",
+    "name": "stock_tick_hot_cold_archive_foundation_v1"
+  },
+  {
+    "version": "20260812044228",
+    "name": "stock_tick_archive_candle_safety_v2"
+  },
+  {
+    "version": "20260812063709",
+    "name": "harden_stock_tick_archive_service_contract_v1"
+  },
+  {
+    "version": "20260812064325",
+    "name": "optimize_stock_tick_archive_prepare_v1"
+  },
+  {
+    "version": "20260812064905",
+    "name": "index_bound_stock_archive_candles_v1"
+  },
+  {
+    "version": "20260812065519",
+    "name": "drop_redundant_stock_tick_asset_desc_index_v1"
+  },
+  {
+    "version": "20260812070049",
+    "name": "preserve_latest_stock_tick_hour_v1"
+  },
+  {
+    "version": "20260812071423",
+    "name": "temporarily_drop_stock_tick_ticker_index_for_compaction_v1"
+  },
+  {
+    "version": "20260812071553",
+    "name": "restore_compacted_stock_tick_ticker_index_v1"
+  },
+  {
+    "version": "20260812071632",
+    "name": "schedule_stock_tick_archive_retention_v1"
+  },
+  {
+    "version": "20260812081410",
+    "name": "add_license_expiration_and_purge_confirmation_foundation_v1"
+  },
+  {
+    "version": "20260812081833",
+    "name": "restrict_game_purge_to_dedicated_permission_v1"
+  },
+  {
+    "version": "20260812082207",
+    "name": "harden_game_purge_grace_and_arm_binding_v1"
+  },
+  {
+    "version": "20260812082436",
+    "name": "add_game_purge_dispatch_state_machine_v1"
+  },
+  {
+    "version": "20260812082727",
+    "name": "add_resumable_game_purge_database_cursor_v1"
+  },
+  {
+    "version": "20260812082927",
+    "name": "add_atomic_game_purge_finalizer_v1"
+  },
+  {
+    "version": "20260812082948",
+    "name": "patch_game_purge_failure_recovery_v1"
+  },
+  {
+    "version": "20260812090000",
+    "name": "add_story_relationship_memory_v1"
+  },
+  {
+    "version": "20260812091000",
+    "name": "seed_remaining_country_character_openings_v1"
+  },
+  {
+    "version": "20260812091500",
+    "name": "harden_story_trigger_function_privileges_v1"
+  },
+  {
+    "version": "20260812092000",
+    "name": "seed_relationship_followups_and_meridian_fracture_v1"
+  },
+  {
+    "version": "20260812092500",
+    "name": "defer_relationship_followups_until_arrival_v1"
+  },
+  {
+    "version": "20260812093000",
+    "name": "harden_relationship_followup_trigger_privileges_v1"
+  },
+  {
+    "version": "20260812103000",
+    "name": "seed_meridian_customs_security_intrusion_v1"
+  },
+  {
+    "version": "20260812110000",
+    "name": "add_story_currency_volatility_runtime_v1"
+  },
+  {
+    "version": "20260812111000",
+    "name": "seed_meridian_security_center_attack_v1"
+  },
+  {
+    "version": "20260812113000",
+    "name": "bind_loan_repayment_accounts_v1"
+  },
+  {
+    "version": "20260812114000",
+    "name": "seed_meridian_emergency_response_v1"
+  },
+  {
+    "version": "20260812114500",
+    "name": "fix_world_runtime_revision_ambiguity_v1"
+  },
+  {
+    "version": "20260812115000",
+    "name": "add_story_effect_replay_safety_v1"
+  },
+  {
+    "version": "20260812120000",
+    "name": "add_story_event_execution_lease_v1"
+  },
+  {
+    "version": "20260812212949",
+    "name": "bound_stock_candle_retention_v1"
+  },
+  {
+    "version": "20260812213217",
+    "name": "drop_exact_duplicate_marketplace_reference_indexes_v1"
+  },
+  {
+    "version": "20260812213540",
+    "name": "remove_duplicate_entitlement_license_trigger_v1"
+  },
+  {
+    "version": "20260812213905",
+    "name": "revoke_public_meridian_customs_trigger_execute_v1"
+  },
+  {
+    "version": "20260812214042",
+    "name": "add_platform_storage_health_monitor_v1"
+  },
+  {
+    "version": "20260812214130",
+    "name": "fix_platform_storage_health_counts_v1"
+  },
+  {
+    "version": "20260813085905",
+    "name": "stock_market_runtime_state_foundation_v2"
+  },
+  {
+    "version": "20260813090000",
+    "name": "add_durable_license_issuance_queue_v1"
+  },
+  {
+    "version": "20260813090014",
+    "name": "stock_market_runtime_eligibility_v2"
+  },
+  {
+    "version": "20260813091500",
+    "name": "harden_license_email_idempotency_window_v1"
+  },
+  {
+    "version": "20260813093000",
+    "name": "add_license_issuance_scheduler_safety_switch_v1"
+  },
+  {
+    "version": "20260813100000",
+    "name": "harden_license_fulfillment_snapshots_v1"
+  },
+  {
+    "version": "20260813103000",
+    "name": "add_license_email_outbox_schema_v1"
+  },
+  {
+    "version": "20260813103100",
+    "name": "add_atomic_license_materialization_outbox_v2"
+  },
+  {
+    "version": "20260813103200",
+    "name": "add_durable_license_email_worker_queue_v1"
+  },
+  {
+    "version": "20260813103300",
+    "name": "add_license_delivery_operations_v1"
+  },
+  {
+    "version": "20260813154748",
+    "name": "add_stock_tick_hot_history_index_v2"
+  },
+  {
+    "version": "20260813211300",
+    "name": "stock_market_simulation_checkpoint_contract_v2"
+  },
+  {
+    "version": "20260813220712",
+    "name": "stock_market_simulation_checkpoint_v3_and_fallback"
+  },
+  {
+    "version": "20260813220753",
+    "name": "fix_stock_market_checkpoint_v3_config_conflict"
+  },
+  {
+    "version": "20260813221053",
+    "name": "stock_market_checkpoint_recovery_chain_v3"
+  },
+  {
+    "version": "20260813221715",
+    "name": "stock_market_checkpoint_interval_capture_v3_safe"
+  },
+  {
+    "version": "20260814022058",
+    "name": "harden_player_contract_progress_service_role_access_v1"
+  },
+  {
+    "version": "20260814042826",
+    "name": "attach_stock_market_checkpoint_after_full_tick_v1"
+  },
+  {
+    "version": "20260814083008",
+    "name": "stock_tick_archive_stopped_game_drain_v2"
+  },
+  {
+    "version": "20260814084305",
+    "name": "stock_market_read_cursor_history_v3"
+  },
+  {
+    "version": "20260814084638",
+    "name": "stop_stock_runtime_chart_history_rewrite_v2"
+  },
+  {
+    "version": "20260816075554",
+    "name": "index_stock_checkpoint_config_fk_v1"
+  },
+  {
+    "version": "20260816101236",
+    "name": "source_20260816090000_add_contract_story_flag_rewards_v1"
+  },
+  {
+    "version": "20260816101439",
+    "name": "source_20260816090100_seed_meridian_competing_models_v1"
+  },
+  {
+    "version": "20260816101555",
+    "name": "source_20260816090200_seed_meridian_outbreak_of_war_v1"
+  },
+  {
+    "version": "20260816101740",
+    "name": "source_20260816090300_seed_meridian_fortune_during_war_v1"
+  },
+  {
+    "version": "20260816101854",
+    "name": "source_20260816090400_seed_meridian_question_of_belonging_v1"
+  },
+  {
+    "version": "20260816102032",
+    "name": "source_20260816090500_seed_meridian_reckoning_v1"
+  },
+  {
+    "version": "20260816102237",
+    "name": "source_20260816090600_seed_meridian_local_friend_relationships_v1"
+  },
+  {
+    "version": "20260816102426",
+    "name": "source_20260816090700_harden_meridian_arrival_clock_gate_v1"
+  },
+  {
+    "version": "20260816115625",
+    "name": "reconcile_admin_v2_contract_edit_v1"
+  },
+  {
+    "version": "20260816115808",
+    "name": "retire_dead_historical_runtime_helpers_v1"
+  },
+  {
+    "version": "20260816120013",
+    "name": "retire_legacy_game_purge_confirmation_v1"
+  },
+  {
+    "version": "20260817122000",
+    "name": "require_teacher_approval_redemption_mode_v1"
+  },
+  {
+    "version": "20260817130000",
+    "name": "add_story_decision_microdetail_v1"
+  },
+  {
+    "version": "20260817130100",
+    "name": "harden_meridian_ending_decision_predicates_v1"
+  },
+  {
+    "version": "20260817130200",
+    "name": "add_story_decision_callbacks_v1"
+  },
+  {
+    "version": "20260818032252",
+    "name": "activate_campaign_runtime_provisioning_v3"
+  },
+  {
+    "version": "20260818032749",
+    "name": "add_campaign_runtime_scheduler_v1"
+  },
+  {
+    "version": "20260818033344",
+    "name": "fix_campaign_event_trigger_key_v2"
+  },
+  {
+    "version": "20260818033549",
+    "name": "fix_campaign_event_revision_ambiguity_v2"
+  },
+  {
+    "version": "20260818033613",
+    "name": "fix_campaign_event_revision_ambiguity_v2b"
+  },
+  {
+    "version": "20260818034021",
+    "name": "harden_campaign_program_digest_v1"
+  },
+  {
+    "version": "20260818034217",
+    "name": "harden_campaign_trigger_permissions_v1"
+  },
+  {
+    "version": "20260818034755",
+    "name": "fix_game_provisioning_preflight_source_selection_v2"
+  },
+  {
+    "version": "20260818034914",
+    "name": "add_game_provisioning_failure_observability_v1"
+  },
+  {
+    "version": "20260818035017",
+    "name": "add_private_game_provisioning_failure_log_v1"
+  },
+  {
+    "version": "20260818035134",
+    "name": "inherit_canonical_stock_market_window_v2"
+  },
+  {
+    "version": "20260818035437",
+    "name": "keep_pinned_retired_campaign_programs_valid_v1"
+  },
+  {
+    "version": "20260818045533",
+    "name": "add_story_character_reply_engine_v1"
+  },
+  {
+    "version": "20260818045638",
+    "name": "refine_story_character_reply_intents_v1"
+  },
+  {
+    "version": "20260818045851",
+    "name": "scale_story_character_reply_worker_v1"
+  },
+  {
+    "version": "20260818082728",
+    "name": "reconcile_campaign_terminal_program_definition_v1"
+  },
+  {
+    "version": "20260818084557",
+    "name": "backfill_ready_game_campaigns_v1"
+  }
+]

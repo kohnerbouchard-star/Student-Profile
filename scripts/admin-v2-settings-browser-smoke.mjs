@@ -105,11 +105,16 @@ async function createRuntime(browser, fixture, {
   longKoreanPreset = false,
   failPatch = false,
   staleAfterFirstRead = false,
+  twoGames = false,
+  holdPatch = false,
 } = {}) {
   const context = await browser.newContext({ viewport, colorScheme: "dark", reducedMotion: "reduce" });
   const runId = randomUUID();
   const session = createAdminV2FixtureSession("ready");
   if (permissions) session.permissions = permissions;
+  if (twoGames) session.activeGameSessions.push({ ...session.activeGameSessions[0], id: "10000000-0000-4000-8000-000000000002", name: "Second game" });
+  let releasePatch;
+  const patchGate = new Promise((resolve) => { releasePatch = resolve; });
   let settings = fixtureSettings({ longKoreanPreset });
   let getCount = 0;
   const requests = [];
@@ -137,7 +142,22 @@ async function createRuntime(browser, fixture, {
     }
   });
 
-  if (permissions) {
+  if (twoGames) {
+    await page.route("**/functions/v1/web-session-api/status", (route) => fulfillJson(route, 200, {
+      ok: true,
+      session: {
+        authenticated: true,
+        expiresAt: session.expiresAt,
+        absoluteExpiresAt: session.absoluteExpiresAt,
+        assuranceLevel: session.assuranceLevel,
+        mfaRequired: session.mfaRequired,
+      },
+      user: session.user,
+      activeGameSessions: session.activeGameSessions,
+      csrfToken: session.csrfToken,
+    }));
+  }
+  if (permissions || twoGames) {
     await page.route(BOOTSTRAP_PROXY, (route) => fulfillJson(route, 200, bootstrapEnvelope(session)));
   }
 
@@ -166,6 +186,7 @@ async function createRuntime(browser, fixture, {
     if (method !== "PATCH") {
       return fulfillJson(route, 405, { error: { code: "METHOD_NOT_ALLOWED" } });
     }
+    if (holdPatch) await patchGate;
     if (failPatch) {
       return fulfillJson(route, 503, {
         error: {
@@ -209,6 +230,7 @@ async function createRuntime(browser, fixture, {
     page,
     requests,
     browserErrors,
+    releasePatch,
     async close() { await context.close(); },
   };
 }
@@ -337,6 +359,132 @@ try {
     await ready.close();
   }
 
+
+  const draft = await createRuntime(browser, fixture, { twoGames: true });
+  try {
+    await waitReady(draft.page);
+    await draft.page.getByLabel("Price multiplier").fill("1.35");
+    await draft.page.getByLabel("Present reward").fill("7.25");
+    await draft.page.locator('[data-route="overview"]').first().click();
+    await draft.page.getByRole("heading", { level: 1, name: "Overview", exact: true }).waitFor();
+    await draft.page.goBack();
+    await waitReady(draft.page);
+    assert.equal(await draft.page.getByLabel("Price multiplier").inputValue(), "1.35");
+    assert.equal(await draft.page.getByLabel("Difficulty preset").inputValue(), "custom");
+    assert.equal(await draft.page.getByLabel("Present reward").inputValue(), "7.25");
+    await draft.page.goForward();
+    await draft.page.getByRole("heading", { level: 1, name: "Overview", exact: true }).waitFor();
+    await draft.page.locator('[data-route="settings"]').first().click();
+    await waitReady(draft.page);
+    assert.equal(await draft.page.getByLabel("Present reward").inputValue(), "7.25");
+    assert.equal(draft.requests.filter(({ method }) => method === "GET").length, 1);
+    pass("draft survives route navigation and browser Back/Forward without changing history");
+
+    for (const selector of [".admin-page-frame__actions", ".admin-freshness"]) {
+      const dismissed = new Promise((resolve) => draft.page.once("dialog", async (dialog) => {
+        assert.equal(dialog.type(), "confirm");
+        await dialog.dismiss();
+        resolve();
+      }));
+      await draft.page.locator(selector).getByRole("button", { name: "Refresh", exact: true }).click();
+      await dismissed;
+      assert.equal(await draft.page.getByLabel("Present reward").inputValue(), "7.25");
+      assert.equal(draft.requests.filter(({ method }) => method === "GET").length, 1);
+    }
+    assert.equal(await draft.page.evaluate(() => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    }), true);
+    pass("both refresh controls preserve draft on cancel and dirty unload is guarded");
+    const cancelledReload = new Promise((resolve) => draft.page.once("dialog", async (dialog) => {
+      assert.equal(dialog.type(), "beforeunload");
+      await dialog.dismiss();
+      resolve();
+    }));
+    await draft.page.evaluate(() => { setTimeout(() => window.location.reload(), 0); });
+    await cancelledReload;
+    assert.equal(await draft.page.getByLabel("Present reward").inputValue(), "7.25");
+    pass("browser reload cancellation leaves the original draft mounted");
+
+    await draft.page.evaluate(() => {
+      window.__settingsSelectionWrites = [];
+      window.EconovariaAdminGameSelection = { write: (game) => window.__settingsSelectionWrites.push(game) };
+    });
+    await draft.page.locator(".admin-navigation__game-context").click();
+    const switchCancelled = new Promise((resolve) => draft.page.once("dialog", async (dialog) => {
+      assert.match(dialog.message(), /switch games/);
+      await dialog.dismiss();
+      resolve();
+    }));
+    await draft.page.getByRole("button", { name: /Second game/ }).click();
+    await switchCancelled;
+    assert.deepEqual(await draft.page.evaluate(() => window.__settingsSelectionWrites), []);
+    await draft.page.keyboard.press("Escape");
+    assert.equal(await draft.page.getByLabel("Present reward").inputValue(), "7.25");
+    pass("cancelled game switch leaves selected context and unsaved draft intact");
+
+
+    const accepted = new Promise((resolve) => draft.page.once("dialog", async (dialog) => {
+      await dialog.accept();
+      resolve();
+    }));
+    await draft.page.locator(".admin-page-frame__actions").getByRole("button", { name: "Refresh", exact: true }).click();
+    await accepted;
+    await waitForRequestCount(draft, "GET", 2);
+    await waitReady(draft.page);
+    assert.equal(await draft.page.getByLabel("Present reward").inputValue(), "5");
+    assert.equal(await draft.page.evaluate(() => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    }), false);
+    pass("explicit refresh discard clears draft and removes unload guard");
+
+    await draft.page.getByLabel("Price multiplier").fill("1.35");
+    await draft.page.locator('[data-route="overview"]').first().click();
+    await draft.page.locator('[data-route="settings"]').first().click();
+    await waitReady(draft.page);
+    await draft.page.getByLabel("Price multiplier").fill("1");
+    assert.equal(await draft.page.getByLabel("Difficulty preset").inputValue(), "moderate");
+    assert.equal(await draft.page.getByRole("button", { name: "Review changes" }).isDisabled(), true);
+    pass("restored draft retains auto-Custom reset semantics");
+    assertClean(draft, "retained Settings draft");
+  } finally {
+    await draft.close();
+  }
+
+
+  const pending = await createRuntime(browser, fixture, { holdPatch: true, twoGames: true });
+  try {
+    await waitReady(pending.page);
+    await pending.page.getByLabel("Present reward").fill("8");
+    await pending.page.getByRole("button", { name: "Review changes" }).click();
+    await pending.page.getByRole("alertdialog", { name: "Apply game settings?" })
+      .getByRole("button", { name: "Apply settings" }).click();
+    await waitForRequestCount(pending, "PATCH", 1);
+    assert.equal(await pending.page.getByLabel("Present reward").isDisabled(), true);
+    await pending.page.locator(".admin-page-frame__actions").getByRole("button", { name: "Refresh", exact: true }).click();
+    assert.equal(pending.requests.filter(({ method }) => method === "GET").length, 1);
+    await pending.page.locator('[data-route="overview"]').first().click();
+    await pending.page.locator('[data-route="settings"]').first().click();
+    await waitReady(pending.page);
+    assert.equal(await pending.page.getByLabel("Present reward").inputValue(), "8");
+    assert.equal(await pending.page.getByLabel("Present reward").isDisabled(), true);
+    assert.equal(pending.requests.filter(({ method }) => method === "PATCH").length, 1);
+    pending.releasePatch();
+    await waitForRequestCount(pending, "GET", 2);
+    await waitReady(pending.page);
+    assert.equal(await pending.page.getByLabel("Present reward").inputValue(), "8");
+    assert.equal(await pending.page.getByRole("button", { name: "Review changes" }).isDisabled(), true);
+    assert.equal(await pending.page.getByLabel("Present reward").isDisabled(), false);
+    pass("in-flight save survives navigation, blocks refresh and clears draft only after acknowledgement");
+    assertClean(pending, "pending Settings save");
+  } finally {
+    pending.releasePatch();
+    await pending.close();
+  }
+
   const stale = await createRuntime(browser, fixture, { staleAfterFirstRead: true });
   try {
     await waitReady(stale.page);
@@ -363,6 +511,18 @@ try {
     await assertNoSensitiveData(failed.page, "failed-save Settings");
     evidence.push(await capture(failed.page, "settings-failed-save"));
     pass("failed save uses safe error presentation");
+    await failed.page.locator('[data-route="overview"]').first().click();
+    await failed.page.locator('[data-route="settings"]').first().click();
+    await waitReady(failed.page);
+    assert.equal(await failed.page.getByLabel("Late reward").inputValue(), "3");
+    await failed.page.getByRole("button", { name: "Review changes" }).click();
+    await failed.page.getByRole("alertdialog", { name: "Apply game settings?" })
+      .getByRole("button", { name: "Apply settings" }).click();
+    await waitForRequestCount(failed, "PATCH", 2);
+    await failed.page.waitForFunction(() => document.querySelector(".admin-settings-form button[type=submit]")?.disabled === false);
+    const retries = failed.requests.filter(({ method }) => method === "PATCH");
+    assert.equal(retries[0].headers["idempotency-key"], retries[1].headers["idempotency-key"]);
+    pass("failed save retains draft and idempotency across navigation and retry");
     assertClean(failed, "failed-save Settings");
   } finally {
     await failed.close();

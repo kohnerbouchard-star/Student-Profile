@@ -100,6 +100,12 @@ verify_jwt = false
 # Explicit sign-out is handled by web-session-api/logout. The retired
 # admin-logout-api function is intentionally absent from the canonical inventory.
 
+# The Business operations worker has fixed all-game scope and an empty body. It
+# validates publishable application identity plus timestamped, nonce-bound HMAC
+# authorization before invoking only the due-period claim/close/release RPCs.
+[functions.business-operations-worker]
+verify_jwt = false
+
 # Server-to-server stock functions validate the publishable apikey and signed,
 # timestamped, nonce-bound runner authorization inside the function. They do not
 # accept a browser or legacy anon JWT as authorization.
@@ -138,6 +144,17 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.game-data-purger]
+verify_jwt = false
+
+# Database-owned daily FX fixing endpoint. It accepts no game or economic
+# input, authenticates a Vault-held scheduler token through the private hash
+# verifier, and uses service-role access only for the canonical FX RPCs.
+[functions.fx-orchestrator]
+verify_jwt = false
+
+# Leased standard-order FX settlement endpoint. It shares the database-owned FX
+# scheduler verifier and uses service-role access only for claim/settle/fail RPCs.
+[functions.banking-fx-orchestrator]
 verify_jwt = false
 
 # Deployed compatibility surface. Browser runtime must not target this function.

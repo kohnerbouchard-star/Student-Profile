@@ -100,7 +100,12 @@ const unavailableStoreData = structuredClone(previewData);
 unavailableStoreData.resourceStatus = optionalStore.data.resourceStatus;
 unavailableStoreData.banking.checking.available = undefined;
 const unavailableStore = renderStorePage(unavailableStoreData, { storeCategory: "All" });
-assert.ok(unavailableStore.includes("BALANCE UNAVAILABLE") && unavailableStore.includes("Unavailable"), "Store must not display a false zero balance when banking is unavailable.");
+assert.ok(
+  unavailableStore.includes("FUNDING UNAVAILABLE") &&
+    unavailableStore.includes("Unavailable") &&
+    !unavailableStore.includes("0 Checking accounts"),
+  "Store must not display false funding availability when Banking FX evidence is unavailable."
+);
 assert.ok(ROUTE_RESOURCE_PLAN.dashboard.optional.includes("portfolio"), "Dashboard allocation requires an actual portfolio read.");
 const unavailablePortfolioData = structuredClone(previewData);
 unavailablePortfolioData.resourceStatus = { portfolio: { state: "unavailable" } };

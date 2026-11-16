@@ -296,10 +296,8 @@ function atomicContractRewardPath(path, method) {
   };
 }
 
-function classroomTrustedClientIp(request) {
-  const configuredHeader = environmentValue(
-    "ECONOVARIA_TRUSTED_CLIENT_IP_HEADER",
-  )
+export function classroomTrustedClientIp(request) {
+  const configuredHeader = environmentValue("ECONOVARIA_TRUSTED_CLIENT_IP_HEADER")
     .trim().toLowerCase();
   if (
     configuredHeader === "x-forwarded-for" ||

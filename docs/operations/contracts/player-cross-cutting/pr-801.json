@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref038-country-exposure-pr-801.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 801,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
+    "backend/src/domains/stocks/calculations/countryExposureProfiles.ts",
+    "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-038/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-038.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/operations/contracts/player-cross-cutting/pr-801.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/stocks/calculations/stockMarketEngine.ts",
+    "backend/src/domains/stocks/calculations/countryExposureProfiles.ts",
+    "backend/src/domains/stocks/calculations/stockMarketEngine.test.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-038/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-038.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/operations/contracts/player-cross-cutting/pr-801.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "stocks",
+    "players"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-038/preflight.md",
+  "authorizationNote": "Owner-authorized REF-038 pure country-exposure family extraction. Preserve literal coefficients/order, normalization, existing exports, full seeded engine output and RNG sequence. No SQL, package, workflow, currency/rate, gameplay, credential or production change."
+}

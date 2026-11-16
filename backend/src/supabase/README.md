@@ -1,37 +1,30 @@
-# Supabase Repository Adapters V1
+# Shared Supabase query contracts
 
-This folder contains backend-only Supabase adapter modules for the access
-boundary. They are framework-agnostic and use structural client types so future
-routes can inject a real `@supabase/supabase-js` server client when backend
-package setup exists.
+This folder retains structural query normalization and row contracts used by
+current domain repositories. The backend has package dependencies; these helpers
+are not a pending package-setup placeholder.
 
-## Adapters
+- `queryResult.ts` normalizes responses and defines repository client contracts.
+- `tableTypes.ts` and its core/stock table modules define shared row contracts.
+- Domain-owned adapters live under `../domains/*/infrastructure/`.
 
-- `staffRepository.ts` implements `StaffAccessRepository` with lookups for
-  `staff_users.supabase_auth_user_id` and `game_sessions.id`, plus backend-only
-  staff creation support for the staff bootstrap flow.
-- `playerSessionRepository.ts` implements `PlayerSessionRepository` with lookup
-  by `player_sessions.session_token_hash`.
-- `auditRepository.ts` provides a small `writeAuditLogEntry` adapter for future
-  audit writes.
-- `tableTypes.ts` defines narrow row types for `staff_users`, `game_sessions`,
-  `game_settings`, `player_sessions`, and `audit_log`.
-- Domain-specific repositories may live under `../domains/*/infrastructure/`
-  and reuse these structural query helpers.
-- `queryResult.ts` normalizes Supabase query responses without importing
-  Supabase package types.
+## Retired disconnected adapters
 
-## Security Boundary
+`staffRepository.ts`, `playerSessionRepository.ts` and `serverClient.ts` had no
+executable consumers or public package exports in the tracked-tree scan and were
+removed. Their old README described future injection, not current runtime wiring.
+The unused standalone Staff/Game creation cluster and its shared `auditRepository.ts` adapter are also retired. Domain-owned audit writes and shared auth/row/query contracts remain; no audit history or database policy was deleted.
 
-The adapters fetch and write rows only. They do not make authorization
-decisions. Future routes and services must resolve identity and call the
-auth/access helpers before using fetched records or writing game-scoped data.
+## Current ownership and security
 
-Player session lookup accepts `session_token_hash` only. Plaintext player session
-tokens must be hashed before reaching the repository adapter.
+The licensing HTTP adapter resolves a verified staff session through
+`../platform/supabase/edgeStaffSession.ts`, supplies its scoped staff lookup to
+the licensing route, and constructs the domain licensing repository. Classroom
+API clients are composed in
+`backend/supabase/functions/classroom-api/classroomClients.ts`.
+Current Player request/session handling lives under `../domains/players/api/`.
+These are observed current owners, not a claim that every historical scaffold
+function has a one-to-one replacement.
 
-Staff lookup uses `supabase_auth_user_id`. Staff game access still has to be
-checked through `game_sessions.owner_staff_user_id`.
-
-The server client used with these adapters must be created in backend/server-only
-code. Never expose the Supabase service-role key to frontend code.
+Repositories do not replace route authorization. Preserve server-derived game
+and player scope, hashed session credentials and server-only service-role keys.

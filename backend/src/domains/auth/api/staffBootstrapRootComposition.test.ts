@@ -1,8 +1,8 @@
-export {};
+import { readEdgeCompositionSource, assertRouteCompositionReachable } from "../../../security/edgeCompositionSource.test.support.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
-  readTextFile(path: string): Promise<string>;
+  readTextFile(path: string | URL): Promise<string>;
 };
 
 const SHARED_ROOTS = [
@@ -18,7 +18,7 @@ const SHARED_ROOTS = [
 
 for (const root of SHARED_ROOTS) {
   Deno.test(`${root.name} composes the shared Staff bootstrap handler`, async () => {
-    const source = await Deno.readTextFile(root.path);
+    const source = await readEdgeCompositionSource(root.path);
 
     assertMatch(
       source,
@@ -36,32 +36,36 @@ for (const root of SHARED_ROOTS) {
 }
 
 Deno.test("Web Session login, status, and MFA compose the shared Staff bootstrap handler", async () => {
-  const source = await Deno.readTextFile(
-    "supabase/functions/web-session-api/index.ts",
-  );
-
+  const root = new URL("../../../../supabase/functions/web-session-api/index.ts", import.meta.url);
+  const modules = ["sessionActions.ts", "sessionUpstream.ts"];
+  const sources = new Map<string, string>();
+  for (const url of [root, ...modules.map((name) => new URL(name, root))]) {
+    sources.set(url.href, await Deno.readTextFile(url));
+  }
+  assertRouteCompositionReachable(root, modules, sources);
+  const source = [...sources.values()].join("\n");
   const login = functionSource(source, "async function handleLogin");
   const status = functionSource(source, "async function handleStatus");
   const mfa = functionSource(source, "async function handleMfa");
   const loader = functionSource(source, "async function loadStaffBootstrap");
 
-  assertMatch(login, /await loadStaffBootstrap\(payload\.accessToken\)/);
+  assertMatch(login, /await loadStaffBootstrap\(\s*payload\.accessToken,\s*adminServiceClient,?\s*\)/);
   assertMatch(
     status,
-    /await loadStaffBootstrap\(resolved\.payload\.accessToken\)/,
+    /await loadStaffBootstrap\(\s*resolved\.payload\.accessToken,\s*adminServiceClient,?\s*\)/,
   );
-  assertMatch(mfa, /await loadStaffBootstrap\(elevated\.accessToken\)/);
+  assertMatch(mfa, /await loadStaffBootstrap\(\s*elevated\.accessToken,\s*adminServiceClient,?\s*\)/);
   assertMatch(loader, /https:\/\/web-session\.internal\/staff\/bootstrap/);
   assertMatch(
     loader,
-    /handleStaffBootstrapRequest\(request,\s*\{\s*createAuthClient,\s*createServiceClient,?\s*\}\)/,
+    /handleStaffBootstrapRequest\(request,\s*\{\s*createAuthClient,\s*createServiceClient:\s*\(\)\s*=>\s*adminServiceClient,?\s*\}\)/,
   );
 });
 
 function functionSource(source: string, declaration: string): string {
   const start = source.indexOf(declaration);
   if (start < 0) throw new Error(`Missing ${declaration}.`);
-  const next = source.indexOf("\nasync function ", start + declaration.length);
+  const next = source.indexOf("\nexport async function ", start + declaration.length);
   return source.slice(start, next < 0 ? source.length : next);
 }
 

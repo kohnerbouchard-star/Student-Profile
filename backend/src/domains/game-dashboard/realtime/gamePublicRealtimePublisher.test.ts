@@ -5,7 +5,7 @@ import {
   GamePublicRealtimePublisher,
   type GamePublicRealtimeTransport,
   validateGamePublicRealtimeEnvelope,
-} from "./gamePublicRealtimePublisher.ts";
+} from "../../game-realtime/index.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;

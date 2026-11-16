@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import "./admin-v2-crafting-route.test.mjs";
 
 import { createCraftingApiClient } from "../admin/v2/src/routes/crafting/CraftingApi.js";
 import {

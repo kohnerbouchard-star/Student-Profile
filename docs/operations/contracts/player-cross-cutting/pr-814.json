@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref045b-license-issuance-application-pr-814.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 814,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/licensing/application/processClaimedLicenseJob.ts",
+    "backend/supabase/functions/license-issuance-worker/index.ts",
+    "scripts/license-issuance-queue-contract.test.mjs",
+    "scripts/license-email-outbox-contract.test.mjs",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-045/execution.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-045.md",
+    "docs/operations/contracts/player-cross-cutting/pr-814.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/licensing/application/processClaimedLicenseJob.ts",
+    "backend/supabase/functions/license-issuance-worker/index.ts",
+    "scripts/license-issuance-queue-contract.test.mjs",
+    "scripts/license-email-outbox-contract.test.mjs",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-045/execution.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-045.md",
+    "docs/operations/contracts/player-cross-cutting/pr-814.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "licensing",
+    "players"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-045/execution.md",
+  "authorizationNote": "Owner-authorized REF045b Licensing issuance policy extraction after actual worker database qualification. Preserve typed atomic materialize/retry commands, shared crypto, transport/auth/claim/batch order, payment provenance, leases and one verifier/outbox transaction. No SQL, webhook, email transport, policy, package, credential or production changes."
+}

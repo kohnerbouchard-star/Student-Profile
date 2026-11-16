@@ -24,16 +24,26 @@ export async function enforceEdgeRequestBoundary(
     policy.allowedMethods.map((value) => value.toUpperCase()),
   );
   if (!allowedMethods.has(method)) {
-    return failure(405, "method_not_allowed", "The request method is not allowed.");
+    return failure(
+      405,
+      "method_not_allowed",
+      "The request method is not allowed.",
+    );
   }
 
   if (request.url.length > (policy.maxUrlLength ?? DEFAULT_MAX_URL_LENGTH)) {
     return failure(414, "request_uri_too_long", "The request URL is too long.");
   }
 
-  const contentLength = readContentLength(request.headers.get("content-length"));
+  const contentLength = readContentLength(
+    request.headers.get("content-length"),
+  );
   if (contentLength > policy.maxBodyBytes) {
-    return failure(413, "request_body_too_large", "The request body is too large.");
+    return failure(
+      413,
+      "request_body_too_large",
+      "The request body is too large.",
+    );
   }
 
   if (BODYLESS_METHODS.has(method)) {
@@ -74,18 +84,23 @@ export async function enforceEdgeRequestBoundary(
     }
   }
 
-  let body: ArrayBuffer;
+  let body: Uint8Array<ArrayBuffer>;
   try {
-    body = await request.arrayBuffer();
+    const boundedBody = await readBoundedBody(request, policy.maxBodyBytes);
+    if (boundedBody === null) {
+      return failure(
+        413,
+        "request_body_too_large",
+        "The request body is too large.",
+      );
+    }
+    body = boundedBody;
   } catch {
     return failure(
       400,
       "invalid_request_body",
       "The request body could not be read.",
     );
-  }
-  if (body.byteLength > policy.maxBodyBytes) {
-    return failure(413, "request_body_too_large", "The request body is too large.");
   }
   if (body.byteLength === 0 && policy.requireJsonBody !== false) {
     return failure(
@@ -103,6 +118,48 @@ export async function enforceEdgeRequestBoundary(
     signal: request.signal,
   });
   return { ok: true, request: boundedRequest };
+}
+
+async function readBoundedBody(
+  request: Request,
+  maxBodyBytes: number,
+): Promise<Uint8Array<ArrayBuffer> | null> {
+  if (request.bodyUsed) {
+    throw new TypeError("The request body was already used.");
+  }
+  if (request.body === null) return new Uint8Array();
+
+  const reader = request.body.getReader();
+  try {
+    let body = new Uint8Array(0);
+    let bytesRead = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return body.subarray(0, bytesRead);
+      if (!(value instanceof Uint8Array)) {
+        throw new TypeError("The request body is not a byte stream.");
+      }
+      if (value.byteLength > maxBodyBytes - bytesRead) {
+        // A slow or broken cancellation must not delay the rejection response.
+        void reader.cancel("Request body limit exceeded.").catch(() => {});
+        return null;
+      }
+      const needed = bytesRead + value.byteLength;
+      if (needed > body.byteLength) {
+        const capacity = Math.min(
+          maxBodyBytes,
+          Math.max(needed, body.byteLength * 2, 1_024),
+        );
+        const expanded = new Uint8Array(capacity);
+        expanded.set(body.subarray(0, bytesRead));
+        body = expanded;
+      }
+      body.set(value, bytesRead);
+      bytesRead = needed;
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 function readContentLength(value: string | null): number {

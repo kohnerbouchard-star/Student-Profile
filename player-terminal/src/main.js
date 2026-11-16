@@ -4,10 +4,13 @@ import { installToastHostController } from "./accessibility/toast-host-controlle
 import { createPlayerTerminal } from "./app.js";
 import { resolvePlayerTerminalConfig } from "./config/player-terminal.config.js";
 import { installBankingReadFlow } from "./features/banking/banking-read-flow.js";
+import { installBusinessIpoFlow } from "./features/business-ipo/business-ipo-flow.js";
+import { installBusinessTreasuryFlow } from "./features/business-treasury/business-treasury-flow.js";
 import { installStoryDecisionFlow } from "./features/contracts/story-decision-flow.js";
 import { installInventoryActionFlow } from "./features/inventory/inventory-action-flow.js";
 import { installLocalControlsFlow } from "./features/local-controls/local-controls-flow.js";
 import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
+import { installMarketplaceFundingFlow } from "./features/marketplace/marketplace-funding-flow.js";
 import { installMessageIntentAdapter } from "./features/messages/message-intent-adapter.js";
 import { installMessageReadFlow } from "./features/messages/message-read-flow.js";
 import { installNotificationInboxFlow } from "./features/notifications/notification-inbox-flow.js";
@@ -41,13 +44,23 @@ const localControls = installLocalControlsFlow({ mount, terminal });
 const inventoryActions = installInventoryActionFlow({ mount, terminal, config });
 const storePurchases = installStorePurchaseFlow({ mount, terminal, config });
 const marketOrders = installMarketOrderFlow({ mount, terminal, config });
+const marketplaceFunding = installMarketplaceFundingFlow({ mount, terminal, config });
 const bankingReads = installBankingReadFlow({ mount, terminal, config });
+const businessIpos = installBusinessIpoFlow({ mount, terminal, config });
+const businessTreasury = installBusinessTreasuryFlow({ mount, terminal, config });
 const notifications = installNotificationInboxFlow({ mount, terminal, config });
 const storyDeliveries = installStoryDeliveryFlow({ mount, terminal, config });
 const worldRuntime = installWorldRuntimeFlow({ mount, terminal, config });
 const invalidations = installPlayerInvalidationController({ terminal, config, mount });
 const liveStatus = installLiveStatusPresenter({ mount, terminal, config });
 const destroyTerminal = terminal.destroy.bind(terminal);
+let coreTerminalDestroyed = false;
+const stopCoreTerminal = () => {
+  if (coreTerminalDestroyed) return;
+  coreTerminalDestroyed = true;
+  destroyTerminal();
+};
+terminal.prepareForSessionExit = stopCoreTerminal;
 terminal.destroy = () => {
   logout.destroy();
   sessionSafeExit.destroy();
@@ -56,7 +69,10 @@ terminal.destroy = () => {
   worldRuntime.destroy();
   storyDeliveries.destroy();
   notifications.destroy();
+  businessIpos.destroy();
+  businessTreasury.destroy();
   bankingReads.destroy();
+  marketplaceFunding.destroy();
   marketOrders.destroy();
   storePurchases.destroy();
   inventoryActions.destroy();
@@ -68,7 +84,7 @@ terminal.destroy = () => {
   toastHost.destroy();
   countryFocus.destroy();
   skipLink.destroy();
-  destroyTerminal();
+  stopCoreTerminal();
 };
 
 globalThis.Econovaria = globalThis.Econovaria || {};

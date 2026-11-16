@@ -212,3 +212,6 @@ async function assertCode(run: () => Promise<unknown>, code: string) {
 function assertEquals(actual: unknown, expected: unknown) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`Actual ${JSON.stringify(actual)} Expected ${JSON.stringify(expected)}`);
 }
+
+import "./playerStoryDeliveryReadCharacterization.test.ts";
+import "./playerStoryDeliveryStateCharacterization.test.ts";

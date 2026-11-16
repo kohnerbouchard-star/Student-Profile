@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { verifyAccountControls } from "./admin-account-controls-browser-check.mjs";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "playwright";
+import { verifyDepartingAdminModuleAborts } from "./admin-session-redirect-diagnostics.mjs";
 
 import {
   ADMIN_V2_FIXTURE_ADMIN_ID,
@@ -132,6 +134,7 @@ async function assertNoRawBackendDetails(page, label) {
 async function assertNoRuntimeErrors(runtime, label, {
   allowExpectedHttpConsoleError = false,
   allowExpectedRedirectAborts = false,
+  expectedSessionRedirect = null,
 } = {}) {
   const unexpectedErrors = allowExpectedHttpConsoleError && runtime.httpFailures.length > 0
     ? runtime.errors.filter((entry) => !/^console: Failed to load resource: the server responded with a status of \d+ \(.+\)$/i.test(entry))
@@ -142,9 +145,14 @@ async function assertNoRuntimeErrors(runtime, label, {
     [],
     `${label} emitted CSP or Trusted Types warnings:\n${runtime.securityWarnings.join("\n")}`,
   );
-  const unexpectedFailedRequests = allowExpectedRedirectAborts
-    ? runtime.failedRequests.filter((entry) => !/\?mode=admin&reason=session-expired net::ERR_ABORTED$/i.test(entry))
-    : runtime.failedRequests;
+  const verifiedModuleAborts = expectedSessionRedirect
+    ? await verifyDepartingAdminModuleAborts(runtime.failedRequestDetails, expectedSessionRedirect, runtime.context.request)
+    : new Set();
+  runtime.verifiedRedirectModuleAborts.push(...[...verifiedModuleAborts].map((index) => runtime.failedRequestDetails[index]));
+  const unexpectedFailedRequests = runtime.failedRequests.filter((entry, index) =>
+    !verifiedModuleAborts.has(index)
+      && !(allowExpectedRedirectAborts && /\?mode=admin&reason=session-expired net::ERR_ABORTED$/i.test(entry))
+  );
   assert.deepEqual(
     unexpectedFailedRequests,
     [],
@@ -273,6 +281,9 @@ function browserErrorRecorder(page) {
   const errors = [];
   const securityWarnings = [];
   const failedRequests = [];
+  const failedRequestDetails = [];
+  const requestDocuments = new WeakMap();
+  const verifiedRedirectModuleAborts = [];
   const httpFailures = [];
   const resourceContentTypes = [];
   page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
@@ -282,7 +293,14 @@ function browserErrorRecorder(page) {
       securityWarnings.push(`${message.type()}: ${message.text()}`);
     }
   });
+  page.on("request", (request) => {
+    try { requestDocuments.set(request, { documentUrl: request.frame().url(), mainFrame: request.frame() === page.mainFrame() }); }
+    catch { requestDocuments.set(request, { documentUrl: "", mainFrame: false }); }
+  });
   page.on("requestfailed", (request) => {
+    failedRequestDetails.push({ method: request.method(), url: request.url(),
+      errorText: request.failure()?.errorText || "request failed", resourceType: request.resourceType(),
+      navigation: request.isNavigationRequest(), ...requestDocuments.get(request) });
     failedRequests.push(`${request.method()} ${request.url()} ${request.failure()?.errorText || "request failed"}`);
   });
   page.on("response", (response) => {
@@ -304,7 +322,7 @@ function browserErrorRecorder(page) {
       resourceContentTypes.push({ kind: "css", url, contentType });
     }
   });
-  return { errors, securityWarnings, failedRequests, httpFailures, resourceContentTypes };
+  return { errors, securityWarnings, failedRequests, failedRequestDetails, verifiedRedirectModuleAborts, httpFailures, resourceContentTypes };
 }
 
 async function createScenarioRuntime(
@@ -373,6 +391,7 @@ async function createScenarioRuntime(
     runId,
     scenario,
     selectedGameId,
+    sourceUrl: url,
     async close() {
       runtimeDiagnostics.push({
         scenario,
@@ -380,6 +399,8 @@ async function createScenarioRuntime(
         errors: [...diagnostics.errors],
         securityWarnings: [...diagnostics.securityWarnings],
         failedRequests: [...diagnostics.failedRequests],
+        failedRequestDetails: [...diagnostics.failedRequestDetails],
+        verifiedRedirectModuleAborts: [...diagnostics.verifiedRedirectModuleAborts],
         httpFailures: [...diagnostics.httpFailures],
         resourceContentTypes: [...new Map(diagnostics.resourceContentTypes.map((entry) => [entry.url, entry])).values()],
       });
@@ -557,17 +578,60 @@ async function verifyDialogFocusLifecycle(page) {
   assert.equal(await opener.evaluate((element) => document.activeElement === element), true, "Dialog did not restore opener focus");
 }
 
-async function verifyWorldPlannedBoundary(page) {
+async function verifyWorldMigratedBoundary(page, fixture, runId) {
+  const initialUrl = new URL(page.url());
+  const worldPath = `/games/${ADMIN_V2_FIXTURE_GAME_ID}/world/`;
+  const resources = ["campaign", "campaign/history?limit=100", "campaign/effects?status=all&limit=100",
+    "arrival-classes?limit=100", "geography", "travel?limit=100", "residency?limit=100"];
+  const browserReads = [];
+  const recordWorldRequest = (request) => {
+    if (new URL(request.url()).pathname.includes("/world/")) browserReads.push(request);
+  };
+  page.on("request", recordWorldRequest);
+  const responses = Promise.all(resources.map((resource) => page.waitForResponse(
+    `${fixture.origin}/functions/v1/web-session-api/proxy${worldPath}${resource}`,
+  )));
   await page.locator('.admin-navigation__link[data-route="world-management"]').click();
   await page.locator('.admin-navigation__link[data-route="world-management"][aria-current="page"]')
     .waitFor({ state: "attached" });
-  const boundary = page.locator('.admin-route-boundary[data-route="world-management"][data-mode="planned"]');
-  await boundary
-    .waitFor({ state: "visible" });
+  for (const response of await responses) assert.equal(response.status(), 200, `World read failed: ${response.url()}`);
+  page.off("request", recordWorldRequest);
+  assert.deepEqual(browserReads.map((request) => request.url()).sort(), resources.map((resource) =>
+    `${fixture.origin}/functions/v1/web-session-api/proxy${worldPath}${resource}`).sort(), "World bypassed the same-origin BFF");
+  for (const request of browserReads) assert.equal(request.method(), "GET", "World attempted a browser mutation");
+  const world = page.locator('.admin-world-route[data-admin-v2-state="ready"]');
+  await world.waitFor({ state: "visible" });
   assert.match(page.url(), /\/admin\/v2\.html\?/i, "World Management bypassed the explicit v2 boundary");
-  assert.match(await boundary.innerText(), /World Management is planned for Admin v2/i);
-  assert.match(await boundary.innerText(), /No unrelated legacy page will be opened/i);
-  assert.equal(await boundary.getByRole("link").count(), 0, "World Management exposed a legacy destination");
+  const currentUrl = new URL(page.url());
+  assert.equal(currentUrl.origin, initialUrl.origin);
+  assert.equal(currentUrl.pathname, initialUrl.pathname);
+  assert.equal(currentUrl.search, initialUrl.search, "World navigation changed the selected game");
+  assert.equal(currentUrl.hash, "#world-management");
+  await page.getByRole("heading", { name: "World Management", exact: true }).waitFor({ state: "visible" });
+  assert.equal(await page.locator('.admin-route-boundary[data-route="world-management"][data-mode="planned"], .admin-route-boundary[data-route="world-management"][data-mode="legacy"]').count(), 0);
+  assert.equal(await page.getByRole("link", { name: "Open existing Admin", exact: true }).count(), 0);
+  assert.equal(await world.locator('.admin-world-route__partial-error').count(), 0, "World hid failed panels behind ready state");
+  const facts = await world.locator('#world-configuration .admin-world-route__facts > div').allTextContents();
+  assert.ok(facts.some((text) => /Pack\s*admin-world-browser-fixture/.test(text)), "World omitted fixture pack");
+  assert.ok(facts.some((text) => /World revision\s*19$/.test(text.trim())), "World omitted fixture revision");
+  const sections = [["Configuration", "world-configuration"], ["Campaign", "world-campaign"],
+    ["Effects", "world-effects"], ["Geography", "world-geography"], ["Travel & residency", "world-travel"]];
+  const links = world.getByRole("navigation", { name: "World Management sections" }).getByRole("link");
+  assert.deepEqual(await links.evaluateAll((nodes) => nodes.map((node) => [node.textContent.trim(), node.getAttribute("href")])),
+    sections.map(([label, id]) => [label, `#${id}`]));
+  for (const [, id] of sections) assert.equal(await world.locator(`[id="${id}"]`).count(), 1);
+  assert.equal(await world.getByRole("link").count(), sections.length, "World exposed a non-section destination");
+  const reads = fixture.requestsFor(runId).filter((request) => request.pathname.includes("/world/"));
+  assert.deepEqual(reads.map((request) => request.pathname + request.search).sort(),
+    resources.map((resource) => worldPath + resource).sort(), "World did not make exactly seven scoped reads");
+  for (const request of reads) {
+    assert.equal(request.method, "GET", "World navigation attempted a mutation");
+    assert.equal(request.gameId, ADMIN_V2_FIXTURE_GAME_ID);
+    assert.equal(request.apikey, "sb_publishable_admin_v2_browser_fixture");
+    assert.equal(request.deviceId, DEVICE_ID);
+    assert.equal(request.authorization, "");
+  }
+  await assertNoRawBackendDetails(page, "World migrated boundary");
   const group = page.locator('.admin-navigation__link[data-route="world-management"]')
     .locator("xpath=ancestor::section[contains(@class, 'admin-navigation__group')]");
   assert.equal(
@@ -763,14 +827,44 @@ async function verifyPlannedBoundaryContract(browser, fixture, destination) {
 async function auditAuthoritativeUuidHandoffExposure(browser, fixture) {
   const runtime = await createScenarioRuntime(browser, fixture, "ready");
   const findings = [];
+  const routeReads = {
+    players: ["players"], attendance: ["attendance/today"],
+    // This fixture grants settings.manage: Contracts also reads its canonical game zone.
+    contracts: ["contracts", "settings"], store: ["store/items?include=stock,prices,purchaseStats"],
+    marketplace: ["marketplace"], settings: ["settings"], logs: ["logs?page=1&pageSize=50"],
+    "world-management": ["campaign", "campaign/history?limit=100", "campaign/effects?status=all&limit=100",
+      "arrival-classes?limit=100", "geography", "travel?limit=100", "residency?limit=100"].map((path) => `world/${path}`),
+  };
   try {
     await waitForState(runtime.page, "ready");
     await waitForSessionGateRelease(runtime.page);
     for (const destination of DEFERRED_UUID_ROUTE_ASSERTIONS) {
+      const before = fixture.requestsFor(runtime.runId).length;
+      const paths = routeReads[destination.id].map((path) => `/games/${ADMIN_V2_FIXTURE_GAME_ID}/${path}`);
+      const responses = Promise.all(paths.map((path) => runtime.page.waitForResponse(
+        `${fixture.origin}/functions/v1/web-session-api/proxy${path}`,
+      )));
       await runtime.page.locator(`.admin-navigation__link[data-route="${destination.id}"]`).click();
       const boundaryMode = destination.migrated ? "source" : destination.migration;
       await runtime.page.locator(`.admin-route-boundary[data-route="${destination.id}"][data-mode="${boundaryMode}"]`)
         .waitFor({ state: "visible" });
+      for (const response of await responses) assert.equal(response.status(), 200, `Audit read failed: ${response.url()}`);
+      const state = ["store", "world-management", "settings"].includes(destination.id) ? "ready" : "empty";
+      if (destination.id === "settings") {
+        await waitForState(runtime.page, "ready");
+        await runtime.page.locator('.admin-route-boundary[data-route="settings"] form[aria-label="Game settings"]').waitFor({ state: "visible" });
+      } else {
+        await runtime.page.locator(`.admin-route-boundary[data-route="${destination.id}"] [data-admin-v2-state="${state}"]`).waitFor({ state: "visible" });
+      }
+      const reads = fixture.requestsFor(runtime.runId).slice(before);
+      assert.deepEqual(reads.map((request) => request.pathname + request.search).sort(), paths.sort());
+      for (const request of reads) {
+        assert.equal(request.method, "GET", "UUID route audit attempted a mutation");
+        assert.equal(request.gameId, ADMIN_V2_FIXTURE_GAME_ID);
+        assert.equal(request.deviceId, DEVICE_ID);
+        assert.equal(request.apikey, "sb_publishable_admin_v2_browser_fixture");
+        assert.equal(request.authorization, "");
+      }
       const browserUrl = runtime.page.url();
       const handoffHref = destination.migration === "legacy"
         ? await runtime.page.getByRole("link", { name: "Open existing Admin", exact: true }).getAttribute("href")
@@ -830,7 +924,10 @@ async function assertRedirectedSessionBoundary(runtime, fixture, {
     );
   }
   await assertNoRawBackendDetails(runtime.page, label);
-  await assertNoRuntimeErrors(runtime, label, { allowExpectedHttpConsoleError: true });
+  await assertNoRuntimeErrors(runtime, label, {
+    allowExpectedHttpConsoleError: true,
+    expectedSessionRedirect: { sourceUrl: runtime.sourceUrl, destinationUrl: finalUrl.href, expectedReasons },
+  });
   if (requiresBoundaryRequest) {
     assertNoBearerRequests(fixture, runtime.runId, label);
   } else {
@@ -903,6 +1000,17 @@ try {
       evidence.push(path.relative(REPOSITORY_ROOT, destination));
       await assertNoRuntimeErrors(runtime, label);
       await assertBffReadBoundary(fixture, runtime.runId);
+      // The historical baseline intentionally retains its original assertions.
+      if (STATIC_ROOT === REPOSITORY_ROOT) {
+        let requestOffset = fixture.requestsFor(runtime.runId).length;
+        await verifyAccountControls(runtime.page, async () => {
+          const batch = fixture.requestsFor(runtime.runId).slice(requestOffset);
+          await assertBffReadBoundary({ requestsFor: () => batch }, runtime.runId);
+          requestOffset += batch.length;
+        });
+        await assertNoRuntimeErrors(runtime, `${label} account controls`);
+        checks.push({ scenario: "account-controls", viewport: `${viewport.width}x${viewport.height}`, status: "passed" });
+      }
       checks.push({ scenario: "ready", viewport: `${viewport.width}x${viewport.height}`, status: "passed" });
     } finally {
       await runtime.close();
@@ -937,7 +1045,7 @@ try {
       await assertMeaningfulOverview(runtime.page, "direct reload 1280x720");
       await verifyNavigationKeyboardAndCollapsedLabels(runtime.page);
       await verifyDialogFocusLifecycle(runtime.page);
-      await verifyWorldPlannedBoundary(runtime.page);
+      await verifyWorldMigratedBoundary(runtime.page, fixture, runtime.runId);
       await assertNoDocumentHorizontalOverflow(runtime.page, "keyboard and dialog lifecycle");
       await assertNoRuntimeErrors(runtime, "keyboard and dialog lifecycle");
       checks.push({ scenario: "direct-reload-keyboard-dialog-legacy-boundary", viewport: "1280x720", status: "passed" });

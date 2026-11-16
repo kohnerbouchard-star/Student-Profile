@@ -189,6 +189,7 @@ export function createSettingsController({
   onChange = () => {},
   notify = () => {},
   cryptoObject = globalThis.crypto,
+  confirmDiscard = (message) => globalThis.confirm?.(message) === true,
 } = {}) {
   for (const method of ["readSettings", "updateSettings"]) {
     if (typeof api?.[method] !== "function") throw new TypeError(`Settings API ${method} is unavailable.`);
@@ -199,6 +200,7 @@ export function createSettingsController({
   let mutationSequence = 0;
   let destroyed = false;
   let currentView = null;
+  let currentViewState = null;
   const pendingIdempotency = new Map();
   const activeMutations = new Set();
 
@@ -206,8 +208,32 @@ export function createSettingsController({
     if (!destroyed) onChange(state);
   }
 
+  function hasUnsavedChanges() {
+    return currentView?.isDirty?.() === true;
+  }
+
+  function canDiscardChanges(message = "Discard unsaved Settings changes and switch games?") {
+    if (activeMutations.size > 0) {
+      notify({ tone: "error", title: "Settings are still saving", message: "Wait for the save to finish before refreshing or switching games." });
+      return false;
+    }
+    return !hasUnsavedChanges() || confirmDiscard(message);
+  }
+
+  function destroyView() {
+    currentView?.destroy?.();
+    currentView = null;
+    currentViewState = null;
+  }
+
   async function load() {
     if (destroyed || !hasPermission("settings.manage")) return state;
+    if (!canDiscardChanges("Discard unsaved Settings changes and refresh?")) return state;
+    return refresh();
+  }
+
+  async function refresh() {
+    destroyView();
     api.cancelSettingsRequest?.();
     requestVersion += 1;
     const version = requestVersion;
@@ -243,7 +269,7 @@ export function createSettingsController({
     if (!validation.ok) return { ok: false, validation };
 
     const fingerprint = stableStringify(validation.settings);
-    if (activeMutations.has(fingerprint)) {
+    if (activeMutations.size > 0) {
       return { ok: false, busy: true, error: createAdminErrorEnvelope({ code: "CONFLICT", retryable: false }) };
     }
     let idempotencyKey = pendingIdempotency.get(fingerprint);
@@ -264,17 +290,19 @@ export function createSettingsController({
         idempotencyKey,
       });
       pendingIdempotency.delete(fingerprint);
+      if (destroyed) return { ok: true, result };
+      destroyView();
       notify({
         tone: "success",
         title: "Settings saved",
         message: "The authoritative game settings were updated.",
       });
-      if (!destroyed) void load();
+      if (!destroyed) void refresh();
       return { ok: true, result };
     } catch (error) {
       const envelope = safeError(error);
       if (!envelope.retryable) pendingIdempotency.delete(fingerprint);
-      notify({ tone: "error", title: "Settings were not saved", message: envelope.userMessage });
+      if (!destroyed) notify({ tone: "error", title: "Settings were not saved", message: envelope.userMessage });
       return { ok: false, error: envelope };
     } finally {
       activeMutations.delete(fingerprint);
@@ -282,13 +310,15 @@ export function createSettingsController({
   }
 
   function render() {
-    currentView?.destroy?.();
+    if (currentView && currentViewState === state) return currentView;
+    destroyView();
     currentView = SettingsRoute({
       state,
       onRetry: load,
       onValidate: validateSettingsDraft,
       onSave: save,
     });
+    currentViewState = state;
     return currentView;
   }
 
@@ -297,16 +327,18 @@ export function createSettingsController({
     save,
     render,
     getState: () => state,
+    hasUnsavedChanges,
+    isSaving: () => activeMutations.size > 0,
+    canDiscardChanges,
+    discardChanges: destroyView,
     deactivate() {
-      currentView?.destroy?.();
-      currentView = null;
+      currentView?.deactivate?.();
       api.cancelSettingsRequest?.();
     },
     destroy() {
       destroyed = true;
       requestVersion += 1;
-      currentView?.destroy?.();
-      currentView = null;
+      destroyView();
       api.cancelSettingsRequest?.();
       activeMutations.clear();
       pendingIdempotency.clear();

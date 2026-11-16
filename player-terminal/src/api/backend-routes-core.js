@@ -1,5 +1,6 @@
 import { resolveBusinessBankingBackendRequest } from "./business-banking-backend-routes.js";
 import { ApiRequestError } from "./errors.js";
+import { BUSINESS_TREASURY_ROUTE_BUILDERS } from "./business-treasury-backend-routes.js";
 
 function requiredText(value, fieldName, endpointKey) {
   const text = typeof value === "string" ? value.trim() : "";
@@ -8,7 +9,6 @@ function requiredText(value, fieldName, endpointKey) {
     body: { code: "player_route_context_missing", fieldName, endpointKey },
   });
 }
-
 function publicStoryDeliveryId(value) {
   const deliveryId = requiredText(value, "deliveryId", "storyDeliveryState").toLowerCase();
   if (/^ndl_[0-9a-f]{32}$/.test(deliveryId)) return deliveryId;
@@ -50,6 +50,112 @@ function idempotencyKey(payload, endpointKey) {
   return requiredText(payload?.idempotencyKey, "idempotencyKey", endpointKey);
 }
 
+function requiredPublicKey(value, pattern, fieldName, endpointKey) {
+  const candidate = requiredText(value, fieldName, endpointKey).toLowerCase();
+  if (pattern.test(candidate)) return candidate;
+  throw new ApiRequestError(`${fieldName} is invalid for ${endpointKey}.`, {
+    body: { code: "player_public_key_invalid", fieldName, endpointKey },
+  });
+}
+
+function requiredPositiveInteger(value, fieldName, endpointKey) {
+  const candidate = Number(value);
+  if (Number.isSafeInteger(candidate) && candidate >= 1 && candidate <= 1_000_000) {
+    return candidate;
+  }
+  throw new ApiRequestError(`${fieldName} is invalid for ${endpointKey}.`, {
+    body: { code: "player_positive_integer_invalid", fieldName, endpointKey },
+  });
+}
+
+function requiredStoreFundingAmount(value, fieldName, endpointKey) {
+  const candidate = typeof value === "string" ? value.trim() : "";
+  if (
+    /^(?:0|[1-9][0-9]{0,19})(?:\.[0-9]{1,18})?$/u.test(candidate) &&
+    /[1-9]/u.test(candidate)
+  ) {
+    const [whole, fraction = ""] = candidate.split(".");
+    const canonicalFraction = fraction.replace(/0+$/u, "");
+    return canonicalFraction ? `${whole}.${canonicalFraction}` : whole;
+  }
+  throw new ApiRequestError(`${fieldName} is invalid for ${endpointKey}.`, {
+    body: {
+      code: "player_store_funding_amount_invalid",
+      fieldName,
+      endpointKey,
+    },
+  });
+}
+
+function requiredStoreFundingAllocations(value, endpointKey) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 3) {
+    throw new ApiRequestError(`allocations is invalid for ${endpointKey}.`, {
+      body: {
+        code: "player_store_funding_allocations_invalid",
+        fieldName: "allocations",
+        endpointKey,
+      },
+    });
+  }
+  const accountKeys = new Set();
+  return value.map((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new ApiRequestError(`allocations[${index}] is invalid for ${endpointKey}.`, {
+        body: {
+          code: "player_store_funding_allocation_invalid",
+          fieldName: `allocations[${index}]`,
+          endpointKey,
+        },
+      });
+    }
+    const sourceAccountKey = requiredPublicKey(
+      entry.sourceAccountKey,
+      /^bac_[0-9a-f]{32}$/u,
+      `allocations[${index}].sourceAccountKey`,
+      endpointKey,
+    );
+    if (accountKeys.has(sourceAccountKey)) {
+      throw new ApiRequestError(`allocations is invalid for ${endpointKey}.`, {
+        body: {
+          code: "player_store_funding_accounts_duplicate",
+          fieldName: "allocations",
+          endpointKey,
+        },
+      });
+    }
+    accountKeys.add(sourceAccountKey);
+    const finalAllocation = index === value.length - 1;
+    if (finalAllocation && entry.targetAmount !== null) {
+      throw new ApiRequestError(`allocations[${index}] is invalid for ${endpointKey}.`, {
+        body: {
+          code: "player_store_funding_remainder_invalid",
+          fieldName: `allocations[${index}].targetAmount`,
+          endpointKey,
+        },
+      });
+    }
+    if (!finalAllocation && entry.targetAmount === null) {
+      throw new ApiRequestError(`allocations[${index}] is invalid for ${endpointKey}.`, {
+        body: {
+          code: "player_store_funding_fixed_amount_invalid",
+          fieldName: `allocations[${index}].targetAmount`,
+          endpointKey,
+        },
+      });
+    }
+    return {
+      sourceAccountKey,
+      targetAmount: finalAllocation
+        ? null
+        : requiredStoreFundingAmount(
+          entry.targetAmount,
+          `allocations[${index}].targetAmount`,
+          endpointKey,
+        ),
+    };
+  });
+}
+
 function gameSessionId(payload, session, endpointKey) {
   return requiredText(
     payload?.gameSessionId || session?.gameSessionId,
@@ -79,6 +185,7 @@ function notificationDeliveryIds(payload, endpointKey) {
 }
 
 const ROUTE_BUILDERS = Object.freeze({
+  ...BUSINESS_TREASURY_ROUTE_BUILDERS,
   session: () => ({ method: "GET", path: "/players/me" }),
   capabilities: () => ({ method: "GET", path: "/players/me/capabilities" }),
   dashboard: () => ({
@@ -133,25 +240,86 @@ const ROUTE_BUILDERS = Object.freeze({
     path: queryPath(`/players/me/stocks/assets/${encodeURIComponent(requiredText(params.assetId || payload.assetId, "assetId", "marketAsset"))}`, { historyLimit: payload.historyLimit ?? 200 }),
   }),
   marketOrder: ({ payload = {} }) => {
-    if (String(payload.orderType || "market").toLowerCase() !== "market") {
-      throw new ApiRequestError("Limit orders are not supported by the current player stock-order route.", { body: { code: "player_limit_orders_not_supported" } });
+    const endpointKey = "marketOrder";
+    const action = requiredText(payload.action, "action", endpointKey).toLowerCase();
+    const requestIdempotencyKey = idempotencyKey(payload, endpointKey);
+    if (action === "settle_buy_quote") {
+      return {
+        method: "POST",
+        path: "/players/me/stocks/orders",
+        payload: {
+          action,
+          quoteKey: requiredPublicKey(payload.quoteKey, /^sbq_[0-9a-f]{32}$/, "quoteKey", endpointKey),
+          idempotencyKey: requestIdempotencyKey,
+        },
+      };
     }
-    const expectedPrice = Number(payload.expectedPrice ?? payload.price);
-    if (!Number.isFinite(expectedPrice) || expectedPrice <= 0) {
-      throw new ApiRequestError("expectedPrice is required for marketOrder.", { body: { code: "player_market_expected_price_invalid" } });
+
+    const ticker = requiredText(payload.ticker, "ticker", endpointKey).toUpperCase();
+    const quantity = Number(payload.quantity);
+    const expectedPrice = Number(payload.expectedPrice);
+    const expectedTickIndex = Number(payload.expectedTickIndex);
+    if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(expectedPrice) || expectedPrice <= 0 || !Number.isSafeInteger(expectedTickIndex) || expectedTickIndex < 0) {
+      throw new ApiRequestError("Stock quote and settlement evidence is invalid.", {
+        body: { code: "player_market_evidence_invalid", endpointKey },
+      });
     }
-    return {
-      method: "POST",
-      path: "/players/me/stocks/orders",
-      payload: {
-        ticker: requiredText(payload.ticker || payload.symbol || payload.assetId, "ticker", "marketOrder").toUpperCase(),
-        expectedPrice,
-        side: requiredText(payload.side, "side", "marketOrder").toLowerCase(),
-        quantity: Number(payload.quantity),
-        idempotencyKey: idempotencyKey(payload, "marketOrder"),
-      },
-    };
+    if (action === "create_buy_quote" || action === "buy_now") {
+      const allocations = Array.isArray(payload.allocations)
+        ? payload.allocations.map((row, index) => ({
+          sourceAccountKey: requiredPublicKey(
+            row?.sourceAccountKey,
+            /^bac_[0-9a-f]{32}$/,
+            `allocations[${index}].sourceAccountKey`,
+            endpointKey,
+          ),
+          targetAmount: Number(row?.targetAmount),
+        }))
+        : [];
+      if (allocations.length < 1 || allocations.length > 3 || allocations.some((row) => !Number.isFinite(row.targetAmount) || row.targetAmount <= 0)) {
+        throw new ApiRequestError("Stock funding requires one to three positive Checking allocations.", {
+          body: { code: "player_market_allocations_invalid", endpointKey },
+        });
+      }
+      return {
+        method: "POST",
+        path: "/players/me/stocks/orders",
+        payload: {
+          action,
+          ticker,
+          quantity,
+          expectedPrice,
+          expectedTickIndex,
+          allocations,
+          idempotencyKey: requestIdempotencyKey,
+        },
+      };
+    }
+    if (action === "settle_sell") {
+      return {
+        method: "POST",
+        path: "/players/me/stocks/orders",
+        payload: {
+          action,
+          ticker,
+          quantity,
+          expectedPrice,
+          expectedTickIndex,
+          destinationAccountKey: requiredPublicKey(
+            payload.destinationAccountKey,
+            /^bac_[0-9a-f]{32}$/,
+            "destinationAccountKey",
+            endpointKey,
+          ),
+          idempotencyKey: requestIdempotencyKey,
+        },
+      };
+    }
+    throw new ApiRequestError("The requested Stock trading action is not supported.", {
+      body: { code: "player_market_action_invalid", endpointKey },
+    });
   },
+
   marketWatchlist: ({ params = {}, payload = {} }) => {
     if (typeof payload.enabled !== "boolean") {
       throw new ApiRequestError("enabled must be a boolean for marketWatchlist.", { body: { code: "player_watchlist_state_invalid", endpointKey: "marketWatchlist" } });
@@ -165,7 +333,13 @@ const ROUTE_BUILDERS = Object.freeze({
   storeQuote: ({ payload = {} }) => ({
     method: "POST",
     path: "/players/me/store/quotes",
-    payload: { itemKey: requiredText(payload.itemKey, "itemKey", "storeQuote"), quantity: Number(payload.quantity ?? 1) },
+    payload: {
+      offerKey: requiredPublicKey(payload.offerKey, /^sof_[0-9a-f]{32}$/u, "offerKey", "storeQuote"),
+      quantity: requiredPositiveInteger(payload.quantity, "quantity", "storeQuote"),
+      expectedVersion: requiredPositiveInteger(payload.expectedVersion, "expectedVersion", "storeQuote"),
+      allocations: requiredStoreFundingAllocations(payload.allocations, "storeQuote"),
+      idempotencyKey: idempotencyKey(payload, "storeQuote"),
+    },
   }),
   storePurchase: ({ payload = {} }) => ({
     method: "POST",
@@ -173,9 +347,39 @@ const ROUTE_BUILDERS = Object.freeze({
     payload: {
       quoteKey: requiredText(payload.quoteKey, "quoteKey", "storePurchase"),
       idempotencyKey: idempotencyKey(payload, "storePurchase"),
-      clientSubmittedAt: typeof payload.clientSubmittedAt === "string" ? payload.clientSubmittedAt : null,
     },
   }),
+  storeOfferQuote: ({ payload = {} }) => ({
+    method: "POST",
+    path: "/players/me/store/offer-quotes",
+    payload: {
+      offerKey: requiredPublicKey(payload.offerKey, /^sof_[0-9a-f]{32}$/u, "offerKey", "storeOfferQuote"),
+      quantity: requiredPositiveInteger(payload.quantity, "quantity", "storeOfferQuote"),
+      expectedVersion: requiredPositiveInteger(payload.expectedVersion, "expectedVersion", "storeOfferQuote"),
+      allocations: requiredStoreFundingAllocations(payload.allocations, "storeOfferQuote"),
+      idempotencyKey: idempotencyKey(payload, "storeOfferQuote"),
+    },
+  }),
+  storeOfferPurchase: ({ payload = {} }) => ({
+    method: "POST",
+    path: "/players/me/store/offer-purchases",
+    payload: {
+      quoteKey: requiredPublicKey(payload.quoteKey, /^quote_[0-9a-f]{32}$/u, "quoteKey", "storeOfferPurchase"),
+      idempotencyKey: idempotencyKey(payload, "storeOfferPurchase"),
+    },
+  }),
+  storeOfferReceipt: ({ path, params = {}, payload = {} }) => {
+    const receiptKey = requiredPublicKey(
+      params.receiptKey || payload.receiptKey || resolvedPathValue(path, /^\/store\/receipts\/([^/]+)$/),
+      /^spr_[0-9a-f]{32}$/u,
+      "receiptKey",
+      "storeOfferReceipt",
+    );
+    return {
+      method: "GET",
+      path: `/players/me/store/receipts/${encodeURIComponent(receiptKey)}`,
+    };
+  },
   inventory: () => ({ method: "GET", path: "/players/me/inventory" }),
   inventoryUse: ({ path, params = {}, payload = {} }) => ({
     method: "POST",
@@ -225,12 +429,12 @@ const ROUTE_BUILDERS = Object.freeze({
 const CORE_PLAYER_BACKEND_ROUTE_KEYS = Object.freeze(Object.keys(ROUTE_BUILDERS));
 const BUSINESS_BANKING_ROUTE_KEYS = Object.freeze([
   "business",
+  "businessWorkforce",
   "businessCreate",
   "businessProductCreate",
-  "businessInputPurchase",
   "businessProduction",
   "businessPrice",
-  "businessHire",
+  "businessCandidateHire",
   "businessTerminate",
   "businessStatus",
   "bankTransfer",

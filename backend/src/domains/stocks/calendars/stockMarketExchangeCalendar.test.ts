@@ -5,12 +5,29 @@ import {
   STOCK_EXCHANGE_CODES,
   stockMarketMinuteKey,
 } from "./stockMarketExchangeCalendar.ts";
+import {
+  normalizeRequiredStockMarketWindowSetting,
+  StockMarketWindowConfigError,
+} from "./stockMarketWindowConfig.ts";
+import {
+  normalizeRequiredStockMarketWindowSetting as publicNormalizeRequiredStockMarketWindowSetting,
+  StockMarketWindowConfigError as PublicStockMarketWindowConfigError,
+} from "../marketWindow.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
 const GAME_TIME_ZONE = "Asia/Seoul";
+
+Deno.test("public Stock market window policy retains the canonical function and error", () => {
+  if (publicNormalizeRequiredStockMarketWindowSetting !== normalizeRequiredStockMarketWindowSetting) {
+    throw new Error("Public market window normalizer is not canonical.");
+  }
+  if (PublicStockMarketWindowConfigError !== StockMarketWindowConfigError) {
+    throw new Error("Public market window validation error is not canonical.");
+  }
+});
 
 Deno.test("all ten countries map to a stable exchange", () => {
   assertEquals(STOCK_EXCHANGE_CODES.length, 10);

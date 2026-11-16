@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.staging-auth-release-guard-pr-868.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 868,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/admin-password-recovery-release.yml",
+    "docs/operations/contracts/player-cross-cutting/pr-868.json",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "docs/roadmaps/staging-auth-release-guard-v1.md",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/staging-auth-recovery-release.mjs",
+    "scripts/staging-auth-recovery-release.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-868.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Repository Quality",
+    "Validate browser recovery and release boundary",
+    "admin-business-supervision-source",
+    "business-player-store-fx-final-v2-source",
+    "business-store-sales-convergence-v2-source",
+    "Verify C4 source, public contracts, and retained application boundaries"
+  ],
+  "criticalJobChecks": [
+    "admin-business-supervision-source",
+    "business-player-store-fx-final-v2-source",
+    "business-store-sales-convergence-v2-source",
+    "Verify C4 source, public contracts, and retained application boundaries"
+  ],
+  "scopeRecord": "docs/roadmaps/staging-auth-release-guard-v1.md",
+  "authorizationNote": "Parent-reviewed and approved bounded verification authority. Bounded release guard and synthetic validation for PR868 only. Verifier and shared regression files are unchanged locks, not edit permission. No Player, backend, API, realtime or dependency changes. No merge, workflow dispatch, live auth/factor/credential/reset change, deployment or production authorization. REF019/020 and all existing owner/release holds retained."
+}

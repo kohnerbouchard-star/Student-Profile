@@ -1,3 +1,4 @@
+// Phase 6 exact-head acceptance synchronization marker.
 import assert from "node:assert/strict";
 
 import { buildPlayerCraftingCapabilityResponse } from "../../backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.ts";
@@ -23,25 +24,80 @@ try {
   throw error;
 }
 
-assert.equal(manifest.manifestVersion, "2026-07-23.2");
+assert.equal(manifest.manifestVersion, "2026-08-31.2");
 assert.equal(manifest.capabilities.routes.dashboard, true);
 assert.equal(manifest.capabilities.routes.crafting, true);
 assert.equal(manifest.capabilities.routes.progression, true);
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "dashboard"));
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "craftingJobClaim"));
 assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "progressionClaim"));
+assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessFormationPropose"));
+assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessFormationRespond"));
+assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessFormationActivate"));
+assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessManufacturingJobs"));
+assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessManufacturingStart"));
+assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === "businessManufacturingCancel"));
+for (const endpointKey of [
+  "bankingFx",
+  "bankingFxHistory",
+  "bankingFxOrders",
+  "bankingFxQuote",
+  "bankingFxStandard",
+  "bankingFxInstant",
+  "bankingFxCancel",
+]) {
+  assert.ok(manifest.endpoints.some((endpoint) => endpoint.key === endpointKey));
+}
+assert.equal("businessInputPurchase" in manifest.capabilities.actions, false);
+assert.equal(manifest.endpoints.some((endpoint) => endpoint.key === "businessInputPurchase"), false);
 
 const resolved = resolveCapabilities({
   config: {},
-  session: { capabilities: manifest.capabilities },
+  session: {
+    capabilities: manifest.capabilities,
+    capabilityEndpointKeys: manifest.endpoints.map((endpoint) => endpoint.key),
+  },
   dashboard: {},
 });
 assert.equal(resolved.actions.marketplaceActivate, true);
 assert.equal(resolved.actions.marketplaceDispute, true);
+assert.equal(resolved.actions.businessFormationPropose, true);
+assert.equal(resolved.actions.businessFormationRespond, true);
+assert.equal(resolved.actions.businessFormationActivate, true);
+assert.equal(resolved.actions.businessProduction, true);
+for (const endpointKey of ["businessEquipmentInstall", "businessStoreOfferCreate", "businessStoreOfferStock", "businessStoreOfferPublish"]) {
+  assert.equal(resolved.actions[endpointKey], true, `Server must advertise ${endpointKey}.`);
+  assert.equal(isEndpointEnabled(resolved, endpointKey), true, `Current manifest must enable ${endpointKey}.`);
+}
+assert.equal(resolved.actions.bankingFxQuote, true);
+assert.equal(resolved.actions.bankingFxStandard, true);
+assert.equal(resolved.actions.bankingFxInstant, true);
+assert.equal(resolved.actions.bankingFxCancel, true);
 assert.equal(isEndpointEnabled(resolved, "marketplaceActivate"), true);
 assert.equal(isEndpointEnabled(resolved, "marketplaceDispute"), true);
+assert.equal(isEndpointEnabled(resolved, "marketplacePurchase"), true);
+assert.equal(isEndpointEnabled(resolved, "marketplaceSettlement"), true);
+assert.equal(isEndpointEnabled(resolved, "businessFormationPropose"), true);
+assert.equal(isEndpointEnabled(resolved, "businessFormationRespond"), true);
+assert.equal(isEndpointEnabled(resolved, "businessFormationActivate"), true);
+assert.equal(isEndpointEnabled(resolved, "businessManufacturingStart"), true);
+assert.equal(isEndpointEnabled(resolved, "businessManufacturingCancel"), true);
+assert.equal(isEndpointEnabled(resolved, "bankingFxQuote"), true);
+assert.equal(isEndpointEnabled(resolved, "bankingFxStandard"), true);
+assert.equal(isEndpointEnabled(resolved, "bankingFxInstant"), true);
+assert.equal(isEndpointEnabled(resolved, "bankingFxCancel"), true);
 assert.equal(isEndpointEnabled(resolved, "messageThreadCreate"), true);
 assert.equal(isEndpointEnabled(resolved, "messageRead"), true);
+for (const endpointKey of [
+  "craftItem",
+  "craftCancel",
+  "craftClaim",
+  "equipmentEquip",
+  "itemEffectUse",
+  "itemSalvage",
+]) {
+  assert.equal(isEndpointEnabled(resolved, endpointKey), true);
+}
 
 const futureManifest = structuredClone(generated);
 futureManifest.capabilities.routes.futureSimulation = true;
@@ -87,4 +143,4 @@ assert.throws(
   "Core capability drift must remain fail closed with bounded diagnostics.",
 );
 
-console.log("Exact backend manifest, mutation capability aliases, optional drift quarantine, core fail-closed validation, and safe diagnostics passed.");
+console.log("Exact backend manifest, Business formation and manufacturing capabilities, mutation aliases, optional drift quarantine, core fail-closed validation, and safe diagnostics passed.");

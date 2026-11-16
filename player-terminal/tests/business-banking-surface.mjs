@@ -2,14 +2,19 @@ import assert from "node:assert/strict";
 
 import { resolveBusinessBankingBackendRequest } from "../src/api/business-banking-backend-routes.js";
 import { PLAYER_ENDPOINTS } from "../src/api/endpoints.js";
+import { playerSafeErrorMessage } from "../src/api/errors.js";
 import { WRITE_INVALIDATIONS } from "../src/api/resource-plan.js";
 import { renderBankingPage } from "../src/pages/banking-page.js";
 import { renderBusinessPage } from "../src/pages/business-page.js";
 import { renderLoansPage } from "../src/pages/loans-page.js";
+import { normalizeApiResponse } from "../src/api/response-normalizer.js";
 
 const businessKey = `biz_${"a".repeat(32)}`;
 const productKey = `bpr_${"b".repeat(32)}`;
+const manufacturingJobKey = `mfg_${"7".repeat(32)}`;
 const employeeKey = `emp_${"c".repeat(32)}`;
+const candidateKey = `wfc_${"f".repeat(32)}`;
+const payrollRunKey = `pay_${"9".repeat(32)}`;
 const loanOfferKey = `lop_${"d".repeat(32)}`;
 const loanKey = `lon_${"e".repeat(32)}`;
 const data = {
@@ -23,11 +28,7 @@ const data = {
       status: "Active",
       industry: "Manufacturing",
       headquarters: "Lumenor",
-      valuation: 5000,
-      valuationChange: 2,
       cash: 1000,
-      revenue: 800,
-      margin: 20,
       reputation: 65,
       reputationLabel: "Established operator",
       summary: "Ledger-backed enterprise.",
@@ -47,7 +48,7 @@ const data = {
       description: "50/100 quality",
       price: 20,
       margin: 30,
-      demand: "Stable",
+      version: 1,
       icon: "factory",
       version: 2,
     }],
@@ -61,6 +62,80 @@ const data = {
       status: "Active",
     }],
     inventory: [{ itemKey: "machine-steel-billet", kind: "input", quantity: 10, unitCost: 2 }],
+    manufacturingJobs: [{
+      jobKey: manufacturingJobKey,
+      businessKey,
+      productKey,
+      productName: "Utility Module",
+      status: "in_progress",
+      resourceState: "reserved",
+      priority: "standard",
+      quantity: 10,
+      completedOutputQuantity: 0,
+      queuedAt: "2026-08-23T00:00:00.000Z",
+      startedAt: "2026-08-23T00:01:00.000Z",
+      completesAt: "2026-08-23T00:11:00.000Z",
+      completedAt: null,
+      cancelledAt: null,
+      failedAt: null,
+      failureCode: null,
+      canCancel: true,
+    }],
+    workforceUtilization: {
+      businessKey,
+      payrollPeriodKey: "payroll:1",
+      generatedAt: "2026-08-23T00:00:00.000Z",
+      payroll: {
+        payrollRunKey,
+        periodKey: "payroll:1",
+        status: "partially_paid",
+        employeeCount: 1,
+        wageDue: 25,
+        wagePaid: 15,
+        wageUnpaid: 10,
+        currencyCode: "LUM",
+        completedAt: "2026-08-23T00:00:00.000Z",
+      },
+      employees: [{
+        employeeKey,
+        roleKey: "production.specialist",
+        roleName: "Production Specialist",
+        status: "active",
+        workforceSource: "candidate_v2",
+        capacityMinutes: 480,
+        reservedMinutes: 0,
+        consumedMinutes: 120,
+        utilizedMinutes: 120,
+        availableMinutes: 360,
+        idleMinutes: 360,
+        utilizationBasisPoints: 2500,
+        latestPayrollStatus: "partially_paid",
+        wageDue: 25,
+        wagePaid: 15,
+        wageUnpaid: 10,
+        currencyCode: "LUM",
+      }],
+    },
+  },
+  businessWorkforce: {
+    businessKey,
+    generatedAt: "2026-08-22T00:00:00.000Z",
+    candidates: [{
+      candidateKey,
+      roleKey: "production.specialist",
+      roleName: "Production Specialist",
+      laborClass: "manufacturing",
+      displayLabel: "Lumenor Production Candidate",
+      countryCode: "LUMENOR",
+      currencyCode: "LUM",
+      wagePerCycle: 25,
+      laborMinutesPerCycle: 480,
+      skillBasisPoints: 7500,
+      productivityIndex: 1,
+      contractType: "cycle",
+      availabilityEndsAt: null,
+      version: 1,
+    }],
   },
   banking: {
     checking: { accountId: "checking", balance: 1000, available: 1000, currencyCode: "LUM" },
@@ -118,10 +193,8 @@ const data = {
 const markup = renderBusinessPage(data);
 for (const endpoint of [
   "businessProductCreate",
-  "businessInputPurchase",
-  "businessProduction",
+  "businessManufacturingStart",
   "businessPrice",
-  "businessHire",
   "businessTerminate",
   "businessStatus",
 ]) {
@@ -129,12 +202,49 @@ for (const endpoint of [
   assert.ok(WRITE_INVALIDATIONS[endpoint]?.includes("business"), `missing ${endpoint} Business invalidation`);
   assertAccessibleForm(markup, endpoint);
 }
+assert.match(markup, /data-endpoint="businessManufacturingCancel"/);
+assert.match(markup, new RegExp(`data-business-manufacturing-job="${manufacturingJobKey}"`));
+assert.ok(
+  WRITE_INVALIDATIONS.businessManufacturingCancel?.includes("business"),
+  "missing businessManufacturingCancel Business invalidation",
+);
+assert.doesNotMatch(markup, /data-endpoint="businessProduction"/);
+assert.equal(
+  PLAYER_ENDPOINTS.businessManufacturingStart.path,
+  "/businesses/:businessId/manufacturing/jobs",
+);
+assert.equal(
+  PLAYER_ENDPOINTS.businessManufacturingCancel.path,
+  "/businesses/:businessId/manufacturing/jobs/:jobId/cancel",
+);
+assert.match(markup, /data-endpoint="businessCandidateHire"/);
+assert.ok(WRITE_INVALIDATIONS.businessCandidateHire?.includes("business"), "missing businessCandidateHire Business invalidation");
+assert.match(markup, /data-business-workforce-utilization/);
+assert.match(markup, /payroll:1/);
+assert.match(markup, /25% utilization/);
+assert.match(markup, /360 minutes available/);
+assert.match(markup, new RegExp(`data-workforce-employee-id="${employeeKey}"`));
+assert.match(markup, new RegExp(`data-candidate-id="${candidateKey}"`));
+assert.match(markup, new RegExp(`name="candidateKey" type="hidden" value="${candidateKey}"`));
+assert.match(markup, /<form[^>]*data-endpoint="businessCandidateHire"[^>]*>[\s\S]*?<button[^>]*type="submit"/u);
 assert.match(markup, new RegExp(`name="businessKey" type="hidden" value="${businessKey}"`));
 assert.match(markup, new RegExp(`data-employee-id="${employeeKey}"`));
-assert.match(markup, /name="wagePerCycle"/);
-assert.match(markup, /name="productivityIndex"/);
+assert.doesNotMatch(markup, /name="wagePerCycle"|name="productivityIndex"|name="roleName"|name="unitLaborCost"/u);
+assert.doesNotMatch(markup, /name="baseDemandUnits"|Company value|Cycle revenue|operating margin/u);
+assert.match(markup, /Recent Store sales/);
+assert.match(markup, /Committed seller receipts/);
 assert.match(markup, /name="expectedVersion" type="hidden" value="2"/);
 assert.doesNotMatch(markup, /playerUuid|gameSessionId|ownerPlayerId/);
+assert.doesNotMatch(markup, /businessInputPurchase|Purchase production inputs|Purchase inputs/);
+assert.equal(PLAYER_ENDPOINTS.businessInputPurchase, undefined);
+assert.match(
+  playerSafeErrorMessage({ status: 409, code: "BUSINESS_LABOR_CAPACITY_UNAVAILABLE" }),
+  /labor minutes left in the current payroll period/u,
+);
+assert.match(
+  playerSafeErrorMessage({ status: 409, code: "BUSINESS_LABOR_ROLE_COVERAGE_UNAVAILABLE" }),
+  /Hire an eligible candidate/u,
+);
 
 const unconfigured = renderBusinessPage({
   session: { currencyCode: "LUM" },
@@ -142,11 +252,15 @@ const unconfigured = renderBusinessPage({
     ...data.business,
     configured: false,
     company: { ...data.business.company, id: "" },
-    products: [], employees: [], inventory: [],
+    products: [], employees: [], inventory: [], workforceUtilization: null,
   },
 });
 assert.match(unconfigured, /data-endpoint="businessCreate"/);
-assert.match(unconfigured, /name="acquireBusinessKey"/);
+assert.match(unconfigured, /Create one game-scoped enterprise/);
+assert.doesNotMatch(
+  unconfigured,
+  /name="acquireBusinessKey"|Create or acquire|acquire an enterprise/iu,
+);
 assertAccessibleForm(unconfigured, "businessCreate");
 
 const assignedCountryCurrency = renderBusinessPage({
@@ -156,7 +270,7 @@ const assignedCountryCurrency = renderBusinessPage({
     ...data.business,
     configured: false,
     company: { ...data.business.company, id: "" },
-    products: [], employees: [], inventory: [],
+    products: [], employees: [], inventory: [], workforceUtilization: null,
   },
 });
 assert.match(assignedCountryCurrency, /STARTING CAPITAL \(YRC\)/);
@@ -187,6 +301,52 @@ assert.match(loansMarkup, /<details class="player-terminal-disclosure"[^>]*><sum
 assertAccessibleForm(loansMarkup, "loanApply");
 assertAccessibleForm(loansMarkup, "loanRepay");
 
+const due = "2026-10-05T00:00:00.000001Z";
+const projection = { version: 1, complete: true, unknownCurrencyRows: 0, groups: [
+  { currencyCode: "NRC", availableCredit: "99999999999999.99", outstanding: "0.00",
+    nextPayment: { amount: "2.00", due }, schedule: [{ due, amount: "2.00" }] },
+  { currencyCode: "LUM", availableCredit: "0.00", outstanding: "3.00", nextPayment: null, schedule: [] },
+] };
+const currencyFixture = { ...data.loans, currencyProjection: projection,
+  offers: data.loans.offers.map((row) => ({ ...row, currencyCode: "LUM", limit: "999999999999.99" })),
+  activeLoans: data.loans.activeLoans.map((row) => ({ ...row, currencyCode: "NRC", balance: "999999999999.99" })),
+  schedule: data.loans.schedule.map((row) => ({ ...row, currencyCode: "LUM", amount: "0.01" })),
+};
+const normalizedLoans = normalizeApiResponse("loans", { ok: true, data: currencyFixture });
+assert.deepEqual(normalizedLoans.currencyProjection, projection);
+const exactMarkup = renderLoansPage({ ...data, loans: normalizedLoans }, { loanOfferId: loanOfferKey });
+for (const value of ["NRC 99,999,999,999,999.99", "NRC 0.00", "LUM 3.00", "LUM 0.01", "LUM 999,999,999,999.99", currencyFixture.schedule[0].due]) {
+  assert.ok(exactMarkup.includes(value), `missing exact currency value ${value}`);
+}
+assert.match(exactMarkup, /Forecast unavailable/);
+assert.match(exactMarkup, /Unverified service schedule/);
+assert.match(exactMarkup, /not the remaining debt, a payment recommendation or a payoff quote/);
+for (const invalid of [undefined, null, { ...projection, version: 2 }, { ...projection, complete: "true" },
+  { ...projection, unknownCurrencyRows: 1 }, { ...projection, groups: [...projection.groups, projection.groups[0]] },
+  { ...projection, groups: Array(1001).fill(projection.groups[0]) },
+  ...[12.34, "1.234", "-1.00", "1.00\n", "9".repeat(5001) + ".00", null].map((outstanding) =>
+    ({ ...projection, groups: [{ ...projection.groups[0], outstanding }] })),
+  { ...projection, groups: [{ ...projection.groups[0], schedule: Array(1001).fill({ due, amount: "1.00" }) }] },
+]) {
+  const loans = normalizeApiResponse("loans", { ...currencyFixture, currencyProjection: invalid });
+  assert.equal(loans.currencyProjection, null);
+  const html = renderLoansPage({ ...data, loans }, { loanOfferId: loanOfferKey });
+  assert.match(html, /Currency totals unavailable/);
+  assert.match(html, /data-endpoint="loanApply"/);
+  assert.match(html, /data-endpoint="loanRepay"/);
+}
+const incomplete = normalizeApiResponse("loans", { ...currencyFixture,
+  currencyProjection: { ...projection, complete: false, unknownCurrencyRows: 1 } });
+const incompleteMarkup = renderLoansPage({ ...data, loans: incomplete }, { loanOfferId: loanOfferKey });
+assert.match(incompleteMarkup, /Currency totals incomplete/);
+assert.doesNotMatch(incompleteMarkup, /NRC 99,999,999,999,999.99/);
+assert.match(loansMarkup, /Currency unavailable/);
+const empty = normalizeApiResponse("loans", { ...data.loans, offers: [], activeLoans: [], schedule: [],
+  currencyProjection: { ...projection, groups: [] } });
+assert.match(renderLoansPage({ ...data, loans: empty }, {}), /No currency obligations or offers/);
+assert.deepEqual(normalizedLoans.activeLoans, currencyFixture.activeLoans);
+assert.deepEqual(normalizedLoans.offers, currencyFixture.offers);
+
 const blockedBusinessLoan = renderLoansPage({
   ...data,
   business: { ...data.business, configured: false, company: { ...data.business.company, id: "" } },
@@ -207,14 +367,30 @@ const termination = resolveBusinessBankingBackendRequest({
     idempotencyKey: "business-terminate-0001",
   },
 });
-assert.equal(
-  termination.path,
-  `/players/me/business/employees/${employeeKey}/terminate`,
-);
+assert.equal(termination.path, `/players/me/business/employees/${employeeKey}/terminate`);
 assert.equal(termination.payload.businessKey, businessKey);
 assert.equal(termination.payload.reason, "Role no longer required");
 
-console.log("Player Business, checking/savings Banking, and Loans surface contract passed.");
+const productCreation = resolveBusinessBankingBackendRequest({
+  endpointKey: "businessProductCreate",
+  method: PLAYER_ENDPOINTS.businessProductCreate.method,
+  path: PLAYER_ENDPOINTS.businessProductCreate.path,
+  params: {},
+  payload: {
+    businessKey,
+    name: "Utility Module",
+    category: "general",
+    unitPrice: 20,
+    unitInputCost: 5,
+    capacityUnits: 100,
+    qualityScore: 50,
+    baseDemandUnits: 99_999,
+    idempotencyKey: "business-product-create-0001",
+  },
+});
+assert.equal(Object.hasOwn(productCreation.payload, "baseDemandUnits"), false);
+
+console.log("Player Business workforce utilization, checking/savings Banking, and Loans surface contract passed.");
 
 function assertAccessibleForm(source, endpoint) {
   const match = source.match(new RegExp(`<form[^>]*data-endpoint="${endpoint}"[^>]*>([\\s\\S]*?)<\\/form>`, "u"));

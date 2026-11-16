@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref022b-staff-ledger-application-pr-777.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 777,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts",
+    "backend/src/domains/economy/application/adjustLedgerForAuthorizedStaff.ts",
+    "backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.test.ts",
+    "backend/src/domains/economy/tests/economicMutationLedgerInvariant.test.ts",
+    "scripts/ref-022-ledger-adjustment-acceptance.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-022/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-022.md",
+    "docs/operations/contracts/player-cross-cutting/pr-777.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts",
+    "backend/src/domains/economy/application/adjustLedgerForAuthorizedStaff.ts",
+    "backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.test.ts",
+    "backend/src/domains/economy/tests/economicMutationLedgerInvariant.test.ts",
+    "scripts/ref-022-ledger-adjustment-acceptance.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-022/preflight.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-022.md",
+    "docs/operations/contracts/player-cross-cutting/pr-777.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Staff Attendance and ledger adjustment database/race qualification"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "economy",
+    "players"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-022/preflight.md",
+  "authorizationNote": "Owner-authorized REF-022b after qualified REF-022a. Extract fixed Staff ledger command construction only; keep the existing atomic service/RPC, auth, rounding, currency/account policy and response mapping. Bind the qualified disposable harness to the actual application; retain all assertions. No SQL, workflow, package, production or credential changes."
+}

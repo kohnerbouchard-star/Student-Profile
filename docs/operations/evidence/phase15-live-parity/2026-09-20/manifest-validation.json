@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "migrationCount": 435,
+  "manifestSha256": "9e52c6b235948f531fc075f90f1c1c63bcd3616c79d76ea46d85b1692a243b82",
+  "uniqueVersions": true,
+  "uniqueIdentities": true,
+  "validSqlFilenames": true,
+  "deterministicOrdering": true,
+  "immutableBaseline": "PASS"
+}

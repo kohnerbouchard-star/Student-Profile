@@ -35,6 +35,18 @@
       "authorizationModel": "publishable-key-plus-purchase-code-plus-rate-limit"
     },
     {
+      "slug": "business-operations-worker",
+      "entrypoint": "backend/supabase/functions/business-operations-worker/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "publishable-key-plus-signed-runner-auth"
+    },
+    {
+      "slug": "banking-fx-orchestrator",
+      "entrypoint": "backend/supabase/functions/banking-fx-orchestrator/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "vault-backed-scheduler-token-plus-private-verifier-plus-service-role"
+    },
+    {
       "slug": "campaign-orchestrator",
       "entrypoint": "backend/supabase/functions/campaign-orchestrator/index.ts",
       "verifyJwt": false,
@@ -43,6 +55,12 @@
     {
       "slug": "game-data-purger",
       "entrypoint": "backend/supabase/functions/game-data-purger/index.ts",
+      "verifyJwt": false,
+      "authorizationModel": "vault-backed-scheduler-token-plus-private-verifier-plus-service-role"
+    },
+    {
+      "slug": "fx-orchestrator",
+      "entrypoint": "backend/supabase/functions/fx-orchestrator/index.ts",
       "verifyJwt": false,
       "authorizationModel": "vault-backed-scheduler-token-plus-private-verifier-plus-service-role"
     },

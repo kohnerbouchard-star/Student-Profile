@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref039b-stock-tick-application-pr-809.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 809,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/stocks/application/runStockMarketRunner.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-039/execution.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-039.md",
+    "docs/operations/contracts/player-cross-cutting/pr-809.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/stocks/application/runStockMarketRunner.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-039/execution.md",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-039.md",
+    "docs/operations/contracts/player-cross-cutting/pr-809.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "stocks",
+    "players"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-039/execution.md",
+  "authorizationNote": "Owner-authorized REF039b mechanical Stock tick application extraction after real baseline qualification. Preserve load/calculate/atomic apply/publication, HTTP auth/calendar/clock and Story ordering, exact engine/persistence outputs. No SQL, scheduler, entrypoint, package, credential or production changes."
+}

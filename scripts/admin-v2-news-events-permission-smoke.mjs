@@ -20,6 +20,7 @@ const browser = await chromium.launch({ headless: true });
 const runId = randomUUID();
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, colorScheme: "dark" });
 const browserErrors = [];
+let deniedBootstrapCount = 0;
 
 try {
   await context.addCookies([
@@ -51,14 +52,17 @@ try {
   // Admin V2 intentionally refreshes authorization on every document load.
   // Deny world.manage at that authoritative bootstrap boundary rather than
   // relying only on the cached browser summary, which refresh() replaces.
-  await page.route("**/functions/v1/web-session-api/proxy/session/bootstrap", async (route) => {
+  await page.route(/\/(?:api\/admin|functions\/v1\/web-session-api\/proxy)\/session\/bootstrap(?:\?|$)/u, async (route) => {
     assert.equal(route.request().method(), "GET");
+    deniedBootstrapCount += 1;
     await route.fulfill({
       status: 200,
       contentType: "application/json; charset=utf-8",
       body: JSON.stringify({
         data: {
           admin: deniedSession.user,
+          activeGame: deniedSession.activeGameSessions[0],
+          games: deniedSession.activeGameSessions,
           permissions: deniedSession.permissions,
           roles: ["game_admin"],
           adminRole: "game_admin",
@@ -73,12 +77,13 @@ try {
     waitUntil: "domcontentloaded",
     timeout: 15_000,
   });
-  await page.getByRole("heading", { name: "News & Events access restricted" }).waitFor({
+  await page.getByRole("heading", { name: "News & Event Monitor access restricted", exact: true }).waitFor({
     state: "visible",
     timeout: 10_000,
   });
 
   assert.equal(await page.locator(".admin-news-events").count(), 0);
+  assert.ok(deniedBootstrapCount > 0, "permission denial must use the refreshed server bootstrap");
   assert.equal(
     fixture.requestsFor(runId).filter((entry) => entry.pathname.includes("/world/campaign")).length,
     0,

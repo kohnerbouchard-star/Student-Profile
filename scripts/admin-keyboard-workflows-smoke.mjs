@@ -169,6 +169,8 @@ async function createHarness(label) {
 async function openAction(page, action, key = "Enter") {
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForSelector("#adminPreview:not([hidden])", { timeout: 15_000 });
+  // Preview visibility precedes the sequential compatibility-module bootstrap.
+  await page.waitForFunction(() => typeof window.EconovariaAdminKeyboardNavigation?.enabled === "function", null, { timeout: 10_000 });
   const section = page.locator('[data-admin-section="Overview"]').first();
   await section.focus();
   await page.keyboard.press("Enter");
@@ -218,11 +220,18 @@ async function selectValue(page, locator, value) {
   value);
   assert(index >= 0, `Select is missing ${value}.`);
   await locator.focus();
-  await page.keyboard.press("Home");
-  for (let position = 0; position < index; position += 1) {
-    await page.keyboard.press("ArrowDown");
+  if (process.platform === "darwin") {
+    // Headless macOS native selects use type-ahead; Enter can submit the form.
+    const label = await locator.evaluate((node, optionIndex) => node.options[optionIndex].label, index);
+    await page.keyboard.type(label);
+    await page.keyboard.press("Tab");
+  } else {
+    await page.keyboard.press("Home");
+    for (let position = 0; position < index; position += 1) {
+      await page.keyboard.press("ArrowDown");
+    }
+    await page.keyboard.press("Enter");
   }
-  await page.keyboard.press("Enter");
   assert(await locator.inputValue() === value, `Keyboard selection failed for ${value}.`);
 }
 
@@ -268,10 +277,12 @@ async function exerciseCreate(config) {
   try {
     const tabs = await openAction(page, config.openAction, config.openKey);
     const form = page.locator(config.form);
+    const writesBeforeEditing = writes.length;
     for (const field of config.fields) {
       const locator = form.locator(`[name="${field.name}"]`);
       if (field.type === "select") await selectValue(page, locator, field.value);
       else await replace(page, locator, field.value);
+      assert(writes.length === writesBeforeEditing, `${config.label} submitted while editing ${field.name}.`);
     }
     const startIndex = writes.length;
     await activate(page, form.locator(config.submit), config.submitKey);

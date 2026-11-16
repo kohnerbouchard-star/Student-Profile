@@ -3,10 +3,21 @@
 import { existsSync, readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-export const DEFAULT_AUTHORITY_PATH =
+export const LEGACY_AUTHORITY_PATH =
   "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json";
-export const EXPECTED_AUTHORITY_ID =
-  "econovaria.stock-market-runtime-pr-483.v1";
+export const DEFAULT_AUTHORITY_PATH = LEGACY_AUTHORITY_PATH;
+export const AUTHORITY_DIRECTORY =
+  "docs/operations/contracts/player-cross-cutting";
+export const AUTHORITY_ID_PATTERN =
+  /^econovaria\.[a-z0-9]+(?:-[a-z0-9]+)*-pr-(\d+)\.v1$/u;
+
+export function authorityPathForPullRequest(pullRequestNumber) {
+  const value = Number(pullRequestNumber);
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error("Player authority pull request number is invalid.");
+  }
+  return `${AUTHORITY_DIRECTORY}/pr-${value}.json`;
+}
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -20,11 +31,20 @@ function uniqueStrings(value, label) {
   return normalized;
 }
 
-export function verifyAuthority({ manifest, changedPaths, pullRequestNumber, baseRef }) {
+export function verifyAuthority({
+  manifest,
+  changedPaths,
+  pullRequestNumber,
+  baseRef,
+  manifestPath = DEFAULT_AUTHORITY_PATH,
+}) {
   assert(manifest?.schemaVersion === 1, "Unsupported Player authority schema version.");
+  const authorityId = String(manifest.authorityId || "").trim();
+  const authorityMatch = authorityId.match(AUTHORITY_ID_PATTERN);
+  assert(authorityMatch, "Unexpected Player authority identifier.");
   assert(
-    manifest.authorityId === EXPECTED_AUTHORITY_ID,
-    "Unexpected Player authority identifier.",
+    Number(authorityMatch[1]) === Number(pullRequestNumber),
+    "Player authority identifier is not bound to this pull request.",
   );
   assert(
     manifest.purpose === "authorize-cross-cutting-player-verification",
@@ -43,6 +63,9 @@ export function verifyAuthority({ manifest, changedPaths, pullRequestNumber, bas
   const allowedPaths = uniqueStrings(manifest.allowedPaths, "allowedPaths");
   const requiredFiles = uniqueStrings(manifest.requiredFiles, "requiredFiles");
   const requiredChecks = uniqueStrings(manifest.requiredChecks, "requiredChecks");
+  const criticalJobChecks = manifest.criticalJobChecks === undefined
+    ? []
+    : uniqueStrings(manifest.criticalJobChecks, "criticalJobChecks");
   const changed = uniqueStrings(changedPaths, "changedPaths");
   const allowed = new Set(allowedPaths);
 
@@ -53,7 +76,7 @@ export function verifyAuthority({ manifest, changedPaths, pullRequestNumber, bas
     assert(allowed.has(path), `Required Player file is outside the authority allowlist: ${path}`);
   }
   assert(
-    allowed.has(DEFAULT_AUTHORITY_PATH) &&
+    allowed.has(manifestPath) &&
       allowed.has("scripts/verify-player-cross-cutting-authority.mjs") &&
       allowed.has("scripts/player-cross-cutting-authority.test.mjs"),
     "Player authority must lock its own manifest, verifier, and regression test.",
@@ -65,13 +88,23 @@ export function verifyAuthority({ manifest, changedPaths, pullRequestNumber, bas
       requiredChecks.includes("player-api-read-resilience"),
     "Player authority omits a required verification contract.",
   );
+  for (const check of criticalJobChecks) {
+    assert(
+      requiredChecks.includes(check),
+      `Critical workflow job is not bound as a required check: ${check}`,
+    );
+  }
 
-  return { allowedPathCount: allowedPaths.length, changedPathCount: changed.length };
+  return {
+    allowedPathCount: allowedPaths.length,
+    changedPathCount: changed.length,
+    criticalJobCheckCount: criticalJobChecks.length,
+  };
 }
 
 function readOptions(argv) {
   const options = {
-    manifest: DEFAULT_AUTHORITY_PATH,
+    manifest: "",
     changedFiles: "",
     pullRequestNumber: "",
     baseRef: "",
@@ -89,12 +122,20 @@ function readOptions(argv) {
   return options;
 }
 
+function resolveManifestPath(options) {
+  if (options.manifest) return options.manifest;
+  const prPath = authorityPathForPullRequest(options.pullRequestNumber);
+  return existsSync(prPath) ? prPath : LEGACY_AUTHORITY_PATH;
+}
+
 function main() {
   const options = readOptions(process.argv.slice(2));
   assert(options.changedFiles, "--changed-files is required.");
   assert(options.pullRequestNumber, "--pr-number is required.");
   assert(options.baseRef, "--base-ref is required.");
-  const manifest = JSON.parse(readFileSync(options.manifest, "utf8"));
+  const manifestPath = resolveManifestPath(options);
+  assert(existsSync(manifestPath), `Player authority manifest is missing: ${manifestPath}`);
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   const changedPaths = readFileSync(options.changedFiles, "utf8")
     .split(/\r?\n/u)
     .map((value) => value.trim())
@@ -104,6 +145,7 @@ function main() {
     changedPaths,
     pullRequestNumber: options.pullRequestNumber,
     baseRef: options.baseRef,
+    manifestPath,
   });
   for (const path of manifest.requiredFiles) {
     assert(existsSync(path), `Required Player authority file is missing: ${path}`);

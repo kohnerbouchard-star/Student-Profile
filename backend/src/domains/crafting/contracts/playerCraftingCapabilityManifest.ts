@@ -1,7 +1,7 @@
 import type {
   PlayerCapabilityManifest,
   PlayerCapabilityManifestResponseBody,
-} from "../../players/contracts/playerCapabilityManifestContracts.ts";
+} from "../../players/index.ts";
 
 const CRAFTING_ENDPOINTS = Object.freeze([
   {

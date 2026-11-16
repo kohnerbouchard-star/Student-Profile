@@ -1,19 +1,22 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 import { resolve } from "node:path";
+import { normalizeScannerFocusSource } from "./admin-scanner-focus-patch-contract.mjs";
 
 const root = process.cwd();
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 const read = (path) => readFileSync(resolve(root, path));
 const readText = (path) => read(path).toString("utf8");
 function gitBlobSha(path) {
-  const content = read(path);
+  const content = path === "admin/dist/admin-overview-terminal.js"
+    ? Buffer.from(normalizeScannerFocusSource(readText(path)), "utf8")
+    : read(path);
   const header = Buffer.from(`blob ${content.length}\0`, "utf8");
   return createHash("sha1").update(header).update(content).digest("hex");
 }
 
 const acceptedV606Blobs = {
-  "admin/dist/admin-overview-terminal.js": "03cf8d402136502688994e6cce670b9701f8f74f",
+  "admin/dist/admin-overview-terminal.js": "763f6c1af68eb985a77f36fed412a2ec7e6e819d",
   "admin/css/admin-overview-terminal.css": "7a609ccff33d61fee96d2ea944e0d1a6059a6081",
   "admin/css/page-shell.css": "a9644c2af3d2851f49c5f0354ed80d31784cf397",
   "admin/css/admin-overview-integrity.css": "887ae8ffaff27e9013093f6aae92529134b80c18",
@@ -29,12 +32,12 @@ const styleSources = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^
 const expectedScripts = [
   "../runtime-config.env.js", "../frontend/src/core/runtime-config.js",
   "../frontend/src/core/admin-game-selection.js",
-  "./auth-session-manager.js", "./session-gate.js", "./admin-auth.js",
+  "./auth-session-manager.js", "./session-gate.js", "./admin-request-normalization.js", "./admin-auth.js",
   "./dist/admin-overview-terminal.js", "./asset-wiring.js", "./classroom-write-fallback.js",
   "./create-action-adapter.js", "./player-access-code-bridge.js", "./modal-accessibility.js",
-  "./player-create-lifecycle.js", "./player-drawer-wiring.js", "./player-identity-wiring.js",
-  "./player-create-ux.js", "./game-code-wiring.js", "./logout-confirmation.js", "./game-session-controls.js", "./admin-stabilization.js",
-  "./interaction-quality.js", "./data-state-contracts.js", "./interaction-quality-control-reset.js",
+  "./player-create-lifecycle.js", "./player-drawer-wiring.js", "./player-identity-reset-scope.js", "./player-identity-roster.js", "./player-identity-profile.js", "./player-identity-wiring.js",
+  "./player-create-ux.js", "./game-code-share-presentation.js", "./game-code-wiring.js", "./logout-confirmation.js", "./game-session-context.js", "./game-session-share-surface.js", "./game-session-controls.js", "./admin-stabilization.js",
+  "./interaction-form-validation.js", "./interaction-quality.js", "./data-state-contracts.js", "./interaction-quality-control-reset.js",
   "./dist/admin-overview-boot.js", "./admin-bootstrap.js",
 ];
 assert(JSON.stringify(scriptSources) === JSON.stringify(expectedScripts), `Admin script order drifted: ${JSON.stringify(scriptSources)}.`);

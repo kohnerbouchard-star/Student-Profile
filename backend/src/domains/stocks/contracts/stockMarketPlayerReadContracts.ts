@@ -33,6 +33,7 @@ export interface StockMarketPlayerHoldingDto {
   readonly companyName: string;
   readonly sector: string;
   readonly countryCode: string;
+  readonly currencyCode?: string;
   readonly quantity: number;
   readonly averageCost: number;
   readonly currentPrice: number;
@@ -43,7 +44,18 @@ export interface StockMarketPlayerHoldingDto {
   readonly realizedPnl: number;
 }
 
+export interface StockMarketCurrencyValue {
+  readonly currencyCode: string;
+  readonly marketValue: number;
+  readonly costBasis: number;
+  readonly unrealizedPnl: number;
+  readonly realizedPnl: number;
+}
+
 export interface StockMarketPlayerPortfolioSummaryDto {
+  readonly currencyCode?: string;
+  readonly valuationStatus?: "complete" | "partial_unconverted";
+  readonly byCurrency?: readonly StockMarketCurrencyValue[];
   readonly cashBalance: number;
   readonly holdingsMarketValue: number;
   readonly totalEquity: number;

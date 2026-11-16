@@ -2,6 +2,13 @@ name: Edge Function Inventory Convergence
 # Release synchronization touch: production-current-20260817 exact merged-SHA attestation.
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_authorized:
+        description: "Explicit owner-authorized staging and production release of current main"
+        required: true
+        type: boolean
+        default: false
   push:
     branches:
       - main
@@ -28,6 +35,7 @@ concurrency:
 jobs:
   staging:
     name: Converge staging Edge Function inventory
+    if: github.event_name == 'workflow_dispatch' && inputs.release_authorized == true && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     environment: staging
@@ -38,7 +46,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
           test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_ACCESS_TOKEN"
           test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
@@ -58,7 +66,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-          node --test scripts/edge-function-inventory/validate.test.mjs
+          node --test scripts/edge-function-inventory/validate.test.mjs scripts/edge-function-inventory/deployment-plan.test.mjs
           node --test scripts/local-edge-runtime-contract.test.mjs
           node --test scripts/runtime-config-contract.test.mjs
 
@@ -77,40 +85,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          true_functions=(
-            admin-api
-            password-reset-api
-            staff-mfa-api
-            classroom-api
-          )
-          custom_auth_functions=(
-            admin-email-verification
-            admin-password-recovery
-            bootstrap-api
-            campaign-orchestrator
-            game-data-purger
-            player-api
-            player-web-session-api
-            stock-market-player-read
-            stock-market-read
-            stock-market-runner
-            stock-market-seed-copy
-            stock-market-trading
-            stock-market-orchestrator
-            stock-tick-archiver
-            web-session-api
-          )
-          for slug in "${true_functions[@]}"; do
-            supabase functions deploy "$slug" \
-              --workdir backend \
-              --project-ref "$STAGING_PROJECT_REF"
-          done
-          for slug in "${custom_auth_functions[@]}"; do
-            supabase functions deploy "$slug" \
-              --workdir backend \
-              --project-ref "$STAGING_PROJECT_REF" \
-              --no-verify-jwt
-          done
+          node scripts/edge-function-inventory/deployment-plan.mjs "$MANIFEST_PATH" \
+            > "$RUNNER_TEMP/edge-deployment-plan.tsv"
+          while IFS=$'\t' read -r slug verify_jwt; do
+            args=(--workdir backend --project-ref "$STAGING_PROJECT_REF")
+            case "$verify_jwt" in
+              true) ;;
+              false) args+=(--no-verify-jwt) ;;
+              *) echo "Invalid deployment JWT setting for $slug" >&2; exit 1 ;;
+            esac
+            supabase functions deploy "$slug" "${args[@]}"
+          done < "$RUNNER_TEMP/edge-deployment-plan.tsv"
 
       - name: Remove only manifest-retired staging functions
         shell: bash
@@ -168,6 +153,7 @@ jobs:
           }
           for spec in \
             'GET admin-email-verification' \
+            'POST business-operations-worker' \
             'POST campaign-orchestrator' \
             'POST game-data-purger' \
             'POST password-reset-api' \
@@ -194,6 +180,7 @@ jobs:
 
   production:
     name: Converge production Edge Function inventory
+    if: github.event_name == 'workflow_dispatch' && inputs.release_authorized == true && github.ref == 'refs/heads/main'
     needs: staging
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -205,7 +192,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_EVENT_NAME" = "push"
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
           test "$GITHUB_REF" = "refs/heads/main"
           test -n "$SUPABASE_ACCESS_TOKEN"
           test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
@@ -241,40 +228,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          true_functions=(
-            admin-api
-            password-reset-api
-            staff-mfa-api
-            classroom-api
-          )
-          custom_auth_functions=(
-            admin-email-verification
-            admin-password-recovery
-            bootstrap-api
-            campaign-orchestrator
-            game-data-purger
-            player-api
-            player-web-session-api
-            stock-market-player-read
-            stock-market-read
-            stock-market-runner
-            stock-market-seed-copy
-            stock-market-trading
-            stock-market-orchestrator
-            stock-tick-archiver
-            web-session-api
-          )
-          for slug in "${true_functions[@]}"; do
-            supabase functions deploy "$slug" \
-              --workdir backend \
-              --project-ref "$PRODUCTION_PROJECT_REF"
-          done
-          for slug in "${custom_auth_functions[@]}"; do
-            supabase functions deploy "$slug" \
-              --workdir backend \
-              --project-ref "$PRODUCTION_PROJECT_REF" \
-              --no-verify-jwt
-          done
+          node scripts/edge-function-inventory/deployment-plan.mjs "$MANIFEST_PATH" \
+            > "$RUNNER_TEMP/edge-deployment-plan.tsv"
+          while IFS=$'\t' read -r slug verify_jwt; do
+            args=(--workdir backend --project-ref "$PRODUCTION_PROJECT_REF")
+            case "$verify_jwt" in
+              true) ;;
+              false) args+=(--no-verify-jwt) ;;
+              *) echo "Invalid deployment JWT setting for $slug" >&2; exit 1 ;;
+            esac
+            supabase functions deploy "$slug" "${args[@]}"
+          done < "$RUNNER_TEMP/edge-deployment-plan.tsv"
 
       - name: Remove only manifest-retired production functions
         shell: bash
@@ -342,6 +306,7 @@ jobs:
           }
           for spec in \
             'GET admin-email-verification' \
+            'POST business-operations-worker' \
             'POST campaign-orchestrator' \
             'POST game-data-purger' \
             'POST password-reset-api' \
@@ -375,7 +340,7 @@ jobs:
             echo "- Exact source SHA: \`$GITHUB_SHA\`"
             echo '- Staging promoted first: `true`'
             echo '- Production gated on staging: `true`'
-            echo '- Canonical/compat deployed functions: `19`'
+            echo "- Canonical/compat deployed functions: \`$(wc -l < "$RUNNER_TEMP/edge-deployment-plan.tsv" | tr -d ' ')\`"
             echo '- Allowed staging temporary functions: `8`'
             echo '- Unexpected production functions: `0`'
             echo '- Retired functions present: `0`'

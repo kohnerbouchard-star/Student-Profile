@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.contract-story-roleplay-pr-906.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 906,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
+    "backend/src/domains/contracts/api/playerContractStoryDecisionSubmitHttpHandler.test.ts",
+    "backend/src/domains/storylines/index.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-906.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
+    "backend/src/domains/contracts/api/playerContractStoryDecisionSubmitHttpHandler.test.ts",
+    "backend/src/domains/storylines/index.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-906.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Story Replay Safety",
+    "REF-018 and REF-022 Staff Mutation Qualification",
+    "multicurrency-store-funding-v1",
+    "multicurrency-marketplace-funding-v1",
+    "multicurrency-stock-funding-v1",
+    "business-multicurrency-treasury-v1",
+    "business-player-store-fx-final-v2",
+    "business-store-sales-convergence-v2",
+    "Business Timed Manufacturing V2",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Required Game Market Timezone",
+    "Runtime Interaction Wiring",
+    "REF-009 Contract Reward Qualification",
+    "Player Multiplayer and Load E2E"
+  ],
+  "criticalJobChecks": [
+    "Story Replay Safety",
+    "REF-018 and REF-022 Staff Mutation Qualification",
+    "multicurrency-store-funding-v1",
+    "multicurrency-marketplace-funding-v1",
+    "multicurrency-stock-funding-v1",
+    "business-multicurrency-treasury-v1",
+    "business-player-store-fx-final-v2",
+    "business-store-sales-convergence-v2",
+    "Business Timed Manufacturing V2",
+    "Backend Typecheck",
+    "Repository Quality",
+    "REF-009 Contract Reward Qualification",
+    "Player Multiplayer and Load E2E"
+  ],
+  "readOnlyPaths": [
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "authorizationNote": "Binds the Contract\u2013Story roleplay capability boundary, its test and generated inventory to this PR. Preserve completion of the existing Contract submission before optional roleplay, scoped reads, failure handling and release holds. The verifier and its regression test are read-only. No roadmaps, production deployment, hosted mutation or secrets are included."
+}

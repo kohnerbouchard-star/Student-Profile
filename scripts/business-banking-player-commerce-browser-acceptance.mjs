@@ -9,41 +9,28 @@ import { restartLocalEdgeRuntime } from "./local-edge-runtime-isolation.mjs";
 const before = `  const form = sender.page.locator('form[data-endpoint="bankTransfer"]');
   await form.evaluate((element) => { const details = element.closest("details"); if (details) details.open = true; });
   await form.locator('[name="recipientPlayerIdentifier"]').fill(recipient.playerIdentifier);`;
-const after = `  const transferForms = sender.page.locator('form[data-endpoint="bankTransfer"]');
-  await transferForms.first().waitFor({ state: "attached", timeout: 30_000 });
-  const transferHost = transferForms.first().locator(
-    "xpath=ancestor::details[@data-player-live-refresh-pause][1]",
-  ).first();
-  let form = sender.page.locator('form[data-endpoint="bankTransfer"]:visible').first();
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    if (await transferHost.count() && await transferHost.getAttribute("open") === null) {
-      const summary = transferHost.locator(":scope > summary").first();
-      if (await summary.count()) {
-        try {
-          await summary.click({ timeout: 7_500 });
-        } catch {
-          await transferHost.evaluate((element) => { element.open = true; });
-        }
-      } else {
-        await transferHost.evaluate((element) => { element.open = true; });
-      }
+const after = `  const transferHost = sender.page.locator('details[data-player-live-refresh-pause]').filter({
+    has: sender.page.locator('form[data-endpoint="bankTransfer"]'),
+  }).first();
+  await transferHost.waitFor({ state: "attached", timeout: 30_000 });
+  const form = transferHost.locator('form[data-endpoint="bankTransfer"]');
+  const recipientInput = form.locator('[name="recipientPlayerIdentifier"]');
+  let transferReady = false;
+  for (let attempt = 0; attempt < 4 && !transferReady; attempt += 1) {
+    const disclosureOpen = await transferHost.evaluate((element) => element.open === true);
+    if (!disclosureOpen) {
+      await transferHost.locator("summary").click();
     }
-    form = sender.page.locator('form[data-endpoint="bankTransfer"]:visible').first();
-    const recipientInput = form.locator('[name="recipientPlayerIdentifier"]');
-    if (
-      await form.isVisible() &&
-      await recipientInput.isVisible() &&
-      await recipientInput.isEnabled()
-    ) {
+    try {
+      await recipientInput.waitFor({ state: "visible", timeout: 5_000 });
       await recipientInput.focus();
-      await recipientInput.fill(recipient.playerIdentifier);
-      break;
+      transferReady = true;
+    } catch (error) {
+      if (attempt === 3) throw error;
+      await sender.page.waitForTimeout(250);
     }
-    if (attempt === 3) {
-      throw new Error("Player transfer form did not become interactable after bounded disclosure retries.");
-    }
-    await sender.page.waitForTimeout(250);
-  }`;
+  }
+  await recipientInput.fill(recipient.playerIdentifier);`;
 
 async function runConnectedPlayerBffAcceptance(entryUrl) {
   const entryPath = fileURLToPath(entryUrl);

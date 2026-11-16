@@ -15,7 +15,10 @@ const PUBLIC_PLAYER_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PUBLIC_LOCATION_ID = /^loc_[a-z0-9_]+$/;
 const PUBLIC_QUOTE_ID = /^trq_[0-9a-f]{32}$/;
+const PUBLIC_STOCK_BUY_QUOTE_KEY = /^sbq_[0-9a-f]{32}$/;
 const PUBLIC_JOURNEY_ID = /^trj_[0-9a-f]{32}$/;
+const PUBLIC_BANK_ACCOUNT_KEY = /^bac_[0-9a-f]{32}$/;
+const MARKET_TICKER = /^[A-Z0-9][A-Z0-9._-]{0,31}$/;
 const COUNTRY_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const TOKEN = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 const STORY_OPTION = /^[a-z0-9_]{2,80}$/;
@@ -74,9 +77,101 @@ function normalizeContractChoiceAnswers(raw, endpointKey) {
   return answers;
 }
 
+function positiveNumber(value, endpointKey, field, { integer = false } = {}) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0 || (integer && !Number.isSafeInteger(number))) {
+    throw invalidPayload(endpointKey, field);
+  }
+  return number;
+}
+
+function nonNegativeInteger(value, endpointKey, field) {
+  const number = Number(value);
+  if (!Number.isSafeInteger(number) || number < 0) throw invalidPayload(endpointKey, field);
+  return number;
+}
+
+function marketTicker(value, endpointKey) {
+  const ticker = normalizeString("ticker", value, endpointKey).toUpperCase();
+  if (!MARKET_TICKER.test(ticker)) throw invalidPayload(endpointKey, "ticker");
+  return ticker;
+}
+
+function bankAccountKey(value, endpointKey, field) {
+  return requirePattern(value, PUBLIC_BANK_ACCOUNT_KEY, endpointKey, field);
+}
+
+function normalizeMarketOrder(raw, endpointKey) {
+  const action = normalizeString("action", raw.action, endpointKey).toLowerCase();
+  if (action === "settle_buy_quote") {
+    return {
+      action,
+      quoteKey: requirePattern(raw.quoteKey, PUBLIC_STOCK_BUY_QUOTE_KEY, endpointKey, "quoteKey")
+    };
+  }
+
+  const common = {
+    ticker: marketTicker(raw.ticker, endpointKey),
+    quantity: positiveNumber(raw.quantity, endpointKey, "quantity"),
+    expectedPrice: positiveNumber(raw.expectedPrice, endpointKey, "expectedPrice"),
+    expectedTickIndex: nonNegativeInteger(raw.expectedTickIndex, endpointKey, "expectedTickIndex")
+  };
+  if (action === "create_buy_quote" || action === "buy_now") {
+    const allocations = [];
+    const seen = new Set();
+    const rawAllocations = Array.isArray(raw.allocations)
+      ? raw.allocations
+      : Array.from({ length: 3 }, (_, offset) => ({
+        sourceAccountKey: raw[`sourceAccountKey${offset + 1}`],
+        targetAmount: raw[`targetAmount${offset + 1}`]
+      }));
+    for (const [offset, row] of rawAllocations.entries()) {
+      const index = offset + 1;
+      const keyValue = row?.sourceAccountKey;
+      const amountValue = row?.targetAmount;
+      const hasKey = String(keyValue || "").trim().length > 0;
+      const hasAmount = String(amountValue || "").trim().length > 0;
+      if (!hasKey && !hasAmount) continue;
+      if (!hasKey || !hasAmount) throw invalidPayload(endpointKey, `funding allocation ${index}`);
+      const sourceAccountKey = bankAccountKey(keyValue, endpointKey, `sourceAccountKey${index}`);
+      if (seen.has(sourceAccountKey)) throw invalidPayload(endpointKey, `sourceAccountKey${index}`);
+      seen.add(sourceAccountKey);
+      allocations.push({
+        sourceAccountKey,
+        targetAmount: positiveNumber(amountValue, endpointKey, `targetAmount${index}`)
+      });
+    }
+    if (!allocations.length || allocations.length > 3) throw invalidPayload(endpointKey, "funding allocation");
+    return { action, ...common, allocations };
+  }
+  if (action === "settle_sell") {
+    return {
+      action,
+      ...common,
+      destinationAccountKey: bankAccountKey(raw.destinationAccountKey, endpointKey, "destinationAccountKey")
+    };
+  }
+  throw invalidPayload(endpointKey, "action");
+}
+
 export function normalizeWritePayload(endpointKey, raw = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw invalidPayload(endpointKey, "request");
   if (endpointKey === "progressionUnlock" || endpointKey === "progressionClaim") return {};
+  if (endpointKey === "businessEquipmentInstall") return {
+    equipmentKey: requirePattern(raw.equipmentKey, /^eqp_[0-9a-f]{32}$/, endpointKey, "equipmentKey"),
+  };
+  if (endpointKey === "businessStoreOfferCreate") return {
+    itemKey: requirePattern(raw.itemKey, /^[a-z0-9_-]{1,64}$/, endpointKey, "itemKey"),
+    unitPrice: positiveNumber(raw.unitPrice, endpointKey, "unitPrice"),
+  };
+  if (endpointKey === "businessStoreOfferStock" || endpointKey === "businessStoreOfferPublish") return {
+    offerKey: requirePattern(raw.offerKey, /^sof_[0-9a-f]{32}$/, endpointKey, "offerKey"),
+    expectedOfferVersion: positiveNumber(raw.expectedOfferVersion, endpointKey, "expectedOfferVersion", { integer: true }),
+    ...(endpointKey === "businessStoreOfferStock" ? {
+      quantity: positiveNumber(raw.quantity, endpointKey, "quantity", { integer: true }),
+    } : {}),
+  };
+  if (endpointKey === "marketOrder") return normalizeMarketOrder(raw, endpointKey);
   if (endpointKey === "arrivalClass") return { answers: normalizeArrivalAnswers(raw.answers, endpointKey) };
   if (endpointKey === "travelQuote") {
     const allowedModes = Array.isArray(raw.allowedModes) ? [...new Set(raw.allowedModes.map((mode) => String(mode).trim().toLowerCase()))] : [];
@@ -145,6 +240,5 @@ export function normalizeWritePayload(endpointKey, raw = {}) {
     if (typeof value === "string") payload[key] = normalizeString(key, value, endpointKey);
     else if (typeof value === "boolean") payload[key] = value;
   }
-  if (endpointKey === "marketOrder") payload.timeInForce = "GTC";
   return payload;
 }

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref004-parity-fixtures-pr-742.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 742,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/package.json",
+    "backend/supabase/functions/admin-api/common.test.ts",
+    "backend/tests/admin/ref004RequestParity.test.ts",
+    "backend/tests/domains/contracts/ref004Parity.test.ts",
+    "backend/tests/domains/players/ref004Parity.test.ts",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-004/parity-matrix.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-004.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/operations/contracts/player-cross-cutting/pr-742.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/package.json",
+    "backend/supabase/functions/admin-api/common.test.ts",
+    "backend/tests/admin/ref004RequestParity.test.ts",
+    "backend/tests/domains/contracts/ref004Parity.test.ts",
+    "backend/tests/domains/players/ref004Parity.test.ts",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-004/parity-matrix.json",
+    "docs/roadmaps/refactor-execution-v1/tasks/REF-004.md",
+    "docs/roadmaps/refactor-execution-v1/backlog.json",
+    "docs/operations/contracts/player-cross-cutting/pr-742.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Admin API Check",
+    "Repository Quality",
+    "Beta Security Contract"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "authorizationNote": "Owner-authorized REF-004 continuation only. Synthetic parity fixtures and minimal existing-suite registration; no application implementation or production access. This manifest binds PR 742 to its ten actual changed paths. The two verifier files are mandatory protected references required by the existing schema; REF-004 does not authorize editing them. All applicable actual-head CI remains required. No historic or other PR authority is reused, and no gate is disabled.",
+  "protectedReferencePaths": [
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "baseMainSha": "53c29cbda56d2f7457b43743ea4ce553bb6659ce",
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-004/parity-matrix.json"
+}

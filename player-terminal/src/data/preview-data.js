@@ -112,7 +112,20 @@ export const previewData = Object.freeze({
   store: {
     categories: ["All", "Equipment", "Materials", "Consumables", "Access"],
     items: [
-      { id: "market-lens", name: "Market Lens", category: "Equipment", price: 2400, stock: 8, owned: 1, image: "./assets/store-items/market-lens.svg", description: "Unlocks expanded market intelligence for one cycle." },
+      {
+        id: "market-lens", itemKey: "market-lens", storeItemKey: "market-lens",
+        catalogItemKey: "itm_11111111111111111111111111111111", canonicalItemKey: "market-lens",
+        name: "Market Lens", category: "Equipment", price: 2200,
+        bestOfferKey: "sof_33333333333333333333333333333333", bestUnitPrice: 2200,
+        stock: 13, totalAvailableQuantity: 13, sellerCount: 3, offerCount: 3,
+        currencyCode: "ELD", owned: 1, image: "./assets/store-items/market-lens.svg",
+        description: "Unlocks expanded market intelligence for one cycle.",
+        offers: [
+          { offerKey: "sof_11111111111111111111111111111111", sellerKey: "pty_11111111111111111111111111111111", sellerPartyKey: "pty_11111111111111111111111111111111", sellerKind: "seeded", sellerName: "Econovaria Store", businessKey: null, businessName: null, unitPrice: 2400, currencyCode: "ELD", availableQuantity: 8, status: "active", purchasability: "system_offer", purchasable: true, version: 1 },
+          { offerKey: "sof_22222222222222222222222222222222", sellerKey: "pty_22222222222222222222222222222222", sellerPartyKey: "pty_22222222222222222222222222222222", sellerKind: "business", sellerName: "Crescent Dynamics", businessKey: "biz_22222222222222222222222222222222", businessName: "Crescent Dynamics", unitPrice: 2280, currencyCode: "ELD", availableQuantity: 3, status: "active", purchasability: "business_offer", purchasable: true, version: 4 },
+          { offerKey: "sof_33333333333333333333333333333333", sellerKey: "pty_33333333333333333333333333333333", sellerPartyKey: "pty_33333333333333333333333333333333", sellerKind: "npc", sellerName: "Crescent Exchange", businessKey: null, businessName: null, unitPrice: 2200, currencyCode: "ELD", availableQuantity: 2, status: "active", purchasability: "system_offer", purchasable: true, version: 2 }
+        ]
+      },
       { id: "logistics-scanner", name: "Logistics Scanner", category: "Equipment", price: 1800, stock: 12, owned: 0, image: "./assets/store-items/logistics-scanner.svg", description: "Improves supply-chain contract visibility." },
       { id: "refined-alloy", name: "Refined Alloy Bundle", category: "Materials", price: 640, stock: 42, owned: 4, image: "./assets/store-items/refined-alloy-bundle.svg", description: "Industrial input used in fabrication contracts." },
       { id: "energy-cell", name: "Energy Cell Pack", category: "Materials", price: 420, stock: 65, owned: 8, image: "./assets/store-items/energy-cell-pack.svg", description: "Portable energy units used across the economy." },
@@ -162,19 +175,72 @@ export const previewData = Object.freeze({
       { id: "txn-6", date: "Jul 12 · 15:44", description: "Contract reward · Pricing Audit", category: "Contract", amount: 6100, status: "Posted" }
     ]
   },
+  bankingFx: {
+    configured: true,
+    generatedAt: "2026-08-26T08:01:00.000Z",
+    currencies: [
+      { currencyCode: "ECO", minorUnit: 2 },
+      { currencyCode: "ELD", minorUnit: 2 },
+      { currencyCode: "LUM", minorUnit: 2 },
+      { currencyCode: "XAL", minorUnit: 2 }
+    ],
+    balances: [
+      { accountKey: "bac_11111111111111111111111111111111", accountKind: "checking", currencyCode: "ECO", postedAmount: 32680, heldAmount: 1200, availableAmount: 31480 },
+      { accountKey: "bac_22222222222222222222222222222222", accountKind: "checking", currencyCode: "ELD", postedAmount: 8640, heldAmount: 0, availableAmount: 8640 },
+      { accountKey: "bac_33333333333333333333333333333333", accountKind: "checking", currencyCode: "LUM", postedAmount: 2400, heldAmount: 300, availableAmount: 2100 },
+      { accountKey: "bac_44444444444444444444444444444444", accountKind: "savings", currencyCode: "ECO", postedAmount: 18400, heldAmount: 0, availableAmount: 18400 }
+    ],
+    fixing: {
+      fixingKey: "fxf_11111111111111111111111111111111",
+      effectiveAt: "2026-08-26T08:00:00.000Z",
+      calculatedAt: "2026-08-26T08:00:04.000Z",
+      nextFixingAt: "2026-08-27T08:00:00.000Z",
+      overdue: false,
+      policyVersion: "fx-policy-v1"
+    },
+    history: {
+      range: "7d",
+      points: [
+        { fixingKey: "fxf_21111111111111111111111111111111", effectiveAt: "2026-08-24T08:00:00.000Z", sourceCurrencyCode: "ECO", targetCurrencyCode: "ELD", referenceRate: "1.42" },
+        { fixingKey: "fxf_31111111111111111111111111111111", effectiveAt: "2026-08-25T08:00:00.000Z", sourceCurrencyCode: "ECO", targetCurrencyCode: "ELD", referenceRate: "1.43" },
+        { fixingKey: "fxf_11111111111111111111111111111111", effectiveAt: "2026-08-26T08:00:00.000Z", sourceCurrencyCode: "ECO", targetCurrencyCode: "ELD", referenceRate: "1.44" }
+      ],
+      pagination: { cursor: null, nextCursor: null, hasMore: false, limit: 100 }
+    },
+    pendingOrders: [
+      { orderKey: "fxo_11111111111111111111111111111111", quoteKey: "fxq_11111111111111111111111111111111", product: "standard", status: "pending", sourceCurrencyCode: "ECO", targetCurrencyCode: "LUM", sourceAmount: "1000", feeAmount: "0", targetAmount: "795", submittedAt: "2026-08-26T07:30:00.000Z", settlesAt: "2026-08-27T08:00:00.000Z", completedAt: "", receiptKey: "", cancellable: true }
+    ],
+    completedOrders: [
+      { orderKey: "fxo_22222222222222222222222222222222", quoteKey: "fxq_22222222222222222222222222222222", product: "instant", status: "settled", sourceCurrencyCode: "ECO", targetCurrencyCode: "ELD", sourceAmount: "500", feeAmount: "10", targetAmount: "711.5", submittedAt: "2026-08-25T10:00:00.000Z", settlesAt: "2026-08-25T10:00:00.000Z", completedAt: "2026-08-25T10:00:01.000Z", receiptKey: "fxr_22222222222222222222222222222222", cancellable: false }
+    ],
+    currentQuote: null,
+    error: ""
+  },
   business: {
-    company: { name: "Crescent Dynamics", registration: "ELD-BIZ-4418", status: "Operating", industry: "Precision Manufacturing", headquarters: "Crescent Bay, Eldoran", valuation: 84600, valuationChange: 4.2, cash: 12600, revenue: 18420, margin: 18.6, reputation: 74, reputationLabel: "Trusted supplier", summary: "A compact player-owned manufacturer producing logistics and analytical equipment for regional buyers." },
+    configured: true,
+    company: { name: "Crescent Dynamics", registration: "ELD-BIZ-4418", status: "Operating", industry: "Precision Manufacturing", headquarters: "Crescent Bay, Eldoran", cash: 12600, reputation: 74, reputationLabel: "Trusted supplier", summary: "A compact player-owned manufacturer producing logistics and analytical equipment for regional buyers." },
     operations: { employees: 8, output: 146, backlog: 34, capacityUse: 78, maxRun: 50, capacityNote: "Current staffing can support one additional standard production run without overtime." },
     products: [
-      { id: "prod-scanner", name: "Logistics Scanner", category: "Equipment", icon: "search", price: 1820, margin: 21.4, demand: "High", description: "Compact supply-chain visibility hardware for commercial operators." },
-      { id: "prod-lens", name: "Market Lens", category: "Analytics", icon: "chart", price: 2460, margin: 17.8, demand: "Stable", description: "Market-intelligence module used by traders and contract teams." },
-      { id: "prod-cell", name: "Energy Cell Pack", category: "Components", icon: "pulse", price: 435, margin: 12.2, demand: "Rising", description: "Standardized portable power unit for workshop and field equipment." }
+      { id: "prod-scanner", name: "Logistics Scanner", category: "Equipment", icon: "search", price: 1820, margin: 21.4, version: 1, description: "Compact supply-chain visibility hardware for commercial operators." },
+      { id: "prod-lens", name: "Market Lens", category: "Analytics", icon: "chart", price: 2460, margin: 17.8, version: 1, description: "Market-intelligence module used by traders and contract teams." },
+      { id: "prod-cell", name: "Energy Cell Pack", category: "Components", icon: "pulse", price: 435, margin: 12.2, version: 1, description: "Standardized portable power unit for workshop and field equipment." }
     ],
     suppliers: [
       { name: "Glassfall Composites", material: "Composite housings", country: "Valerion", status: "Stable", leadTime: "2 days", tone: "good" },
       { name: "Dusk Harbor Energy", material: "Energy cells", country: "Thaloris", status: "Price risk", leadTime: "3 days", tone: "warn" },
       { name: "Frostgate Circuits", material: "Sensor boards", country: "Northreach", status: "Stable", leadTime: "4 days", tone: "good" }
-    ]
+    ],
+    storeSales: {
+      businessKey: "biz_22222222222222222222222222222222",
+      currencyCode: "ELD",
+      recentReceiptCount: 0,
+      recentQuantitySold: 0,
+      recentGrossRevenue: 0,
+      recentCostOfGoodsSold: 0,
+      recentGrossMargin: 0,
+      sales: [],
+      activity: []
+    }
   },
   marketplace: {
     categories: ["All", "Equipment", "Materials", "Consumables", "Access"],

@@ -5,9 +5,11 @@ import {
   handlePlayerStockMarketTradingRequest,
 } from "./playerStockMarketTradingHttpHandler.ts";
 import {
-  type StockMarketOrderExecuteInput,
+  type PlayerStockMarketTradingRepository,
+  type StockMarketBuyQuoteInput,
+  type StockMarketBuySettlementInput,
+  type StockMarketSellSettlementInput,
   StockMarketTradingError,
-  type StockMarketTradingRepository,
 } from "../contracts/stockMarketTradingContracts.ts";
 import type {
   StockMarketPlayerReadInput,
@@ -23,68 +25,116 @@ const GAME_SESSION_ID = "00000000-0000-4000-8000-000000000001";
 const PLAYER_SESSION_ID = "00000000-0000-4000-8000-000000000011";
 const PLAYER_ID = "00000000-0000-4000-8000-000000000021";
 const STOCK_ASSET_ID = "00000000-0000-4000-8000-000000000101";
+const BUY_QUOTE_KEY = "sbq_11111111111111111111111111111111";
+const SOURCE_ACCOUNT_KEY = "bac_22222222222222222222222222222222";
+const DESTINATION_ACCOUNT_KEY = "bac_33333333333333333333333333333333";
+const SETTLEMENT_TRANSACTION_KEY = "btx_44444444444444444444444444444444";
 
-Deno.test("public player market order resolves ticker server-side and emits no ownership UUID", async () => {
+Deno.test("public player Stock buy quote derives ownership and emits public evidence only", async () => {
   const repository = new TradingRepository();
   const response = await handlePlayerStockMarketTradingRequest(
     tradingRequest({
+      action: "create_buy_quote",
       ticker: "aura",
-      expectedPrice: 100,
-      side: "buy",
       quantity: 2,
-      idempotencyKey: "order-public-1",
+      expectedPrice: 100,
+      expectedTickIndex: 42,
+      allocations: [{
+        sourceAccountKey: SOURCE_ACCOUNT_KEY,
+        targetAmount: 200,
+      }],
+      idempotencyKey: "stock-quote-public-1",
     }),
     tradingDependencies(repository),
   );
   const body = await response.json();
 
-  assertEquals(response.status, 200);
+  assertEquals(response.status, 201);
   assertEquals(repository.inputs, [{
+    operation: "create_buy_quote",
     gameSessionId: GAME_SESSION_ID,
-    playerSessionId: PLAYER_SESSION_ID,
-    stockAssetId: STOCK_ASSET_ID,
-    side: "buy",
-    quantity: 2,
-    idempotencyKey: "order-public-1",
-  }]);
-  assertEquals(body.order, {
+    playerId: PLAYER_ID,
     ticker: "AURA",
-    side: "buy",
     quantity: 2,
-    executionPrice: 100,
-    grossValue: 200,
-    status: "filled",
-    rejectionReason: null,
-  });
+    expectedPrice: 100,
+    expectedTickIndex: 42,
+    allocations: [{
+      sourceAccountKey: SOURCE_ACCOUNT_KEY,
+      targetAmount: 200,
+    }],
+    idempotencyKey: "stock-quote-public-1",
+  }]);
+  assertEquals(body.action, "create_buy_quote");
+  assertEquals(body.quote.quoteKey, BUY_QUOTE_KEY);
+  assertEquals(body.quote.listingCurrencyCode, "XAL");
+  assertEquals(body.quote.funding.quote_key, "pfq_55555555555555555555555555555555");
+  assertEquals(response.headers.get("cache-control"), "private, no-store, max-age=0");
   assertNoUuid(body);
 });
 
-Deno.test("public player market order rejects a stale reviewed price before settlement", async () => {
+Deno.test("public player Stock buy and sell settlements derive ownership and expose public keys only", async () => {
   const repository = new TradingRepository();
-  const response = await handlePlayerStockMarketTradingRequest(
+  const buyResponse = await handlePlayerStockMarketTradingRequest(
     tradingRequest({
-      ticker: "AURA",
-      expectedPrice: 99,
-      side: "buy",
-      quantity: 1,
-      idempotencyKey: "order-stale-1",
+      action: "settle_buy_quote",
+      quoteKey: BUY_QUOTE_KEY,
+      idempotencyKey: "stock-buy-public-1",
     }),
     tradingDependencies(repository),
   );
+  const sellResponse = await handlePlayerStockMarketTradingRequest(
+    tradingRequest({
+      action: "settle_sell",
+      ticker: "aura",
+      quantity: 1,
+      expectedPrice: 105,
+      expectedTickIndex: 43,
+      destinationAccountKey: DESTINATION_ACCOUNT_KEY,
+      idempotencyKey: "stock-sell-public-1",
+    }),
+    tradingDependencies(repository),
+  );
+  const buyBody = await buyResponse.json();
+  const sellBody = await sellResponse.json();
 
-  await assertError(response, 409, "stale_stock_price");
-  assertEquals(repository.inputs, []);
+  assertEquals([buyResponse.status, sellResponse.status], [200, 200]);
+  assertEquals(repository.inputs, [{
+    operation: "settle_buy_quote",
+    gameSessionId: GAME_SESSION_ID,
+    playerId: PLAYER_ID,
+    quoteKey: BUY_QUOTE_KEY,
+    idempotencyKey: "stock-buy-public-1",
+  }, {
+    operation: "settle_sell",
+    gameSessionId: GAME_SESSION_ID,
+    playerId: PLAYER_ID,
+    ticker: "AURA",
+    quantity: 1,
+    expectedPrice: 105,
+    expectedTickIndex: 43,
+    destinationAccountKey: DESTINATION_ACCOUNT_KEY,
+    idempotencyKey: "stock-sell-public-1",
+  }]);
+  assertEquals(buyBody.settlement.funding.receipt_key, "pfr_66666666666666666666666666666666");
+  assertEquals(sellBody.settlement.destinationAccountKey, DESTINATION_ACCOUNT_KEY);
+  assertEquals(sellBody.settlement.settlementTransactionKey, SETTLEMENT_TRANSACTION_KEY);
+  assertNoUuid({ buyBody, sellBody });
 });
 
-Deno.test("public player market order rejects internal stock UUID injection", async () => {
+Deno.test("public player Stock trading rejects internal stock UUID injection", async () => {
   const response = await handlePlayerStockMarketTradingRequest(
     tradingRequest({
+      action: "create_buy_quote",
       ticker: "AURA",
       stockAssetId: STOCK_ASSET_ID,
-      expectedPrice: 100,
-      side: "buy",
       quantity: 1,
-      idempotencyKey: "order-injection-1",
+      expectedPrice: 100,
+      expectedTickIndex: 42,
+      allocations: [{
+        sourceAccountKey: SOURCE_ACCOUNT_KEY,
+        targetAmount: 100,
+      }],
+      idempotencyKey: "stock-injection-1",
     }),
     tradingDependencies(new TradingRepository()),
   );
@@ -92,26 +142,66 @@ Deno.test("public player market order rejects internal stock UUID injection", as
   await assertError(response, 400, "invalid_stock_market_trading_request");
 });
 
-Deno.test("public player market order maps insufficient cash and shares", async () => {
-  for (const [code, message] of [
-    ["insufficient_cash", "Insufficient player cash for this stock order."],
-    ["insufficient_shares", "Insufficient stock holdings for this sell order."],
-  ] as const) {
-    const repository = new TradingRepository(
-      new StockMarketTradingError(code, message, 409),
-    );
-    const response = await handlePlayerStockMarketTradingRequest(
-      tradingRequest({
+Deno.test("public player Stock trading preserves quote and settlement conflicts", async () => {
+  const cases: readonly [
+    Record<string, unknown>,
+    StockMarketTradingError,
+  ][] = [
+    [
+      {
+        action: "create_buy_quote",
         ticker: "AURA",
-        expectedPrice: 100,
-        side: code === "insufficient_cash" ? "buy" : "sell",
+        quantity: 1,
+        expectedPrice: 99,
+        expectedTickIndex: 42,
+        allocations: [{
+          sourceAccountKey: SOURCE_ACCOUNT_KEY,
+          targetAmount: 99,
+        }],
+        idempotencyKey: "stock-stale-price-1",
+      },
+      new StockMarketTradingError(
+        "stale_stock_price",
+        "The reviewed Stock price changed.",
+        409,
+      ),
+    ],
+    [
+      {
+        action: "settle_buy_quote",
+        quoteKey: BUY_QUOTE_KEY,
+        idempotencyKey: "stock-insufficient-cash-1",
+      },
+      new StockMarketTradingError(
+        "insufficient_cash",
+        "Available Checking funds are insufficient.",
+        409,
+      ),
+    ],
+    [
+      {
+        action: "settle_sell",
+        ticker: "AURA",
         quantity: 5,
-        idempotencyKey: `order-${code}`,
-      }),
-      tradingDependencies(repository),
-    );
+        expectedPrice: 100,
+        expectedTickIndex: 42,
+        destinationAccountKey: DESTINATION_ACCOUNT_KEY,
+        idempotencyKey: "stock-insufficient-shares-1",
+      },
+      new StockMarketTradingError(
+        "insufficient_shares",
+        "Available Stock holdings are insufficient.",
+        409,
+      ),
+    ],
+  ];
 
-    await assertError(response, 409, code);
+  for (const [requestBody, error] of cases) {
+    const response = await handlePlayerStockMarketTradingRequest(
+      tradingRequest(requestBody),
+      tradingDependencies(new TradingRepository(error)),
+    );
+    await assertError(response, 409, error.code);
   }
 });
 
@@ -195,15 +285,6 @@ function tradingDependencies(repository: TradingRepository): any {
     readSupabaseEnv: environment,
     hashSessionToken: async () => "session-token-hash",
     resolvePlayerSession: sessionResult,
-    resolveStockAssetByTicker: async (_client: unknown, gameSessionId: string, ticker: string) => {
-      assertEquals(gameSessionId, GAME_SESSION_ID);
-      assertEquals(ticker, "AURA");
-      return {
-        stockAssetId: STOCK_ASSET_ID,
-        ticker: "AURA",
-        currentPrice: 100,
-      };
-    },
     createRepository: () => repository,
   };
 }
@@ -218,37 +299,66 @@ function readDependencies(repository: ReadRepository): any {
   };
 }
 
-class TradingRepository implements StockMarketTradingRepository {
-  readonly inputs: StockMarketOrderExecuteInput[] = [];
+class TradingRepository implements PlayerStockMarketTradingRepository {
+  readonly inputs: Record<string, unknown>[] = [];
 
   constructor(private readonly error: StockMarketTradingError | null = null) {}
 
-  async executeOrder(input: StockMarketOrderExecuteInput) {
-    this.inputs.push(input);
+  async createBuyQuote(input: StockMarketBuyQuoteInput) {
+    this.inputs.push({ operation: "create_buy_quote", ...input });
     if (this.error) throw this.error;
     return {
-      order: {
-        orderId: "00000000-0000-4000-8000-000000000201",
-        gameSessionId: input.gameSessionId,
-        playerSessionId: input.playerSessionId,
-        stockAssetId: input.stockAssetId,
-        ticker: "AURA",
-        side: input.side,
-        quantity: input.quantity,
-        executionPrice: 100,
-        grossValue: input.quantity * 100,
-        status: "filled" as const,
-        rejectionReason: null,
+      quoteKey: BUY_QUOTE_KEY,
+      ticker: input.ticker,
+      listingCurrencyCode: "XAL",
+      quantity: input.quantity,
+      quotedPrice: input.expectedPrice,
+      priceTickIndex: input.expectedTickIndex,
+      grossValue: input.quantity * input.expectedPrice,
+      expiresAt: "2026-08-30T13:05:00.000Z",
+      funding: {
+        quote_key: "pfq_55555555555555555555555555555555",
       },
-      cash: {
-        accountType: "checking" as const,
-        currencyCode: "XAL",
-        balance: 9800,
+    };
+  }
+
+  async settleBuyQuote(input: StockMarketBuySettlementInput) {
+    this.inputs.push({ operation: "settle_buy_quote", ...input });
+    if (this.error) throw this.error;
+    return {
+      quoteKey: input.quoteKey,
+      ticker: "AURA",
+      listingCurrencyCode: "XAL",
+      quantity: 2,
+      executionPrice: 100,
+      priceTickIndex: 42,
+      grossValue: 200,
+      holdingQuantityAfter: 2,
+      averageCostAfter: 100,
+      filledAt: "2026-08-30T13:04:00.000Z",
+      alreadyCompleted: false,
+      funding: {
+        receipt_key: "pfr_66666666666666666666666666666666",
       },
-      holding: {
-        quantity: input.quantity,
-        averageCost: 100,
-      },
+    };
+  }
+
+  async settleSell(input: StockMarketSellSettlementInput) {
+    this.inputs.push({ operation: "settle_sell", ...input });
+    if (this.error) throw this.error;
+    return {
+      ticker: input.ticker,
+      listingCurrencyCode: "XAL",
+      quantity: input.quantity,
+      executionPrice: input.expectedPrice,
+      priceTickIndex: input.expectedTickIndex,
+      grossValue: input.quantity * input.expectedPrice,
+      holdingQuantityAfter: 1,
+      averageCostAfter: 100,
+      filledAt: "2026-08-30T13:06:00.000Z",
+      destinationAccountKey: input.destinationAccountKey,
+      settlementTransactionKey: SETTLEMENT_TRANSACTION_KEY,
+      alreadyCompleted: false,
     };
   }
 }

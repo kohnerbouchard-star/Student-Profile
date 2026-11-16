@@ -96,7 +96,7 @@
     link.id = STYLE_ID;
     link.rel = "stylesheet";
     link.href = "./css/attendance-reward-settings.css";
-    document.head.append(link);
+    insertAttendanceStylesheet(link);
   }
 
   function cardMarkup(config) {
@@ -377,4 +377,14 @@
   };
 
   scheduleRender();
+
+  function insertAttendanceStylesheet(link) {
+    for (const id of ["econovaria-settings-simplified-style", "econovaria-settings-final-polish-style"]) {
+      const anchor = document.getElementById(id);
+      if (anchor?.parentNode !== document.head) continue;
+      document.head.insertBefore(link, anchor);
+      return;
+    }
+    document.head.append(link);
+  }
 })();

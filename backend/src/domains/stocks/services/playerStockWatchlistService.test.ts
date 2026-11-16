@@ -20,6 +20,7 @@ Deno.test("player stock watchlist service preserves entry order and hides UUIDs"
   const body = await service.listWatchlist(scope(), { limit: 50, offset: 0 });
 
   assertEquals(body.assets[0].assetId, "AURA");
+  assertEquals(body.assets[0].listingCurrencyCode, "XAL");
   assertEquals(body.assets[0].isWatchlisted, true);
   assertEquals(body.pagination, {
     limit: 50,
@@ -136,6 +137,7 @@ function asset(): PlayerStockAssetRecord {
     companyName: "Aurora Aerospace Systems",
     sector: "AI_AEROSPACE",
     countryCode: "SOLVEND",
+    listingCurrencyCode: "XAL",
     description: "Public company description",
     currentPrice: 105,
     previousClose: 100,

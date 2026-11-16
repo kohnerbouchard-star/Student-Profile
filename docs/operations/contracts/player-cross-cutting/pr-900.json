@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.story-stock-tick-boundary-pr-900.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 900,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
+    "backend/src/domains/storylines/server/stockTickStorylineRunner.ts",
+    "backend/src/domains/storylines/services/storylineRunnerGameScope.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-900.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
+    "backend/src/domains/storylines/server/stockTickStorylineRunner.ts",
+    "backend/src/domains/storylines/services/storylineRunnerGameScope.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-900.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Story Replay Safety",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Player Multiplayer and Load E2E",
+    "REF-018 and REF-022 Staff Mutation Qualification"
+  ],
+  "criticalJobChecks": [
+    "Story Replay Safety",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Player Multiplayer and Load E2E"
+  ],
+  "readOnlyPaths": [
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "authorizationNote": "This manifest binds the six reviewed Story–Stocks source, test and generated inventory paths and this PR-specific authority to the draft for normal CI and Preview. Preserve the canonical Story runner and Contract adapter, construction and tick-to-context ordering, game scope, error identities and override behavior, dependency locks, authority verifier and tests, and release holds. Both roadmaps remain excluded. This draft does not authorize production deployment, hosted mutations, secrets, review approval, force operations or release-hold changes. Exact-head CI and Preview remain pending."
+}

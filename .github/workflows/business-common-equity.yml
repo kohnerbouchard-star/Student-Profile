@@ -1,0 +1,79 @@
+name: Business Common Equity
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/business-common-equity.yml"
+      - "backend/supabase/migrations/**"
+      - "scripts/business-common-equity-*.mjs"
+      - "docs/roadmaps/business-common-equity-*.md"
+      - "docs/roadmaps/business-v2-current-checkpoint-v1.json"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: business-common-equity-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  source:
+    name: business-common-equity-source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+      - name: Verify exact source and retained authority
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          node scripts/business-common-equity-contract.mjs
+          node --check scripts/business-common-equity-database.mjs
+          node scripts/business-financial-reporting-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          if [ -n "$PR_NUMBER" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/phase14b-changed.txt
+            node scripts/verify-player-cross-cutting-authority.mjs --changed-files /tmp/phase14b-changed.txt --pr-number "$PR_NUMBER" --base-ref "$BASE_REF"
+          fi
+          git diff --check
+  database:
+    name: business-common-equity-database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.23.1
+      - name: Install pinned tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+      - name: Replay twice and verify common-equity atomicity
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta
+          for PASS in 1 2; do
+            npx supabase db reset --workdir backend --local
+            node scripts/business-common-equity-database.mjs
+          done
+      - name: Check rebuilt database advisors
+        run: npx supabase db advisors --workdir backend --local --type all --level warn --fail-on error --output-format json
+      - name: Stop disposable service
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup
