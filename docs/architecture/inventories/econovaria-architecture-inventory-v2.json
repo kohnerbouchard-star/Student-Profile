@@ -13,8 +13,8 @@
     "handlerFiles": 60,
     "persistenceOutsideInfrastructure": 85,
     "crossDomainDeepImports": 68,
-    "browserTransportShimFiles": 27,
-    "compatibilityMarkerFiles": 206,
+    "browserTransportShimFiles": 26,
+    "compatibilityMarkerFiles": 207,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 0,
     "capabilityStrings": 144
@@ -1350,14 +1350,7 @@
       {
         "file": "admin/scanner-auto-refresh.js",
         "patterns": [
-          "MutationObserver",
-          "window.fetch="
-        ]
-      },
-      {
-        "file": "admin/scanner-reward-localization.js",
-        "patterns": [
-          "window.fetch="
+          "MutationObserver"
         ]
       },
       {
@@ -1563,6 +1556,10 @@
           "fallback",
           "fallbackcode"
         ]
+      },
+      {
+        "file": "admin/scanner-reward-localization.js",
+        "markers": []
       },
       {
         "file": "admin/settings-simplified.js",
