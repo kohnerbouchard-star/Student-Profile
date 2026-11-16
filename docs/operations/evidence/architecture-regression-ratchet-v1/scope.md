@@ -1,6 +1,6 @@
 # Architecture regression ratchets: bounded source-size and Player write policy
 
-Status: `IMPLEMENTED_NOT_MERGED` (local preparation only). Roadmap items: `ARCH-001-SIZE-WIRING-RATCHET-001`, `ARCH-001-PERSISTENCE-CENSUS-001` (separately owned, not implemented here). Base: actual main `8092e8fc12507bc77621ca851549fe7beb64fcd4`, after #981. This change does not alter application behavior, economic authority, routes, schemas, migrations, dependencies, permissions, deployment or production.
+Status: `IMPLEMENTED_NOT_MERGED` (draft PR #985; exact-head qualification pending). Roadmap items: `ARCH-001-SIZE-WIRING-RATCHET-001`, `ARCH-001-PERSISTENCE-CENSUS-001` (separately owned, not implemented here). Base: actual main `8092e8fc12507bc77621ca851549fe7beb64fcd4`, after #981. This change does not alter application behavior, economic authority, routes, schemas, migrations, dependencies, permissions, deployment or production.
 
 ## Existing baseline and precise size scope
 
@@ -35,4 +35,11 @@ Independent source review initially found missing aggregate registration of the 
 
 The initial ratchet implementation `685fb91d402787bfb6846ca8ea1c1f8e30f8a307` is normally merged locally with actual main `39685d2c29394caa425d928649804a433806e521`, which includes merged security #984. Only the shared Scope Intake conflicted; preserve both complete entries and all pre-existing roadmap text. Preserve every security source, test, authority and evidence file byte-for-byte from that main. The earlier #984 `IMPLEMENTED_NOT_MERGED` wording is historical as to source integration; actual-main push qualification remains pending, not inferred from merge.
 
-This is still local preparation. Fresh committed-union tests, independent union and required-CI scope review, exact-head hosted qualification and coordinator-controlled publication are mandatory. Wait for #984 actual-main postmerge clearance before publication. No production change or gate waiver.
+At that checkpoint this was local preparation. Fresh committed-union tests, independent union and required-CI scope review, exact-head hosted qualification and coordinator-controlled publication were mandatory. #984 actual-main postmerge clearance was subsequently reported by the coordinator. No production change or gate waiver is claimed.
+
+
+## Draft publication checkpoint
+
+Draft [PR #985](https://github.com/kohnerbouchard-star/Student-Profile/pull/985) published source tree `cc898ea2c0d09370c1a40e75a3699d8692b4981b` on main `39685d2c29394caa425d928649804a433806e521`. Its PR-bound verification contract locks the exact changed paths and read-only verifier files. The planned PR matrix, derived from the main workflow definitions, has 39 workflow families and 61 normally active job definitions; nine additional jobs are explicitly guarded from ordinary PR execution. This is a static expectation, not a claim of hosted results or coverage of external checks. Qualification must use the actual final head and current main. Initial source-only CI could not satisfy PR-bound authority before this contract existed.
+
+The coordinator reports that the owner elected to retain the existing automatic production sync. This change makes no runtime, migration, dependency, deployment-setting or production change itself; nevertheless a future main merge may trigger the existing synchronization and requires serial coordination, exact-head CI and verification of actual post-merge effects.
