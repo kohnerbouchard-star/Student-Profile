@@ -17,7 +17,7 @@ Local source: `93aaa4e30`, reviewed on main `1327a2602a08fe8b5c4cac7d1205d9cfe73
 
 ## Evidence
 
-Independent exact-union review confirms incoming main/ratchets preserved; only generated architecture census conflicted and was regenerated. Full root npm test passed, 468 summarized passes and one explicit optional PostgreSQL skip. Checked Store39, Banking44, Contracts124, World23 and Player scope85 passed on combined tree. Backend tsc passed; current runtime-size/Player-write guards pass. Negative file restoration tests detect retired modules returning.
+Independent exact-union review confirms incoming main/ratchets preserved; only generated architecture census conflicted and was regenerated. Full root npm test passed, 470 summarized passes and one explicit optional PostgreSQL skip. Checked Store39, Banking44, Contracts124, World23 and Player scope85 passed on combined tree. Backend tsc passed; current runtime-size/Player-write guards pass. Negative file restoration tests detect retired modules returning.
 
 ## Not yet cleared
 
@@ -25,9 +25,9 @@ Edge-all typecheck is blocked by an uncached esm.sh dependency download. Full Ga
 
 ## Current-main integration and independent review
 
-PR #988 merged as `1327a2602a08fe8b5c4cac7d1205d9cfe73de460`. Normal local merge `93aaa4e30` preserves all incoming source and both realtime workflow selectors. Only generated inventory conflicted and was regenerated. Independent review found no actionable source/merge defect; 34 retirement/auth/realtime coverage tests and size/write-policy ratchets pass. Fresh root tests and checked Store39, Banking44, Contracts124, World23 and Player scope85 pass using Node22.23.1/npm10.9.8 and exact-lock cached dependencies. Core TypeScript passes; full Edge is still waiting on its locked SDK download and is not qualified. No hosted qualification is claimed.
+PR #988 merged as `1327a2602a08fe8b5c4cac7d1205d9cfe73de460`. Normal local merge `93aaa4e30` preserves all incoming source and both realtime workflow selectors. Only generated inventory conflicted and was regenerated. Independent review found no actionable source/merge defect; 34 retirement/auth/realtime coverage tests and size/write-policy ratchets pass. Fresh root tests and checked Store39, Banking44, Contracts124, World23 and Player scope85 pass using Node22.23.1/npm10.9.8 and exact-lock cached dependencies. Core TypeScript passes; full Edge and backend smoke are blocked by the locked esm.sh SDK download connection refusal and are not qualified. No hosted qualification is claimed.
 
-Actual-number PR authority and exact-head CI qualification follow draft creation. Existing production synchronization remains unchanged. No merge authorized by this evidence alone.
+Draft [PR #989](https://github.com/kohnerbouchard-star/Student-Profile/pull/989) publishes source `34c28a2937411c7524b55569e0c9433426a7cb8e`, with exact reviewed local tree `5ff7ed918fb54ef32c3bf3378d5c72d15c6c013d`. The actual-number authority `docs/operations/contracts/player-cross-cutting/pr-989.json` locks this bounded diff and unchanged verifier/test. [CI derivation](ci-contract.json) records naturally triggered workflows, applicable job identities and guarded skips from current workflow definitions, not a cloned predecessor list. Final exact-head qualification remains pending. Existing production synchronization remains unchanged. No merge authorized by this evidence alone.
 
 ## Explicit exclusions
 
