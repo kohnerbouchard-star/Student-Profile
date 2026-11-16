@@ -1,7 +1,7 @@
 {
-  "base": "9193d4e9865cc591d9d4a3c7289b48b6721574c4",
+  "base": "68d5626b4d654ee53e6ef04da8d900a30a470fe8",
   "sourceHead": "ea277b64b0dd43cd1e911e3605ad74e5756810ad",
-  "derivation": "Read current main-target pull_request branch/event/path filters against complete PR993 diff including both metadata paths. Preserve job names and conditions. 37 repository workflow families,74 active job tuples,6 guarded skips; no selected job matrix. Branch Hygiene is closed-only and excluded. CodeQL is external dynamic analysis. Existing Backend Typecheck runs full smoke, which registers the new history tests via the Admin wildcard. No workflow, command, permission, condition or trigger change. Re-derive on actual main after preceding PR992; sourceHead is source-publication evidence, not final metadata/CI qualification.",
+  "derivation": "Read current main-target pull_request branch/event/path filters against complete PR993 diff including both metadata paths. Preserve job names and conditions. 37 repository workflow families,74 active job tuples,6 guarded skips; no selected job matrix. Branch Hygiene is closed-only and excluded. CodeQL is external dynamic analysis. Existing Backend Typecheck runs full smoke, which registers the new history tests via the Admin wildcard. No workflow, command, permission, condition or trigger change. Re-derive on actual main after preceding PR992; sourceHead is source-publication evidence, not final metadata/CI qualification. Reconciled after merged PR992 onto actual main 68d5626b; all history source/test/reader files and all scanner runtime/CI files are preserved. Fresh integrated-head qualification required.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-api-check.yml",

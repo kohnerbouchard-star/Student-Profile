@@ -11,6 +11,34 @@
   const eventTarget = window.document || null;
   const cryptoRuntime = window.crypto || globalThis.crypto || null;
   let requestSequence = 0;
+  const attendanceObservers = new Set();
+
+  // Capture presentation context before dispatch without replacing transport.
+  function observeAttendanceResponses(capture) {
+    if (typeof capture !== "function") throw new TypeError("Expected a capture function");
+    attendanceObservers.add(capture);
+    return () => attendanceObservers.delete(capture);
+  }
+
+  function captureAttendanceObservers(request, url) {
+    if (request.method !== "POST" || !isAdminRequest(url) ||
+        !/\/attendance\/(?:scan|scans)$/.test(url.pathname)) return [];
+    return [...attendanceObservers].flatMap((capture) => {
+      try {
+        const receive = capture();
+        return typeof receive === "function" ? [receive] : [];
+      } catch (_) {
+        return [];
+      }
+    });
+  }
+
+  function notifyAttendanceObservers(observers, response) {
+    if (!response.ok || !observers.length) return;
+    for (const receive of observers) {
+      response.clone().json().then(receive).catch(() => {});
+    }
+  }
 
   function record(value) {
     return value && typeof value === "object" && !Array.isArray(value)
@@ -372,6 +400,7 @@
       ? new Request(input, init)
       : new Request(rawUrl, init);
     const url = new URL(initialRequest.url, window.location.href);
+    const observers = captureAttendanceObservers(initialRequest, url);
     const lifecycle = await createLifecycle(initialRequest, url);
     const request = await withEconomicIdempotency(initialRequest, url, lifecycle);
     beginLifecycle(lifecycle);
@@ -379,6 +408,7 @@
     try {
       const response = await delegatedFetch(request);
       await finishLifecycle(lifecycle, response);
+      notifyAttendanceObservers(observers, response);
       return response;
     } catch (error) {
       failLifecycle(lifecycle, error);
@@ -387,6 +417,7 @@
   };
 
   window.EconovariaClassroomWriteFallback = Object.freeze({
+    observeAttendanceResponses,
     canonicalWrite,
     unwrapAdminTerminalResponsePayload: unwrapResponsePayload,
     lifecycleEvent: LIFECYCLE_EVENT,

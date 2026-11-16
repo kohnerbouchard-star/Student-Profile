@@ -61,3 +61,15 @@ The authority CLI passes and all 16 existing authority regressions pass. Fresh
 exact-head hosted results, independent metadata review and serial main reconciliation
 after PR992 are still required. Source-stage hosted results do not qualify a later
 metadata or integrated commit.
+
+
+## Post-PR992 current-main reconciliation
+
+Integrated exact main `68d5626b4d654ee53e6ef04da8d900a30a470fe8` after normal PR992
+merge. Preserve all history runtime/test/finite-reader blobs and the predecessor's
+scanner runtime, browser coverage, package commands and scope authority. Resolve
+only shared intake/inventory conflicts by retaining both entries and regenerating
+the inventory. Result: 1,623 sources, 84 persistence candidates and six actual
+browser interception owners. Prior source-head checks are historical; fresh union
+review, exact-head hosted checks and predecessor postmerge clearance are required.
+No production, database, permissions or deployment setting changes.
