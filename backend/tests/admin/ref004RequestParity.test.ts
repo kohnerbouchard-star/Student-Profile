@@ -43,7 +43,8 @@ async function fixture(options: any, run: (send: any, calls: Call[]) => Promise<
     evidence_payload: {}, result_payload: {}, submitted_at: NOW, completed_at: null,
     reward_issued_at: options.rewarded ? NOW : null, created_at: NOW, updated_at: NOW };
   const staff = { id: S, supabase_auth_user_id: S, email: "fixture@example.invalid", display_name: "Fixture",
-    status: "active", role: "game_admin", permission_version: 1, security_version: 1, mfa_required: true, ...options.staff };
+    status: "active", role: "game_admin", permission_version: 1, security_version: 1, mfa_required: true,
+    created_at: NOW, updated_at: NOW, ...options.staff };
   const token = ["fixture", btoa(JSON.stringify({ aal: options.aal ?? "aal2" })), "fixture"].join(".");
   runtime.env.get = (name: string) => fixtureEnv[name];
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -59,7 +60,8 @@ async function fixture(options: any, run: (send: any, calls: Call[]) => Promise<
       ? json({ message: "synthetic unavailable" }, 503) : json([staff]);
     if (call.path === "/rest/v1/game_sessions") {
       equal(call.method, "GET"); equal(call.query.get("owner_staff_user_id"), `eq.${S}`);
-      return json(options.noGame ? [] : [{ id: G, name: "Fixture", status: "active" }]);
+      return json(options.noGame ? [] : [{ id: G, owner_staff_user_id: S, name: "Fixture", status: "active",
+        game_join_code: "REF004", game_join_code_status: "active", created_at: NOW, updated_at: NOW }]);
     }
     if (call.path === "/rest/v1/staff_permission_grants") return json((options.grants ?? ["contracts.manage", "players.manage", "game.update"]).map((permission: string) => ({ permission })));
     if (call.path.endsWith("/consume_request_rate_limits_v1")) return options.limiterError

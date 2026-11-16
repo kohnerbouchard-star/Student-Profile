@@ -2,6 +2,7 @@
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertExtractedModulesReachable } from "./helpers/edge-runtime-source.mjs";
 import { deploymentPlan } from "./edge-function-inventory/deployment-plan.mjs";
 
 const migrationPaths = Object.freeze({
@@ -55,6 +56,8 @@ const [periods, close, retirement, assertions] = await Promise.all(
 );
 const [
   adminIndex,
+  adminBootstrapComposition,
+  adminSecurityGuard,
   retirementDispatch,
   purgeWorker,
   purgeRuntimeBinding,
@@ -65,6 +68,8 @@ const [
   databaseHarness,
 ] = await Promise.all([
   readFile("backend/supabase/functions/admin-api/index.ts", "utf8"),
+  readFile("backend/supabase/functions/admin-api/adminBootstrapComposition.ts", "utf8"),
+  readFile("backend/supabase/functions/admin-api/adminSecurityGuard.ts", "utf8"),
   readFile(
     "backend/supabase/functions/admin-api/businessSettlementRetirementDispatch.ts",
     "utf8",
@@ -630,7 +635,31 @@ assert.doesNotMatch(
   "the retired Admin route must not consume or parse its request body",
 );
 const adminRuntime = adminIndex.slice(adminIndex.indexOf("Deno.serve"));
-const securityPosition = adminRuntime.indexOf("await guardAdminRequest(");
+const adminRootPath = "backend/supabase/functions/admin-api/index.ts";
+const authorizationPath = "backend/supabase/functions/admin-api/adminBootstrapComposition.ts";
+const guardPath = "backend/supabase/functions/admin-api/adminSecurityGuard.ts";
+assertExtractedModulesReachable(adminRootPath, [authorizationPath, guardPath], new Map([
+  [adminRootPath, adminIndex], [authorizationPath, adminBootstrapComposition], [guardPath, adminSecurityGuard],
+]));
+const authorizationSource = adminBootstrapComposition.slice(
+  adminBootstrapComposition.indexOf("export async function authorizeAndHydrateAdminBootstrapContext<"),
+  adminBootstrapComposition.indexOf("export function applicationContextForAdminGame("),
+);
+assert.equal(authorizationSource.match(/await guardAdminRequest\(/gu)?.length, 1,
+  "the composed Admin authorization must invoke the real security guard exactly once");
+const guardPosition = authorizationSource.indexOf("await guardAdminRequest(request, context, path)");
+const denialPosition = authorizationSource.indexOf("if (security.ok === false) return security");
+const hydrationPosition = authorizationSource.indexOf("await hydrateAdminBootstrapContext({");
+assert.ok(guardPosition >= 0 && denialPosition > guardPosition && hydrationPosition > denialPosition,
+  "guard denial must stop before Admin hydration");
+const securityPosition = adminRuntime.indexOf("await authorizeAndHydrateAdminBootstrapContext(");
+const rootDenialPosition = adminRuntime.indexOf("if (authorization.ok === false)");
+const rootDenialReturnPosition = adminRuntime.indexOf("return adminSecurityFailureResponse(request, authorization)");
+assert.equal(adminRuntime.match(/await authorizeAndHydrateAdminBootstrapContext\(/gu)?.length, 1,
+  "the Admin root must invoke composed authorization exactly once");
+assert.ok(rootDenialPosition > securityPosition &&
+  rootDenialReturnPosition > rootDenialPosition,
+  "the Admin root must preserve composed authorization denial");
 const retirementPosition = adminRuntime.indexOf(
   "preDispatchRetiredBusinessSettlement({",
 );
@@ -640,7 +669,7 @@ const lifecyclePosition = adminRuntime.indexOf(
 );
 assert.ok(securityPosition >= 0, "Admin dispatch must retain its security guard");
 assert.ok(
-  retirementPosition > securityPosition,
+  retirementPosition > securityPosition && retirementPosition > rootDenialReturnPosition,
   "retirement dispatch must remain after Admin authentication and authorization",
 );
 assert.ok(

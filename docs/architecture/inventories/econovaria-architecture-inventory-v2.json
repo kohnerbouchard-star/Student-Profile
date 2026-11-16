@@ -8,10 +8,10 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1604,
+    "sourceFiles": 1619,
     "edgeEntrypoints": 28,
     "handlerFiles": 60,
-    "persistenceOutsideInfrastructure": 60,
+    "persistenceOutsideInfrastructure": 85,
     "crossDomainDeepImports": 68,
     "browserTransportShimFiles": 27,
     "compatibilityMarkerFiles": 206,
@@ -80,7 +80,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 9,
+      "sourceFiles": 16,
       "publicBoundaryFiles": []
     },
     {
@@ -526,10 +526,6 @@
         "layer": "api"
       },
       {
-        "file": "backend/src/domains/auth/api/staffBootstrapHttpHandler.ts",
-        "layer": "api"
-      },
-      {
         "file": "backend/src/domains/auth/api/staffLoginHttpHandler.ts",
         "layer": "api"
       },
@@ -540,6 +536,22 @@
       {
         "file": "backend/src/domains/auth/api/staffSignupHttpHandler.ts",
         "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/auth/api/staffSignupResendHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/business/api/playerBusinessIpoHttpDispatch.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/business/api/playerBusinessManufacturing.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/contracts/services/contractRewardLedgerWriter.ts",
+        "layer": "services"
       },
       {
         "file": "backend/src/domains/economy/api/initialBalanceSeedHttpHandler.ts",
@@ -554,7 +566,15 @@
         "layer": "api"
       },
       {
+        "file": "backend/src/domains/economy/services/idempotentStaffLedgerAdjustment.ts",
+        "layer": "services"
+      },
+      {
         "file": "backend/src/domains/game-sessions/api/gameSettingsHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
         "layer": "api"
       },
       {
@@ -574,6 +594,14 @@
         "layer": "api"
       },
       {
+        "file": "backend/src/domains/progression/api/playerProgressionHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/progression/services/progressionIntegrationEventService.ts",
+        "layer": "services"
+      },
+      {
         "file": "backend/src/domains/store/tests/playerStoreNegativeStateMatrix.test.ts",
         "layer": "tests"
       },
@@ -583,6 +611,18 @@
       },
       {
         "file": "backend/src/security/authenticationThrottle.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/src/security/staffMessagingRateLimitDispatch.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/src/security/staffRequestRateLimit.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/src/security/supabaseRateLimitRepository.ts",
         "layer": "outside-domain"
       },
       {
@@ -638,6 +678,10 @@
         "layer": "outside-domain"
       },
       {
+        "file": "backend/supabase/functions/admin-api/gameLifecycleOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
         "file": "backend/supabase/functions/admin-api/gameProvisioningOperations.ts",
         "layer": "outside-domain"
       },
@@ -658,6 +702,10 @@
         "layer": "outside-domain"
       },
       {
+        "file": "backend/supabase/functions/admin-api/inventoryRedemptionOperationsCore.ts",
+        "layer": "outside-domain"
+      },
+      {
         "file": "backend/supabase/functions/admin-api/logs.ts",
         "layer": "outside-domain"
       },
@@ -667,6 +715,18 @@
       },
       {
         "file": "backend/supabase/functions/admin-api/marketplaceOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/messagingOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/messagingOperationsCore.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/messagingParticipantOperations.ts",
         "layer": "outside-domain"
       },
       {
@@ -690,6 +750,14 @@
         "layer": "outside-domain"
       },
       {
+        "file": "backend/supabase/functions/admin-api/progressionOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/progressionRateLimit.ts",
+        "layer": "outside-domain"
+      },
+      {
         "file": "backend/supabase/functions/admin-api/readExtensions.ts",
         "layer": "outside-domain"
       },
@@ -702,7 +770,15 @@
         "layer": "outside-domain"
       },
       {
+        "file": "backend/supabase/functions/admin-api/worldRuntimeValidation.ts",
+        "layer": "outside-domain"
+      },
+      {
         "file": "backend/supabase/functions/admin-api/worldTravelOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/business-operations-worker/index.ts",
         "layer": "outside-domain"
       },
       {
@@ -750,11 +826,35 @@
         "layer": "outside-domain"
       },
       {
+        "file": "backend/supabase/functions/stock-market-player-read/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/stock-market-read/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/stock-market-runner/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/stock-market-seed-copy/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/stock-market-trading/index.ts",
+        "layer": "outside-domain"
+      },
+      {
         "file": "backend/supabase/functions/stock-tick-archiver/index.ts",
         "layer": "outside-domain"
       },
       {
         "file": "backend/supabase/functions/stripe-checkout-session/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/web-session-api/index.ts",
         "layer": "outside-domain"
       }
     ],
@@ -2624,6 +2724,8 @@
         "locations": [
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
+          "backend/supabase/functions/admin-api/adminBootstrapComposition.test.ts",
+          "backend/supabase/functions/admin-api/adminBootstrapResponseParity.test.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
@@ -3154,8 +3256,13 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/overview/GameLifecycleController.js",
           "admin/v2/src/routes/overview/OverviewController.js",
+          "backend/src/domains/auth/application/staffGameSessionBootstrap.test.ts",
+          "backend/src/domains/auth/infrastructure/supabaseStaffGameSessionBootstrapRepository.test.ts",
           "backend/src/domains/game-sessions/application/readGameJoinCode.test.ts",
           "backend/src/domains/game-sessions/infrastructure/supabaseGameJoinCodeReadRepository.test.ts",
+          "backend/src/shared/staffRequestApplicationContextFactory.test.ts",
+          "backend/supabase/functions/admin-api/adminBootstrapComposition.test.ts",
+          "backend/supabase/functions/admin-api/adminBootstrapResponseParity.test.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
           "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
@@ -3171,6 +3278,7 @@
         "locations": [
           "admin/admin-auth.js",
           "admin/auth-session-manager.js",
+          "backend/supabase/functions/admin-api/adminBootstrapResponseParity.test.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
@@ -3508,6 +3616,7 @@
           "backend/src/domains/game-sessions/application/readGameSettings.test.ts",
           "backend/src/domains/game-sessions/infrastructure/supabaseGameSessionMutationRepository.test.ts",
           "backend/src/domains/game-sessions/infrastructure/supabaseGameSettingsReadRepository.test.ts",
+          "backend/src/shared/staffRequestApplicationContextFactory.test.ts",
           "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
@@ -3675,7 +3784,8 @@
     "Static inventory identifies candidates, not proof that each match is a live violation.",
     "SQL-defined cross-domain mutations and semantic state-machine duplication require the accompanying human audit.",
     "Imports through another domain's explicit index.ts public boundary are not classified as deep imports.",
-    "Standard JavaScript and typed-array .from constructors are excluded from persistence-call detection.",
+    "Standard JavaScript and typed-array .from constructors, including generic forms, are excluded from persistence-call detection.",
+    "Persistence detection is lexical: direct calls and generic member candidates are included; comments, strings and generic instantiation expressions may match. Counts are files, not calls, violations or proven live paths.",
     "Generated Admin dist output and dependencies are excluded."
   ]
 }

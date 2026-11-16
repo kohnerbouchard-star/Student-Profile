@@ -21,6 +21,14 @@ const STAFF_BOOTSTRAP = new URL(
   "../backend/src/domains/auth/api/staffBootstrapHttpHandler.ts",
   import.meta.url,
 );
+const STAFF_BOOTSTRAP_REPOSITORY = new URL(
+  "../backend/src/domains/auth/infrastructure/supabaseStaffGameSessionBootstrapRepository.ts",
+  import.meta.url,
+);
+const ADMIN_BOOTSTRAP_COMPOSITION = new URL(
+  "../backend/supabase/functions/admin-api/adminBootstrapComposition.ts",
+  import.meta.url,
+);
 const ADMIN_COMMON = new URL(
   "../backend/supabase/functions/admin-api/common.ts",
   import.meta.url,
@@ -60,6 +68,8 @@ test("Admin reads the authoritative persisted code instead of a browser cache", 
     resetHandler,
     joinCodeReadRepository,
     bootstrap,
+    bootstrapRepository,
+    adminBootstrapComposition,
     adminCommon,
     adminRoutes,
     adminLocalMutations,
@@ -70,6 +80,8 @@ test("Admin reads the authoritative persisted code instead of a browser cache", 
     readFile(RESET_HANDLER, "utf8"),
     readFile(JOIN_CODE_READ_REPOSITORY, "utf8"),
     readFile(STAFF_BOOTSTRAP, "utf8"),
+    readFile(STAFF_BOOTSTRAP_REPOSITORY, "utf8"),
+    readFile(ADMIN_BOOTSTRAP_COMPOSITION, "utf8"),
     readFile(ADMIN_COMMON, "utf8"),
     readFile(ADMIN_ROUTES, "utf8"),
     readFile(ADMIN_LOCAL_MUTATIONS, "utf8"),
@@ -107,10 +119,19 @@ test("Admin reads the authoritative persisted code instead of a browser cache", 
     /\.eq\(\s*"owner_staff_user_id",\s*input\.applicationContext\.actor\.staffUserId,?\s*\)/,
   );
   assert.match(resetHandler, /rotateGameJoinCode/);
-  assert.match(bootstrap, /game_join_code,game_join_code_status/);
-  assert.match(bootstrap, /joinCode:\s*session\.game_join_code/);
-  assert.match(bootstrap, /gameCode:\s*session\.game_join_code/);
-  assert.match(adminCommon, /game_join_code,game_join_code_status/);
+  assert.match(bootstrapRepository, /"game_join_code"/);
+  assert.match(bootstrapRepository, /"game_join_code_status"/);
+  assert.match(bootstrapRepository, /gameJoinCode:\s*nullableText\(row\.game_join_code\)/);
+  assert.match(bootstrap, /joinCode:\s*gameSession\.gameJoinCode/);
+  assert.match(bootstrap, /gameCode:\s*gameSession\.gameJoinCode/);
+  assert.match(
+    adminBootstrapComposition,
+    /game_join_code:\s*gameSession\.gameJoinCode/,
+  );
+  assert.match(
+    adminBootstrapComposition,
+    /game_join_code_status:\s*gameSession\.gameJoinCodeStatus/,
+  );
   assert.match(adminCommon, /joinCode:\s*gameCode/);
   assert.match(adminCommon, /gameCode,/);
   assert.doesNotMatch(adminRoutes, /classroomGamePath\(gameId, "\/join-code\/reset"\)/);

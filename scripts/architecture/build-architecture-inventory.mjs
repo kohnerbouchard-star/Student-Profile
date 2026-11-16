@@ -1,12 +1,12 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { hasPersistenceCallCandidate } from "./persistence-call-candidates.mjs";
 
 const ROOT = process.cwd();
 const OUTPUT = path.join(ROOT, "docs/architecture/inventories/econovaria-architecture-inventory-v2.json");
 const SOURCE_EXTENSIONS = new Set([".js", ".mjs", ".cjs", ".ts", ".tsx"]);
 const SCAN_ROOTS = ["backend/src", "backend/supabase/functions", "admin", "frontend/src", "player-terminal/src"];
 const GENERATED_SEGMENTS = ["/dist/", "/node_modules/", "/coverage/"];
-const COLLECTION_FROM_CALL = /\b(?:Array|Int8Array|Uint8Array|Uint8ClampedArray|Int16Array|Uint16Array|Int32Array|Uint32Array|BigInt64Array|BigUint64Array|Float32Array|Float64Array)\.from\s*\(/gu;
 
 async function filesBelow(relativeRoot) {
   const absoluteRoot = path.join(ROOT, relativeRoot);
@@ -30,7 +30,6 @@ const lines = (source) => source.split(/\r?\n/u).length;
 const domainName = (file) => file.match(/^backend\/src\/domains\/([^/]+)\//u)?.[1] ?? null;
 const publicDomainBoundary = (file) => /^backend\/src\/domains\/[^/]+\/index\.(?:ts|js)$/u.test(file);
 const unique = (values) => [...new Set(values)].sort();
-const persistenceScanSource = (source) => source.replace(COLLECTION_FROM_CALL, "collectionFrom(");
 
 const domainsRoot = path.join(ROOT, "backend/src/domains");
 const domains = [];
@@ -53,8 +52,7 @@ const crossDomainImports = [];
 const browserTransportShims = [];
 const capabilityOccurrences = new Map();
 for (const [file, source] of sources) {
-  const persistenceSource = persistenceScanSource(source);
-  if (/\.(?:from|rpc)\s*\(/u.test(persistenceSource) || /createClient\s*\(/u.test(persistenceSource)) {
+  if (hasPersistenceCallCandidate(source)) {
     const allowed = /\/infrastructure\//u.test(file) || file.startsWith("backend/src/platform/supabase/") || file.startsWith("backend/src/supabase/");
     if (!allowed) persistenceCalls.push({ file, layer: file.match(/^backend\/src\/domains\/[^/]+\/([^/]+)/u)?.[1] ?? "outside-domain" });
   }
@@ -126,7 +124,8 @@ const inventory = {
     "Static inventory identifies candidates, not proof that each match is a live violation.",
     "SQL-defined cross-domain mutations and semantic state-machine duplication require the accompanying human audit.",
     "Imports through another domain's explicit index.ts public boundary are not classified as deep imports.",
-    "Standard JavaScript and typed-array .from constructors are excluded from persistence-call detection.",
+    "Standard JavaScript and typed-array .from constructors, including generic forms, are excluded from persistence-call detection.",
+    "Persistence detection is lexical: direct calls and generic member candidates are included; comments, strings and generic instantiation expressions may match. Counts are files, not calls, violations or proven live paths.",
     "Generated Admin dist output and dependencies are excluded.",
   ],
 };

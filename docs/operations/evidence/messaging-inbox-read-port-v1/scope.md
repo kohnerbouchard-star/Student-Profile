@@ -122,3 +122,27 @@ Plain Git publication failed for absent credentials; the authenticated connector
 publication was denied by the safety reviewer because the approval did not name
 `kohnerbouchard-star/Student-Profile` explicitly. No branch or PR was created;
 publication awaits exact-destination approval, without bypass or alternate upload.
+
+## Post-scanner union (2026-11-16)
+
+The publication-denial and no-PR statements above are historical. Draft PR #990
+was published as `f435e31b8573ebd6abd6f2d7d175630a59a7fd17` with actual-PR
+authority. This union merges actual main
+`acab3292390da659e954375d6349015332252a7e`, including merged #668 and corrected
+scanner #991. All fourteen Messaging runtime/test files are preserved byte-for-byte.
+The roadmap conflict retains both complete historical intake blocks; generated
+inventory is recomputed with the corrected scanner, not selected from either side.
+It reports 1,619 sources and 85 persistence-candidate files, versus main 1,611/86.
+These lexical candidates are not confirmed defects or a completion percentage.
+No ceilings, workflow commands, migration, RPC, permissions or production settings
+change. Existing automatic sync is unchanged; no manual deployment is performed.
+Fresh local union tests and exact-head hosted qualification remain required.
+The older local frozen-SDK and live-acceptance limitations remain recorded, not waived.
+
+Fresh union verification: complete root suite, Messaging 121/121, request-scope/
+privacy 85/85, core TypeScript, Player Messaging fixture lifecycle, secret scan,
+and actual PR990 authority (20 paths/22 locks) pass. Independent reconciliation
+review verified all fourteen source/test blobs unchanged, every nonempty roadmap
+line from both parents retained, byte-identical regenerated inventory and scanner
+36/36 tests. Local full Edge checks still stop at the frozen Supabase SDK network
+refusal; hosted exact-head qualification remains required and is not yet claimed.
