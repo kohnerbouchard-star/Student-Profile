@@ -1,0 +1,53 @@
+{
+  "baseline": "19ee89dcd7d02b60f43b0b0ca4477a5c2529f6c7",
+  "fixed_source_state": "uncommitted correction after 061c9e24700a2e883b34714ce6958898eacc1846",
+  "blocks": [
+    {
+      "block": "state-and-effects",
+      "lines": 44,
+      "byte_identical_contiguous_move": true
+    },
+    {
+      "block": "session-and-read-functions",
+      "lines": 181,
+      "byte_identical_contiguous_move": true
+    },
+    {
+      "block": "executeEndpoint",
+      "lines": 93,
+      "byte_identical_contiguous_move": true
+    }
+  ],
+  "all_blocks_byte_identical": true,
+  "logout_delegation": {
+    "original_conditional_byte_identical": true,
+    "retained_branch_identical_except_one_delegation": true,
+    "order": [
+      "if freshness: terminalLoadVersion++",
+      "retireEffects()",
+      "onLogoutRequested(detail)",
+      "dispatchHostEvent(logoutRequestedEvent, detail)"
+    ],
+    "null_freshness_noop_preserved": true,
+    "does_not_set_destroyed": true
+  },
+  "moved_private_binding_references_remaining_in_app": {
+    "terminalLoadVersion": 0,
+    "retireEffects": 0,
+    "routeRequestVersions": 0,
+    "publishedSession": 0,
+    "pendingControls": 0,
+    "controlOwners": 0,
+    "deferredEffects": 0,
+    "frames": 0,
+    "admitted": 0,
+    "settlePublished": 0,
+    "handleInvalidSession": 0
+  },
+  "target_file_TS2304": [],
+  "source_sha256": {
+    "player-terminal/src/app.js": "c7ee403570a2a5701462c1d39f0b9d022e8d33a8722d646f67dff6827c30b9b0",
+    "player-terminal/src/core/player-terminal-lifecycle.js": "5e8ac95d413b537ea7b7985b6731c633064ce3816eca904fa960398f621dd613",
+    "player-terminal/tests/app-lifecycle-characterization.mjs": "e4bf86ffaea1c6767325993f656b59c3dd99915027d710dcc0f767fe5500ce67"
+  }
+}

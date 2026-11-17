@@ -323,3 +323,30 @@ test("promotion workflow downloads an artifact by ID and never rebuilds", async 
   assert.match(workflow, /expected-source-artifact-id/);
   assert.match(workflow, /validate-promotion/);
 });
+
+test("promotion contracts use per-PR concurrency while dispatches retain environment locks", async () => {
+  const workflow = await readFile(".github/workflows/release-promote.yml", "utf8");
+  const concurrency = workflow.match(/^concurrency:\n([\s\S]*?)(?=^\S)/mu)?.[1];
+  assert.ok(concurrency, "Workflow concurrency must remain explicit.");
+  assert.equal(
+    concurrency.match(/^  group: (.+)$/mu)?.[1],
+    "release-promote-${{ github.event_name == 'pull_request' && format('contract-pr-{0}', github.event.pull_request.number) || inputs.target_environment || 'contract' }}",
+    "PRs must isolate by number; dispatches must retain release-promote-staging/production.",
+  );
+  assert.match(concurrency, /^  cancel-in-progress: false$/mu);
+});
+
+test("per-PR contract isolation does not grant promotion authority", async () => {
+  const workflow = await readFile(".github/workflows/release-promote.yml", "utf8");
+  const contracts = workflow.match(/^  contract-tests:\n([\s\S]*?)(?=^  [a-z-]+:)/mu)?.[1];
+  const promotion = workflow.match(/^  authorize-promotion:\n([\s\S]*)/mu)?.[1];
+  assert.ok(contracts && promotion, "Both separate job boundaries must remain present.");
+  assert.match(contracts, /^    if: github.event_name == 'pull_request'$/mu);
+  assert.doesNotMatch(contracts, /^    environment:/mu);
+  assert.match(promotion, /^    if: github.event_name == 'workflow_dispatch'$/mu);
+  assert.match(promotion, /^    environment: \$\{\{ inputs\.target_environment \}\}$/mu);
+  assert.match(promotion, /git merge-base --is-ancestor "\$RELEASE_COMMIT" origin\/main/u);
+  assert.match(promotion, /Validate dispatch identity, approval, staging evidence, and rollback target/u);
+  assert.match(promotion, /--expected-source-run-id "\$SOURCE_RUN_ID"/u);
+  assert.match(promotion, /--expected-source-artifact-id "\$SOURCE_ARTIFACT_ID"/u);
+});

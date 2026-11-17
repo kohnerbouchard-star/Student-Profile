@@ -1,4 +1,4 @@
-import { list, object, text, number, shortDate } from "./read-model-values.js";
+import { list, object, text, number, optionalNumber, shortDate } from "./read-model-values.js";
 
 export function normalizeMarketNews(news, stocks = []) {
   const assetIdByTicker = new Map(list(stocks).map((stock) => [
@@ -78,6 +78,8 @@ function normalizeWorldNewsItems(items, marketAssets) {
       assetIds: scope === "ticker" && targetKey
         ? [assetIdByTicker.get(targetKey.toLowerCase())].filter(Boolean)
         : [],
+      // Retain the public ticker so later Market reads can resolve cold-entry links.
+      ...(scope === "ticker" && targetKey ? { assetSymbols: [targetKey] } : {}),
       tick: object(item.tick),
       source: text(item.source)
     };
@@ -125,7 +127,9 @@ export function normalizeCountriesRead(response, data) {
       ? item.economy
       : null;
     const id = text(item.countryCode).toLowerCase();
-    const stabilityIndex = number(economy?.politicalStabilityIndex, 1);
+    const stabilityIndex = optionalNumber(economy?.politicalStabilityIndex);
+    const growth = optionalNumber(economy?.gdpGrowthRate);
+    const inflation = optionalNumber(economy?.inflationRate);
     return {
       id,
       profileId: text(item.id),
@@ -138,12 +142,12 @@ export function normalizeCountriesRead(response, data) {
       market: economy ? titleCase(economy.difficultyPreset, "Current") : "Unavailable",
       condition: economy ? text(economy.label, "Current snapshot") : "No live snapshot",
       index: number(economy?.realGdpIndex),
-      growth: number(economy?.gdpGrowthRate) * 100,
-      inflation: number(economy?.inflationRate) * 100,
+      growth: growth === null ? null : growth * 100,
+      inflation: inflation === null ? null : inflation * 100,
       unemployment: number(economy?.unemploymentRate) * 100,
       baseRate: number(economy?.interestRate) * 100,
       currencyTrend: (number(economy?.exchangeRateIndex, 1) - 1) * 100,
-      stability: Math.round(Math.max(0, Math.min(100, stabilityIndex * 50))),
+      stability: stabilityIndex === null ? null : Math.round(Math.max(0, Math.min(100, stabilityIndex * 50))),
       risk: economy ? countryRisk(economy.marketRiskIndex) : "Unavailable",
       resources: [],
       exports: [],

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -24,7 +25,7 @@ const files = Object.freeze({
 });
 
 const entries = await Promise.all(
-  Object.entries(files).map(async ([key, path]) => [key, await readFile(path, "utf8")]),
+  Object.entries(files).map(async ([key, path]) => [key, key === "capability" ? readEdgeRuntimeSource(path, "utf8") : await readFile(path, "utf8")]),
 );
 const source = Object.fromEntries(entries);
 const rateLimitBoundary = [source.rateLimit, source.rateLimitRegistry].join("\n");

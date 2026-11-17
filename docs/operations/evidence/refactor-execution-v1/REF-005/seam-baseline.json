@@ -42,8 +42,6 @@
     {"file":"admin/create-action-adapter.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"039e29f8646b65c351825a2604e80384ab3c1bbd"},
     {"file":"admin/game-creation-runtime-bridge.js","kind":"browser_interception","signature":"window . fetch = function","maximum":1,"sourceBlobSha":"0ce82e842290de45faad789d98f643601b1c2787"},
     {"file":"admin/player-access-code-bridge.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"0a64de2377b88f94119413fa09b2cc7c41bab230"},
-    {"file":"admin/scanner-auto-refresh.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"542c0f9472a3cd441107438a89ead0a0aff200c5"},
-    {"file":"admin/scanner-reward-localization.js","kind":"browser_interception","signature":"window . fetch = async","maximum":1,"sourceBlobSha":"977d19d17e596387d0969c550b5bd270f6b7445a"},
     {"file":"backend/src/domains/business/api/playerBusinessRoutePaths.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"bc8856d482bcd67a84bbfb85db8cd08f1aadb257"},
     {"file":"backend/src/platform/supabase/playerApiRouteSegments.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"ce9f92f39ce1af9a37170ea5b80ae7e7fe749c5d"},
     {"file":"backend/src/domains/players/api/playerCapabilityManifestRoutePaths.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":2,"sourceBlobSha":"e79e5acaa69a8fb148202b91378a715d8528312c"},
@@ -66,9 +64,9 @@
     {"file":"backend/supabase/functions/classroom-api/index.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":2,"sourceBlobSha":"1b4691f278b8fea057851de520fdfe4773be46f7"},
     {"file":"backend/supabase/functions/player-api/runtime.ts","kind":"classroom_import","signature":"backend/supabase/functions/classroom-api/messagingDispatch.ts","maximum":1,"sourceBlobSha":"3bff3bdd9cc9a59d693b83cc076fe6243c58aaa7"},
     {"file":"backend/supabase/functions/player-web-session-api/staging-compat-entrypoint-v2.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"34123bf2f0d9f8aa55826dbfce419b60d60c0e31"},
-    {"file":"backend/supabase/functions/player-web-session-api/staging-compat-entrypoint-v2.ts","kind":"classroom_literal","signature":"`${config.supabaseUrl}/functions/v1/classroom-api${route}`","maximum":1,"sourceBlobSha":"34123bf2f0d9f8aa55826dbfce419b60d60c0e31"},
+    {"file":"backend/supabase/functions/player-web-session-api/stagingCompatV2Upstream.ts","kind":"classroom_literal","signature":"`${config.supabaseUrl}/functions/v1/classroom-api${route}`","maximum":1,"sourceBlobSha":"6465fd3b6e6bf5e759c621696dcc3762d5ca11f3"},
     {"file":"backend/supabase/functions/player-web-session-api/staging-compat-entrypoint.ts","kind":"classroom_literal","signature":"\"classroom-api\"","maximum":1,"sourceBlobSha":"8494f967c806bd51ae0c7bd9ad512caf618ed8fc"},
-    {"file":"backend/supabase/functions/player-web-session-api/staging-compat-entrypoint.ts","kind":"classroom_literal","signature":"`${supabaseUrl}/functions/v1/classroom-api${route}`","maximum":1,"sourceBlobSha":"8494f967c806bd51ae0c7bd9ad512caf618ed8fc"},
+    {"file":"backend/supabase/functions/player-web-session-api/stagingCompatUpstream.ts","kind":"classroom_literal","signature":"`${supabaseUrl}/functions/v1/classroom-api${route}`","maximum":1,"sourceBlobSha":"7a5d8f25f5a4593e6d96a1be7ae42ca07c8330e8"},
     {"file":"frontend/src/core/constants.js","kind":"browser_interception","signature":"window . fetch = function","maximum":1,"sourceBlobSha":"21bafff331da6ccc128c62cbeeb8d057aefe19aa"},
     {"file":"frontend/src/core/constants.js","kind":"classroom_reference","signature":", CLASSROOM_API_URL , PLAYER_SESSION_STORAGE_KEY","maximum":1,"sourceBlobSha":"21bafff331da6ccc128c62cbeeb8d057aefe19aa"},
     {"file":"frontend/src/core/constants.js","kind":"classroom_reference","signature":"const CLASSROOM_API_URL = runtimeConfig","maximum":1,"sourceBlobSha":"21bafff331da6ccc128c62cbeeb8d057aefe19aa"},
@@ -97,7 +95,8 @@
     {"path":"admin/player-identity-wiring.js","sourceBlobSha":"ff8267b3ac89fc5570dfcfe593bbd857cce636a1","owner":"Retained Admin Player profile and identity UI","disposition":"compatibility_required","referenceTerms":["confirm-player-settings-save","EconovariaPlayerAccessCodeBridge"]},
     {"path":"admin/attendance-reward-save-controller-v3.js","sourceBlobSha":"bd8a10163ba475c5083936c81323c1b16d8e6624","owner":"Retained Admin Attendance save controller","disposition":"compatibility_required","referenceTerms":["econovaria:attendance-reward-saved","econovaria:settings-context-changed"]},
     {"path":"admin/attendance-reward-settings-v4.js","sourceBlobSha":"ac692d46dc972bc85ada7e9fa3397d3a5935886b","owner":"Retained Admin Attendance settings state and renderer","disposition":"compatibility_required","referenceTerms":["econovaria:attendance-reward-saved"]},
-    {"path":"admin/settings-lifecycle-bridge.js","sourceBlobSha":"379d5589edbc2bdd94a9abbb7b0c2b8e8213b05d","owner":"Retained Admin Settings mounted lifecycle","disposition":"compatibility_required","referenceTerms":["econovaria:admin-settings-mounted","econovaria:admin-request-lifecycle","econovaria:settings-context-changed","econovaria:attendance-reward-saved"]}
+    {"path":"admin/settings-lifecycle-bridge.js","sourceBlobSha":"379d5589edbc2bdd94a9abbb7b0c2b8e8213b05d","owner":"Retained Admin Settings mounted lifecycle","disposition":"compatibility_required","referenceTerms":["econovaria:admin-settings-mounted","econovaria:admin-request-lifecycle","econovaria:settings-context-changed","econovaria:attendance-reward-saved"]},
+    {"path": "admin/player-identity-reset-scope.js", "sourceBlobSha": "74e9e1faaf5b0dfc7398d62be3ae82a13a984fc4", "owner": "Retained Admin Player profile and identity UI", "disposition": "compatibility_required", "referenceTerms": ["EconovariaAdminAuth"]}
   ],
   "removalRecords": [],
   "validation": {
@@ -319,6 +318,44 @@
       "review": "Explicit one-for-one review of the selected refactor: the old Admin-to-Classroom GET call is absent and its allowance is removed. The remaining literal constructs an in-process Request for inherited Staff rate-limit classification and the existing local reader; it is never fetched. Preserve the exact path/kind/signature and maximum of one, not a directory exemption or a renamed/computed bypass. Registered identities remain 37 and occurrence allowances remain 40; all other 36 site records and all 23 removal targets are unchanged. Original REF-005 scope/review/publication fields above are historical evidence and are not relabeled as REF-007 acceptance.",
       "parityTests": ["backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts", "backend/tests/admin/ref004RequestParity.test.ts"],
       "requiredVerification": "Fresh exact-head architecture census, unchanged adversarial seam/removal tests, Admin/Contract parity and shared CI. Restoring the removed GET proxy call or moving/duplicating the metadata literal must fail the unchanged exact-site checker. Existing real-root fixtures must continue to prove zero Classroom HTTP requests and unchanged read/security behavior. No source deletion or runtime-retirement approval."
+    },
+    {
+      "task": "ALL-LARGE-FILES-LOCAL-20261115",
+      "sourceInspectionSha": "4397f419153a7ad0cb6cc391cfac721a24a3101c",
+      "removedSite": {
+        "file": "backend/supabase/functions/player-web-session-api/staging-compat-entrypoint.ts",
+        "kind": "classroom_literal",
+        "signature": "`${supabaseUrl}/functions/v1/classroom-api${route}`",
+        "maximum": 1,
+        "sourceBlobSha": "8494f967c806bd51ae0c7bd9ad512caf618ed8fc"
+      },
+      "addedSite": {
+        "file": "backend/supabase/functions/player-web-session-api/stagingCompatUpstream.ts",
+        "kind": "classroom_literal",
+        "signature": "`${supabaseUrl}/functions/v1/classroom-api${route}`",
+        "maximum": 1,
+        "sourceBlobSha": "7a5d8f25f5a4593e6d96a1be7ae42ca07c8330e8"
+      },
+      "review": "One-for-one preserved upstream fetch literal extraction. Exact signature and maximum=1 retained; original path allowance removed. Other sites and all removal gates unchanged. Local source evidence only; no hosted qualification or publication credit."
+    },
+    {
+      "task": "ALL-LARGE-FILES-LOCAL-20261115",
+      "sourceInspectionSha": "4397f419153a7ad0cb6cc391cfac721a24a3101c",
+      "removedSite": {
+        "file": "backend/supabase/functions/player-web-session-api/staging-compat-entrypoint-v2.ts",
+        "kind": "classroom_literal",
+        "signature": "`${config.supabaseUrl}/functions/v1/classroom-api${route}`",
+        "maximum": 1,
+        "sourceBlobSha": "34123bf2f0d9f8aa55826dbfce419b60d60c0e31"
+      },
+      "addedSite": {
+        "file": "backend/supabase/functions/player-web-session-api/stagingCompatV2Upstream.ts",
+        "kind": "classroom_literal",
+        "signature": "`${config.supabaseUrl}/functions/v1/classroom-api${route}`",
+        "maximum": 1,
+        "sourceBlobSha": "6465fd3b6e6bf5e759c621696dcc3762d5ca11f3"
+      },
+      "review": "One-for-one preserved upstream fetch literal extraction. Exact signature and maximum=1 retained; original path allowance removed. Other sites and all removal gates unchanged. Local source evidence only; no hosted qualification or publication credit."
     }
   ]
 }

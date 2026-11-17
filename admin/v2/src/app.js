@@ -1,176 +1,58 @@
-import {
-  AdminDrawer,
-  AdminEmptyState,
-  AdminErrorState,
-  AdminFreshnessStatus,
-  AdminNavigation,
-  AdminPermissionBoundary,
-  AdminRouteBoundary,
-  AdminShell,
-  AdminToast,
-  AdminTopbar,
-} from "./components/index.js";
-import { createElement } from "./components/dom.js";
-import { createAdminApiClient } from "./api/admin-api-client.js";
-import { createAdminBffTransport } from "./api/admin-bff-transport.js";
-import { createContractsApiClient } from "./api/contracts-api-client.js";
-import {
-  ADMIN_DEFAULT_ROUTE_ID,
-  ADMIN_NAVIGATION_GROUPS,
-  getAdminNavigationRoute,
-} from "./core/navigation-registry.js";
-import {
-  createLegacyAdminHandoffUrl,
-  resolveCurrentAdminRouteBoundary,
-} from "./core/route-boundary.js";
-import { createAdminInventoryRedemptionQueueClient } from "../../inventory-redemption-queue-client.js";
-import { createAttendanceApi } from "./routes/attendance/AttendanceApi.js";
-import { createAttendanceController } from "./routes/attendance/AttendanceController.js";
-import { createBankingApiClient } from "./routes/banking/BankingApi.js";
-import { createBankingController } from "./routes/banking/BankingController.js";
-import { createContractsController } from "./routes/contracts/ContractsController.js";
-import { createInventoryController } from "./routes/inventory/InventoryController.js";
-import { createLoansApiClient } from "./routes/loans/LoansApiClient.js";
-import { createLoansController } from "./routes/loans/LoansController.js";
-import { createLogsApiClient } from "./routes/logs/LogsApi.js";
-import { createLogsController } from "./routes/logs/LogsController.js";
-import { createMarketController } from "./routes/market/MarketController.js";
-import { createCraftingApiClient } from "./routes/crafting/CraftingApi.js";
-import { createCraftingController } from "./routes/crafting/CraftingController.js";
-import { createBusinessApi } from "./routes/business/BusinessApi.js";
-import { createBusinessController } from "./routes/business/BusinessController.js";
-import { createMarketplaceApiClient } from "./routes/marketplace/MarketplaceApiClient.js";
-import { createMarketplaceController } from "./routes/marketplace/MarketplaceController.js";
-import { createMessagesAdminClient } from "./routes/messages/MessagesApi.js";
-import { createMessagesController } from "./routes/messages/MessagesController.js";
-import { createNewsEventsApi } from "./routes/news-events/NewsEventsApi.js";
-import { createNewsEventsController } from "./routes/news-events/NewsEventsController.js";
-import { createOverviewController } from "./routes/overview/OverviewController.js";
-import { createPlayersController } from "./routes/players/PlayersController.js";
-import { createProgressionApiClient } from "./routes/progression/ProgressionClient.js";
-import { createProgressionController } from "./routes/progression/ProgressionController.js";
-import { createSettingsApi } from "./routes/settings/SettingsApi.js";
-import { createSettingsController } from "./routes/settings/SettingsController.js";
-import { createStoreController } from "./routes/store/StoreController.js";
-import { createWorldManagementController } from "./routes/world-management/WorldManagementController.js";
-
-const NAVIGATION_COLLAPSED_KEY = "econovaria.admin.v2.navigation-collapsed.v1";
+import { createAppControllers } from "./app-controllers.js";
+import { createAppPresentation } from "./app-presentation.js";
 
 function text(value, fallback = "") {
   const normalized = String(value || "").trim();
   return normalized || fallback;
 }
 
-function permissionSet(session) {
-  return new Set(Array.isArray(session?.permissions)
-    ? session.permissions.map((permission) => text(permission)).filter(Boolean)
-    : []);
-}
+const {
+  permissionSet, routeAllowed, selectedGameContext, navigationGroups, safeCollapsedPreference,
+  rememberCollapsedPreference, accountDrawerContent, gameDrawerContent,
+} = createAppPresentation(text);
+import {
+  AdminDrawer, AdminFreshnessStatus, AdminNavigation, AdminPermissionBoundary, AdminRouteBoundary,
+  AdminShell, AdminToast, AdminTopbar,
+} from "./components/index.js";
+import { createElement } from "./components/dom.js";
 
-function routeAllowed(route, permissions) {
-  const allOf = route?.permission?.allOf || [];
-  const anyOf = route?.permission?.anyOf || [];
-  return allOf.every((permission) => permissions.has(permission))
-    && (anyOf.length === 0 || anyOf.some((permission) => permissions.has(permission)));
-}
+import { createAdminBffTransport } from "./api/admin-bff-transport.js";
 
-function selectedSessionGame(session, selectedGameId) {
-  const games = Array.isArray(session?.activeGameSessions) ? session.activeGameSessions : [];
-  return games.find((game) => text(game?.id || game?.gameId) === selectedGameId) || null;
-}
+import { ADMIN_DEFAULT_ROUTE_ID, getAdminNavigationRoute } from "./core/navigation-registry.js";
+import {
+  createLegacyAdminHandoffUrl,
+  resolveCurrentAdminRouteBoundary,
+} from "./core/route-boundary.js";
 
-function selectedGameContext(session, selectedGameId, model = null) {
-  const sessionGame = selectedSessionGame(session, selectedGameId) || {};
-  const modelGame = model?.game || {};
-  return {
-    name: text(modelGame.name || sessionGame.name, "Current game"),
-    code: text(modelGame.gameCode || modelGame.joinCode || sessionGame.gameCode || sessionGame.joinCode),
-    status: text(modelGame.status || sessionGame.status, "Status unavailable"),
-  };
-}
 
-function navigationGroups() {
-  return ADMIN_NAVIGATION_GROUPS.map((group) => ({
-    id: group.id,
-    label: group.label,
-    items: group.routes.map((route) => ({
-      id: route.id,
-      label: route.label,
-      icon: route.icon,
-      href: route.href,
-      badge: route.modeLabel || null,
-      badgeLabel: route.modeLabel ? `Route mode: ${route.modeLabel}` : null,
-      badgeTitle: route.modeLabel ? `${route.label} is a ${route.modeLabel.toLowerCase()} surface` : null,
-    })),
-  }));
-}
 
-function safeCollapsedPreference() {
-  try {
-    return window.localStorage.getItem(NAVIGATION_COLLAPSED_KEY) === "true";
-  } catch (_error) {
-    return false;
-  }
-}
 
-function rememberCollapsedPreference(collapsed) {
-  try {
-    window.localStorage.setItem(NAVIGATION_COLLAPSED_KEY, String(Boolean(collapsed)));
-  } catch (_error) {}
-}
 
-function accountDrawerContent(session, gameContext) {
-  const user = session?.user || {};
-  return createElement("dl", {
-    className: "admin-u-stack",
-    children: [
-      createElement("div", { children: [
-        createElement("dt", { className: "admin-u-muted", text: "Administrator" }),
-        createElement("dd", { text: text(user.displayName || user.email, "Administrator") }),
-      ] }),
-      createElement("div", { children: [
-        createElement("dt", { className: "admin-u-muted", text: "Email" }),
-        createElement("dd", { text: text(user.email, "Not available") }),
-      ] }),
-      createElement("div", { children: [
-        createElement("dt", { className: "admin-u-muted", text: "Current game" }),
-        createElement("dd", { text: gameContext.name }),
-      ] }),
-    ],
-  });
-}
 
-function gameDrawerContent({ session, selectedGameId, onSelect, error }) {
-  if (error) {
-    return AdminErrorState({
-      title: "Game list is unavailable",
-      message: error.userMessage,
-      requestId: error.requestId,
-      compact: true,
-    });
-  }
-  const games = Array.isArray(session?.activeGameSessions) ? session.activeGameSessions : [];
-  if (games.length === 0) {
-    return AdminEmptyState({
-      title: "No available games",
-      message: "No game sessions are available to this administrator.",
-      compact: true,
-    });
-  }
-  const list = createElement("div", { className: "admin-u-stack" });
-  games.forEach((game) => {
-    const gameId = text(game?.id || game?.gameId);
-    const selected = gameId === selectedGameId;
-    const button = createElement("button", {
-      className: `admin-button${selected ? "" : " admin-button--quiet"}`,
-      attrs: { type: "button", "aria-current": selected ? "true" : null, disabled: selected },
-      text: `${text(game?.name, "Game session")} · ${text(game?.status, "Status unavailable")}`,
-    });
-    button.addEventListener("click", () => onSelect(gameId));
-    list.append(button);
-  });
-  return list;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export function mountAdminV2({ mount, session, selectedGameId } = {}) {
   if (!(mount instanceof HTMLElement)) throw new TypeError("Admin v2 mount is unavailable.");
@@ -184,146 +66,17 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     selectedGameId,
     session: () => window.EconovariaAdminAuthSession?.read?.(),
   });
-  const api = createAdminApiClient({ fetchImpl: transport });
-  const attendanceApi = createAttendanceApi({ fetchImpl: transport });
-  const bankingApi = createBankingApiClient({ fetchImpl: transport });
-  const contractsApi = createContractsApiClient({ fetchImpl: transport });
-  const inventoryApi = createAdminInventoryRedemptionQueueClient({ fetchImpl: transport });
-  const craftingApi = createCraftingApiClient({ fetchImpl: transport });
-  const businessApi = createBusinessApi({ fetchImpl: transport });
-  const marketplaceApi = createMarketplaceApiClient({ fetchImpl: transport });
-  const loansApi = createLoansApiClient({ fetchImpl: transport });
-  const logsApi = createLogsApiClient({ fetchImpl: transport });
-  const messagesApi = createMessagesAdminClient({ fetchImpl: transport });
-  const newsEventsApi = createNewsEventsApi({ fetchImpl: transport });
-  const progressionApi = createProgressionApiClient({ fetchImpl: transport });
-  const settingsApi = createSettingsApi({ fetchImpl: transport });
   let activeRouteId = resolveCurrentAdminRouteBoundary().route.id;
   let renderedMigratedRouteId = null;
   let pendingRouteIntent = null;
   let destroyed = false;
   let toast = null;
-  const overview = createOverviewController({
-    api,
-    selectedGameId,
-    hasPermission,
-    onChange: renderOverviewChange,
-    onResolved: updateOverviewShell,
-  });
-  const attendance = createAttendanceController({
-    api: attendanceApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("attendance"),
+  const {
+    overview, attendance, store, inventory, market, business, crafting, marketplace, banking, loans,
+    players, contracts, worldManagement, newsEvents, messages, progression, settings, logs,
+  } = createAppControllers({
+    transport, selectedGameId, hasPermission, renderOverviewChange, updateOverviewShell, renderControllerChange,
     notify: (notification) => toast?.push(notification),
-  });
-  const store = createStoreController({
-    api,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("store"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const inventory = createInventoryController({
-    api: inventoryApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("inventory"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const market = createMarketController({
-    api,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("market"),
-  });
-  const business = createBusinessController({
-    api: businessApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("business"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const crafting = createCraftingController({
-    api: craftingApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("crafting"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const marketplace = createMarketplaceController({
-    api: marketplaceApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("marketplace"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const banking = createBankingController({
-    api: bankingApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("banking"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const loans = createLoansController({
-    api: loansApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("loans"),
-  });
-  const players = createPlayersController({
-    api,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("players"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const contracts = createContractsController({
-    api: contractsApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("contracts"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const worldManagement = createWorldManagementController({
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("world-management"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const newsEvents = createNewsEventsController({
-    api: newsEventsApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("news-events"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const messages = createMessagesController({
-    api: messagesApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("messages"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const progression = createProgressionController({
-    api: progressionApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("progression"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const settings = createSettingsController({
-    api: settingsApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("settings"),
-    notify: (notification) => toast?.push(notification),
-  });
-  const logs = createLogsController({
-    api: logsApi,
-    selectedGameId,
-    hasPermission,
-    onChange: () => renderControllerChange("logs"),
   });
   const routeControllers = Object.freeze({
     overview: Object.freeze({
@@ -438,10 +191,13 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     description: "Administrator alerts for the current game context.",
     content: overview.renderNotifications(),
   });
+  const accountDetails = createElement("div", {
+    children: accountDrawerContent(session, initialGame),
+  });
   accountDrawer = AdminDrawer({
     title: "Administrator account",
     description: "Authenticated administrator and current game context.",
-    content: accountDrawerContent(session, initialGame),
+    content: accountDetails,
   });
   gameDrawer = AdminDrawer({
     title: "Select game",
@@ -579,7 +335,7 @@ export function mountAdminV2({ mount, session, selectedGameId } = {}) {
     });
     topbar.setNotificationCount(data.model.notificationCount ?? data.model.notifications?.length ?? 0);
     notificationDrawer.setContent(overview.renderNotifications());
-    accountDrawer.setContent(accountDrawerContent(session, game));
+    accountDetails.replaceChildren(accountDrawerContent(session, game));
     gameDrawer.setContent(gameDrawerContent({
       session,
       selectedGameId,

@@ -184,3 +184,5 @@ function assertEquals(actual: unknown, expected: unknown): void {
     );
   }
 }
+
+import "../infrastructure/supabaseCampaignRuntimeRepository.test.ts";

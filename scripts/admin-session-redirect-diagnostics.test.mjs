@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFileSync } from "node:fs";
+import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 import { isDepartingAdminModuleAbort, verifyDepartingAdminModuleAborts } from "./admin-session-redirect-diagnostics.mjs";
 const sourceUrl = "http://127.0.0.1:4283/admin/v2.html?game=fixture#overview";
 const redirect = { sourceUrl, destinationUrl: "http://127.0.0.1:4283/?mode=admin&reason=session-required", expectedReasons: ["session-required"] };

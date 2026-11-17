@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readBrowserSource as readFile } from "./lib/browser-module-source.mjs";
 import vm from "node:vm";
 
 const source = await readFile("admin/session-gate.js", "utf8");

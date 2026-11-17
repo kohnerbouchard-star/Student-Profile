@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readEdgeRuntimeSource as readFile } from "./helpers/edge-runtime-source.mjs";
 import test from "node:test";
 import "./login-card-auth-ui-contract.test.mjs";
 
@@ -9,7 +9,12 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 test("web-session BFF owns Staff MFA and exact Admin service authority", async () => {
   const [source, authSource, staffLoginSource] = await Promise.all([
     read("backend/supabase/functions/web-session-api/index.ts"),
-    read("backend/src/security/adminBffRequestAuth.ts"),
+    Promise.all([
+      read("backend/src/security/adminBffRequestAuth.ts"),
+      read("backend/src/security/adminBffOidcVerification.ts"),
+      read("backend/src/security/adminBffTargetPolicy.ts"),
+      read("backend/src/security/adminBffCrypto.ts"),
+    ]).then((sources) => sources.join("\n")),
     read("backend/src/domains/auth/api/staffLoginHttpHandler.ts"),
   ]);
 

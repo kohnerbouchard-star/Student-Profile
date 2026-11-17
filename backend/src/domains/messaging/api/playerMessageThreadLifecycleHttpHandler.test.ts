@@ -1,3 +1,5 @@
+import "./playerMessagePolicyReadHttpCharacterization.test.ts";
+import "../application/readPlayerMessagePolicy.test.ts";
 import { handlePlayerMessageThreadLifecycleRequest } from "./playerMessageThreadLifecycleHttpHandler.ts";
 
 const GAME = "00000000-0000-4000-8000-000000000001";

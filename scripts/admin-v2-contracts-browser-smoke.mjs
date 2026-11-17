@@ -74,6 +74,7 @@ function contractRecord(overrides = {}) {
 
 function contractsFor(mode) {
   if (mode === "empty") return [];
+  if (mode === "draft") return [contractRecord({ status: "draft", publishedAt: null, deadlineAt: null, expiresAt: null })];
   if (mode === "one") return [contractRecord()];
   return [
     contractRecord(),
@@ -169,7 +170,7 @@ function contractPath(pathname) {
   return pathname.includes(`/games/${ADMIN_V2_FIXTURE_GAME_ID}/contracts`);
 }
 
-async function installContractRoutes(page, { mode = "many", failReads = false, permissionDenied = false, detailMode = "default", failReview = false } = {}) {
+async function installContractRoutes(page, { mode = "many", failReads = false, permissionDenied = false, settingsDenied = false, detailMode = "default", failReview = false, timeZone = "Asia/Seoul" } = {}) {
   const progress = progressResponse();
   const submissions = submissionsResponse();
   if (detailMode !== "default") {
@@ -191,7 +192,7 @@ async function installContractRoutes(page, { mode = "many", failReads = false, p
     const url = new URL(request.url());
     const pathname = url.pathname;
 
-    if (permissionDenied && pathname.endsWith("/functions/v1/web-session-api/proxy/session/bootstrap")) {
+    if ((permissionDenied || settingsDenied) && pathname.endsWith("/functions/v1/web-session-api/proxy/session/bootstrap")) {
       return route.fulfill({
         status: 200,
         contentType: "application/json; charset=utf-8",
@@ -200,7 +201,7 @@ async function installContractRoutes(page, { mode = "many", failReads = false, p
             admin: { email: "contracts.admin@example.test", displayName: "Contracts Administrator" },
             activeGame: { id: ADMIN_V2_FIXTURE_GAME_ID, name: "Contracts Fixture", status: "active", gameCode: "CTRCT7" },
             games: [{ id: ADMIN_V2_FIXTURE_GAME_ID, name: "Contracts Fixture", status: "active", gameCode: "CTRCT7" }],
-            permissions: ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => permission !== "contracts.manage"),
+            permissions: ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => !(permissionDenied && permission === "contracts.manage") && !(settingsDenied && permission === "settings.manage")),
             roles: ["game_admin"],
             adminRole: "game_admin",
           },
@@ -210,6 +211,9 @@ async function installContractRoutes(page, { mode = "many", failReads = false, p
       });
     }
 
+    if (request.method() === "GET" && pathname.endsWith(`/games/${ADMIN_V2_FIXTURE_GAME_ID}/settings`)) {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { settings: { stockMarketWindow: { timezone: timeZone }, attendanceWindow: { timezone: "Asia/Seoul" } } } }) });
+    }
     if (!contractPath(pathname)) return route.continue();
 
     let body = {};
@@ -262,14 +266,15 @@ async function createRuntime(browser, fixture, {
   viewport = VIEWPORTS[0],
   failReads = false,
   permissionDenied = false,
+  settingsDenied = false,
   detailMode = "default",
   failReview = false,
+  timeZone = "Asia/Seoul",
+  browserTimeZone = null,
 } = {}) {
-  const context = await browser.newContext({ viewport, colorScheme: "dark", reducedMotion: "reduce" });
+  const context = await browser.newContext({ viewport, colorScheme: "dark", reducedMotion: "reduce", ...(browserTimeZone ? { timezoneId: browserTimeZone } : {}) });
   const session = createAdminV2FixtureSession("ready");
-  if (permissionDenied) {
-    session.permissions = session.permissions.filter((permission) => permission !== "contracts.manage");
-  }
+  session.permissions = session.permissions.filter((permission) => !(permissionDenied && permission === "contracts.manage") && !(settingsDenied && permission === "settings.manage"));
   await context.addInitScript(({ sessionKey, deviceKey, seededSession, deviceId }) => {
     try {
       sessionStorage.setItem(sessionKey, JSON.stringify(seededSession));
@@ -277,7 +282,7 @@ async function createRuntime(browser, fixture, {
     } catch {}
   }, { sessionKey: SESSION_STORAGE_KEY, deviceKey: DEVICE_STORAGE_KEY, seededSession: session, deviceId: DEVICE_ID });
   const page = await context.newPage();
-  await installContractRoutes(page, { mode, failReads, permissionDenied, detailMode, failReview });
+  await installContractRoutes(page, { mode, failReads, permissionDenied, settingsDenied, detailMode, failReview, timeZone });
   await page.goto(`${fixture.origin}/admin/v2.html?game=${ADMIN_V2_FIXTURE_GAME_ID}#contracts`, { waitUntil: "domcontentloaded", timeout: 15_000 });
   return { context, page, async close() { await context.close(); } };
 }
@@ -429,6 +434,119 @@ try {
       return { localValidation: true, createMutation: true };
     } finally { await runtime.close(); }
   });
+
+  await runCheck("selected-game-timezone-scheduling", async () => {
+    const before = requestEvidence.length;
+    const runtime = await createRuntime(browser, fixture, { timeZone: "America/New_York" });
+    try {
+      await waitForState(runtime.page, "ready");
+      await runtime.page.getByRole("button", { name: "Create Contract" }).first().click();
+      await runtime.page.getByText("All contract times use America/New_York, the selected game timezone.", { exact: true }).waitFor();
+      await runtime.page.getByLabel("Title").fill("New York Scheduled Contract");
+      await runtime.page.getByLabel("Objective").fill("Explain the causal mechanism.");
+      await runtime.page.getByLabel("Instructions").fill("Use classroom evidence.");
+      await runtime.page.getByLabel("Evidence / submission requirements").fill("Submit two observations.");
+      await runtime.page.getByLabel("Initial lifecycle state").selectOption("scheduled");
+      await runtime.page.getByLabel("Scheduled publish time").fill("2026-11-16T09:00");
+      await runtime.page.getByLabel("Due time").fill("2026-11-16T10:00");
+      await runtime.page.getByLabel("Expiration time").fill("2026-11-16T11:00");
+      await Promise.all([
+        runtime.page.waitForResponse((response) => response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/contracts")),
+        runtime.page.getByRole("button", { name: "Create Contract" }).last().click(),
+      ]);
+      const created = requestEvidence.slice(before).find((entry) => entry.method === "POST" && entry.pathname.endsWith("/contracts"));
+      assert.ok(created);
+      assert.deepEqual([created.body.scheduledAt, created.body.deadlineAt, created.body.expiresAt], ["2026-11-16T14:00:00.000Z", "2026-11-16T15:00:00.000Z", "2026-11-16T16:00:00.000Z"]);
+      return { canonicalZone: "America/New_York", noAttendanceFallback: true };
+    } finally { await runtime.close(); }
+  });
+
+  await runCheck("selected-zone-catalog-and-detail-not-browser-zone", async () => {
+    const runtime = await createRuntime(browser, fixture, { timeZone: "America/New_York", browserTimeZone: "Asia/Seoul" });
+    try {
+      await waitForState(runtime.page, "ready");
+      assert.match(await runtime.page.locator(".admin-contracts-route__dates").first().innerText(), /America\/New_York/);
+      await runtime.page.locator('[data-contracts-action="details"]').first().click();
+      const detail = runtime.page.locator(".admin-contracts-detail-drawer .admin-contracts-detail");
+      await detail.waitFor({ state: "visible" });
+      assert.match(await detail.locator(".admin-contracts-detail__definitions").innerText(), /America\/New_York/);
+      assert.equal((await detail.innerText()).includes("game timezone unavailable"), false);
+      return { selectedZone: true, independentBrowserZone: true };
+    } finally { await runtime.close(); }
+  });
+
+  await runCheck("contracts-only-role-can-create-and-edit-dateless-drafts", async () => {
+    const before = requestEvidence.length;
+    const runtime = await createRuntime(browser, fixture, { mode: "draft", settingsDenied: true, browserTimeZone: "Asia/Seoul" });
+    try {
+      await waitForState(runtime.page, "ready");
+      await runtime.page.getByRole("button", { name: "Create Contract" }).first().click();
+      await runtime.page.getByLabel("Title").fill("Dateless authorized draft");
+      await runtime.page.getByLabel("Objective").fill("Explain the mechanism.");
+      await runtime.page.getByLabel("Instructions").fill("Use classroom evidence.");
+      await runtime.page.getByLabel("Evidence / submission requirements").fill("Submit two observations.");
+      assert.equal(await runtime.page.getByLabel("Due time").isDisabled(), true);
+      await Promise.all([
+        runtime.page.waitForResponse((response) => response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/contracts")),
+        runtime.page.getByRole("button", { name: "Create Contract" }).last().click(),
+      ]);
+      await runtime.page.locator(".admin-contract-form").waitFor({ state: "detached" });
+      await runtime.page.locator('[data-contracts-action="edit"]').first().click();
+      await runtime.page.getByLabel("Title").fill("Dateless authorized edit");
+      await Promise.all([
+        runtime.page.waitForResponse((response) => response.request().method() === "PATCH" && new URL(response.url()).pathname.includes("/contracts/")),
+        runtime.page.getByRole("button", { name: "Save changes", exact: true }).click(),
+      ]);
+      const writes = requestEvidence.slice(before).filter((entry) => ["POST", "PATCH"].includes(entry.method));
+      assert.equal(writes.length, 2);
+      assert.ok(writes.every(({ body }) => !body.scheduledAt && !body.deadlineAt && !body.expiresAt));
+      return { datelessCreate: true, datelessEdit: true, noBroadSettingsGrant: true };
+    } finally { await runtime.close(); }
+  });
+
+  for (const mode of ["create", "edit"]) {
+    await runCheck(`new-overlap-time-blocked-${mode}`, async () => {
+      const before = requestEvidence.length;
+      const runtime = await createRuntime(browser, fixture, { mode: "draft", timeZone: "America/New_York" });
+      try {
+        await waitForState(runtime.page, "ready");
+        if (mode === "create") {
+          await runtime.page.getByRole("button", { name: "Create Contract" }).first().click();
+          await runtime.page.getByLabel("Title").fill("Ambiguous schedule");
+          await runtime.page.getByLabel("Objective").fill("Explain the mechanism.");
+          await runtime.page.getByLabel("Instructions").fill("Use classroom evidence.");
+          await runtime.page.getByLabel("Evidence / submission requirements").fill("Submit two observations.");
+        } else await runtime.page.locator('[data-contracts-action="edit"]').first().click();
+        await runtime.page.getByLabel(mode === "create" ? "Initial lifecycle state" : "Lifecycle state").selectOption("scheduled");
+        await runtime.page.getByLabel("Scheduled publish time").fill("2026-11-01T01:30");
+        await runtime.page.getByRole("button", { name: mode === "create" ? "Create Contract" : "Save changes", exact: true }).last().click();
+        await runtime.page.locator(".admin-field__error").filter({ hasText: "This local time occurs twice" }).first().waitFor({ state: "visible" });
+        assert.equal(requestEvidence.slice(before).some((entry) => entry.method !== "GET"), false);
+        return { ambiguousTimeRejected: true, mutationAbsent: true };
+      } finally { await runtime.close(); }
+    });
+  }
+
+  for (const timeZone of [null, "invalid/timezone"]) {
+    await runCheck(`unconfirmed-timezone-blocks-dated-inputs-${timeZone || "missing"}`, async () => {
+      const before = requestEvidence.length;
+      const runtime = await createRuntime(browser, fixture, { timeZone });
+      try {
+        await waitForState(runtime.page, "ready");
+        await runtime.page.getByRole("button", { name: "Create Contract" }).first().click();
+        const form = runtime.page.locator(".admin-contract-form");
+        assert.match(await form.innerText(), /Game timezone could not be confirmed/);
+        assert.equal(await runtime.page.getByRole("button", { name: "Create Contract" }).last().isDisabled(), false);
+        assert.equal(await runtime.page.getByLabel("Due time").isDisabled(), true);
+        assert.equal(await runtime.page.locator('.admin-contract-form option[value="scheduled"]').isDisabled(), true);
+        await runtime.page.getByRole("button", { name: "Cancel", exact: true }).click();
+        await form.waitFor({ state: "detached" });
+        await waitForState(runtime.page, "ready");
+        assert.equal(requestEvidence.slice(before).some((entry) => entry.method !== "GET"), false);
+        return { readsAvailable: true, datedInputsBlocked: true, datelessSubmissionAvailable: true };
+      } finally { await runtime.close(); }
+    });
+  }
 
   await runCheck("safe-read-failure", async () => {
     const runtime = await createRuntime(browser, fixture, { failReads: true });

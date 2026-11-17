@@ -1,3 +1,4 @@
+import "./storyEffectEngineCharacterization.test.ts";
 import { prepareStoryContractEffect } from "./prepareStoryEffects.ts";
 import { executeStoryEffect } from "./storyEffectEngine.ts";
 import { parseStoryEffect } from "../contracts/storyEffectContracts.ts";

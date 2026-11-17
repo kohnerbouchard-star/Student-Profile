@@ -177,7 +177,8 @@ test("inventory V2 source keeps Store, Crafting, and Business semantics out of t
   assert.match(source, /INITIAL_LOADING|initial-loading/);
   assert.match(source, /STALE/);
   assert.match(source, /FAILED/);
-  assert.match(route, /Quantities shown are requested redemption quantities/);
+  assert.match(route, /Search and summary counts apply only to the currently loaded server page/);
+  assert.match(route, /Requested quantities are redemption requests, not a second owned-item balance ledger/);
   assert.match(route, /Seeded\/custom provenance is not inferred/);
   assert.doesNotMatch(source, /routes\/(store|crafting|business)|StoreController|CraftingController|BusinessController/);
   assert.match(css, /@media \(max-width: 900px\)/);

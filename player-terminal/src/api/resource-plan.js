@@ -4,10 +4,10 @@ export const SHELL_OPTIONAL_RESOURCES = Object.freeze(["notifications"]);
 export const ROUTE_RESOURCE_PLAN = Object.freeze({
   dashboard: Object.freeze({
     required: Object.freeze(["dashboard", "countries"]),
-    optional: Object.freeze(["news", "market", "portfolio", "contracts", "messages", "banking", "inventory"])
+    optional: Object.freeze(["news", "market", "portfolio", "contracts", "messages", "banking", "inventory", "worldRuntime"])
   }),
   world: Object.freeze({ required: Object.freeze(["countries"]), optional: Object.freeze(["worldRuntime", "storyDeliveries"]) }),
-  news: Object.freeze({ required: Object.freeze(["news"]), optional: Object.freeze([]) }),
+  news: Object.freeze({ required: Object.freeze(["news"]), optional: Object.freeze(["countries", "market"]) }),
   market: Object.freeze({ required: Object.freeze(["market"]), optional: Object.freeze(["news", "banking", "bankingFx", "portfolio", "countries", "businessIpos"]) }),
   portfolio: Object.freeze({ required: Object.freeze(["portfolio"]), optional: Object.freeze(["market"]) }),
   business: Object.freeze({
@@ -21,7 +21,7 @@ export const ROUTE_RESOURCE_PLAN = Object.freeze({
   inventory: Object.freeze({ required: Object.freeze(["inventory"]), optional: Object.freeze([]) }),
   crafting: Object.freeze({ required: Object.freeze(["crafting"]), optional: Object.freeze(["inventory"]) }),
   banking: Object.freeze({ required: Object.freeze(["banking"]), optional: Object.freeze(["bankingFx"]) }),
-  loans: Object.freeze({ required: Object.freeze(["loans"]), optional: Object.freeze(["banking"]) }),
+  loans: Object.freeze({ required: Object.freeze(["loans"]), optional: Object.freeze(["banking", "business"]) }),
   messages: Object.freeze({ required: Object.freeze(["messages"]), optional: Object.freeze([]) }),
   progression: Object.freeze({ required: Object.freeze(["progression"]), optional: Object.freeze([]) }),
   profile: Object.freeze({ required: Object.freeze(["session"]), optional: Object.freeze([]) })
@@ -36,6 +36,9 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   travelExecute: Object.freeze(["worldRuntime", "dashboard", "banking"]),
   travelComplete: Object.freeze(["worldRuntime", "dashboard"]),
   residencyRequest: Object.freeze(["worldRuntime", "dashboard"]),
+  businessFormationPropose: Object.freeze(["business"]),
+  businessFormationRespond: Object.freeze(["business"]),
+  businessFormationActivate: Object.freeze(["dashboard", "business", "banking", "businessTreasury"]),
   businessCreate: Object.freeze(["dashboard", "business", "banking", "businessTreasury"]),
   businessProductCreate: Object.freeze(["business"]),
   businessProduction: Object.freeze(["dashboard", "business", "banking", "inventory"]),
@@ -67,6 +70,8 @@ export const WRITE_INVALIDATIONS = Object.freeze({
   businessStoreWithdrawal: Object.freeze(["business", "store"]),
   marketOrder: Object.freeze(["dashboard", "market", "portfolio", "banking", "bankingFx"]),
   marketWatchlist: Object.freeze(["market"]),
+  storeQuote: Object.freeze([]),
+  storeOfferQuote: Object.freeze([]),
   storePurchase: Object.freeze(["dashboard", "store", "inventory", "banking", "bankingFx"]),
   storeOfferPurchase: Object.freeze(["dashboard", "store", "inventory", "banking", "bankingFx"]),
   marketplaceActivate: Object.freeze(["marketplace", "inventory"]),
@@ -103,8 +108,6 @@ export const WRITE_INVALIDATIONS = Object.freeze({
 
 export const IDEMPOTENT_WRITE_ENDPOINTS = Object.freeze(new Set([
   ...Object.keys(WRITE_INVALIDATIONS),
-  "storeQuote",
-  "storeOfferQuote",
 ]));
 
 export function resourcesForRoute(route) {

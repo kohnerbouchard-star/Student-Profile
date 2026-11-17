@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -61,7 +62,7 @@ const files = Object.freeze({
 });
 
 const source = Object.fromEntries(
-  Object.entries(files).map(([key, path]) => [key, readFileSync(path, "utf8")]),
+  Object.entries(files).map(([key, path]) => [key, key === "backendCapabilityManifest" ? readEdgeRuntimeSource(path, "utf8") : readFileSync(path, "utf8")]),
 );
 const authority = JSON.parse(source.authority);
 

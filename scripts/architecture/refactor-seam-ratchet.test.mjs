@@ -16,6 +16,8 @@ function fixture(t, entries = original) {
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const write = (file, value) => { const text = typeof value === "string" ? value : JSON.stringify(value); fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true }); fs.writeFileSync(path.join(root, file), text); return { path: file, blobSha: blobSha(text) }; };
   for (const file of SCAN_ROOTS) file.endsWith(".html") ? write(file, "<!doctype html>") : fs.mkdirSync(path.join(root, file), { recursive: true });
+  write("player-terminal/host-runtime.js", "");
+  write("scripts/architecture/runtime-source-size-policy.json", { schemaVersion: 1, oversizedAtLines: 500, exceptions: [] });
   for (const [file, text] of entries) write(file, text);
   const baseline = { schemaVersion: 1, task: "REF-005", sourceSha: SHA, sites: measureSites(entries), removalTargets: [], removalRecords: [] };
   write(BASELINE_PATH, baseline); write(CANDIDATES_PATH, { reviews: [] });
@@ -158,3 +160,24 @@ test("REF005: a PASS label cannot override failed or mismatched execution eviden
     assert.throws(() => verifyRemoval(f.root, f.target, f.record, f.sources), /exact passing/);
   }
 });
+
+test("REF005: a reviewed exact size exception is bounded without weakening the old zero ceiling", (t) => {
+  const f = fixture(t, new Map());
+  const file = "backend/src/domains/store/long.ts";
+  const text = Array(500).fill("x").join("\n");
+  f.write(file, text);
+  const inventory = { counts: { persistenceOutsideInfrastructure: 0, crossDomainDeepImports: 0, compatibilityMarkerFiles: 0, oversizedSourceFiles: 1 }, measuredDebt: { crossDomainDeepImports: [], browserTransportShims: [], oversizedFiles: [{ file, lines: 500 }] }, thresholds: { oversizedSourceFileLines: 500 } };
+  f.write("docs/architecture/inventories/econovaria-architecture-inventory-v2.json", inventory);
+  f.write("scripts/architecture/architecture-ratchet-v2-baseline.json", { maximums: { oversizedSourceFiles: 0, oversizedHttpHandlers: 0 }, retiredBrowserMarkers: [], httpHandlerLineBudget: 500 });
+  const run = () => spawnSync(process.execPath, [fileURLToPath(new URL("./architecture-ratchet-v2.mjs", import.meta.url))], { cwd: f.root, encoding: "utf8" });
+  assert.equal(run().status, 1, "an unreviewed 500-line file must fail");
+  f.write("docs/operations/evidence/example/review.md", "reviewed exception\n");
+  f.write("scripts/architecture/runtime-source-size-policy.json", { schemaVersion: 1, oversizedAtLines: 500, exceptions: [{ path: file, maxLines: 500, owner: "Store", reason: "Bounded review", reviewEvidence: "docs/operations/evidence/example/review.md", removalCondition: "Extract owner" }] });
+  assert.equal(run().status, 0, "the exact bounded documented exception may pass");
+  f.write(file, `${text}\nx`); inventory.measuredDebt.oversizedFiles[0].lines = 501;
+  f.write("docs/architecture/inventories/econovaria-architecture-inventory-v2.json", inventory);
+  const grown = run(); assert.equal(grown.status, 1); assert.match(grown.stderr, /grew to 501/);
+});
+
+// Preserve the existing CI path coverage of the relocated game-public realtime files.
+import "./game-realtime-workflow-coverage.test.mjs";

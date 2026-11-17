@@ -1,3 +1,4 @@
+import { readEdgeCompositionSource } from "./edgeCompositionSource.test.support.ts";
 import { dispatchClassroomMessagingRequest as dispatchFromDomain } from "../domains/messaging/api/playerMessagingDispatch.ts";
 import { dispatchClassroomMessagingRequest as dispatchFromClassroom } from "../../supabase/functions/classroom-api/messagingDispatch.ts";
 import type { EdgeSupabaseClient } from "../platform/supabase/edgeStaffSession.ts";
@@ -169,8 +170,8 @@ Deno.test("REF-006 both roots retain one identical Messaging implementation", ()
 });
 
 Deno.test("REF-006 Player imports the domain directly and Classroom retains its one-way export", async () => {
-  const player = await Deno.readTextFile("supabase/functions/player-api/runtime.ts");
-  const classroom = await Deno.readTextFile("supabase/functions/classroom-api/index.ts");
+  const player = await readEdgeCompositionSource("supabase/functions/player-api/runtime.ts");
+  const classroom = await readEdgeCompositionSource("supabase/functions/classroom-api/index.ts");
   assertEquals(player.includes('from "../../../src/domains/messaging/api/playerMessagingDispatch.ts"'), true);
   assertEquals(/from\s+["'][^"']*classroom-api\//u.test(player), false);
   assertEquals(classroom.includes('from "./messagingDispatch.ts"'), true);

@@ -1,3 +1,5 @@
+import "./supabasePlayerStoryContextCharacterizationQueries.test.ts";
+import "./supabasePlayerStoryContextCharacterizationProjection.test.ts";
 import { SupabasePlayerStoryContextRepository } from "./supabasePlayerStoryContextRepository.ts";
 import {
   PlayerStoryContextRepositoryError,

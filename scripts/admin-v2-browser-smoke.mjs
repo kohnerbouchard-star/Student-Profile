@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { verifyAccountControls } from "./admin-account-controls-browser-check.mjs";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -827,7 +828,9 @@ async function auditAuthoritativeUuidHandoffExposure(browser, fixture) {
   const runtime = await createScenarioRuntime(browser, fixture, "ready");
   const findings = [];
   const routeReads = {
-    players: ["players"], attendance: ["attendance/today"], contracts: ["contracts"], store: ["store/items?include=stock,prices,purchaseStats"],
+    players: ["players"], attendance: ["attendance/today"],
+    // This fixture grants settings.manage: Contracts also reads its canonical game zone.
+    contracts: ["contracts", "settings"], store: ["store/items?include=stock,prices,purchaseStats"],
     marketplace: ["marketplace"], settings: ["settings"], logs: ["logs?page=1&pageSize=50"],
     "world-management": ["campaign", "campaign/history?limit=100", "campaign/effects?status=all&limit=100",
       "arrival-classes?limit=100", "geography", "travel?limit=100", "residency?limit=100"].map((path) => `world/${path}`),
@@ -997,6 +1000,17 @@ try {
       evidence.push(path.relative(REPOSITORY_ROOT, destination));
       await assertNoRuntimeErrors(runtime, label);
       await assertBffReadBoundary(fixture, runtime.runId);
+      // The historical baseline intentionally retains its original assertions.
+      if (STATIC_ROOT === REPOSITORY_ROOT) {
+        let requestOffset = fixture.requestsFor(runtime.runId).length;
+        await verifyAccountControls(runtime.page, async () => {
+          const batch = fixture.requestsFor(runtime.runId).slice(requestOffset);
+          await assertBffReadBoundary({ requestsFor: () => batch }, runtime.runId);
+          requestOffset += batch.length;
+        });
+        await assertNoRuntimeErrors(runtime, `${label} account controls`);
+        checks.push({ scenario: "account-controls", viewport: `${viewport.width}x${viewport.height}`, status: "passed" });
+      }
       checks.push({ scenario: "ready", viewport: `${viewport.width}x${viewport.height}`, status: "passed" });
     } finally {
       await runtime.close();

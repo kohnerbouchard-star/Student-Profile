@@ -1,10 +1,17 @@
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
+import type { PlayerMessagePolicyReadRepository } from "../application/readPlayerMessagePolicy.ts";
 import type { PlayerMessageThreadRepository } from "../application/createPlayerMessageThread.ts";
 
 export function createSupabasePlayerMessageThreadRepository(
   client: Pick<EdgeSupabaseClient, "rpc">,
-): PlayerMessageThreadRepository {
+): PlayerMessageThreadRepository & PlayerMessagePolicyReadRepository {
   return {
+    readPolicy(scope) {
+      return client.rpc<Record<string, unknown>>("read_player_message_policy_v1", {
+        p_game_session_id: scope.gameId,
+        p_player_id: scope.playerUuid,
+      });
+    },
     createThread(scope, command) {
       // Ownership comes from the resolved session; the recipient remains a public identifier.
       return client.rpc<readonly unknown[]>("create_player_message_thread_atomic_v1", {

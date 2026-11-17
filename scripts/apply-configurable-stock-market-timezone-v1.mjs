@@ -567,7 +567,7 @@ await patch(
 );
 
 await patch(
-  "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+  "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.fixtures.support.ts",
   (source) => {
     let expected = source;
 
@@ -583,11 +583,20 @@ await patch(
     if (!expected.includes("readMarketOpenState: options.readMarketOpenState")) {
       expected = replaceRequired(
         expected,
-        `    now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),\n    createRepository: () => repository,`,
-        `    now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),\n    readMarketOpenState: options.readMarketOpenState ?? (async () => true),\n    createRepository: () => repository,`,
+        `    now: options.now ?? (() => new Date(WALL_CLOCK_TIME)),\n    createRepository: () => repository,`,
+        `    now: options.now ?? (() => new Date(WALL_CLOCK_TIME)),\n    readMarketOpenState: options.readMarketOpenState ?? (async () => true),\n    createRepository: () => repository,`,
         "runner test default market-state reader",
       );
     }
+
+    return expected;
+  },
+);
+
+await patch(
+  "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.authorizationAndPublication.cases.ts",
+  (source) => {
+    let expected = source;
 
     expected = expected.replace(
       `      now: () => new Date("2026-07-19T00:00:00.000Z"),`,
@@ -761,41 +770,7 @@ await patch(
   },
 );
 
-await patch(
-  "backend/src/domains/game-sessions/application/createGame.ts",
-  (source) => {
-    let expected = source;
-
-    if (!expected.includes("normalizeRequiredStockMarketWindowSetting")) {
-      expected = replaceRequired(
-        expected,
-        `import type { GameSessionRecord, UUID } from "../../../auth/types";`,
-        `import type { GameSessionRecord, UUID } from "../../../auth/types";\nimport {\n  normalizeRequiredStockMarketWindowSetting,\n  StockMarketWindowConfigError,\n} from "../../stocks/calendars/stockMarketWindowConfig";`,
-        "create-game timezone validator import",
-      );
-    }
-
-    if (!expected.includes("stockMarketWindow: normalizeRequiredStockMarketWindow(")) {
-      expected = replaceRequired(
-        expected,
-        `    stockMarketWindow: normalizeJsonObject(input.stockMarketWindow),`,
-        `    stockMarketWindow: normalizeRequiredStockMarketWindow(\n      input.stockMarketWindow,\n    ),`,
-        "create-game required timezone",
-      );
-    }
-
-    if (!expected.includes("function normalizeRequiredStockMarketWindow(")) {
-      expected = replaceRequired(
-        expected,
-        `function normalizeJsonObject(value: JsonObject | null | undefined): JsonObject {`,
-        `function normalizeRequiredStockMarketWindow(\n  value: JsonObject | null | undefined,\n): JsonObject {\n  try {\n    return normalizeRequiredStockMarketWindowSetting(value) as JsonObject;\n  } catch (error) {\n    if (error instanceof StockMarketWindowConfigError) {\n      throw new CreateGameValidationError(error.message);\n    }\n    throw error;\n  }\n}\n\nfunction normalizeJsonObject(value: JsonObject | null | undefined): JsonObject {`,
-        "create-game required timezone normalizer",
-      );
-    }
-
-    return expected;
-  },
-);
+// Standalone pre-licensing game creation is retired; keep the active activation parser patch below.
 
 await patch(
   "backend/src/domains/licensing/contracts/activationRequestParser.ts",

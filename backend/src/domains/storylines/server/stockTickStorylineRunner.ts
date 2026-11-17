@@ -1,9 +1,9 @@
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
-import { createStoryNotificationPublisher } from "../../notifications/public/storyNotifications.ts";
 import type { StoryEffectContractWriter } from "../contracts/storyEffectExecutionContracts.ts";
 import { SupabaseStoryEffectLedgerWriter } from "../infrastructure/supabaseStoryEffectLedgerWriter.ts";
 import { SupabaseStorylineRepository } from "../infrastructure/supabaseStorylineRepository.ts";
 import { runDueStorylineEvents as executeDueStorylineEvents } from "../services/storylineRunner.ts";
+import { createStoryNotificationPublisher } from "./notificationCapabilities.ts";
 import { createPlayerStoryContextReadQuery } from "./playerContextReadQuery.ts";
 
 export interface StorylineAfterStockTickInput {

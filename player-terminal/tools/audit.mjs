@@ -98,7 +98,9 @@ const dashboardSource = await readFile(path.join(root, "src/pages/dashboard-page
 for (const marker of ["renderCountryOverlay", "player-terminal-country-overlay", "player-terminal-country-border", "data-player-country", "player-terminal-map-hud", "player-terminal-map-footer"]) {
   if (!dashboardSource.includes(marker)) throw new Error(`Required Dashboard or map renderer marker is missing: ${marker}`);
 }
-const appSource = await readFile(path.join(root, "src/app.js"), "utf8");
+const appSource = (await Promise.all([
+  "src/app.js", "src/core/player-terminal-actions.js", "src/core/player-terminal-forms.js"
+].map((file) => readFile(path.join(root, file), "utf8")))).join("\n");
 for (const marker of ["ROUTE_TITLES", "focusAfterRender", "closeTopOverlay", "showFormError", "updateMarketOrderEstimate", "updateMarketplaceEstimate", "globalThis.addEventListener(\"offline\"", "keyboardCountry", "data-player-country"]) {
   if (!appSource.includes(marker)) throw new Error(`Required application behavior is missing: ${marker}`);
 }

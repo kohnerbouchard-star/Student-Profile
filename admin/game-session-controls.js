@@ -21,90 +21,11 @@
   let fallbackShareSurface = null;
   let shareRepairGeneration = 0;
 
-  function text(value) {
-    return String(value ?? "").replace(/\s+/g, " ").trim();
-  }
-
-  function selectedGameId() {
-    return text(
-      window.EconovariaAdminAuth?.getSelectedGameId?.() ||
-        window.EconovariaAdminGameSelection?.read?.() ||
-        "",
-    );
-  }
-
-  function feature() {
-    return window.Econovaria?.features?.adminOverviewTerminal || null;
-  }
-
-  function normalizeCode(value) {
-    const code = text(value).toUpperCase();
-    if (EMPTY_CODES.has(code.toLowerCase())) return "";
-    return /^[A-Z0-9-]{4,64}$/.test(code) ? code : "";
-  }
-
-  function gameCandidates(model, gameId) {
-    return [
-      model?.selectedGame,
-      model?.activeGame,
-      ...(Array.isArray(model?.games) ? model.games : []),
-      ...(Array.isArray(model?.activeGameSessions)
-        ? model.activeGameSessions
-        : []),
-    ].filter((candidate) => {
-      const candidateId = text(candidate?.id || candidate?.gameId);
-      return candidate && (!gameId || !candidateId || candidateId === gameId);
-    });
-  }
-
-  function selectedGameContext() {
-    const gameId = selectedGameId();
-    const model = feature()?.currentModel || {};
-    const candidate = gameCandidates(model, gameId)[0] || {};
-    const gameName = text(
-      candidate.name ||
-        candidate.gameName ||
-        model.gameName ||
-        model.selectedGameName ||
-        "Current game",
-    );
-    const gameCode = normalizeCode(
-      candidate.joinCode ||
-        candidate.gameCode ||
-        model.joinCode ||
-        model.gameCode ||
-        "",
-    );
-    return Object.freeze({ gameId, gameName, gameCode });
-  }
-
-  function playerAppUrl(gameCode) {
-    const normalizedCode = normalizeCode(gameCode);
-    if (!normalizedCode) return "";
-    const configured = text(
-      window.ECONOVARIA_PLAYER_APP_URL ||
-        document.querySelector('meta[name="econovaria-player-app-url"]')?.content ||
-        "/play",
-    );
-    try {
-      const url = new URL(configured || "/play", window.location.origin);
-      const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
-      if (url.protocol !== "https:" && !(url.protocol === "http:" && local)) {
-        return "";
-      }
-      if (!text(url.pathname) || url.pathname === "/") url.pathname = "/play";
-      url.search = "";
-      url.hash = "";
-      gameCode = normalizedCode;
-      url.searchParams.set("gameCode", gameCode);
-      url.searchParams.set("mode", "student");
-      // Retired alias retained in source-history contract only:
-      // url.searchParams.set("mode", "player")
-      return url.toString();
-    } catch (_) {
-      return "";
-    }
-  }
+  const {
+    text, selectedGameId, feature, normalizeCode, gameCandidates, selectedGameContext, playerAppUrl,
+  } = window.createGameSessionContext({
+    EMPTY_CODES,
+  });
 
   function findSidebarHost() {
     const legacy = document.querySelector([
@@ -230,87 +151,10 @@
     });
   }
 
-  function setShareContext(modal, context) {
-    if (!(modal instanceof Element)) return;
-    modal.classList.add("econovaria-admin-share-game-access");
-    modal.dataset.gameId = context.gameId;
-    modal.dataset.gameCode = context.gameCode;
-
-    const dialog = modal.querySelector('[role="dialog"]') || modal;
-    if (!dialog.querySelector("[data-econovaria-share-game-context]")) {
-      const note = document.createElement("p");
-      note.dataset.econovariaShareGameContext = "true";
-      note.className = "econovaria-admin-share-game-context";
-      const heading = dialog.querySelector("h1, h2, h3, header");
-      if (heading?.parentElement) heading.insertAdjacentElement("afterend", note);
-      else dialog.prepend(note);
-    }
-    const note = dialog.querySelector("[data-econovaria-share-game-context]");
-    if (note) {
-      note.textContent = context.gameCode
-        ? `Players using ${context.gameCode} will join ${context.gameName}.`
-        : `Loading the current Game Code for ${context.gameName}.`;
-    }
-
-    dialog.querySelectorAll("input[id*='share-admin-link']").forEach((input) => {
-      const field = input.closest("label, .admin-terminal-field, .admin-terminal-share-field");
-      if (field) field.hidden = true;
-    });
-
-    const playerLink = playerAppUrl(context.gameCode);
-    dialog.querySelectorAll(
-      "input[id*='share-student-link'], input[id*='share-player-link'], [data-econovaria-player-link]",
-    ).forEach((input) => {
-      if (playerLink && "value" in input) input.value = playerLink;
-    });
-    dialog.querySelectorAll(
-      "textarea[id*='share-invite'], [data-econovaria-invite]",
-    ).forEach((invite) => {
-      if (!("value" in invite)) return;
-      invite.value = context.gameCode
-        ? `Join ${context.gameName}\n\nGame Code: ${context.gameCode}\nPlayer login: ${playerLink || "Open Econovaria Player Login"}`
-        : `Join ${context.gameName}\n\nOpen the Share panel to load the current Game Code.`;
-    });
-    const codeNode = dialog.querySelector(".admin-terminal-share-modal-code strong");
-    if (codeNode) codeNode.textContent = context.gameCode || "Loading…";
-  }
-
-  function visibleShareModal() {
-    return [...document.querySelectorAll('[data-modal-id="share-game-access"]')]
-      .reverse()
-      .find((node) => {
-        if (node.hidden || node.getAttribute("aria-hidden") === "true") return false;
-        const style = window.getComputedStyle(node);
-        return style.display !== "none" && style.visibility !== "hidden";
-      }) || null;
-  }
-
-  async function copyText(value, button) {
-    const copy = text(value);
-    if (!copy) return false;
-    try {
-      await navigator.clipboard.writeText(copy);
-    } catch (_) {
-      const helper = document.createElement("textarea");
-      helper.value = copy;
-      helper.setAttribute("readonly", "");
-      helper.style.position = "fixed";
-      helper.style.opacity = "0";
-      document.body.append(helper);
-      helper.select();
-      const copied = document.execCommand("copy");
-      helper.remove();
-      if (!copied) return false;
-    }
-    if (button instanceof HTMLButtonElement) {
-      const prior = button.textContent;
-      button.textContent = "Copied";
-      window.setTimeout(() => {
-        if (button.isConnected) button.textContent = prior;
-      }, 1200);
-    }
-    return true;
-  }
+  const { setShareContext, visibleShareModal, copyText } = window.createGameSessionShareSurface({
+    playerAppUrl,
+    text,
+  });
 
   function createFallbackShareSurface(context, opener) {
     fallbackShareSurface?.remove();

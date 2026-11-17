@@ -4,11 +4,6 @@ Teacher-owned simulation lifecycle code lives here.
 
 ## Structure
 
-- `application/createGame.ts` creates a teacher-owned game session, default game settings, and audit log entry.
-- `api/createGameHandler.ts` is a framework-agnostic handler for future route/runtime wiring.
-- `contracts/createGameRouteContracts.ts` defines request/response DTOs for game creation.
-- `contracts/normalizeCreateGameRouteBody.ts` validates and normalizes the create-game request body.
-- `infrastructure/gameRepository.ts` contains the Supabase persistence adapter for `game_sessions` and `game_settings`.
 - `domain/` is reserved for pure game-session lifecycle rules.
 - `tests/` is reserved for domain-specific tests.
 
@@ -27,3 +22,7 @@ It does not own:
 - business simulation
 
 All live game data must remain scoped by `game_session_id`.
+
+Live Admin creation uses adminGlobalRoutes and gameProvisioningOperations with licensing activation. The uncalled pre-licensing adapter is retired; the unused standalone creator and its repository are now retired too.
+
+The retired pre-licensing route DTOs and body parser are also removed. Live request validation remains owned by licensing activation, not by the retired standalone application helper.

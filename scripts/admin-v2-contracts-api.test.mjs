@@ -7,6 +7,10 @@ import {
   normalizeContractDetail,
   normalizeContractsReadModel,
 } from "../admin/v2/src/routes/contracts/ContractsController.js";
+import { ContractForm } from "../admin/v2/src/routes/contracts/ContractForm.js";
+import { formatContractDateTime, normalizeContractTimeZone, resolveContractLocalDateTime } from "../admin/v2/src/core/contract-time-zone.js";
+import { createAccountDocument } from "./admin-account-controls-dom-fixture.mjs";
+import { normalizeContractCreate } from "../backend/supabase/functions/admin-api/mutationAdapters.ts";
 import { ADMIN_DATA_STATES } from "../admin/v2/src/core/data-state.js";
 import { getAdminNavigationRoute, isMigratedAdminRoute } from "../admin/v2/src/core/navigation-registry.js";
 
@@ -279,4 +283,494 @@ test("Contracts controller denies reads and writes without contracts.manage and 
   assert.equal(reads, 1);
   assert.equal(allowed.getState().status, ADMIN_DATA_STATES.EMPTY);
   allowed.destroy();
+});
+
+
+const formGlobalSnapshots = new WeakMap();
+
+function editForm(t, original, changes = {}, mode = "edit", timeZone = "Asia/Seoul") {
+  if (!formGlobalSnapshots.has(t)) {
+    const saved = Object.fromEntries(["document", "Node", "HTMLElement"].map((key) => [key, globalThis[key]]));
+    formGlobalSnapshots.set(t, saved);
+    t.after(() => {
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete globalThis[key];
+        else globalThis[key] = value;
+      }
+      formGlobalSnapshots.delete(t);
+    });
+  }
+  const { document, Element } = createAccountDocument();
+  document.createElementNS = (_namespace, tag) => document.createElement(tag);
+  Object.assign(globalThis, { document, Node: Element, HTMLElement: Element });
+  const model = normalizeContractsReadModel({ contracts: [original] }).contracts[0];
+  const form = ContractForm({ mode, contract: model, timeZone });
+  const initialDates = Object.fromEntries(["scheduledAt", "deadlineAt", "expiresAt"].map((key) => [key, form.fields[key].control.getAttribute("value") || ""]));
+  // This minimal DOM is not a native input implementation. Seed actual control
+  // values explicitly; production validation and payload construction stay real.
+  const values = {
+    title: model.title, description: model.description, instructions: model.instructions,
+    category: model.category, status: model.status, visibility: model.visibility,
+    countryCodes: model.targetCountryCodes.join(", "), completionMode: model.completionMode,
+    requirementsText: model.requirementsText, rewardAmount: String(model.reward.cashAmount ?? ""),
+    difficulty: model.metadata.difficulty, reviewNote: model.metadata.reviewNote,
+    scheduledAt: "", deadlineAt: "", expiresAt: "", ...changes,
+  };
+  for (const [key, value] of Object.entries(values)) form.fields[key].setValue(value);
+  return { model, form, initialDates };
+}
+
+async function normalizeFormPayload(form, method = "PATCH") {
+  const payload = form.validate();
+  assert.ok(payload, "the unchanged fixture must be a valid contract form");
+  return normalizeContractCreate(new Request("https://example.test/contracts/synthetic", {
+    method, body: JSON.stringify(payload),
+  }), "contracts-edit-regression");
+}
+
+test("UUID-only and mixed player targeting cannot pass the draft/scheduled edit guard", async () => {
+  let writes = 0;
+  const controller = createContractsController({
+    api: Object.fromEntries([
+      "readContracts", "readContractDetail", "createContract", "updateContract", "publishContract",
+      "archiveContract", "duplicateContract", "reviewProgress", "issueRewards",
+    ].map((method) => [method, async () => { writes += 1; return {}; }])),
+    selectedGameId: GAME_ID, hasPermission: () => true,
+  });
+  for (const status of ["draft", "scheduled"]) {
+    for (const targetingPayload of [
+      { playerIds: [PLAYER_ID] },
+      { playerIds: [PLAYER_ID], countryCodes: ["NORTHREACH"] },
+      { rosterLabels: [PLAYER_ID] },
+      { storyFlagConditions: [{ key: "lesson", value: true }] },
+    ]) {
+      const model = normalizeContractsReadModel({ contracts: [contract({ status, targetingPayload })] });
+      assert.equal(model.contracts[0].targetingEditable, false);
+      assert.equal((await controller.updateContract(model.contracts[0], { title: "Unrelated edit" })).ok, false);
+      assert.doesNotMatch(JSON.stringify(displayProjection(model)), new RegExp(PLAYER_ID));
+    }
+  }
+  assert.equal(writes, 0);
+  controller.destroy();
+});
+
+test("an unrelated contract edit preserves cash destination and unrepresented metadata", async (t) => {
+  const original = contract({
+    status: "draft", targetingPayload: { countryCodes: ["NORTHREACH"] },
+    rewardPayload: { cash: { amount: 75, currencyCode: "NRC", accountType: "savings", source: "lesson" }, items: [{ storeItemId: PLAYER_ID, quantity: 2 }] },
+    requirementsPayload: { manualText: "Submit written evidence.", rubric: { minSources: 2 } },
+    metadata: { difficulty: "Advanced", reviewNote: "Use the rubric.", materials: [{ title: "Guide" }], submissionRequirements: ["diagram"], custom: { version: 1 } },
+  });
+  const { form } = editForm(t, original, { title: "Edited title" });
+  const payload = await normalizeFormPayload(form);
+  // Model the existing SQL's shallow JSONB update. Omitted keys must remain
+  // omitted at the API boundary; this is not a live database proof.
+  assert.deepEqual({ ...original.rewardPayload, ...payload.rewardPayload }, original.rewardPayload);
+  assert.deepEqual({ ...original.metadata, ...payload.metadata }, original.metadata);
+  assert.deepEqual({ ...original.requirementsPayload, ...payload.requirementsPayload }, original.requirementsPayload);
+  assert.deepEqual(payload.targetingPayload.countryCodes, ["NORTHREACH"]);
+});
+
+test("changing cash amount retains savings and original currency", async (t) => {
+  const { form } = editForm(t, contract({
+    status: "draft", targetingPayload: { countryCodes: ["NORTHREACH"] },
+    rewardPayload: { cash: { amount: 75, currencyCode: "NRC", accountType: "savings" } },
+  }), { rewardAmount: "90.25" });
+  const payload = await normalizeFormPayload(form);
+  assert.deepEqual(payload.rewardPayload.cash, { amount: 90.25, currencyCode: "NRC", accountType: "savings" });
+});
+
+test("explicit cash removal remains distinct from an unchanged reward", async (t) => {
+  const { form } = editForm(t, contract({ status: "draft", targetingPayload: { allPlayers: true }, visibility: "public" }), { rewardAmount: "0" });
+  const payload = await normalizeFormPayload(form);
+  assert.equal(payload.rewardPayload.cash, null);
+});
+
+test("metadata updates distinguish omitted arrays, nested arrays and deliberate clearing", async () => {
+  for (const method of ["POST", "PATCH"]) {
+    const normalize = (body) => normalizeContractCreate(new Request("https://example.test/contracts", {
+      method, body: JSON.stringify({ title: "Test", instructions: "Do it", ...body }),
+    }), "metadata-test");
+    const nested = { materials: [{ title: "Guide" }], submissionRequirements: ["diagram"], custom: "retained" };
+    assert.deepEqual((await normalize({ metadata: nested })).metadata, nested);
+    assert.deepEqual((await normalize({ metadata: nested, materials: [], submissionRequirements: [] })).metadata,
+      { ...nested, materials: [], submissionRequirements: [] });
+    const omitted = (await normalize({ metadata: { reviewNote: "Updated" } })).metadata;
+    assert.deepEqual(omitted, method === "PATCH" ? { reviewNote: "Updated" }
+      : { reviewNote: "Updated", materials: [], submissionRequirements: [] });
+  }
+});
+
+test("new Contracts keep ECO/checking cash defaults and creation metadata defaults", async (t) => {
+  const { form } = editForm(t, contract({ status: "draft", targetingPayload: { allPlayers: true }, visibility: "public" }), { rewardAmount: "12.34" }, "create");
+  const payload = await normalizeFormPayload(form, "POST");
+  assert.deepEqual(payload.rewardPayload.cash, { amount: 12.34, accountType: "checking", currencyCode: "ECO" });
+  assert.deepEqual(payload.metadata.materials, []);
+  assert.deepEqual(payload.metadata.submissionRequirements, []);
+});
+
+test("Contracts normalization preserves accepted envelopes, rejects malformed responses and freezes bounded projections", () => {
+  const row = contract();
+  const expected = normalizeContractsReadModel([row]);
+  for (const envelope of [
+    { contracts: [row] }, { assignments: [row] }, { value: { contracts: [row] } },
+    { data: { assignments: [row] } }, { data: { data: { contracts: [row] } } },
+    { payload: { assignments: [row] } },
+  ]) assert.deepEqual(normalizeContractsReadModel(envelope), expected);
+  for (const malformed of [null, {}, { data: { contracts: {} } }, { contracts: "invalid" }]) {
+    assert.throws(() => normalizeContractsReadModel(malformed), (error) => error.code === "INVALID_RESPONSE" && error.retryable);
+  }
+  assert.throws(() => normalizeContractDetail({ progress: [] }, expected.contracts[0]), (error) => error.code === "INVALID_RESPONSE");
+  const bounded = normalizeContractsReadModel([...Array(2_001).fill(row), null]);
+  assert.equal(bounded.contracts.length, 2_000);
+  assert.deepEqual(normalizeContractsReadModel([null, 7, [], row]).contracts, [expected.contracts[0]]);
+  for (const value of [expected, expected.contracts, expected.contracts[0], expected.contracts[0].reward,
+    expected.contracts[0].targetCountryCodes, expected.statuses, expected.categories, expected.summary]) assert.ok(Object.isFrozen(value));
+  assert.throws(() => { expected.contracts[0].title = "Changed"; }, TypeError);
+});
+
+test("Contracts display fields retain UUID stripping, identifier normalization and safe defaults", () => {
+  const secret = "ABCDEFAB-ABCD-4ABC-8ABC-ABCDEFABCDEF";
+  const row = normalizeContractsReadModel([contract({
+    id: ` ${secret} `, contractKey: `key ${secret}`, title: secret,
+    description: `Before ${secret} after`, instructions: secret, category: secret,
+    sourceType: " SYSTEM ", status: " PAUSED ", visibility: " HIDDEN ", completionMode: " AUTO_CHECK ",
+    targetingPayload: { countryCodes: [`kr ${secret}`], rosterLabels: [`Class ${secret}`], playerIds: [secret] },
+    requirementsPayload: { manualText: `Task ${secret}` },
+    rewardPayload: { cash: { amount: "12.5", currencyCode: `krw ${secret}` }, items: [{ quantity: 2 }, { quantity: -1 }, { quantity: 1.2 }] },
+    metadata: { difficulty: secret, reviewNote: secret },
+    progressCount: -1, submittedCount: 1.5, completedCount: "2", rewardIssuedCount: Infinity,
+    deadlineAt: "not a date",
+  })]).contracts[0];
+  assert.equal(row.resourceId, secret.toLowerCase());
+  assert.equal(row.title, "Untitled contract");
+  assert.equal(row.description, "Before after");
+  assert.equal(row.category, "general");
+  assert.equal(row.status, "paused");
+  assert.equal(row.sourceType, "system");
+  assert.equal(row.visibility, "hidden");
+  assert.equal(row.completionMode, "auto_check");
+  assert.equal(row.targetingEditable, false);
+  assert.equal(row.reward.label, "12.5 KRW + 2 items");
+  assert.deepEqual([row.progressCount, row.submittedCount, row.completedCount, row.rewardIssuedCount], [0, 0, 2, 0]);
+  assert.equal(row.deadlineAt, "");
+  const { resourceId: _resourceId, ...visible } = row;
+  assert.doesNotMatch(JSON.stringify(visible), /abcdefab/i);
+  const fallback = normalizeContractsReadModel([{ id: "invalid", status: "other", sourceType: "other", visibility: "other", completionMode: "other" }]).contracts[0];
+  assert.equal(fallback.resourceId, null);
+  assert.deepEqual([fallback.status, fallback.sourceType, fallback.visibility, fallback.completionMode], ["draft", "teacher", "public", "manual_review"]);
+});
+
+test("Contracts detail joins only validated matching IDs and retains authoritative progress precedence", () => {
+  const row = normalizeContractsReadModel([contract()]).contracts[0];
+  const detail = normalizeContractDetail({
+    progress: { progress: [
+      { progressId: PROGRESS_ID.toUpperCase(), status: "submitted", playerName: "Do not display", evidencePayload: { writtenResponse: "Progress evidence" }, resultPayload: { feedback: "Authoritative feedback" } },
+      { progressId: "invalid", status: "submitted" },
+      { progressId: "31000000-0000-4000-8000-000000000003", status: "completed" },
+      null,
+    ] },
+    submissions: { data: { contractSubmissions: [
+      { submissionId: PROGRESS_ID, displayName: "First" },
+      { id: PROGRESS_ID, displayName: `Safe ${PLAYER_ID}`, status: "completed", evidence: `Evidence ${PLAYER_ID}`, resultPayload: { feedback: "Projection feedback" } },
+      { progressId: "invalid", displayName: "Must not join", evidence: "Must not join" },
+      { progressId: "32000000-0000-4000-8000-000000000003", displayName: "Unrelated" },
+    ] } },
+  }, row);
+  assert.equal(detail.contract, row);
+  assert.equal(detail.participants.length, 3);
+  const [joined, invalid, unmatched] = detail.participants;
+  assert.equal(joined.playerName, "Safe");
+  assert.equal(joined.status, "submitted");
+  assert.equal(joined.evidence, "Evidence");
+  assert.equal(joined.feedback, "Authoritative feedback");
+  assert.equal(invalid.playerName, "Player");
+  assert.equal(invalid.resourceId, null);
+  assert.equal(invalid.canReview, false);
+  assert.equal(unmatched.playerName, "Player");
+  assert.equal(unmatched.canIssueReward, true);
+  assert.deepEqual(detail.summary, { participantCount: 3, submittedCount: 2, completedCount: 1, rewardIssuedCount: 0 });
+  assert.ok(Object.isFrozen(detail) && Object.isFrozen(detail.participants) && detail.participants.every(Object.isFrozen));
+});
+
+test("Contracts review and reward eligibility follows status, valid ID and issued state across all states", () => {
+  const row = normalizeContractsReadModel([contract()]).contracts[0];
+  const issuedAt = "2026-08-07T03:00:00.000Z";
+  for (const status of ["available", "in_progress", "submitted", "completed", "failed", "expired", "dismissed", "unknown"]) {
+    for (const id of [PROGRESS_ID, "invalid"]) {
+      for (const issued of ["", issuedAt]) {
+        const detail = normalizeContractDetail({
+          progress: { progress: [{ progressId: id, status, rewardIssuedAt: issued }] },
+          submissions: { data: { submissions: [{ progressId: id, status: "completed", rewardIssuedAt: issued }] } },
+        }, row);
+        const item = detail.participants[0];
+        assert.equal(item.canReview, id === PROGRESS_ID && status === "submitted" && !issued, `${status}/${id}/${issued}: review`);
+        assert.equal(item.canIssueReward, id === PROGRESS_ID && status === "completed" && !issued, `${status}/${id}/${issued}: reward`);
+        assert.equal(item.status, status === "unknown" ? "available" : status);
+      }
+    }
+  }
+  const projected = normalizeContractDetail({
+    progress: { progress: [{ progressId: PROGRESS_ID }] },
+    submissions: { data: { submissions: [{ progressId: PROGRESS_ID, status: "completed", rewardIssuedAt: issuedAt }] } },
+  }, row).participants[0];
+  assert.equal(projected.status, "completed");
+  assert.equal(projected.rewardIssuedAt, issuedAt);
+  assert.equal(projected.canIssueReward, false);
+});
+
+test("Contracts evidence fallback retains answer limits, empty defaults and bounded detail rows", () => {
+  const row = normalizeContractsReadModel([contract()]).contracts[0];
+  const evidencePayload = { answers: Array.from({ length: 21 }, (_, index) => ({ prompt: `Question ${index} ${PLAYER_ID}`, answer: `Answer ${index}` })) };
+  const detail = normalizeContractDetail({ progress: { progress: [
+    { id: PROGRESS_ID, evidencePayload }, {},
+  ] } }, row);
+  assert.equal(detail.participants[0].evidence.split(" · ").length, 20);
+  assert.doesNotMatch(detail.participants[0].evidence, /Question 20|40000000/);
+  assert.equal(detail.participants[1].evidence, "No submitted evidence");
+  assert.equal(normalizeContractDetail({ progress: { progress: [] } }, row).isEmpty, true);
+  assert.equal(normalizeContractDetail({ progress: { progress: Array(2_001).fill({}) } }, row).participants.length, 2_000);
+});
+
+test("Contracts extracted read model retains controller exports without a controller dependency", async () => {
+  const model = await import("../admin/v2/src/routes/contracts/ContractsReadModel.js");
+  assert.equal(model.normalizeContractsReadModel, normalizeContractsReadModel);
+  assert.equal(model.normalizeContractDetail, normalizeContractDetail);
+  assert.equal(model.formatContractText(`Created ${PLAYER_ID}`, 280), "Created");
+  assert.equal(model.isContractResourceId(PROGRESS_ID), true);
+  assert.equal(model.isContractResourceId("invalid"), false);
+  for (const status of ["draft", "scheduled", "active", "paused", "completed", "expired", "archived"]) assert.equal(model.isContractStatus(status), true);
+  assert.equal(model.isContractStatus("other"), false);
+});
+
+test("Contracts controller preserves scoped mutations, retry identity and duplicate suppression after extraction", async () => {
+  const calls = [];
+  let resolveFirst;
+  const methods = ["createContract", "updateContract", "publishContract", "archiveContract", "duplicateContract", "reviewProgress", "issueRewards"];
+  const api = Object.fromEntries(methods.map((method) => [method, async (args) => {
+    calls.push({ method, args });
+    return { ok: true };
+  }]));
+  Object.assign(api, {
+    readContracts: async () => ({ contracts: [] }),
+    readContractDetail: async () => ({ progress: { progress: [] } }),
+  });
+  api.createContract = (args) => {
+    calls.push({ method: "createContract", args });
+    if (calls.length === 1) return new Promise((resolve) => { resolveFirst = resolve; });
+    if (calls.length === 2) return Promise.reject({ code: "SERVICE_UNAVAILABLE", retryable: true });
+    return Promise.resolve({ ok: true });
+  };
+  const notifications = [];
+  const controller = createContractsController({
+    api, selectedGameId: GAME_ID, hasPermission: () => true,
+    cryptoObject: { randomUUID: () => "50000000-0000-4000-8000-000000000005" },
+    notify: (notification) => notifications.push(notification),
+  });
+  try {
+    const input = { title: `Draft ${PLAYER_ID}` };
+    const pending = controller.createContract(input);
+    assert.equal((await controller.createContract(input)).busy, true);
+    assert.equal(calls.length, 1);
+    resolveFirst({ ok: true });
+    assert.equal((await pending).ok, true);
+    assert.equal(notifications[0].message, "Draft was created.");
+    assert.equal((await controller.createContract(input)).ok, false);
+    const retryKey = calls.at(-1).args.idempotencyKey;
+    assert.equal((await controller.createContract(input)).ok, true);
+    assert.equal(calls.at(-1).args.idempotencyKey, retryKey);
+    assert.notEqual(retryKey, calls[0].args.idempotencyKey);
+    const row = normalizeContractsReadModel([contract({ status: "draft", targetingPayload: { allPlayers: true } })]).contracts[0];
+    const participant = { resourceId: PROGRESS_ID, playerName: "Player" };
+    for (const method of ["updateContract", "publishContract", "archiveContract", "duplicateContract"]) {
+      assert.equal((await controller[method](row, input)).ok, true);
+      assert.equal(calls.at(-1).args.contractId, CONTRACT_ID);
+    }
+    assert.equal((await controller.reviewProgress(row, participant, "approve", "Good evidence")).ok, true);
+    assert.equal((await controller.issueRewards(row, participant)).ok, true);
+    assert.equal(calls.at(-2).args.progressId, PROGRESS_ID);
+    assert.equal(calls.at(-1).args.progressId, PROGRESS_ID);
+    assert.equal(calls.at(-2).args.feedback, "Good evidence");
+    assert.ok(calls.every(({ args }) => args.gameId === GAME_ID && args.idempotencyKey.startsWith("admin.contracts.")));
+    const writes = calls.length;
+    assert.equal((await controller.updateContract({ ...row, status: "active" }, input)).error.code, "CONFLICT");
+    assert.equal((await controller.publishContract({})).error.code, "NOT_FOUND");
+    assert.equal(calls.length, writes);
+  } finally { controller.destroy(); }
+});
+
+test("Contracts use scoped stock-market timezone, not attendance, without a permission expansion", async () => {
+  const urls = [];
+  const api = createContractsApiClient({ fetchImpl: async (url) => {
+    urls.push(url);
+    return response({ data: url.endsWith('/settings')
+      ? { settings: { stockMarketWindow: { timezone: 'America/New_York' }, attendanceWindow: { timezone: 'Asia/Seoul' } } }
+      : { contracts: [contract()] } });
+  } });
+  assert.equal(normalizeContractsReadModel(await api.readContracts({ gameId: GAME_ID })).timeZone, 'America/New_York');
+  assert.deepEqual(urls.sort(), [`/api/admin/games/${GAME_ID}/contracts`, `/api/admin/games/${GAME_ID}/settings`]);
+  urls.length = 0;
+  assert.equal((await api.readContracts({ gameId: GAME_ID, includeTimeZone: false })).data.timeZone, null);
+  assert.deepEqual(urls, [`/api/admin/games/${GAME_ID}/contracts`]);
+});
+
+test("Intl-supported persisted timezone aliases are accepted, invalid values never default to Seoul", () => {
+  for (const value of ['UTC', 'Asia/Seoul', 'America/New_York', 'EST5EDT', 'CST6CDT', 'GMT0', 'Etc/GMT+9']) {
+    assert.equal(normalizeContractTimeZone(value), new Intl.DateTimeFormat('en-US', { timeZone: value }).resolvedOptions().timeZone);
+  }
+  for (const value of [null, '', 'invalid/timezone', {}, 'x'.repeat(81)]) assert.equal(normalizeContractTimeZone(value), null);
+});
+
+test("missing, invalid, denied and unavailable settings preserve reads without inventing a timezone", async () => {
+  for (const settings of [{}, { stockMarketWindow: { timezone: '' } }, { stockMarketWindow: { timezone: 'invalid/timezone' } }, { attendanceWindow: { timezone: 'Asia/Seoul' } }]) {
+    const api = createContractsApiClient({ fetchImpl: async (url) => response({ data: url.endsWith('/settings') ? { settings } : { contracts: [contract()] } }) });
+    const result = await api.readContracts({ gameId: GAME_ID });
+    assert.equal(result.data.contracts.length, 1);
+    assert.equal(normalizeContractsReadModel(result).timeZone, null);
+  }
+  for (const status of [403, 500]) {
+    const api = createContractsApiClient({ fetchImpl: async (url) => url.endsWith('/settings') ? response({ code: 'staff_permission_denied' }, status) : response({ data: { contracts: [contract()] } }) });
+    const result = await api.readContracts({ gameId: GAME_ID });
+    assert.equal(result.data.contracts.length, 1);
+    assert.equal(result.data.timeZone, null);
+  }
+});
+
+test("timezone lookup preserves session expiry, MFA and cancellation", async () => {
+  for (const [status, code, expected] of [[401, 'SESSION_EXPIRED', 'SESSION_REQUIRED'], [403, 'staff_mfa_required', 'MFA_REQUIRED']]) {
+    const api = createContractsApiClient({ fetchImpl: async (url) => url.endsWith('/settings') ? response({ code }, status) : response({ data: { contracts: [contract()] } }) });
+    await assert.rejects(api.readContracts({ gameId: GAME_ID }), (error) => error.code === expected);
+  }
+  const signals = [];
+  const api = createContractsApiClient({ fetchImpl: (_url, options) => new Promise((_resolve, reject) => {
+    signals.push(options.signal);
+    options.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
+  }) });
+  const pending = api.readContracts({ gameId: GAME_ID });
+  api.cancelContractsRequest();
+  await assert.rejects(pending, (error) => error.code === 'REQUEST_ABORTED');
+  assert.equal(signals.length, 2);
+  assert.ok(signals.every((signal) => signal.aborted));
+});
+
+test("Contracts controller requests settings only with its grant and discards a destroyed game's late result", async () => {
+  const methods = ['readContractDetail', 'createContract', 'updateContract', 'publishContract', 'archiveContract', 'duplicateContract', 'reviewProgress', 'issueRewards'];
+  for (const allowed of [true, false]) {
+    const calls = [];
+    const api = Object.fromEntries(methods.map((method) => [method, async () => ({})]));
+    api.readContracts = async (args) => { calls.push(args); return { data: { contracts: [], timeZone: allowed ? 'America/New_York' : null } }; };
+    const controller = createContractsController({ api, selectedGameId: GAME_ID, hasPermission: (permission) => permission === 'contracts.manage' || allowed });
+    const state = await controller.load();
+    assert.deepEqual(calls, [{ gameId: GAME_ID, includeTimeZone: allowed }]);
+    assert.equal(state.data.timeZone, allowed ? 'America/New_York' : null);
+    controller.destroy();
+  }
+  let finish;
+  const api = Object.fromEntries(methods.map((method) => [method, async () => ({})]));
+  api.readContracts = () => new Promise((resolve) => { finish = resolve; });
+  const changes = [];
+  const controller = createContractsController({ api, selectedGameId: GAME_ID, hasPermission: () => true, onChange: (state) => changes.push(state) });
+  const pending = controller.load(); controller.destroy();
+  finish({ data: { contracts: [], timeZone: 'Asia/Seoul' } });
+  await pending;
+  assert.equal(changes.length, 1);
+});
+
+test("Contract create/edit conversion and prefilling use UTC, Seoul, New York, Los Angeles and London", (t) => {
+  for (const [timeZone, expected] of [['UTC', '2026-11-16T09:00:00.000Z'], ['Asia/Seoul', '2026-11-16T00:00:00.000Z'], ['America/New_York', '2026-11-16T14:00:00.000Z'], ['America/Los_Angeles', '2026-11-16T17:00:00.000Z'], ['Europe/London', '2026-11-16T09:00:00.000Z']]) {
+    for (const mode of ['create', 'edit']) {
+      const { form } = editForm(t, contract({ status: 'scheduled', targetingPayload: { allPlayers: true }, visibility: 'public' }), { scheduledAt: '2026-11-16T09:00', deadlineAt: '2026-11-16T09:00', expiresAt: '2026-11-16T09:00' }, mode, timeZone);
+      const value = form.validate(); assert.ok(value, `${mode}/${timeZone}`);
+      assert.deepEqual([value.scheduledAt, value.deadlineAt, value.expiresAt], Array(3).fill(expected));
+      assert.ok(form.element.textContent.includes(timeZone));
+    }
+    const { form, initialDates } = editForm(t, contract({ status: 'scheduled', targetingPayload: { allPlayers: true }, visibility: 'public', publishedAt: expected, deadlineAt: expected, expiresAt: expected }), {}, 'edit', timeZone);
+    assert.deepEqual(Object.values(initialDates), Array(3).fill('2026-11-16T09:00'));
+    for (const [key, value] of Object.entries(initialDates)) form.fields[key].setValue(value);
+    const value = form.validate(); assert.ok(value, timeZone);
+    assert.deepEqual([value.scheduledAt, value.deadlineAt, value.expiresAt], Array(3).fill(expected));
+  }
+});
+
+test("Contract dates honor DST boundaries, reject skipped times and preserve both repeated-hour instants", (t) => {
+  for (const [local, expected] of [['2026-03-07T09:00', '2026-03-07T14:00:00.000Z'], ['2026-03-09T09:00', '2026-03-09T13:00:00.000Z'], ['2026-10-31T09:00', '2026-10-31T13:00:00.000Z'], ['2026-11-02T09:00', '2026-11-02T14:00:00.000Z']]) {
+    const { form } = editForm(t, contract({ status: 'scheduled' }), { scheduledAt: local }, 'edit', 'America/New_York');
+    assert.equal(form.validate()?.scheduledAt, expected);
+  }
+  assert.equal(editForm(t, contract({ status: 'scheduled' }), { scheduledAt: '2026-03-08T02:30' }, 'edit', 'America/New_York').form.validate(), null);
+  for (const instant of ['2026-11-01T05:30:12.345Z', '2026-11-01T06:30:12.345Z']) {
+    const { form, initialDates } = editForm(t, contract({ status: 'scheduled', targetingPayload: { allPlayers: true }, visibility: 'public', publishedAt: instant, deadlineAt: instant, expiresAt: instant }), {}, 'edit', 'America/New_York');
+    assert.deepEqual(Object.values(initialDates), Array(3).fill('2026-11-01T01:30'));
+    for (const [key, value] of Object.entries(initialDates)) form.fields[key].setValue(value);
+    const value = form.validate(); assert.ok(value);
+    assert.deepEqual([value.scheduledAt, value.deadlineAt, value.expiresAt], Array(3).fill(instant));
+  }
+});
+
+test("dated Contract actions fail closed without a confirmed zone in create and edit modes", (t) => {
+  for (const timeZone of [null, '', 'invalid/timezone']) {
+    for (const mode of ['create', 'edit']) {
+      const { form } = editForm(t, contract({ status: 'draft' }), { deadlineAt: '2026-11-16T09:00' }, mode, timeZone);
+      assert.equal(form.validate(), null);
+      assert.equal(form.footer.children[1].disabled, mode === 'edit', 'existing dated contracts must not have dates silently cleared');
+      assert.ok(['scheduledAt', 'deadlineAt', 'expiresAt'].every((key) => form.fields[key].control.disabled));
+      assert.match(form.element.textContent, /timezone could not be confirmed/i);
+    }
+  }
+});
+
+test("dateless create, publish-now and draft edit stay available without settings permission", async (t) => {
+  const apiCalls = [];
+  const methods = ['readContractDetail', 'createContract', 'updateContract', 'publishContract', 'archiveContract', 'duplicateContract', 'reviewProgress', 'issueRewards'];
+  const api = Object.fromEntries(methods.map((method) => [method, async (args) => { apiCalls.push({ method, args }); return {}; }]));
+  api.readContracts = async (args) => { apiCalls.push({ method: 'readContracts', args }); return { data: { contracts: [], timeZone: null } }; };
+  const controller = createContractsController({ api, selectedGameId: GAME_ID, hasPermission: (permission) => permission === 'contracts.manage' });
+  t.after(() => controller.destroy());
+  await controller.load();
+  assert.deepEqual(apiCalls[0], { method: 'readContracts', args: { gameId: GAME_ID, includeTimeZone: false } });
+  for (const [mode, status] of [['create', 'draft'], ['create', 'active'], ['edit', 'draft']]) {
+    const original = contract({ status: 'draft', publishedAt: null, deadlineAt: null, expiresAt: null, visibility: 'public', targetingPayload: { allPlayers: true } });
+    const { form, model } = editForm(t, original, { status }, mode, null);
+    const payload = form.validate();
+    assert.ok(payload, `${mode}/${status} dateless flow must remain authorized`);
+    assert.equal(form.footer.children[1].disabled, false);
+    assert.ok(['scheduledAt', 'deadlineAt', 'expiresAt'].every((key) => form.fields[key].control.disabled));
+    const result = mode === 'edit' ? await controller.updateContract(model, payload) : await controller.createContract(payload);
+    assert.equal(result.ok, true);
+    const write = apiCalls.findLast((call) => call.method === (mode === 'edit' ? 'updateContract' : 'createContract'));
+    assert.equal(write.args.gameId, GAME_ID);
+  }
+});
+
+test("new DST-overlap values are rejected for create/edit publication, due and expiry, including half-hour folds", (t) => {
+  for (const [zone, local] of [['America/New_York', '2026-11-01T01:30'], ['Europe/London', '2026-10-25T01:30'], ['Australia/Lord_Howe', '2026-04-05T01:45']]) {
+    assert.equal(resolveContractLocalDateTime(local, zone).problem, 'ambiguous');
+    for (const mode of ['create', 'edit']) {
+      for (const field of ['scheduledAt', 'deadlineAt', 'expiresAt']) {
+        const original = contract({ status: 'draft', publishedAt: null, deadlineAt: null, expiresAt: null, visibility: 'public', targetingPayload: { allPlayers: true } });
+        const { form } = editForm(t, original, { [field]: local, status: field === 'scheduledAt' ? 'scheduled' : 'draft' }, mode, zone);
+        assert.equal(form.validate(), null, `${mode}/${field}/${zone} must not choose a repeated instant`);
+        assert.match(form.fields[field].element.textContent, /occurs twice.*Choose a different time/);
+      }
+    }
+  }
+  assert.equal(resolveContractLocalDateTime('2026-11-01T03:00', 'America/New_York').instant, '2026-11-01T08:00:00.000Z');
+  assert.equal(resolveContractLocalDateTime('2026-04-05T02:15', 'Australia/Lord_Howe').instant, '2026-04-04T15:45:00.000Z');
+});
+
+test("Contract presentation uses the selected zone regardless of host zone and labels unknown-zone UTC explicitly", () => {
+  const saved = process.env.TZ;
+  try {
+    process.env.TZ = 'UTC';
+    const selected = formatContractDateTime('2026-11-16T14:00:00.000Z', 'America/New_York');
+    process.env.TZ = 'Asia/Seoul';
+    assert.equal(formatContractDateTime('2026-11-16T14:00:00.000Z', 'America/New_York'), selected);
+    assert.match(selected, /America\/New_York/);
+    assert.match(selected, /09:00/);
+    const unavailable = formatContractDateTime('2026-11-16T14:00:00.000Z', null);
+    assert.match(unavailable, /UTC.*game timezone unavailable/);
+    assert.equal(formatContractDateTime('not-a-date', 'America/New_York'), '—');
+  } finally {
+    if (saved === undefined) delete process.env.TZ; else process.env.TZ = saved;
+  }
 });

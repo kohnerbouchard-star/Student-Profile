@@ -42,7 +42,11 @@
     "scripts/admin-v2-roster-import-browser-smoke.mjs",
     "scripts/admin-v2-roster-import.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "scripts/verify-player-cross-cutting-authority.mjs"
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    ".github/workflows/admin-api-check.yml",
+    ".github/workflows/edge-function-inventory.yml",
+    ".github/workflows/admin-bundle-audit.yml",
+    ".github/workflows/runtime-stabilization-onboarding.yml"
   ],
   "requiredFiles": [
     ".github/workflows/admin-v2-messages.yml",
@@ -78,7 +82,11 @@
     "scripts/admin-v2-roster-import-browser-smoke.mjs",
     "scripts/admin-v2-roster-import.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
-    "scripts/verify-player-cross-cutting-authority.mjs"
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    ".github/workflows/admin-api-check.yml",
+    ".github/workflows/edge-function-inventory.yml",
+    ".github/workflows/admin-bundle-audit.yml",
+    ".github/workflows/runtime-stabilization-onboarding.yml"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -225,7 +233,18 @@
     "Admin V2 Messages",
     "Messages moderation contract and browser smoke",
     "Admin V2 Players",
-    "Players V2 contract and browser verification"
+    "Players V2 contract and browser verification",
+    "Admin API Check",
+    "admin-api-check",
+    "Admin Bundle Contract Audit",
+    "audit",
+    "Edge Function Inventory",
+    "Validate canonical inventory contract",
+    "Progression Runtime",
+    "Runtime Stabilization Onboarding",
+    "Runtime and request contracts",
+    "Local custom-auth Edge Functions reachability",
+    "Two-Player Arrival onboarding"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -329,12 +348,19 @@
     "News & Events contract and browser smoke",
     "focused",
     "Messages moderation contract and browser smoke",
-    "Players V2 contract and browser verification"
+    "Players V2 contract and browser verification",
+    "admin-api-check",
+    "audit",
+    "Validate canonical inventory contract",
+    "Runtime and request contracts",
+    "Local custom-auth Edge Functions reachability",
+    "Two-Player Arrival onboarding",
+    "CodeQL"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs"
   ],
-  "authorizationNote": "Owner requested actual CSV input mechanics and clarified names-only rosters. This PR933 amendment adds local validation, explicit account-creation confirmation, names-only protected BFF requests, in-memory stable retry keys and one-time credential presentation. Separate atomic backend provisioning remains a required dependency; frontend alone cannot enable its unavailable route. Preserve every current-main predecessor requirement plus Players gates and read-only verifier/test paths. No actual student data, permission expansion, production deployment, production mutation, secret values, gate weakening or unrelated change is authorized. Keep draft pending independent and exact-head qualification; no merge or previously denied routine PR-description update is performed. The owner also authorized bounded filter updates and workflow qualification: add only this PR authority path to twelve existing required test-workflow PR filters and bind three shared test-only checkouts to the exact PR head without persisted credentials. All test commands, permissions, non-PR triggers, manual/live guards, required/critical check identifiers and production holds remain unchanged. Shared changes preserve other owners during serial main integration. Local provisional 2026-11-11 continuation prepares this existing owner on frozen unmerged focus PR946 c72c380c09e2b6e7a335b1ac9942c1b88a085aaa, tree 5c02b658681c04f1e9eb8e4d4129c717c858f1a0, above actual main 773e72cf857165bc73cfcb16adabce40f1b64eb0. Preserve the complete focus, teacher, refactor, scanner, runner, readiness and quote predecessor; retain lifecycle reads/transitions and roster import together. All ordered 143 required and 101 critical inherited identities remain an exact prefix, with the existing two Players required identities and one critical job appended (145/102). Recalculated predecessor-relative scope is 32 changed paths / 34 locks. The original twelve exact PR933 scheduling additions remain, with three newly necessary exact-path additions only for Messages, News & Events and Settings. Shared checkout corrections are already inherited and are not counted as new changes. Preserve all jobs, commands, assertions, permissions, prior paths and guards. This is not current-main publication scope: the separate Admin harness prerequisite and actual focus merge/reconciliation are still required, followed by independent review and fresh exact-head frontend and paired backend/connected qualification. No remote write, PR-description change, dispatch, merge to main, deployment or real accounts/data is authorized in this preparation. Local provisional refresh on frozen unmerged PR946 c89e855e2d5c46076f9e49d835f0fa4b4b4dfa3d, tree 93fe57c79d67d6f7a6a6e38fef1ed7f231a458db, preserves actual main 893641945d38e77e9f9095185ddc43016d1a5e25 and its complete merged PR951 readiness/native-proof/filter/head-binding changes. The prior local runtime bytes remain exact. All ordered 143/101 inherited checks plus existing own roster identities remain 145/102 across 54 families. Existing own exact-path scheduling remains additive; all checkout corrections are inherited. This supersedes prior pending-PR951 wording. Scope is still predecessor-relative and not publication-eligible against actual main until focus merges and is reconciled. Independent final review and new-head hosted/connected qualification remain required. No remote write, CI trigger, runtime/data, production or PR933 body update is included. Recalculated refresh scope is 32 changes / 34 locks versus the frozen predecessor, with 47 actual-main changes still provisional. All 15 retained exact own filters remain necessary; all 54 families select. Actual-main reconciliation on 2026-11-11 supersedes the earlier unmerged-focus and 47-path provisional-main statements: PR946 merged normally as 143f54b308b25870716bfb956c5b6bc202b40f87, tree 93fe57c79d67d6f7a6a6e38fef1ed7f231a458db, with parents 893641945d38e77e9f9095185ddc43016d1a5e25 and c89e855e2d5c46076f9e49d835f0fa4b4b4dfa3d. Its tree exactly matches the prepared predecessor. The local ancestry-only merge preserves reviewed b7beb9a96a2f328823efa3e321855a322c9c6254 tree 58295e36422c3bed60e376717caf52664b662f98 before own metadata updates. Actual-main scope is now 32 changed paths / 34 locks; all runtime, tests, registrations, workflow bodies and generated inventory remain unchanged. All 145/102 gate identities retain the exact inherited ordered 143/101 prefix, all 54 required workflow families and 15 necessary exact own-authority filters. Earlier scope records remain historical. This is local source reconciliation only, not hosted or connected/runtime qualification, publication approval or feature completion. Renew final committed checks and independent review before any separately authorized publication. The separate cef595e725680ac56a55649cbf8464a4da9797f9 connected gate and historical pins remain untouched. Docker/psql absence, prior native-browser denial, frozen-SDK and supported hosted Edge/BFF capacity holds remain unwaived. No remote source/body write, dispatch, runtime/data, trust expansion or production action is included.",
+  "authorizationNote": "Owner requested actual CSV input mechanics and clarified names-only rosters. This PR933 amendment adds local validation, explicit account-creation confirmation, names-only protected BFF requests, in-memory stable retry keys and one-time credential presentation. Separate atomic backend provisioning remains a required dependency; frontend alone cannot enable its unavailable route. Preserve every current-main predecessor requirement plus Players gates and read-only verifier/test paths. No actual student data, permission expansion, production deployment, production mutation, secret values, gate weakening or unrelated change is authorized. Keep draft pending independent and exact-head qualification; no merge or previously denied routine PR-description update is performed. The owner also authorized bounded filter updates and workflow qualification: add only this PR authority path to twelve existing required test-workflow PR filters and bind three shared test-only checkouts to the exact PR head without persisted credentials. All test commands, permissions, non-PR triggers, manual/live guards, required/critical check identifiers and production holds remain unchanged. Shared changes preserve other owners during serial main integration. Local provisional 2026-11-11 continuation prepares this existing owner on frozen unmerged focus PR946 c72c380c09e2b6e7a335b1ac9942c1b88a085aaa, tree 5c02b658681c04f1e9eb8e4d4129c717c858f1a0, above actual main 773e72cf857165bc73cfcb16adabce40f1b64eb0. Preserve the complete focus, teacher, refactor, scanner, runner, readiness and quote predecessor; retain lifecycle reads/transitions and roster import together. All ordered 143 required and 101 critical inherited identities remain an exact prefix, with the existing two Players required identities and one critical job appended (145/102). Recalculated predecessor-relative scope is 32 changed paths / 34 locks. The original twelve exact PR933 scheduling additions remain, with three newly necessary exact-path additions only for Messages, News & Events and Settings. Shared checkout corrections are already inherited and are not counted as new changes. Preserve all jobs, commands, assertions, permissions, prior paths and guards. This is not current-main publication scope: the separate Admin harness prerequisite and actual focus merge/reconciliation are still required, followed by independent review and fresh exact-head frontend and paired backend/connected qualification. No remote write, PR-description change, dispatch, merge to main, deployment or real accounts/data is authorized in this preparation. Local provisional refresh on frozen unmerged PR946 c89e855e2d5c46076f9e49d835f0fa4b4b4dfa3d, tree 93fe57c79d67d6f7a6a6e38fef1ed7f231a458db, preserves actual main 893641945d38e77e9f9095185ddc43016d1a5e25 and its complete merged PR951 readiness/native-proof/filter/head-binding changes. The prior local runtime bytes remain exact. All ordered 143/101 inherited checks plus existing own roster identities remain 145/102 across 54 families. Existing own exact-path scheduling remains additive; all checkout corrections are inherited. This supersedes prior pending-PR951 wording. Scope is still predecessor-relative and not publication-eligible against actual main until focus merges and is reconciled. Independent final review and new-head hosted/connected qualification remain required. No remote write, CI trigger, runtime/data, production or PR933 body update is included. Recalculated refresh scope is 32 changes / 34 locks versus the frozen predecessor, with 47 actual-main changes still provisional. All 15 retained exact own filters remain necessary; all 54 families select. Actual-main reconciliation on 2026-11-11 supersedes the earlier unmerged-focus and 47-path provisional-main statements: PR946 merged normally as 143f54b308b25870716bfb956c5b6bc202b40f87, tree 93fe57c79d67d6f7a6a6e38fef1ed7f231a458db, with parents 893641945d38e77e9f9095185ddc43016d1a5e25 and c89e855e2d5c46076f9e49d835f0fa4b4b4dfa3d. Its tree exactly matches the prepared predecessor. The local ancestry-only merge preserves reviewed b7beb9a96a2f328823efa3e321855a322c9c6254 tree 58295e36422c3bed60e376717caf52664b662f98 before own metadata updates. Actual-main scope is now 32 changed paths / 34 locks; all runtime, tests, registrations, workflow bodies and generated inventory remain unchanged. All 145/102 gate identities retain the exact inherited ordered 143/101 prefix, all 54 required workflow families and 15 necessary exact own-authority filters. Earlier scope records remain historical. This is local source reconciliation only, not hosted or connected/runtime qualification, publication approval or feature completion. Renew final committed checks and independent review before any separately authorized publication. The separate cef595e725680ac56a55649cbf8464a4da9797f9 connected gate and historical pins remain untouched. Docker/psql absence, prior native-browser denial, frozen-SDK and supported hosted Edge/BFF capacity holds remain unwaived. No remote source/body write, dispatch, runtime/data, trust expansion or production action is included. Current 2026-11-17 continuation under the owner request to develop features in separate PRs reconciles existing PR933 with main 956ad02db949ae9c4cff7d709a18ec28d20c0788. Preserve all historical required/critical identities and add any current-main PR993 identities. No merge, deployment, real student data, live database change or gate weakening. Paired backend PR938 and connected qualification remain required.",
   "scopeRecord": "docs/operations/evidence/classroom-roster-csv-review-v1/scope.md"
 }

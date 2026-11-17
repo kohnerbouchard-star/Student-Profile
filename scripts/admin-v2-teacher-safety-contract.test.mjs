@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
+import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 
 const attendanceApi = fs.readFileSync(
   "admin/v2/src/routes/attendance/AttendanceApi.js",
@@ -22,7 +23,7 @@ const storeController = fs.readFileSync(
   "admin/v2/src/routes/store/StoreController.js",
   "utf8",
 );
-const adminReadModels = fs.readFileSync(
+const adminReadModels = readEdgeRuntimeSource(
   "backend/supabase/functions/admin-api/readModels.ts",
   "utf8",
 );

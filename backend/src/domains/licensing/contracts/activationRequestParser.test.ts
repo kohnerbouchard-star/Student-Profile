@@ -1,3 +1,4 @@
+import { handleLicensingActivationRequest } from "../application/licensingActivationRouteAdapter.ts";
 import {
   LicensingActivationRequestParseError,
   parseLicensingActivationRequestBody,
@@ -49,3 +50,18 @@ function assertEquals(actual: unknown, expected: unknown): void {
     throw new Error(`Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}.`);
   }
 }
+
+Deno.test("Licensing boundary rejects invalid Stock windows before hashing or persistence", async () => {
+  let calls = 0;
+  const dependencies = {
+    purchaseCodeHasher: { hashPurchaseCode: async () => { calls++; throw new Error("Unexpected hash"); } },
+    redeemPurchaseCodeDependencies: { activationRepository: { redeemPurchaseCodeForGame: async () => { calls++; throw new Error("Unexpected write"); } } },
+  };
+  for (const stockMarketWindow of [undefined, {}, { timezone: "Invalid/Timezone" }]) {
+    const result = await handleLicensingActivationRequest({ purchaseCode: "code", gameName: "Game", stockMarketWindow },
+      { staffUserId: "00000000-0000-4000-8000-000000000201" }, dependencies);
+    assertEquals(result.httpStatus, 400);
+    assertEquals(result.body.ok, false);
+  }
+  assertEquals(calls, 0);
+});
