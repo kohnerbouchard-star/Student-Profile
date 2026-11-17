@@ -131,3 +131,24 @@ Next: freeze this source, independently review, publish the existing draft owner
 Integrate normal #998 merge `9df2064d6` into the existing frontend owner, preserving its complete Crafting source, tests, CI contract, authority and roadmap intake. The only merge conflict is additive roadmap intake. Roster runtime/tests, the strict two-line API inverse, all 156 required/109 critical identities, 36 changed/38 locked paths and production denials are unchanged. The existing authority already contains every #998 required and critical identity. Prior frontend source `4420092e7ba313299e622458a7042eaa6667144d` has 78 successful PR workflow runs at this checkpoint; that evidence does not certify the reconciled head.
 
 Fresh integrated qualification is renewed before publication. Local system Chromium was located, but sandbox and approved escalated launches both fail with a socket permission denial; no browser pass is claimed. The frozen Edge SDK download limit remains. Preserve separate #938 ownership and repin it to the exact published frontend source/tree, then renew paired connected qualification. No merge to main, deployment or live data mutation.
+
+
+## Final actual-backend-main integration
+
+PR #938 merged at `3ebddbf6810ce22034e882b0a1e143427d5a4c44` after126 successful
+exact-head checks and14 guarded/provider skips. The frontend owner normally
+reconciles this actual main, retaining both complete scopes and all intervening
+feature work. The source snapshot is frozen before a separate harness commit
+pins one identical public source/tree for both roles in `integrated-composite`
+mode with `exact-equality`, covering frontend non-overlay qualification inputs.
+The seven runtime overlays and guard algorithm remain unchanged.
+
+The atomic roster workflow adds only PR933's exact authority path to its PR
+filter, so database/authentication acceptance is retained on the frontend-only
+delta. No permission, job, secret, deployment or guard weakening occurs. Authority
+is38 changed paths under40 locks, preserving every required/critical prefix and
+adding both inherited roster gate identities. Full root/Player/core TypeScript,
+131 harness cases and both131-case mode suites passed the identical provisional
+runtime; independent final source/pin review and fresh integrated exact-head
+hosted qualification are required before merge. Earlier draft/provisional records
+remain historical. No manual production action or hosted capacity claim.

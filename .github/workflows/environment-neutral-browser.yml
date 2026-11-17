@@ -27,6 +27,7 @@ on:
       - "docs/operations/contracts/player-cross-cutting/pr-961.json"
       - "docs/operations/contracts/player-cross-cutting/pr-958.json"
       - "docs/operations/contracts/player-cross-cutting/pr-957.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-938.json"
       - "docs/operations/contracts/player-cross-cutting/pr-951.json"
       - "docs/operations/contracts/player-cross-cutting/pr-945.json"
       - "docs/operations/contracts/player-cross-cutting/pr-949.json"

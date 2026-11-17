@@ -46,7 +46,9 @@
     ".github/workflows/admin-api-check.yml",
     ".github/workflows/edge-function-inventory.yml",
     ".github/workflows/admin-bundle-audit.yml",
-    ".github/workflows/runtime-stabilization-onboarding.yml"
+    ".github/workflows/runtime-stabilization-onboarding.yml",
+    ".github/workflows/player-roster-import.yml",
+    "scripts/roster-connected/sources.json"
   ],
   "requiredFiles": [
     ".github/workflows/admin-v2-messages.yml",
@@ -86,7 +88,9 @@
     ".github/workflows/admin-api-check.yml",
     ".github/workflows/edge-function-inventory.yml",
     ".github/workflows/admin-bundle-audit.yml",
-    ".github/workflows/runtime-stabilization-onboarding.yml"
+    ".github/workflows/runtime-stabilization-onboarding.yml",
+    ".github/workflows/player-roster-import.yml",
+    "scripts/roster-connected/sources.json"
   ],
   "requiredChecks": [
     "player-terminal-verify",
@@ -245,7 +249,11 @@
     "Runtime and request contracts",
     "Local custom-auth Edge Functions reachability",
     "Two-Player Arrival onboarding",
-    "Story durable execution database acceptance"
+    "Story durable execution database acceptance",
+    "Player Roster Import",
+    "Atomic roster provisioning and replay",
+    "Roster Connected E2E",
+    "Paired-source disposable roster integration (not hosted capacity)"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -357,7 +365,9 @@
     "Local custom-auth Edge Functions reachability",
     "Two-Player Arrival onboarding",
     "CodeQL",
-    "Story durable execution database acceptance"
+    "Story durable execution database acceptance",
+    "Atomic roster provisioning and replay",
+    "Paired-source disposable roster integration (not hosted capacity)"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
