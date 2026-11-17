@@ -115,7 +115,7 @@ export async function runFxRaces(){
   assert.equal(sql(`select count(*) from public.fx_fixing_currency_values v join public.fx_fixings f on f.id=v.fixing_id where f.game_session_id='${game}'`),'11');
   assert.equal(sql(`select count(*) from public.fx_fixing_macro_snapshots where game_session_id='${game}'`),'10');
   assert.equal(sql(`select count(*) from public.currency_exchange_rates where game_session_id='${game}'`),'0');
-  sql(`update public.game_sessions set provisioning_status='ready',provisioned_at=clock_timestamp() where id='${game}';`);
+  sql(`update public.game_sessions set provisioning_status='ready',provisioning_pack_id='econovaria.beta-seed-pack.v1',provisioning_pack_version='1.0.0-beta',provisioning_pack_sha256=repeat('a',64),provisioning_source_game_session_id=id,provisioned_at=clock_timestamp(),provisioning_failure_code=null where id='${game}';`);
   const pointer=sql(`select current_fixing_id from private.fx_runtime_state where game_session_id='${game}'`);
   const pause=`update public.game_sessions set lifecycle_state='paused',status='disabled' where id='${game}';`;
   const resume=`update public.game_sessions set lifecycle_state='active',status='active' where id='${game}';`;
@@ -147,7 +147,7 @@ export async function runFxRaces(){
     insert into public.purchase_codes(id,code_hash,status,max_redemptions,redeemed_count) values('${purchase}',encode(extensions.digest('${purchase}','sha256'),'hex'),'active',1,1);
     insert into public.entitlements(purchase_code_id,staff_user_id,game_session_id,status) values('${purchase}','${staff}','${workerGame}','active');
     select public.initialize_fx_authority_for_game_v1('${workerGame}',now()-interval '2 days',true);
-    update public.game_sessions set provisioning_status='ready',provisioned_at=clock_timestamp() where id='${workerGame}';
+    update public.game_sessions set provisioning_status='ready',provisioning_pack_id='econovaria.beta-seed-pack.v1',provisioning_pack_version='1.0.0-beta',provisioning_pack_sha256=repeat('a',64),provisioning_source_game_session_id=id,provisioned_at=clock_timestamp(),provisioning_failure_code=null where id='${workerGame}';
     -- Scheduling-only synthetic fixture setup; never touches fixing evidence,
     -- authorization time, lease ownership, or immutable exchange history.
     update private.fx_runtime_state set next_due_at=clock_timestamp()-interval '1 day' where game_session_id='${workerGame}';

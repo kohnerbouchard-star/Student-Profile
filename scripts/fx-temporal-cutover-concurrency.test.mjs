@@ -65,3 +65,11 @@ test('tagged resume boundary ignores barrier output and fails closed on missing/
  assert.equal(readFxResumeBoundary('1\n{"resumeDue":"2026-11-17 08:00:00+00"}\nHOLDER_READY\n'),'2026-11-17 08:00:00+00');
  for(const output of ['HOLDER_READY\n','{"resumeDue":null}\nHOLDER_READY\n','{"resumeDue":"x"}\n{"resumeDue":"y"}\n'])assert.throws(()=>readFxResumeBoundary(output));
 });
+
+test('both ready race fixtures satisfy canonical campaign provisioning metadata',()=>{
+ const source=readFileSync('scripts/fx-temporal-cutover-concurrency.mjs','utf8');
+ const updates=[...source.matchAll(/update public\.game_sessions set provisioning_status='ready',([^;]+);/g)];
+ assert.equal(updates.length,2);
+ for(const [,fields] of updates)for(const required of ["provisioning_pack_id='econovaria.beta-seed-pack.v1'","provisioning_pack_version='1.0.0-beta'","provisioning_pack_sha256=repeat('a',64)",'provisioning_source_game_session_id=id','provisioned_at=clock_timestamp()','provisioning_failure_code=null'])assert(fields.includes(required),required);
+ assert(!/disable trigger|session_replication_role|drop constraint/i.test(source));
+});

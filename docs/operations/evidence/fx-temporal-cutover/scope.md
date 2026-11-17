@@ -166,3 +166,15 @@ Independent review also caught a holder-barrier marker mixed into the resume
 boundary comparison. A tagged JSON boundary parser now rejects missing, null or
 ambiguous output; its regression brings local concurrency/guard tests to23.
 The fixture predicates and runtime safety assertions are unchanged.
+
+
+## Canonical readiness fixture metadata
+
+Run `44031541546` at `53ebfee3` passed first replay and initial bootstrap
+assertions, then the lifecycle fixture's ready transition failed with
+`CAMPAIGN_DEFAULT_GAME_NOT_READY`. Both ready race fixtures now supply the same
+seed-pack ID/version, synthetic digest/source and provisioning timestamps as
+the previously passing serial acceptance fixture. Campaign initialization and
+all real readiness/lifecycle triggers remain enabled. A two-update regression
+brings local guard/concurrency tests to24. No product migration or acceptance
+predicate changed; hosted qualification remains required.
