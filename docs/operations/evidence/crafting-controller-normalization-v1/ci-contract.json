@@ -1,7 +1,7 @@
 {
   "base": "03adc6891995fe1d780fe34629b1daf14470ea39",
   "sourceHead": "c72a865d3ef7f8386ff02e548db4b396059b4dfc",
-  "derivation": "Full PR1008 scope including metadata evaluated against current main-target opened/synchronize/reopened branch/path filters. 35 families,69 active tuples,5 guarded skips; no matrices. Closed-only Branch Hygiene excluded; external CodeQL required. No workflow, permission, gate or command edits.",
+  "derivation": "Full PR1008 scope including metadata evaluated against current main-target opened/synchronize/reopened branch/path filters. 35 families,69 active tuples,5 guarded skips; no matrices. Closed-only Branch Hygiene excluded; external CodeQL required. No workflow, permission, gate or command edits. Roster pin repair adds scripts/roster-connected/sources.json to scope without editing workflow filters or gates; final source-pin-only commit binds the reviewed complete checkpoint.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-browser-e2e.yml",

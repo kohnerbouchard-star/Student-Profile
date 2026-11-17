@@ -18,3 +18,6 @@ Reviewed local source eeb14905e: independent reviewer confirmed exact normalizat
 
 ## Actual PR qualification metadata
 Draft #1008 source c72a865d matches reviewed local tree. Exact authority locks eight changed paths plus two read-only verifier/test paths. Fresh derivation:35 workflow families,69 active tuples,five guarded skips. Production/secret denials remain false; no workflow or test command edits. Metadata review and fresh published-head hosted qualification remain pending.
+
+## Roster qualification pin repair
+Hosted e7d0e919 failed the pre-install runtime-equivalence check. Local exported verifier reproduces runtime-head-projection-drift: inherited integrated pins60a08987 describe the pre-refactor repository, while the gate intentionally compares every non-exempt repository input. This is not a Crafting behavior failure. Preserve the entire default-deny verifier, workflow and both full mode suites. Add only sources.json to the exact authority scope, then bind both integrated source pins to the reviewed published source checkpoint containing this metadata. The final pin-only commit must pass exact projection and disk integrity against that checkpoint. Nine changed paths, eleven locked paths; no production changes or weakened checks. Fresh hosted qualification is required.
