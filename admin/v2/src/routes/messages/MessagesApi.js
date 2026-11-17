@@ -244,7 +244,25 @@ export function createMessagesAdminClient({
     });
   }
 
+  function readPolicy({ gameId, signal } = {}) {
+    return requestJson(fetchImpl, `/games/${requireGameToken(gameId)}/messages/policy`, { signal, timeoutMs });
+  }
+
+  function updatePolicy({ gameId, policy, signal } = {}) {
+    if (typeof policy?.playerThreadsEnabled !== "boolean"
+      || !Number.isSafeInteger(policy?.defaultRetentionDays)
+      || policy.defaultRetentionDays < 1 || policy.defaultRetentionDays > 730) {
+      return Promise.reject(normalizeAdminError(new MessagesTransportDiagnostic({ status: 400, code: "INVALID_REQUEST" })));
+    }
+    return requestJson(fetchImpl, `/games/${requireGameToken(gameId)}/messages/policy`, {
+      method: "POST", signal, timeoutMs,
+      body: { playerThreadsEnabled: policy.playerThreadsEnabled, defaultRetentionDays: policy.defaultRetentionDays },
+    });
+  }
+
   return Object.freeze({
+    readPolicy,
+    updatePolicy,
     readMessages,
     cancelMessagesRequest,
     moderateThread,

@@ -8,13 +8,13 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1628,
+    "sourceFiles": 1632,
     "edgeEntrypoints": 28,
     "handlerFiles": 61,
     "persistenceOutsideInfrastructure": 84,
-    "crossDomainDeepImports": 68,
+    "crossDomainDeepImports": 70,
     "browserTransportShimFiles": 26,
-    "compatibilityMarkerFiles": 208,
+    "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 0,
     "capabilityStrings": 144
@@ -1241,6 +1241,18 @@
         "target": "../../stocks/news.ts"
       },
       {
+        "consumer": "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/stockMarketRunnerHttpHandler.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/stockMarketRunnerHttpHandler.test.fixtures.support.ts"
+      },
+      {
         "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.eventFixtures.support.ts",
         "ownerDomain": "storylines",
         "importedDomain": "game-dashboard",
@@ -1860,6 +1872,12 @@
       },
       {
         "file": "admin/v2/src/routes/settings/SettingsController.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/settings/SettingsRoute.js",
         "markers": [
           "fallback"
         ]
@@ -3440,6 +3458,7 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/messages/MessagesController.js",
+          "admin/v2/src/routes/messages/MessagesPolicyPanel.js",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]

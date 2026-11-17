@@ -160,3 +160,5 @@ for (const privateField of ["gameSessionId", "playerId", "playerSessionId", "con
 }
 
 console.log("Contracts flow passed: public-key acceptance and submission, scope stripping, lifecycle states, rewards, and UUID privacy are valid.");
+
+await import("./contracts-review-history.mjs");

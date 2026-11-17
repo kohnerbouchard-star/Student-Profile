@@ -322,6 +322,7 @@ function resolvedContent({ model, filters, onApplyFilters, onPage, onRequestActi
 
 export function MessagesRoute({
   state,
+  policyPanel = null,
   filters = { query: "", status: "all", limit: 25, offset: 0 },
   onApplyFilters = async () => {},
   onPage = async () => {},
@@ -443,6 +444,8 @@ export function MessagesRoute({
       route.append(content);
     }
   }
+
+  if (policyPanel) route.append(policyPanel);
 
   const pageFrame = AdminPageFrame({
     eyebrow: "Game communications",
