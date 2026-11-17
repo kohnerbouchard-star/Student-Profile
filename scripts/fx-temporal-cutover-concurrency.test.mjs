@@ -82,3 +82,17 @@ test('elapsed worker boundaries use an isolated copied policy without rewriting 
  assert(!/update public\.fx_policy_versions|delete from public\.fx_policy_versions|disable trigger|session_replication_role/i.test(source));
  assert(source.indexOf('FX_RACE_POLICY_FIXTURE_MISSING')<source.indexOf("for(const order of ['worker-first','bootstrap-first'])"));
 });
+
+test('real clock proof initializes a separate game timezone before immutable bootstrap',()=>{
+ const source=readFileSync('scripts/canonical-fx-authority-database.mjs','utf8');
+ const long=source.slice(source.indexOf('// Dedicated PR-only extension.'));
+ assert(long.includes('fixture.realClockGameId'));
+ assert(long.includes('fixture.realClockPurchaseId'));
+ assert(!long.includes('fixture.gameTwoId'));
+ const settings=long.indexOf('insert into public.game_settings');
+ const bootstrap=long.indexOf('select public.initialize_fx_authority_for_game_v1(');
+ const queue=long.indexOf('select * from public.apply_story_currency_volatility_v1(');
+ assert(settings>0&&bootstrap>settings&&queue>bootstrap);
+ assert(!/update public\.game_settings|update private\.fx_runtime_state|disable trigger|session_replication_role/.test(long));
+ for(const text of ["clock_timestamp() + interval '60 seconds'","interval '65 minutes'",'isolated real clock fixture retains its pre-bootstrap timezone and canonical schedule','insert into public.entitlements','insert into public.country_economic_snapshots','provisioning_pack_version=','real queued shock produces the exact economic NRC movement'])assert(long.includes(text),text);
+});

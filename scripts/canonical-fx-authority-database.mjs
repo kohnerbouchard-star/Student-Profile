@@ -68,6 +68,8 @@ const fixture = Object.freeze({
   purchaseCodeId: randomUUID(),
   gameOneId: randomUUID(),
   gameTwoId: randomUUID(),
+  realClockGameId: randomUUID(),
+  realClockPurchaseId: randomUUID(),
   gameIncompleteId: randomUUID(),
   gamePausedPreId: randomUUID(),
   gamePausedPostId: randomUUID(),
@@ -2831,40 +2833,82 @@ if (realClockStoryProof) {
     .replaceAll("fx_apply_request", "fx_real_request")
     .replaceAll("fx_story_claim", "fx_real_claim")
     .replaceAll("fx_loaded_input", "fx_real_input")
-    .replaceAll(fixture.gameOneId, fixture.gameTwoId);
+    .replaceAll(fixture.gameOneId, fixture.realClockGameId);
   const proof = String.raw`
--- All earlier immutable/isolation assertions have completed. Only synthetic
--- fixture settings and scheduling are changed; no economic history is rewritten.
+-- All earlier immutable/isolation assertions have completed. A separate
+-- synthetic game chooses its timezone BEFORE bootstrap; existing immutable
+-- game settings and economic history are never rewritten.
 create temporary table fx_real_boundary on commit drop as
 select zone.name as timezone, boundary.effective_at
 from pg_catalog.pg_timezone_names as zone
 cross join lateral (
-  select private.fx_next_boundary_v1(clock_timestamp() + interval '10 seconds', zone.name) as effective_at
+  select private.fx_next_boundary_v1(clock_timestamp() + interval '60 seconds', zone.name) as effective_at
 ) as boundary
 where zone.name !~ '^(posix|right)/'
-  and boundary.effective_at > clock_timestamp() + interval '5 seconds'
+  and boundary.effective_at > clock_timestamp() + interval '30 seconds'
   and boundary.effective_at <= clock_timestamp() + interval '65 minutes'
 order by boundary.effective_at, zone.name
 limit 1;
 select pg_temp.fx_assert_v1((select count(*)=1 from fx_real_boundary), 'real clock proof requires a named-zone boundary within 65 minutes');
 
-update public.game_settings
-set stock_market_window=jsonb_set(stock_market_window,'{timezone}',to_jsonb((select timezone from fx_real_boundary)))
-where game_session_id=${sqlLiteral(fixture.gameTwoId)}::uuid;
-update private.fx_runtime_state
-set next_due_at=(select effective_at from fx_real_boundary), retry_after_at=null
-where game_session_id=${sqlLiteral(fixture.gameTwoId)}::uuid;
+insert into public.game_sessions (
+  id, owner_staff_user_id, name, lifecycle_state, provisioning_status
+) values (
+  ${sqlLiteral(fixture.realClockGameId)}::uuid,
+  ${sqlLiteral(fixture.staffId)}::uuid,
+  'FX real clock isolated fixture', 'active', 'pending'
+);
+insert into public.game_settings(game_session_id,stock_market_window)
+select ${sqlLiteral(fixture.realClockGameId)}::uuid,jsonb_build_object('timezone',timezone)
+from fx_real_boundary;
+insert into public.purchase_codes(id,code_hash,status,max_redemptions,redeemed_count)
+values (${sqlLiteral(fixture.realClockPurchaseId)}::uuid,
+  encode(extensions.digest(${sqlLiteral(fixture.realClockPurchaseId)},'sha256'),'hex'),'active',1,1);
+insert into public.entitlements(purchase_code_id,staff_user_id,game_session_id,status)
+values (${sqlLiteral(fixture.realClockPurchaseId)}::uuid,${sqlLiteral(fixture.staffId)}::uuid,
+  ${sqlLiteral(fixture.realClockGameId)}::uuid,'active');
+-- Ten complete neutral snapshots use normal defaults, just as the serial
+-- baseline fixture. No snapshot timestamp or immutable source row is rewritten.
+insert into public.country_economic_snapshots (
+  game_session_id,country_profile_id,snapshot_sequence,effective_at,
+  snapshot_label,difficulty_policy_profile_id,difficulty_preset,metadata,created_at
+)
+select ${sqlLiteral(fixture.realClockGameId)}::uuid,country_row.id,0,statement_timestamp(),
+  'FX real clock neutral fixture',difficulty_row.id,difficulty_row.preset_key,
+  jsonb_build_object('source','fx-real-clock-disposable-proof'),statement_timestamp()
+from public.country_profiles as country_row
+join public.difficulty_policy_profiles as difficulty_row on difficulty_row.preset_key='standard'
+where country_row.status='active';
+create temporary table fx_real_bootstrap on commit drop as
+select public.initialize_fx_authority_for_game_v1(
+  ${sqlLiteral(fixture.realClockGameId)}::uuid,clock_timestamp(),true
+) as result;
 select pg_temp.fx_assert_v1(
-  exists(select 1 from private.fx_runtime_state where game_session_id=${sqlLiteral(fixture.gameTwoId)}::uuid and lease_token is null and cutover_status='ready'),
-  'real clock fixture must have no outstanding lease');
+  (select result->>'outcome'='initialized' and result->>'cutoverStatus'='ready'
+    and (result->>'currencyValuesInserted')::integer=11
+    and (result->>'macroSnapshotsLinked')::integer=10 from fx_real_bootstrap)
+  and (select count(*)=1 from public.fx_fixings where game_session_id=${sqlLiteral(fixture.realClockGameId)}::uuid),
+  'isolated real clock game bootstraps eleven values and ten links exactly once');
+update public.game_sessions
+set provisioning_status='ready',provisioning_pack_id='econovaria.beta-seed-pack.v1',
+    provisioning_pack_version='1.0.0-beta',provisioning_pack_sha256=repeat('a',64),
+    provisioning_source_game_session_id=id,provisioned_at=clock_timestamp(),provisioning_failure_code=null
+where id=${sqlLiteral(fixture.realClockGameId)}::uuid;
+select pg_temp.fx_assert_v1(
+  exists(select 1 from private.fx_runtime_state
+    where game_session_id=${sqlLiteral(fixture.realClockGameId)}::uuid
+      and lease_token is null and cutover_status='ready'
+      and next_due_at=(select effective_at from fx_real_boundary))
+  and public.game_timezone_for_game_v1(${sqlLiteral(fixture.realClockGameId)}::uuid)=(select timezone from fx_real_boundary),
+  'isolated real clock fixture retains its pre-bootstrap timezone and canonical schedule');
 
 create temporary table fx_real_queue on commit drop as
 select * from public.apply_story_currency_volatility_v1(
-  ${sqlLiteral(fixture.gameTwoId)}::uuid,'fx-db-real-clock-v1','{"NRC":75}',clock_timestamp());
+  ${sqlLiteral(fixture.realClockGameId)}::uuid,'fx-db-real-clock-v1','{"NRC":75}',clock_timestamp());
 create temporary table fx_real_receipt on commit drop as
 select id,public_key,eligible_at,authorized_at,authorization_hash
 from public.fx_story_shock_authorizations
-where game_session_id=${sqlLiteral(fixture.gameTwoId)}::uuid and command_key='fx-db-real-clock-v1';
+where game_session_id=${sqlLiteral(fixture.realClockGameId)}::uuid and command_key='fx-db-real-clock-v1';
 select pg_temp.fx_assert_v1(
   (select count(*)=1 and bool_and(command_outcome='queued' and inserted_rates=0) from fx_real_queue)
   and (select count(*)=1 and bool_and(authorized_at < (select effective_at from fx_real_boundary)) from fx_real_receipt),
@@ -2885,7 +2929,7 @@ select pg_temp.fx_assert_v1(clock_timestamp() >= (select effective_at from fx_re
 
 create temporary table fx_real_claim on commit drop as
 select * from public.claim_due_fx_games_v1(clock_timestamp(),100,'fx-db-real-clock',120)
-where game_session_id=${sqlLiteral(fixture.gameTwoId)}::uuid;
+where game_session_id=${sqlLiteral(fixture.realClockGameId)}::uuid;
 select pg_temp.fx_assert_v1(
   (select count(*)=1 and bool_and(fixing_effective_at=(select effective_at from fx_real_boundary)) from fx_real_claim),
   'actual clock claims exactly the awaited fixing');
@@ -2923,7 +2967,7 @@ select pg_temp.fx_assert_v1(
 create temporary table fx_real_next_claim on commit drop as
 select claim_row.* from private.fx_runtime_state as runtime
 cross join lateral public.claim_due_fx_games_v1(runtime.next_due_at,100,'fx-db-real-next-input',120) as claim_row
-where runtime.game_session_id=${sqlLiteral(fixture.gameTwoId)}::uuid and claim_row.game_session_id=runtime.game_session_id;
+where runtime.game_session_id=${sqlLiteral(fixture.realClockGameId)}::uuid and claim_row.game_session_id=runtime.game_session_id;
 create temporary table fx_real_next_input on commit drop as
 select loaded.* from fx_real_next_claim as claim_row
 cross join lateral public.load_fx_fixing_input_v1(claim_row.game_session_id,claim_row.fixing_local_date,claim_row.lease_token) as loaded;
@@ -2933,7 +2977,7 @@ select pg_temp.fx_assert_v1(
     cross join fx_real_receipt as receipt where shock.item->>'shockId'=receipt.public_key),
   'next input omits the actually consumed queue receipt');
 select pg_temp.fx_assert_v1(public.fail_fx_fixing_claim_v1(
-  ${sqlLiteral(fixture.gameTwoId)}::uuid,(select fixing_local_date from fx_real_next_claim),(select lease_token from fx_real_next_claim),'fixture_real_next_release',clock_timestamp()),
+  ${sqlLiteral(fixture.realClockGameId)}::uuid,(select fixing_local_date from fx_real_next_claim),(select lease_token from fx_real_next_claim),'fixture_real_next_release',clock_timestamp()),
   'next-input proof releases its lease');
 select 'FX_REAL_CLOCK_STORY_PROOF_PASSED';
 `;

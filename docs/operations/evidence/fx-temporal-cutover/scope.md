@@ -190,3 +190,17 @@ from the seeded parameters, as the established serial fixture does. It does not
 update/delete existing policies, bypass immutable triggers, or change the product
 time predicate. The second full replay removes that fixture before serial/long
 qualification. Local tests now25; new exact-head runtime proof remains required.
+
+
+## Dedicated real-clock game fixture
+
+Run `44037890405` at `fcfac57f` passed all independent-session concurrency
+cases (bootstrap, lifecycle and daily-worker orderings) and both full migration
+replays. The long proof then correctly rejected changing a previously bootstrapped
+game's timezone: `FX_TIMEZONE_IMMUTABLE_AFTER_BOOTSTRAP`. The correction uses a
+new isolated synthetic game, selecting its real named timezone before any
+bootstrap, with its own complete neutral macro cohort and entitlement. Existing
+fixture timezones/evidence and the immutable timezone trigger remain untouched.
+Actual queue authorization, real elapsed-boundary wait, economic movement,
+one-time consumption and replay predicates remain required. Fresh exact-head
+hosted qualification is still needed; no live/staging action or recovery claim.

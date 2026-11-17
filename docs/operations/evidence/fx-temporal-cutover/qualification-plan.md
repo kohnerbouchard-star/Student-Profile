@@ -109,3 +109,11 @@ committed fixtures before the long rollback-only proof. Concurrent legacy90-row
 preservation remains pending: the canonical schema rightly forbids inserting
 historical rates. A separate pre-canonical seeded replay is required; immutable
 triggers are not disabled. New exact-head hosted qualification remains required.
+
+
+Run `44037890405` confirms both worker/bootstrap orderings and lifecycle races
+passed on PostgreSQL, plus both replays. Long-proof qualification failed before
+its wait because timezone cannot change after bootstrap. The revised extension
+creates a dedicated game with timezone set before bootstrap; it does not bypass
+the immutability trigger or mutate the earlier serial fixture. Its real-clock
+proof remains unqualified until the corrected exact-head run passes.
