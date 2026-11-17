@@ -61,12 +61,12 @@ jobs:
         run: npx --no-install supabase start --workdir backend --exclude studio,imgproxy,inbucket,storage-api,edge-runtime,logflare,vector,supavisor
       - name: Replay all forward migrations once
         run: npx --no-install supabase db reset --workdir backend --local
+      - name: Exercise real independent-session FX lifecycle races
+        run: node scripts/fx-temporal-cutover-concurrency.mjs
       - name: Replay all forward migrations twice
         run: npx --no-install supabase db reset --workdir backend --local
       - name: Run rollback-only FX acceptance and bounded real-clock Story consumption
         run: node scripts/canonical-fx-authority-database.mjs --real-clock-story-proof
-      - name: Exercise real independent-session FX lifecycle races
-        run: node scripts/fx-temporal-cutover-concurrency.mjs
       - name: Lint rebuilt local schema
         run: npx --no-install supabase db lint --workdir backend --local --level warning --fail-on error
       - name: Destroy disposable stack

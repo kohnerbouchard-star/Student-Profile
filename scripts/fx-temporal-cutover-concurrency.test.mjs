@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {assertFxRaceEnvironment} from './fx-temporal-cutover-concurrency.mjs';
+import {readFxResumeBoundary,assertFxRaceEnvironment,renderFxRaceApply} from './fx-temporal-cutover-concurrency.mjs';
 const env={GITHUB_ACTIONS:'true',GITHUB_EVENT_NAME:'pull_request',GITHUB_REPOSITORY:'kohnerbouchard-star/Student-Profile'};
 const sha='a'.repeat(40),project='fixture',time=Date.parse('2026-11-17T00:00:00Z');
 const event={pull_request:{number:1005,draft:true,head:{ref:'fix/fx-bootstrap-temporal-provenance',sha,repo:{full_name:env.GITHUB_REPOSITORY}},base:{ref:'main',repo:{full_name:env.GITHUB_REPOSITORY}}}};
@@ -20,13 +20,16 @@ for(const [name,mutate] of [
 ])test(`rejects ${name}`,()=>{const args=valid();mutate(args);assert.throws(()=>assertFxRaceEnvironment(...args));});
 test('races use actual independent backends and lifecycle triggers without bypasses',()=>{
  const source=readFileSync('scripts/fx-temporal-cutover-concurrency.mjs','utf8');
- for(const required of ['wait_event_type=\'Lock\'','pg_terminate_backend','idle_in_transaction_session_timeout','Promise.all([a.done,b.done])','contend(bootstrap,bootstrap)','contend(bootstrap,pause)','contend(pause,bootstrap)','contend(bootstrap,resume)','contend(resume+`select next_due_at','replay after pause must not reschedule paused game','replay must preserve resume boundary','supabase_migrations.schema_migrations'])assert(source.includes(required),required);
- assert(!/disable trigger|session_replication_role|drop constraint|update private\.fx_runtime_state/i.test(source));
+ for(const required of ['wait_event_type=\'Lock\'','pg_terminate_backend','idle_in_transaction_session_timeout','Promise.all([a.done,b.done])','contend(bootstrap,bootstrap)','contend(bootstrap,pause)','contend(pause,bootstrap)','contend(bootstrap,resume)','contend(resume+`select json_build_object','replay after pause must not reschedule paused game','replay must preserve resume boundary','supabase_migrations.schema_migrations'])assert(source.includes(required),required);
+ assert(!/disable trigger|session_replication_role|drop constraint/i.test(source));
+ assert.equal((source.match(/update private\.fx_runtime_state/g)||[]).length,1);
+ assert(source.includes("update private.fx_runtime_state set next_due_at=clock_timestamp()-interval '1 day' where game_session_id='${workerGame}'"));
 });
 test('bootstrap locks canonical lifecycle before advisory/runtime and never schedules paused games',()=>{
  const migration=readFileSync('backend/supabase/migrations/20261117035856_fx_bootstrap_temporal_provenance.sql','utf8');
  const lifecycle=migration.indexOf('select game_row.lifecycle_state into v_lifecycle_state');
- const gameLock=migration.indexOf('for update;',lifecycle);
+ const gameLock=migration.indexOf('for no key update;',lifecycle);
+ assert(!migration.slice(lifecycle,gameLock).includes('for update;'),'Game lock must remain FK KEY SHARE compatible');
  const advisory=migration.indexOf('perform pg_advisory_xact_lock(');
  const runtime=migration.indexOf('from private.fx_runtime_state as runtime');
  assert(lifecycle>0&&gameLock>lifecycle&&advisory>gameLock&&runtime>advisory);
@@ -35,4 +38,30 @@ test('bootstrap locks canonical lifecycle before advisory/runtime and never sche
  assert.match(migration,/order by\s+fixing_row.effective_at desc,\s+fixing_row.calculated_at desc,\s+fixing_row.id desc\s+limit 1/);
  const source=readFileSync('scripts/fx-temporal-cutover-concurrency.mjs','utf8');
  assert(source.includes('initial paused bootstrap must not schedule'));
+});
+
+test('worker races use real claim load apply and preserve fencing',()=>{
+ const source=readFileSync('scripts/fx-temporal-cutover-concurrency.mjs','utf8');
+ for(const term of ["['worker-first','bootstrap-first']",'contend(lock,replay,worker)',"contend(replay,`begin;${lock}${worker}commit;`)",
+ 'claim_due_fx_games_v1','load_fx_fixing_input_v1','apply_fx_fixing_v1','FX_RACE_CLAIM_MISSING','FX_RACE_APPLY_MISSING','FX_RACE_APPLY_NOT_IDEMPOTENT',
+ 'bootstrap replay must not rewind daily pointer','bootstrap replay must preserve worker schedule','successful worker must release its lease','exactly one daily fixing'])assert(source.includes(term),term);
+ assert(!/insert into public\.fx_fixings|set lease_token/i.test(source));
+ const canonical=readFileSync('scripts/canonical-fx-authority-database.mjs','utf8');
+ const rendered=renderFxRaceApply(canonical,'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+ assert(rendered.includes('from fx_race_claim'));assert(rendered.includes('join fx_race_input'));
+ assert(!rendered.includes('${'));assert(rendered.includes("'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid"));
+ assert.throws(()=>renderFxRaceApply('missing markers','aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'));
+ assert.throws(()=>renderFxRaceApply(canonical,"bad';drop table"));
+});
+test('serial shock receipt avoids reserved authorization alias and preserves comparison',()=>{
+ const source=readFileSync('scripts/canonical-fx-authority-database.mjs','utf8');
+ assert(!/as\s+authorization\b/i.test(source));
+ assert.match(source,/persisted\.authorized_at\s*=\s*receipt\.authorized_at/);
+ assert.match(source,/persisted\.authorization_hash\s*=\s*receipt\.authorization_hash/);
+ assert.match(source,/persisted\.eligible_at\s*=\s*receipt\.eligible_at/);
+});
+
+test('tagged resume boundary ignores barrier output and fails closed on missing/ambiguous values',()=>{
+ assert.equal(readFxResumeBoundary('1\n{"resumeDue":"2026-11-17 08:00:00+00"}\nHOLDER_READY\n'),'2026-11-17 08:00:00+00');
+ for(const output of ['HOLDER_READY\n','{"resumeDue":null}\nHOLDER_READY\n','{"resumeDue":"x"}\n{"resumeDue":"y"}\n'])assert.throws(()=>readFxResumeBoundary(output));
 });

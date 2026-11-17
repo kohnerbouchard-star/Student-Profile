@@ -2628,10 +2628,10 @@ select pg_temp.fx_assert_v1(
     select 1
     from fx_after_daily_resume_input as loaded
     cross join lateral jsonb_array_elements(loaded.engine_input -> 'storyShocks') as shock(item)
-    join public.fx_story_shock_authorizations as authorization
-      on authorization.public_key = shock.item ->> 'shockId'
-    where authorization.game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid
-      and authorization.command_key = 'fx-db-consumable-shock-v1'
+    join public.fx_story_shock_authorizations as shock_auth
+      on shock_auth.public_key = shock.item ->> 'shockId'
+    where shock_auth.game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid
+      and shock_auth.command_key = 'fx-db-consumable-shock-v1'
   ),
   'next fixing input includes actual queued shock unchanged and omits already consumed shock'
 );

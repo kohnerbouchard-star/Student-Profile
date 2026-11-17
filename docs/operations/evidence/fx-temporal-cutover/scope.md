@@ -144,3 +144,25 @@ Neither new hosted proof has run yet. True daily-worker/bootstrap contention and
 legacy90-row concurrent preservation remain pending; do not mark recovery or
 completion. Existing lint --fail-on error, two complete replays, production denial
 and no-alias-rehearsal boundaries remain unchanged. No live/staging activity.
+
+
+## Reserved SQL alias and worker-lock follow-up
+
+At published `40da8cea`, run `44029739972` passed both migration replays but
+failed parsing the receipt assertion's reserved `authorization` alias. Corrected
+alias references preserve every predicate. PostgreSQL parser validation covers
+rendered default/long SQL and reproduces the original syntax failure.
+
+The concurrency harness now includes real daily-worker/bootstrap races in both
+orderings, including worker apply while bootstrap is already blocked on runtime.
+Game locking uses `FOR NO KEY UPDATE` so daily-fixing foreign-key `KEY SHARE`
+checks do not deadlock against bootstrap; lifecycle mutations still serialize.
+Independent review identified and verified this correction. Runtime qualification
+is pending, as is legacy90-rate concurrency requiring a separately seeded replay.
+No production/staging/alias rehearsal activity, history rewrite, guard suppression,
+or completion claim. Both full replays and strict whole-schema lint remain required.
+
+Independent review also caught a holder-barrier marker mixed into the resume
+boundary comparison. A tagged JSON boundary parser now rejects missing, null or
+ambiguous output; its regression brings local concurrency/guard tests to23.
+The fixture predicates and runtime safety assertions are unchanged.

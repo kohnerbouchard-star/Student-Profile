@@ -45,10 +45,10 @@ connections; preserve all existing timeout guards and reject hosted URLs.
 1. Implemented for a policy-baseline fixture, not yet executed: two bootstraps, same fresh fixture, overlapping transaction windows. Assert
    one initialized/one replayed, exactly one bootstrap and11values/10links,
    identical returned canonical pointer. The fixture has zero legacy rows; concurrent preservation of 90 legacy source rows remains pending (serial preservation already exists).
-2. Pending: bootstrap replay vs daily worker. Hold runtime row lock in worker, start
+2. Implemented, not yet executed: bootstrap replay vs daily worker. Hold runtime row lock in worker, start
    replay, publish daily fixing then commit. Replay must return latest fixing,
    never restore bootstrap or replace next_due_at with an earlier boundary.
-3. Pending: reverse order of race2: bootstrap acquires its locks first; worker waits and
+3. Implemented, not yet executed: reverse order of race2: bootstrap acquires its locks first; worker waits and
    then operates on the canonical pointer. Check no deadlock, lost lease or
    skipped/duplicated fixing.
 4. Implemented, not yet executed: lifecycle pause/resume vs bootstrap/replay in both orderings, plus initially paused bootstrap. Paused runtime
@@ -61,7 +61,7 @@ connections; preserve all existing timeout guards and reject hosted URLs.
 
 Static review exposed pre-existing replay rescheduling paused games. This
 unmerged candidate now locks the game lifecycle before bootstrap advisory and
-runtime locks, matching lifecycle-trigger order, and retains a null due time
+runtime locks, matching lifecycle-trigger order. The game lock is `FOR NO KEY UPDATE`, compatible with the worker foreign-key `KEY SHARE`, and retains a null due time
 in all three paused bootstrap/replay schedule paths. Active scheduling and
 latest-fixing pointer selection remain unchanged. This bounded correction
 requires the new actual PostgreSQL race proof; it is not a waived test. Candidate is not rollout-ready until
@@ -87,3 +87,25 @@ and fail if those inputs changed. Never run against all games: the genuine
 zero-macro game must remain blocked. Resolve quota and missing migrations as
 separate release prerequisites. Observe actual future fixing and Story claims
 before declaring the incident recovered.
+
+
+## Run 44029739972 follow-up
+
+Both complete replays passed, then the new receipt assertion failed parsing an
+unquoted reserved `authorization` alias before the real-time wait. The alias is
+corrected without changing its predicates. Generated default and opt-in SQL were
+parsed with PostgreSQL parser pglast7.23; restoring the old alias reproduces the
+syntax rejection. No runtime success is inferred from parsing.
+
+Two additional baseline games exercise daily worker/bootstrap replay in both
+orderings with real claim/load/apply and idempotent apply, exact cardinalities,
+lease release and pointer/schedule preservation. Worker-first deliberately holds
+runtime, waits for bootstrap to block, then inserts the validated daily fixing.
+This exposed the implicit FK game-row lock hazard: `FOR UPDATE` would deadlock;
+`FOR NO KEY UPDATE` retains lifecycle serialization and permits FK `KEY SHARE`.
+See PostgreSQL17 [lock compatibility](https://www.postgresql.org/docs/17/explicit-locking.html).
+Quick races run between the two full replays, so the second replay clears their
+committed fixtures before the long rollback-only proof. Concurrent legacy90-row
+preservation remains pending: the canonical schema rightly forbids inserting
+historical rates. A separate pre-canonical seeded replay is required; immutable
+triggers are not disabled. New exact-head hosted qualification remains required.

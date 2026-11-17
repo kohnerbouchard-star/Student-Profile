@@ -55,10 +55,12 @@ begin
 
   -- Match lifecycle-trigger lock order: game row, bootstrap lock, runtime row.
   -- Read lifecycle under lock so a concurrent pause cannot be rescheduled.
+  -- NO KEY UPDATE permits the fixing worker FK KEY SHARE while it holds runtime;
+  -- FOR UPDATE would deadlock that worker against this runtime acquisition.
   select game_row.lifecycle_state into v_lifecycle_state
   from public.game_sessions as game_row
   where game_row.id = p_game_session_id
-  for update;
+  for no key update;
   if not found then
     raise exception 'FX_BOOTSTRAP_GAME_NOT_FOUND' using errcode = 'P0001';
   end if;
