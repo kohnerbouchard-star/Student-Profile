@@ -84,3 +84,14 @@ rejects aborted/session-obsolete Market reads before snapshot mutation; newer
 directory reads supersede earlier ones. Terminal aggregate replacement aborts
 an outstanding page. Real adapter/API cases cover 1,001 assets, latest detail,
 abort, session rotation and superseding refresh. No sanitizer limit is relaxed.
+
+## Hosted Chromium fixture correction
+
+At published head `b453dd50`, seven retained Chromium workflow jobs each reported
+four failures in the new pagination spec, with 301 existing cases passing and
+11 existing skips. The fixture overrode bootstrap with raw preview data lacking
+route capabilities, so the real terminal correctly redirected Market to Dashboard.
+The spec now uses the existing funded business Market fixture, advertises Market
+read/search capabilities, and asserts the Market route and enabled Load more
+control before exercising pagination. Assertions, timeouts, workflow gates, and
+runtime behavior are not relaxed. Latest-head hosted rerun remains required.

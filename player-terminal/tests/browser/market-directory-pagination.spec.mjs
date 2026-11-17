@@ -3,14 +3,17 @@ async function setup(page) {
   await page.route('**/directory-fixture', route => route.fulfill({contentType:'text/html',body:'<!doctype html><div id="playerTerminal"></div>'}));
   await page.goto('/directory-fixture#market');
   await page.evaluate(async()=>{
-    const [{createPlayerTerminal},{installMarketDirectoryFlow},{installLocalControlsFlow},{PlayerApi},{previewData}]=await Promise.all([
-      import('/src/app.js'),import('/src/features/market/market-directory-flow.js'),import('/src/features/local-controls/local-controls-flow.js'),import('/src/api/player-api.js'),import('/src/data/preview-data.js')]);
-    const data=structuredClone(previewData);data.market.assets=data.market.assets.slice(0,2);
+    const [{createPlayerTerminal},{installMarketDirectoryFlow},{installLocalControlsFlow},{PlayerApi},{businessMarketData}]=await Promise.all([
+      import('/src/app.js'),import('/src/features/market/market-directory-flow.js'),import('/src/features/local-controls/local-controls-flow.js'),import('/src/api/player-api.js'),import('/tests/fixtures/business-market-fixture.mjs')]);
+    const data=businessMarketData();
+    data.market.assets.push({...structuredClone(data.market.assets[0]),id:'second',symbol:'SECOND',name:'Second instrument'});
+    data.capabilities.endpointKeys.market=true;
+    data.capabilities.actions.marketSearch=true;
     data.market.pagination={offset:0,limit:2,returned:2,hasMore:true,nextOffset:2};
     PlayerApi.prototype.bootstrap=async function(){return this.freshness.track(structuredClone(data),this.freshness.capture([]));};
     PlayerApi.prototype.loadRoute=async function(){return this.freshness.track({data:structuredClone(data),errors:{}},this.freshness.capture(['market']));};
     const mount=document.getElementById('playerTerminal');
-    const terminal=createPlayerTerminal({mount,config:{usePreviewData:true,environment:'development'}});
+    const terminal=createPlayerTerminal({mount,config:{usePreviewData:true,environment:'development',capabilities:data.capabilities}});
     await new Promise(r=>setTimeout(r,0));
     let release,calls=0;
     const config={usePreviewData:false,authenticated:true,csrfToken:'a'.repeat(43),gameSessionId:'fixture-game',requestTimeoutMs:5000,apiCall:async context=>{
@@ -22,6 +25,9 @@ async function setup(page) {
     const flow=installMarketDirectoryFlow({mount,terminal,config});
     globalThis.probe={terminal,flow,controls,release:()=>release(),calls:()=>calls};
   });
+  await expect(page).toHaveURL(/#market$/);
+  await expect(page.locator('[data-page="market"]')).toBeVisible();
+  await expect(page.getByRole('button',{name:'Load more instruments'})).toBeEnabled();
 }
 test('load more retains search and shows newly loaded matching assets',async({page})=>{
   await setup(page);
