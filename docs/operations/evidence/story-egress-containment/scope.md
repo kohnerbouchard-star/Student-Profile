@@ -55,8 +55,8 @@ TypeScript files. When stacked after it, its immediate-retry database fixture
 must advance only the rollback fixture's retry time before asserting reacquisition;
 all replay/ownership/stale-token assertions remain required.
 
-- Seven source/workflow-contract tests, 16 runner safety tests and one executable
-  parser/resolver compatibility test pass locally (24 total).
+- Eight source/workflow-contract tests, 17 runner safety tests, one executable
+  parser/resolver compatibility test and three existing redactor tests pass locally (29 total).
 - Migration validation: 463 unique versions; whitespace check passes.
 - Rollback-only PostgreSQL proof covers delay boundaries, high historical attempt
   counts, frozen identity, active lease priority, dependency holds, release
@@ -83,8 +83,26 @@ migration versions before running serial and concurrent tests. Sessions have
 server/client deadlines and named-backend cleanup. Fixtures are rolled back or
 removed within the disposable database; teardown uses --no-backup.
 
-Raw CLI/database output remains in temporary runner files, not uploaded or
-printed. The workflow emits a pass sentinel or non-sensitive failure. Independent
+Raw CLI/database output remains in temporary runner files and is never uploaded
+or printed. On failure, the existing fail-closed redactor sanitizes and validates
+the entire log before a bounded 120-line sanitized tail is printed. The redactor
+and its regression test are locked read-only in this PR authority. Independent
 source and workflow review found no remaining source blocker; exact-head real
 PostgreSQL CI must still pass before a merge decision. No release approval is
 implied by a draft PR or passing disposable tests.
+
+## Qualification follow-up
+
+Exact-head dedicated run 44016740068 passed all 24 initial local-contract tests,
+migration validation and disposable PostgreSQL startup. Acceptance failed before
+its diagnostic could be observed because the original workflow suppressed raw
+output. A reviewed sanitized diagnostic path is added without relaxing any gate;
+the underlying acceptance cause is not yet claimed or guessed.
+
+A separate scratch Git regression reproduces a freshness-check defect: clean
+`git status` updates the `.git` directory mtime while the immutable checkout HEAD
+file stays unchanged. The harness now uses the HEAD file marker rather than that
+mutable directory. Exact SHA, clean-tree, Docker identity/image, and stale-container
+rejection remain enforced. This is a reproduced defect consistent with the early
+CI failure, not confirmation of the original suppressed exception. Sanitized CI
+diagnostics and exact-head database rerun remain required.

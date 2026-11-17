@@ -44,3 +44,14 @@ test('dedicated CI remains PR-only, credential-free and disposable',()=>{
  for(const forbidden of ['workflow_dispatch:','pull_request_target:','secrets.','supabase link','--project-ref','db push','SUPABASE_ACCESS_TOKEN:','environment:','actions/upload-artifact'])assert(!workflow.includes(forbidden),forbidden);
  for(const required of ['contents: read','persist-credentials: false','--no-install','supabase stop --workdir backend --no-backup','github.event.pull_request.head.sha','fix/story-dependency-retry-containment','RUNNER_TEMP'])assert(workflow.includes(required),required);
 });
+
+test('failed CI prints only bounded diagnostics after fail-closed redaction',()=>{
+ const workflow=readFileSync('.github/workflows/story-retry-containment.yml','utf8');
+ for(const name of ['start','acceptance']){
+  const safe=`node scripts/redact-econovaria-ci-log.mjs "$RUNNER_TEMP/story-retry-${name}.log" >"$RUNNER_TEMP/story-retry-${name}.sanitized.log"`;
+  const tail=`tail -n 120 "$RUNNER_TEMP/story-retry-${name}.sanitized.log"`;
+  assert(workflow.includes(safe));assert(workflow.indexOf(tail)>workflow.indexOf(safe));
+  assert(!workflow.includes(`tail -n 120 "$RUNNER_TEMP/story-retry-${name}.log"`));
+ }
+ assert(workflow.includes('scripts/redact-econovaria-ci-log.test.mjs'));
+});

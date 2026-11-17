@@ -1,7 +1,7 @@
 {
   "base": "9df2064d6835b64ab9f7a3bde19ed1da5356cded",
-  "sourceHead": "bca318142bc283dd4aa07be2ea0bd3c5ac3fe8b3",
-  "derivation": "Exact complete PR1004 scope including authority and inventory metadata; main-target opened/synchronize/reopened filters and ordered path globs. Manually evaluated all job conditions for same-repository fix/story-dependency-retry-containment PR1004. 33 selected workflow families, 59 active workflow/job tuples, 6 guarded job templates (one disabled two-value matrix), no active matrices. CodeQL remains dynamic external analysis. No gate is waived; live/dispatch-only jobs remain guarded.",
+  "sourceHead": "95bc973f0578221427c2cb06c9c7687399468807",
+  "derivation": "Exact complete PR1004 scope including authority and inventory metadata; main-target opened/synchronize/reopened filters and ordered path globs. Manually evaluated all job conditions for same-repository fix/story-dependency-retry-containment PR1004. 33 selected workflow families, 59 active workflow/job tuples, 6 guarded job templates (one disabled two-value matrix), no active matrices. CodeQL remains dynamic external analysis. No gate is waived; live/dispatch-only jobs remain guarded. Follow-up changes only the already-covered workflow, harness/tests and evidence; no trigger/job/matrix condition changes. Existing redactor and its test are additional read-only authority locks.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-api-check.yml",

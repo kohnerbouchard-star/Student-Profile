@@ -16,6 +16,8 @@
     "docs/operations/evidence/story-egress-containment/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/redact-econovaria-ci-log.mjs",
+    "scripts/redact-econovaria-ci-log.test.mjs",
     "scripts/story-retry-containment-compatibility.test.mjs",
     "scripts/story-retry-containment-concurrency.mjs",
     "scripts/story-retry-containment-concurrency.test.mjs",
@@ -31,6 +33,8 @@
     "docs/operations/evidence/story-egress-containment/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/redact-econovaria-ci-log.mjs",
+    "scripts/redact-econovaria-ci-log.test.mjs",
     "scripts/story-retry-containment-compatibility.test.mjs",
     "scripts/story-retry-containment-concurrency.mjs",
     "scripts/story-retry-containment-concurrency.test.mjs",
@@ -197,7 +201,9 @@
     "CodeQL"
   ],
   "readOnlyPaths": [
-    "scripts/verify-player-cross-cutting-authority.mjs",
-    "scripts/player-cross-cutting-authority.test.mjs"
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/redact-econovaria-ci-log.mjs",
+    "scripts/redact-econovaria-ci-log.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
   ]
 }

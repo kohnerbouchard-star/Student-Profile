@@ -25,6 +25,12 @@ export function assertDisposableStoryEnvironment(env, sha, event, context, conta
   assert(Date.parse(container.Created) >= checkoutTime, 'Preexisting database forbidden');
 }
 
+export function readStoryCheckoutMarker(headPath) {
+  const marker=statSync(headPath);
+  assert(marker.isFile(), 'Git HEAD checkout marker must be a file');
+  return marker.mtimeMs;
+}
+
 export function assertCleanStoryCheckout(status) {
   assert.equal(status, '', 'Dirty or untracked source cannot qualify an exact PR head');
 }
@@ -34,12 +40,13 @@ export async function runConcurrency() {
   const sha=run('git',['rev-parse','HEAD']);
   const event=JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH,'utf8'));
   assertStoryInvocation(process.env,sha,event);
+  const checkoutTime=readStoryCheckoutMarker(run('git',['rev-parse','--git-path','HEAD']));
   assertCleanStoryCheckout(run('git',['status','--porcelain','--untracked-files=all']));
   const project=readFileSync('backend/supabase/config.toml','utf8').match(/^project_id = "([\w-]+)"$/m)?.[1];
   assert(project);
   const container=JSON.parse(run('docker',['inspect',`supabase_db_${project}`]))[0];
   assertDisposableStoryEnvironment(process.env,sha,event,
-    JSON.parse(run('docker',['context','inspect']))[0],container,project,statSync('.git').mtimeMs);
+    JSON.parse(run('docker',['context','inspect']))[0],container,project,checkoutTime);
   // Rebuild this already-verified disposable DB from the clean exact-head source.
   // Never rely on a container label or an external attestation as schema proof.
   execFileSync('npx',['--no-install','supabase','db','reset','--workdir','backend','--local'],

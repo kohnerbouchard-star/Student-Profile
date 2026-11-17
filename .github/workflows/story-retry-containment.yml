@@ -48,20 +48,24 @@ jobs:
           npm install --global npm@10.9.8
           npm ci --ignore-scripts
           test "$(npx --no-install supabase --version)" = 2.109.1
-          node --test scripts/story-retry-containment-contract.test.mjs scripts/story-retry-containment-concurrency.test.mjs scripts/story-retry-containment-compatibility.test.mjs
+          node --test scripts/story-retry-containment-contract.test.mjs scripts/story-retry-containment-concurrency.test.mjs scripts/story-retry-containment-compatibility.test.mjs scripts/redact-econovaria-ci-log.test.mjs
           node scripts/validate-supabase-migrations.mjs
       - name: Start fresh disposable PostgreSQL only
         run: |
           set -euo pipefail
           docker info >/dev/null
           if ! npx --no-install supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta >"$RUNNER_TEMP/story-retry-start.log" 2>&1; then
-            echo '::error::Disposable PostgreSQL startup failed. Connection output is not published.'
+            node scripts/redact-econovaria-ci-log.mjs "$RUNNER_TEMP/story-retry-start.log" >"$RUNNER_TEMP/story-retry-start.sanitized.log"
+            tail -n 120 "$RUNNER_TEMP/story-retry-start.sanitized.log"
+            echo '::error::Disposable PostgreSQL startup failed. Only validated sanitized diagnostics were printed.'
             exit 1
           fi
       - name: Rebuild exact-head schema and exercise serial and concurrent contracts
         run: |
           set -euo pipefail
           if ! node scripts/story-retry-containment-concurrency.mjs >"$RUNNER_TEMP/story-retry-acceptance.log" 2>&1; then
+            node scripts/redact-econovaria-ci-log.mjs "$RUNNER_TEMP/story-retry-acceptance.log" >"$RUNNER_TEMP/story-retry-acceptance.sanitized.log"
+            tail -n 120 "$RUNNER_TEMP/story-retry-acceptance.sanitized.log"
             echo '::error::Disposable Story database acceptance failed. No live project was used.'
             exit 1
           fi
