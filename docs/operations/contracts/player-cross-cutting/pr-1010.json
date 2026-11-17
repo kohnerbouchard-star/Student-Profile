@@ -23,6 +23,7 @@
     "scripts/business-phase10-player-store-cutover-contract.mjs",
     "scripts/finite-source-contract-readers.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/roster-connected/sources.json",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
@@ -40,6 +41,7 @@
     "scripts/business-phase10-player-store-cutover-contract.mjs",
     "scripts/finite-source-contract-readers.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/roster-connected/sources.json",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredChecks": [

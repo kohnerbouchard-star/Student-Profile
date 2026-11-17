@@ -1,7 +1,7 @@
 {
   "base": "03adc6891995fe1d780fe34629b1daf14470ea39",
   "sourceHead": "457d985604fccb5650076935139bf66d701cba1d",
-  "derivation": "Current main pull_request event/branch/path filters on complete PR1010 scope: 36 workflow families, 76 active job tuples and 4 guarded skips. No matrices. Closed-only Branch Hygiene excluded; external CodeQL retained. No workflow, permission, job or trigger changes. Source and metadata do not authorize merge, deployment or live writes.",
+  "derivation": "Current main pull_request event/branch/path filters on complete PR1010 scope: 36 workflow families, 76 active job tuples and 4 guarded skips. No matrices. Closed-only Branch Hygiene excluded; external CodeQL retained. No workflow, permission, job or trigger changes. Source and metadata do not authorize merge, deployment or live writes. Scope also includes strict Roster source-pin reconciliation: freeze this reviewed complete input checkpoint, then update only both integrated source pins to its exact SHA/tree. Runtime equivalence and all gates remain unchanged.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-browser-e2e.yml",
