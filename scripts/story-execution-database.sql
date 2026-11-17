@@ -2,9 +2,9 @@
 begin;
 insert into public.staff_users(id,supabase_auth_user_id,email,display_name) values
 ('72000000-0000-4000-8000-000000000001','72000000-0000-4000-8000-000000000002','story-execution@example.test','Story execution fixture');
-insert into public.game_sessions(id,owner_staff_user_id,name,status) values
-('72000000-0000-4000-8000-000000000010','72000000-0000-4000-8000-000000000001','Story A','active'),
-('72000000-0000-4000-8000-000000000011','72000000-0000-4000-8000-000000000001','Story B','active');
+insert into public.game_sessions(id,owner_staff_user_id,name,status,lifecycle_state,game_join_code_status) values
+('72000000-0000-4000-8000-000000000010','72000000-0000-4000-8000-000000000001','Story A','disabled','draft','pending'),
+('72000000-0000-4000-8000-000000000011','72000000-0000-4000-8000-000000000001','Story B','disabled','draft','pending');
 insert into public.storylines(id,key,title,description,is_active) values
 ('72000000-0000-4000-8000-000000000030','story_execution_fixture_v1','Story fixture','Rollback only',true);
 insert into public.storyline_events(id,storyline_id,event_key,title,description,act,sequence,trigger_type,scheduled_offset_seconds,priority,is_active) values
@@ -20,6 +20,23 @@ declare
  first_claim record; busy_claim record; retry_claim record; final_result record; replay_result record; other_claim record;
  old_token uuid; denied boolean; original_resolution uuid;
 begin
+ -- The canonical lifecycle trigger projects draft to disabled regardless of a
+ -- caller-supplied legacy status. Prove that guard before activating only these
+ -- non-joinable, rollback-only fixtures through matching lifecycle/status.
+ denied := false;
+ begin
+  perform public.claim_story_event_execution_v1(g,e,at_time,4,null,120);
+ exception when raise_exception then
+  if sqlerrm <> 'STORY_EXECUTION_GAME_NOT_MUTABLE' then raise; end if;
+  denied := true;
+ end;
+ if not denied then raise exception 'Draft game accepted Story execution'; end if;
+ update public.game_sessions set lifecycle_state='active', status='active'
+ where id in (g,other_game);
+ if (select count(*) from public.game_sessions where id in (g,other_game)
+     and lifecycle_state='active' and status='active' and game_join_code_status='pending') is distinct from 2 then
+  raise exception 'Story fixture lifecycle did not activate';
+ end if;
  select * into first_claim from public.claim_story_event_execution_v1(g,e,at_time,4,null,120);
  if first_claim.claim_outcome  is distinct from  'absent' then raise exception 'Expected absent'; end if;
  select * into first_claim from public.claim_story_event_execution_v1(g,e,at_time,4,plan,120);

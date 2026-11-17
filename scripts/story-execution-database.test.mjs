@@ -19,5 +19,14 @@ test('Story SQL is rollback-only and contains semantic assertions rather than mi
   assert.match(sql,/^\\set ON_ERROR_STOP on\nbegin;/);
   assert.match(sql,/rollback;\nselect 'STORY_EXECUTION_DATABASE_ACCEPTANCE_PASSED';\s*$/);
   assert.doesNotMatch(sql,/\bcommit\s*;/i);
-  for(const marker of ['Expected busy without token','Cross-game lease token accepted','Stale lease token accepted','Retry changed frozen identity or plan','Duplicate resolution','Replay overwrote result','Unexpected RPC privilege']) assert(sql.includes(marker));
+  for(const marker of ['Draft game accepted Story execution','Story fixture lifecycle did not activate','Expected busy without token','Cross-game lease token accepted','Stale lease token accepted','Retry changed frozen identity or plan','Duplicate resolution','Replay overwrote result','Unexpected RPC privilege']) assert(sql.includes(marker));
+});
+
+test('Story fixture honors canonical lifecycle and never disables database guards', () => {
+  const sql = readFileSync('scripts/story-execution-database.sql','utf8');
+  assert.match(sql,/status,lifecycle_state,game_join_code_status/);
+  assert.match(sql,/'disabled','draft','pending'/);
+  assert.match(sql,/set lifecycle_state='active', status='active'/);
+  assert.doesNotMatch(sql,/disable trigger|session_replication_role|alter function/i);
+  assert(sql.indexOf('Draft game accepted Story execution') < sql.indexOf("set lifecycle_state='active'"));
 });
