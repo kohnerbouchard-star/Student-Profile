@@ -41,8 +41,8 @@ No migration, RPC, route, permission, backend, data write or deployment change.
   Story/frozen-model coverage and narrow-screen wrapping were incorporated.
 - No hosted exact-head, live classroom, staging, or production result claimed.
 
-Next: draft publication and actual-number scope authority, independent final
-metadata review, all applicable exact-head hosted tests including desktop/mobile
+Next: publish the independently reviewed final metadata, then all applicable
+exact-head hosted tests including desktop/mobile
 browser checks, then coordinator-controlled merge. Do not deploy this branch.
 
 Local runtime attempts: Playwright desktop/mobile could not launch because the
@@ -50,3 +50,16 @@ pinned Chromium executable is absent. The new browser test is isolated component
 wrapping coverage, not full route responsiveness or real service acceptance.
 Full Edge checks require the frozen Supabase SDK download; backend smoke also
 needs the Deno executable on PATH. These remain gates, not waived checks.
+
+Publication: draft PR #1001 source `ba25b677c8042f921ccf2d5f6705d6e0450cb730`
+exactly matches reviewed source tree `e6dabef2e096c5fc8aa1504e17a6350bd3265c03`.
+Final full Player verify passes with the wrapping correction. Full Edge attempt
+with the pinned Deno executable fails fetching frozen Supabase SDK (connection
+refused). No package/lock/config changes were made. Actual-number metadata locks
+nine changed paths plus two read-only verifiers, derived from current PR path and
+branch filters: 23 workflow families, 45 active job tuples, three guarded skips,
+no matrices. All production/secret denials remain. Hosted qualification required.
+
+Independent final metadata review re-derived all 23 workflow families and 48 job
+tuples directly from current YAML and passed exact-lock and deny-flag checks.
+Authority regressions (16/16), actual-number verifier and architecture audit pass.
