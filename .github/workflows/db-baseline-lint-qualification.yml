@@ -5,15 +5,19 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened, converted_to_draft, ready_for_review]
     paths:
-      - "backend/tests/sql/baseline_temporary_context_lint_v1.sql"
       - ".github/workflows/db-baseline-lint-qualification.yml"
-      - "scripts/db-baseline-lint-qualification.mjs"
       - "backend/supabase/migrations/20261117050144_baseline_function_name_resolution_v1.sql"
       - "backend/tests/sql/baseline_function_name_resolution_v1.sql"
-      - "scripts/tests/test_db_baseline_name_resolution.py"
-      - "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md"
-      - "docs/operations/evidence/db-baseline-lint-v1/scope.md"
+      - "backend/tests/sql/baseline_temporary_context_lint_v1.sql"
+      - "docs/operations/contracts/player-cross-cutting/pr-1006.json"
+      - "docs/operations/evidence/db-baseline-lint-v1/ci-contract.json"
       - "docs/operations/evidence/db-baseline-lint-v1/qualification-authority.json"
+      - "docs/operations/evidence/db-baseline-lint-v1/scope.md"
+      - "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md"
+      - "scripts/db-baseline-lint-qualification.mjs"
+      - "scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs"
+      - "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs"
+      - "scripts/tests/test_db_baseline_name_resolution.py"
 
 permissions:
   contents: read

@@ -159,3 +159,30 @@ remain byte-identical. The exact positive 531-function and negative 532-function
 checks are not relaxed or recalibrated. Local source checks must not be treated
 as PostgreSQL proof; independent union review and fresh exact-head hosted
 qualification are required before merge. No main merge or live/staging action.
+
+## Exact-head results and authority correction (2026-11-17)
+
+Head `f295b78ecd5caa1cac16a4d49c3efd5807bc14cd` passed dedicated run
+`44045497674`, job `133910039308`: both replay phases, apply-twice definition
+and security equivalence, actual quote lifecycle/isolation, injected-invalid
+checker rejection, clean 531-function gate, rollback and teardown. Independent
+hosted review confirmed the bounded result. This is not an all-checks pass.
+
+Eleven other workflows failed: nine source jobs fell back to a legacy Player
+authority not bound to PR1006; Loan Review and Database Replay rejected the new
+migration absent from the exact suffix registry. The correction adds actual-PR
+metadata for the complete 13-path scope (15 locks including read-only verifier
+and tests), and registers the exact fifteenth suffix while preserving all
+previous fourteen identities and immutable environment manifests. Required
+checks remain derived from actual workflow filters, with production, mutation
+and secret permissions denied. No verifier, migration or runtime SQL changes.
+
+Local checks pass: 27 suffix tests including missing/modified suffix rejection,
+16 authority cases, 12 dedicated scope cases and five source regressions.
+Independent metadata review and fresh complete exact-head CI are required.
+No main merge, alias rehearsal, deployment or live/staging action.
+
+Normal reconciliation also retains merged Market #997 main `bdc00c8f`; no
+workflow or migration changed in that incoming main, so derived job coverage
+remains unchanged. Local root aggregate initially stopped on missing installed
+`@supabase/supabase-js`, not a source assertion; no passing aggregate claimed.
