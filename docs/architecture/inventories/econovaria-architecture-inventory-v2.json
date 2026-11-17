@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1624,
+    "sourceFiles": 1625,
     "edgeEntrypoints": 28,
     "handlerFiles": 60,
     "persistenceOutsideInfrastructure": 84,
@@ -3439,6 +3439,7 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/messages/MessagesController.js",
+          "admin/v2/src/routes/messages/MessagesPolicyPanel.js",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
