@@ -105,3 +105,14 @@ fail the job. Reviewer re-check found no new bypass. Full root tests initially
 stopped at five missing-SDK environment failures because this fresh worktree
 had no installed root dependencies; clean lockfile installation and rerun are
 pending. No full-root or PostgreSQL success is claimed at this point.
+
+Draft PR #1005 published at `115367ec24461491bd741ee7ebce589179007d4c`,
+with tree `dc90ab3269c6ce7d09444a3c89222e52473890d8` independently fetched
+and byte-identical to the reviewed local tree. Actual PR metadata confirms
+main target, same repository, draft state and eight changed paths. Qualification
+authority is now bound specifically to PR1005; no dispatch or live scope added.
+
+After clean root lockfile installation using a writable local npm cache, the
+full root `npm test` rerun passed on Node22.23.1/npm10.9.8. The five initial
+missing-SDK failures were resolved without source/test changes. The PR-binding
+contract also passes with actual PR1005. PostgreSQL results are still pending.
