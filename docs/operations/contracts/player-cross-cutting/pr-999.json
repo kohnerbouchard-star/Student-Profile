@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/story-replay-safety.yml",
     "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
     "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
     "backend/src/domains/storylines/server/stockTickStorylineRunner.ts",
@@ -18,9 +19,13 @@
     "docs/operations/evidence/story-default-durable-execution-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/story-execution-database.mjs",
+    "scripts/story-execution-database.sql",
+    "scripts/story-execution-database.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
+    ".github/workflows/story-replay-safety.yml",
     "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
     "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
     "backend/src/domains/storylines/server/stockTickStorylineRunner.ts",
@@ -30,6 +35,9 @@
     "docs/operations/evidence/story-default-durable-execution-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/story-execution-database.mjs",
+    "scripts/story-execution-database.sql",
+    "scripts/story-execution-database.test.mjs",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredChecks": [
@@ -130,6 +138,7 @@
     "Validator tests",
     "Story Replay Safety",
     "replay-safety",
+    "Story durable execution database acceptance",
     "Supply Chain Security",
     "dependency-review",
     "verify-and-attest",
@@ -198,6 +207,7 @@
     "trace-runtime-controls",
     "Validator tests",
     "replay-safety",
+    "Story durable execution database acceptance",
     "dependency-review",
     "verify-and-attest",
     "CodeQL"

@@ -1,7 +1,7 @@
 {
-  "base": "956ad02db949ae9c4cff7d709a18ec28d20c0788",
-  "sourceHead": "bf29b5e87002b3b6b8a68942f4969c6c5e18e8a7",
-  "derivation": "Current main-target pull_request event/branch/path filters evaluated against complete PR999 diff including metadata.32 workflow families,68 active tuples,4 guarded skips; no selected matrices. CodeQL external. No workflow edits. This does not certify live RPC deployment or database lease behavior.",
+  "base": "9df2064d6835b64ab9f7a3bde19ed1da5356cded",
+  "sourceHead": "e87c373f1acff5ea7c90054841e88d53679445fe",
+  "derivation": "Reconciled main9df2064d. Current main-target PR branch/event/path filters against complete PR999 diff derive32 families,69 active tuples,4 guarded skips; no selected matrices. New Story durable-database job must execute rollback-only lease RPC acceptance on fresh local pinned PostgreSQL after full-schema replay. No production credentials/deployments. Original source pin remains provenance only; final candidate exact head must qualify.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-business-supervision.yml",
@@ -464,6 +464,13 @@
       "job": "replay-safety",
       "checkName": "replay-safety",
       "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/story-replay-safety.yml",
+      "workflowName": "Story Replay Safety",
+      "job": "durable-database",
+      "checkName": "Story durable execution database acceptance",
+      "condition": "github.event_name == 'pull_request'"
     },
     {
       "workflow": ".github/workflows/supply-chain-security.yml",
