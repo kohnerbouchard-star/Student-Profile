@@ -1,0 +1,74 @@
+name: Story Retry Containment Disposable Database
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/story-retry-containment.yml'
+      - 'backend/supabase/migrations/**'
+      - 'backend/supabase/config.toml'
+      - 'scripts/story-retry-containment-*'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: story-retry-containment-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  disposable-postgres:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'fix/story-dependency-retry-containment'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Check out exact reviewed PR head without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - name: Install locked tooling and check local guards
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = pull_request
+          test "$GITHUB_BASE_REF" = main
+          test "$GITHUB_HEAD_REF" = fix/story-dependency-retry-containment
+          test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha }}'
+          test -z "$(git status --porcelain --untracked-files=all)"
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          test "$(npx --no-install supabase --version)" = 2.109.1
+          node --test scripts/story-retry-containment-contract.test.mjs scripts/story-retry-containment-concurrency.test.mjs scripts/story-retry-containment-compatibility.test.mjs
+          node scripts/validate-supabase-migrations.mjs
+      - name: Start fresh disposable PostgreSQL only
+        run: |
+          set -euo pipefail
+          docker info >/dev/null
+          if ! npx --no-install supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta >"$RUNNER_TEMP/story-retry-start.log" 2>&1; then
+            echo '::error::Disposable PostgreSQL startup failed. Connection output is not published.'
+            exit 1
+          fi
+      - name: Rebuild exact-head schema and exercise serial and concurrent contracts
+        run: |
+          set -euo pipefail
+          if ! node scripts/story-retry-containment-concurrency.mjs >"$RUNNER_TEMP/story-retry-acceptance.log" 2>&1; then
+            echo '::error::Disposable Story database acceptance failed. No live project was used.'
+            exit 1
+          fi
+          grep '^STORY_RETRY_CONCURRENCY_ACCEPTANCE_PASSED$' "$RUNNER_TEMP/story-retry-acceptance.log"
+      - name: Stop only this disposable stack without retaining backup
+        if: always()
+        run: |
+          if test -x node_modules/.bin/supabase; then
+            npx --no-install supabase stop --workdir backend --no-backup >"$RUNNER_TEMP/story-retry-stop.log" 2>&1
+          fi
