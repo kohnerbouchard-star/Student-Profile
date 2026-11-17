@@ -270,3 +270,26 @@ test("Crafting acquisition controls honor unavailable route capabilities", async
   expect(await page.evaluate(() => craftingGuidanceFixture.calls.includes("store"))).toBe(false);
   await page.evaluate(() => craftingGuidanceFixture.terminal.destroy());
 });
+
+for (const width of [1280, 390]) {
+  test(`recipe discloses each output at ${width}px without writes`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const writes = [];
+    page.on('request', (request) => { if (request.method() !== 'GET') writes.push(request.url()); });
+    const data = structuredClone(crafting);
+    data.recipes[0].name = 'Mixed batch';
+    data.recipes[0].outputQuantity = 5;
+    data.recipes[0].outputs = [
+      { name: 'Copper sheets', quantity: 3, outputKind: 'stackable' },
+      { name: 'Portable press', quantity: 2, outputKind: 'equipment' },
+    ];
+    await render(page, data);
+    const detail = page.locator('.player-terminal-recipe-detail');
+    await expect(detail.getByText('3 × Copper sheets', { exact: true })).toBeVisible();
+    await expect(detail.getByText('2 × Portable press', { exact: true })).toBeVisible();
+    await expect(detail.getByText('Item · Inventory', { exact: true })).toBeVisible();
+    await expect(detail.getByText('Equipment · Workshop', { exact: true })).toBeVisible();
+    await expect(detail.getByText('5 × Mixed batch', { exact: true })).toHaveCount(0);
+    expect(writes).toEqual([]);
+  });
+}

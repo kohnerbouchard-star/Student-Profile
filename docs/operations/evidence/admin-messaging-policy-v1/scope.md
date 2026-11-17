@@ -66,3 +66,13 @@ and asserts native required semantics; it retains the same edit/cancel/save and
 responsive-overflow checks. No runtime behavior or verifier is changed. All 68
 focused Messages tests pass. Local system Chromium launch fails at process
 singleton socket creation (EPERM); hosted browser rerun is still required.
+
+## Post-#998 main reconciliation (2026-11-17)
+
+Reconciled published `ff0001754e` with actual main `9df2064d6`. The only
+text conflict was the shared roadmap intake; both capability records are retained,
+and #998 merge status is explicitly reconciled without claiming live acceptance.
+Messaging source, browser correction, PR995 authority locks and qualification
+contract are preserved. Crafting source and PR998 qualification are inherited
+unchanged. Fresh union review, aggregate checks and exact-head hosted CI remain
+required. No merge, deployment, permission or runtime acceptance is implied.
