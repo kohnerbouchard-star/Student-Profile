@@ -5,6 +5,7 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened, converted_to_draft, ready_for_review]
     paths:
+      - "backend/tests/sql/baseline_temporary_context_lint_v1.sql"
       - ".github/workflows/db-baseline-lint-qualification.yml"
       - "scripts/db-baseline-lint-qualification.mjs"
       - "backend/supabase/migrations/20261117050144_baseline_function_name_resolution_v1.sql"
@@ -67,6 +68,10 @@ jobs:
         run: psql -X 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 -f backend/tests/sql/baseline_function_name_resolution_v1.sql
       - name: Replay complete corrected migration chain
         run: npx --no-install supabase db reset --workdir backend --local
+      - name: Prove temporary context and check complete CLI-covered function scope
+        run: psql -X 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 -f backend/tests/sql/baseline_temporary_context_lint_v1.sql
+      - name: Prove actual quote lifecycle, replay and game isolation
+        run: node scripts/multicurrency-funding-database.mjs
       - name: Lint rebuilt local schema
         run: npx --no-install supabase db lint --workdir backend --local --level warning --fail-on error
       - name: Destroy disposable stack

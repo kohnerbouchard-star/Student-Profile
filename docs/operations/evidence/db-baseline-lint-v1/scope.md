@@ -73,3 +73,38 @@ replay, SQL catalog/lint acceptance, then fixture-backed execution of affected
 RPC paths with replay and wrong-game/role cases. A source-only result is not
 merge/release qualification. Keep #1005's `--fail-on error` gate intact. Do not
 mark this or FX complete until reviewed exact-head checks actually pass.
+
+
+## Actual PR1006 qualification and supplemental context proof
+
+Published draft #1006 head `1a824abe8319416a9b8eed17d7aca490639f43a6`.
+Run `44022442570`, job `133834813828`, passed uncorrected baseline replay,
+actual migration applied twice, full-definition oracle, identity/security metadata
+invariance, all eleven corrected function checks, and complete corrected replay.
+Whole-schema lint failed with exactly one error: the pre-existing temporary-stage
+42P01 in `private.create_purchase_funding_quote_core_v1`. Eleven errors are fixed;
+this does not yet constitute RPC lifecycle or complete release qualification.
+
+A supplemental disposable transaction now prepares the exact temporary table
+shape from the unchanged runtime definition, proves missing and malformed shapes
+fail, checks every CLI-covered function with that context, reports coverage by
+schema/count/signature digest and all findings, and rolls back. No function is
+excluded, no error suppressed, and the original CLI fail-on-error step remains
+unchanged after this proof and the existing quote lifecycle acceptance harness.
+The overall workflow is therefore still expected to report the context-free CLI
+finding, even if the supplemental proof succeeds. That is intentional, not green.
+
+Coverage was verified against Supabase CLI v2.109.1 source commit
+`6d4c19870ed213ba7f682f117d0345c8a40bfa94`, specifically
+`apps/cli-go/pkg/migration/drop.go`, `queries/list.sql`, and
+`apps/cli-go/internal/db/lint/templates/check.sql`: identical managed-schema
+patterns, extension-dependency/schema-owner exclusions, PL/pgSQL language filter
+and non-trigger return-type filter. The supplemental checker uses
+`fatal_errors := false` to reveal all errors instead of stopping on the first.
+It does not claim trigger coverage, which the current CLI likewise excludes.
+No runtime definition, checker pragma or database data is changed by this proof.
+
+Next decision only after actual evidence: independently review an explicit
+context-aware gate implementation with the same enumerated coverage, both negative
+controls, complete error reporting and lifecycle evidence. Do not silently convert
+the existing CLI failure into success or ignore its result.

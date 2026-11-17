@@ -10,6 +10,7 @@
     "scripts/tests/test_db_baseline_name_resolution.py",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "docs/operations/evidence/db-baseline-lint-v1/scope.md",
-    "docs/operations/evidence/db-baseline-lint-v1/qualification-authority.json"
+    "docs/operations/evidence/db-baseline-lint-v1/qualification-authority.json",
+    "backend/tests/sql/baseline_temporary_context_lint_v1.sql"
   ]
 }

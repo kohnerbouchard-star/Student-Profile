@@ -54,6 +54,24 @@ class NameResolutionTests(unittest.TestCase):
         self.assertIn('from baseline_function_expected where definition <> pg_get_functiondef(oid)', sql)
         self.assertIn('BASELINE_TEST_UNEXPECTED_DEFINITION_CHANGE', sql)
 
+    def test_temporary_context_is_supplemental_and_source_exact(self):
+        sql = (ROOT / 'backend/tests/sql/baseline_temporary_context_lint_v1.sql').read_text()
+        source = (MIGRATIONS / '20260827090000_multicurrency_funding_quote_v1.sql').read_text()
+        fixture = sql.split('$fixture$')[1]
+        self.assertEqual(source.count(fixture), 1)
+        self.assertIn("l.lanname = 'plpgsql' and p.prorettype <> 2279", sql)
+        self.assertIn("pd.deptype is null", sql)
+        self.assertIn("pn.nspowner::regrole::text != 'supabase_admin'", sql)
+        self.assertIn('for v_target in select * from context_lint_targets order by signature loop', sql)
+        self.assertIn('CONTEXT_LINT_ABSENT_STAGE_CONTROL_FAILED', sql)
+        self.assertIn('CONTEXT_LINT_BAD_STAGE_CONTROL_FAILED', sql)
+        self.assertIn('CONTEXT_LINT_ERROR_LEVEL_FINDINGS_REMAIN', sql)
+        self.assertTrue(sql.rstrip().endswith('rollback;'))
+        self.assertNotIn('exception when', sql.lower())
+        workflow = (ROOT / '.github/workflows/db-baseline-lint-qualification.yml').read_text()
+        self.assertIn('supabase db lint --workdir backend --local --level warning --fail-on error', workflow)
+        self.assertNotIn('continue-on-error', workflow)
+
     def test_no_lint_or_security_bypass(self):
         sql = FIX.read_text().lower()
         for forbidden in ('#variable_conflict', 'check_function_bodies', 'grant execute', 'drop function', 'alter function', 'create temporary', 'plpgsql_check_pragma'):
