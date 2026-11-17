@@ -137,7 +137,21 @@ export function validateSettingsDraft(draft) {
     errors.push(validationError("lateRewardAmount", "Use an amount from 0 through 1000."));
   }
   const attendanceBase = isRecord(input.attendanceWindowBase) ? input.attendanceWindowBase : {};
-  const timezone = safeText(attendanceBase.timezone, "Asia/Seoul", 64);
+  const timezone = Object.hasOwn(attendance, "timezone")
+    ? String(attendance.timezone ?? "").trim()
+    : safeText(attendanceBase.timezone, "Asia/Seoul", 64);
+  try {
+    if (!timezone || timezone.length > 64) throw new Error("Invalid timezone");
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(0);
+  } catch {
+    errors.push(validationError("timezone", "Enter a valid timezone, such as Asia/Seoul or America/New_York."));
+  }
+  const lateCutoff = Object.hasOwn(attendance, "lateCutoff")
+    ? String(attendance.lateCutoff ?? "").trim()
+    : attendanceBase.lateCutoff;
+  if (lateCutoff != null && lateCutoff !== "" && !/^(?:[01]?\d|2[0-3]):[0-5]\d$/.test(lateCutoff)) {
+    errors.push(validationError("lateCutoff", "Use a 24-hour time such as 09:15, or leave blank for no late cutoff."));
+  }
   const currencyCodeCandidate = safeText(attendanceBase.currencyCode, "ECO", 8).toUpperCase();
   const currencyCode = CURRENCY_PATTERN.test(currencyCodeCandidate) ? currencyCodeCandidate : "ECO";
 
@@ -145,6 +159,7 @@ export function validateSettingsDraft(draft) {
     attendanceWindow: Object.freeze({
       ...attendanceBase,
       timezone,
+      ...(lateCutoff !== undefined ? { lateCutoff } : {}),
       presentRewardAmount,
       lateRewardAmount,
       currencyMode: "player_country",

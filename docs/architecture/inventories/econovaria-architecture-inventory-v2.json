@@ -14,7 +14,7 @@
     "persistenceOutsideInfrastructure": 84,
     "crossDomainDeepImports": 70,
     "browserTransportShimFiles": 26,
-    "compatibilityMarkerFiles": 208,
+    "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 0,
     "capabilityStrings": 144
@@ -1871,6 +1871,12 @@
       },
       {
         "file": "admin/v2/src/routes/settings/SettingsController.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/settings/SettingsRoute.js",
         "markers": [
           "fallback"
         ]

@@ -320,3 +320,43 @@ test("Settings does not publish a late save result after its controller is destr
     assert.deepEqual(notices, []);
   }
 });
+
+test("Attendance timing changes preserve unrelated authoritative settings", () => {
+  const draft = validDraft();
+  draft.attendanceWindowBase.lateCutoff = "09:15";
+  Object.assign(draft.attendanceWindow, { timezone: " America/New_York ", lateCutoff: "10:30" });
+  const result = validateSettingsDraft(draft);
+  assert.equal(result.ok, true);
+  assert.equal(result.settings.attendanceWindow.timezone, "America/New_York");
+  assert.equal(result.settings.attendanceWindow.lateCutoff, "10:30");
+  assert.equal(result.settings.attendanceWindow.preservedServerField, "keep");
+  assert.equal(draft.attendanceWindowBase.lateCutoff, "09:15");
+});
+
+test("Attendance timing validates server-compatible 24-hour boundaries and optional removal", () => {
+  for (const lateCutoff of ["", "00:00", "0:00", "09:15", "23:59"]) {
+    const draft = validDraft();
+    Object.assign(draft.attendanceWindow, { timezone: "UTC", lateCutoff });
+    const result = validateSettingsDraft(draft);
+    assert.equal(result.ok, true, lateCutoff);
+    assert.equal(result.settings.attendanceWindow.lateCutoff, lateCutoff);
+  }
+  for (const lateCutoff of ["24:00", "12:60", "9:5", "09:15:00", "noon"]) {
+    const draft = validDraft();
+    draft.attendanceWindow.lateCutoff = lateCutoff;
+    assert.equal(validateSettingsDraft(draft).errors.some(({ field }) => field === "lateCutoff"), true, lateCutoff);
+  }
+});
+
+test("Attendance timing rejects empty and invalid zones without falling back to device time", () => {
+  for (const timezone of ["", "   ", "Not/A_Zone", "x".repeat(65)]) {
+    const draft = validDraft();
+    draft.attendanceWindow.timezone = timezone;
+    assert.equal(validateSettingsDraft(draft).errors.some(({ field }) => field === "timezone"), true);
+  }
+  const draft = validDraft();
+  draft.attendanceWindowBase.lateCutoff = "09:15";
+  const result = validateSettingsDraft(draft);
+  assert.equal(result.settings.attendanceWindow.timezone, "Asia/Seoul");
+  assert.equal(result.settings.attendanceWindow.lateCutoff, "09:15");
+});

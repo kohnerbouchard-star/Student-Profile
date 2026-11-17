@@ -12,6 +12,8 @@ import { createElement } from "../../components/dom.js";
 import { ADMIN_DATA_STATES } from "../../core/data-state.js";
 
 const FIELD_IDS = Object.freeze({
+  timezone: "admin-settings-attendance-timezone",
+  lateCutoff: "admin-settings-attendance-late-cutoff",
   difficultyPreset: "admin-settings-difficulty-preset",
   priceMultiplier: "admin-settings-price-multiplier",
   incomeMultiplier: "admin-settings-income-multiplier",
@@ -145,6 +147,19 @@ function settingsForm(model, { onValidate, onSave, canSave = true, refreshing = 
   });
   fields.set("lateRewardAmount", lateReward);
 
+  const timezone = AdminField({
+    id: FIELD_IDS.timezone, name: "timezone", label: "Attendance timezone",
+    hint: "Used for student clock-ins. Staff scans use the scanner device timezone when valid, with this timezone as fallback. Example: Asia/Seoul.",
+    value: model.attendanceWindow.timezone,
+  });
+  const lateCutoff = AdminField({
+    id: FIELD_IDS.lateCutoff, name: "lateCutoff", label: "Late cutoff (24-hour time)",
+    hint: "Clock-ins after this time are late. At the cutoff minute they are present. Leave blank for no late cutoff. Applies to future clock-ins only.",
+    value: model.attendanceWindow.lateCutoff ?? "",
+  });
+  fields.set("timezone", timezone);
+  fields.set("lateCutoff", lateCutoff);
+
   const sensitiveNote = createElement("div", {
     className: "admin-settings-security-note",
     attrs: { role: "note" },
@@ -190,6 +205,8 @@ function settingsForm(model, { onValidate, onSave, canSave = true, refreshing = 
     validationSummary.element,
     section("Game difficulty and economy", "Difficulty and economy controls. Modifiers are limited to the supported 0.5–2.0 range.", [difficulty.element, ...modifierFields]),
     section("Attendance and rewards", "Attendance reward amounts. Currency conversion remains automatic for each player country.", [
+      timezone.element,
+      lateCutoff.element,
       presentReward.element,
       lateReward.element,
     ]),
@@ -226,6 +243,8 @@ function settingsForm(model, { onValidate, onSave, canSave = true, refreshing = 
       tradeMultiplier: fields.get("tradeMultiplier").getValue(),
       attendanceWindowBase: model.attendanceWindow,
       attendanceWindow: {
+        timezone: timezone.getValue(),
+        lateCutoff: lateCutoff.getValue(),
         presentRewardAmount: presentReward.getValue(),
         lateRewardAmount: lateReward.getValue(),
       },
@@ -242,6 +261,8 @@ function settingsForm(model, { onValidate, onSave, canSave = true, refreshing = 
       change("Shock severity", model.shockSeverity, input.shockSeverity),
       change("Recovery support", model.recoverySupport, input.recoverySupport),
       change("Trade multiplier", model.tradeMultiplier, input.tradeMultiplier),
+      change("Attendance timezone", model.attendanceWindow.timezone, input.attendanceWindow.timezone),
+      change("Late cutoff", model.attendanceWindow.lateCutoff ?? "", input.attendanceWindow.lateCutoff),
       change("Present reward", model.attendanceWindow.presentRewardAmount, input.attendanceWindow.presentRewardAmount),
       change("Late reward", model.attendanceWindow.lateRewardAmount, input.attendanceWindow.lateRewardAmount),
     ].filter(Boolean);
@@ -262,6 +283,8 @@ function settingsForm(model, { onValidate, onSave, canSave = true, refreshing = 
     presetWasAutoCustom = false;
     difficulty.setValue(model.difficultyPreset);
     MODIFIER_FIELDS.forEach((name) => fields.get(name).setValue(model[name]));
+    timezone.setValue(model.attendanceWindow.timezone);
+    lateCutoff.setValue(model.attendanceWindow.lateCutoff ?? "");
     presentReward.setValue(model.attendanceWindow.presentRewardAmount);
     lateReward.setValue(model.attendanceWindow.lateRewardAmount);
     fields.forEach((field) => field.setError(""));
@@ -301,6 +324,8 @@ function settingsForm(model, { onValidate, onSave, canSave = true, refreshing = 
     presetWasAutoCustom = false;
     updateDirtyState();
   });
+  timezone.control.addEventListener("input", updateDirtyState);
+  lateCutoff.control.addEventListener("input", updateDirtyState);
   presentReward.control.addEventListener("input", updateDirtyState);
   lateReward.control.addEventListener("input", updateDirtyState);
   resetButton.addEventListener("click", reset);
