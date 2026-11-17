@@ -1,3 +1,5 @@
+import { createSupabasePlayerRosterImportRepository } from "../../../src/domains/players/infrastructure/supabasePlayerRosterImportRepository.ts";
+import { handlePlayerRosterImport } from "../../../src/domains/players/api/playerRosterImportHttpHandler.ts";
 import {
   AdminMutationError,
   adminMutationErrorBody,
@@ -56,6 +58,8 @@ export async function handleLocalAdminGameMutation(
   serviceClient: AdminMutationRpcClient & EdgeSupabaseClient,
   input: LocalAdminGameMutationContext,
 ): Promise<LocalAdminGameMutationResult> {
+  const rosterImport = await handlePlayerRosterImport(createSupabasePlayerRosterImportRepository(serviceClient), input);
+  if (rosterImport.handled) return rosterImport;
   if (!isAffectedMutation(input.request.method, input.suffix)) {
     return { handled: false };
   }
