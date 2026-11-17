@@ -46,3 +46,7 @@ The actual-number authority locks the complete diff and unchanged verifier/tests
 The CI contract records 33 workflow families,58 active tuples and5 intentional
 guarded skips; no workflow, deployment or production permission changes. Fresh
 exact-head hosted checks and full browser acceptance are pending, not certified.
+
+## Post-Crafting main reconciliation
+
+Integrate main `9df2064d6835b64ab9f7a3bde19ed1da5356cded` (#998) into published Banking head `4faf63b74b07504ba68d13937efe9e350fd5e59c`. The only conflict is shared roadmap intake; both records are retained. Banking and Crafting runtime/test blobs remain unchanged. Fresh local aggregate checks, independent review and exact-head hosted qualification are required; previous checks do not qualify the union. No deployment or merge performed.

@@ -1,6 +1,6 @@
 {
-  "base": "956ad02db949ae9c4cff7d709a18ec28d20c0788",
-  "sourceHead": "ba1d5128f373f809bc655b94a2a3a6612309682a",
+  "base": "9df2064d6835b64ab9f7a3bde19ed1da5356cded",
+  "sourceHead": "4faf63b74b07504ba68d13937efe9e350fd5e59c",
   "derivation": "Current main-target pull_request opened/synchronize/reopened branch/event/path filters evaluated against complete PR996 scope including golden-fixture correction and both metadata paths. 33 workflow families,58 active tuples,5 guarded skips; no matrices. Branch Hygiene is closed-only; CodeQL external. Preserve all commands, conditions, permissions and triggers. Source-only failed CI is historical; fresh exact-head checks remain mandatory.",
   "pairs": [
     {
