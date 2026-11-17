@@ -49,7 +49,7 @@ server directory changes concurrently.
   download connection failure. Backend smoke likewise stops at the unchanged
   Supabase SDK import after passing the preceding domain suites.
 - Actual-number PR997 authority passes its verifier and all 16 authority tests.
-  Current path-filter derivation selects 35 workflow families, 75 active job
+  Current path-filter derivation selects 38 workflow families, 78 active job
   tuples and four guarded skips; no workflow changes or skipped-gate waivers.
   Independent review and exact-head hosted checks remain pending.
 - Initial publication was denied pending explicit public-destination approval.

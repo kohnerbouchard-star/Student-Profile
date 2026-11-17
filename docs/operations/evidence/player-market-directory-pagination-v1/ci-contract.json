@@ -1,7 +1,7 @@
 {
   "base": "956ad02db949ae9c4cff7d709a18ec28d20c0788",
   "sourceHead": "22cd6e12ae7b1d0fcd6e7cd9c2489ecde29a9645",
-  "derivation": "Current main-target pull_request branch/type/path filters evaluated against all fourteen changed paths including metadata. 35 workflow families, 75 active job tuples, four guarded skips, no matrix. Existing trigger paths already cover this source and tests; no workflow, condition, permission or command changes. CodeQL external dynamic analysis is additionally required. Full Player verify registers the Node regression; full Chromium suite discovers the new desktop/mobile spec. Names duplicated across workflows are tracked by exact tuples here. Source-head runs without actual-PR authority are interim only.",
+  "derivation": "Current main-target pull_request branch/type/path filters evaluated against all fourteen changed paths including metadata. 38 workflow families, 78 active job tuples, four guarded skips, no matrix. Existing trigger paths already cover this source and tests; no workflow, condition, permission or command changes. CodeQL external dynamic analysis is additionally required. Full Player verify registers the Node regression; full Chromium suite discovers the new desktop/mobile spec. Names duplicated across workflows are tracked by exact tuples here. Source-head runs without actual-PR authority are interim only.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-browser-e2e.yml",
@@ -388,6 +388,14 @@
       "matrix": null
     },
     {
+      "workflow": ".github/workflows/business-workforce-hiring-v2.yml",
+      "workflowName": "Business Workforce Hiring V2",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": "",
+      "matrix": null
+    },
+    {
       "workflow": ".github/workflows/business-workforce-payroll-v2.yml",
       "workflowName": "Business Workforce Payroll V2",
       "job": "authority-contract",
@@ -492,6 +500,14 @@
       "matrix": null
     },
     {
+      "workflow": ".github/workflows/player-local-currency-authority.yml",
+      "workflowName": "Player Local Currency Authority",
+      "job": "contract",
+      "checkName": "Checking, Savings, and local-currency contract",
+      "condition": "",
+      "matrix": null
+    },
+    {
       "workflow": ".github/workflows/player-multiplayer-load-e2e.yml",
       "workflowName": "Player Multiplayer and Load E2E",
       "job": "connected-player-runtime",
@@ -512,6 +528,14 @@
       "workflowName": "Production Runtime Promotion Contract",
       "job": "verify",
       "checkName": "Verify production promotion remains fail-closed",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/progression-runtime-v1.yml",
+      "workflowName": "Progression Runtime",
+      "job": "verify",
+      "checkName": "verify",
       "condition": "",
       "matrix": null
     },

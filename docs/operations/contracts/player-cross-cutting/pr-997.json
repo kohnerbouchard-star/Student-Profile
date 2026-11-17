@@ -154,7 +154,11 @@
     "dependency-review",
     "verify-and-attest",
     "World Runtime",
-    "CodeQL"
+    "CodeQL",
+    "Business Workforce Hiring V2",
+    "Player Local Currency Authority",
+    "Checking, Savings, and local-currency contract",
+    "Progression Runtime"
   ],
   "criticalJobChecks": [
     "Rendered Admin browser and secure mutation journey",
@@ -227,7 +231,8 @@
     "Validator tests",
     "dependency-review",
     "verify-and-attest",
-    "CodeQL"
+    "CodeQL",
+    "Checking, Savings, and local-currency contract"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
