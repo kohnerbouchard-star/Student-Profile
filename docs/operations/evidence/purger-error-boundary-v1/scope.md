@@ -36,3 +36,17 @@ No login runtime rewrite or scanner dismissal is included.
   deployment. Supabase functions deploy separately from Vercel.
 - Exact-head hosted checks and any required PR-specific authority metadata remain
   pending; no VERIFIED_COMPLETE or merge-readiness claim.
+
+## Exact-PR authority correction
+
+Hosted source gates in Treasury run 44012651334 and Admin Business Supervision
+run 44012651365 stopped before runtime verification because no PR1003 authority
+was present. Their database/browser jobs passed; those results do not replace
+source qualification. Add the actual-number exact-path manifest and CI inventory,
+not a rerun waiver: eight changed paths plus two unchanged read-only verifier
+locks, 47 triggered workflow families, 73 active job tuples, ten guarded job
+definitions (one has a two-environment matrix). Preserve ordered PR998 required
+and critical identities and extend actual jobs: 130 required / 75 critical names.
+Authority verification plus existing and focused regressions pass 24/24.
+No workflow, verifier, runtime, production or secret permission is changed.
+Fresh exact-head hosted qualification is required after publication.

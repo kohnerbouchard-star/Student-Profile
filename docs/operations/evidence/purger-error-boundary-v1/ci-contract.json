@@ -1,0 +1,684 @@
+{
+  "base": "9df2064d6835b64ab9f7a3bde19ed1da5356cded",
+  "sourceHead": "0b588696afee0766f3a2e08ffbfd884bcb1397a5",
+  "derivation": "Current main pull_request branch/event/path filters evaluated against complete PR1003 scope: 47 families, 73 active job tuples, 10 guarded job definitions (one guarded matrix has two environments). No active matrices. Closed-only Branch Hygiene excluded; CodeQL external. Preserve ordered PR998 required/critical identities and extend for actual triggered jobs. No workflow, verifier, gate, deployment or secret changes.",
+  "pairs": [
+    {
+      "workflow": ".github/workflows/admin-browser-e2e.yml",
+      "workflowName": "Admin Browser E2E",
+      "job": "rendered-admin",
+      "checkName": "Rendered Admin browser and secure mutation journey",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/admin-business-supervision.yml",
+      "workflowName": "Admin Business Supervision",
+      "job": "source",
+      "checkName": "admin-business-supervision-source",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/admin-business-supervision.yml",
+      "workflowName": "Admin Business Supervision",
+      "job": "database",
+      "checkName": "admin-business-supervision-database",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/admin-business-supervision.yml",
+      "workflowName": "Admin Business Supervision",
+      "job": "browser",
+      "checkName": "admin-business-supervision-browser",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/admin-game-lifecycle-controls-v1.yml",
+      "workflowName": "Admin Game Lifecycle Controls",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/admin-game-lifecycle-controls-v1.yml",
+      "workflowName": "Admin Game Lifecycle Controls",
+      "job": "native-v2",
+      "checkName": "Game lifecycle V2 contracts and browser acceptance",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/admin-game-session-controls.yml",
+      "workflowName": "Admin Game Session Controls",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/admin-shell-smoke.yml",
+      "workflowName": "Admin Shell Smoke",
+      "job": "admin-shell-smoke",
+      "checkName": "admin-shell-smoke",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/admin-v2-attendance.yml",
+      "workflowName": "Admin V2 Attendance",
+      "job": "focused",
+      "checkName": "focused",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/admin-v2-banking.yml",
+      "workflowName": "Admin V2 Banking",
+      "job": "banking-v2",
+      "checkName": "Banking V2 contracts and browser smoke",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/admin-v2-crafting.yml",
+      "workflowName": "Admin V2 Crafting",
+      "job": "crafting-v2",
+      "checkName": "Crafting V2 contracts and browser smoke",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/admin-v2-market.yml",
+      "workflowName": "Admin V2 Market",
+      "job": "market-v2",
+      "checkName": "Market V2 contracts and browser smoke",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/backend-typecheck.yml",
+      "workflowName": "Backend Typecheck",
+      "job": "backend-typecheck",
+      "checkName": "backend-typecheck",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/backup-restore-contract.yml",
+      "workflowName": "Backup and Restore Contract",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/banking-fx-clearing-v1.yml",
+      "workflowName": "banking-fx-clearing-v1",
+      "job": "certify",
+      "checkName": "Certify Banking FX clearing source",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/banking-fx-clearing-v1.yml",
+      "workflowName": "banking-fx-clearing-v1",
+      "job": "database-acceptance",
+      "checkName": "Verify Banking FX database acceptance",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/banking-fx-clearing-v1.yml",
+      "workflowName": "banking-fx-clearing-v1",
+      "job": "chromium-acceptance",
+      "checkName": "Verify Banking FX Chromium acceptance",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/beta-e2e-pilot.yml",
+      "workflowName": "Beta Pilot Contract",
+      "job": "contract",
+      "checkName": "contract",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/beta-security-contract.yml",
+      "workflowName": "Beta Security Contract",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-banking-runtime.yml",
+      "workflowName": "Business Banking Runtime",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-multicurrency-treasury-v1.yml",
+      "workflowName": "business-multicurrency-treasury-v1",
+      "job": "source-contract",
+      "checkName": "Verify C4 source, public contracts, and retained application boundaries",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-multicurrency-treasury-v1.yml",
+      "workflowName": "business-multicurrency-treasury-v1",
+      "job": "disposable-database",
+      "checkName": "Verify C4 database, replay, isolation, rollback, and concurrency",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-multicurrency-treasury-v1.yml",
+      "workflowName": "business-multicurrency-treasury-v1",
+      "job": "player-browser",
+      "checkName": "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
+      "workflowName": "Business Player Store Cutover V2",
+      "job": "verify-cutover-authority",
+      "checkName": "Verify Player Store cutover and retained authorities",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
+      "workflowName": "Business Player Store Cutover V2",
+      "job": "verify-backend-store-runtime",
+      "checkName": "Verify public Store, seller projection, capabilities, rates, and Edge roots",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
+      "workflowName": "Business Player Store Cutover V2",
+      "job": "verify-database-settlement",
+      "checkName": "Verify serial settlement, ordering races, and two-game isolation",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
+      "workflowName": "Business Player Store Cutover V2",
+      "job": "verify-database-replay",
+      "checkName": "Replay complete database twice and lint at warning level",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
+      "workflowName": "Business Player Store Cutover V2",
+      "job": "verify-player-terminal-and-chromium",
+      "checkName": "Verify standalone Player Terminal and full Chromium suite",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
+      "workflowName": "Business Player Store Cutover V2",
+      "job": "verify-connected-player-store",
+      "checkName": "Verify connected Buyer and seller Store journey in two games",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-fx-final-v2.yml",
+      "workflowName": "business-player-store-fx-final-v2",
+      "job": "source-contract",
+      "checkName": "business-player-store-fx-final-v2-source",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-fx-final-v2.yml",
+      "workflowName": "business-player-store-fx-final-v2",
+      "job": "disposable-database",
+      "checkName": "business-player-store-fx-final-v2-database",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-fx-final-v2.yml",
+      "workflowName": "business-player-store-fx-final-v2",
+      "job": "player-browser",
+      "checkName": "business-player-store-fx-final-v2-player-browser",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-fx-final-v2.yml",
+      "workflowName": "business-player-store-fx-final-v2",
+      "job": "connected-two-browser",
+      "checkName": "business-player-store-fx-final-v2-connected",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
+      "workflowName": "Business Store Atomic Settlement V2",
+      "job": "verify-settlement-authority",
+      "checkName": "Verify atomic settlement authority and retained Store phases",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
+      "workflowName": "Business Store Atomic Settlement V2",
+      "job": "verify-database-settlement",
+      "checkName": "Verify database settlement, rollback, races, and isolation",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
+      "workflowName": "Business Store Atomic Settlement V2",
+      "job": "verify-database-replay",
+      "checkName": "Replay complete database twice and lint",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
+      "workflowName": "Business Store Atomic Settlement V2",
+      "job": "verify-retained-economic-runtime",
+      "checkName": "Verify retained Business, Store, Inventory, Backend, and Edge runtime",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
+      "workflowName": "Business Store Atomic Settlement V2",
+      "job": "verify-player-terminal-and-chromium",
+      "checkName": "Verify retained Player Terminal and Chromium",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-store-sales-convergence-v2.yml",
+      "workflowName": "business-store-sales-convergence-v2",
+      "job": "source-contract",
+      "checkName": "business-store-sales-convergence-v2-source",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-store-sales-convergence-v2.yml",
+      "workflowName": "business-store-sales-convergence-v2",
+      "job": "disposable-database",
+      "checkName": "business-store-sales-convergence-v2-database",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-store-sales-convergence-v2.yml",
+      "workflowName": "business-store-sales-convergence-v2",
+      "job": "worker-contract",
+      "checkName": "business-store-sales-convergence-v2-worker",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-store-sales-convergence-v2.yml",
+      "workflowName": "business-store-sales-convergence-v2",
+      "job": "player-admin-contract",
+      "checkName": "business-store-sales-convergence-v2-player-admin",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/configurable-stock-market-timezone-v1.yml",
+      "workflowName": "Required Game Market Timezone",
+      "job": "apply-and-validate",
+      "checkName": "apply-and-validate",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/crafting-item-runtime.yml",
+      "workflowName": "Crafting Item Runtime",
+      "job": "permanent-runtime",
+      "checkName": "permanent-runtime",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/database-replay.yml",
+      "workflowName": "Database Replay",
+      "job": "replay",
+      "checkName": "replay",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/edge-function-inventory.yml",
+      "workflowName": "Edge Function Inventory",
+      "job": "static-contract",
+      "checkName": "Validate canonical inventory contract",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/exchange-calendar-runtime-v1.yml",
+      "workflowName": "Exchange Calendar Runtime",
+      "job": "validate",
+      "checkName": "Validate exchange calendar runtime",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/incident-readiness.yml",
+      "workflowName": "Incident Readiness",
+      "job": "incident-readiness",
+      "checkName": "Incident readiness contract",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/legacy-runtime-retirement-audit.yml",
+      "workflowName": "Legacy Runtime Retirement Audit",
+      "job": "audit",
+      "checkName": "audit",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/loan-review-transition-qualification.yml",
+      "workflowName": "Loan Review Transition Qualification",
+      "job": "loan-review",
+      "checkName": "Loan Review Transition Qualification",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/observability-performance.yml",
+      "workflowName": "Observability and Performance",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/password-reset-transition-qualification.yml",
+      "workflowName": "Password Reset Transition Qualification",
+      "job": "password-reset",
+      "checkName": "Password Reset Transition Qualification",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/player-multiplayer-load-e2e.yml",
+      "workflowName": "Player Multiplayer and Load E2E",
+      "job": "connected-player-runtime",
+      "checkName": "Two-browser Player journey, secure mutations, and 30-40 Player load",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/player-terminal-verify.yml",
+      "workflowName": "Player Terminal Verify",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/production-runtime-promotion-contract.yml",
+      "workflowName": "Production Runtime Promotion Contract",
+      "job": "verify",
+      "checkName": "Verify production promotion remains fail-closed",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/production-web-session-hotfix.yml",
+      "workflowName": "Web Session Recovery Candidate",
+      "job": "validate-and-package",
+      "checkName": "Validate and package immutable web-session source",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/production-web-session-release.yml",
+      "workflowName": "Production Web Session Release Orchestrator",
+      "job": "validate-and-package",
+      "checkName": "Validate release request and package immutable source",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/progression-runtime-v1.yml",
+      "workflowName": "Progression Runtime",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/ref-014-settings-qualification.yml",
+      "workflowName": "REF-014 Settings Qualification",
+      "job": "settings-lifecycle",
+      "checkName": "settings-lifecycle",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/release-artifact-build.yml",
+      "workflowName": "Release Artifact Build",
+      "job": "contract-tests",
+      "checkName": "Release platform contract tests",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/release-integrity.yml",
+      "workflowName": "Release Integrity",
+      "job": "static-integrity",
+      "checkName": "Verify static release integrity",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/release-promote.yml",
+      "workflowName": "Release Promote Exact Artifacts",
+      "job": "contract-tests",
+      "checkName": "Promotion contract tests",
+      "condition": "github.event_name == 'pull_request'",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/repository-quality.yml",
+      "workflowName": "Repository Quality",
+      "job": "quality",
+      "checkName": "quality",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/runtime-interaction-wiring.yml",
+      "workflowName": "Runtime Interaction Wiring",
+      "job": "trace-runtime-controls",
+      "checkName": "trace-runtime-controls",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/runtime-stabilization-onboarding.yml",
+      "workflowName": "Runtime Stabilization Onboarding",
+      "job": "contracts",
+      "checkName": "Runtime and request contracts",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/runtime-stabilization-onboarding.yml",
+      "workflowName": "Runtime Stabilization Onboarding",
+      "job": "local-functions",
+      "checkName": "Local custom-auth Edge Functions reachability",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/runtime-stabilization-onboarding.yml",
+      "workflowName": "Runtime Stabilization Onboarding",
+      "job": "two-player-onboarding",
+      "checkName": "Two-Player Arrival onboarding",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/seed-executable-beta-pack.yml",
+      "workflowName": "Seed Executable Beta Pack",
+      "job": "verify-bounded-pack",
+      "checkName": "Verify bounded pack and repository contracts",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/seed-executable-beta-pack.yml",
+      "workflowName": "Seed Executable Beta Pack",
+      "job": "verify-transactional-release",
+      "checkName": "Verify transactional import, replay, rollback, and isolation",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/staging-golden-five-contract.yml",
+      "workflowName": "Staging Golden Five Contract",
+      "job": "contract",
+      "checkName": "contract",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/staging-readiness-preflight.yml",
+      "workflowName": "Staging Readiness Preflight",
+      "job": "validator-tests",
+      "checkName": "Validator tests",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/supply-chain-security.yml",
+      "workflowName": "Supply Chain Security",
+      "job": "dependency-review",
+      "checkName": "dependency-review",
+      "condition": "github.event_name == 'pull_request'",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/supply-chain-security.yml",
+      "workflowName": "Supply Chain Security",
+      "job": "verify-and-attest",
+      "checkName": "verify-and-attest",
+      "condition": "",
+      "matrix": null
+    }
+  ],
+  "skipped": [
+    {
+      "workflow": ".github/workflows/database-replay.yml",
+      "workflowName": "Database Replay",
+      "job": "live-shaped-rehearsal",
+      "checkName": "Rehearse ${{ matrix.environment }}-shaped forward migration convergence",
+      "condition": "false && (github.event_name == 'push' && github.ref == 'refs/heads/main')",
+      "matrix": {
+        "include": [
+          {
+            "environment": "staging",
+            "expected_project_ref": "eecvbssdvarfcykcfrny"
+          },
+          {
+            "environment": "production",
+            "expected_project_ref": "cgiukdjwicykrmtkhudh"
+          }
+        ]
+      }
+    },
+    {
+      "workflow": ".github/workflows/edge-function-inventory.yml",
+      "workflowName": "Edge Function Inventory",
+      "job": "live-attestation",
+      "checkName": "Attest staging and production inventory",
+      "condition": "github.event_name == 'workflow_dispatch'",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/production-web-session-hotfix.yml",
+      "workflowName": "Web Session Recovery Candidate",
+      "job": "deploy-staging-candidate",
+      "checkName": "Deploy and verify staging candidate",
+      "condition": "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/production-web-session-release.yml",
+      "workflowName": "Production Web Session Release Orchestrator",
+      "job": "deploy-staging",
+      "checkName": "Deploy and verify staging candidate",
+      "condition": "github.event_name == 'push' && github.ref == 'refs/heads/main'",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/production-web-session-release.yml",
+      "workflowName": "Production Web Session Release Orchestrator",
+      "job": "deploy-and-verify-production",
+      "checkName": "Approve, deploy, and verify production",
+      "condition": "github.event_name == 'push' && github.ref == 'refs/heads/main'",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/release-artifact-build.yml",
+      "workflowName": "Release Artifact Build",
+      "job": "build-once",
+      "checkName": "Build immutable release set",
+      "condition": "github.event_name == 'workflow_dispatch'",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/release-integrity.yml",
+      "workflowName": "Release Integrity",
+      "job": "live-parity",
+      "checkName": "Inspect staging and production parity read-only",
+      "condition": "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/release-promote.yml",
+      "workflowName": "Release Promote Exact Artifacts",
+      "job": "authorize-promotion",
+      "checkName": "Verify and authorize unchanged artifacts",
+      "condition": "github.event_name == 'workflow_dispatch'",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/seed-executable-beta-pack.yml",
+      "workflowName": "Seed Executable Beta Pack",
+      "job": "connected-isolated-staging",
+      "checkName": "Execute connected isolated-staging release and rollback",
+      "condition": "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.run_connected_staging == true",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/staging-readiness-preflight.yml",
+      "workflowName": "Staging Readiness Preflight",
+      "job": "staging-preflight",
+      "checkName": "Fail-closed staging evidence check",
+      "condition": "github.event_name == 'workflow_dispatch'",
+      "matrix": null
+    }
+  ]
+}
