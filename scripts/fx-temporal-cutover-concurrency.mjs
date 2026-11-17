@@ -88,6 +88,14 @@ export async function runFxRaces(){
  // destroys the whole stack without backup, including on assertion failure.
  try{
   sql(`begin;
+   -- Disposable synthetic historical policy, matching the serial fixture.
+   -- Never update an existing policy or bypass immutable evidence guards.
+   insert into public.fx_policy_versions(policy_version,status,fixing_local_time,normal_movement_cap_basis_points,crisis_movement_cap_basis_points,parameters,activated_at)
+   select 'fx-policy-v900',status,fixing_local_time,normal_movement_cap_basis_points,crisis_movement_cap_basis_points,parameters,clock_timestamp()-interval '5 days'
+   from public.fx_policy_versions where policy_version='fx-policy-v1';
+   do $policy_fixture$ begin
+    if (select count(*) from public.fx_policy_versions where policy_version='fx-policy-v900')<>1 then raise exception 'FX_RACE_POLICY_FIXTURE_MISSING'; end if;
+   end $policy_fixture$;
    insert into public.staff_users(id,supabase_auth_user_id,email,display_name) values('${staff}','${randomUUID()}','fx-race-${staff}@example.invalid','FX concurrency fixture');
    insert into public.game_sessions(id,owner_staff_user_id,name,lifecycle_state,provisioning_status,created_at,started_at) values('${game}','${staff}','FX concurrency fixture','active','pending',clock_timestamp()-interval '3 days',clock_timestamp()-interval '3 days');
    insert into public.game_settings(game_session_id,stock_market_window) values('${game}','{"timezone":"UTC"}');

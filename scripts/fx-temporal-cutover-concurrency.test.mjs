@@ -73,3 +73,12 @@ test('both ready race fixtures satisfy canonical campaign provisioning metadata'
  for(const [,fields] of updates)for(const required of ["provisioning_pack_id='econovaria.beta-seed-pack.v1'","provisioning_pack_version='1.0.0-beta'","provisioning_pack_sha256=repeat('a',64)",'provisioning_source_game_session_id=id','provisioned_at=clock_timestamp()','provisioning_failure_code=null'])assert(fields.includes(required),required);
  assert(!/disable trigger|session_replication_role|drop constraint/i.test(source));
 });
+
+test('elapsed worker boundaries use an isolated copied policy without rewriting authority',()=>{
+ const source=readFileSync('scripts/fx-temporal-cutover-concurrency.mjs','utf8');
+ assert(source.includes("select 'fx-policy-v900',status,fixing_local_time,normal_movement_cap_basis_points,crisis_movement_cap_basis_points,parameters,clock_timestamp()-interval '5 days'"));
+ assert(source.includes("from public.fx_policy_versions where policy_version='fx-policy-v1'"));
+ assert(source.includes('FX_RACE_POLICY_FIXTURE_MISSING'));
+ assert(!/update public\.fx_policy_versions|delete from public\.fx_policy_versions|disable trigger|session_replication_role/i.test(source));
+ assert(source.indexOf('FX_RACE_POLICY_FIXTURE_MISSING')<source.indexOf("for(const order of ['worker-first','bootstrap-first'])"));
+});

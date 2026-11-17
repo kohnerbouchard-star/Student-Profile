@@ -178,3 +178,15 @@ the previously passing serial acceptance fixture. Campaign initialization and
 all real readiness/lifecycle triggers remain enabled. A two-update regression
 brings local guard/concurrency tests to24. No product migration or acceptance
 predicate changed; hosted qualification remains required.
+
+
+## Historical worker policy fixture
+
+Run `44032742109` at `10daee69` passed bootstrap and lifecycle races and reached
+real worker input, which correctly rejected its elapsed boundary with
+`FX_INPUT_POLICY_NOT_ACTIVE`: fresh replay activates the sole policy now. The
+isolated disposable fixture now inserts one synthetic historical policy copied
+from the seeded parameters, as the established serial fixture does. It does not
+update/delete existing policies, bypass immutable triggers, or change the product
+time predicate. The second full replay removes that fixture before serial/long
+qualification. Local tests now25; new exact-head runtime proof remains required.
