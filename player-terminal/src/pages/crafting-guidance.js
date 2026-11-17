@@ -1,4 +1,5 @@
 import { escapeHtml, formatNumber } from "../core/format.js";
+import { icon } from "../components/icons.js";
 
 // The read model's `owned` count is available stock after reservations, not total custody.
 export function ingredientAvailability(item) {
@@ -50,4 +51,21 @@ export function ingredientQuantityLabel(item) {
   const availability = ingredientAvailability(item);
   if (!availability.known) return "Available or required quantity unavailable";
   return `${formatNumber(item.owned)} available / ${formatNumber(item.required)} required${availability.missing ? ` · Need ${formatNumber(availability.missing)} more for one craft` : ""}`;
+}
+
+// A recipe may produce several different items. The aggregate quantity is not
+// a quantity of the recipe itself; disclose each authoritative output instead.
+export function renderCraftingOutputs(recipe) {
+  const outputs = Array.isArray(recipe?.outputs) ? recipe.outputs : [];
+  if (!outputs.length) return '<p>Output details are unavailable. Refresh Crafting before starting a job.</p>';
+  return `<p>Output quantities are per craft. Receive them by claiming a completed job.</p>${outputs.map((output) => {
+    const quantity = output?.quantity;
+    const validQuantity = (typeof quantity === "number" || (typeof quantity === "string" && /^\d+$/.test(quantity)))
+      && Number.isSafeInteger(Number(quantity)) && Number(quantity) > 0;
+    const name = typeof output?.name === "string" && output.name.trim()
+      ? output.name : typeof output?.itemKey === "string" && output.itemKey.trim() ? output.itemKey : "Unnamed output";
+    const destination = output?.outputKind === "equipment" ? "Equipment · Workshop"
+      : output?.outputKind === "stackable" ? "Item · Inventory" : "Destination unavailable";
+    return `<article><span>${icon(output?.outputKind === "equipment" ? "factory" : "inventory")}</span><div><strong>${validQuantity ? `${escapeHtml(formatNumber(quantity))} × ` : "Quantity unavailable · "}${escapeHtml(name)}</strong><small>${destination}</small></div></article>`;
+  }).join("")}`;
 }

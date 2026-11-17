@@ -1,6 +1,6 @@
 {
-  "base": "956ad02db949ae9c4cff7d709a18ec28d20c0788",
-  "sourceHead": "22cd6e12ae7b1d0fcd6e7cd9c2489ecde29a9645",
+  "base": "9df2064d6835b64ab9f7a3bde19ed1da5356cded",
+  "sourceHead": "fa17277310a2169ac233928b4bd3a5657c3fd166",
   "derivation": "Current main-target pull_request branch/type/path filters evaluated against all fourteen changed paths including metadata. 38 workflow families, 78 active job tuples, four guarded skips, no matrix. Existing trigger paths already cover this source and tests; no workflow, condition, permission or command changes. CodeQL external dynamic analysis is additionally required. Full Player verify registers the Node regression; full Chromium suite discovers the new desktop/mobile spec. Names duplicated across workflows are tracked by exact tuples here. Source-head runs without actual-PR authority are interim only.",
   "pairs": [
     {

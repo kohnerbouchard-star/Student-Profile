@@ -95,3 +95,12 @@ The spec now uses the existing funded business Market fixture, advertises Market
 read/search capabilities, and asserts the Market route and enabled Load more
 control before exercising pagination. Assertions, timeouts, workflow gates, and
 runtime behavior are not relaxed. Latest-head hosted rerun remains required.
+
+## Main reconciliation after Crafting #998
+
+Reconciled with main `9df2064d6835b64ab9f7a3bde19ed1da5356cded` while
+preserving both intake records. All Market runtime/tests are unchanged from
+published `fa172773`; all Crafting source/tests match main. Regenerated architecture
+inventory has no additional change. Re-derived CI contract against new main:
+38 workflow families, 78 active tuples and four guarded skips, unchanged. Fresh
+integrated-head hosted checks are required; no merge or deployment performed.
