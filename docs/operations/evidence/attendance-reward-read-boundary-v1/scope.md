@@ -1,7 +1,7 @@
 # Attendance reward read boundary
 
 Roadmap ID: `ARCH-ATTENDANCE-REWARD-READ-001`.
-Status: `IMPLEMENTED_NOT_MERGED`; branch `refactor/attendance-reward-read-port` based on main `03adc6891995fe1d780fe34629b1daf14470ea39`.
+Status: `IMPLEMENTED_NOT_MERGED`; draft [PR #1009](https://github.com/kohnerbouchard-star/Student-Profile/pull/1009), branch `refactor/attendance-reward-read-port` based on main `03adc6891995fe1d780fe34629b1daf14470ea39`.
 
 ## Scope and invariants
 
@@ -19,6 +19,8 @@ The application still type-imports the existing API-owned attendance configurati
 - Added exact query-chain assertions for all six reads; all six database failure positions fail closed without leaking database messages; policy branches verify read short circuits, currency resolution and rounding.
 - Backend core TypeScript passes.
 - Generated inventory: persistence outside infrastructure 84 to 83; source files 1636 to 1639; lexical compatibility candidates 209 to 210 due preserved/split policy strings and composition text. No ratchet ceilings change.
-- Independent source review found no blocking behavior/security/failure finding; focused tests independently passed. Initial root ratchet caught an extra lexical marker from a separate test module; tests were consolidated into the existing registered file without dropping assertions or changing ceilings. Final root/Edge/smoke qualification pending. No hosted, staging, database integration or production verification claimed.
+- Independent source review found no blocking behavior/security/failure finding; focused tests independently passed. Initial root ratchet caught an extra lexical marker from a separate test module; tests were consolidated into the existing registered file without dropping assertions or changing ceilings. Final root `npm test` passes. Full Edge fails at unchanged frozen Supabase 2.108.2 SDK download (connection refused); smoke also fails at the same SDK download and is not an aggregate pass. No hosted, staging, database integration or production verification claimed.
 
-No active attendance reward policy owner was found in the open-PR audit. Teacher timing #1002 and roster #933/#938 do not overlap this runtime slice. Broad stale attendance donor edits are not imported. Next: finish independent review/local qualification, publish a bounded draft and bind actual-number exact-head checks before considering merge. Broader attendance authorization/context refactors remain separate.
+No active attendance reward policy owner was found in the open-PR audit. Teacher timing #1002 and roster #933/#938 do not overlap this runtime slice. Broad stale attendance donor edits are not imported. Next: finish independent review/local qualification, qualify draft #1009 against its actual-number exact-head checks before considering merge. Broader attendance authorization/context refactors remain separate.
+
+Actual-number authority locks ten changed paths plus two read-only verifier files. CI contract records 30 workflow families,64 active tuples,four guarded skips; no matrix or workflow changes. Source reviewed at local `58f73ca02`, published identical tree `5da452242cef35dc3788dd4f62a524819af07b80` at `1d8ad3150a1d9335c42a04c66ce62473ac40e4fc`. Final metadata review and hosted qualification pending.
