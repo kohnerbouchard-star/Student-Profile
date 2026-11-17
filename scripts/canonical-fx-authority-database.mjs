@@ -735,6 +735,166 @@ begin
 end;
 $legacy_table_is_frozen$;
 
+-- All mutations below are disposable fixtures inside the outer rollback transaction.
+savepoint temporal_negative;
+delete from public.country_economic_snapshots where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid;
+select pg_temp.fx_assert_v1(
+  public.initialize_fx_authority_for_game_v1(${sqlLiteral(fixture.gameOneId)}::uuid, (select bootstrap_at + interval '1 hour' from fx_acceptance_clock), false)
+    ->> 'reason' = 'FX_MACRO_SNAPSHOT_SET_INCOMPLETE',
+  'zero macro rows remain blocked without fabricated initialization'
+);
+select pg_temp.fx_assert_v1((select count(*) = 0 from public.country_economic_snapshots where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid), 'zero macro input remains zero');
+rollback to savepoint temporal_negative;
+release savepoint temporal_negative;
+
+savepoint temporal_negative;
+update public.country_economic_snapshots set effective_at = effective_at + interval '43 minutes' where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid;
+delete from public.country_economic_snapshots where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid and country_profile_id = (select id from public.country_profiles where currency_code = 'NRC');
+select pg_temp.fx_assert_v1(
+  public.initialize_fx_authority_for_game_v1(${sqlLiteral(fixture.gameOneId)}::uuid, (select bootstrap_at + interval '1 hour' from fx_acceptance_clock), false)
+    ->> 'reason' = 'FX_MACRO_SNAPSHOT_SET_INCOMPLETE',
+  'nine-country later cohort cannot satisfy cutover'
+);
+
+rollback to savepoint temporal_negative;
+release savepoint temporal_negative;
+
+savepoint temporal_negative;
+update public.country_economic_snapshots set effective_at = statement_timestamp() + interval '2 days' where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid;
+select pg_temp.fx_assert_v1(
+  (select count(*) = 10 and count(distinct country_profile_id) = 10
+    and count(distinct effective_at) = 1 and min(effective_at) > clock_timestamp()
+   from public.country_economic_snapshots
+   where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid),
+  'future-time rejection fixture is one complete real ten-country cohort'
+);
+select pg_temp.fx_assert_v1(
+  public.initialize_fx_authority_for_game_v1(${sqlLiteral(fixture.gameOneId)}::uuid, clock_timestamp() + interval '3 days', false)
+    ->> 'reason' = 'FX_MACRO_SNAPSHOT_SET_INCOMPLETE',
+  'future cohort cannot become historical evidence even with future horizon'
+);
+
+rollback to savepoint temporal_negative;
+release savepoint temporal_negative;
+
+savepoint temporal_negative;
+alter table public.currency_exchange_rates disable trigger currency_exchange_rates_immutable;
+update public.currency_exchange_rates set rate = rate + 0.00000001 where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid and from_currency_code = 'NRC' and to_currency_code = 'YRC';
+alter table public.currency_exchange_rates enable trigger currency_exchange_rates_immutable;
+select pg_temp.fx_assert_v1(
+  public.initialize_fx_authority_for_game_v1(${sqlLiteral(fixture.gameOneId)}::uuid, (select bootstrap_at + interval '1 hour' from fx_acceptance_clock), false)
+    ->> 'outcome' = 'initialized',
+  'legacy coherence tolerance boundary 0.00000001 remains unchanged'
+);
+
+rollback to savepoint temporal_negative;
+release savepoint temporal_negative;
+
+savepoint temporal_negative;
+alter table public.currency_exchange_rates disable trigger currency_exchange_rates_immutable;
+update public.currency_exchange_rates set rate = rate + 0.00000002 where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid and from_currency_code = 'NRC' and to_currency_code = 'YRC';
+alter table public.currency_exchange_rates enable trigger currency_exchange_rates_immutable;
+select pg_temp.fx_assert_v1(
+  public.initialize_fx_authority_for_game_v1(${sqlLiteral(fixture.gameOneId)}::uuid, (select bootstrap_at + interval '1 hour' from fx_acceptance_clock), false)
+    ->> 'reason' = 'FX_LEGACY_MATRIX_INCOHERENT',
+  'legacy coherence tolerance boundary 0.00000002 remains unchanged'
+);
+
+rollback to savepoint temporal_negative;
+release savepoint temporal_negative;
+
+savepoint temporal_negative;
+alter table public.currency_exchange_rates disable trigger currency_exchange_rates_immutable;
+delete from public.currency_exchange_rates where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid and from_currency_code = 'NRC' and to_currency_code = 'YRC';
+alter table public.currency_exchange_rates enable trigger currency_exchange_rates_immutable;
+select pg_temp.fx_assert_v1(
+  public.initialize_fx_authority_for_game_v1(${sqlLiteral(fixture.gameOneId)}::uuid, (select bootstrap_at + interval '1 hour' from fx_acceptance_clock), false)
+    ->> 'reason' = 'FX_LEGACY_MATRIX_INCOMPLETE',
+  'incomplete legacy matrix remains blocked'
+);
+
+rollback to savepoint temporal_negative;
+release savepoint temporal_negative;
+
+-- This savepoint temporarily changes ONLY this rollback-only fixture's cohort.
+-- It reproduces a real matrix that predates the first real ten-country cohort.
+savepoint temporal_cutover_fixture;
+update public.country_economic_snapshots
+set effective_at = effective_at + interval '43 minutes 20 seconds'
+where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid;
+
+select pg_temp.fx_assert_v1(
+  public.initialize_fx_authority_for_game_v1(
+    ${sqlLiteral(fixture.gameOneId)}::uuid,
+    (select bootstrap_at from fx_acceptance_clock), false
+  ) ->> 'reason' = 'FX_MACRO_SNAPSHOT_SET_INCOMPLETE',
+  'temporal correction cannot use a cohort beyond the requested horizon'
+);
+
+insert into public.country_economic_snapshots (
+  game_session_id, country_profile_id, snapshot_sequence, effective_at,
+  snapshot_label, difficulty_policy_profile_id, difficulty_preset, metadata, created_at
+)
+select game_session_id, country_profile_id, 1,
+  (select bootstrap_at + interval '50 minutes' from fx_acceptance_clock),
+  'Later temporal fixture cohort', difficulty_policy_profile_id, difficulty_preset,
+  metadata, created_at
+from public.country_economic_snapshots where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid;
+
+create temporary table temporal_bootstrap_result on commit drop as
+select public.initialize_fx_authority_for_game_v1(
+  ${sqlLiteral(fixture.gameOneId)}::uuid,
+  (select bootstrap_at + interval '1 hour' from fx_acceptance_clock), false
+) as result;
+select pg_temp.fx_assert_v1(
+  (select result ->> 'outcome' = 'initialized' from temporal_bootstrap_result),
+  'legacy matrix carries forward to a real admissible cohort'
+);
+select pg_temp.fx_assert_v1(
+  (select effective_at = (select bootstrap_at + interval '43 minutes 20 seconds' from fx_acceptance_clock)
+    and legacy_rate_source_effective_at = (select bootstrap_at from fx_acceptance_clock)
+   from public.fx_fixings where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid),
+  'canonical timestamp and legacy provenance remain distinct'
+);
+select pg_temp.fx_assert_v1(
+  (select count(*) = 90 and bool_and(rate_row.rate = round(target.units_per_eco / source.units_per_eco, 8))
+   from public.currency_exchange_rates rate_row
+   join public.fx_fixing_currency_values source
+     on source.game_session_id = rate_row.game_session_id and source.currency_code = rate_row.from_currency_code
+   join public.fx_fixing_currency_values target
+     on target.fixing_id = source.fixing_id and target.currency_code = rate_row.to_currency_code
+   where rate_row.game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid),
+  'all ninety original fixture rates are preserved without movement'
+);
+select pg_temp.fx_assert_v1(
+  (select count(*) = 10 and bool_and(snapshot_effective_at = (select bootstrap_at + interval '43 minutes 20 seconds' from fx_acceptance_clock))
+   from public.fx_fixing_macro_snapshots where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid),
+  'the ten actual cohort timestamps are linked without fabrication'
+);
+select pg_temp.fx_assert_v1(
+  public.initialize_fx_authority_for_game_v1(
+    ${sqlLiteral(fixture.gameOneId)}::uuid,
+    (select bootstrap_at + interval '2 hours' from fx_acceptance_clock), false
+  ) ->> 'outcome' = 'replayed',
+  'repeated cutover reuses immutable authority'
+);
+select pg_temp.fx_assert_v1(
+  (select command_outcome = 'queued' from public.apply_story_currency_volatility_v1(
+    ${sqlLiteral(fixture.gameOneId)}::uuid, 'temporal-frozen-story', '{"VAL":10}'::jsonb,
+    (select bootstrap_at from fx_acceptance_clock)
+  )),
+  'delayed Story retains its original pre-cutover eligible timestamp'
+);
+select pg_temp.fx_assert_v1(
+  (select command_outcome = 'replayed' from public.apply_story_currency_volatility_v1(
+    ${sqlLiteral(fixture.gameOneId)}::uuid, 'temporal-frozen-story', '{"VAL":10}'::jsonb,
+    (select bootstrap_at from fx_acceptance_clock)
+  )),
+  'frozen Story shock is not queued twice'
+);
+rollback to savepoint temporal_cutover_fixture;
+release savepoint temporal_cutover_fixture;
+
 create temporary table fx_blocked_cutover_result on commit drop as
 select public.initialize_fx_authority_for_game_v1(
   ${sqlLiteral(fixture.gameBlockedId)}::uuid,
@@ -908,6 +1068,16 @@ select pg_temp.fx_assert_v1(
     where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid
   ),
   'existing game backfill uses the coherent legacy matrix'
+);
+select pg_temp.fx_assert_v1(
+  (select effective_at = (select bootstrap_at from fx_acceptance_clock) and legacy_rate_source_effective_at = (select bootstrap_at from fx_acceptance_clock)
+   from public.fx_fixings where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid),
+  'already admissible cohort keeps original canonical and source times'
+);
+select pg_temp.fx_assert_v1(
+  (select effective_at = (select bootstrap_at from fx_acceptance_clock) and legacy_rate_source_effective_at is null
+   from public.fx_fixings where game_session_id = ${sqlLiteral(fixture.gameTwoId)}::uuid),
+  'policy baseline keeps its original timestamp and no invented legacy source'
 );
 
 select pg_temp.fx_assert_v1(
@@ -1970,13 +2140,13 @@ select
   ${sqlLiteral(fixture.gameOneId)}::uuid,
   'fx-db-consumable-shock-v1',
   jsonb_build_object('NRC', 100),
-  claim_row.fixing_effective_at - interval '1 second',
+  (select bootstrap_at - interval '1 hour' from fx_acceptance_clock),
   private.fx_digest_jsonb_v1(
     jsonb_build_object(
       'gameSessionId', ${sqlLiteral(fixture.gameOneId)}::uuid,
       'commandKey', 'fx-db-consumable-shock-v1',
       'adjustmentsBasisPoints', jsonb_build_object('NRC', 100),
-      'eligibleAt', claim_row.fixing_effective_at - interval '1 second'
+      'eligibleAt', (select bootstrap_at - interval '1 hour' from fx_acceptance_clock)
     )
   ),
   claim_row.fixing_effective_at - interval '1 second'
@@ -2451,7 +2621,7 @@ select pg_temp.fx_assert_v1(
       where shock_auth.game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid
         and shock_auth.command_key = 'fx-db-story-replay-v1'
     ),
-  'eligible Story shock is consumed once while the later authorization stays queued'
+  'pre-bootstrap eligible Story shock is consumed once while later authorization stays queued'
 );
 
 select pg_temp.fx_assert_v1(

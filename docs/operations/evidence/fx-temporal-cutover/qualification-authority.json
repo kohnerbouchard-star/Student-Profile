@@ -1,0 +1,15 @@
+{
+  "prNumber": 0,
+  "repository": "kohnerbouchard-star/Student-Profile",
+  "head": "fix/fx-bootstrap-temporal-provenance",
+  "allowedPaths": [
+    ".github/workflows/fx-temporal-cutover-qualification.yml",
+    "scripts/fx-temporal-cutover-qualification.mjs",
+    "backend/supabase/migrations/20261117035856_fx_bootstrap_temporal_provenance.sql",
+    "scripts/canonical-fx-authority-database.mjs",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "docs/operations/evidence/fx-temporal-cutover/scope.md",
+    "docs/operations/evidence/fx-temporal-cutover/qualification-plan.md",
+    "docs/operations/evidence/fx-temporal-cutover/qualification-authority.json"
+  ]
+}
