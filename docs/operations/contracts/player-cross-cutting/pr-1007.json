@@ -9,6 +9,7 @@
   "productionMutationAllowed": false,
   "secretValuesAllowed": false,
   "allowedPaths": [
+    ".github/workflows/crafting-item-runtime.yml",
     "docs/operations/contracts/player-cross-cutting/pr-1007.json",
     "docs/operations/evidence/loans-facility-payment-receipts-v1/ci-contract.json",
     "docs/operations/evidence/loans-facility-payment-receipts-v1/scope.md",
@@ -20,6 +21,7 @@
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
+    ".github/workflows/crafting-item-runtime.yml",
     "docs/operations/contracts/player-cross-cutting/pr-1007.json",
     "docs/operations/evidence/loans-facility-payment-receipts-v1/ci-contract.json",
     "docs/operations/evidence/loans-facility-payment-receipts-v1/scope.md",

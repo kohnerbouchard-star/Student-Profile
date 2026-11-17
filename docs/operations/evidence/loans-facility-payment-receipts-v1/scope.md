@@ -38,3 +38,16 @@ pull_request filters against the complete changed scope. Read-only verifier path
 are locked, not edited. All production/deployment/secret denials remain false.
 
 Next: qualify exact-head checks and return the draft for review. No merge/deploy.
+
+## Exact-head scheduling correction
+
+Final source/metadata `a7cb5ad73` passes the repeated full root aggregate. Full
+backend smoke stops on the same frozen SDK fetch. GitHub's complete workflow
+listing schedules 24 of 25 derived PR families; Crafting Item Runtime is absent.
+The coordinator authorized adding only the exact `pr-1007.json` path to its
+existing pull-request filter. All jobs, commands, assertions, permissions,
+conditions and other triggers remain unchanged. Authority becomes eight changed
+paths under ten locks, with the same 25 families/47 active tuples/3 guarded skips.
+Earlier no-workflow-change statements describe the source tranche and are
+superseded only for this bounded scheduling path. Fresh independent review and
+exact-head qualification remain required; no dispatch or waiver.
