@@ -144,3 +144,22 @@ The local full root aggregate stopped at five unrelated security-metadata tests
 because `@supabase/supabase-js` is absent. Locked installation is blocked by the
 executor's Node 24/npm 11 versus the required Node 22/npm 10; no engine guard was
 bypassed. Exact-head hosted CI uses the pinned toolchain and remains required.
+
+
+## Fixture lifecycle projection correction
+
+Exact-head disposable run 44024484351 at `6e3b482a` passed all 43 local
+contracts, the fresh reset guard and migration-version verification, then failed
+serial fixture setup at `game_sessions_lifecycle_status_projection_check`.
+The canonical lifecycle migration and transition RPC project draft and paused to
+status `disabled`, not `active` or `paused`. Existing Story claim/release guards
+therefore fail closed for a canonical paused game. Broadening production guards
+to make a fixture pass would change gameplay semantics and is out of scope.
+The serial fixture now explicitly proves paused/disabled claim and release denial
+with no audit write, then resumes active/active for unchanged success cases.
+Concurrency starts active and exercises both draft and paused transitions in both
+lock orderings, resuming active between cases. No prior assertion is removed;
+constraints, trigger behavior and production SQL remain unchanged. A regression
+checks all six lifecycle-update sites, explicit paused denial coverage and both
+concurrency lifecycle states. 44 targeted tests pass locally; exact-head real
+PostgreSQL/concurrency CI must rerun. No live/staging action occurred.

@@ -106,7 +106,25 @@ declare
  r record; replay record; c record; saved public.story_event_execution_claims%rowtype;
  n integer; delay_seconds integer; denied boolean; release_id uuid;
 begin
- update public.game_sessions set lifecycle_state='paused' where id in(g,fx_game);
+ update public.game_sessions set lifecycle_state='paused',status='disabled' where id in(g,fx_game);
+ -- A canonical paused game is disabled: recovery must not resume execution.
+ denied:=false;
+ begin perform public.claim_story_event_execution_v1(g,e,clock_timestamp(),4,'{}',120);
+ exception when raise_exception then
+  if sqlerrm <> 'STORY_EXECUTION_GAME_NOT_MUTABLE' then raise; end if;
+  denied:=true;
+ end;
+ if not denied then raise exception 'Paused fixture unexpectedly mutable'; end if;
+ denied:=false;
+ begin perform public.release_story_execution_retry_hold_v1(g,e,'STORY_EXECUTION_RETRY_BUDGET_EXHAUSTED',8,1,owner_id,'Reviewed paused fixture denial','retry-fixture-paused');
+ exception when insufficient_privilege then
+  if sqlerrm <> 'STORY_RETRY_RELEASE_OWNER_OR_GAME_INVALID' then raise; end if;
+  denied:=true;
+ end;
+ if not denied then raise exception 'Paused fixture unexpectedly released hold'; end if;
+ if exists(select 1 from public.story_execution_retry_release_audit where game_session_id in(g,fx_game)) then raise exception 'Paused denial wrote release audit'; end if;
+ -- Resume synthetic fixtures only; all success cases use canonical active state.
+ update public.game_sessions set lifecycle_state='active',status='active' where id in(g,fx_game);
  -- Wrong owner and stale expected attempts cannot open a hold.
  denied:=false;
  begin perform public.release_story_execution_retry_hold_v1(g,e,'STORY_EXECUTION_RETRY_BUDGET_EXHAUSTED',8,1,gen_random_uuid(),'Reviewed transient outage recovery','retry-fixture-owner');

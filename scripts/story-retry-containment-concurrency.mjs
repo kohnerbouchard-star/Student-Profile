@@ -124,7 +124,7 @@ export async function runConcurrency() {
   const fixture=readFileSync('scripts/story-retry-containment-database.sql','utf8').split('do $test$')[0].replaceAll('73000000','74000000').replaceAll('story_retry_fixture','story_retry_concurrency_fixture').replaceAll('story-retry@example.test','story-retry-concurrency@example.test');
   let setup=false;
   try {
-    sql(fixture+`update public.game_sessions set lifecycle_state='paused' where id='${g}'; commit;`);setup=true;
+    sql(fixture+'commit;');setup=true;
     reset('absent');let results=await contend(claim,claim);
     assert(results[0].output.includes('"claim_outcome":"acquired"'));
     assert(results[1].code===0&&results[1].output.includes('"claim_outcome":"busy"'));
@@ -161,15 +161,18 @@ export async function runConcurrency() {
     assert(sql(claim).includes('"claim_outcome":"busy"'),'New FX block must prevent execution after release');
     prepareFxHeld();results=await contend(blockFx,release('fixture-block-before-release'));
     assert(results[1].code!==0&&results[1].errors.includes('STORY_RETRY_RELEASE_FX_NOT_READY'),results[1].errors);
-    const disableGame=`update public.game_sessions set lifecycle_state='draft',status='disabled' where id='${g}';`;
-    reset('held');results=await contend(release('fixture-release-before-lifecycle'),disableGame);
-    assert.equal(results[1].code,0,results[1].errors);
-    let lifecycleDenied=false;
-    try{sql(claim);}catch(error){lifecycleDenied=String(error.stderr).includes('STORY_EXECUTION_GAME_NOT_MUTABLE');}
-    assert(lifecycleDenied,'Changed lifecycle must prevent execution after release');
-    sql(`update public.game_sessions set lifecycle_state='paused',status='paused' where id='${g}';`);
-    reset('held');results=await contend(disableGame,release('fixture-lifecycle-before-release'));
-    assert(results[1].code!==0&&results[1].errors.includes('STORY_RETRY_RELEASE_OWNER_OR_GAME_INVALID'),results[1].errors);
+    for(const lifecycle of ['draft','paused']){
+      const disableGame=`update public.game_sessions set lifecycle_state='${lifecycle}',status='disabled' where id='${g}';`;
+      reset('held');results=await contend(release(`fixture-release-before-${lifecycle}`),disableGame);
+      assert.equal(results[1].code,0,results[1].errors);
+      let lifecycleDenied=false;
+      try{sql(claim);}catch(error){lifecycleDenied=String(error.stderr).includes('STORY_EXECUTION_GAME_NOT_MUTABLE');}
+      assert(lifecycleDenied,'Changed lifecycle must prevent execution after release');
+      sql(`update public.game_sessions set lifecycle_state='active',status='active' where id='${g}';`);
+      reset('held');results=await contend(disableGame,release(`fixture-${lifecycle}-before-release`));
+      assert(results[1].code!==0&&results[1].errors.includes('STORY_RETRY_RELEASE_OWNER_OR_GAME_INVALID'),results[1].errors);
+      sql(`update public.game_sessions set lifecycle_state='active',status='active' where id='${g}';`);
+    }
     console.log('STORY_RETRY_CONCURRENCY_ACCEPTANCE_PASSED');
   } finally {
     for(const child of sessions)child.kill();

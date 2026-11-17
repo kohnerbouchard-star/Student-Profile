@@ -55,3 +55,29 @@ test('failed CI prints only bounded diagnostics after fail-closed redaction',()=
  }
  assert(workflow.includes('scripts/redact-econovaria-ci-log.test.mjs'));
 });
+
+
+test('all fixture lifecycle transitions retain the canonical status projection',()=>{
+ const projection=readFileSync('backend/supabase/migrations/20260719200000_add_game_lifecycle_controls_v1.sql','utf8');
+ assert(projection.includes("lifecycle_state in ('draft', 'paused') and status = 'disabled'"));
+ const expected={active:'active',draft:'disabled',paused:'disabled','${lifecycle}':'disabled'};
+ let transitions=0;
+ for(const path of ['scripts/story-retry-containment-database.sql','scripts/story-retry-containment-concurrency.mjs']){
+  const source=readFileSync(path,'utf8');
+  for(const match of source.matchAll(/update public\.game_sessions set ([^;]+?)(?:where)/g)){
+   const state=match[1].match(/lifecycle_state='([^']+)'/)?.[1];
+   if(!state)continue;
+   const status=match[1].match(/(?:^|,)status='([^']+)'/)?.[1];
+   assert.equal(status,expected[state],`${path}: ${state} must retain its status projection`);
+   transitions++;
+  }
+  assert(!/disable trigger|drop constraint|session_replication_role/i.test(source));
+ }
+ assert.equal(transitions,6,'Every serial and concurrent lifecycle transition must be checked');
+ const proof=readFileSync('scripts/story-retry-containment-database.sql','utf8');
+ for(const term of ['Paused fixture unexpectedly mutable','Paused fixture unexpectedly released hold','Paused denial wrote release audit'])assert(proof.includes(term));
+ const runner=readFileSync('scripts/story-retry-containment-concurrency.mjs','utf8');
+ assert(runner.includes("for(const lifecycle of ['draft','paused'])"));
+ assert(runner.includes("assert(lifecycleDenied,'Changed lifecycle must prevent execution after release')"));
+ assert(runner.includes("results[1].errors.includes('STORY_RETRY_RELEASE_OWNER_OR_GAME_INVALID')"));
+});
