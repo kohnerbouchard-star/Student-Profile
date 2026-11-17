@@ -9,6 +9,7 @@ import { installBusinessTreasuryFlow } from "./features/business-treasury/busine
 import { installStoryDecisionFlow } from "./features/contracts/story-decision-flow.js";
 import { installInventoryActionFlow } from "./features/inventory/inventory-action-flow.js";
 import { installLocalControlsFlow } from "./features/local-controls/local-controls-flow.js";
+import { installMarketDirectoryFlow } from "./features/market/market-directory-flow.js";
 import { installMarketOrderFlow } from "./features/market/market-order-flow.js";
 import { installMarketplaceFundingFlow } from "./features/marketplace/marketplace-funding-flow.js";
 import { installMessageIntentAdapter } from "./features/messages/message-intent-adapter.js";
@@ -43,6 +44,7 @@ const logout = installPlayerLogoutController({ terminal, config, mount });
 const localControls = installLocalControlsFlow({ mount, terminal });
 const inventoryActions = installInventoryActionFlow({ mount, terminal, config });
 const storePurchases = installStorePurchaseFlow({ mount, terminal, config });
+const marketDirectory = installMarketDirectoryFlow({ mount, terminal, config });
 const marketOrders = installMarketOrderFlow({ mount, terminal, config });
 const marketplaceFunding = installMarketplaceFundingFlow({ mount, terminal, config });
 const bankingReads = installBankingReadFlow({ mount, terminal, config });
@@ -74,6 +76,7 @@ terminal.destroy = () => {
   bankingReads.destroy();
   marketplaceFunding.destroy();
   marketOrders.destroy();
+  marketDirectory.destroy();
   storePurchases.destroy();
   inventoryActions.destroy();
   localControls.destroy();
