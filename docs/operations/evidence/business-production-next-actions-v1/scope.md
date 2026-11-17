@@ -48,3 +48,15 @@ No staging/production runtime acceptance or deployment is claimed. Draft remains
 unqualified pending independent review and applicable hosted exact-head checks.
 Next: publish draft, qualify unchanged commands/gates, and reconcile current main
 serially before any separately authorized merge.
+
+## Actual-number authority
+
+Draft PR #994 source publication is `2ed94f1512e980fae556e813b6bf6cc65397f546`,
+matching local tree `e61cd8d45ab5c1a6120d0f3af208189e33f57c9f` exactly.
+The actual-number manifest locks ten changed paths plus two read-only verification
+files; it preserves deployment, production-mutation and secret denials. Current
+workflow filter derivation records 37 families, 79 active workflow/job tuples and
+four guarded skips, with 115 ordered required identities and 74 unique critical
+job names. No workflow trigger, command, permission or condition changes. Manifest
+verification and its 16 regression tests pass. Source-only hosted CI is interim;
+metadata head must receive fresh qualification and independent review.
