@@ -331,6 +331,7 @@ export function createStudentProfileApiCall({ request } = {}) {
   let capabilityManifest = null;
   let snapshot = createEmptyReadModels();
   let sessionFingerprint = "";
+  let marketReadVersion = 0;
 
   async function loadCapabilityManifest(context) {
     const route = resolvePlayerBackendRequest({ endpointKey: "capabilities", method: "GET", path: "/capabilities", payload: undefined, params: {}, session: context.session });
@@ -363,12 +364,20 @@ export function createStudentProfileApiCall({ request } = {}) {
       throw new ApiConnectionPendingError({ endpointKey: context.endpointKey, method: context.method, path: context.path, payload: context.payload });
     }
 
+    const marketVersion = context.endpointKey === "market" ? ++marketReadVersion : null;
     const raw = await request({
       endpointKey: context.endpointKey, method: backendRequest.method, path: backendRequest.path,
       payload: backendRequest.payload, headers: headersFor({ ...context, method: backendRequest.method }), signal: context.signal,
       requestId: context.requestId, idempotencyKey: context.idempotencyKey
     });
 
+    // A retired directory page must not poison the adapter's shared snapshot,
+    // even if a custom transport finishes after its AbortSignal was cancelled.
+    if (["market", "marketAsset"].includes(context.endpointKey)
+      && (context.signal?.aborted || currentFingerprint !== sessionFingerprint
+        || (context.endpointKey === "market" && marketVersion !== marketReadVersion))) {
+      throw new ApiRequestError("The market read was superseded.", { code: "REQUEST_SUPERSEDED", endpointKey: context.endpointKey });
+    }
     if (context.endpointKey === "session") {
       rawSession = raw;
       capabilityManifest = await loadCapabilityManifest(context);
@@ -438,6 +447,13 @@ export function createStudentProfileApiCall({ request } = {}) {
           ...snapshot,
           portfolio: attachPortfolioHoldings(snapshot.portfolio, raw),
         };
+      }
+      // Keep the accumulated directory internal. Wire projections stay bounded
+      // to this page/detail, so response sanitization cannot truncate later pages.
+      if (context.endpointKey === "market" || context.endpointKey === "marketAsset") {
+        const ids = new Set(context.endpointKey === "marketAsset"
+          ? [raw?.asset?.assetId] : (Array.isArray(raw?.assets) ? raw.assets : []).map((asset) => asset.assetId));
+        return { ...snapshot.market, assets: snapshot.market.assets.filter((asset) => ids.has(asset.id)) };
       }
       return endpointProjection(snapshot, context.endpointKey);
     }
