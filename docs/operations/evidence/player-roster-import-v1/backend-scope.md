@@ -407,3 +407,17 @@ Git fetch verifies both source objects and exact trees. This pin update changes
 no runtime, workflow command, validation or test assertion. Renew clean paired
 qualification before the single expected-head update of existing #938. Hosted
 checks and connected-runtime qualification of the published head remain pending.
+
+### Current-head mode fixture correction (2026-11-17)
+
+Exact public head `ef9d3658ab449a6e35bc9e67b654ff8f1e9d52ce` passed all 131
+primary harness cases in run `43988945255`, then stopped before connected
+execution: its synthetic mode matrix still used historical pre-extraction source
+trees. Those trees lack the current value-connected source-reader helper and
+current bootstrap DTO composition. The matrix now derives test-only repositories
+from the current source pins only after the unchanged runtime verifier succeeds.
+Both complete 131-case modes pass locally. The frozen checkpoint guard test permits
+only that precise fixture substitution; runtime guards, cleanup, full-suite
+execution, real DB/browser requirements and `connectedExecuted:false` remain.
+This is harness repair, not connected qualification or a capacity claim. Fresh
+exact-head hosted connected execution remains mandatory. No merge or deployment.

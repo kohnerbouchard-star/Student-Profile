@@ -83,7 +83,12 @@ test('source manifest pins only seven runtime files and creates the exact paired
     assert.equal(manifest.maximumRosterCapacityQualified,false);
     assert.match(manifest.compositeTree,/^[0-9a-f]{40}$/);
     const changed = execFileSync('git',['-C',root,'diff-tree','--no-commit-id','--name-only','-r',pins.backend.tree,manifest.compositeTree],{encoding:'utf8'}).trim().split('\n').filter(Boolean);
-    assert.deepEqual(changed.sort(),pins.mode === 'backend-owned' ? expected.sort() : []);
+    // A synthetic inverse backend may already contain six identical frontend
+    // blobs. Require exactly the pinned blob differences, not seven edits.
+    const expectedChanges = pins.mode === 'backend-owned' ? expected.filter(path =>
+      !execFileSync('git',['-C',root,'ls-tree',pins.backend.sha,'--',path]).equals(
+        execFileSync('git',['-C',root,'ls-tree',pins.frontend.sha,'--',path]))) : [];
+    assert.deepEqual(changed.sort(),expectedChanges.sort());
     // Exercise the real file-based canonical builder in the .git-free archive.
     const runtime = join(temporary,'runtime');
     const contract = JSON.parse(await readFile(join(runtime,'docs/operations/contracts/beta-seed-downstream-consumer-contract-v1.json'),'utf8'));
@@ -250,7 +255,38 @@ test('checkpoint inverse preserves all original flow bytes and exact runtime gua
   // prepare/verifyRuntime above; exact public pin bytes are checked separately
   // against the frozen publication candidate, never a synthetic fixture.
   for(const name of ['runtime-equivalence.mjs','prepare.mjs','database.mjs','evidence.mjs','auth-fixture.mjs','provisioning.mjs','mode-fixtures.mjs','install-diagnostics.mjs','install-diagnostics.test.mjs']) {
-    assert.equal(await read(`./${name}`),baseline(`scripts/roster-connected/${name}`));
+    let expected = baseline(`scripts/roster-connected/${name}`);
+    if (name === 'mode-fixtures.mjs') {
+      // The only allowed fixture revision replaces stale test-only source pins.
+      // Preserve every suite, projection, report and cleanup byte around it.
+      const frozen = `const historical = Object.freeze({
+  backend:{sha:'1ab7aaad04d95c020e5211d69735106a58da31ce',tree:'874af232b28f4d1a0e9ad4dfdb55dd65af3404bc'},
+  frontend:{sha:'db4aec4c5203ef44618b8718f871dd400eaa4f48',tree:'b5f410f50ed25ba6f155bae731ac45d7e7bf3989'},
+});\n`;
+      assert.equal(expected.split(frozen).length, 2);
+      expected = expected.replace(frozen, '').replace('  await verifyRuntime(root);',
+        `  await verifyRuntime(root);
+  // Validate current pins before deriving synthetic convention fixtures. Historical
+  // pre-extraction trees cannot execute current source-connected contract tests.
+  const sources = JSON.parse(await readFile(join(root,'scripts/roster-connected/sources.json'),'utf8'));`)
+        .replaceAll('historical.', 'sources.')
+        .replace('HARNESS_PATHS, OVERLAY_PATHS, MODE_API_RELATION',
+          'API_PATH, API_ROSTER_LINES, HARNESS_PATHS, OVERLAY_PATHS, MODE_API_RELATION')
+        .replace('    let backend=sources.backend,frontend=sources.frontend;',
+          '    let backend=sources.backend,frontend=sources.frontend;\n' +
+          `    // An integrated input has no inverse pair. Derive only the exact two-line
+    // inverse in a synthetic backend; never modify or substitute real pins.
+    if (sources.mode === 'integrated-composite') {
+      let api = String(git(directory,'show',\`\${backend.sha}:\${API_PATH}\`));
+      for (const line of API_ROSTER_LINES) {
+        check(api.split(line).length === 2,'mode-fixture-api-inverse');
+        api = api.replace(line,'');
+      }
+      await put(directory,API_PATH,api);
+      backend=commit(directory);
+    }`);
+    }
+    assert.equal(await read(`./${name}`),expected);
   }
   assert.equal(await read('../../.github/workflows/roster-connected-e2e.yml'),baseline('.github/workflows/roster-connected-e2e.yml'));
 });

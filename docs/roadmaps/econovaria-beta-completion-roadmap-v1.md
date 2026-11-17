@@ -718,3 +718,15 @@ Next: complete current-main qualification and independent source/security
 review, reconcile the explicit live-parity merge gate, then normal merge only
 when permitted and collect exact-merge evidence. Later context owners and
 broader ARCH-100 closure remain separately unqualified.
+
+### Classroom #938 connected-gate fixture follow-up (2026-11-17)
+
+Existing names-roster owner #938 remains `IMPLEMENTED_NOT_MERGED`. Run
+`43988945255` on `ef9d3658` passed 131 primary harness tests but failed its stale
+pre-extraction synthetic source matrix before any DB/browser execution. Bounded
+harness correction derives fixtures from validated current source pins, retaining
+the exact frozen guard boundary and both complete modes (131 cases each passing
+locally). Backend/UI source pins, migrations, RPCs, application behavior and
+permissions are unchanged. See backend-scope evidence for details. Next: obtain
+independent review and fresh exact-head hosted connected qualification; no merge,
+deployment, completion or hosted-capacity claim.

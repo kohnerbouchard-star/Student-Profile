@@ -6,14 +6,10 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { check } from './evidence.mjs';
-import { HARNESS_PATHS, OVERLAY_PATHS, MODE_API_RELATION } from './runtime-inputs.mjs';
+import { API_PATH, API_ROSTER_LINES, HARNESS_PATHS, OVERLAY_PATHS, MODE_API_RELATION } from './runtime-inputs.mjs';
 import { verifyRuntime } from './runtime-equivalence.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)),'../..');
-const historical = Object.freeze({
-  backend:{sha:'1ab7aaad04d95c020e5211d69735106a58da31ce',tree:'874af232b28f4d1a0e9ad4dfdb55dd65af3404bc'},
-  frontend:{sha:'db4aec4c5203ef44618b8718f871dd400eaa4f48',tree:'b5f410f50ed25ba6f155bae731ac45d7e7bf3989'},
-});
 const frontendTestInputs = [
   'package.json', '.github/workflows/admin-v2-players.yml',
   ...['csv-browser-smoke.mjs','csv.test.mjs','import-browser-smoke.mjs','import.test.mjs']
@@ -36,6 +32,9 @@ function commit(directory) {
 }
 try {
   await verifyRuntime(root);
+  // Validate current pins before deriving synthetic convention fixtures. Historical
+  // pre-extraction trees cannot execute current source-connected contract tests.
+  const sources = JSON.parse(await readFile(join(root,'scripts/roster-connected/sources.json'),'utf8'));
   const tests=(await readdir(join(root,'scripts/roster-connected'))).filter(name=>name.endsWith('.test.mjs'))
     .sort().map(name=>`scripts/roster-connected/${name}`);
   check(tests.length>0 && tests.every(path=>HARNESS_PATHS.includes(path)),'mode-fixture-complete-suite');
@@ -44,13 +43,24 @@ try {
     report.stage=`${mode}-source-fixture`;
     const directory=join(temporary,mode);
     git(root,'clone','--shared','--no-checkout','--quiet',root,directory);
-    git(directory,'checkout','--quiet','--detach',historical.backend.sha);
-    let backend=historical.backend,frontend=historical.frontend;
+    git(directory,'checkout','--quiet','--detach',sources.backend.sha);
+    let backend=sources.backend,frontend=sources.frontend;
+    // An integrated input has no inverse pair. Derive only the exact two-line
+    // inverse in a synthetic backend; never modify or substitute real pins.
+    if (sources.mode === 'integrated-composite') {
+      let api = String(git(directory,'show',`${backend.sha}:${API_PATH}`));
+      for (const line of API_ROSTER_LINES) {
+        check(api.split(line).length === 2,'mode-fixture-api-inverse');
+        api = api.replace(line,'');
+      }
+      await put(directory,API_PATH,api);
+      backend=commit(directory);
+    }
     if(mode === 'integrated-composite') {
       // Full source fixture is frozen BEFORE its separate harness commit. Include
       // frontend package commands/test helpers, not only seven application blobs.
       for(const path of [...OVERLAY_PATHS,...frontendTestInputs]) {
-        await put(directory,path,git(root,'show',`${historical.frontend.sha}:${path}`));
+        await put(directory,path,git(root,'show',`${sources.frontend.sha}:${path}`));
       }
       backend=frontend=commit(directory);
     }
