@@ -18,6 +18,7 @@
     "player-terminal/tests/browser/player-loans-lifecycle.spec.mjs",
     "player-terminal/tests/loans-lifecycle-forecast.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/roster-connected/sources.json",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
@@ -30,6 +31,7 @@
     "player-terminal/tests/browser/player-loans-lifecycle.spec.mjs",
     "player-terminal/tests/loans-lifecycle-forecast.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/roster-connected/sources.json",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredChecks": [

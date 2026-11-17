@@ -51,3 +51,25 @@ paths under ten locks, with the same 25 families/47 active tuples/3 guarded skip
 Earlier no-workflow-change statements describe the source tranche and are
 superseded only for this bounded scheduling path. Fresh independent review and
 exact-head qualification remain required; no dispatch or waiver.
+
+## Roster integrated-source pin reconciliation
+
+The unchanged whole-runtime guard rejects the new feature head with
+`runtime-head-projection-drift`: retained roster pins identify old main source
+`60a08987`, not these reviewed Loans bytes. The coordinator requested checking
+and correcting this shared qualification blocker without weakening the guard.
+
+Prepare this scope/authority inclusion first, publish the reviewed immutable
+candidate, then set only both integrated-composite source SHA/tree pairs in
+`scripts/roster-connected/sources.json` to that public candidate. Preserve the
+mode, exact API equality, seven overlay paths, classifier, workflow coverage,
+all harness/test bytes and production holds. Both sources must identify the same
+reviewed integrated tree. No exclusions or assertions are removed or broadened.
+Because new scope/authority files are deliberately runtime inputs, pinning occurs
+in a separate descendant containing only the harness-owned sources.json change.
+
+Final scope is nine changed paths under eleven locks; CI remains 25 workflow
+families, 47 active tuples and three guarded skips. Independently review the
+pin/control diff, prove disk and whole-runtime equivalence, run the complete
+roster guard suite and both historical mode fixtures, then renew hosted
+qualification. The source pin does not authorize live deployment or production.
