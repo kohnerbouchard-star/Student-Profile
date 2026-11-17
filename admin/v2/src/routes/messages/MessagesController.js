@@ -10,6 +10,7 @@ import {
   isAdminErrorEnvelope,
   normalizeAdminError,
 } from "../../core/error-envelope.js";
+import { createMessagesPolicyPanel } from "./MessagesPolicyPanel.js";
 import { MessagesRoute } from "./MessagesRoute.js";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -164,6 +165,7 @@ export function createMessagesController({
   let mutationSequence = 0;
   let destroyed = false;
   let currentView = null;
+  let policyPanel = null;
   let refreshTimer = null;
   const activeMutations = new Set();
 
@@ -308,7 +310,11 @@ export function createMessagesController({
   function render() {
     if (destroyed) throw new Error("Messages controller has been destroyed.");
     currentView?.destroy?.();
+    if (!policyPanel && hasPermission("messaging.moderate") && typeof api.readPolicy === "function" && typeof api.updatePolicy === "function") {
+      policyPanel = createMessagesPolicyPanel({ api, gameId: selectedGameId, hasPermission });
+    }
     currentView = MessagesRoute({
+      policyPanel: policyPanel?.element,
       state,
       filters,
       onApplyFilters: (next) => load({ ...filters, ...next, offset: 0 }),
@@ -322,6 +328,8 @@ export function createMessagesController({
   }
 
   function deactivate() {
+    policyPanel?.destroy();
+    policyPanel = null;
     if (api.cancelMessagesRequest?.() === true) {
       requestVersion += 1;
       if (!state.hasResolved) {
@@ -354,6 +362,8 @@ export function createMessagesController({
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      policyPanel?.destroy();
+      policyPanel = null;
       requestVersion += 1;
       api.cancelMessagesRequest?.();
       if (refreshTimer !== null) globalThis.clearTimeout(refreshTimer);

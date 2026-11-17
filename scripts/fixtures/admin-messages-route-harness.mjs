@@ -62,6 +62,7 @@ export function createMessagesRouteHarness() {
     modules.set(filename, loaded); return loaded;
   }
   return { MessagesRoute: load(path.join(directory, "MessagesRoute.js")).MessagesRoute,
+    createPolicyPanel: load(path.join(directory, "MessagesPolicyPanel.js")).createMessagesPolicyPanel,
     nodes, fields, confirmations, frames,
     button(action) { return nodes.find((node) => node.tag === "button" && node.children.includes(action)); },
   };

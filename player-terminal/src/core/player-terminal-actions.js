@@ -94,6 +94,21 @@ export function createPlayerTerminalActions({
       updateUi({ notificationsOpen: false });
     }
 
+    // Workspace anchors are in-page navigation, not terminal route hashes.
+    const workspaceLink = event.target.closest("[data-business-workspace-link]");
+    if (workspaceLink) {
+      event.preventDefault();
+      const section = workspaceLink.dataset.businessWorkspaceLink;
+      const sections = ["overview", "products", "stockroom", "procurement", "production", "workforce", "equipment", "sales", "finance", "governance", "activity"];
+      if (stateAtClick.route !== "business" || stateAtClick.status !== "ready" || stateAtClick.modal || !sections.includes(section)) return;
+      const destination = mount.querySelector(`[data-business-workspace-section="${section}"]`);
+      if (!destination) return;
+      destination.setAttribute("tabindex", "-1");
+      destination.focus({ preventScroll: true });
+      destination.scrollIntoView({ block: "start", behavior: "auto" });
+      return;
+    }
+
     const routeButton = event.target.closest("[data-route]");
     if (routeButton) {
       if (!isRouteEnabled(stateAtClick.data?.capabilities, routeButton.dataset.route)) {
