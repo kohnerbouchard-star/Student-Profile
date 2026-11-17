@@ -179,7 +179,13 @@ function marketplace() {
       }],
       myListings: [],
       reservations: [],
-      orders: [],
+      orders: [{
+        id: "ord_77777777777777777777777777777777", listingId: LISTING_ID,
+        itemId: "data-chip", itemName: "Recorded Data Chip", quantity: 1,
+        subtotal: 15, feeAmount: 0.38, taxAmount: 0.15, total: 15.53,
+        sellerProceeds: 15, currencyCode: "LUM", status: "completed",
+        role: "buyer", completedAt: NOW,
+      }],
       disputes: [],
       summary: { listingCount: 1, activeSellers: 1, volume: 30 },
     },
@@ -497,6 +503,23 @@ test("Marketplace purchase reviews exact funding before atomic settlement", asyn
     "15.53",
   );
   await expect(page.evaluate(() => document.cookie)).resolves.not.toContain("econovaria_player_session");
+
+  const receipt = marketplacePage.locator("[data-player-marketplace-order]").first();
+  await receipt.locator("summary").click();
+  await expect(receipt.locator("dl")).toBeVisible();
+  await expect(receipt).toContainText("RECORDED BUYER TOTAL");
+  await expect(receipt).toContainText("LUM 15.53");
+  expect(await receipt.locator("dd").first().evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const box = element.getBoundingClientRect();
+    return [...range.getClientRects()].every((rect) => rect.right <= box.right + 1 && rect.left >= box.left - 1);
+  })).toBe(true);
+  await receipt.locator("summary").click();
+  await expect(receipt.locator("dl")).toBeHidden();
+  expect(harness.quotePosts()).toBe(0);
+  expect(harness.settlementPosts()).toBe(0);
+  expect(await page.evaluate(() => location.hash)).toBe("#marketplace");
 
   await quoteForm.getByRole("button", { name: /Review exact funding quote/i }).click();
   await expect.poll(harness.quotePosts).toBe(1);

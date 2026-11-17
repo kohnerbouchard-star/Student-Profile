@@ -909,7 +909,7 @@ for (const options of [{ serverCap: 1 }, { omitCount: true }]) {
     assert.equal(lifecycle.recordedDebt.groups[0].outstanding, null);
   });
 }
-Deno.test("legacy snapshot golden fixture retains every original field and value", async () => {
+Deno.test("legacy snapshot golden fixture retains original values and explicit unavailable repayment account", async () => {
   const { lifecycle: _lifecycle, repaymentForecast: _forecast, ...legacy } = await read(
     synthetic(database()),
   );
@@ -949,6 +949,7 @@ Deno.test("legacy snapshot golden fixture retains every original field and value
       repaidPercent: 10,
       accruedInterest: 1,
       businessId: null,
+      repaymentAccountType: null,
     }],
     schedule: [{
       currencyCode: "USD",

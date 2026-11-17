@@ -187,6 +187,7 @@ export interface LoansSnapshotDto {
     readonly repaidPercent: number;
     readonly accruedInterest: number;
     readonly businessId: string | null;
+    readonly repaymentAccountType?: "checking" | "savings" | "business" | null;
   }[];
   readonly schedule: readonly {
     readonly currencyCode?: string | null;
