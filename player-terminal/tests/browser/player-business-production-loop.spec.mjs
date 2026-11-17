@@ -66,21 +66,31 @@ test.beforeEach(async ({ page }) => { page.loopErrors = []; page.on("pageerror",
 test.afterEach(async ({ page }) => { await page.evaluate(() => businessLoop.terminal.destroy()); expect(page.loopErrors).toEqual([]); });
 
 test("equipment, manufacturing, draft, stock and publication use real Player controls", async ({ page }) => {
+  const guidance = page.locator("[data-business-next-actions]");
+  await expect(guidance).toContainText("Install warehouse equipment");
+  await guidance.getByRole("link", { name: "Review equipment", exact: true }).click();
+  expect(await page.evaluate(() => businessLoop.calls.length)).toBe(0);
   await expect(page.locator('[data-player-form="business-manufacturing-start"]')).toHaveCount(0);
   await page.getByRole("button", { name: "Install equipment", exact: true }).click();
   await expect(page.locator('[data-business-equipment-installation]')).toContainText("Fixture Press");
+  await expect(guidance).toContainText("Start a ready production run");
+  await expect(guidance).not.toContainText("Install warehouse equipment");
   const production = page.locator('[data-player-form="business-manufacturing-start"]');
   await expect(production.locator('[name="quantity"]')).toHaveAttribute("max", "6");
   await production.locator('[name="quantity"]').fill("4"); await production.getByRole("button").click();
+  await expect(guidance).toContainText("Move finished goods toward a sale");
   const create = page.locator('[data-player-form="business-store-offer-create"]');
   await expect(create).toBeVisible(); await create.locator('[name="unitPrice"]').fill("20"); await create.getByRole("button").click();
   const stock = page.locator('[data-player-form="business-store-offer-stock"]');
   await expect(stock.locator('[name="quantity"]')).toHaveAttribute("max", "4");
   await expect(page.getByRole("button", { name: "Publish offer", exact: true })).toHaveCount(0);
   await stock.locator('[name="quantity"]').fill("4"); await stock.getByRole("button").click();
+  await expect(guidance).toContainText("Review stocked offers for publication");
   await page.getByRole("button", { name: "Publish offer", exact: true }).click();
   await expect(page.locator('[data-business-sales-offer]')).toContainText("ACTIVE");
   await expect(page.locator('[data-player-form="business-store-offer-stock"]')).toHaveCount(0);
+  await expect(guidance).toContainText("Monitor published offers");
+  await expect(guidance).not.toContainText("Review committed sales receipts");
   const calls = await page.evaluate(() => businessLoop.calls);
   expect(calls.map((call) => call.endpointKey)).toEqual(["businessEquipmentInstall", "businessManufacturingStart", "businessStoreOfferCreate", "businessStoreOfferStock", "businessStoreOfferPublish"]);
   for (const call of calls) { expect(call.payload.idempotencyKey).toBeTruthy(); expect(call.payload.gameSessionId).toBeUndefined(); expect(call.payload.playerId).toBeUndefined(); expect(call.payload.businessKey).toBeUndefined(); }
@@ -94,6 +104,7 @@ test("equipment, manufacturing, draft, stock and publication use real Player con
     Object.assign(models.business.storeSales, { recentReceiptCount: 1, recentQuantitySold: 2, recentGrossRevenue: 40, recentCostOfGoodsSold: 10, recentGrossMargin: 30, sales: [sale], activity: [activity] });
     await terminal.refreshResources(["business"]);
   });
+  await expect(guidance).toContainText("Review committed sales receipts");
   const receipt = page.locator("[data-business-store-sale-receipt]");
   await expect(receipt).toContainText("ECO 40");
   await expect(receipt).toContainText("ECO 10");
