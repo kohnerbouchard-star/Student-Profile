@@ -121,3 +121,26 @@ The expanded source scope selects 34 workflow families: 60 active job tuples and
 live convergence jobs remain literal-false guarded. Authority retains earlier
 checks and adds that source gate (96 required / 61 critical), with all production
 and secret prohibitions unchanged. Independent review precedes publication.
+
+
+## Disposable reset identity correction
+
+Dedicated run 44022030220 at exact head `50c54bb3` passed 29 local-contract
+tests, migration validation and disposable startup. Its sanitized failure was
+`Disposable database identity changed during reset`, before serial SQL acceptance.
+The [official CLI reference](https://supabase.com/docs/reference/cli/supabase-db-reset)
+documents that local reset recreates the Postgres container. The harness now
+revalidates the replacement's exact-head invocation, local Docker context,
+running state, project label, pinned image reference and immutable image digest,
+and requires a new container created after reset started. All SQL sessions target
+that verified replacement ID; source cleanliness and exact migration-version
+checks remain mandatory. No workflow, migration or SQL acceptance assertion was
+changed. Fourteen replacement/wiring regressions bring local containment tests
+to 43 passes. Real serial/concurrent PostgreSQL acceptance remains unqualified
+until a fresh exact-head disposable run passes. No live/staging action occurred.
+
+Independent review reran all 43 tests and cleared the four-file correction.
+The local full root aggregate stopped at five unrelated security-metadata tests
+because `@supabase/supabase-js` is absent. Locked installation is blocked by the
+executor's Node 24/npm 11 versus the required Node 22/npm 10; no engine guard was
+bypassed. Exact-head hosted CI uses the pinned toolchain and remains required.

@@ -20,9 +20,20 @@ export function assertDisposableStoryEnvironment(env, sha, event, context, conta
   assert.equal(context.Endpoints.docker.Host, 'unix:///var/run/docker.sock');
   assert.equal(container.State.Running, true);
   assert.match(container.Id, /^[a-f0-9]{64}$/);
+  assert.match(container.Image, /^sha256:[a-f0-9]{64}$/);
   assert.equal(container.Config.Labels['com.supabase.cli.project'], project);
   assert.match(container.Config.Image, /^(public\.ecr\.aws|ghcr\.io)\/supabase\/postgres:17\.6\.1\.143$/);
   assert(Date.parse(container.Created) >= checkoutTime, 'Preexisting database forbidden');
+}
+
+// The pinned CLI recreates Postgres during a local reset. Re-authorize the new
+// disposable container rather than allowing an arbitrary changed identity.
+export function assertResetStoryEnvironment(env, sha, event, context, previous, replacement, project, resetStartedAt) {
+  assertDisposableStoryEnvironment(env, sha, event, context, replacement, project, resetStartedAt);
+  assert.notEqual(replacement.Id, previous.Id, 'Local reset did not recreate the disposable database');
+  assert.equal(replacement.Image, previous.Image, 'Database image changed during reset');
+  assert.equal(replacement.Config.Image, previous.Config.Image, 'Database image reference changed during reset');
+  return replacement.Id;
 }
 
 export function readStoryCheckoutMarker(headPath) {
@@ -49,12 +60,14 @@ export async function runConcurrency() {
     JSON.parse(run('docker',['context','inspect']))[0],container,project,checkoutTime);
   // Rebuild this already-verified disposable DB from the clean exact-head source.
   // Never rely on a container label or an external attestation as schema proof.
+  const resetStartedAt=Date.now();
   execFileSync('npx',['--no-install','supabase','db','reset','--workdir','backend','--local'],
     {encoding:'utf8',timeout:240000,stdio:['ignore','pipe','pipe']});
   assertCleanStoryCheckout(run('git',['status','--porcelain','--untracked-files=all']));
-  assert.equal(JSON.parse(run('docker',['inspect',`supabase_db_${project}`]))[0].Id,container.Id,
-    'Disposable database identity changed during reset');
-  const args=['exec','-i',container.Id,'psql','-U','supabase_admin','-d','postgres','-X','-q','-t','-A','-v','ON_ERROR_STOP=1'];
+  const replacement=JSON.parse(run('docker',['inspect',`supabase_db_${project}`]))[0];
+  const databaseId=assertResetStoryEnvironment(process.env,sha,event,
+    JSON.parse(run('docker',['context','inspect']))[0],container,replacement,project,resetStartedAt);
+  const args=['exec','-i',databaseId,'psql','-U','supabase_admin','-d','postgres','-X','-q','-t','-A','-v','ON_ERROR_STOP=1'];
   const sql = input => execFileSync('docker',args,{input:`set statement_timeout='15s'; set lock_timeout='10s';\n${input}`,encoding:'utf8',timeout:20000}).trim();
   const expectedVersions=readdirSync('backend/supabase/migrations').filter(n=>/^\d+_.+\.sql$/.test(n)).map(n=>n.split('_')[0]).sort();
   assert.deepEqual(sql('select version from supabase_migrations.schema_migrations order by version;').split('\n').filter(Boolean),expectedVersions,
