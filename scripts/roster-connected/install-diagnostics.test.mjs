@@ -399,33 +399,35 @@ test('late child stream errors remain handled after successful close without kil
 
 test('hermetic default stdout errors before/after callbacks never emit raw stacks and remain nonzero', async () => {
   const summary = await collectDiagnostics(fixture().options);
-  const moduleUrl = new URL('./install-diagnostics.mjs', import.meta.url).href;
   for (const mode of ['event_without_callback', 'before_callback', 'after_callback', 'callback_error_then_event', 'synchronous_throw']) {
+    // Keep executable source static; fixture values cross only the JSON stdin boundary.
     const program = `
-      import { diagnosticsMain } from ${JSON.stringify(moduleUrl)};
+      import { readFileSync } from 'node:fs';
+      import { diagnosticsMain } from './install-diagnostics.mjs';
+      const { mode, secret, summary } = JSON.parse(readFileSync(0, 'utf8'));
       const originalWrite = process.stdout.write.bind(process.stdout);
       let writes = 0;
       process.stdout.write = (_value, callback) => {
         writes++;
-        if (${JSON.stringify(mode)} === 'synchronous_throw') throw new Error(${JSON.stringify(SECRET)});
-        if (${JSON.stringify(mode)} === 'event_without_callback') {
-          queueMicrotask(() => process.stdout.emit('error', new Error(${JSON.stringify(SECRET)})));
-        } else if (${JSON.stringify(mode)} === 'before_callback') {
-          setImmediate(() => { process.stdout.emit('error', new Error(${JSON.stringify(SECRET)})); setImmediate(callback); });
-        } else if (${JSON.stringify(mode)} === 'callback_error_then_event') {
-          setImmediate(() => { callback(new Error(${JSON.stringify(SECRET)})); setImmediate(() => process.stdout.emit('error', new Error(${JSON.stringify(SECRET)}))); });
+        if (mode === 'synchronous_throw') throw new Error(secret);
+        if (mode === 'event_without_callback') {
+          queueMicrotask(() => process.stdout.emit('error', new Error(secret)));
+        } else if (mode === 'before_callback') {
+          setImmediate(() => { process.stdout.emit('error', new Error(secret)); setImmediate(callback); });
+        } else if (mode === 'callback_error_then_event') {
+          setImmediate(() => { callback(new Error(secret)); setImmediate(() => process.stdout.emit('error', new Error(secret))); });
         } else {
-          setImmediate(() => { callback(); setImmediate(() => process.stdout.emit('error', new Error(${JSON.stringify(SECRET)}))); });
+          setImmediate(() => { callback(); setImmediate(() => process.stdout.emit('error', new Error(secret))); });
         }
         return true;
       };
-      const outcome = await diagnosticsMain({ collect: async () => (${JSON.stringify(summary)}) });
+      const outcome = await diagnosticsMain({ collect: async () => (summary) });
       if (outcome !== 0) process.exitCode = outcome;
       await new Promise(resolve => setImmediate(() => setImmediate(resolve)));
-      process.stdout.emit('error', new Error(${JSON.stringify(SECRET)}));
+      process.stdout.emit('error', new Error(secret));
       originalWrite(JSON.stringify({ writes, outcome, exitCode: process.exitCode, listeners: process.stdout.listenerCount('error') }) + '\\n');
     `;
-    const result = spawnSync(process.execPath, ['--input-type=module', '-e', program], { encoding: 'utf8', env: { PATH: '/usr/bin:/bin', LANG: 'C', LC_ALL: 'C' }, timeout: 2000, maxBuffer: LIMITS.outputBytes, stdio: ['ignore', 'pipe', 'pipe'] });
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', program], { cwd: new URL('.', import.meta.url), input: JSON.stringify({ mode, secret: SECRET, summary }), encoding: 'utf8', env: { PATH: '/usr/bin:/bin', LANG: 'C', LC_ALL: 'C' }, timeout: 2000, maxBuffer: LIMITS.outputBytes, stdio: ['pipe', 'pipe', 'pipe'] });
     assert.equal(result.error, undefined); assert.equal(result.status, 1); assert.equal(result.stderr, '');
     assert.ok(!result.stdout.includes(SECRET));
     const report = JSON.parse(result.stdout); assert.equal(report.writes, 1); assert.equal(report.exitCode, 1); assert.equal(report.listeners, 1);

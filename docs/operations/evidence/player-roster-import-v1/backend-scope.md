@@ -438,3 +438,15 @@ run `43998484423`, including disposable SQL replay and full Edge typecheck.
 Those runs remain historical after this reconciliation. Current public source
 pairing must receive fresh exact-head hosted qualification, including connected
 DB/browser gates, before merge. No deployment or hosted-capacity claim.
+
+## Diagnostics test source/data boundary
+
+Four unresolved CodeQL sanitization threads target the hermetic child-process
+test's generated program. Its inputs were fixed synthetic fixtures, not live
+credentials or external data, but the correction removes all program interpolation.
+A static module imports the same diagnostics implementation from a fixed test
+directory and reads mode, marker and summary as JSON from stdin. All five stdout
+error scenarios retain the same timeout, output cap, nonzero exit, no raw stderr,
+no marker leak and late-listener assertions. Production diagnostics and roster
+runtime are unchanged. Focused diagnostics tests pass 29/29; exact-head CodeQL
+and independent review remain required, and no alert is suppressed or dismissed.
