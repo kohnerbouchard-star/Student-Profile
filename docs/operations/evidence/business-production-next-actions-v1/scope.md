@@ -82,3 +82,7 @@ attributed to navigation and is not waived. New-head CI must qualify it normally
 CI scope is now 11 changed / 13 locked paths, 38 workflow families, 80 active job
 tuples and four guarded skips. Backend Typecheck is additionally triggered by the
 core action handler. No workflow commands, conditions or permissions are changed.
+
+## Main reconciliation after PR998
+
+Reconciled reviewed published Business head `7c270588b12d19c0a23e89242fbcc65d27de4970` with actual main `9df2064d6835b64ab9f7a3bde19ed1da5356cded`. The sole conflict was additive roadmap intake; both records are retained exactly. Every Business implementation/test blob is unchanged and every Crafting predecessor change is retained. The prior head completed 39 workflows successfully; this does not qualify the union. The actual-PR scope remains 11 changed paths/13 locks and 38 families/80 active tuples/four guarded skips. Fresh local aggregate, independent union review, exact-head hosted and browser qualification remain required. No merge/deployment or live acceptance claimed.

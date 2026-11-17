@@ -178,3 +178,28 @@ for (const ingredients of [undefined, null, [null], [{ owned: 5, required: null 
 }
 assert.match(renderRecipe({ ...data.crafting.recipes[0], ingredients: [{ owned: 0, required: 1 }] }), /Need 1 more for one craft/);
 console.log("Crafting guidance explains shortages, reported requirements and outputs; malformed quantities fail closed and route actions preserve capability gating.");
+
+// Multi-output recipes must not be rendered as total quantity × recipe name.
+const multiOutput = renderRecipe({ ...data.crafting.recipes[0], name: 'Mixed batch', outputQuantity: 5,
+  outputs: [{ name: 'Copper sheets', quantity: 3, outputKind: 'stackable' },
+    { itemKey: 'portable_press', quantity: '2', outputKind: 'equipment' }] });
+assert.match(multiOutput, /3 × Copper sheets/);
+assert.match(multiOutput, /2 × portable_press/);
+assert.match(multiOutput, /Item · Inventory/);
+assert.match(multiOutput, /Equipment · Workshop/);
+assert.doesNotMatch(multiOutput, /5 × Mixed batch/);
+assert.match(multiOutput, /Output quantities are per craft/);
+for (const outputs of [undefined, null, [], {}]) {
+  assert.match(renderRecipe({ ...data.crafting.recipes[0], outputs }), /Output details are unavailable/);
+}
+for (const quantity of [null, '', ' ', true, 0, -1, 1.5, '2.5', Infinity, NaN, Number.MAX_SAFE_INTEGER + 1]) {
+  const result = renderRecipe({ ...data.crafting.recipes[0], outputs: [{ name: '<ScRiPt>bad</ScRiPt>', quantity, outputKind: 'unknown' }] });
+  assert.match(result, /Quantity unavailable/);
+  assert.match(result, /Destination unavailable/);
+  assert.match(result, /&lt;ScRiPt&gt;/);
+  assert.doesNotMatch(result, /<script\b/i);
+}
+assert.match(renderRecipe({ ...data.crafting.recipes[0], outputs: [null] }), /Unnamed output/);
+console.log('Crafting per-output disclosure preserves individual quantities and destinations; malformed/absent details are explicit.');
+
+assert.match(multiOutput, /<article><span>.*?<\/span><div><strong>3 × Copper sheets/);
