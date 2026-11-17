@@ -56,3 +56,7 @@ limits, independent review, actual PR authority, public source pins and hosted
 exact-head results must be recorded before readiness. The inherited roster
 runtime-equivalence guard is not exempted: freeze the complete reviewed source,
 then pin both integrated roles to its verified public SHA/tree.
+
+## Draft PR 1011 verification checkpoint
+
+Public source 99d6edc4dc747e380be8c6ac15995a50d3616250, tree 910bb7baa3ab65c719cbee7e85945c0e903f7040, exactly matches independently reviewed local bd1605282. All 20 focused cases, full root tests, Player verification and core backend TypeScript pass. Browser execution is blocked before test bodies because local Chromium is absent. Full Edge typecheck and smoke are blocked by the frozen esm.sh Supabase SDK network fetch; no passing claim is made for either. Hosted exact-head qualification remains required. Authority and CI inventory use the actual PR number and deny production deployment, mutation and secret handling. No guard or workflow weakening.
