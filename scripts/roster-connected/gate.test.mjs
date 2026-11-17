@@ -256,6 +256,13 @@ test('checkpoint inverse preserves all original flow bytes and exact runtime gua
   // against the frozen publication candidate, never a synthetic fixture.
   for(const name of ['runtime-equivalence.mjs','prepare.mjs','database.mjs','evidence.mjs','auth-fixture.mjs','provisioning.mjs','mode-fixtures.mjs','install-diagnostics.mjs','install-diagnostics.test.mjs']) {
     let expected = baseline(`scripts/roster-connected/${name}`);
+    if (name === 'install-diagnostics.test.mjs') {
+      // Only this hermetic test changed in the independently reviewed source/data
+      // hygiene correction. Keep full-file byte equality against its published
+      // commit, not HEAD; all runtime files retain the original frozen baseline.
+      expected = execFileSync('git', ['-C', root, 'show',
+        'c6d2f5f0683199365a543f8d4219decefca0267e:scripts/roster-connected/install-diagnostics.test.mjs'], { encoding: 'utf8' });
+    }
     if (name === 'mode-fixtures.mjs') {
       // The only allowed fixture revision replaces stale test-only source pins.
       // Preserve every suite, projection, report and cleanup byte around it.

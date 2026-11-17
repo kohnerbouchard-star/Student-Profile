@@ -450,3 +450,15 @@ error scenarios retain the same timeout, output cap, nonzero exit, no raw stderr
 no marker leak and late-listener assertions. Production diagnostics and roster
 runtime are unchanged. Focused diagnostics tests pass 29/29; exact-head CodeQL
 and independent review remain required, and no alert is suppressed or dismissed.
+
+
+## Diagnostics historical-byte guard correction
+
+Public hygiene head `c6d2f5f0683199365a543f8d4219decefca0267e` retained all
+29 diagnostics tests, but connected run `44028222102` exposed a historical
+full-file assertion still frozen to the pre-correction test. The guard now pins
+only `install-diagnostics.test.mjs` to that independently reviewed public commit.
+It still compares every byte; all runtime files, original checkpoint inverses,
+source projections, permissions and workflow remain unchanged. This is not an
+exemption, dynamic HEAD comparison, or alert suppression. Fresh exact-head hosted
+qualification remains required; no merge or production operation is performed.
