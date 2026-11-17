@@ -1,0 +1,450 @@
+{
+  "base": "956ad02db949ae9c4cff7d709a18ec28d20c0788",
+  "sourceHead": "ba1d5128f373f809bc655b94a2a3a6612309682a",
+  "derivation": "Current main-target pull_request opened/synchronize/reopened branch/event/path filters evaluated against complete PR996 scope including golden-fixture correction and both metadata paths. 33 workflow families,58 active tuples,5 guarded skips; no matrices. Branch Hygiene is closed-only; CodeQL external. Preserve all commands, conditions, permissions and triggers. Source-only failed CI is historical; fresh exact-head checks remain mandatory.",
+  "pairs": [
+    {
+      "workflow": ".github/workflows/admin-browser-e2e.yml",
+      "workflowName": "Admin Browser E2E",
+      "job": "rendered-admin",
+      "checkName": "Rendered Admin browser and secure mutation journey",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/admin-business-supervision.yml",
+      "workflowName": "Admin Business Supervision",
+      "job": "source",
+      "checkName": "admin-business-supervision-source",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/admin-business-supervision.yml",
+      "workflowName": "Admin Business Supervision",
+      "job": "database",
+      "checkName": "admin-business-supervision-database",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/admin-business-supervision.yml",
+      "workflowName": "Admin Business Supervision",
+      "job": "browser",
+      "checkName": "admin-business-supervision-browser",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/backend-typecheck.yml",
+      "workflowName": "Backend Typecheck",
+      "job": "backend-typecheck",
+      "checkName": "backend-typecheck",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/banking-fx-clearing-v1.yml",
+      "workflowName": "banking-fx-clearing-v1",
+      "job": "certify",
+      "checkName": "Certify Banking FX clearing source",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/banking-fx-clearing-v1.yml",
+      "workflowName": "banking-fx-clearing-v1",
+      "job": "database-acceptance",
+      "checkName": "Verify Banking FX database acceptance",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/banking-fx-clearing-v1.yml",
+      "workflowName": "banking-fx-clearing-v1",
+      "job": "chromium-acceptance",
+      "checkName": "Verify Banking FX Chromium acceptance",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-banking-runtime.yml",
+      "workflowName": "Business Banking Runtime",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-economy-v2.yml",
+      "workflowName": "Business Economy V2",
+      "job": "authority-contract",
+      "checkName": "Business economy authority contract",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-economy-v2.yml",
+      "workflowName": "Business Economy V2",
+      "job": "backend-typecheck",
+      "checkName": "Backend typecheck",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-financial-market.yml",
+      "workflowName": "Business Financial Market",
+      "job": "source",
+      "checkName": "business-financial-market-source",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-financial-market.yml",
+      "workflowName": "Business Financial Market",
+      "job": "database",
+      "checkName": "business-financial-market-database",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-financial-market.yml",
+      "workflowName": "Business Financial Market",
+      "job": "browser",
+      "checkName": "business-financial-market-browser",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-multicurrency-treasury-v1.yml",
+      "workflowName": "business-multicurrency-treasury-v1",
+      "job": "source-contract",
+      "checkName": "Verify C4 source, public contracts, and retained application boundaries",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-multicurrency-treasury-v1.yml",
+      "workflowName": "business-multicurrency-treasury-v1",
+      "job": "disposable-database",
+      "checkName": "Verify C4 database, replay, isolation, rollback, and concurrency",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-multicurrency-treasury-v1.yml",
+      "workflowName": "business-multicurrency-treasury-v1",
+      "job": "player-browser",
+      "checkName": "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
+      "workflowName": "Business Player Store Cutover V2",
+      "job": "verify-cutover-authority",
+      "checkName": "Verify Player Store cutover and retained authorities",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
+      "workflowName": "Business Player Store Cutover V2",
+      "job": "verify-backend-store-runtime",
+      "checkName": "Verify public Store, seller projection, capabilities, rates, and Edge roots",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
+      "workflowName": "Business Player Store Cutover V2",
+      "job": "verify-database-settlement",
+      "checkName": "Verify serial settlement, ordering races, and two-game isolation",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
+      "workflowName": "Business Player Store Cutover V2",
+      "job": "verify-database-replay",
+      "checkName": "Replay complete database twice and lint at warning level",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
+      "workflowName": "Business Player Store Cutover V2",
+      "job": "verify-player-terminal-and-chromium",
+      "checkName": "Verify standalone Player Terminal and full Chromium suite",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
+      "workflowName": "Business Player Store Cutover V2",
+      "job": "verify-connected-player-store",
+      "checkName": "Verify connected Buyer and seller Store journey in two games",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-fx-final-v2.yml",
+      "workflowName": "business-player-store-fx-final-v2",
+      "job": "source-contract",
+      "checkName": "business-player-store-fx-final-v2-source",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-fx-final-v2.yml",
+      "workflowName": "business-player-store-fx-final-v2",
+      "job": "disposable-database",
+      "checkName": "business-player-store-fx-final-v2-database",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-fx-final-v2.yml",
+      "workflowName": "business-player-store-fx-final-v2",
+      "job": "player-browser",
+      "checkName": "business-player-store-fx-final-v2-player-browser",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-player-store-fx-final-v2.yml",
+      "workflowName": "business-player-store-fx-final-v2",
+      "job": "connected-two-browser",
+      "checkName": "business-player-store-fx-final-v2-connected",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-primary-ipo.yml",
+      "workflowName": "Business Primary IPO",
+      "job": "source",
+      "checkName": "business-primary-ipo-source",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-primary-ipo.yml",
+      "workflowName": "Business Primary IPO",
+      "job": "database",
+      "checkName": "business-primary-ipo-database",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-primary-ipo.yml",
+      "workflowName": "Business Primary IPO",
+      "job": "browser",
+      "checkName": "business-primary-ipo-browser",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
+      "workflowName": "Business Store Atomic Settlement V2",
+      "job": "verify-settlement-authority",
+      "checkName": "Verify atomic settlement authority and retained Store phases",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
+      "workflowName": "Business Store Atomic Settlement V2",
+      "job": "verify-database-settlement",
+      "checkName": "Verify database settlement, rollback, races, and isolation",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
+      "workflowName": "Business Store Atomic Settlement V2",
+      "job": "verify-database-replay",
+      "checkName": "Replay complete database twice and lint",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
+      "workflowName": "Business Store Atomic Settlement V2",
+      "job": "verify-retained-economic-runtime",
+      "checkName": "Verify retained Business, Store, Inventory, Backend, and Edge runtime",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
+      "workflowName": "Business Store Atomic Settlement V2",
+      "job": "verify-player-terminal-and-chromium",
+      "checkName": "Verify retained Player Terminal and Chromium",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-store-sales-convergence-v2.yml",
+      "workflowName": "business-store-sales-convergence-v2",
+      "job": "source-contract",
+      "checkName": "business-store-sales-convergence-v2-source",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-store-sales-convergence-v2.yml",
+      "workflowName": "business-store-sales-convergence-v2",
+      "job": "disposable-database",
+      "checkName": "business-store-sales-convergence-v2-database",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-store-sales-convergence-v2.yml",
+      "workflowName": "business-store-sales-convergence-v2",
+      "job": "worker-contract",
+      "checkName": "business-store-sales-convergence-v2-worker",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-store-sales-convergence-v2.yml",
+      "workflowName": "business-store-sales-convergence-v2",
+      "job": "player-admin-contract",
+      "checkName": "business-store-sales-convergence-v2-player-admin",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/business-workforce-hiring-v2.yml",
+      "workflowName": "Business Workforce Hiring V2",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/button-action-coverage.yml",
+      "workflowName": "Button Action Coverage",
+      "job": "button-action-coverage",
+      "checkName": "button-action-coverage",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/configurable-stock-market-timezone-v1.yml",
+      "workflowName": "Required Game Market Timezone",
+      "job": "apply-and-validate",
+      "checkName": "apply-and-validate",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/crafting-item-runtime.yml",
+      "workflowName": "Crafting Item Runtime",
+      "job": "permanent-runtime",
+      "checkName": "permanent-runtime",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/environment-neutral-browser.yml",
+      "workflowName": "Environment Neutral Browser",
+      "job": "runtime-config-contract",
+      "checkName": "runtime-config-contract",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/exchange-calendar-runtime-v1.yml",
+      "workflowName": "Exchange Calendar Runtime",
+      "job": "validate",
+      "checkName": "Validate exchange calendar runtime",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/loans-lifecycle-read-v1.yml",
+      "workflowName": "Loans Lifecycle Read",
+      "job": "loans-lifecycle-read",
+      "checkName": "Loans Lifecycle Read",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/player-button-click-safety.yml",
+      "workflowName": "Player Button Click Safety",
+      "job": "player-button-click-safety",
+      "checkName": "player-button-click-safety",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/player-multiplayer-load-e2e.yml",
+      "workflowName": "Player Multiplayer and Load E2E",
+      "job": "connected-player-runtime",
+      "checkName": "Two-browser Player journey, secure mutations, and 30-40 Player load",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/player-terminal-verify.yml",
+      "workflowName": "Player Terminal Verify",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/production-runtime-promotion-contract.yml",
+      "workflowName": "Production Runtime Promotion Contract",
+      "job": "verify",
+      "checkName": "Verify production promotion remains fail-closed",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/release-integrity.yml",
+      "workflowName": "Release Integrity",
+      "job": "static-integrity",
+      "checkName": "Verify static release integrity",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/release-promote.yml",
+      "workflowName": "Release Promote Exact Artifacts",
+      "job": "contract-tests",
+      "checkName": "Promotion contract tests",
+      "condition": "github.event_name == 'pull_request'"
+    },
+    {
+      "workflow": ".github/workflows/repository-quality.yml",
+      "workflowName": "Repository Quality",
+      "job": "quality",
+      "checkName": "quality",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/runtime-interaction-wiring.yml",
+      "workflowName": "Runtime Interaction Wiring",
+      "job": "trace-runtime-controls",
+      "checkName": "trace-runtime-controls",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/staging-readiness-preflight.yml",
+      "workflowName": "Staging Readiness Preflight",
+      "job": "validator-tests",
+      "checkName": "Validator tests",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/supply-chain-security.yml",
+      "workflowName": "Supply Chain Security",
+      "job": "dependency-review",
+      "checkName": "dependency-review",
+      "condition": "github.event_name == 'pull_request'"
+    },
+    {
+      "workflow": ".github/workflows/supply-chain-security.yml",
+      "workflowName": "Supply Chain Security",
+      "job": "verify-and-attest",
+      "checkName": "verify-and-attest",
+      "condition": ""
+    },
+    {
+      "workflow": ".github/workflows/world-runtime.yml",
+      "workflowName": "World Runtime",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": ""
+    }
+  ],
+  "guardedSkips": [
+    {
+      "workflow": ".github/workflows/economic-asset-core-staging-reconcile.yml",
+      "workflowName": "Economic Asset Core Staging Reconcile",
+      "job": "reconcile",
+      "checkName": "Verify staged schema, deploy exact runtime, and run rollback acceptance",
+      "condition": "github.event.pull_request.number == 503"
+    },
+    {
+      "workflow": ".github/workflows/economic-asset-core-staging-release.yml",
+      "workflowName": "Economic Asset Core Staging Release",
+      "job": "release",
+      "checkName": "Apply exact migrations and run rollback acceptance",
+      "condition": "github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.pull_request.number == 503"
+    },
+    {
+      "workflow": ".github/workflows/release-integrity.yml",
+      "workflowName": "Release Integrity",
+      "job": "live-parity",
+      "checkName": "Inspect staging and production parity read-only",
+      "condition": "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'"
+    },
+    {
+      "workflow": ".github/workflows/release-promote.yml",
+      "workflowName": "Release Promote Exact Artifacts",
+      "job": "authorize-promotion",
+      "checkName": "Verify and authorize unchanged artifacts",
+      "condition": "github.event_name == 'workflow_dispatch'"
+    },
+    {
+      "workflow": ".github/workflows/staging-readiness-preflight.yml",
+      "workflowName": "Staging Readiness Preflight",
+      "job": "staging-preflight",
+      "checkName": "Fail-closed staging evidence check",
+      "condition": "github.event_name == 'workflow_dispatch'"
+    }
+  ]
+}

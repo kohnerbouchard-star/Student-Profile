@@ -32,3 +32,17 @@ existing payment controls and display an explicit unavailable account notice.
 New response property is additive; old clients ignore it. The server continues to
 reject invalid accounts, currencies or insufficient funds. The disclosure is not
 a balance reservation or a payoff quote. No merge or deploy in this tranche.
+
+## PR996 qualification correction
+
+Draft PR #996 source `ba1d5128f373f809bc655b94a2a3a6612309682a` failed eight
+workflow authority gates because its own PR-bound manifest had not been published.
+The ninth failure was the retained exact golden snapshot, which omitted the new
+explicit-null repayment category. The correction adds that one expected property
+and retains every original expected value and strict equality; no runtime or
+verifier changes. All 96 tests in the exact Loans lifecycle Deno command pass.
+
+The actual-number authority locks the complete diff and unchanged verifier/tests.
+The CI contract records 33 workflow families,58 active tuples and5 intentional
+guarded skips; no workflow, deployment or production permission changes. Fresh
+exact-head hosted checks and full browser acceptance are pending, not certified.
