@@ -50,3 +50,13 @@ and critical identities and extend actual jobs: 130 required / 75 critical names
 Authority verification plus existing and focused regressions pass 24/24.
 No workflow, verifier, runtime, production or secret permission is changed.
 Fresh exact-head hosted qualification is required after publication.
+
+## Sales Convergence formatting correction
+
+At head 3fb83b610473e423ffd9da30e57fd27cd8bb5b7d, run 44018261623
+passed authority, database, worker and browser jobs, but source job
+133821299020 rejected the unbraced failure-record log conditional under
+`deno fmt --check`. Apply the formatter's braces only, with no behavior or gate
+change. The exact 23-file formatting command passes; purger runtime-binding
+tests pass 3/3 and error/storage regressions pass 8/8. Fresh hosted source
+qualification remains required.

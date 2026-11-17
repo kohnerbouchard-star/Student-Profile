@@ -124,7 +124,9 @@ Deno.serve(async (request: Request) => {
         p_stage: stage,
         p_error: failureCode,
       });
-      if (recorded.error) console.error("game_data_purge_failure_record_failed");
+      if (recorded.error) {
+        console.error("game_data_purge_failure_record_failed");
+      }
     } catch {
       console.error("game_data_purge_failure_record_failed");
     }
