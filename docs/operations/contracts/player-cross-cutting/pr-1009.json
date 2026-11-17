@@ -20,6 +20,7 @@
     "docs/operations/evidence/attendance-reward-read-boundary-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/roster-connected/sources.json",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
@@ -34,6 +35,7 @@
     "docs/operations/evidence/attendance-reward-read-boundary-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/roster-connected/sources.json",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredChecks": [

@@ -22,7 +22,9 @@ export class SupabaseAttendanceRewardReadRepository
       .select("income_modifier")
       .eq("game_session_id", gameSessionId)
       .eq("status", "active")
-      .maybeSingle() as AttendanceRewardReadResult<DifficultyPolicyRow>;
+      .maybeSingle() as unknown as AttendanceRewardReadResult<
+        DifficultyPolicyRow
+      >;
   }
 
   async readGameDifficulty(
@@ -32,7 +34,9 @@ export class SupabaseAttendanceRewardReadRepository
       .from("game_settings")
       .select("difficulty_preset")
       .eq("game_session_id", gameSessionId)
-      .maybeSingle() as AttendanceRewardReadResult<GameSettingsDifficultyRow>;
+      .maybeSingle() as unknown as AttendanceRewardReadResult<
+        GameSettingsDifficultyRow
+      >;
   }
 
   async readDifficultyProfile(
@@ -43,7 +47,9 @@ export class SupabaseAttendanceRewardReadRepository
       .select("income_modifier")
       .eq("preset_key", presetKey)
       .eq("status", "active")
-      .maybeSingle() as AttendanceRewardReadResult<DifficultyProfileRow>;
+      .maybeSingle() as unknown as AttendanceRewardReadResult<
+        DifficultyProfileRow
+      >;
   }
 
   async readLatestAssignment(
@@ -58,7 +64,9 @@ export class SupabaseAttendanceRewardReadRepository
       .eq("status", "active")
       .order("assigned_at", { ascending: false })
       .limit(1)
-      .maybeSingle() as AttendanceRewardReadResult<PlayerCountryAssignmentRow>;
+      .maybeSingle() as unknown as AttendanceRewardReadResult<
+        PlayerCountryAssignmentRow
+      >;
   }
 
   async readActiveCountry(
@@ -69,7 +77,9 @@ export class SupabaseAttendanceRewardReadRepository
       .select("country_code,currency_code")
       .eq("id", countryProfileId)
       .eq("status", "active")
-      .maybeSingle() as AttendanceRewardReadResult<CountryProfileRow>;
+      .maybeSingle() as unknown as AttendanceRewardReadResult<
+        CountryProfileRow
+      >;
   }
 
   async readLatestExchangeRate(
@@ -83,6 +93,8 @@ export class SupabaseAttendanceRewardReadRepository
       .eq("country_profile_id", countryProfileId)
       .order("snapshot_sequence", { ascending: false })
       .limit(1)
-      .maybeSingle() as AttendanceRewardReadResult<CountryEconomicSnapshotRow>;
+      .maybeSingle() as unknown as AttendanceRewardReadResult<
+        CountryEconomicSnapshotRow
+      >;
   }
 }

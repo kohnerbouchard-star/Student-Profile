@@ -1,7 +1,7 @@
 {
   "base": "03adc6891995fe1d780fe34629b1daf14470ea39",
-  "sourceHead": "1d8ad3150a1d9335c42a04c66ce62473ac40e4fc",
-  "derivation": "Complete PR1009 path/branch/event-filter derivation:30 workflow families,64 active job tuples,4 guarded skips. No matrices; closed-only Branch Hygiene excluded; CodeQL external. No workflow or gate changes.",
+  "sourceHead": "29ec53107695efb0dbf94bfd291a91a66c0f0210",
+  "derivation": "Complete eleven-path PR1009 scope including reviewed Roster source pin: path/branch/event-filter derivation:30 workflow families,64 active job tuples,4 guarded skips. No matrices; closed-only Branch Hygiene excluded; CodeQL external. No workflow or gate changes.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-browser-e2e.yml",
