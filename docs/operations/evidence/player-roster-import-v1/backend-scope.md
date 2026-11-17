@@ -343,3 +343,67 @@ source files, 70 cross-domain deep imports and 52 persistence sites outside
 infrastructure. The SDK-only test lives with the roster qualification scripts,
 not application runtime source. Full Edge typecheck and backend smoke reach the
 existing frozen esm.sh fetch failure and are not counted as complete.
+
+
+## Current-main feature continuation (2026-11-17)
+
+Status: `IMPLEMENTED_NOT_MERGED`. Existing draft #938 remains the backend owner;
+#933 remains the frontend owner. Current main `956ad02db949ae9c4cff7d709a18ec28d20c0788`
+was merged normally into local source `7188eb9f`, preserving every main change.
+Workflow conflicts were additive PR filter lists; both sets of filters were retained.
+Roadmap histories were retained and the architecture inventory regenerated: 1,628
+sources, zero oversized files, 84 persistence candidates, with unchanged ceilings.
+The private-login lookup needs the existing `isRecord` import after main's parser
+extraction. That import is restored; no credential policy or runtime semantics changed.
+Three source-contract files follow current extracted owners and the #668 bootstrap
+projection. Session contracts use the existing value-import-connected finite reader.
+
+Local source `c810c99b2ed18aa015c8a111a97e58f83b06b7e3`, tree
+`d3119995fed824f0960e909df5fa050f60d5ea07`, is paired in separate pin child `9b0753ec`
+with reviewed frontend `43d9be95fc3ff66a13cd16386e8d9ddfdd2a4e8e`, tree
+`fb3cc0690a05e340d49a916fd14f11295ae8ff78`. The exact two-line API inverse and
+seven-overlay allowlist remain unchanged. These are local Git identities, not public
+source pins; if GitHub assigns new commit IDs, re-pin the identical reviewed trees.
+
+Verification: full root npm test passed; core backend TypeScript passed; 12 provisioning
+and six retained auth-privacy Deno tests passed; all 134 paired/source harness tests and
+clean runtime-equivalence passed. One preliminary run correctly rejected generated
+root-test artifacts; only those generated files were removed before the clean rerun.
+The current main/old owner gate union preserves every historical ordered identity and
+adds current-main requirements (158 required / 110 critical). The authority CLI accepts
+80 changed paths under 82 locks. Reciprocal independent integration review found no
+remaining actionable source issue and reran 46 relevant Node tests successfully.
+Full Edge/smoke remain incomplete because frozen esm.sh SDK retrieval is refused;
+Docker-backed connected/browser/SQL runs must be renewed in hosted CI.
+
+Historical published head `ab4923f1` passed Player Roster Import run `43362486766`
+and Roster Connected E2E run `43362486625`. These are old-head results only and do
+not qualify the current main union or establish hosted maximum-size capacity.
+
+Publication is currently held after a safety-review denial of public workflow-source
+upload. Three workflow blobs were accepted before the denial; no branch or PR head,
+commit publication, CI wave, merge, deployment, or live data changed. Do not bypass
+the denial. Next: obtain the requested concrete public-publication approval, publish
+exact reviewed source objects, replace local-only paired pins with verified public
+identities, verify identical trees and clean equivalence, update only the existing
+owner branch with its expected head, and require fresh hosted/connected qualification.
+
+
+### Explicitly approved public-source pairing
+
+The owner subsequently approved public publication of the reviewed classroom
+source, all retained cross-domain CI workflows, support records and inventory,
+including the existing public synthetic localhost test fixtures. This supersedes
+the publication hold above for this exact tranche only; no merge or deployment
+is approved by this feature-publication action.
+
+Public source object `6d57158d0a1148eb7c66182e8e4f234fb932015d` has tree
+`d3119995fed824f0960e909df5fa050f60d5ea07`, byte-identical to reviewed local
+`c810c99b`. Its two parents preserve existing public #938 `ab4923f1` and current
+main `956ad02d`. The paired public #933 source is
+`4420092e7ba313299e622458a7042eaa6667144d`, tree
+`fb3cc0690a05e340d49a916fd14f11295ae8ff78`, identical to reviewed UI `43d9be95`.
+Git fetch verifies both source objects and exact trees. This pin update changes
+no runtime, workflow command, validation or test assertion. Renew clean paired
+qualification before the single expected-head update of existing #938. Hosted
+checks and connected-runtime qualification of the published head remain pending.
