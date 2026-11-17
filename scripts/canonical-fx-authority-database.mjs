@@ -1,7 +1,27 @@
 #!/usr/bin/env node
 
 import { randomUUID } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { spawnSync, execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
+
+const realClockStoryProof = process.argv.includes("--real-clock-story-proof");
+if (realClockStoryProof) {
+  assert.equal(process.env.GITHUB_ACTIONS, "true");
+  assert.equal(process.env.GITHUB_EVENT_NAME, "pull_request");
+  assert.equal(process.env.GITHUB_REPOSITORY, "kohnerbouchard-star/Student-Profile");
+  const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
+  const pr = event.pull_request;
+  assert.equal(pr.number, 1005);
+  assert.equal(pr.draft, true);
+  assert.equal(pr.base.ref, "main");
+  assert.equal(pr.head.ref, "fix/fx-bootstrap-temporal-provenance");
+  assert.equal(pr.head.repo.full_name, process.env.GITHUB_REPOSITORY);
+  assert.equal(pr.base.repo.full_name, process.env.GITHUB_REPOSITORY);
+  assert.equal(execFileSync("git", ["rev-parse", "HEAD"], {encoding:"utf8"}).trim(), pr.head.sha);
+  assert.equal(execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], {encoding:"utf8"}).trim(), "");
+  for (const name of ["SUPABASE_ACCESS_TOKEN", "SUPABASE_DB_URL", "DOCKER_HOST", "DOCKER_CONTEXT"]) assert(!process.env[name], `External authority forbidden: ${name}`);
+}
 
 const databaseUrl = process.env.DATABASE_URL ??
   "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
@@ -70,7 +90,7 @@ const legacyVectorSql = String.raw`
     ('DRV'::text, 256.000000000000000000::numeric)
 `;
 
-const sql = String.raw`
+let sql = String.raw`
 \set ON_ERROR_STOP on
 \pset pager off
 \pset format unaligned
@@ -2070,6 +2090,13 @@ select pg_temp.fx_assert_v1(
   'Story authorization queues once, replays once, and writes no pair matrix'
 );
 
+-- Capture the real queue receipt without rewriting authorization time.
+create temporary table fx_actual_queue_receipt on commit drop as
+select id, public_key, eligible_at, authorized_at, authorization_hash
+from public.fx_story_shock_authorizations
+where game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid
+  and command_key = 'fx-db-story-replay-v1';
+
 do $story_hash_conflict$
 declare
   v_rejected boolean := false;
@@ -2575,6 +2602,40 @@ select pg_temp.fx_assert_v1(
   'the first post-resume input uses the daily fixing, not bootstrap, as predecessor'
 );
 
+-- This proves future input eligibility, not a future wall-clock fixing apply.
+-- Applying before that boundary would violate the unchanged calculated-at guard.
+select pg_temp.fx_assert_v1(
+  (select count(*) = 1 from fx_actual_queue_receipt)
+  and exists (
+    select 1
+    from fx_actual_queue_receipt as receipt
+    join public.fx_story_shock_authorizations as persisted on persisted.id = receipt.id
+    cross join fx_after_daily_resume_claim as claim_row
+    cross join fx_after_daily_resume_input as loaded
+    where persisted.authorized_at = receipt.authorized_at
+      and persisted.eligible_at = receipt.eligible_at
+      and persisted.authorization_hash = receipt.authorization_hash
+      and receipt.authorized_at <= claim_row.fixing_effective_at
+      and receipt.eligible_at <= claim_row.fixing_effective_at
+      and exists (
+        select 1 from jsonb_array_elements(loaded.engine_input -> 'storyShocks') as shock(item)
+        where shock.item ->> 'shockId' = receipt.public_key
+          and shock.item ->> 'currencyCode' = 'NRC'
+          and (shock.item ->> 'basisPoints')::integer = 75
+      )
+  )
+  and not exists (
+    select 1
+    from fx_after_daily_resume_input as loaded
+    cross join lateral jsonb_array_elements(loaded.engine_input -> 'storyShocks') as shock(item)
+    join public.fx_story_shock_authorizations as authorization
+      on authorization.public_key = shock.item ->> 'shockId'
+    where authorization.game_session_id = ${sqlLiteral(fixture.gameOneId)}::uuid
+      and authorization.command_key = 'fx-db-consumable-shock-v1'
+  ),
+  'next fixing input includes actual queued shock unchanged and omits already consumed shock'
+);
+
 select pg_temp.fx_assert_v1(
   public.fail_fx_fixing_claim_v1(
     ${sqlLiteral(fixture.gameOneId)}::uuid,
@@ -2759,6 +2820,127 @@ $immutable_fx_evidence$;
 rollback;
 `;
 
+// Dedicated PR-only extension. Default historical workflow retains its short timeout.
+if (realClockStoryProof) {
+  // Reuse the existing neutral-fixture renderer. apply_fx_fixing_v1 independently
+  // verifies every value/component against its lease-bound canonical input.
+  const renderStart = sql.indexOf("create temporary table fx_apply_request on commit drop as");
+  const renderEnd = sql.indexOf("create temporary table fx_apply_before on commit drop as", renderStart);
+  assert(renderStart > 0 && renderEnd > renderStart);
+  const realRequest = sql.slice(renderStart, renderEnd)
+    .replaceAll("fx_apply_request", "fx_real_request")
+    .replaceAll("fx_story_claim", "fx_real_claim")
+    .replaceAll("fx_loaded_input", "fx_real_input")
+    .replaceAll(fixture.gameOneId, fixture.gameTwoId);
+  const proof = String.raw`
+-- All earlier immutable/isolation assertions have completed. Only synthetic
+-- fixture settings and scheduling are changed; no economic history is rewritten.
+create temporary table fx_real_boundary on commit drop as
+select zone.name as timezone, boundary.effective_at
+from pg_catalog.pg_timezone_names as zone
+cross join lateral (
+  select private.fx_next_boundary_v1(clock_timestamp() + interval '10 seconds', zone.name) as effective_at
+) as boundary
+where zone.name !~ '^(posix|right)/'
+  and boundary.effective_at > clock_timestamp() + interval '5 seconds'
+  and boundary.effective_at <= clock_timestamp() + interval '65 minutes'
+order by boundary.effective_at, zone.name
+limit 1;
+select pg_temp.fx_assert_v1((select count(*)=1 from fx_real_boundary), 'real clock proof requires a named-zone boundary within 65 minutes');
+
+update public.game_settings
+set stock_market_window=jsonb_set(stock_market_window,'{timezone}',to_jsonb((select timezone from fx_real_boundary)))
+where game_session_id=${sqlLiteral(fixture.gameTwoId)}::uuid;
+update private.fx_runtime_state
+set next_due_at=(select effective_at from fx_real_boundary), retry_after_at=null
+where game_session_id=${sqlLiteral(fixture.gameTwoId)}::uuid;
+select pg_temp.fx_assert_v1(
+  exists(select 1 from private.fx_runtime_state where game_session_id=${sqlLiteral(fixture.gameTwoId)}::uuid and lease_token is null and cutover_status='ready'),
+  'real clock fixture must have no outstanding lease');
+
+create temporary table fx_real_queue on commit drop as
+select * from public.apply_story_currency_volatility_v1(
+  ${sqlLiteral(fixture.gameTwoId)}::uuid,'fx-db-real-clock-v1','{"NRC":75}',clock_timestamp());
+create temporary table fx_real_receipt on commit drop as
+select id,public_key,eligible_at,authorized_at,authorization_hash
+from public.fx_story_shock_authorizations
+where game_session_id=${sqlLiteral(fixture.gameTwoId)}::uuid and command_key='fx-db-real-clock-v1';
+select pg_temp.fx_assert_v1(
+  (select count(*)=1 and bool_and(command_outcome='queued' and inserted_rates=0) from fx_real_queue)
+  and (select count(*)=1 and bool_and(authorized_at < (select effective_at from fx_real_boundary)) from fx_real_receipt),
+  'real queue must precede the real future fixing boundary');
+
+-- pg_sleep is an active statement: idle-transaction timeout remains unchanged.
+-- Server timeout and client watchdog bound interruption; disconnect rolls back.
+set local statement_timeout='66min';
+do $real_clock_wait$
+declare seconds_to_wait double precision;
+begin
+  seconds_to_wait:=extract(epoch from (select effective_at from fx_real_boundary)-clock_timestamp());
+  if seconds_to_wait < 0 or seconds_to_wait > 3900 then raise exception 'FX_REAL_CLOCK_WAIT_OUT_OF_BOUNDS'; end if;
+  perform pg_sleep(seconds_to_wait + 0.1);
+end $real_clock_wait$;
+set local statement_timeout='90s';
+select pg_temp.fx_assert_v1(clock_timestamp() >= (select effective_at from fx_real_boundary),'real future boundary actually elapsed');
+
+create temporary table fx_real_claim on commit drop as
+select * from public.claim_due_fx_games_v1(clock_timestamp(),100,'fx-db-real-clock',120)
+where game_session_id=${sqlLiteral(fixture.gameTwoId)}::uuid;
+select pg_temp.fx_assert_v1(
+  (select count(*)=1 and bool_and(fixing_effective_at=(select effective_at from fx_real_boundary)) from fx_real_claim),
+  'actual clock claims exactly the awaited fixing');
+create temporary table fx_real_input on commit drop as
+select loaded.* from fx_real_claim as claim_row
+cross join lateral public.load_fx_fixing_input_v1(claim_row.game_session_id,claim_row.fixing_local_date,claim_row.lease_token) as loaded;
+select pg_temp.fx_assert_v1(
+  (select count(*)=1 from fx_real_input)
+  and exists(select 1 from fx_real_input as loaded cross join lateral jsonb_array_elements(loaded.engine_input->'storyShocks') as shock(item)
+    cross join fx_real_receipt as receipt where shock.item->>'shockId'=receipt.public_key and (shock.item->>'basisPoints')::integer=75),
+  'real queue receipt enters actual boundary input');
+`;
+  const finish = String.raw`
+create temporary table fx_real_applied on commit drop as
+select applied.* from fx_real_request as request
+cross join lateral public.apply_fx_fixing_v1(request.game_session_id,request.fixing_local_date,request.fixing_effective_at,request.lease_token,request.input_hash,request.calculated_at,request.fixing_result) as applied;
+create temporary table fx_real_replayed on commit drop as
+select applied.* from fx_real_request as request
+cross join lateral public.apply_fx_fixing_v1(request.game_session_id,request.fixing_local_date,request.fixing_effective_at,request.lease_token,request.input_hash,request.calculated_at,request.fixing_result) as applied;
+select pg_temp.fx_assert_v1(
+  (select count(*)=1 and bool_and(outcome='applied' and currency_values_inserted=11 and shocks_consumed=1) from fx_real_applied)
+  and (select count(*)=1 and bool_and(outcome='replayed' and currency_values_inserted=0 and shocks_consumed=0) from fx_real_replayed)
+  and (select a.fixing_public_id=r.fixing_public_id from fx_real_applied a cross join fx_real_replayed r)
+  and (select count(*)=1 from public.fx_fixing_story_shocks as consumed join fx_real_receipt as receipt on receipt.id=consumed.shock_authorization_id)
+  and exists(select 1 from fx_real_receipt as receipt join public.fx_story_shock_authorizations as persisted on persisted.id=receipt.id
+    where persisted.authorized_at=receipt.authorized_at and persisted.eligible_at=receipt.eligible_at and persisted.authorization_hash=receipt.authorization_hash),
+  'real queued shock applied once, replayed without writes, and authorization preserved');
+select pg_temp.fx_assert_v1(
+  exists(select 1 from public.fx_fixing_currency_values as value_row join public.fx_fixings as fixing_row on fixing_row.id=value_row.fixing_id
+    where fixing_row.public_key=(select fixing_public_id from fx_real_applied) and value_row.currency_code='NRC'
+      and value_row.story_basis_points=75 and value_row.units_per_eco=round(value_row.previous_units_per_eco*1.0075,18)),
+  'real queued shock produces the exact economic NRC movement');
+
+-- Only subsequent INPUT is projected forward; never apply a future fixing early.
+create temporary table fx_real_next_claim on commit drop as
+select claim_row.* from private.fx_runtime_state as runtime
+cross join lateral public.claim_due_fx_games_v1(runtime.next_due_at,100,'fx-db-real-next-input',120) as claim_row
+where runtime.game_session_id=${sqlLiteral(fixture.gameTwoId)}::uuid and claim_row.game_session_id=runtime.game_session_id;
+create temporary table fx_real_next_input on commit drop as
+select loaded.* from fx_real_next_claim as claim_row
+cross join lateral public.load_fx_fixing_input_v1(claim_row.game_session_id,claim_row.fixing_local_date,claim_row.lease_token) as loaded;
+select pg_temp.fx_assert_v1(
+  (select count(*)=1 from fx_real_next_input)
+  and not exists(select 1 from fx_real_next_input as loaded cross join lateral jsonb_array_elements(loaded.engine_input->'storyShocks') as shock(item)
+    cross join fx_real_receipt as receipt where shock.item->>'shockId'=receipt.public_key),
+  'next input omits the actually consumed queue receipt');
+select pg_temp.fx_assert_v1(public.fail_fx_fixing_claim_v1(
+  ${sqlLiteral(fixture.gameTwoId)}::uuid,(select fixing_local_date from fx_real_next_claim),(select lease_token from fx_real_next_claim),'fixture_real_next_release',clock_timestamp()),
+  'next-input proof releases its lease');
+select 'FX_REAL_CLOCK_STORY_PROOF_PASSED';
+`;
+  assert(sql.endsWith("rollback;\n"));
+  sql = sql.slice(0, -"rollback;\n".length) + proof + realRequest + finish + "rollback;\n";
+}
+
 const result = spawnSync(
   "psql",
   [
@@ -2773,7 +2955,7 @@ const result = spawnSync(
   {
     input: sql,
     encoding: "utf8",
-    timeout: 150_000,
+    timeout: realClockStoryProof ? 90 * 60_000 : 150_000,
     maxBuffer: 16 * 1024 * 1024,
     env: {
       ...process.env,
@@ -2787,4 +2969,8 @@ if (result.status !== 0 || result.error) {
   throw new Error(`Canonical FX database acceptance failed: ${detail}`);
 }
 
+if (realClockStoryProof) {
+  assert(result.stdout.includes("FX_REAL_CLOCK_STORY_PROOF_PASSED"));
+  console.log("FX_REAL_CLOCK_STORY_PROOF_PASSED");
+}
 console.log("ok - canonical FX database acceptance rolled back cleanly");

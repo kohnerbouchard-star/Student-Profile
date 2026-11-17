@@ -28,6 +28,7 @@ declare
   v_policy public.fx_policy_versions%rowtype;
   v_existing public.fx_fixings%rowtype;
   v_timezone text;
+  v_lifecycle_state text;
   v_effective_at timestamptz := p_effective_at;
   v_calculated_at timestamptz := clock_timestamp();
   v_snapshot_effective_at timestamptz;
@@ -52,11 +53,13 @@ begin
     raise exception 'FX_BOOTSTRAP_REQUEST_INVALID' using errcode = '22023';
   end if;
 
-  if not exists (
-    select 1
-    from public.game_sessions as game_row
-    where game_row.id = p_game_session_id
-  ) then
+  -- Match lifecycle-trigger lock order: game row, bootstrap lock, runtime row.
+  -- Read lifecycle under lock so a concurrent pause cannot be rescheduled.
+  select game_row.lifecycle_state into v_lifecycle_state
+  from public.game_sessions as game_row
+  where game_row.id = p_game_session_id
+  for update;
+  if not found then
     raise exception 'FX_BOOTSTRAP_GAME_NOT_FOUND' using errcode = 'P0001';
   end if;
 
@@ -121,7 +124,8 @@ begin
       null,
       v_existing.id,
       v_existing.policy_version_id,
-      private.fx_next_boundary_v1(clock_timestamp(), v_existing.game_timezone),
+      case when v_lifecycle_state = 'paused' then null
+        else private.fx_next_boundary_v1(clock_timestamp(), v_existing.game_timezone) end,
       v_existing.calculated_at,
       clock_timestamp()
     )
@@ -130,10 +134,8 @@ begin
         blocked_reason = null,
         current_fixing_id = excluded.current_fixing_id,
         policy_version_id = excluded.policy_version_id,
-        next_due_at = coalesce(
-          private.fx_runtime_state.next_due_at,
-          excluded.next_due_at
-        ),
+        next_due_at = case when v_lifecycle_state = 'paused' then null
+          else coalesce(private.fx_runtime_state.next_due_at, excluded.next_due_at) end,
         retry_after_at = null,
         last_success_at = coalesce(
           private.fx_runtime_state.last_success_at,
@@ -704,7 +706,8 @@ begin
       blocked_reason = null,
       current_fixing_id = v_fixing_id,
       policy_version_id = v_policy.id,
-      next_due_at = private.fx_next_boundary_v1(v_calculated_at, v_timezone),
+      next_due_at = case when v_lifecycle_state = 'paused' then null
+        else private.fx_next_boundary_v1(v_calculated_at, v_timezone) end,
       retry_after_at = null,
       last_success_at = v_calculated_at,
       last_error_code = null,

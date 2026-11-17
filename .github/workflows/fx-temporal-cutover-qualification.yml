@@ -7,6 +7,8 @@ on:
     paths:
       - ".github/workflows/fx-temporal-cutover-qualification.yml"
       - "scripts/fx-temporal-cutover-qualification.mjs"
+      - "scripts/fx-temporal-cutover-concurrency.mjs"
+      - "scripts/fx-temporal-cutover-concurrency.test.mjs"
       - "backend/supabase/migrations/20261117035856_fx_bootstrap_temporal_provenance.sql"
       - "scripts/canonical-fx-authority-database.mjs"
       - "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md"
@@ -26,7 +28,7 @@ jobs:
     name: FX temporal disposable PostgreSQL qualification
     if: github.event.pull_request.head.ref == 'fix/fx-bootstrap-temporal-provenance' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.draft == true
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 100
     steps:
       - name: Check out exact PR head without credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -50,6 +52,7 @@ jobs:
           node scripts/fx-temporal-cutover-qualification.mjs
           node scripts/validate-supabase-migrations.mjs
           node --check scripts/canonical-fx-authority-database.mjs
+          node --test scripts/fx-temporal-cutover-concurrency.test.mjs
       - name: Require disposable local database tools
         run: |
           docker info >/dev/null
@@ -60,8 +63,10 @@ jobs:
         run: npx --no-install supabase db reset --workdir backend --local
       - name: Replay all forward migrations twice
         run: npx --no-install supabase db reset --workdir backend --local
-      - name: Run rollback-only FX PostgreSQL acceptance
-        run: node scripts/canonical-fx-authority-database.mjs
+      - name: Run rollback-only FX acceptance and bounded real-clock Story consumption
+        run: node scripts/canonical-fx-authority-database.mjs --real-clock-story-proof
+      - name: Exercise real independent-session FX lifecycle races
+        run: node scripts/fx-temporal-cutover-concurrency.mjs
       - name: Lint rebuilt local schema
         run: npx --no-install supabase db lint --workdir backend --local --level warning --fail-on error
       - name: Destroy disposable stack

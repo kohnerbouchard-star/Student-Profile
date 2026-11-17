@@ -116,3 +116,31 @@ After clean root lockfile installation using a writable local npm cache, the
 full root `npm test` rerun passed on Node22.23.1/npm10.9.8. The five initial
 missing-SDK failures were resolved without source/test changes. The PR-binding
 contract also passes with actual PR1005. PostgreSQL results are still pending.
+
+
+## Expanded disposable qualification follow-up
+
+Published baseline `b8b5129b` / run `44018032749` passed serial PostgreSQL
+acceptance and both migration replays; 12 baseline whole-schema lint findings
+remain blocking and are not suppressed. The new local tranche adds strict
+PR1005/exact-head/fresh-Docker bootstrap and lifecycle contention tests, including
+initially paused bootstrap and both pause/resume orderings. Static review found
+bootstrap replay could repopulate a paused schedule. The unmerged definition-only
+migration now locks game lifecycle before advisory/runtime locks and keeps all
+three paused schedule paths null, without changing active scheduling, pointer
+selection, grants, rate history or temporal provenance.
+
+A dedicated real-clock opt-in additionally queues through the actual Story RPC,
+waits for the next real named-zone 08:00 boundary (maximum65 minutes), applies
+using actual time, checks exact economic movement and single consumption/replay,
+and verifies the next input omits the consumed shock. Actual authorization time,
+eligibility and hash are preserved. It uses SQL-rendered results checked by the
+canonical database validator, not the JavaScript worker engine. Default historical
+runner behavior stays short; only the exact scoped draft workflow gets a100-minute
+limit and the opt-in90-minute watchdog. All fixture work rolls back; committed
+concurrency fixtures are destroyed with the disposable stack.
+
+Neither new hosted proof has run yet. True daily-worker/bootstrap contention and
+legacy90-row concurrent preservation remain pending; do not mark recovery or
+completion. Existing lint --fail-on error, two complete replays, production denial
+and no-alias-rehearsal boundaries remain unchanged. No live/staging activity.
