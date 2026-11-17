@@ -244,7 +244,8 @@
     "Runtime Stabilization Onboarding",
     "Runtime and request contracts",
     "Local custom-auth Edge Functions reachability",
-    "Two-Player Arrival onboarding"
+    "Two-Player Arrival onboarding",
+    "Story durable execution database acceptance"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -355,7 +356,8 @@
     "Runtime and request contracts",
     "Local custom-auth Edge Functions reachability",
     "Two-Player Arrival onboarding",
-    "CodeQL"
+    "CodeQL",
+    "Story durable execution database acceptance"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",

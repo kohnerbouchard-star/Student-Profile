@@ -318,11 +318,15 @@ try {
 
     await ready.page.getByLabel("Price multiplier").fill("1");
     await ready.page.getByLabel("Present reward").fill("6");
+    await ready.page.getByLabel("Attendance timezone").fill("America/New_York");
+    await ready.page.getByLabel("Late cutoff (24-hour time)", { exact: true }).fill("09:15");
     const opener = ready.page.getByRole("button", { name: "Review changes" });
     await opener.focus();
     await opener.click();
     let dialog = ready.page.getByRole("alertdialog", { name: "Apply game settings?" });
     await dialog.waitFor({ state: "visible" });
+    assert.match(await dialog.innerText(), /America\/New_York/);
+    assert.match(await dialog.innerText(), /09:15/);
     const safeCancel = dialog.getByRole("button", { name: "Cancel" });
     assert.equal(await safeCancel.evaluate((node) => node === document.activeElement), true, "safe cancel action did not autofocus");
     await ready.page.keyboard.press("Escape");
@@ -338,6 +342,10 @@ try {
     const attendancePatch = ready.requests.filter(({ method }) => method === "PATCH").at(-1);
     assert.deepEqual(Object.keys(attendancePatch.body.settings).sort(), ["attendanceWindow"]);
     assert.equal(attendancePatch.body.settings.attendanceWindow.presentRewardAmount, 6);
+    assert.equal(attendancePatch.body.settings.attendanceWindow.timezone, "America/New_York");
+    assert.equal(attendancePatch.body.settings.attendanceWindow.lateCutoff, "09:15");
+    assert.equal(await ready.page.getByLabel("Attendance timezone").inputValue(), "America/New_York");
+    assert.equal(await ready.page.getByLabel("Late cutoff (24-hour time)", { exact: true }).inputValue(), "09:15");
     assert.equal(attendancePatch.body.settings.attendanceWindow.currencyMode, "player_country");
     assert.equal(attendancePatch.body.settings.attendanceWindow.applyDifficultyIncomeModifier, true);
     pass("confirmation focus and attendance mutation semantics");

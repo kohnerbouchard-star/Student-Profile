@@ -100,7 +100,7 @@ Deno.test("IPO routes remain exclusively owned by the canonical Business dispatc
 
 // REF025a: application/repository characterization with synthetic clients, no SQL execution.
 import { handlePlayerBusinessBankingRequest } from "./playerBusinessBankingHttpHandler.ts";
-import { SupabasePlayerBusinessBankingRepository } from "../infrastructure/supabasePlayerBusinessBankingRepository.ts";
+import { SupabasePlayerBusinessBankingRepository, loanRepaymentAccountType } from "../infrastructure/supabasePlayerBusinessBankingRepository.ts";
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
 import { EdgeActivationError } from "../../../platform/supabase/edgeResponse.ts";
 
@@ -175,6 +175,7 @@ Deno.test("Loans retains its five original reads and projection when added histo
         row.currency_code = [null, undefined, "   "][businessCount];
       }
     }
+    fixtures.player_loans[0].repayment_account_type = ["checking", "savings", `business:${businessKey}`][businessCount];
     const client = {
       rpc(name: string, args: unknown) {
         calls.push(["rpc", name, args]);
@@ -247,10 +248,10 @@ Deno.test("Loans retains its five original reads and projection when added histo
       activeLoans: [
         { id: key("lon", "c"), name: "Credit facility", status: "Active", balance: 10.3,
           originalAmount: 20, nextPayment: 3, nextDue: "2026-10-05T00:00:00.000Z",
-          repaidPercent: 49.5, accruedInterest: 0.2, businessId: businessCount ? businessKey : null },
+          repaidPercent: 49.5, accruedInterest: 0.2, repaymentAccountType: ["checking", "savings", "business"][businessCount], businessId: businessCount ? businessKey : null },
         { id: key("lon", "d"), name: "Credit facility", status: "Delinquent", balance: 20.5,
           originalAmount: 30, nextPayment: 4, nextDue: "2026-10-06T00:00:00.000Z",
-          repaidPercent: 32.7, accruedInterest: 0.3, businessId: null },
+          repaidPercent: 32.7, accruedInterest: 0.3, repaymentAccountType: null, businessId: null },
       ],
       schedule: [
         { cycle: "Payment 1", due: "2026-10-05T00:00:00.000Z", amount: 3, status: "Scheduled" },
@@ -417,5 +418,14 @@ Deno.test("Fractional player and savings transfers preserve cents and server-der
       }]]);
       assertEquals(await response.json(), { ok: true, result: { status: "posted", amount }, refreshRequired: true });
     }
+  }
+});
+
+Deno.test("Loan repayment disclosure publishes only canonical account categories", () => {
+  assertEquals(loanRepaymentAccountType("checking"), "checking");
+  assertEquals(loanRepaymentAccountType("savings"), "savings");
+  assertEquals(loanRepaymentAccountType(`business:${key("biz", "a")}`), "business");
+  for (const value of [null, undefined, "", "Checking", "business:private-id", "__proto__", {}, "11111111-1111-4111-8111-111111111111"]) {
+    assertEquals(loanRepaymentAccountType(value), null);
   }
 });

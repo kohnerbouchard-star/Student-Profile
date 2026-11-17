@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "docs/operations/contracts/player-cross-cutting/pr-933.json"
+      - "scripts/story-execution-database*"
+      - "docs/operations/contracts/player-cross-cutting/pr-999.json"
       - "docs/operations/contracts/player-cross-cutting/pr-981.json"
       - "docs/operations/contracts/player-cross-cutting/pr-982.json"
       - "docs/operations/contracts/player-cross-cutting/pr-980.json"
@@ -171,3 +173,37 @@ jobs:
             src/domains/storylines/tests/storyEffectReplaySafetyMigration.test.ts \
             src/domains/storylines/tests/storyEventExecutionLeaseMigration.test.ts \
             src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts
+
+  durable-database:
+    name: Story durable execution database acceptance
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact proposed source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - name: Install pinned tooling and verify acceptance guards
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = '${{ github.event.pull_request.head.sha }}'
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          test "$(npx supabase --version)" = '2.109.1'
+          node --test scripts/story-execution-database.test.mjs
+      - name: Start disposable full-schema PostgreSQL
+        run: npx supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta
+      - name: Replay full schema from zero
+        run: npx supabase db reset --workdir backend --local
+      - name: Exercise real Story lease RPCs with rollback-only fixtures
+        run: node scripts/story-execution-database.mjs
+      - name: Stop only this disposable stack
+        if: always()
+        run: npx supabase stop --workdir backend --no-backup

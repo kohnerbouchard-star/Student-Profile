@@ -149,19 +149,23 @@ Deno.test("stock-tick Story factory preserves context and adapter failures", asy
   assertEquals(tables.length, 9);
 });
 
-for (const useDefault of [false, true]) {
+for (const claimOutcome of ["acquired", "busy", "already_resolved", "error", "retry"] as const) {
+for (const useDefault of [false, true, "handler"] as const) {
+  if (useDefault === "handler" && claimOutcome !== "retry") continue;
   Deno.test(
     useDefault
-      ? "stock-tick Story factory default executor runs a due Contract effect with the injected writer"
-      : "stock-tick Story factory runs a due Contract effect with the injected writer",
+      ? `stock-tick Story ${useDefault === "handler" ? "HTTP handler" : "factory default executor"} preserves durable ${claimOutcome} outcome`
+      : `stock-tick Story factory injected executor preserves durable ${claimOutcome} outcome`,
     async () => {
       const events: string[] = [];
       const contractWrites: unknown[] = [];
+      const persistedContracts: Record<string, unknown>[] = [];
+      let finalizeCalls = 0;
       const at = "2026-08-12T03:00:00.000Z";
       let result: Awaited<ReturnType<typeof runDueStorylineEvents>> | undefined;
       const activation = {
         id: "activation-1",
-        game_session_id: "game-1",
+        game_session_id: "00000000-0000-4000-8000-000000000001",
         storyline_id: "storyline-1",
         status: "active",
         story_started_at: "2026-08-10T00:00:00.000Z",
@@ -226,6 +230,15 @@ for (const useDefault of [false, true]) {
               return query;
             },
             maybeSingle() {
+              if (table === "game_session_contracts" && inserted) {
+                events.push("contract-write");
+                contractWrites.push(inserted);
+                if (persistedContracts.length) {
+                  return Promise.resolve({ data: null, error: { code: "23505", message: "duplicate contract" } });
+                }
+                persistedContracts.push({ id: "contract-1", ...inserted });
+                return Promise.resolve({ data: { id: "contract-1" }, error: null });
+              }
               if (table !== "story_event_resolutions" || !inserted) {
                 throw new Error(`Unexpected insert in ${table}`);
               }
@@ -237,7 +250,7 @@ for (const useDefault of [false, true]) {
             then(
               resolve: (value: { data: unknown[]; error: null }) => unknown,
             ) {
-              const data = table === "players"
+              const data = table === "game_session_contracts" ? persistedContracts : table === "players"
                 ? [{ id: "player-1" }]
                 : table === "game_session_storylines"
                 ? [activation]
@@ -249,8 +262,39 @@ for (const useDefault of [false, true]) {
           };
           return query;
         },
-        rpc() {
-          throw new Error("No ledger effect is expected");
+        rpc(name: string, args: Record<string, unknown>) {
+          assertEquals(args.p_game_session_id, "00000000-0000-4000-8000-000000000001");
+          assertEquals(args.p_storyline_event_id, "event-1");
+          events.push(`rpc:${name}`);
+          if (name === "claim_story_event_execution_v1") {
+            if (claimOutcome === "error") {
+              return Promise.resolve({ data: null, error: { code: "XX001", message: "claim unavailable" } });
+            }
+            return Promise.resolve({ data: [{
+              claim_outcome: ["acquired", "retry"].includes(claimOutcome) ? (args.p_execution_plan === null ? "absent" : "acquired") : claimOutcome,
+              claim_id: "claim-1", lease_token: "lease-1",
+              lease_expires_at: "2026-08-12T03:02:00.000Z",
+              effective_at: args.p_effective_at,
+              effective_market_tick: args.p_effective_market_tick,
+              attempt_count: 1, execution_plan: args.p_execution_plan ?? {},
+              resolution_id: claimOutcome === "already_resolved" ? "resolution-1" : null,
+            }], error: null });
+          }
+          if (name === "finalize_story_event_execution_v1") {
+            assertEquals(args.p_lease_token, "lease-1");
+            finalizeCalls++;
+            if (claimOutcome === "retry" && finalizeCalls === 1) {
+              return Promise.resolve({ data: null, error: { code: "XX001", message: "finalize unavailable" } });
+            }
+            return Promise.resolve({ data: [{ finalize_outcome: "finalized",
+              claim_id: "claim-1", resolution_id: "resolution-1", attempt_count: 1,
+            }], error: null });
+          }
+          if (name === "fail_story_event_execution_v1" && claimOutcome === "retry") {
+            assertEquals(args.p_lease_token, "lease-1");
+            return Promise.resolve({ data: [{ claim_outcome: "retryable_failed", claim_id: "claim-1", attempt_count: 1 }], error: null });
+          }
+          throw new Error(`Unexpected RPC ${name}`);
         },
       };
       const contractWriter = {
@@ -260,18 +304,18 @@ for (const useDefault of [false, true]) {
           return Promise.resolve({ id: "contract-1" });
         },
       };
-      const hook = createStockTickStorylineRunner(
+      let hook = createStockTickStorylineRunner(
         client as never,
-        () => contractWriter,
+        claimOutcome === "retry" ? undefined : () => contractWriter,
         useDefault ? undefined : async (input) => {
-          assertEquals(input.gameSessionId, "game-1");
+          assertEquals(input.gameSessionId, "00000000-0000-4000-8000-000000000001");
           assertEquals(input.now, at);
           assertEquals(input.currentMarketTick, 4);
           assertEquals(Object.keys(input.notificationRepository ?? {}), [
             "createStoryNotification",
             "createNotificationDeliveries",
           ]);
-          if (input.effectDependencies.contracts !== contractWriter) {
+          if (claimOutcome !== "retry" && input.effectDependencies.contracts !== contractWriter) {
             throw new Error("Contract writer identity changed");
           }
           events.push("story-runner");
@@ -279,11 +323,45 @@ for (const useDefault of [false, true]) {
           return result;
         },
       );
+      if (useDefault === "handler") {
+        const { handleStockMarketRunnerRequest } = await import("../../stocks/api/stockMarketRunnerHttpHandler.ts");
+        const { dependencies, request, SECRET } = await import("../../stocks/api/stockMarketRunnerHttpHandler.test.fixtures.support.ts");
+        hook = async (input) => {
+          const response = await handleStockMarketRunnerRequest(
+            request({ gameSessionId: input.gameSessionId, tickIndex: input.currentMarketTick }, SECRET),
+            { ...dependencies({ createServiceClient: () => client, now: () => new Date(input.generatedAt) }),
+              createStorylineRunnerAfterTick: undefined },
+          );
+          assertEquals(response.status, 200);
+        };
+      }
       await hook({
-        gameSessionId: "game-1",
+        gameSessionId: "00000000-0000-4000-8000-000000000001",
         currentMarketTick: 4,
         generatedAt: at,
       });
+      if (claimOutcome === "retry") {
+        assertEquals(persistedContracts.length, 1);
+        assertEquals(finalizeCalls, 1);
+        if (!useDefault) assertEquals(result?.failedCount, 1);
+        await hook({ gameSessionId: "00000000-0000-4000-8000-000000000001", currentMarketTick: 4, generatedAt: at });
+        assertEquals(finalizeCalls, 2);
+        assertEquals(persistedContracts.length, 1);
+        assertEquals(contractWrites.length, 2);
+        assertEquals(events.includes("insert:story_event_resolutions"), false);
+        if (!useDefault) assertEquals(result?.resolvedCount, 1);
+        return;
+      }
+      if (claimOutcome !== "acquired") {
+        assertEquals(contractWrites.length, 0);
+        assertEquals(events.includes("insert:story_event_resolutions"), false);
+        assertEquals(events.includes("rpc:finalize_story_event_execution_v1"), false);
+        if (!useDefault) {
+          assertEquals(result?.failedCount, claimOutcome === "error" ? 1 : 0);
+          assertEquals(result?.alreadyExistingCount, claimOutcome === "already_resolved" ? 1 : 0);
+        }
+        return;
+      }
       if (!useDefault) {
         assertEquals(result?.resolvedCount, 1);
         assertEquals(result?.effectAppliedCount, 1);
@@ -295,19 +373,23 @@ for (const useDefault of [false, true]) {
         contractKey: string;
         publishedAt: string;
       };
-      assertEquals(written.gameSessionId, "game-1");
+      assertEquals(written.gameSessionId, "00000000-0000-4000-8000-000000000001");
       assertEquals(written.sourceId, "event-1");
       assertEquals(written.contractKey, "contract.story-test");
       assertEquals(written.publishedAt, at);
+      assertEquals(events.includes("insert:story_event_resolutions"), false);
+      if (events.indexOf("rpc:finalize_story_event_execution_v1") < events.indexOf("contract-write")) {
+        throw new Error("Durable resolution must finalize after effects");
+      }
       const storyStart = useDefault
         ? events.indexOf("from:game_session_storylines")
         : events.indexOf("story-runner");
       if (
         storyStart < 9 ||
-        events.indexOf("insert:story_event_resolutions") <
+        events.indexOf("rpc:claim_story_event_execution_v1") <
           storyStart ||
         events.indexOf("contract-write") <
-          events.indexOf("insert:story_event_resolutions")
+          events.indexOf("rpc:claim_story_event_execution_v1")
       ) {
         throw new Error(
           `Story context, resolution, and Contract write order changed: ${
@@ -317,6 +399,8 @@ for (const useDefault of [false, true]) {
       }
     },
   );
+}
+
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {

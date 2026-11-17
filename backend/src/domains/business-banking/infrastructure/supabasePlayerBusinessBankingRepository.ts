@@ -14,6 +14,12 @@ import { projectLoanCurrencies, projectLoanLifecycle, type LoanCurrencyScheduleI
 
 type Row = Record<string, unknown>;
 
+// Publish only the account category, never persisted account identifiers.
+export function loanRepaymentAccountType(value: unknown): "checking" | "savings" | "business" | null {
+  if (value === "checking" || value === "savings") return value;
+  return typeof value === "string" && /^business:biz_[0-9a-f]{32}$/u.test(value) ? "business" : null;
+}
+
 export class SupabasePlayerBusinessBankingRepository
   implements PlayerBusinessBankingRepository {
   constructor(private readonly client: EdgeSupabaseClient, private readonly lifecycleTimeoutMs = 2000) {}
@@ -134,6 +140,7 @@ export class SupabasePlayerBusinessBankingRepository
             )))
             : 0,
           accruedInterest: number(row.accrued_interest),
+          repaymentAccountType: loanRepaymentAccountType(row.repayment_account_type),
           businessId: businessKeys.get(text(row.business_id)) ?? null,
         };
       }),
