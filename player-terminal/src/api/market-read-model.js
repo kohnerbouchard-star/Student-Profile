@@ -80,9 +80,18 @@ export function normalizeMarketRead(response, currentMarket) {
   const body = object(response);
   const current = object(currentMarket);
   const existingById = new Map(list(current.assets).map((asset) => [asset.id, asset]));
-  const assets = list(body.assets).map((asset) => normalizeMarketAsset(asset, {
+  const pageAssets = list(body.assets).map((asset) => normalizeMarketAsset(asset, {
     existing: existingById.get(asset.assetId)
   }));
+  // The adapter owns a shared read snapshot. Retain earlier pages here too,
+  // otherwise a later marketAsset review cannot update an earlier-page ticker.
+  const offset = object(body.pagination).offset;
+  let assets = pageAssets;
+  if (Number.isInteger(offset) && offset > 0) {
+    const byId = new Map(list(current.assets).map((asset) => [asset.id, asset]));
+    for (const asset of pageAssets) if (!byId.has(asset.id)) byId.set(asset.id, asset);
+    assets = [...byId.values()];
+  }
   const sectors = [...new Set(assets.map((asset) => asset.sector).filter(Boolean))];
   const selectedAssetId = assets.some((asset) => asset.id === current.selectedAssetId)
     ? current.selectedAssetId

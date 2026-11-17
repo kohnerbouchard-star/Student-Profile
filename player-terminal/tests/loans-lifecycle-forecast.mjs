@@ -75,3 +75,17 @@ test("older responses retain exact reported schedule amounts without calling the
   f.repaymentForecast = loansFixture().repaymentForecast;
   assert.doesNotMatch(render(f), /Unverified service schedule|LUM 0.01|99,999,999,999,999.99/);
 });
+
+test("repayment discloses the facility account and currency without assuming home Checking", () => {
+  for (const [type, label] of [["checking", "Checking account"], ["savings", "Savings account"], ["business", "Business operating account"]]) {
+    const f = loansFixture(); f.activeLoans[0].repaymentAccountType = type;
+    assert.ok(render(f).includes(`facility-bound ${label} in NRC`));
+  }
+  for (const type of [undefined, null, "__proto__", "constructor", "private-account-id", "<img src=x>"]) {
+    const f = loansFixture(); f.activeLoans[0].repaymentAccountType = type;
+    const html = render(f);
+    assert.match(html, /Repayment account unavailable/);
+    assert.match(html, /data-endpoint="loanRepay"/);
+    assert.doesNotMatch(html, /private-account-id|<img src=x>/);
+  }
+});

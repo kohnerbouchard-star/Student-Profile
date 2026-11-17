@@ -1,3 +1,4 @@
+import { nextMarketPage } from "../features/market/market-directory-model.js";
 import { renderBusinessShareFacts } from "../features/market/business-share-view.js";
 import { renderBusinessIpoPanel } from "../features/business-ipo/business-ipo-panel.js";
 import { escapeHtml, formatCompact, formatCurrency, formatNumber, formatPercent, toneFromChange } from "../core/format.js";
@@ -95,13 +96,15 @@ export function renderMarketPage(data, ui) {
       <section class="player-terminal-panel player-terminal-asset-browser">
         <header class="player-terminal-panel-header"><div><span>ASSET DIRECTORY</span><strong>${escapeHtml(assets.length)} instruments</strong></div><button class="player-terminal-icon-button" type="button" aria-label="Search assets" aria-expanded="false" aria-controls="playerMarketSearchPanel" data-player-local-action="market-search">${icon("eye")}</button></header>
         <div id="playerMarketSearchPanel" class="player-terminal-filter-row" data-player-market-search-panel hidden>
-          <label><span class="sr-only">Search listed assets</span><input type="search" data-player-market-search autocomplete="off" placeholder="Search symbol, company, or sector"></label>
+          <label><span class="sr-only">Search listed assets</span><input type="search" data-player-market-search autocomplete="off" placeholder="Search loaded instruments"></label>
           <small data-player-market-search-status>${escapeHtml(assets.length)} listed instruments</small>
         </div>
         <div class="player-terminal-filter-row">
           ${market.sectors.map((item) => `<button type="button" class="${item === sector ? "active" : ""}" data-player-market-sector="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("")}
         </div>
         <div class="player-terminal-asset-list">${assets.length ? assets.map((asset) => renderAssetRow(asset, selected.id, data.countries, sessionCurrencyCode)).join("") : renderEmptyState({ title: "No assets in this sector", detail: "Select another sector to continue browsing.", iconName: "market" })}<p class="player-terminal-inline-empty" data-player-market-search-empty hidden>No listed assets match this search.</p></div>
+        <p class="player-terminal-inline-empty" data-player-market-directory-status role="status" tabindex="-1">${escapeHtml(market.assets.length)} instruments loaded${nextMarketPage(market) ? ". More instruments are available." : "."} Search and sector filters apply to loaded instruments.</p>
+        ${nextMarketPage(market) ? '<button class="player-terminal-secondary-button" type="button" data-player-market-load-more>Load more instruments</button>' : ""}
       </section>
 
       <section class="player-terminal-panel player-terminal-chart-panel">
