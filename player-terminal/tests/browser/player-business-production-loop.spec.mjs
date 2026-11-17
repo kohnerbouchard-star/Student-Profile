@@ -69,6 +69,11 @@ test("equipment, manufacturing, draft, stock and publication use real Player con
   const guidance = page.locator("[data-business-next-actions]");
   await expect(guidance).toContainText("Install warehouse equipment");
   await guidance.getByRole("link", { name: "Review equipment", exact: true }).click();
+  await expect(page).toHaveURL(/#business$/);
+  await expect(page.locator('[data-business-workspace-section="equipment"]')).toBeFocused();
+  await page.getByRole("navigation", { name: "Business workspace", exact: true }).getByRole("link", { name: "Production", exact: true }).click();
+  await expect(page).toHaveURL(/#business$/);
+  await expect(page.locator('[data-business-workspace-section="production"]')).toBeFocused();
   expect(await page.evaluate(() => businessLoop.calls.length)).toBe(0);
   await expect(page.locator('[data-player-form="business-manufacturing-start"]')).toHaveCount(0);
   await page.getByRole("button", { name: "Install equipment", exact: true }).click();

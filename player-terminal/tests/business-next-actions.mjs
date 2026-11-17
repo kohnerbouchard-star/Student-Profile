@@ -43,3 +43,29 @@ const html=renderBusinessNextActions(sold);
 assert.doesNotMatch(html, /<form|data-endpoint|data-player-form/);
 assert.equal(html, renderBusinessNextActions(sold), "Repeated renders do not mutate state");
 console.log("Business next-action guidance: authoritative read, lifecycle and navigation cases passed.");
+
+// Real delegated action handler: in-page navigation must never feed hash routing.
+const { createPlayerTerminalActions } = await import("../src/core/player-terminal-actions.js");
+for (const section of ["overview", "products", "stockroom", "procurement", "production", "workforce", "equipment", "sales", "finance", "governance", "activity"]) {
+  let prevented = 0, focused = 0, scrolled = 0;
+  const destination = { setAttribute(name, value) { assert.equal(name, "tabindex"); assert.equal(value, "-1"); }, focus(options) { assert.equal(options.preventScroll, true); focused++; }, scrollIntoView(options) { assert.equal(options.block, "start"); scrolled++; } };
+  const link = { dataset: { businessWorkspaceLink: section } };
+  const target = { closest(selector) { return selector === "[data-business-workspace-link]" ? link : null; } };
+  let state = { status: "ready", route: "business", ui: {} };
+  const { handleClick } = createPlayerTerminalActions({ store: { getState: () => state }, mount: { querySelector(selector) { assert.equal(selector, `[data-business-workspace-section="${section}"]`); return destination; } }, lifecycle: {} });
+  const event = { target, preventDefault() { prevented++; } };
+  await handleClick(event); await handleClick(event);
+  assert.deepEqual([prevented, focused, scrolled], [2, 2, 2]);
+  for (const unavailable of [{ ...state, status: "loading" }, { ...state, route: "news" }, { ...state, modal: { type: "test" } }]) {
+    state = unavailable; target.matches = () => false; await handleClick(event);
+  }
+  assert.deepEqual([prevented, focused, scrolled], [5, 2, 2]);
+}
+console.log("Business workspace navigation retains route and rejects inactive contexts.");
+
+for (const section of ["unknown", "equipment"]) {
+  let prevented = false;
+  const { handleClick } = createPlayerTerminalActions({ store: { getState: () => ({ status: "ready", route: "business", ui: {} }) }, mount: { querySelector() { assert.equal(section, "equipment"); return null; } }, lifecycle: {} });
+  await handleClick({ target: { closest(selector) { return selector === "[data-business-workspace-link]" ? { dataset: { businessWorkspaceLink: section } } : null; } }, preventDefault() { prevented = true; } });
+  assert.equal(prevented, true, "Unknown or missing targets cannot trigger hash routing");
+}

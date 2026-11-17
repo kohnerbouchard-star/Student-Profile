@@ -15,6 +15,7 @@
     "docs/operations/evidence/business-production-next-actions-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "player-terminal/package.json",
+    "player-terminal/src/core/player-terminal-actions.js",
     "player-terminal/src/pages/business-next-actions.js",
     "player-terminal/src/pages/business-workspace-sections.js",
     "player-terminal/tests/browser/player-business-production-loop.spec.mjs",
@@ -29,6 +30,7 @@
     "docs/operations/evidence/business-production-next-actions-v1/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
     "player-terminal/package.json",
+    "player-terminal/src/core/player-terminal-actions.js",
     "player-terminal/src/pages/business-next-actions.js",
     "player-terminal/src/pages/business-workspace-sections.js",
     "player-terminal/tests/browser/player-business-production-loop.spec.mjs",
@@ -151,7 +153,9 @@
     "dependency-review",
     "verify-and-attest",
     "World Runtime",
-    "CodeQL"
+    "CodeQL",
+    "Backend Typecheck",
+    "backend-typecheck"
   ],
   "criticalJobChecks": [
     "Rendered Admin browser and secure mutation journey",
@@ -227,7 +231,8 @@
     "Validator tests",
     "dependency-review",
     "verify-and-attest",
-    "CodeQL"
+    "CodeQL",
+    "backend-typecheck"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",

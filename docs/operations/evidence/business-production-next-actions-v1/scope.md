@@ -60,3 +60,25 @@ four guarded skips, with 115 ordered required identities and 74 unique critical
 job names. No workflow trigger, command, permission or condition changes. Manifest
 verification and its 16 regression tests pass. Source-only hosted CI is interim;
 metadata head must receive fresh qualification and independent review.
+
+
+## Hosted navigation correction (2026-11-17)
+
+Head `4fea9422` failed the retained production-loop browser journey on desktop
+and mobile: the equipment advice anchor changed the global hash to a section ID,
+which the route parser treated as Dashboard. The new bounded delegated handler
+prevents hash routing for allowlisted Business workspace links, requires the ready
+Business route and no modal, then focuses/scrolls the existing section. Both advice
+and existing workspace navigation are covered, including repeated clicks, inactive
+contexts, unknown sections and missing targets. Existing economic assertions and
+commands remain unchanged. Independent source review is clear.
+
+Full root and Player verification passed after correction. Local Chromium again
+failed before test execution at process-singleton socket creation (EPERM), so
+hosted browser requalification remains mandatory. A separate original FX database
+job failed before tests because host port 54322 was already occupied; this is not
+attributed to navigation and is not waived. New-head CI must qualify it normally.
+
+CI scope is now 11 changed / 13 locked paths, 38 workflow families, 80 active job
+tuples and four guarded skips. Backend Typecheck is additionally triggered by the
+core action handler. No workflow commands, conditions or permissions are changed.
