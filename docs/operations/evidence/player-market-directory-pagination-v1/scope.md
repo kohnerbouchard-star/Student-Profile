@@ -1,7 +1,7 @@
 # Player Market directory pagination
 
 Roadmap item: `FEATURE-MARKET-DIRECTORY-PAGING-001`.
-Status: `IN_PROGRESS`; base `956ad02db949ae9c4cff7d709a18ec28d20c0788`.
+Status: `IMPLEMENTED_NOT_MERGED`; draft [PR #997](https://github.com/kohnerbouchard-star/Student-Profile/pull/997); base `956ad02db949ae9c4cff7d709a18ec28d20c0788`.
 
 ## Current-main audit
 
@@ -48,10 +48,16 @@ server directory changes concurrently.
 - Backend core TypeScript passes; all-Edge checking is blocked by the frozen SDK
   download connection failure. Backend smoke likewise stops at the unchanged
   Supabase SDK import after passing the preceding domain suites.
-- Exact-head hosted checks, independent review and actual-PR authority pending.
-- Publication was denied by the automated safety reviewer pending explicit approval
-  to export this source to the public `kohnerbouchard-star/Student-Profile`
-  repository. No remote branch was created; no alternate publication attempted.
+- Actual-number PR997 authority passes its verifier and all 16 authority tests.
+  Current path-filter derivation selects 35 workflow families, 75 active job
+  tuples and four guarded skips; no workflow changes or skipped-gate waivers.
+  Independent review and exact-head hosted checks remain pending.
+- Initial publication was denied pending explicit public-destination approval.
+  The owner subsequently approved "Upload and publish" / "Publish". Git transport
+  lacked credentials; the authorized GitHub connector published draft #997 at
+  `22cd6e12ae7b1d0fcd6e7cd9c2489ecde29a9645`, exact local source tree
+  `34c25996cdfdc4dca43f199abfc83e7a7a5b51fb` (local `cc25d5d8`).
+  That source-only head is interim; actual-number metadata is qualified separately.
 - No staging or production deployment is performed or verified.
 
 Next: independent review, draft PR and exact-head hosted qualification. Follow-on
