@@ -1,0 +1,15 @@
+{
+  "prNumber": 0,
+  "repository": "kohnerbouchard-star/Student-Profile",
+  "head": "fix/db-baseline-lint-20261117",
+  "allowedPaths": [
+    ".github/workflows/db-baseline-lint-qualification.yml",
+    "scripts/db-baseline-lint-qualification.mjs",
+    "backend/supabase/migrations/20261117050144_baseline_function_name_resolution_v1.sql",
+    "backend/tests/sql/baseline_function_name_resolution_v1.sql",
+    "scripts/tests/test_db_baseline_name_resolution.py",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "docs/operations/evidence/db-baseline-lint-v1/scope.md",
+    "docs/operations/evidence/db-baseline-lint-v1/qualification-authority.json"
+  ]
+}
