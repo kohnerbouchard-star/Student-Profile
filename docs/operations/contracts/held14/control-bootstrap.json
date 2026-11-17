@@ -1,0 +1,875 @@
+{
+  "schemaVersion": 1,
+  "pullRequestNumber": 979,
+  "baseSha": "f5db830bca8aab9fad2b04c028563b32dfd38ef2",
+  "repository": "kohnerbouchard-star/Student-Profile",
+  "changes": [
+    {
+      "path": ".github/workflows/admin-api-check.yml",
+      "oldOid": "df3bdae952240a829f542556d85145c1f6d9f979",
+      "newOid": "d1b4be27a9c0968ac208c317be64dc8e9cd4fa96",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-browser-e2e.yml",
+      "oldOid": "04c95d0a303bb052038d5cbb991f2ca740ab59d5",
+      "newOid": "fed2c0a8d71d4875d7fb9633c57152bcaed27cfa",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-business-supervision.yml",
+      "oldOid": "1404cf674fc16f0a7393ba827dfbc9b8e378e25f",
+      "newOid": "02e9b64856335457b4ee2229df7e33a5eb2813a0",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-game-lifecycle-controls-v1.yml",
+      "oldOid": "b5c51e1ad82c035041829b9bd20e8a71db0a7d11",
+      "newOid": "eb70fe262bb4df35312410c25bb16395e8232b6f",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-scroll-integrity.yml",
+      "oldOid": "df36b7b45ac432279015082cc3ea28e26ccf21fe",
+      "newOid": "2b60f9a8b7a8d9ce4b27152ba784138713e1e349",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-shell-smoke.yml",
+      "oldOid": "0b6d28e450a81164b4dadf311ee85c47af414142",
+      "newOid": "3eaf2c9118deaf39f5d1b019facc3406149e9475",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-v2-attendance.yml",
+      "oldOid": "cccbff119824c57a01dd823f9a14ae98e1760315",
+      "newOid": "39bd63c9b130e7508803bb8a809865bce723c882",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-v2-banking.yml",
+      "oldOid": "395b23eea0730b8a7d74d240450d726476cbb119",
+      "newOid": "0a4c46cbce9fece8e32aca5d26f5f8ca0990dc6b",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-v2-contracts.yml",
+      "oldOid": "7fe0c3462010bc6e642a0758ece82fb7c8c805e3",
+      "newOid": "500b86438e150d3446f99fb60cc1c73121f5dba4",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-v2-crafting.yml",
+      "oldOid": "a312e0db94421994dc6d0ceffcdd7ed1618986e7",
+      "newOid": "49d235785e555f65f1562f5618fb0e9cac38a004",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-v2-market.yml",
+      "oldOid": "8d8cae25b687c4db97706c01b285e11609643ec9",
+      "newOid": "eb001b69577ff499f4f0ba82f72a6f19f0ac427f",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-v2-messages.yml",
+      "oldOid": "53c58c298060dba697f2e35b6acb1202f5bc5091",
+      "newOid": "5cf0c99e5b8430263d5978bcbc5881b540922a4f",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-v2-news-events.yml",
+      "oldOid": "e7176b685e9e91b2fc949e5476c1fe0ae9ca5016",
+      "newOid": "6581f3771c79e3a334ab8de6b0c6904723311064",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/admin-v2-settings-check.yml",
+      "oldOid": "05919dde806b46fc43d277a8a7068f7e50e89227",
+      "newOid": "d69e47188b02985eb374eac5c9c23c43e29be317",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/backend-typecheck.yml",
+      "oldOid": "588c9fb9258159c50345a955cb83eb199974d79a",
+      "newOid": "4d88633b59b9e1e1cafec6dbe56034f178d72803",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/banking-fx-clearing-v1.yml",
+      "oldOid": "8d9da5d0967ec6c1255d0dc0d6751d54a6d6d377",
+      "newOid": "0b9dee5e9e3b3e1921dfae28a22971ee981636d2",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-economy-v2.yml",
+      "oldOid": "6905f84a4dfb40493f758571d1bf44c44429ed80",
+      "newOid": "3784366c018b4942c5ee5e707d8887620cdc8942",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-financial-market.yml",
+      "oldOid": "2206f938f8310854f9682ce1853997ac205562c6",
+      "newOid": "7a96e527786c9d8860af312b2e005e5ce7aea2da",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-multicurrency-treasury-v1.yml",
+      "oldOid": "ec732aae5b23310d1480b85c6954a9e79524d77c",
+      "newOid": "efcca65f9a540e3f4d8a3f47d652a353ca14c325",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-player-store-cutover-v2.yml",
+      "oldOid": "f100e134721338409d37f5282f2c5dc35d29e97d",
+      "newOid": "d43c16413b2af824ac78fece662074ff953f5ba0",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-player-store-fx-final-v2.yml",
+      "oldOid": "1ec6dbb149ba6c928b8a850d0b1046ddd9220efd",
+      "newOid": "f37ef8d463989ec8018d68b4b7c683c5c918225d",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-primary-ipo.yml",
+      "oldOid": "534f7288a735c3a1a0f75a355e077c9315b6ac94",
+      "newOid": "d23b54983359094ece4e82c478d339a9e913681f",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-store-atomic-settlement-v2.yml",
+      "oldOid": "18c6c3ecb587724639a222cca63483989818b337",
+      "newOid": "50947085a878c4d7b5dd2c86ce3d1dc9e88d3d0f",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-store-listing-inventory-v2.yml",
+      "oldOid": "bb4a2f5670d37948fd1055429eb008fb3b06f90c",
+      "newOid": "cb91fed79b69a72d4b37178a393b7ebf7ffced63",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-store-sales-convergence-v2.yml",
+      "oldOid": "c42976e86e4c7cb537d18b81ac2514e33c820e82",
+      "newOid": "a7a8e0186f0550a14e03acf36ad0703cee33e5fa",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-store-seller-offers-v2.yml",
+      "oldOid": "d77a3728e615349c4eb79b78e5068e5ad6e97455",
+      "newOid": "35572c1a0dc0c02d523ab4a393cf4ffd048e7ebb",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-store-withdrawal-safety-v2.yml",
+      "oldOid": "f6d24c2a98496ad6f74ea0bc4658e5c6ca4e6d85",
+      "newOid": "0637df924927bb42d3b9273a09bf57bcea7f7982",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-timed-manufacturing-v2.yml",
+      "oldOid": "c1ccf9bbc8119b501a69a26bf807f8083aa3c154",
+      "newOid": "c5defaa3b8ca5df7575db929bd97495c917797f5",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/business-workforce-payroll-v2.yml",
+      "oldOid": "17d6d1fcf5e292e2b2b832bc94b5c4dd8cbfa130",
+      "newOid": "254d1a6e75e0f860eee26907938fdbc2071b34eb",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/button-action-coverage.yml",
+      "oldOid": "3506921516086ee2515456b1a6d3e57e18557848",
+      "newOid": "e49b80315780b4f96fc4013971803d84d871e922",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/configurable-stock-market-timezone-v1.yml",
+      "oldOid": "c711fb7954384260e7b763e785c3a19f7614fe93",
+      "newOid": "3951d6fa14cc0a8353854fd6d79ff6e15efe585b",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/crafting-item-runtime.yml",
+      "oldOid": "0db2502a63699a9b0a6044208338ea64eee5ef04",
+      "newOid": "91586f2c2f340fef5ea4a21c08deb55a9577e6f9",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/database-replay.yml",
+      "oldOid": "ab6fcf4b8f6a24fdaa66ed9fd2e59e10d6855dbc",
+      "newOid": "892b9746802355c8d714520e990cfd04bb713f3c",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/economic-balance-exploit-lab.yml",
+      "oldOid": "e44e50b052593a72773e34f0fb82d9671798a6e4",
+      "newOid": "59efbcf46bf1dc61b50d46aee35a1a8c7eacf684",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/economic-core-request-claims.yml",
+      "oldOid": "59c6014880c31d99b7e3e43e7e001d6e218767a2",
+      "newOid": "1f38740aab52f63aa0afc2e793b5d7abf8e32b5b",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/environment-neutral-browser.yml",
+      "oldOid": "b69de311dbe5bea93d74fc0c059c3a5b4bf50167",
+      "newOid": "d206c18d3c236e3941c68738ddbd8d9acec3fa05",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/exchange-calendar-runtime-v1.yml",
+      "oldOid": "441d32fc4d4f8a19bf2538282e597d196b6c0c62",
+      "newOid": "234a5d32f40fbfabc80b1d88b2c8c300ec4994fb",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/full-financial-markets-expansion.yml",
+      "oldOid": "a2963e67f612d7b75e008180ff5339a9e2219b72",
+      "newOid": "bfbe73034f1224e814b7796a0b312aba351d1bd9",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/loans-lifecycle-read-v1.yml",
+      "oldOid": "34d9b75b779021b520751beb20ea2887d1cf2da3",
+      "newOid": "3f495872a8b02d90759b390dedbafce24b36a083",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/multicurrency-marketplace-funding-v1.yml",
+      "oldOid": "e630d4b9f9c18e97510e0c15a2ce70438272b2b0",
+      "newOid": "a0ba13423804657b6353bba0094b42bfeabe4990",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/multicurrency-stock-funding-v1.yml",
+      "oldOid": "0eeb4b12abb69e93332a34fc18628cf767bb7186",
+      "newOid": "2a1cc8e24e373048e47e83f4ea6eee0645844242",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/multicurrency-store-funding-v1.yml",
+      "oldOid": "ce48a6d62ffac42e400d8ff00104a4d535465295",
+      "newOid": "0e3b1ea09d7c597423f0128f58e04a51f317ef7c",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/player-button-click-safety.yml",
+      "oldOid": "d40e7990939dc5b8695223761df1349e44a74c46",
+      "newOid": "ad0895f27c4ef39d1a5aae0b7823c5d2fbc9a7d5",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/player-local-currency-authority.yml",
+      "oldOid": "48985a64071ce2bc285bef572f34eeb416417e0c",
+      "newOid": "6e4f8792ac26a83379bdf7a93a1ca8d708f61eba",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/player-multiplayer-load-e2e.yml",
+      "oldOid": "c6fafadd7c9535bfbf048dd97d058fe16e4b64d8",
+      "newOid": "e3f9fd3cb3aacb6608daf6e95afe2a54aa50c99e",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/player-response-privacy.yml",
+      "oldOid": "937f449bbcc43883f09e904b6af673b9cf0fadb1",
+      "newOid": "5ccc36e2767147848635dae79e786c8ba8061cae",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/ref-009-contract-reward-qualification.yml",
+      "oldOid": "3c10114703167784e18888df5f09c651a4da1385",
+      "newOid": "3b0f80c1cb96ea3043d621b70e8cc660fb761727",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/ref-018-attendance-qualification.yml",
+      "oldOid": "07abebfec03fe770c9f0ef696b007109c834c879",
+      "newOid": "1dc3056cf1b1599960788c32cc032fff11b83239",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/release-promote.yml",
+      "oldOid": "866fc09d6fd66f7009b6fc323461229d2445ffcf",
+      "newOid": "1f1dbf475473b988514d1f4bb210087523602e75",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/runtime-interaction-wiring.yml",
+      "oldOid": "8a996aecaeeff731cae22052da489b6d643513ea",
+      "newOid": "5088fdd7ab6b7837dfbfdc0d82d801544eea3038",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/story-replay-safety.yml",
+      "oldOid": "0c625d29e45a145db5d9850c89ea9b2c31db8edc",
+      "newOid": "11198644d458fef6b637fb245acc4cfd943955b7",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": ".github/workflows/world-runtime.yml",
+      "oldOid": "995e629cc4ee728d702c2ffa084695efd7d9896b",
+      "newOid": "29c010701fd4a95046eec89728f52d9ce504fc34",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": "docs/operations/contracts/held14/admissions.json",
+      "oldOid": null,
+      "newOid": "a4cc33efaf27df8a9651655523d96f125508a7a1",
+      "oldMode": null,
+      "newMode": "100644"
+    },
+    {
+      "path": "docs/operations/contracts/held14/source-scope.json",
+      "oldOid": null,
+      "newOid": "4e1fe74b65340bb2d1ecf5c4042b57aefdb11eaf",
+      "oldMode": null,
+      "newMode": "100644"
+    },
+    {
+      "path": "docs/operations/contracts/player-cross-cutting/pr-979.json",
+      "oldOid": null,
+      "newOid": "146bd3102245942d285418c816ad491ce5c35b47",
+      "oldMode": null,
+      "newMode": "100644"
+    },
+    {
+      "path": "docs/operations/evidence/held14-control-v1/scope.md",
+      "oldOid": null,
+      "newOid": "e4efcececaf469dd854ad9c658a26b39c9838039",
+      "oldMode": null,
+      "newMode": "100644"
+    },
+    {
+      "path": "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+      "oldOid": "51d226547536059ab95ee4155884e9016bd60941",
+      "newOid": "068b0c93a7e7c185bde660862019045866090abb",
+      "oldMode": "100644",
+      "newMode": "100644"
+    },
+    {
+      "path": "scripts/held14-admission-contracts.mjs",
+      "oldOid": null,
+      "newOid": "7ce8f143d8dfa269924428cab1aeb89a8f5a8237",
+      "oldMode": null,
+      "newMode": "100644"
+    },
+    {
+      "path": "scripts/held14-admission.test.mjs",
+      "oldOid": null,
+      "newOid": "37034084f8607d3f3440aa5145b4b3005bc36209",
+      "oldMode": null,
+      "newMode": "100644"
+    },
+    {
+      "path": "scripts/held14-control-bootstrap.test.mjs",
+      "oldOid": null,
+      "newOid": "f7544a21e2f955d1d607a617bd9202c9b237e336",
+      "oldMode": null,
+      "newMode": "100644"
+    },
+    {
+      "path": "scripts/verify-held14-admission.mjs",
+      "oldOid": null,
+      "newOid": "9d079aab1b2a638c01fc4d4f1ce763350f08c96c",
+      "oldMode": null,
+      "newMode": "100644"
+    },
+    {
+      "path": "scripts/verify-held14-control-bootstrap.mjs",
+      "oldOid": null,
+      "newOid": "b7979062d2b7f29d8a5feecad3076660c8c57e2c",
+      "oldMode": null,
+      "newMode": "100644"
+    }
+  ],
+  "amendment": {
+    "schemaVersion": 1,
+    "pullRequestNumber": 982,
+    "repository": "kohnerbouchard-star/Student-Profile",
+    "baseRef": "main",
+    "baseSha": "023ca4d70948bebf8cdc71460cbe8c6141af6934",
+    "reason": "retained-history-and-admin-formatting-pr981",
+    "originalBootstrap": {
+      "path": "docs/operations/contracts/held14/control-bootstrap.json",
+      "mode": "100644",
+      "oid": "e15ba9360faf53540bcfe353209dbf19f0f7526e"
+    },
+    "originalRegistry": {
+      "path": "docs/operations/contracts/held14/admissions.json",
+      "mode": "100644",
+      "oid": "a4cc33efaf27df8a9651655523d96f125508a7a1"
+    },
+    "changes": [
+      {
+        "path": ".github/workflows/admin-api-check.yml",
+        "oldOid": "e12ff2f6c0bff7e3be75f7302c01be4ce7ef3b13",
+        "newOid": "fbbc91305f67182713a657723c827a0edf593354",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/admin-browser-e2e.yml",
+        "oldOid": "88434edb5f50d051a7445d42289ce5bcccc916e2",
+        "newOid": "8b1ab8d486f3611bc31a3b2877510faa6a1bfb29",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/admin-game-lifecycle-controls-v1.yml",
+        "oldOid": "87398d29fc77503125c234f7c029f3a261825fec",
+        "newOid": "4bd6a748ca103796461e2ce369ebca829a6df6e6",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/admin-scroll-integrity.yml",
+        "oldOid": "5fb302a111cf0f1873fef5d01237adf98d3b76aa",
+        "newOid": "d9991bd5031da751ca3ef47d9a8ad21ff28c0ac7",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/admin-v2-attendance.yml",
+        "oldOid": "b7dab781d6be676296023582cd25d58880189266",
+        "newOid": "821b2bf29698cd91e4fc27fa4cc01409efab7b99",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/admin-v2-banking.yml",
+        "oldOid": "89ded59c6384ab2c6f90501cd6cb99aa8d009b95",
+        "newOid": "12a020d2af8a27e2cc49066dbe479417d692309f",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/admin-v2-contracts.yml",
+        "oldOid": "1b31b0fd161aeab1e0ebc4df138fc39f8d9f7bae",
+        "newOid": "b8fd2e0ffe274d4817918db701a56b2b5f032413",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/admin-v2-crafting.yml",
+        "oldOid": "573d27c6a8529a182e21ce6d23c87fbe98d7cc0b",
+        "newOid": "b074930b9be772c0056d60a9c3241ca177f8c7b0",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/admin-v2-market.yml",
+        "oldOid": "fc952de18c59d22a4dbf0dd9bb66c03cfe7c512d",
+        "newOid": "283c6555f5f51bcee1906417508b5c159c286214",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/admin-v2-messages.yml",
+        "oldOid": "322ea720b4e06674eb0f41cfd6c6ffd7fdf4348c",
+        "newOid": "6ca91f29df74365877ef534ab52a437b239f5784",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/admin-v2-news-events.yml",
+        "oldOid": "61ddde111550e32088d5080196e622852f048b25",
+        "newOid": "a5ef21dade8c4543874627ec447d3db9763da87c",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/admin-v2-settings-check.yml",
+        "oldOid": "8a06a969784f79639f0f9837ce8bf6a282793e3c",
+        "newOid": "088d76f2ffb4bbac1b6948aaf226512633cd04be",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/backend-typecheck.yml",
+        "oldOid": "3d4739014d08a4e0abe6042e2e875562f24501bf",
+        "newOid": "a8b919a108e0d0397151387531244ef6c0a77d82",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/banking-fx-clearing-v1.yml",
+        "oldOid": "aa65edca2ea9a6cb5bf72fd65a7572bf7d909732",
+        "newOid": "d484eebf81e223832b52958928df11fd4e50417d",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-economy-v2.yml",
+        "oldOid": "2d0dd4399c749d9cc3717b64b61a4d845e8f4e22",
+        "newOid": "590ce4a300c235eb9c1dbbb9224f09928085e378",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-equipment-capacity-v2.yml",
+        "oldOid": "374b8e187d542c08596a52e986e3996f298e3fbc",
+        "newOid": "f33030575aaf265ac59ecbbf27ed208f0d198d1f",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-financial-market.yml",
+        "oldOid": "7b9acc4d0978939fcc5cb7957efbc01966073ac1",
+        "newOid": "a9e4d7e634fe5095c8bedb3ceea9f047defeaf6f",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-manufacturing-completion-v2.yml",
+        "oldOid": "eebe5c13ca7d083bdf0b8c75513c0b3e0d5549b4",
+        "newOid": "33074db6677218772abce02aeeefd567068f5c9d",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-manufacturing-recovery-v2.yml",
+        "oldOid": "fb5e861a13984a45ddd4cbd7363edd8d89d35f85",
+        "newOid": "553faee63dc8a4b75efe572261e0dc741d72c9b5",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-manufacturing-resource-hold-v2.yml",
+        "oldOid": "7d739415da39b546a600b6b1d7597f07457aae6b",
+        "newOid": "d0e4da1cddf6cfed1f3ba30fb12dbc54f3e688c2",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-player-store-cutover-v2.yml",
+        "oldOid": "91b792a3ba34ef635bd3b1493c4967fd6621961a",
+        "newOid": "54ff65cbeaa4dae0ae8990ccc077841930c57b9b",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-primary-ipo.yml",
+        "oldOid": "e71eab072ffc723a6cfc124c211ebba9c2f3d6da",
+        "newOid": "4f84799f0c205355955bac3b0dcd1ed0396f90d3",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-store-atomic-settlement-v2.yml",
+        "oldOid": "9d0ab54f3d7cd0b195286492adf0e9a168a6063c",
+        "newOid": "8ff0ed5bee4f92ccf00091f4c02000d2419c7859",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-store-listing-inventory-v2.yml",
+        "oldOid": "76d968c65dc1665fe33227579d674f9e94e513b0",
+        "newOid": "dcb132310960fec795d817e6297d8c5381ca895b",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-store-seller-offers-v2.yml",
+        "oldOid": "be61431332c3f2a5f73dd73fc8e9ed59f1d18076",
+        "newOid": "ab754f5c4431246ce26427171c07e3dda2e84473",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-store-withdrawal-safety-v2.yml",
+        "oldOid": "d15032fe1e3b302183224ba2b71fbbf58cf26f5d",
+        "newOid": "d249d8b71001a30fa98f5f024936cd3d0c808712",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-timed-manufacturing-v2.yml",
+        "oldOid": "8ff245e58c2a6864bda9cd53d27bf03e065356e1",
+        "newOid": "8eea402ec8a2d8dbdefb78b33b8f7cdb53b840a6",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-workforce-hiring-v2.yml",
+        "oldOid": "b8f0bf8cadc70a5b224afe05299fb2e7b9473304",
+        "newOid": "b4866f2f81c02008efee80b13bfe39465be3384a",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-workforce-payroll-v2.yml",
+        "oldOid": "254d1a6e75e0f860eee26907938fdbc2071b34eb",
+        "newOid": "ffda3444640b47d3af65ee287ff5078ce56e787a",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/business-workforce-production-payroll-v2.yml",
+        "oldOid": "66e80ff29a00d29d6facef210a48cd4b606d4ff0",
+        "newOid": "349f49bf028b5aa55219f13558dcdb0ebf0f23e0",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/button-action-coverage.yml",
+        "oldOid": "d169fabc3a76792f97116a5812d3da66eeb14e53",
+        "newOid": "e8088325ca5792d43d86a9c1ea6593ae29db7322",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/configurable-stock-market-timezone-v1.yml",
+        "oldOid": "116309de2e820932c8c1ce66bd643181e3dd3b5b",
+        "newOid": "c2f4409eb9f6c9c52aac8d4d5bf345db37fb61f1",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/crafting-item-runtime.yml",
+        "oldOid": "71fa6a9fa734c06917f897a693cdd383db3bea5d",
+        "newOid": "7bd8ee06e7b6fda08748259e3452775a844a9fe9",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/database-replay.yml",
+        "oldOid": "2a33a8dc21b5d5b5887a42cf2c52660422b34284",
+        "newOid": "be099ccd2672d068b0e6cda06fdf3fdb4075e1b0",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/economic-core-request-claims.yml",
+        "oldOid": "a49a337a58f70e7e0955242542f858402c893585",
+        "newOid": "b92b59c5f3c18755410999cc502b7d47ce0c4ebb",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/environment-neutral-browser.yml",
+        "oldOid": "1588cbe5167c2b3b6f0cc4487d07ef8922bf92e3",
+        "newOid": "87f46486447b6b39f357ec5bd4e5c0d963481b76",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/exchange-calendar-runtime-v1.yml",
+        "oldOid": "4e6e9fcf3b9b57cbbad9e569ce6b16a3d1701fec",
+        "newOid": "e84757c7856c0c1f14f5329e9c51aa9600b7a98f",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/full-financial-markets-expansion.yml",
+        "oldOid": "df35bb8cf8b0c563a801a357a13710e86a592056",
+        "newOid": "7b1a1938ece5db4ace300eeddb1e19fb9e508397",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/loans-lifecycle-read-v1.yml",
+        "oldOid": "fb180bfbe0703b896f16852561bb0e83c54b2a8a",
+        "newOid": "c270464c8314877ca1dfd4f91f45e79786feb952",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/multicurrency-marketplace-funding-v1.yml",
+        "oldOid": "945a27fa3808a1bdc82907735e740508e04ec4e6",
+        "newOid": "8c8a1111ebaf8c9365739e951e73b4451e7d6ff7",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/multicurrency-stock-funding-v1.yml",
+        "oldOid": "c29f644d8dc55cb5b9b021c370849e06ff4a9de5",
+        "newOid": "25ccf061596c974c4baddd9b698691e5e83554e2",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/multicurrency-store-funding-v1.yml",
+        "oldOid": "d718082579dee2306ac4df73d561ec3022ccd31a",
+        "newOid": "2f82624dae0802159240c29678dc86b75350870c",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/player-button-click-safety.yml",
+        "oldOid": "1456787662accf850f4c1e900a1e9dabcc43f4b2",
+        "newOid": "e34969d71356a5a95eabd1eeeb39a49613d3cb50",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/player-local-currency-authority.yml",
+        "oldOid": "bb8af78d578e88e19d4e8b680fcd41ca5e03af9f",
+        "newOid": "41cecf401c2683936c62f74b904d64121cae54a9",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/player-multiplayer-load-e2e.yml",
+        "oldOid": "f5464cff8d6a46f0993d8e2f0b9544479c4a3794",
+        "newOid": "d62aa5971e000eae265e291c8b702af991ca9320",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/player-response-privacy.yml",
+        "oldOid": "39181bbb1f8e163f42ce09fdea9a720e4bb689d0",
+        "newOid": "889045e903a6a779d5ef9a738282021bbbdcda3e",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/ref-009-contract-reward-qualification.yml",
+        "oldOid": "64c0b703c6b93985c33e0bf10e04682552794d53",
+        "newOid": "85a6b3bb597f1706477287a04f80fea5d2f6fe76",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/ref-010-access-reset-qualification.yml",
+        "oldOid": "7457436b08ba68604b25985c514bad7c85501a29",
+        "newOid": "c1e0f8f58ccf4302f465f7d1ae3a49345cfd1280",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/ref-018-attendance-qualification.yml",
+        "oldOid": "422861b7083245db79c94419d4201b05d3779920",
+        "newOid": "7b2cad428353777908e39ca688ebc4d9ccc4879a",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/repository-quality.yml",
+        "oldOid": "950513a7377fdc7ee82874c6ea880531db5052f9",
+        "newOid": "e0e28640b59e9d60b4646ceb352c38a2f4ab8608",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/runtime-interaction-wiring.yml",
+        "oldOid": "3d341ad3b239d8dc0170be35e578a901c1751e26",
+        "newOid": "510cad293597ba777a18204c4ea6eeea80200bb7",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/story-replay-safety.yml",
+        "oldOid": "a7c0d9b52bd23a12a94e7bb1b5a1c88e511a7691",
+        "newOid": "27ad5f16727fb0fbe35918dafc2e9764e34eebce",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": ".github/workflows/world-runtime.yml",
+        "oldOid": "334b1e2b7ef58b602fda5dd76554191fbef74971",
+        "newOid": "5716d067dc633d43e71ff6ad366a1eaf032384c0",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": "docs/operations/contracts/held14/admissions.json",
+        "oldOid": "a4cc33efaf27df8a9651655523d96f125508a7a1",
+        "newOid": "f4ec765634d1645d81b3e64a4f68848f1143b1c4",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": "docs/operations/contracts/player-cross-cutting/pr-982.json",
+        "oldOid": null,
+        "newOid": "41492f9c7d60f9b4da6c903c306b49c79cffe20a",
+        "oldMode": null,
+        "newMode": "100644"
+      },
+      {
+        "path": "docs/operations/evidence/held14-history-amendment-v1/scope.md",
+        "oldOid": null,
+        "newOid": "05474e96099f698a02df8e63d2116528cf4dfb5e",
+        "oldMode": null,
+        "newMode": "100644"
+      },
+      {
+        "path": "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+        "oldOid": "6ed40627e05127bbef8e4e7d24e2644aabda0e6d",
+        "newOid": "a80f1b3093fb04e1e93956568a5506fbd21d9a1b",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": "scripts/held14-admission.test.mjs",
+        "oldOid": "37034084f8607d3f3440aa5145b4b3005bc36209",
+        "newOid": "0b6dd1b82b9f919fdd43b930dac8c8271de9daaa",
+        "oldMode": "100644",
+        "newMode": "100644"
+      },
+      {
+        "path": "scripts/verify-held14-admission.mjs",
+        "oldOid": "9d079aab1b2a638c01fc4d4f1ce763350f08c96c",
+        "newOid": "e84ffad4aec55727bfe7a9022fc9c9f4f857a922",
+        "oldMode": "100644",
+        "newMode": "100644"
+      }
+    ]
+  }
+}

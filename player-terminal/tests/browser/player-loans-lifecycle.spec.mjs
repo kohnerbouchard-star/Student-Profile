@@ -10,12 +10,20 @@ async function mount(page) {
     const { buildPlayerTerminalConfig } = await import("/src/config/player-terminal.config.js");
     const { previewData } = await import("/src/data/preview-data.js");
     const models = structuredClone(previewData); models.loans = loans;
-    const calls = [];
+    models.banking.checking.available = 0;
+    const calls = [], repayments = [];
     const config = buildPlayerTerminalConfig({ usePreviewData: false, authenticated: true, csrfToken: "L".repeat(43), gameSessionId: "loans-fixture",
       capabilities: { routes: { loans: true, news: true }, actions: { loanRepay: true, loanApply: true } },
-      apiCall: async (context) => { calls.push(context.endpointKey); return structuredClone(models[context.endpointKey]); } });
+      apiCall: async (context) => {
+        calls.push(context.endpointKey);
+        if (context.endpointKey === "loanRepay") {
+          repayments.push(structuredClone({ params: context.params, payload: context.payload }));
+          if (globalThis.loansTest.rejectRepayment) throw { status: 409, code: "INSUFFICIENT_FUNDS" };
+        }
+        return context.method === "GET" ? structuredClone(models[context.endpointKey]) : { ok: true };
+      } });
     const terminal = createPlayerTerminal({ mount: document.querySelector("#fixture"), config });
-    globalThis.loansTest = { terminal, models, calls };
+    globalThis.loansTest = { terminal, models, calls, repayments, rejectRepayment: false };
   }, loansFixture());
   await expect(page.locator(".player-terminal-loans-page")).toBeVisible();
 }
@@ -43,4 +51,30 @@ test("route departure, return, refresh and optional history failure do not keep 
   await page.evaluate(async (loans) => { loansTest.models.loans = loans; await loansTest.terminal.refreshResources(["loans"]); }, loansFixture());
   await expect(page.getByText("Default does not erase this debt", { exact: false })).toBeVisible();
   expect(await page.evaluate(() => loansTest.calls.filter((key) => key === "loanRepay"))).toEqual([]);
+});
+
+test("repayment reaches the command despite zero unrelated Checking and retains native required input", async ({ page }) => {
+  const form = page.locator('[data-endpoint="loanRepay"]');
+  await form.locator('..').locator('summary').click();
+  await form.locator('input[name="amount"]').fill('');
+  await form.locator('button[type="submit"]').click();
+  expect(await page.evaluate(() => loansTest.repayments.length)).toBe(0);
+  await form.locator('input[name="amount"]').fill('2.00');
+  await form.locator('button[type="submit"]').click();
+  await expect.poll(() => page.evaluate(() => loansTest.repayments.length)).toBe(1);
+  const repayment = await page.evaluate(() => loansTest.repayments[0]);
+  expect(repayment.params.loanId).toBe(loansFixture().activeLoans[0].id);
+  expect(repayment.payload.amount).toBe(2);
+});
+
+test("bound-account rejection remains an error and does not fabricate repaid debt", async ({ page }) => {
+  await page.evaluate(() => { loansTest.rejectRepayment = true; });
+  const form = page.locator('[data-endpoint="loanRepay"]');
+  await form.locator('..').locator('summary').click();
+  await form.locator('input[name="amount"]').fill('2.00');
+  await form.locator('button[type="submit"]').click();
+  await expect.poll(() => page.evaluate(() => loansTest.repayments.length)).toBe(1);
+  await expect(page.getByText('This action conflicts with a newer update. Refresh this section and try again.', { exact: true }).first()).toBeVisible();
+  expect(await page.evaluate(() => loansTest.terminal.getState().data.loans.activeLoans[0].balance)).toBe(4.01);
+  await expect(form.locator('button[type="submit"]')).toBeEnabled();
 });

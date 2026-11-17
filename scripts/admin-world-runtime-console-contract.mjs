@@ -1,14 +1,16 @@
+import { readBrowserSourceSync } from "./lib/browser-module-source.mjs";
 import assert from "node:assert/strict";
+import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
-const source = fs.readFileSync(path.join(root, "admin/world-runtime-console.js"), "utf8");
-const loader = fs.readFileSync(path.join(root, "admin/world-runtime-console-loader.js"), "utf8");
-const index = fs.readFileSync(path.join(root, "admin/index.html"), "utf8");
-const bootstrap = fs.readFileSync(path.join(root, "admin/admin-bootstrap.js"), "utf8");
-const css = fs.readFileSync(path.join(root, "admin/css/world-runtime-console.css"), "utf8");
-const operations = fs.readFileSync(path.join(root, "backend/supabase/functions/admin-api/worldRuntimeOperations.ts"), "utf8");
+const source = readBrowserSourceSync(path.join(root, "admin/world-runtime-console.js"), "utf8");
+const loader = readBrowserSourceSync(path.join(root, "admin/world-runtime-console-loader.js"), "utf8");
+const index = readBrowserSourceSync(path.join(root, "admin/index.html"), "utf8");
+const bootstrap = readBrowserSourceSync(path.join(root, "admin/admin-bootstrap.js"), "utf8");
+const css = readBrowserSourceSync(path.join(root, "admin/css/world-runtime-console.css"), "utf8");
+const operations = readEdgeRuntimeSource(path.join(root, "backend/supabase/functions/admin-api/worldRuntimeOperations.ts"), "utf8");
 
 for (const route of [
   "/campaign",

@@ -1,11 +1,10 @@
 import { SupabaseLedgerHistoryReadRepository } from "../infrastructure/supabaseLedgerHistoryReadRepository.ts";
-import { handlePlayerLedgerHistoryRequest } from "./playerLedgerHistoryHttpHandler.ts";
 import { handleStaffPlayerLedgerHistoryRequest } from "./staffPlayerLedgerHistoryHttpHandler.ts";
 
 declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
 const GAME = "game-fixture", PLAYER = "player-fixture", STAFF = "staff-fixture";
 const STAMP = "2026-10-01T00:00:00.000Z";
-type Audience = "player" | "staff";
+type Audience = "staff";
 type Options = { absent?: string; failure?: string; revoked?: boolean; expired?: boolean; inactive?: boolean; denied?: boolean; empty?: boolean };
 type Query = { table: string; columns?: string; filters: Array<[string, unknown]>; order?: [string, unknown]; limit?: number };
 function equal(actual: unknown, expected: unknown) {
@@ -38,7 +37,6 @@ async function fixture(audience: Audience, options: Options, run: (f: any) => Pr
   }, rpc() { throw new Error("No mutation or replacement RPC allowed"); } };
   const send = (query = "", method = "GET", token = "fixture-token") => {
     const request = new Request(`https://ref021.invalid/ledger${query}`, { method, headers: token ? { "x-player-session-token": token } : {} });
-    if (audience === "player") return handlePlayerLedgerHistoryRequest(request, { createServiceClient: () => client as never });
     return handleStaffPlayerLedgerHistoryRequest(request, GAME, PLAYER, { resolveStaffForRequest: async () => {
       events.push("staff-auth");
       return options.denied ? { ok: false as const, status: 403, error: { code: "staff_forbidden", message: "Forbidden", retryable: false } }
@@ -48,7 +46,7 @@ async function fixture(audience: Audience, options: Options, run: (f: any) => Pr
   try { await run({ send, queries, events, client }); } finally { runtime.env.get = savedGet; globalThis.fetch = savedFetch; }
 }
 const dataTables = (f: any) => f.queries.filter((q: Query) => ["account_balances", "ledger_entries"].includes(q.table));
-for (const audience of ["player", "staff"] as const) {
+for (const audience of ["staff"] as const) {
   for (const limit of [1, 50, 100]) Deno.test(`REF021 ${audience}: exact scope, projection, ordering and limit ${limit}`, () => fixture(audience, {}, async (f) => {
     const response = await f.send(limit === 50 ? "" : `?limit=${limit}`), body = await response.json();
     equal(response.status, 200); equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
@@ -56,7 +54,7 @@ for (const audience of ["player", "staff"] as const) {
       { table: "account_balances", filters: [["game_session_id", GAME], ["player_id", PLAYER]], columns: "account_type,balance,currency_code", order: ["account_type", { ascending: true }] },
       { table: "ledger_entries", filters: [["game_session_id", GAME], ["player_id", PLAYER]], columns: "id,account_type,amount,currency_code,entry_type,source_domain,source_action,source_id,created_by_type,created_at", order: ["created_at", { ascending: false }], limit },
     ]);
-    equal(f.events, audience === "player" ? ["player_sessions", "game_sessions", "players", "account_balances", "ledger_entries"] : ["staff-auth", "game_sessions", "players", "account_balances", "ledger_entries"]);
+    equal(f.events, ["staff-auth", "game_sessions", "players", "account_balances", "ledger_entries"]);
     // Tied timestamps retain the returned order; no new tie-breaker or currency conversion.
     equal(body.currentBalances, [{ accountType: "checking", balance: 100.25, currencyCode: "ECO" }, { accountType: "savings", balance: 0.01, currencyCode: "LUM" }]);
     equal(body.ledgerEntries.map((r: any) => [r.id, r.amount, r.currencyCode, r.createdAt]), [["entry-0", 12.34, "ECO", STAMP], ["entry-1", 12.34, "LUM", STAMP]]);
@@ -69,7 +67,7 @@ for (const audience of ["player", "staff"] as const) {
   }));
   for (const failure of ["account_balances", "ledger_entries"]) Deno.test(`REF021 ${audience}: ${failure} failure is redacted and stops reads`, () => fixture(audience, { failure }, async (f) => {
     const response = await f.send(), body = await response.json(); equal(response.status, 500);
-    equal(body.error.code, audience === "player" ? "player_ledger_history_failed" : "admin_player_ledger_history_failed");
+    equal(body.error.code, "admin_player_ledger_history_failed");
     equal(body.error.message, "Player ledger history could not be loaded."); equal(body.error.retryable, false);
     equal(dataTables(f).length, failure === "account_balances" ? 1 : 2);
   }));
@@ -77,19 +75,15 @@ for (const audience of ["player", "staff"] as const) {
     const response = await f.send(`?limit=${limit}`); equal(response.status, 400); equal(dataTables(f), []);
   }));
   for (const absent of ["game_sessions", "players"]) Deno.test(`REF021 ${audience}: missing or wrong-scope ${absent} never reads money`, () => fixture(audience, { absent }, async (f) => {
-    const response = await f.send(); equal(response.status, audience === "player" ? 401 : 404); equal(dataTables(f), []);
+    const response = await f.send(); equal(response.status, 404); equal(dataTables(f), []);
     const query = f.queries.find((q: Query) => q.table === absent);
-    equal(query.filters, absent === "players" ? [["game_session_id", GAME], ["id", PLAYER]] : audience === "player" ? [["id", GAME], ["status", "active"]] : [["id", GAME], ["owner_staff_user_id", STAFF]]);
+    equal(query.filters, absent === "players" ? [["game_session_id", GAME], ["id", PLAYER]] : [["id", GAME], ["owner_staff_user_id", STAFF]]);
   }));
   Deno.test(`REF021 ${audience}: unsupported method has no reads`, () => fixture(audience, {}, async (f) => {
     equal((await f.send("", "POST")).status, 405); equal(f.queries, []);
   }));
 }
-for (const options of [{ revoked: true }, { expired: true }, { inactive: true }]) Deno.test(`REF021 Player denial ${JSON.stringify(options)}`, () => fixture("player", options, async (f) => {
-  equal((await f.send()).status, 401); equal(dataTables(f), []);
-}));
-Deno.test("REF021 missing Player token and denied Staff never read persistence", async () => {
-  await fixture("player", {}, async (f) => { equal((await f.send("", "GET", "")).status, 401); equal(f.queries, []); });
+Deno.test("REF021 denied Staff never reads persistence", async () => {
   await fixture("staff", { denied: true }, async (f) => { equal((await f.send()).status, 403); equal(f.queries, []); });
 });
 Deno.test("REF021 Staff retains history visibility for archived Player", () => fixture("staff", { inactive: true }, async (f) => {

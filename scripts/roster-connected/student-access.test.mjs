@@ -1,3 +1,4 @@
+import { readEdgeRuntimeSource } from '../helpers/edge-runtime-source.mjs';
 import vm from 'node:vm';
 import { sealCheckpoints } from './checkpoints.mjs';
 import { assertTeacherDto } from './auth-fixture.mjs';
@@ -159,10 +160,11 @@ test('control responses accept only frozen public denial/logout shapes and rejec
 });
 
 test('all actual student JSON response paths apply source-bound control or success contracts',async()=>{
-  const [runtime,handler,edge,bootstrap,accounts]=await Promise.all([
-    repo('backend/supabase/functions/player-web-session-api/runtime.ts'),repo('backend/src/domains/players/api/playerLoginHttpHandler.ts'),
+  const [handler,edge,bootstrap,accounts]=await Promise.all([
+    repo('backend/src/domains/players/api/playerLoginHttpHandler.ts'),
     repo('backend/src/platform/supabase/edgeResponse.ts'),repo('backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts'),
     repo('backend/supabase/migrations/20260806093000_provision_player_banking_and_credit_v1.sql')]);
+  const runtime = readEdgeRuntimeSource(new URL('../../backend/supabase/functions/player-web-session-api/runtime.ts', import.meta.url));
   assert.match(runtime,/return \{ ok: false, error: \{ code, message, retryable \} \}/);
   assert.ok(runtime.includes('body: unknown = errorBody(code, "Player sign-in is required.")'));
   assert.ok(runtime.includes('200, "signed_out", { ok: true }'));assert.ok(runtime.includes('forwardJsonResponse(request, upstream, loginBytes.body)'));

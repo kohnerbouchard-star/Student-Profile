@@ -3,6 +3,10 @@ name: REF-014 Settings Qualification
 on:
   pull_request:
     paths:
+      - "scripts/admin-v2-attendance-read-model.test.mjs"
+      - "scripts/fixtures/admin-attendance-controller-function-hashes.json"
+      - "scripts/admin-v2-world-read-model.test.mjs"
+      - "scripts/admin-v2-marketplace-read-model.test.mjs"
       - "scripts/admin-account-controls-dom-fixture.mjs"
       - "scripts/admin-account-controls.test.mjs"
       - "admin/settings-*.js"

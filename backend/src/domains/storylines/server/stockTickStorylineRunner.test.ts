@@ -267,6 +267,10 @@ for (const useDefault of [false, true]) {
           assertEquals(input.gameSessionId, "game-1");
           assertEquals(input.now, at);
           assertEquals(input.currentMarketTick, 4);
+          assertEquals(Object.keys(input.notificationRepository ?? {}), [
+            "createStoryNotification",
+            "createNotificationDeliveries",
+          ]);
           if (input.effectDependencies.contracts !== contractWriter) {
             throw new Error("Contract writer identity changed");
           }

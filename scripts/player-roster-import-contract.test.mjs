@@ -25,9 +25,17 @@ test('new API and application modules do not access persistence clients',()=>{
 });
 test('secured entrypoint owns auth and scope before roster dispatcher; one-time response is not cached',()=>{
   const index=read('backend/supabase/functions/admin-api/index.ts');
-  assert.ok(index.indexOf('const security = await guardAdminRequest(')<index.indexOf('const localGameMutation = await handleLocalAdminGameMutation('));
+  const composition=read('backend/supabase/functions/admin-api/adminBootstrapComposition.ts');
+  assert.match(index, /from "\.\/adminBootstrapComposition\.ts"/);
+  const authorize=index.indexOf('const authorization = await authorizeAndHydrateAdminBootstrapContext(');
+  assert.ok(authorize>=0 && authorize<index.indexOf('const localGameMutation = await handleLocalAdminGameMutation('));
+  assert.match(composition, /const security = await guardAdminRequest\(request, context, path\);\s*if \(security.ok === false\) return security;/);
+  assert.ok(composition.indexOf('const security = await guardAdminRequest(')<composition.indexOf('const hydratedContext = await hydrateAdminBootstrapContext('));
   assert.ok(index.indexOf('const game = ensureOwnedGame(securedContext, gameId)')<index.indexOf('const localGameMutation = await handleLocalAdminGameMutation('));
-  assert.match(index, /"Cache-Control": "private, no-store, max-age=0"/);
+  const common=read('backend/supabase/functions/admin-api/common.ts');
+  assert.match(index, /from "\.\/common\.ts"/);
+  assert.match(common, /"Cache-Control": "no-store"/);
+  assert.match(index, /if \(localGameMutation.handled\) \{\s*return json\(/);
   const proxy=read('api/_admin-bff-proxy.js');
   assert.match(proxy,/cache: "no-store"/);
   assert.match(proxy,/response.setHeader\("Cache-Control", "private, no-store, max-age=0"\)/);

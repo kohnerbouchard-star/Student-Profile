@@ -1,3 +1,5 @@
+import "./playerMessageInboxReadHttpCharacterization.test.ts";
+import "../application/readPlayerMessageInbox.test.ts";
 import { handlePlayerMessagingRequest } from "./playerMessagingHttpHandler.ts";
 
 declare const Deno: { test(name: string, run: () => void | Promise<void>): void };

@@ -2,6 +2,8 @@
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertExtractedModulesReachable } from "./helpers/edge-runtime-source.mjs";
+import { deploymentPlan } from "./edge-function-inventory/deployment-plan.mjs";
 
 const migrationPaths = Object.freeze({
   periods:
@@ -54,6 +56,8 @@ const [periods, close, retirement, assertions] = await Promise.all(
 );
 const [
   adminIndex,
+  adminBootstrapComposition,
+  adminSecurityGuard,
   retirementDispatch,
   purgeWorker,
   purgeRuntimeBinding,
@@ -64,6 +68,8 @@ const [
   databaseHarness,
 ] = await Promise.all([
   readFile("backend/supabase/functions/admin-api/index.ts", "utf8"),
+  readFile("backend/supabase/functions/admin-api/adminBootstrapComposition.ts", "utf8"),
+  readFile("backend/supabase/functions/admin-api/adminSecurityGuard.ts", "utf8"),
   readFile(
     "backend/supabase/functions/admin-api/businessSettlementRetirementDispatch.ts",
     "utf8",
@@ -171,35 +177,67 @@ assert.doesNotMatch(
   /(?:pull_request(?:_target)?|workflow_run|repository_dispatch|schedule|cron):/u,
   "Edge convergence must not acquire a PR writer, indirect release event, or scheduler",
 );
-const edgeStagingJobStart = edgeConvergenceWorkflow.indexOf("\n  staging:\n");
-const edgeProductionJobStart = edgeConvergenceWorkflow.indexOf("\n  production:\n");
-assert.ok(
-  edgeStagingJobStart >= 0 && edgeProductionJobStart > edgeStagingJobStart,
-  "Edge convergence must retain ordered staging and production jobs",
-);
-const edgeEnvironmentJobs = Object.freeze({
-  staging: edgeConvergenceWorkflow.slice(
-    edgeStagingJobStart,
-    edgeProductionJobStart,
-  ),
-  production: edgeConvergenceWorkflow.slice(edgeProductionJobStart),
-});
-for (const [environment, source] of Object.entries(edgeEnvironmentJobs)) {
-  assert.equal(
-    [...source.matchAll(/^\s+business-operations-worker$/gmu)].length,
-    1,
-    `${environment} Edge deployment must include the Business operations worker exactly once`,
+export function assertBusinessWorkerEdgeDeployment(edgeConvergenceWorkflow, edgeManifest) {
+  assert.deepEqual(
+    deploymentPlan(edgeManifest).filter(({ slug }) => slug === "business-operations-worker"),
+    [{ slug: "business-operations-worker", verifyJwt: false }],
+    "The validated deployment plan must include the Business operations worker exactly once with its service-role boundary",
   );
   assert.equal(
-    [...source.matchAll(/^\s+'POST business-operations-worker' \\$/gmu)].length,
+    edgeConvergenceWorkflow.split("  MANIFEST_PATH: backend/supabase/edge-function-manifest.json\n").length - 1,
     1,
-    `${environment} Edge security smoke must probe the Business operations worker exactly once`,
+    "Both deployment jobs must use the validated canonical manifest",
+  );
+  const edgeStagingJobStart = edgeConvergenceWorkflow.indexOf("\n  staging:\n");
+  const edgeProductionJobStart = edgeConvergenceWorkflow.indexOf("\n  production:\n");
+  assert.ok(
+    edgeStagingJobStart >= 0 && edgeProductionJobStart > edgeStagingJobStart,
+    "Edge convergence must retain ordered staging and production jobs",
+  );
+  const edgeEnvironmentJobs = {
+    staging: edgeConvergenceWorkflow.slice(edgeStagingJobStart, edgeProductionJobStart),
+    production: edgeConvergenceWorkflow.slice(edgeProductionJobStart),
+  };
+  const expectedDeploymentLines = [
+    "set -euo pipefail",
+    "node scripts/edge-function-inventory/deployment-plan.mjs \"$MANIFEST_PATH\" \\",
+    "  > \"$RUNNER_TEMP/edge-deployment-plan.tsv\"",
+    "while IFS=$'\\t' read -r slug verify_jwt; do",
+    "  args=(--workdir backend --project-ref \"$__ENVIRONMENT___PROJECT_REF\")",
+    "  case \"$verify_jwt\" in",
+    "    true) ;;",
+    "    false) args+=(--no-verify-jwt) ;;",
+    "    *) echo \"Invalid deployment JWT setting for $slug\" >&2; exit 1 ;;",
+    "  esac",
+    "  supabase functions deploy \"$slug\" \"${args[@]}\"",
+    "done < \"$RUNNER_TEMP/edge-deployment-plan.tsv\"",
+  ];
+  for (const [environment, source] of Object.entries(edgeEnvironmentJobs)) {
+    const marker = `      - name: Deploy exact ${environment} canonical runtime\n`;
+    assert.equal(source.split(marker).length - 1, 1, `${environment} must have one deployment step`);
+    const step = source.split(marker)[1].split("\n      - name:")[0];
+    const script = step.split("        run: |\n")[1]?.split("\n")
+      .map((line) => line.replace(/^          /u, "")).join("\n").trim();
+    assert.equal(
+      script,
+      expectedDeploymentLines.join("\n").replace("__ENVIRONMENT__", environment.toUpperCase()),
+      `${environment} must execute the entire validated plan exactly once with exact project/JWT flags and fail-fast semantics`,
+    );
+    assert.equal(
+      [...source.matchAll(/^\s+'POST business-operations-worker' \\$/gmu)].length,
+      1,
+      `${environment} Edge security smoke must probe the Business operations worker exactly once`,
+    );
+  }
+  assert.equal(
+    [...edgeConvergenceWorkflow.matchAll(/business-operations-worker/gu)].length,
+    2,
+    "The worker is selected by the manifest plan; only both explicit smoke probes name it in the workflow",
   );
 }
-assert.equal(
-  [...edgeConvergenceWorkflow.matchAll(/business-operations-worker/gu)].length,
-  4,
-  "Edge convergence may reference the Business operations worker only in both deploy and smoke lists",
+assertBusinessWorkerEdgeDeployment(
+  edgeConvergenceWorkflow,
+  JSON.parse(await readFile("backend/supabase/edge-function-manifest.json", "utf8")),
 );
 
 for (const [name, source] of Object.entries({ periods, close, retirement, assertions })) {
@@ -597,7 +635,31 @@ assert.doesNotMatch(
   "the retired Admin route must not consume or parse its request body",
 );
 const adminRuntime = adminIndex.slice(adminIndex.indexOf("Deno.serve"));
-const securityPosition = adminRuntime.indexOf("await guardAdminRequest(");
+const adminRootPath = "backend/supabase/functions/admin-api/index.ts";
+const authorizationPath = "backend/supabase/functions/admin-api/adminBootstrapComposition.ts";
+const guardPath = "backend/supabase/functions/admin-api/adminSecurityGuard.ts";
+assertExtractedModulesReachable(adminRootPath, [authorizationPath, guardPath], new Map([
+  [adminRootPath, adminIndex], [authorizationPath, adminBootstrapComposition], [guardPath, adminSecurityGuard],
+]));
+const authorizationSource = adminBootstrapComposition.slice(
+  adminBootstrapComposition.indexOf("export async function authorizeAndHydrateAdminBootstrapContext<"),
+  adminBootstrapComposition.indexOf("export function applicationContextForAdminGame("),
+);
+assert.equal(authorizationSource.match(/await guardAdminRequest\(/gu)?.length, 1,
+  "the composed Admin authorization must invoke the real security guard exactly once");
+const guardPosition = authorizationSource.indexOf("await guardAdminRequest(request, context, path)");
+const denialPosition = authorizationSource.indexOf("if (security.ok === false) return security");
+const hydrationPosition = authorizationSource.indexOf("await hydrateAdminBootstrapContext({");
+assert.ok(guardPosition >= 0 && denialPosition > guardPosition && hydrationPosition > denialPosition,
+  "guard denial must stop before Admin hydration");
+const securityPosition = adminRuntime.indexOf("await authorizeAndHydrateAdminBootstrapContext(");
+const rootDenialPosition = adminRuntime.indexOf("if (authorization.ok === false)");
+const rootDenialReturnPosition = adminRuntime.indexOf("return adminSecurityFailureResponse(request, authorization)");
+assert.equal(adminRuntime.match(/await authorizeAndHydrateAdminBootstrapContext\(/gu)?.length, 1,
+  "the Admin root must invoke composed authorization exactly once");
+assert.ok(rootDenialPosition > securityPosition &&
+  rootDenialReturnPosition > rootDenialPosition,
+  "the Admin root must preserve composed authorization denial");
 const retirementPosition = adminRuntime.indexOf(
   "preDispatchRetiredBusinessSettlement({",
 );
@@ -607,7 +669,7 @@ const lifecyclePosition = adminRuntime.indexOf(
 );
 assert.ok(securityPosition >= 0, "Admin dispatch must retain its security guard");
 assert.ok(
-  retirementPosition > securityPosition,
+  retirementPosition > securityPosition && retirementPosition > rootDenialReturnPosition,
   "retirement dispatch must remain after Admin authentication and authorization",
 );
 assert.ok(

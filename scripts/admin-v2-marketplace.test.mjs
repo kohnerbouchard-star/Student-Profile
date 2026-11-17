@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readBrowserSource as readFile } from "./lib/browser-module-source.mjs";
 import test from "node:test";
+import "./admin-v2-marketplace-read-model.test.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 

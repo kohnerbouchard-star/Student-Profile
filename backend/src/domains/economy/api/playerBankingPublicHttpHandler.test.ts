@@ -1,3 +1,4 @@
+import "./playerBankingSessionBoundary.test.ts";
 // Keep adjacent ledger-history parity in the existing Banking suite.
 import "./ledgerHistoryReadRepository.test.ts";
 import { handlePlayerBankingPublicRequest } from "./playerBankingPublicHttpHandler.ts";

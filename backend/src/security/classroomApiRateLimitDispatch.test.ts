@@ -1,3 +1,8 @@
+import {
+  assertRouteCompositionReachable,
+  assertRouteModuleImports,
+  readEdgeCompositionSource,
+} from "./edgeCompositionSource.test.support.ts";
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
   readTextFile(path: URL): Promise<string>;
@@ -13,7 +18,7 @@ const PLAYER_API_RUNTIME = new URL(
 );
 
 Deno.test("Classroom API dispatch applies one central guard to each integrated reviewed route", async () => {
-  const source = await Deno.readTextFile(CLASSROOM_API);
+  const source = await readEdgeCompositionSource(CLASSROOM_API);
 
   assertEquals(
     occurrences(source, "return dispatchRateLimitedReviewedPlayerRequest("),
@@ -78,7 +83,7 @@ Deno.test("Classroom API dispatch applies one central guard to each integrated r
 
 Deno.test("both Player composition roots forward the authenticated Inventory context", async () => {
   for (const sourceUrl of [CLASSROOM_API, PLAYER_API_RUNTIME]) {
-    const source = await Deno.readTextFile(sourceUrl);
+    const source = await readEdgeCompositionSource(sourceUrl);
     const normalized = source.replace(/\s+/gu, " ");
 
     assertEquals(
@@ -98,7 +103,7 @@ Deno.test("both Player composition roots forward the authenticated Inventory con
 
 Deno.test("both Player composition roots share the Store route rate-limit classifier", async () => {
   for (const sourceUrl of [CLASSROOM_API, PLAYER_API_RUNTIME]) {
-    const source = await Deno.readTextFile(sourceUrl);
+    const source = await readEdgeCompositionSource(sourceUrl);
     const normalized = source.replace(/\s+/gu, " ");
 
     assertEquals(
@@ -116,7 +121,7 @@ Deno.test("both Player composition roots share the Store route rate-limit classi
 
 Deno.test("both Player composition roots share the Banking FX parser, classifier, and authenticated context", async () => {
   for (const sourceUrl of [CLASSROOM_API, PLAYER_API_RUNTIME]) {
-    const source = await Deno.readTextFile(sourceUrl);
+    const source = await readEdgeCompositionSource(sourceUrl);
     const normalized = source.replace(/\s+/gu, " ");
     assertEquals(source.includes("readPlayerBankingFxRoutePath"), true);
     assertEquals(source.includes("playerBankingFxRateLimitKey"), true);
@@ -140,3 +145,88 @@ function assertEquals(actual: unknown, expected: unknown): void {
     );
   }
 }
+
+Deno.test("composition reader rejects disconnected route modules", () => {
+  let rejected = false;
+  try {
+    assertRouteModuleImports(
+      'const label = "./dispatchPlayerWorldRoutes.ts";',
+      ["dispatchPlayerWorldRoutes.ts"],
+    );
+  } catch {
+    rejected = true;
+  }
+  assertEquals(rejected, true);
+  assertRouteModuleImports(
+    'import { dispatchPlayerWorldRoutes } from "./dispatchPlayerWorldRoutes.ts";',
+    ["dispatchPlayerWorldRoutes.ts"],
+  );
+});
+
+for (
+  const [name, source] of [
+    ["type declaration", 'import type { dispatch } from "./route.ts";'],
+    ["type specifier", 'import { type dispatch } from "./route.ts";'],
+    ["line comment", '// import { dispatch } from "./route.ts";'],
+    ["block comment", '/* import { dispatch } from "./route.ts"; */'],
+    [
+      "template literal",
+      'const text = `import { dispatch } from "./route.ts";`;',
+    ],
+    [
+      "quoted literal",
+      "const text = 'import { dispatch } from \"./route.ts\";';",
+    ],
+  ]
+) {
+  Deno.test(`route source reader rejects ${name} as a value import`, () => {
+    let rejected = false;
+    try {
+      assertRouteModuleImports(source, ["route.ts"]);
+    } catch {
+      rejected = true;
+    }
+    assertEquals(rejected, true);
+  });
+}
+
+Deno.test("Classroom finite reader requires direct and transitive value connectivity", () => {
+  const root = new URL("file:///reviewed/index.ts");
+  const sources = new Map([
+    [root.href, 'import { dispatch } from "./dispatch.ts";'],
+    [
+      new URL("dispatch.ts", root).href,
+      'import { client } from "./client.ts";',
+    ],
+    [new URL("client.ts", root).href, "export const client = true;"],
+  ]);
+  assertRouteCompositionReachable(root, ["dispatch.ts", "client.ts"], sources);
+  for (
+    const source of [
+      'import type { dispatch } from "./dispatch.ts";',
+      'import { type dispatch } from "./dispatch.ts";',
+      '// import { dispatch } from "./dispatch.ts";',
+      '/* import { dispatch } from "./dispatch.ts"; */',
+      'const text = `import { dispatch } from "./dispatch.ts";`;',
+      "const text = 'import { dispatch } from \"./dispatch.ts\";';",
+      'import { dispatch } from "./unlisted.ts";',
+    ]
+  ) {
+    sources.set(root.href, source);
+    sources.set(
+      new URL("unlisted.ts", root).href,
+      'export { dispatch } from "./dispatch.ts";',
+    );
+    let rejected = false;
+    try {
+      assertRouteCompositionReachable(
+        root,
+        ["dispatch.ts", "client.ts"],
+        sources,
+      );
+    } catch {
+      rejected = true;
+    }
+    assertEquals(rejected, true);
+  }
+});

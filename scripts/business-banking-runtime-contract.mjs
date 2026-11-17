@@ -1,3 +1,4 @@
+import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 
@@ -31,7 +32,7 @@ const files = {
 };
 
 const source = Object.fromEntries(await Promise.all(
-  Object.entries(files).map(async ([key, path]) => [key, await readFile(path, "utf8")]),
+  Object.entries(files).map(async ([key, path]) => [key, ["dispatcher", "capabilities"].includes(key) ? readEdgeRuntimeSource(path, "utf8") : await readFile(path, "utf8")]),
 ));
 const migrations = [
   source.core,

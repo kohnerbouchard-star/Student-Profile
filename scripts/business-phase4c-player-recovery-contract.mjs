@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 
 import fs from "node:fs";
 import path from "node:path";
@@ -21,7 +22,7 @@ const files = {
 const source = Object.fromEntries(Object.entries(files).map(([key, relative]) => {
   const absolute = path.join(root, relative);
   if (!fs.existsSync(absolute)) throw new Error(`Missing Phase 4C-C file: ${relative}`);
-  return [key, fs.readFileSync(absolute, "utf8")];
+  return [key, key === "capability" ? readEdgeRuntimeSource(absolute, "utf8") : fs.readFileSync(absolute, "utf8")];
 }));
 
 for (const token of [

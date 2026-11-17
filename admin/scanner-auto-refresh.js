@@ -5,7 +5,6 @@
   const SUCCESS_RESET_MS = 1200;
   const ERROR_RESET_MS = 2000;
   const jobs = new WeakMap();
-  const delegatedFetch = window.fetch.bind(window);
 
   function text(value) {
     return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -138,7 +137,7 @@
     }
   }
 
-  function presentPlayerIdentity(payload, fallbackCode) {
+  function presentPlayerIdentity(payload, fallbackCode, expectedConsole = null) {
     const source = payload && typeof payload === "object" ? payload : {};
     const player = source.player || source.data?.player;
     if (!player || typeof player !== "object") return;
@@ -151,7 +150,7 @@
 
     window.setTimeout(() => {
       const current = elements();
-      if (!current?.player) return;
+      if (!current?.player || (expectedConsole && current.consoleElement !== expectedConsole)) return;
       current.player.textContent = displayName;
       current.player.dataset.adminScannerIdentitySource = "attendance-response";
       const playerId = ensurePlayerIdLine(current);
@@ -164,16 +163,6 @@
         current.time.setAttribute("datetime", text(source.attendance?.clockedInAt || source.data?.attendance?.clockedInAt));
       }
     }, 0);
-  }
-
-  function attendanceScanRequest(input, init) {
-    try {
-      const url = new URL(input instanceof Request ? input.url : String(input), window.location.href);
-      const method = text(init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
-      return method === "POST" && /\/attendance\/(?:scan|scans)$/.test(url.pathname);
-    } catch (_) {
-      return false;
-    }
   }
 
   function setReady(options = {}) {
@@ -276,18 +265,12 @@
     );
   });
 
-  window.fetch = async function econovariaScannerIdentityFetch(input, init) {
-    const isAttendanceScan = attendanceScanRequest(input, init);
-    const current = isAttendanceScan ? elements() : null;
-    const fallbackCode = isAttendanceScan ? text(activeInput(current)?.value) : "";
-    const response = await delegatedFetch(input, init);
-    if (isAttendanceScan && response.ok) {
-      response.clone().json()
-        .then((payload) => presentPlayerIdentity(payload, fallbackCode))
-        .catch(() => {});
-    }
-    return response;
-  };
+  window.EconovariaClassroomWriteFallback.observeAttendanceResponses(() => {
+    const current = elements();
+    if (!current) return null;
+    const fallbackCode = text(activeInput(current)?.value);
+    return (payload) => presentPlayerIdentity(payload, fallbackCode, current.consoleElement);
+  });
 
   new MutationObserver(() => window.requestAnimationFrame(reconcile)).observe(document.body, {
     subtree: true,

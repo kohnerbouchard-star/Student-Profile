@@ -1,20 +1,9 @@
 (function initEconovariaScannerRewardLocalization() {
   "use strict";
 
-  const delegatedFetch = window.fetch.bind(window);
 
   function text(value) {
     return String(value ?? "").trim();
-  }
-
-  function attendanceScanRequest(input, init) {
-    try {
-      const url = new URL(input instanceof Request ? input.url : String(input), window.location.href);
-      const method = text(init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
-      return method === "POST" && /\/attendance\/(?:scan|scans)$/.test(url.pathname);
-    } catch (_) {
-      return false;
-    }
   }
 
   function amount(value) {
@@ -22,7 +11,7 @@
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
-  function presentReward(payload) {
+  function presentReward(payload, expectedElement) {
     const source = payload && typeof payload === "object" ? payload : {};
     const reward = source.reward || source.data?.reward;
     const attendance = source.attendance || source.data?.attendance;
@@ -30,7 +19,7 @@
 
     window.setTimeout(() => {
       const element = document.querySelector("[data-admin-terminal-last-scan-reward]");
-      if (!element) return;
+      if (!element || element !== expectedElement) return;
       const rewardAmount = amount(reward.amount);
       const currencyCode = (text(reward.currencyCode || reward.currency_code) || "ECO").toUpperCase();
       const wasCreated = attendance?.wasCreated ?? attendance?.was_created;
@@ -59,12 +48,8 @@
     }, 0);
   }
 
-  window.fetch = async function econovariaScannerRewardFetch(input, init) {
-    const isAttendanceScan = attendanceScanRequest(input, init);
-    const response = await delegatedFetch(input, init);
-    if (isAttendanceScan && response.ok) {
-      response.clone().json().then(presentReward).catch(() => {});
-    }
-    return response;
-  };
+  window.EconovariaClassroomWriteFallback.observeAttendanceResponses(() => {
+    const element = document.querySelector("[data-admin-terminal-last-scan-reward]");
+    return element ? (payload) => presentReward(payload, element) : null;
+  });
 })();

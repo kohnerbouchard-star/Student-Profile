@@ -1,72 +1,78 @@
+import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
+import { readBrowserSourceSync } from "./lib/browser-module-source.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const adminWiring = fs.readFileSync("admin/ledger-adjustment-wiring.js", "utf8");
-const adminWriteLifecycle = fs.readFileSync(
+const adminWiring = readBrowserSourceSync("admin/ledger-adjustment-wiring.js", "utf8");
+const adminWriteLifecycle = readBrowserSourceSync(
   "admin/classroom-write-fallback.js",
   "utf8",
 );
-const adminCreateAdapter = fs.readFileSync(
+const adminCreateAdapter = readBrowserSourceSync(
   "admin/create-action-adapter.js",
   "utf8",
 );
-const adminPlayerIdentity = fs.readFileSync(
+const adminPlayerIdentity = readBrowserSourceSync(
   "admin/player-identity-wiring.js",
   "utf8",
 );
-const adminContractMutation = fs.readFileSync(
+const adminContractMutation = readBrowserSourceSync(
   "backend/src/domains/contracts/application/adminContractMutation.ts",
   "utf8",
 );
-const adminBackend = fs.readFileSync(
+const adminBackend = readEdgeRuntimeSource(
   "backend/supabase/functions/admin-api/playerOperations.ts",
   "utf8",
 );
-const adminIdempotentLedger = fs.readFileSync(
+const adminIdempotentLedger = readBrowserSourceSync(
   "backend/supabase/functions/admin-api/idempotentLedgerOperations.ts",
   "utf8",
 );
-const adminAttendanceOperations = fs.readFileSync(
+const adminAttendanceOperations = readBrowserSourceSync(
   "backend/supabase/functions/admin-api/attendanceOperations.ts",
   "utf8",
 );
-const adminReadExtensions = fs.readFileSync(
+const adminReadExtensions = readEdgeRuntimeSource(
   "backend/supabase/functions/admin-api/readExtensions.ts",
   "utf8",
 );
-const adminGameRoutes = fs.readFileSync(
+const adminGameRoutes = readEdgeRuntimeSource(
   "backend/supabase/functions/admin-api/gameRoutes.ts",
   "utf8",
 );
-const playerDashboardRepository = fs.readFileSync(
+const playerDashboardRepository = readBrowserSourceSync(
   "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
   "utf8",
 );
-const playerDashboardContracts = fs.readFileSync(
+const playerDashboardProjection = readBrowserSourceSync(
+  "backend/src/domains/game-dashboard/infrastructure/dashboardReadProjection.ts",
+  "utf8",
+);
+const playerDashboardContracts = readBrowserSourceSync(
   "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
   "utf8",
 );
-const staffLedgerHandler = fs.readFileSync(
+const staffLedgerHandler = readBrowserSourceSync(
   "backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts",
   "utf8",
 );
-const bankingRepository = fs.readFileSync(
+const bankingRepository = readBrowserSourceSync(
   "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts",
   "utf8",
 );
-const playerApiIntegration = fs.readFileSync(
+const playerApiIntegration = readBrowserSourceSync(
   "player-terminal/src/integrations/student-profile-api-call.js",
   "utf8",
 );
-const checkingMigration = fs.readFileSync(
+const checkingMigration = readBrowserSourceSync(
   "backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql",
   "utf8",
 );
-const storePage = fs.readFileSync(
+const storePage = readBrowserSourceSync(
   "player-terminal/src/pages/store-page.js",
   "utf8",
 );
-const currencyAdr = fs.readFileSync(
+const currencyAdr = readBrowserSourceSync(
   "docs/seed-content/decisions/adr-001-currency-and-settlement-architecture.md",
   "utf8",
 );
@@ -122,8 +128,18 @@ assert.ok(modalPlayerIdSource, "Expected modalPlayerId identity authority.");
 assert.ok(
   modalPlayerIdSource.indexOf("modal?.querySelector") >= 0 &&
     modalPlayerIdSource.indexOf("modal?.querySelector") <
-      modalPlayerIdSource.indexOf("return text(selectedPlayerId)"),
+      modalPlayerIdSource.indexOf("return text(ownerScope.selectedPlayerId)"),
   "The Player Settings modal identity must outrank stale global selection state.",
+);
+assert.match(
+  adminPlayerIdentity,
+  /get selectedPlayerId\(\) \{ return selectedPlayerId; \}/,
+  "The extracted profile reader must read the live selected-player binding.",
+);
+assert.match(
+  adminPlayerIdentity,
+  /set selectedPlayerId\(value\) \{ selectedPlayerId = value; \}/,
+  "The extracted profile reader must update the same selected-player binding.",
 );
 assert.match(adminPlayerIdentity, /modalId !== playerId/);
 assert.match(adminPlayerIdentity, /if \(gameId !== currentGameId\(\)\) return;/);
@@ -227,9 +243,19 @@ assert.match(
   /const excludedStockMarketValue = valuationCurrencyCode === "ECO"[\s\S]*?: portfolio\.holdingsMarketValue/,
   "Player net worth must mark unconverted ECO holdings as excluded from local-currency valuation.",
 );
-assert.match(playerDashboardRepository, /rankScope: "currency" as const/);
 assert.match(
   playerDashboardRepository,
+  /import \{[^}]*\btoLeaderboard\b[^}]*\} from "\.\/dashboardReadProjection\.ts"/,
+  "Dashboard must import the reviewed leaderboard projection owner.",
+);
+assert.match(
+  playerDashboardRepository,
+  /const leaderboard = toLeaderboard\(\s*players,\s*countryByPlayerId,\s*financialBalances,\s*holdings,\s*stockByAssetId,\s*\)/,
+  "Dashboard must use the reviewed currency-scoped leaderboard with authoritative rows.",
+);
+assert.match(playerDashboardProjection, /rankScope: "currency" as const/);
+assert.match(
+  playerDashboardProjection,
   /const rankByCurrency = new Map<string, number>\(\)/,
   "Leaderboard ranks must be scoped within a comparable currency instead of comparing unlike currencies.",
 );

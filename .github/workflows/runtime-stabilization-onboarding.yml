@@ -11,7 +11,12 @@ on:
       - "backend/supabase/migrations/20260725100000_repair_arrival_grant_scope_ambiguity_v3.sql"
       - "backend/src/domains/game-sessions/tests/arrivalGrantScopeRepairMigrationContract.test.ts"
       - "admin/classroom-write-fallback.js"
+      - "admin/create-action-adapter.js"
+      - "admin/scanner-auto-refresh.js"
+      - "admin/scanner-reward-localization.js"
       - "scripts/admin-economic-write-contract.test.mjs"
+      - "scripts/admin-attendance-response-observers.test.mjs"
+      - "scripts/admin-attendance-response-observers.browser.mjs"
       - "scripts/auth-boundary-contract.test.mjs"
       - "scripts/local-edge-runtime-contract.test.mjs"
       - "scripts/game-feature-activation-v2-local-acceptance.mjs"
@@ -64,7 +69,13 @@ jobs:
           node --check scripts/game-feature-activation-v2-local-acceptance.mjs
 
       - name: Verify exact Admin ledger browser contract
-        run: node --test scripts/admin-economic-write-contract.test.mjs
+        run: npm run test:admin-economic-writes
+
+      - name: Install pinned browser for scanner transport contract
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify scanner response observers in real browser
+        run: node scripts/admin-attendance-response-observers.browser.mjs
 
       - name: Verify application authentication boundaries
         run: npm run test:auth-boundaries

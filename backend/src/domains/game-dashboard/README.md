@@ -63,7 +63,7 @@ secrets.
 ## Realtime Contract
 
 The realtime contract now has a minimal backend publisher seam in
-`realtime/gamePublicRealtimePublisher.ts`. The seam builds the public channel,
+`../game-realtime/index.ts`. The seam builds the public channel,
 validates the supported public event envelopes, rejects obvious private/session
 fields, serializes a broadcast message, and delegates delivery to an injected
 transport. The stock runner now uses that seam after successful stock tick
@@ -100,7 +100,7 @@ The dashboard response includes:
 ```
 
 Publisher-backed public realtime events use the supported envelope in
-`realtime/gamePublicRealtimePublisher.ts`:
+`../game-realtime/index.ts`:
 
 ```ts
 {

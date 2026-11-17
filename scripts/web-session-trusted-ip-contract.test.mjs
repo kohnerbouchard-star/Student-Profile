@@ -1,12 +1,14 @@
+import "./edge-runtime-source.test.mjs";
+import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-const source = fs.readFileSync(
+const source = readEdgeRuntimeSource(
   "backend/supabase/functions/web-session-api/index.ts",
   "utf8",
 );
-const authSource = fs.readFileSync(
+const authSource = readEdgeRuntimeSource(
   "backend/src/security/adminBffRequestAuth.ts",
   "utf8",
 );

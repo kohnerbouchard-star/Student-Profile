@@ -17,10 +17,10 @@ import {
 import type {
   GamePublicRealtimeEnvelope,
   GamePublicRealtimePublishResult,
-} from "../../game-dashboard/publicRealtime.ts";
+} from "../../game-realtime/index.ts";
 import {
   buildGamePublicRealtimeStockTickEnvelope,
-} from "../../game-dashboard/publicRealtime.ts";
+} from "../../game-realtime/index.ts";
 
 // HTTP owns authorization, market-calendar time and the post-tick Story hook.
 // This owner keeps the existing load → calculate → atomic apply → public event order.

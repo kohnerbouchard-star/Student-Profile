@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readEdgeRuntimeSource as readFile } from "./helpers/edge-runtime-source.mjs";
 import test from "node:test";
 import { processClaimedLicenseJob } from "../backend/src/domains/licensing/application/processClaimedLicenseJob.ts";
 

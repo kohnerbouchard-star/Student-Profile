@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { readEdgeRuntimeSource } from '../helpers/edge-runtime-source.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import childProcess from 'node:child_process';
@@ -8,6 +9,8 @@ import { validateDatabaseUrl, validateSupabaseUrl, assertTeacherDto, assertNoUui
 
 const source = await readFile(new URL('./auth-fixture.mjs', import.meta.url), 'utf8');
 const repoFile = path => readFile(new URL(`../../${path}`, import.meta.url), 'utf8');
+
+
 
 test('accepts only literal loopback hosts and the dedicated stack ports', () => {
   for (const host of ['localhost', '127.0.0.1', '[::1]']) {
@@ -256,7 +259,7 @@ test('teacher contracts reject missing fields, wrong endpoint envelopes and malf
 });
 
 test('teacher schema is bound to the pinned production projections, not a general UUID allowlist', async () => {
-  const bff = await repoFile('backend/supabase/functions/web-session-api/index.ts');
+  const bff = readEdgeRuntimeSource(new URL('../../backend/supabase/functions/web-session-api/index.ts', import.meta.url));
   const bootstrap = await repoFile('backend/src/domains/auth/api/staffBootstrapHttpHandler.ts');
   const provision = await repoFile('backend/supabase/functions/admin-api/gameProvisioningOperations.ts');
   const session = bff.slice(bff.indexOf('function publicSession('), bff.indexOf('function parseAccessExpiry('));
@@ -264,7 +267,7 @@ test('teacher schema is bound to the pinned production projections, not a genera
   assert.match(bff, /id: login.user.id,[\s\S]*email: login.user.email,[\s\S]*displayName: login.user.displayName,[\s\S]*role: "game_admin",[\s\S]*permissionVersion: login.user.permissionVersion,[\s\S]*securityVersion: login.user.securityVersion,/u);
   assert.match(bff, /verified: true,[\s\S]*session: publicSession\(elevated, "aal2", true\)/u);
   assert.match(bff, /\.\.\.resolved.payload.user,[\s\S]*displayName: bootstrap.body.staff.displayName/u);
-  assert.match(bootstrap, /id: session.id,[\s\S]*name: session.name,[\s\S]*status: session.status,[\s\S]*joinCode: session.game_join_code,[\s\S]*gameCode: session.game_join_code,[\s\S]*joinCodeStatus: session.game_join_code_status,[\s\S]*createdAt: session.created_at,[\s\S]*updatedAt: session.updated_at/u);
+  assert.match(bootstrap, /id: gameSession.id,[\s\S]*name: gameSession.name,[\s\S]*status: gameSession.status,[\s\S]*joinCode: gameSession.gameJoinCode,[\s\S]*gameCode: gameSession.gameJoinCode,[\s\S]*joinCodeStatus: gameSession.gameJoinCodeStatus,[\s\S]*createdAt: gameSession.createdAt,[\s\S]*updatedAt: gameSession.updatedAt/u);
   for (const field of ['id', 'gameId', 'name', 'status', 'lifecycleState', 'provisioningStatus', 'joinCodeStatus', 'joinCode', 'gameCode', 'createdAt', 'updatedAt']) assert.match(provision, new RegExp(`\\b${field}[:,]`));
   assert.match(source, /browserJson\(response, 'login'\)/u);
   assert.match(source, /browserJson\(await verifiedPromise, 'mfa-verify'\)/u);
@@ -276,7 +279,7 @@ test('teacher schema is bound to the pinned production projections, not a genera
 });
 
 test('source projection field sets stay exactly aligned with teacher fixture schemas', async () => {
-  const bff = await repoFile('backend/supabase/functions/web-session-api/index.ts');
+  const bff = readEdgeRuntimeSource(new URL('../../backend/supabase/functions/web-session-api/index.ts', import.meta.url));
   const bootstrap = await repoFile('backend/src/domains/auth/api/staffBootstrapHttpHandler.ts');
   const provision = await repoFile('backend/supabase/functions/admin-api/gameProvisioningOperations.ts');
   const keys = (sourceText, start, end, indent) => {
@@ -286,6 +289,6 @@ test('source projection field sets stay exactly aligned with teacher fixture sch
   };
   assert.deepEqual(keys(bff, 'function publicSession(', 'function parseAccessExpiry(', 4), ['absoluteExpiresAt', 'assuranceLevel', 'authenticated', 'expiresAt', 'mfaRequired']);
   assert.deepEqual(keys(bff, 'displayName: login.user.displayName,', '    activeGameSessions:', 6), ['permissionVersion', 'role', 'securityVersion']);
-  assert.deepEqual(keys(bootstrap, 'activeGameSessions: ((sessionsResponse.data', '      })),', 8), ['createdAt', 'gameCode', 'id', 'joinCode', 'joinCodeStatus', 'name', 'status', 'updatedAt']);
+  assert.deepEqual(keys(bootstrap, 'activeGameSessions: sessions.map(({ gameSession }) => ({', '      })),', 8), ['createdAt', 'gameCode', 'id', 'joinCode', 'joinCodeStatus', 'name', 'status', 'updatedAt']);
   assert.deepEqual(keys(provision, '        game: {', '        },', 10), ['createdAt', 'gameCode', 'gameId', 'id', 'joinCode', 'joinCodeStatus', 'lifecycleState', 'name', 'provisioningStatus', 'status', 'updatedAt']);
 });

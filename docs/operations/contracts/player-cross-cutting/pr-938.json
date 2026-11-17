@@ -321,7 +321,18 @@
     "Player Roster Import",
     "Atomic roster provisioning and replay",
     "Roster Connected E2E",
-    "Paired-source disposable roster integration (not hosted capacity)"
+    "Paired-source disposable roster integration (not hosted capacity)",
+    "Admin API Check",
+    "admin-api-check",
+    "Admin Bundle Contract Audit",
+    "audit",
+    "Edge Function Inventory",
+    "Validate canonical inventory contract",
+    "Progression Runtime",
+    "Runtime Stabilization Onboarding",
+    "Runtime and request contracts",
+    "Local custom-auth Edge Functions reachability",
+    "Two-Player Arrival onboarding"
   ],
   "criticalJobChecks": [
     "Story Replay Safety",
@@ -426,7 +437,14 @@
     "focused",
     "Messages moderation contract and browser smoke",
     "Atomic roster provisioning and replay",
-    "Paired-source disposable roster integration (not hosted capacity)"
+    "Paired-source disposable roster integration (not hosted capacity)",
+    "admin-api-check",
+    "audit",
+    "Validate canonical inventory contract",
+    "Runtime and request contracts",
+    "Local custom-auth Edge Functions reachability",
+    "Two-Player Arrival onboarding",
+    "CodeQL"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",

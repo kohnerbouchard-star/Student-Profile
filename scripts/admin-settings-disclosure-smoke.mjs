@@ -1,3 +1,4 @@
+import { readSettingsPresenterSource } from "./lib/settings-presenter-source.mjs";
 import { createQualityHarness, BASE_URL } from "./admin-quality-smoke-fixture.mjs";
 
 const harness = await createQualityHarness("settings-disclosure");
@@ -290,8 +291,7 @@ try {
     throw new Error("Settings error bridge still intercepts document or numeric input lifecycle.");
   }
 
-  const presenterSource = await page.request.get(`${BASE_URL}/settings-simplified.js`);
-  const presenterText = await presenterSource.text();
+  const presenterText = await readSettingsPresenterSource(page.request, BASE_URL);
   if (
     /forceAutomaticAttendancePolicy/.test(presenterText) ||
     /difficulty\.value\s*=\s*["']true["']/.test(presenterText) ||
@@ -488,7 +488,7 @@ try {
   await measureStyles(page, "after-save-remount");
   const sameIdentity = await page.evaluate(async () => {
     const before = [...document.querySelectorAll('link[rel="stylesheet"]')];
-    await import("./settings-simplified.js"); await import("./attendance-reward-settings-v4.js"); await import("./settings-save-error-bridge.js"); await import("./settings-save-error-bridge.js?ref015-repeat");
+    await import("./settings-copy.js"); await import("./settings-presentation.js"); await import("./settings-simplified.js"); await import("./attendance-reward-settings-v4.js"); await import("./settings-save-error-bridge.js"); await import("./settings-save-error-bridge.js?ref015-repeat");
     const after = [...document.querySelectorAll('link[rel="stylesheet"]')];
     return before.length === after.length && before.every((node, index) => node === after[index]);
   });

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { readEdgeRuntimeSource as readFileSync } from "./helpers/edge-runtime-source.mjs";
 
 const migrationDirectory = "backend/supabase/migrations";
 const migrationName = "20260831103001_business_player_store_fx_final_v2.sql";
