@@ -66,7 +66,7 @@ Deno.serve(async (request: Request) => {
   if (claim.error) {
     return json(500, {
       ok: false,
-      error: `claim_failed:${claim.error.message}`,
+      error: "claim_failed",
     });
   }
   const claimed = (claim.data || [])[0] as {
@@ -114,26 +114,26 @@ Deno.serve(async (request: Request) => {
       return json(200, await purgeDbStage(client, requestId, gameSessionId));
     }
     throw new Error(`unsupported_stage:${stage}`);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    await client.rpc("record_game_data_purge_failure_v1", {
-      p_request_id: requestId,
-      p_stage: stage,
-      p_error: message,
-    });
-    console.error(
-      "game_data_purge_failed",
-      requestId,
-      gameSessionId,
-      stage,
-      message,
-    );
+  } catch {
+    // Upstream errors may contain SQL, object keys or credentials. Never include
+    // them in responses, logs or the persisted failure record.
+    const failureCode = "purge_stage_failed";
+    try {
+      const recorded = await client.rpc("record_game_data_purge_failure_v1", {
+        p_request_id: requestId,
+        p_stage: stage,
+        p_error: failureCode,
+      });
+      if (recorded.error) {
+        console.error("game_data_purge_failure_record_failed");
+      }
+    } catch {
+      console.error("game_data_purge_failure_record_failed");
+    }
+    console.error("game_data_purge_failed");
     return json(500, {
       ok: false,
-      requestId,
-      gameSessionId,
-      stage,
-      error: message,
+      error: failureCode,
     });
   }
 });
