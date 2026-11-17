@@ -731,3 +731,15 @@ locally). Backend/UI source pins, migrations, RPCs, application behavior and
 permissions are unchanged. See backend-scope evidence for details. Next: obtain
 independent review and fresh exact-head hosted connected qualification; no merge,
 deployment, completion or hosted-capacity claim.
+
+### Classroom pair after merged Crafting #998 (2026-11-17)
+
+`CLASSROOM-ROSTER-ATOMIC-PROVISION-001` remains `IMPLEMENTED_NOT_MERGED` in
+existing #938, paired with #933. Normally reconciled main `9df2064d` with only
+eight inherited Crafting files; independent review confirms exact-main bytes
+and additive roadmap preservation. Backend public source `7d9d40e3` matches
+reviewed local `618fbaf42`. Root and Player verification pass; authority remains
+158 required / 110 critical. Earlier #938 head `65671b32` passed connected and
+atomic hosted qualification, but that evidence does not qualify the new union.
+Next: verify new exact public frontend/backend pins, then all current-head
+connected and required checks before any merge. No deploy/live completion claim.

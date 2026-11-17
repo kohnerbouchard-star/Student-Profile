@@ -421,3 +421,20 @@ only that precise fixture substitution; runtime guards, cleanup, full-suite
 execution, real DB/browser requirements and `connectedExecuted:false` remain.
 This is harness repair, not connected qualification or a capacity claim. Fresh
 exact-head hosted connected execution remains mandatory. No merge or deployment.
+
+### Merged Crafting disclosure reconciliation (2026-11-17)
+
+Normally merged main `9df2064d` (#998) into the existing #938 owner. Reviewed
+public backend source `7d9d40e341305811c6ebb232df84358831bc41d0` has tree
+`b9c7d2a2066a1c46edd869463ad1f97c5c872928`, exactly matching local `618fbaf42`.
+All seven non-roadmap inherited files are byte-identical to main; the sole
+roadmap conflict retains both additive intake records. Inventory regeneration
+is unchanged. Full root and Player verification pass. Authority retains all
+158 required / 110 critical identities and accepts 80 changed paths under
+82 locks. No application behavior beyond merged #998 is changed.
+
+Prior exact head `65671b32` passed connected run `43998484550` and atomic roster
+run `43998484423`, including disposable SQL replay and full Edge typecheck.
+Those runs remain historical after this reconciliation. Current public source
+pairing must receive fresh exact-head hosted qualification, including connected
+DB/browser gates, before merge. No deployment or hosted-capacity claim.
