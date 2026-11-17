@@ -15,3 +15,6 @@ Controller: 498 to 269 lines; pure read-model owner: 238 lines. Inventory source
 
 ## Source qualification
 Reviewed local source eeb14905e: independent reviewer confirmed exact normalization declaration preservation (only added export) and exact lifecycle/mutation preservation modulo equivalent status membership call; 44/44 focused cases passed independently. Full root, full Player and backend core TypeScript pass locally on pinned Node22.23.1/npm10.9.8; existing root database skips remain explicit. Secret scan passes. The initial root run stopped on the intentionally uncommitted generated inventory; the committed rerun passed. No local Chromium/full Edge/live pass is claimed. Actual-PR scope authority and exact-head hosted checks remain next before any merge consideration.
+
+## Actual PR qualification metadata
+Draft #1008 source c72a865d matches reviewed local tree. Exact authority locks eight changed paths plus two read-only verifier/test paths. Fresh derivation:35 workflow families,69 active tuples,five guarded skips. Production/secret denials remain false; no workflow or test command edits. Metadata review and fresh published-head hosted qualification remain pending.
