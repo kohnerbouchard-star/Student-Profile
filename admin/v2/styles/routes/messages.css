@@ -413,3 +413,12 @@
     inline-size: 100%;
   }
 }
+
+.admin-messages-route__policy {
+  border: 1px solid var(--admin-color-line);
+  border-radius: 12px;
+  padding: 16px;
+}
+.admin-messages-route__policy summary { cursor: pointer; font-weight: 600; }
+.admin-messages-route__policy form { display: grid; gap: 12px; margin-top: 16px; }
+.admin-messages-route__policy p { overflow-wrap: anywhere; }

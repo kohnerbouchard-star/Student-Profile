@@ -143,3 +143,19 @@ positive/negative execution are required before calling the gate qualified. No
 merge, production/staging execution, runtime definition change or trigger coverage
 is claimed or authorized. Trigger exclusion is identical to the pinned CLI, not
 an assertion that triggers are validated.
+
+
+## Current-main reconciliation (2026-11-17)
+
+Prepared against main `942e37de71f312bd361b40e6f0dcfb7c74f9140e` on the
+existing #1006 owner branch. The starting local tree matched published head
+`5fa772cca882a7a25f8fc5890197cd00ae57a963` exactly:
+`44e6808601b7bacd974c7ba50160640ee59236e1`. Only the shared roadmap conflicted;
+both intake histories and all incoming feature changes are retained.
+
+Main adds no migration changes relative to this branch's prior baseline.
+The correction migration, SQL acceptance, qualification workflow and verifier
+remain byte-identical. The exact positive 531-function and negative 532-function
+checks are not relaxed or recalibrated. Local source checks must not be treated
+as PostgreSQL proof; independent union review and fresh exact-head hosted
+qualification are required before merge. No main merge or live/staging action.
