@@ -809,3 +809,15 @@ reviewed local `618fbaf42`. Root and Player verification pass; authority remains
 atomic hosted qualification, but that evidence does not qualify the new union.
 Next: verify new exact public frontend/backend pins, then all current-head
 connected and required checks before any merge. No deploy/live completion claim.
+
+### Scope Intake: Player Market loaded-summary honesty (2026-11-18)
+
+`PLAYER-MARKET-SUMMARY-001` is `IMPLEMENTED_NOT_MERGED`, owned by
+`fix/market-read-state-20261118`, a bounded T047 follow-up. Missing composite
+observations no longer render invented zero at the renderer boundary; genuine
+zero remains visible. Volume is explicitly scoped to loaded instruments. Root
+and Player verification pass; 31 directory tests pass; independent review found
+no blocking findings. Backend checks lack Deno and browser checks lack Chromium;
+no database qualification, merge, deployment or full task completion claimed.
+See `docs/operations/evidence/player-market-summary-v1/scope.md` for acceptance,
+ownership, toolchain limitations and remaining gates.
