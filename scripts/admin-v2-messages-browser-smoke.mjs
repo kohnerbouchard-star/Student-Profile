@@ -240,12 +240,15 @@ async function verifyReadyViewport(browser, server, viewport) {
 
   await page.locator(".admin-messages-route__policy summary").click();
   await page.getByRole("button", { name: "Load policy", exact: true }).click();
-  await page.getByLabel("Default retention days", { exact: true }).fill("30");
+  // AdminField includes its required indicator in the accessible label.
+  const retention = page.getByRole("spinbutton", { name: /^Default retention days\s*Required$/i });
+  assert.equal(await retention.getAttribute("required"), "");
+  await retention.fill("30");
   await page.getByLabel("Player-created conversations", { exact: true }).selectOption("false");
   await page.getByRole("button", { name: "Review policy changes" }).click();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   assert.equal(await page.evaluate(() => window.__policyWrites.length), 0);
-  assert.equal(await page.getByLabel("Default retention days", { exact: true }).inputValue(), "30");
+  assert.equal(await page.getByRole("spinbutton", { name: /^Default retention days\s*Required$/i }).inputValue(), "30");
   await page.getByRole("button", { name: "Review policy changes" }).click();
   await page.getByRole("button", { name: "Save policy", exact: true }).click();
   await page.getByText("Messaging policy saved.", { exact: true }).waitFor();
