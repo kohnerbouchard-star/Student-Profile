@@ -1,3 +1,4 @@
+import { createRosterImportRequest } from "./player-roster-import.js";
 import {
   ADMIN_OVERVIEW_RESOURCE_KEYS, ADMIN_MARKET_RESOURCE_KEYS, ADMIN_MARKET_DETAIL_RESOURCE_KEYS,
   DEFAULT_TIMEOUT_MS, STORE_CREATE_FIELDS, STORE_UPDATE_FIELDS, PLAYER_CREATE_FIELDS,
@@ -480,6 +481,7 @@ export function createAdminApiClient({
     updateStoreItem,
     archiveStoreItem,
     createPlayer,
+    importPlayerRoster: createRosterImportRequest({ mutate: playerMutation, collectionPath: playersCollectionPath }),
     updatePlayerSettings,
     updatePlayerCredentials,
     getRequestVersion: () => activeRequestVersion,

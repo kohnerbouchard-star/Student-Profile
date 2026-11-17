@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1632,
+    "sourceFiles": 1636,
     "edgeEntrypoints": 28,
     "handlerFiles": 61,
     "persistenceOutsideInfrastructure": 84,
@@ -3510,6 +3510,7 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/overview/OverviewRoute.js",
           "admin/v2/src/routes/players/PlayersController.js",
+          "admin/v2/src/routes/players/RosterImportController.js",
           "backend/src/domains/players/api/playerRosterImportHttpHandler.ts",
           "backend/src/domains/players/application/importPlayerRoster.test.ts",
           "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",

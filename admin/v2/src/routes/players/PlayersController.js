@@ -10,6 +10,7 @@ import {
   isAdminErrorEnvelope,
   normalizeAdminError,
 } from "../../core/error-envelope.js";
+import { createRosterImportController } from "./RosterImportController.js";
 import { PlayersRoute } from "./PlayersRoute.js";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -162,6 +163,9 @@ export function createPlayersController({
   let mutationSequence = 0;
   let destroyed = false;
   let currentView = null;
+  let rosterReviewOpen = false;
+  let rosterRefreshPending = false;
+  const rosterImport = createRosterImportController({ api, gameId: selectedGameId, hasPermission, cryptoObject });
   const pendingIdempotency = new Map();
   const activeMutations = new Set();
   const refreshTimers = new Set();
@@ -172,6 +176,7 @@ export function createPlayersController({
 
   async function load() {
     if (destroyed || !hasPermission("players.manage")) return state;
+    if (rosterReviewOpen) { rosterRefreshPending = true; return state; }
     api.cancelPlayersRequest?.();
     requestVersion += 1;
     const version = requestVersion;
@@ -341,6 +346,18 @@ export function createPlayersController({
       onFiltersChange: updateFilters,
       onRefresh: load,
       onCreate: createPlayer,
+      onImportRoster: rosterImport.submit,
+      onImportOpen: () => {
+        if ([ADMIN_DATA_STATES.INITIAL_LOADING, ADMIN_DATA_STATES.REFRESHING].includes(state.status)) return false;
+        rosterReviewOpen = true;
+        return true;
+      },
+      onImportClose: ({ imported, reason }) => {
+        rosterReviewOpen = false;
+        const refresh = imported || rosterRefreshPending;
+        rosterRefreshPending = false;
+        if (refresh && reason !== "destroyed" && !destroyed) void load();
+      },
       onEditProfile: updateProfile,
       onUpdateCredentials: updateCredentials,
     });
@@ -379,6 +396,7 @@ export function createPlayersController({
     currentView = null;
     refreshTimers.forEach((timer) => globalThis.clearTimeout(timer));
     refreshTimers.clear();
+    rosterImport.destroy();
     pendingIdempotency.clear();
     activeMutations.clear();
   }

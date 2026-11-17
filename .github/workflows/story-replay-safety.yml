@@ -3,6 +3,7 @@ name: Story Replay Safety
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-933.json"
       - "scripts/story-execution-database*"
       - "docs/operations/contracts/player-cross-cutting/pr-999.json"
       - "docs/operations/contracts/player-cross-cutting/pr-981.json"
