@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "apiRelation": "roster-two-line-inverse",
-  "mode": "backend-owned",
+  "apiRelation": "exact-equality",
+  "mode": "integrated-composite",
   "backend": {
-    "sha": "df1723d503c99e9ff1ecb482f4f4a6ffdfe46525",
-    "tree": "0da59e69254b83d129ce0b594466bf8ff4079848"
+    "sha": "60a08987a524088b720df2d1504af046086f21f4",
+    "tree": "2de1ec6e9c8bafea6ad80cfe9a4a7d2dc4b32f59"
   },
   "frontend": {
-    "sha": "bb99f67804bed0c85996c03853e8d8a478e4b352",
-    "tree": "a581058c02a9553db5f9a01ac2423a29d4e553be"
+    "sha": "60a08987a524088b720df2d1504af046086f21f4",
+    "tree": "2de1ec6e9c8bafea6ad80cfe9a4a7d2dc4b32f59"
   },
   "overlay": [
     "admin/v2/src/api/admin-api-client.js",
