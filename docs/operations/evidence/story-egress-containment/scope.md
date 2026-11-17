@@ -106,3 +106,18 @@ mutable directory. Exact SHA, clean-tree, Docker identity/image, and stale-conta
 rejection remain enforced. This is a reproduced defect consistent with the early
 CI failure, not confirmation of the original suppressed exception. Sanitized CI
 diagnostics and exact-head database rerun remain required.
+
+## Separate bounded suffix accounting
+
+Existing database replay rejected the new migration because its immutable suffix
+registry did not include it. The local follow-up appends exactly this migration
+with raw and normalized SHA-256 digests and order 15, retains all 14 predecessor
+identities, and adds a prefix-hash regression. Strict total-count assertions move
+to 15; no wildcard, digest bypass, certificate rewrite or U1 workflow change is
+introduced. All 27 existing-plus-new source/ledger/suffix tests pass locally.
+
+The expanded source scope selects 34 workflow families: 60 active job tuples and
+10 guarded templates. The additional Phase15 source contract runs, while all four
+live convergence jobs remain literal-false guarded. Authority retains earlier
+checks and adds that source gate (96 required / 61 critical), with all production
+and secret prohibitions unchanged. Independent review precedes publication.

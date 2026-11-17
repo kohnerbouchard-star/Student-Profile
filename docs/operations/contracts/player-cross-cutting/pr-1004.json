@@ -15,6 +15,8 @@
     "docs/operations/evidence/story-egress-containment/ci-contract.json",
     "docs/operations/evidence/story-egress-containment/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/redact-econovaria-ci-log.mjs",
     "scripts/redact-econovaria-ci-log.test.mjs",
@@ -32,6 +34,8 @@
     "docs/operations/evidence/story-egress-containment/ci-contract.json",
     "docs/operations/evidence/story-egress-containment/scope.md",
     "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/redact-econovaria-ci-log.mjs",
     "scripts/redact-econovaria-ci-log.test.mjs",
@@ -136,7 +140,9 @@
     "Supply Chain Security",
     "dependency-review",
     "verify-and-attest",
-    "CodeQL"
+    "CodeQL",
+    "Phase 15 Controlled Staging Convergence",
+    "Validate fail-closed staging release contract"
   ],
   "criticalJobChecks": [
     "admin-api-check",
@@ -198,7 +204,8 @@
     "disposable-postgres",
     "dependency-review",
     "verify-and-attest",
-    "CodeQL"
+    "CodeQL",
+    "Validate fail-closed staging release contract"
   ],
   "readOnlyPaths": [
     "scripts/player-cross-cutting-authority.test.mjs",
