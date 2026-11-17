@@ -40,7 +40,7 @@ function fixture() {
   const flow = installMarketDirectoryFlow({mount,terminal,config});
   const page = { ...data.market, assets:[data.market.assets[1],{...data.market.assets[0],id:"additional",symbol:"ADDL"}], pagination:{offset:2,limit:2,returned:2,hasMore:false,nextOffset:null} };
   return {mount,store,freshness,config,calls,toasts,invalid,flow,button,status,page,resolve,reject,
-    click:()=>listeners.get('click')?.({target:{closest:()=>button},preventDefault(){},stopImmediatePropagation(){}}) };
+    click:()=>{document.activeElement=button;listeners.get('click')?.({target:{closest:()=>button},preventDefault(){},stopImmediatePropagation(){}});} };
 }
 test('page validation fails closed and deduplicates without losing detail',()=>{
  const current={assets:[{id:'a',sector:'A',history:[10]}],selectedAssetId:'a',pagination:{offset:0,limit:2,hasMore:true,nextOffset:2}};
@@ -84,13 +84,75 @@ test('current invalid-session response reaches the safe-exit callback',async()=>
 });
 
 test('pagination preserves distinct buy and sell draft fields after render',async()=>{
- const f=fixture(), buy={quantity:{name:'quantity',value:'7',type:'number'}}, sell={quantity:{name:'quantity',value:'3',type:'number'}};
+ const f=fixture(), buy={quantity:{name:'quantity',value:'7',type:'number',focus(){this.focused=true;}}}, sell={quantity:{name:'quantity',value:'3',type:'number'}};
  function form(kind,fields){const elements=Object.values(fields);elements.namedItem=name=>fields[name];return {dataset:{playerMarketOrderForm:kind},elements,dispatchEvent(){}};}
  const forms=[form('buy-quote',buy),form('sell-review',sell)];
  f.mount.querySelectorAll=()=>forms;
  const query=f.mount.querySelector;
  f.mount.querySelector=selector=>selector.includes('buy-quote')?forms[0]:selector.includes('sell-review')?forms[1]:query(selector);
  f.store.subscribe(()=>{buy.quantity.value='1';sell.quantity.value='1';});
- f.click();await tick();f.resolve(f.page);await tick();
- assert.equal(buy.quantity.value,'7');assert.equal(sell.quantity.value,'3');f.flow.destroy();
+ f.click();await tick();document.activeElement=buy.quantity;f.resolve(f.page);await tick();
+ assert.equal(buy.quantity.value,'7');assert.equal(sell.quantity.value,'3');assert.equal(buy.quantity.focused,true);assert.notEqual(f.status.focused,true);f.flow.destroy();
+});
+
+test('real authenticated adapter retains earlier pages for authoritative order detail',async()=>{
+ const {createStudentProfileApiCall}=await import('../src/integrations/student-profile-api-call.js');
+ const requests=[];
+ const asset=(ticker,price)=>({assetId:ticker,ticker,companyName:ticker,currentPrice:price,previousClose:price,sector:'Tech'});
+ const adapter=createStudentProfileApiCall({request:async request=>{
+   requests.push(request);
+   if(request.endpointKey==='marketAsset')return {ok:true,asset:asset(request.path.includes('AAA')?'AAA':'BBB',9),history:[{price:8},{price:9}],tickIndex:2};
+   const offset=new URL(request.path,'https://fixture.invalid').searchParams.get('offset');
+   return {ok:true,assets:[asset(offset==='1'?'BBB':'AAA',1)],pagination:{offset:Number(offset),limit:1,returned:1,hasMore:offset==='0',nextOffset:offset==='0'?1:null},tickIndex:1};
+ }});
+ const context=(endpointKey,payload={},params={})=>({endpointKey,payload,params,method:'GET',path:'/unused',requestId:'market-fixture',
+   session:{authenticated:true,csrfToken:'C'.repeat(43),gameSessionId:'fixture-game'},config:{deviceId:'00000000-0000-4000-8000-000000000001'}});
+ const first=await adapter(context('market',{offset:0,limit:1}));
+ const second=await adapter(context('market',{offset:1,limit:1}));
+ assert.deepEqual(first.assets.map(a=>a.id),['AAA']);assert.deepEqual(second.assets.map(a=>a.id),['BBB']);
+ for(const ticker of ['AAA','BBB']){
+   const detail=await adapter(context('marketAsset',{}, {assetId:ticker}));
+   assert.equal(detail.assets.find(a=>a.id===ticker).price,9);
+   assert.deepEqual(detail.assets.find(a=>a.id===ticker).history,[8,9]);assert.equal(detail.tickIndex,2);
+ }
+ const refreshed=await adapter(context('market',{offset:0,limit:1}));assert.deepEqual(refreshed.assets.map(a=>a.id),['AAA']);
+ assert.ok(requests.every(r=>r.method==='GET'));assert.ok(requests.every(r=>!r.path.includes('gameSessionId')));
+});
+
+test('PlayerApi receives page and detail beyond 1000 accumulated instruments without truncation',async()=>{
+ const {createStudentProfileApiCall}=await import('../src/integrations/student-profile-api-call.js');
+ const {PlayerApi}=await import('../src/api/player-api.js');
+ const asset=i=>({assetId:`A${i}`,ticker:`A${i}`,companyName:`Asset ${i}`,currentPrice:1,sector:'Tech'});
+ const adapter=createStudentProfileApiCall({request:async request=>{
+   if(request.endpointKey==='marketAsset')return {ok:true,asset:{...asset(1000),currentPrice:9},history:[{price:9}],tickIndex:3};
+   const offset=Number(new URL(request.path,'https://fixture.invalid').searchParams.get('offset'));
+   return {ok:true,assets:Array.from({length:offset===1000?1:100},(_,i)=>asset(offset+i)),pagination:{offset,limit:100,returned:offset===1000?1:100,hasMore:offset<1000,nextOffset:offset<1000?offset+100:null},tickIndex:1};
+ }});
+ const api=new PlayerApi({usePreviewData:false,apiCall:adapter,authenticated:true,csrfToken:'C'.repeat(43),gameSessionId:'fixture-game',deviceId:'00000000-0000-4000-8000-000000000001'});
+ for(let offset=0;offset<=1000;offset+=100){
+   const page=await api.request('market',{payload:{offset,limit:100},force:true});
+   assert.equal(page.assets[0].id,`A${offset}`);assert.equal(page.assets.length,offset===1000?1:100);
+ }
+ const detail=await api.request('marketAsset',{params:{assetId:'A1000'},force:true});
+ assert.equal(detail.assets.length,1);assert.equal(detail.assets[0].id,'A1000');assert.equal(detail.assets[0].price,9);
+});
+
+for(const retirement of ['abort','session','newer-page']) test(`real adapter rejects ${retirement} directory result before snapshot mutation`,async()=>{
+ const {createStudentProfileApiCall}=await import('../src/integrations/student-profile-api-call.js');
+ let release;const hold=new Promise(r=>release=r);let count=0;
+ const row=id=>({assetId:id,ticker:id,companyName:id,currentPrice:1});
+ const adapter=createStudentProfileApiCall({request:async request=>{
+   if(request.endpointKey==='marketAsset')return {ok:true,asset:{...row('OLD'),currentPrice:9},tickIndex:2};
+   const call=count++;if(call===0)await hold;
+   return {assets:[row(call===0?'OLD':'NEW')],pagination:{offset:0,limit:100,hasMore:false},tickIndex:1};
+ }});
+ const controller=new AbortController();
+ const context=(endpointKey='market',session='one')=>({endpointKey,method:'GET',params:{assetId:'OLD'},payload:{offset:0},signal:controller.signal,session:{authenticated:true,gameSessionId:session},config:{deviceId:'00000000-0000-4000-8000-000000000001'}});
+ const pending=adapter(context());const rejected=assert.rejects(pending,e=>e.code==='REQUEST_SUPERSEDED');
+ if(retirement==='abort')controller.abort();
+ if(retirement==='session')await adapter({...context('market','two'),signal:null});
+ if(retirement==='newer-page')await adapter({...context(),signal:null});
+ release();await rejected;
+ const detail=await adapter({...context('marketAsset',retirement==='session'?'two':'one'),signal:null});
+ assert.equal(detail.assets.length,0,'retired OLD row must not enter the shared directory');
 });

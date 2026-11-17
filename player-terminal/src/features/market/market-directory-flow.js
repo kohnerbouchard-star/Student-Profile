@@ -8,7 +8,7 @@ import { nextMarketPage, appendMarketPage } from "./market-directory-model.js";
 export function installMarketDirectoryFlow({ mount, terminal, config }) {
   const freshness = terminal.freshness;
   const api = new PlayerApi(config, { freshness, deferFreshnessSettlement: true });
-  let active = null, destroyed = false, generation = 0;
+  let active = null, destroyed = false, generation = 0, publishing = false;
   let previous = terminal.getState();
   function current(operation) {
     const state = terminal.getState();
@@ -24,7 +24,8 @@ export function installMarketDirectoryFlow({ mount, terminal, config }) {
   }
   const unsubscribe = terminal.subscribe?.((state) => {
     if (state.route !== previous?.route || state.status !== previous?.status || state.modal !== previous?.modal
-      || Boolean(state.routeLoading?.market) !== Boolean(previous?.routeLoading?.market)) retire();
+      || Boolean(state.routeLoading?.market) !== Boolean(previous?.routeLoading?.market)
+      || (!publishing && active && state.data?.market !== active.market)) retire();
     previous = state;
   });
   async function load(button) {
@@ -34,7 +35,8 @@ export function installMarketDirectoryFlow({ mount, terminal, config }) {
       || (state.data?.capabilities?.endpointKeys != null && state.data.capabilities.endpointKeys.market !== true)) return;
     api.setSession(config);
     const operation = { market: state.data.market, generation, ticket: freshness?.capture(["market"]),
-      controller: new AbortController(), restore: setButtonProcessing(button, "Loading instruments") };
+      controller: new AbortController(), focusedAtStart: button === document.activeElement,
+      restore: setButtonProcessing(button, "Loading instruments") };
     active = operation;
     try {
       const page = await api.request("market", { payload: request, force: true, signal: operation.controller.signal });
@@ -42,13 +44,21 @@ export function installMarketDirectoryFlow({ mount, terminal, config }) {
       const market = appendMarketPage(operation.market, page, request);
       const orderDrafts = [...(mount.querySelectorAll?.("form[data-player-market-order-form]") || [])].map((form) => ({
         kind: form.dataset.playerMarketOrderForm,
+        focusedName: [...form.elements].find((field) => field === document.activeElement)?.name || "",
         fields: [...form.elements].filter((field) => field.name && !field.disabled && field.type !== "hidden" && field.type !== "submit")
           .map((field) => [field.name, field.value]),
       }));
       const search = mount.querySelector("[data-player-market-search]");
       const searchValue = search?.value || "";
+      const searchFocused = search === document.activeElement;
+      const buttonFocused = button === document.activeElement
+        || (operation.focusedAtStart && document.activeElement === document.body);
       const searchOpen = mount.querySelector("[data-player-market-search-panel]")?.hidden === false;
-      if (!updateStoreFromSnapshot(terminal.getState(), (latest) => ({ ...latest, data: { ...latest.data, market } }))) return;
+      let accepted;
+      publishing = true;
+      try { accepted = updateStoreFromSnapshot(terminal.getState(), (latest) => ({ ...latest, data: { ...latest.data, market } })); }
+      finally { publishing = false; }
+      if (!accepted) return;
       operation.market = market;
       // Keep local filtering usable across appended pages without claiming
       // that this loaded-only search is a server-wide search.
@@ -72,8 +82,10 @@ export function installMarketDirectoryFlow({ mount, terminal, config }) {
             if (field && !field.disabled) field.value = value;
           }
           form?.dispatchEvent(new Event("input", { bubbles: true }));
+          if (draft.focusedName) form?.elements.namedItem(draft.focusedName)?.focus?.({ preventScroll: true });
         }
-        mount.querySelector("[data-player-market-directory-status]")?.focus?.({ preventScroll: true });
+        if (searchFocused) input?.focus?.({ preventScroll: true });
+        else if (buttonFocused) mount.querySelector("[data-player-market-directory-status]")?.focus?.({ preventScroll: true });
       });
       // Never settle a whole-market invalidation with this partial page.
     } catch (error) {

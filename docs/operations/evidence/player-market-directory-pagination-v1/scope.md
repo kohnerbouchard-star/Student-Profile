@@ -37,7 +37,7 @@ server directory changes concurrently.
 
 ## Qualification
 
-- 18 focused Node cases pass against real PlayerApi, terminal store and freshness.
+- 23 focused Node cases pass against real PlayerApi, terminal store and freshness.
 - Full Player `verify` passes.
 - Architecture inventory regenerates from 1,623 to 1,625 sources; all debt counts
   unchanged. Full root aggregate passes on Node 22.23.1/npm 10.9.8 after
@@ -63,3 +63,24 @@ server directory changes concurrently.
 Next: independent review, draft PR and exact-head hosted qualification. Follow-on
 Market capabilities remain separate: server-backed search, asset deep links and
 real timestamp-based series controls.
+
+## Independent review correction
+
+The first review found that the real authenticated adapter replaced its shared
+Market snapshot with the later page even though the terminal retained the union.
+That prevented authoritative order-detail projection for an earlier-page ticker.
+`player-terminal/src/api/market-read-model.js` now retains earlier assets for a
+positive-offset read; offset-zero refresh still replaces the directory normally.
+A real `createStudentProfileApiCall` regression traverses AAA page 0, BBB page 1,
+then obtains current price, history and tick for both tickers and checks refresh.
+All 43 focused pagination/projection cases pass. This correction receives no
+live trading or economic mutation acceptance credit. Fresh exact-head review and
+qualification are required; prior source-only runs remain historical.
+
+Second review identified response sanitizer truncation above 1,000 accumulated
+assets. The authenticated adapter retains its internal directory but projects
+only this requested page or detail into PlayerApi. The shared adapter also
+rejects aborted/session-obsolete Market reads before snapshot mutation; newer
+directory reads supersede earlier ones. Terminal aggregate replacement aborts
+an outstanding page. Real adapter/API cases cover 1,001 assets, latest detail,
+abort, session rotation and superseding refresh. No sanitizer limit is relaxed.
