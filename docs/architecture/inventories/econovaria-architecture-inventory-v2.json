@@ -12,7 +12,7 @@
     "edgeEntrypoints": 28,
     "handlerFiles": 60,
     "persistenceOutsideInfrastructure": 84,
-    "crossDomainDeepImports": 68,
+    "crossDomainDeepImports": 70,
     "browserTransportShimFiles": 26,
     "compatibilityMarkerFiles": 208,
     "schedulerEntrypoints": 10,
@@ -1238,6 +1238,18 @@
         "ownerDomain": "storylines",
         "importedDomain": "stocks",
         "target": "../../stocks/news.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/stockMarketRunnerHttpHandler.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/stockMarketRunnerHttpHandler.test.fixtures.support.ts"
       },
       {
         "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.eventFixtures.support.ts",
