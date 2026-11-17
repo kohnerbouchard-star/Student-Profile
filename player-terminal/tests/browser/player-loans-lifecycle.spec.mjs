@@ -78,3 +78,16 @@ test("bound-account rejection remains an error and does not fabricate repaid deb
   expect(await page.evaluate(() => loansTest.terminal.getState().data.loans.activeLoans[0].balance)).toBe(4.01);
   await expect(form.locator('button[type="submit"]')).toBeEnabled();
 });
+
+test("facility-bound repayment account updates on refresh without sending a payment", async ({ page }) => {
+  const disclosure = page.locator('[data-player-loan-repayment-account]');
+  await page.locator('[data-endpoint="loanRepay"]').locator('..').locator('summary').click();
+  await expect(disclosure).toContainText("Repayment account unavailable");
+  for (const [account, label] of [["savings", "Savings account"], ["business", "Business operating account"], ["checking", "Checking account"]]) {
+    await page.evaluate(async (value) => { loansTest.models.loans.activeLoans[0].repaymentAccountType = value; await loansTest.terminal.refreshResources(["loans"]); }, account);
+    await expect(disclosure).toContainText(`facility-bound ${label} in NRC`);
+  }
+  await page.evaluate(async () => { delete loansTest.models.loans.activeLoans[0].repaymentAccountType; await loansTest.terminal.refreshResources(["loans"]); });
+  await expect(disclosure).toContainText("Repayment account unavailable");
+  expect(await page.evaluate(() => loansTest.repayments)).toEqual([]);
+});
