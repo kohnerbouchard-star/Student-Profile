@@ -69,7 +69,12 @@ class NameResolutionTests(unittest.TestCase):
         self.assertTrue(sql.rstrip().endswith('rollback;'))
         self.assertNotIn('exception when', sql.lower())
         workflow = (ROOT / '.github/workflows/db-baseline-lint-qualification.yml').read_text()
-        self.assertIn('supabase db lint --workdir backend --local --level warning --fail-on error', workflow)
+        self.assertIn('Fail on any error across exact CLI-covered scope with runtime temporary context', workflow)
+        self.assertIn('node scripts/db-baseline-lint-qualification.mjs --database', workflow)
+        self.assertIn('CONTEXT_LINT_STAGE_LEAKED_BETWEEN_TARGETS', sql)
+        self.assertIn('if v_target.oid = v_core then execute v_fixture; end if;', sql)
+        self.assertIn('CONTEXT_LINT_COVERAGE_DRIFT', sql)
+        self.assertIn('CONTEXT_LINT_ANY_DEFINITION_CHANGED', sql)
         self.assertNotIn('continue-on-error', workflow)
 
     def test_no_lint_or_security_bypass(self):

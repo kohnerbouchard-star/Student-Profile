@@ -108,3 +108,38 @@ Next decision only after actual evidence: independently review an explicit
 context-aware gate implementation with the same enumerated coverage, both negative
 controls, complete error reporting and lifecycle evidence. Do not silently convert
 the existing CLI failure into success or ignore its result.
+
+## Reviewed context-aware gate transition candidate
+
+Run `44024643912`, job `133841949002`, on exact head
+`87f17ce77be6a6095107c4885c89fb54bd6c281c` passed both migration replays,
+all definition/security assertions, the full 531-function contextual check, and
+actual service-role quote lifecycle acceptance (stage isolation, balanced currency
+nets, zero replay/rollback deltas and two-game isolation). Context-free CLI again
+reported only the same temporary-stage error. This is now evidence of an invalid
+checker context rather than an untested exemption.
+
+The next candidate explicitly replaces that final context-free invocation with
+the context-aware fail-on-error gate, rather than concealing its exit status.
+The preceding historical notes accurately describe earlier candidates, not this
+transition. No errors are ignored. Any finding at level error fails the subprocess
+and job. Coverage uses the pinned CLI 2.109.1 filters and additionally requires the
+observed per-schema counts (30/6/68/427). Count/schema drift blocks for review.
+Every routine definition is compared before/after checking.
+
+Independent-review hardening: the temporary relation now exists only while the
+one known quote-core OID is checked; the other 530 functions see it absent. An
+unrelated deliberately invalid public function is created in a rolled-back
+negative-control transaction and enters the same enumeration (532 total). The
+actual checker subprocess must exit nonzero with SQLSTATE 42703 and the final
+error-level assertion. A subsequent fresh clean subprocess must return zero and
+531 functions, also proving the negative-control fixture did not persist. Missing
+psql, early SQL failure or a different error cannot satisfy that control. Existing
+absent/malformed-stage controls remain mandatory, and quote lifecycle acceptance
+still runs before the final gate.
+
+This transition has not yet executed in CI. Independent review and exact-head
+positive/negative execution are required before calling the gate qualified. No
+merge, production/staging execution, runtime definition change or trigger coverage
+is claimed or authorized. Trigger exclusion is identical to the pinned CLI, not
+an assertion that triggers are validated.
