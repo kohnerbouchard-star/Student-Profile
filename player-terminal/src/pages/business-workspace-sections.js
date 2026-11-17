@@ -1,3 +1,4 @@
+import { renderBusinessNextActions } from "./business-next-actions.js";
 import { renderBusinessEquipmentInstall, renderBusinessOfferDrafts, renderBusinessOfferStock } from "./business-production-controls.js";
 import { renderBusinessIpoPanel } from "../features/business-ipo/business-ipo-panel.js";
 import { isEndpointEnabled } from "../api/capabilities.js";
@@ -115,7 +116,7 @@ function statusControls(data) { const business=data.business; return `<section c
 
 export function renderBusinessWorkspacePage(data) {
   if (data?.business?.configured !== true) return renderBusinessFormationPage(data);
-  return `<section class="player-terminal-page player-terminal-business-page" data-page="business" data-business-workspace-v2><div class="player-terminal-page-heading"><div><small>PLAYER ENTERPRISE</small><h2>Business</h2><p>Operate from canonical Inventory, Banking, Store, Workforce, Equipment, manufacturing, governance, and receipt evidence.</p></div><div class="player-terminal-heading-actions"><button class="player-terminal-icon-button" type="button" data-player-action="refresh-data" aria-label="Refresh Business data">${icon("refresh")}</button></div></div>${navigation()}<div class="player-terminal-business-layout">${overview(data)}${products(data)}${stockroom(data)}${procurement(data)}${production(data)}${workforce(data)}${equipment(data)}${sales(data)}${finance(data)}${governance(data)}${activity(data)}${statusControls(data)}</div></section>`;
+  return `<section class="player-terminal-page player-terminal-business-page" data-page="business" data-business-workspace-v2><div class="player-terminal-page-heading"><div><small>PLAYER ENTERPRISE</small><h2>Business</h2><p>Operate from canonical Inventory, Banking, Store, Workforce, Equipment, manufacturing, governance, and receipt evidence.</p></div><div class="player-terminal-heading-actions"><button class="player-terminal-icon-button" type="button" data-player-action="refresh-data" aria-label="Refresh Business data">${icon("refresh")}</button></div></div>${navigation()}<div class="player-terminal-business-layout">${overview(data)}${renderBusinessNextActions(data)}${products(data)}${stockroom(data)}${procurement(data)}${production(data)}${workforce(data)}${equipment(data)}${sales(data)}${finance(data)}${governance(data)}${activity(data)}${statusControls(data)}</div></section>`;
 }
 
 function buildCountryOnlyWorldModel(data) {
