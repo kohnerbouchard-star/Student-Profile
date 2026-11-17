@@ -1,5 +1,5 @@
 {
-  "base": "956ad02db949ae9c4cff7d709a18ec28d20c0788",
+  "base": "9df2064d6835b64ab9f7a3bde19ed1da5356cded",
   "sourceHead": "bc16e13336d0b9e114c78f86be122899419ff6c7",
   "derivation": "Current main pull_request branch/event/path filters on complete PR1000 scope;24 families,48 active tuples,3 guarded skips. No matrices. Closed-only Branch Hygiene excluded; CodeQL external. No workflow/gate changes.",
   "pairs": [
