@@ -101,7 +101,10 @@
     "Verify Player Store cutover and retained authorities",
     "Verify serial settlement, ordering races, and two-game isolation",
     "Verify standalone Player Terminal and full Chromium suite",
-    "Replay complete database twice and lint at warning level"
+    "Replay complete database twice and lint at warning level",
+    "multicurrency-stock-funding-v1",
+    "Verify C3C Stock buy settlement source and retained C3A/C3B scope + C3D sell + C3E Player cutover",
+    "Verify C3C atomic Stock buy database and retained C3A/C3B authority + C3D sell + C3E cutover"
   ],
   "criticalJobChecks": [
     "Verify production promotion remains fail-closed",
@@ -148,7 +151,9 @@
     "Verify Player Store cutover and retained authorities",
     "Verify serial settlement, ordering races, and two-game isolation",
     "Verify standalone Player Terminal and full Chromium suite",
-    "Replay complete database twice and lint at warning level"
+    "Replay complete database twice and lint at warning level",
+    "Verify C3C Stock buy settlement source and retained C3A/C3B scope + C3D sell + C3E Player cutover",
+    "Verify C3C atomic Stock buy database and retained C3A/C3B authority + C3D sell + C3E cutover"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",

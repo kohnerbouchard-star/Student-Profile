@@ -38,3 +38,15 @@ check identities. Integrated roster pins will select the final published source/
 this scope and authority file for both sides, followed only by a pins-only commit. Authority verifier accepts six changed paths
 under eight locked paths; its 16 regression cases pass. Hosted/browser qualification
 remains outstanding. No check, workflow filter, assertion or manual guard is weakened.
+
+## Authority completeness correction
+
+Hosted inspection at `cd55fc2c` found all 25 naturally scheduled workflows passing,
+but the manifest omitted `multicurrency-stock-funding-v1` and its two C3C source
+and disposable-database job identities. Both jobs had passed. The correction only
+appends those exact three required identities and two critical identities, yielding
+76 required / 47 unique critical checks. Existing order and entries are preserved;
+three dispatch-only guarded jobs remain guarded, with no bypass or workflow edits.
+Fresh metadata-complete source publication and pins-only refresh are required;
+earlier green results do not qualify the new head. No live database test or
+production mutation was performed by this work.
