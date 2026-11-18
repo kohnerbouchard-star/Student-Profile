@@ -60,3 +60,7 @@ then pin both integrated roles to its verified public SHA/tree.
 ## Draft PR 1011 verification checkpoint
 
 Public source 99d6edc4dc747e380be8c6ac15995a50d3616250, tree 910bb7baa3ab65c719cbee7e85945c0e903f7040, exactly matches independently reviewed local bd1605282. All 20 focused cases, full root tests, Player verification and core backend TypeScript pass. Browser execution is blocked before test bodies because local Chromium is absent. Full Edge typecheck and smoke are blocked by the frozen esm.sh Supabase SDK network fetch; no passing claim is made for either. Hosted exact-head qualification remains required. Authority and CI inventory use the actual PR number and deny production deployment, mutation and secret handling. No guard or workflow weakening.
+
+## Actual-main serial integration (2026-11-18)
+
+Normally integrate actual main `b9265aecd9b59099b6973d27eec9580ffc806c38` containing Loans receipts #1007, Crafting #1008 and Store state #1010. Preserve every predecessor source/test/authority and both Player package test registrations. Resolve only additive roadmap, regenerated combined inventory and inherited runtime pins. Principal progress source/tests remain unchanged from `73e96c54`. Publish metadata-complete integration then a four-value pin-only child; independent review and full fresh exact-head hosted qualification remain required. No manual deployment, provider setting or live DB action.

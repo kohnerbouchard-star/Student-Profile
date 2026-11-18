@@ -1,7 +1,7 @@
 {
-  "base": "03adc6891995fe1d780fe34629b1daf14470ea39",
+  "base": "b9265aecd9b59099b6973d27eec9580ffc806c38",
   "sourceHead": "99d6edc4dc747e380be8c6ac15995a50d3616250",
-  "derivation": "Current main-target pull_request opened/synchronize/reopened filters evaluated against all 11 changed paths including actual-number metadata and integrated source pins. 38 workflow families, 78 active job tuples, 4 condition-guarded skips; no matrices. CodeQL external. No workflow, check, condition, command, permission or runtime guard changed. SourceHead identifies reviewed source, not final hosted qualification.",
+  "derivation": "Current main-target pull_request opened/synchronize/reopened filters evaluated against all 11 changed paths including actual-number metadata and integrated source pins. 38 workflow families, 78 active job tuples, 4 condition-guarded skips; no matrices. CodeQL external. No workflow, check, condition, command, permission or runtime guard changed. SourceHead identifies reviewed source, not final hosted qualification. Actual-main integration preserves merged #1007/#1008/#1010 and the additive Store test command. Own eleven-path scope remains unchanged after inventory regeneration and final repin. Inherited Crafting filter addition names only pr-1007.json; no change to PR1011 applicability. Both runtime roles must bind the published metadata-complete integration.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-browser-e2e.yml",
