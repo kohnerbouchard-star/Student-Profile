@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
-import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
+import { readEdgeRuntimeSource, assertExtractedModulesReachable } from "./helpers/edge-runtime-source.mjs";
 
 const files = {
   publicContracts:
@@ -49,6 +49,7 @@ const files = {
   resourcePlan: "player-terminal/src/api/resource-plan.js",
   storePage: "player-terminal/src/pages/store-page.js",
   purchaseFlow: "player-terminal/src/features/store/store-purchase-flow.js",
+  purchaseState: "player-terminal/src/features/store/store-purchase-state.js",
   purchaseContract:
     "player-terminal/src/features/store/store-purchase-contract.js",
   purchaseConvergence:
@@ -446,11 +447,18 @@ requireTokens(source.purchaseFlow, "exact selected-offer flow", [
   "expectedVersion",
   "offerKey",
   "alreadyCompleted",
-  'refreshState: warnings.length ? "pending" : "complete"',
+  'type: "refresh-finished"',
   "convergeCommittedStorePurchase",
   "retryCommittedRefresh",
   "data-player-store-refresh-retry",
   "transaction?.processing === true && !force",
+  'type: "settlement-started"',
+]);
+assertExtractedModulesReachable(files.purchaseFlow, [files.purchaseState], new Map([
+  [files.purchaseFlow, source.purchaseFlow], [files.purchaseState, source.purchaseState],
+]));
+requireTokens(source.purchaseState, "Store transaction state", [
+  'refreshState: event.warnings.length ? "pending" : "complete"',
   "processing: true",
 ]);
 requireTokens(source.capabilitiesUi, "retained capability aliases", [
