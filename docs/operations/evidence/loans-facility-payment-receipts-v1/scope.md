@@ -1,0 +1,75 @@
+# Facility-linked loan payment receipts
+
+Roadmap: `LOANS-FACILITY-PAYMENT-RECEIPTS-001`.
+Draft PR: #1007. Source `7254a511226252b95589ecac41e7ab09b0dcbced`.
+Base `03adc6891995fe1d780fe34629b1daf14470ea39`.
+
+## Audit and scope
+
+Prior Loans forecast/history and repayment-account disclosure are source-merged.
+Existing payment history is a flat list referring to opaque facility keys, making
+multiple facilities difficult to reconcile. The new native keyboard-operable
+receipt disclosures group only already authorized, normalized payment records by
+facility. Current product name is reference metadata, not historical loan terms.
+
+The existing normalized facility public key is the sole join. No current offer,
+player home currency, array index, name, or debt total determines that join.
+Orphan receipts remain visible when the bounded facility window omits their loan.
+Every receipt retains its currency, principal/interest allocations, posted or
+reversed state, public key and recorded/applied dates. No payment total or payoff
+quote is synthesized. Both section and disclosure retain incomplete-window
+warnings. Refreshing unavailable lifecycle data removes the stale receipts.
+
+Implementation: `player-terminal/src/pages/loans-history.js`.
+Tests: `player-terminal/tests/loans-lifecycle-forecast.mjs` and
+`player-terminal/tests/browser/player-loans-lifecycle.spec.mjs`.
+No migration, RPC, backend/query, route, permissions, CSS or mutation changes.
+
+## Evidence and remaining gates
+
+- Focused lifecycle Node tests: 14/14 pass, including three new grouping/orphan/escaping regressions that fail unchanged main.
+- Full Player verify and full root npm test pass under Node 22.23.1/npm 10.9.8.
+- Backend core TypeScript passes. Full Edge check fails retrieving the frozen esm.sh Supabase SDK; no skip or version replacement.
+- Desktop/mobile receipt disclosure regression added. Local pinned Chromium unavailable; browser behavior remains unqualified until hosted execution.
+- Independent source review found no actionable issue and independently passed all 14 lifecycle cases and the Loans surface contract. Independent metadata review also confirms 25 workflow families, 47 active tuples, 3 guarded skips and complete 7-changed/9-locked scope with no workflow edits. Fresh exact-head hosted qualification remains required. No real database, staging or production acceptance claimed.
+
+Actual-number authority and CI contract are derived from current main-target
+pull_request filters against the complete changed scope. Read-only verifier paths
+are locked, not edited. All production/deployment/secret denials remain false.
+
+Next: qualify exact-head checks and return the draft for review. No merge/deploy.
+
+## Exact-head scheduling correction
+
+Final source/metadata `a7cb5ad73` passes the repeated full root aggregate. Full
+backend smoke stops on the same frozen SDK fetch. GitHub's complete workflow
+listing schedules 24 of 25 derived PR families; Crafting Item Runtime is absent.
+The coordinator authorized adding only the exact `pr-1007.json` path to its
+existing pull-request filter. All jobs, commands, assertions, permissions,
+conditions and other triggers remain unchanged. Authority becomes eight changed
+paths under ten locks, with the same 25 families/47 active tuples/3 guarded skips.
+Earlier no-workflow-change statements describe the source tranche and are
+superseded only for this bounded scheduling path. Fresh independent review and
+exact-head qualification remain required; no dispatch or waiver.
+
+## Roster integrated-source pin reconciliation
+
+The unchanged whole-runtime guard rejects the new feature head with
+`runtime-head-projection-drift`: retained roster pins identify old main source
+`60a08987`, not these reviewed Loans bytes. The coordinator requested checking
+and correcting this shared qualification blocker without weakening the guard.
+
+Prepare this scope/authority inclusion first, publish the reviewed immutable
+candidate, then set only both integrated-composite source SHA/tree pairs in
+`scripts/roster-connected/sources.json` to that public candidate. Preserve the
+mode, exact API equality, seven overlay paths, classifier, workflow coverage,
+all harness/test bytes and production holds. Both sources must identify the same
+reviewed integrated tree. No exclusions or assertions are removed or broadened.
+Because new scope/authority files are deliberately runtime inputs, pinning occurs
+in a separate descendant containing only the harness-owned sources.json change.
+
+Final scope is nine changed paths under eleven locks; CI remains 25 workflow
+families, 47 active tuples and three guarded skips. Independently review the
+pin/control diff, prove disk and whole-runtime equivalence, run the complete
+roster guard suite and both historical mode fixtures, then renew hosted
+qualification. The source pin does not authorize live deployment or production.

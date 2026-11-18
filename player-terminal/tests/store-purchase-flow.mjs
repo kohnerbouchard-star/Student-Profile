@@ -652,6 +652,7 @@ const purchaseSourcePaths = [
   "../src/features/store/store-purchase-flow.js",
   "../src/features/store/store-purchase-contract.js",
   "../src/features/store/store-purchase-convergence.js",
+  "../src/features/store/store-purchase-state.js",
 ];
 const purchaseSources = await Promise.all(purchaseSourcePaths.map((path) =>
   readFile(new URL(path, import.meta.url), "utf8")
@@ -688,7 +689,7 @@ assert.ok(!retrySource.includes('api.execute("storePurchase"'), "Refresh retry m
 assert.equal((source.match(/api\.execute\("storeOfferPurchase"/g) || []).length, 1, "The controller must contain only one Business settlement call site.");
 assert.ok(source.includes("data-player-store-refresh-retry"), "The safe refresh retry control must be handled by the Store controller.");
 assert.ok(source.includes("transaction?.processing === true && !force"), "The economic POST must block modal dismissal until its authoritative result is known.");
-assert.ok(source.includes("transaction = { ...current, processing: true"), "Settlement processing must be explicit before the economic POST begins.");
+assert.ok(source.includes('type: "settlement-started"'), "Settlement processing must transition explicitly before the economic POST begins.");
 assert.ok(source.includes("transaction.processing === true"), "The processing dialog must receive focus when all transaction controls are disabled.");
 assert.ok(source.includes('addEventListener("click", handleClick, true)'), "The feature controller must intercept seeded one-click purchase handling before the application controller.");
 

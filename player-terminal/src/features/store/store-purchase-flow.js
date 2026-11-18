@@ -1,3 +1,4 @@
+import { transitionStorePurchase } from "./store-purchase-state.js";
 import { isEndpointEnabled } from "../../api/capabilities.js";
 import { renderModal } from "../../components/modal.js";
 import { focusFirstInteractive, setButtonProcessing } from "../../core/dom.js";
@@ -212,19 +213,10 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       const quote = businessOffer
         ? validateBusinessOfferQuote(operation.result, { item: current.item, offer: current.offer, quantity, allocationIntent: request.intent })
         : validateSystemOfferQuote(operation.result, { item: current.item, offer: current.offer, quantity, allocationIntent: request.intent });
-      transaction = {
-        ...current,
-        stage: "review",
-        quantity,
-        quote,
-        receipt: null,
-        error: "",
-        refreshState: "idle",
-        allocationDraft: request.allocationDraft,
-        fundingIntent: request.intent,
-        quoteRequest: requestGeneration,
-        commandRequest: null,
-      };
+      transaction = transitionStorePurchase(current, {
+        type: "quote-reviewed", quantity, quote, allocationDraft: request.allocationDraft,
+        fundingIntent: request.intent, request: requestGeneration,
+      });
       renderTransaction();
     } catch (error) {
       if (!requestIsCurrent(requestGeneration)) return;
@@ -244,22 +236,23 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
   async function confirmPurchase(button) {
     const current = currentTransaction();
     const quote = current?.quote;
-    if (current?.processing === true) return;
+    if (current?.processing === true || current?.stage === "receipt") return;
     if (!current || !quote?.quoteKey || !requestIsCurrent(current.commandRequest || current.quoteRequest)) {
       if (current) {
-        transaction = { ...current, stage: "select", error: "Request a current Store quote before confirming the purchase." };
+        transaction = transitionStorePurchase(current, { type: "quote-required", message: "Request a current Store quote before confirming the purchase." });
         renderTransaction();
       }
       return;
     }
     if (!current.commandRequest && quoteExpired(quote)) {
-      transaction = { ...current, stage: "select", quote: null, error: "This quote expired. Request a new authoritative quote." };
+      transaction = transitionStorePurchase(current, { type: "quote-required", expired: true, message: "This quote expired. Request a new authoritative quote." });
       renderTransaction();
       return;
     }
 
     void button;
-    transaction = { ...current, processing: true, error: "" };
+    transaction = transitionStorePurchase(current, { type: "settlement-started" });
+    if (transaction === current) return;
     renderTransaction();
     const { requestGeneration, signal } = beginRequest({ settlement: true });
     let operation;
@@ -300,47 +293,19 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
           requestIsCurrent,
         });
         if (!refreshed) return;
-        transaction = {
-          ...current,
-          item: refreshed.item,
-          offer: refreshed.offer,
-          stage: "select",
-          quote: null,
-          receipt: null,
-          error: refreshed.refreshPending
-            ? `${failure.message} The authoritative Store refresh is still pending, so this offer remains unavailable.`
-            : failure.message,
-          refreshState: refreshed.refreshPending ? "pending" : "idle",
-          refreshWarning: refreshed.refreshPending
-            ? "Authoritative Store refresh pending."
-            : "",
-          processing: false,
-          fundingIntent: null,
-          commandRequest: null,
-        };
+        transaction = transitionStorePurchase(current, { type: "offer-invalidated", refreshed, message: failure.message });
       } else {
         // A failed response may follow a server commit. Keep this command; the
         // existing API retains its replay key for ambiguous failures.
-        transaction = { ...current, commandRequest: requestGeneration, error: failure.message, processing: false };
+        transaction = transitionStorePurchase(current, { type: "settlement-uncertain", request: requestGeneration, message: failure.message });
       }
       renderTransaction();
       return;
     }
 
-    const committed = {
-      ...current,
-      stage: "receipt",
-      receipt,
-      error: "",
-      refreshState: "refreshing",
-      refreshWarning: "",
-      processing: false,
-      invalidatedResources: Object.freeze([
-        ...new Set(Array.isArray(operation.invalidatedResources)
-          ? operation.invalidatedResources
-          : ["dashboard", "store", "inventory", "banking", "bankingFx"]),
-      ]),
-    };
+    const committed = transitionStorePurchase(current, {
+      type: "settlement-committed", receipt, invalidatedResources: operation.invalidatedResources,
+    });
     if (requestIsCurrent(requestGeneration)) { transaction = committed; renderTransaction(); }
 
     let warnings;
@@ -361,25 +326,15 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       return;
     }
     if (!warnings || !requestIsCurrent(requestGeneration)) return;
-    transaction = {
-      ...transaction,
-      refreshState: warnings.length ? "pending" : "complete",
-      refreshWarning: warnings.join(" "),
-    };
+    transaction = transitionStorePurchase(transaction, { type: "refresh-finished", warnings });
     renderTransaction();
   }
 
   async function retryCommittedRefresh() {
     const current = currentTransaction();
-    if (
-      !current || current.stage !== "receipt" || !current.receipt ||
-      current.refreshState !== "pending"
-    ) return;
-    transaction = {
-      ...current,
-      refreshState: "refreshing",
-      refreshWarning: "",
-    };
+    const refreshing = transitionStorePurchase(current, { type: "refresh-started" });
+    if (!refreshing || refreshing === current) return;
+    transaction = refreshing;
     renderTransaction();
     const { requestGeneration, signal } = beginRequest();
     let warnings;
@@ -400,18 +355,15 @@ export function installStorePurchaseFlow({ mount, terminal, config }) {
       return;
     }
     if (!warnings || !requestIsCurrent(requestGeneration)) return;
-    transaction = {
-      ...transaction,
-      refreshState: warnings.length ? "pending" : "complete",
-      refreshWarning: warnings.join(" "),
-    };
+    transaction = transitionStorePurchase(transaction, { type: "refresh-finished", warnings });
     renderTransaction();
   }
 
   function editQuantity() {
-    if (!transaction) return;
+    const selected = transitionStorePurchase(transaction, { type: "edit-selection" });
+    if (!selected || selected === transaction) return;
     cancelActiveRequest();
-    transaction = { ...transaction, stage: "select", quote: null, receipt: null, fundingIntent: null, commandRequest: null, error: "", refreshState: "idle", refreshWarning: "", invalidatedResources: [], processing: false };
+    transaction = selected;
     renderTransaction();
   }
 

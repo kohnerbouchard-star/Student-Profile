@@ -50,3 +50,7 @@ three dispatch-only guarded jobs remain guarded, with no bypass or workflow edit
 Fresh metadata-complete source publication and pins-only refresh are required;
 earlier green results do not qualify the new head. No live database test or
 production mutation was performed by this work.
+
+## Actual-main serial integration (2026-11-18)
+
+Normally integrate actual main `9d0518906f4f5746b87a5cc179922145b29d767e`, preserving complete predecessor source/tests/authorities and package registrations. Market page/tests and corrected Stock funding authority remain byte-identical to qualified `2ae47914`. Resolve inherited source pins; roadmap merge is additive. Six-path/eight-lock scope retained. Publish metadata-complete integration then a four-value pin-only child, independently review and qualify every fresh exact-head gate. No manual deployment, provider configuration or live DB action.

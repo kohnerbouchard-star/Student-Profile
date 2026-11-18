@@ -361,3 +361,131 @@ test("Crafting controller commits supported recovery with a stable idempotency k
   assert.ok(reads >= 2);
   controller.destroy();
 });
+
+test("Crafting normalizer compatibility export is the pure read-model owner", async () => {
+  const owner = await import("../admin/v2/src/routes/crafting/CraftingReadModel.js");
+  assert.equal(normalizeCraftingReadModel, owner.normalizeCraftingReadModel);
+  for (const value of [null, [], {}, { jobs: [], effects: [], supply: [] }]) {
+    assert.throws(() => normalizeCraftingReadModel(value), (error) => error.code === "INVALID_RESPONSE");
+  }
+  const source = oversightData({
+    jobs: Array.from({ length: 251 }, (_, i) => ({ recipeKey: "recipe", recipeName: "Recipe", status: "failed", quantity: i })),
+    effects: Array.from({ length: 501 }, () => ({ summary: PRIVATE_ID })),
+    supply: Array.from({ length: 1001 }, () => ({ itemKey: "ALLOY_PLATE", availableQuantity: -1 })),
+  });
+  const before = structuredClone(source);
+  for (const wrapped of [source, { data: source }, { data: { data: source } }, { value: source }]) {
+    const model = owner.normalizeCraftingReadModel(wrapped);
+    assert.equal(model.jobs.length, 250);
+    assert.equal(model.effects.length, 500);
+    assert.equal(model.supply.length, 1000);
+    assert.equal(model.summary.failedJobCount, 250);
+    assert.equal(model.effects[0].summary, "");
+    assert.equal(model.supply[0].itemKey, "alloy_plate");
+    assert.equal(model.supply[0].availableQuantity, null);
+    for (const value of [model, model.jobs, model.jobs[0], model.summary, model.invariants]) assert.ok(Object.isFrozen(value));
+  }
+  assert.deepEqual(source, before);
+});
+
+function deferredCraftingResult() {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
+function controlledCrafting(overrides = {}) {
+  const api = {
+    readCrafting: async () => ({ data: oversightData() }),
+    recoverCraftingJob: async () => ({ committed: true }),
+    applyCraftingSupply: async () => ({ committed: true }),
+    cancelCraftingRequest: () => false,
+    ...overrides,
+  };
+  const notifications = [];
+  const changes = [];
+  const controller = createCraftingController({ api, selectedGameId: GAME_ID,
+    hasPermission: () => true, notify: (value) => notifications.push(value),
+    onChange: (value) => changes.push(value),
+    cryptoObject: { randomUUID: () => "30000000-0000-4000-8000-000000000003" },
+  });
+  return { controller, notifications, changes };
+}
+
+test("Crafting extraction preserves stale read rejection and latest authoritative state", async () => {
+  const first = deferredCraftingResult(), second = deferredCraftingResult();
+  let reads = 0;
+  const { controller } = controlledCrafting({ readCrafting: () => (++reads === 1 ? first.promise : second.promise) });
+  const oldLoad = controller.load(), newLoad = controller.load();
+  second.resolve({ data: oversightData({ pack: { packKey: "latest" } }) });
+  await newLoad;
+  first.resolve({ data: oversightData({ pack: { packKey: "stale" } }) });
+  await oldLoad;
+  assert.equal(controller.getState().data.pack.packKey, "latest");
+  controller.destroy();
+});
+
+test("Crafting deactivation cancels unresolved reads and ignores their late result", async () => {
+  const pending = deferredCraftingResult();
+  const { controller, changes } = controlledCrafting({ readCrafting: () => pending.promise, cancelCraftingRequest: () => true });
+  const loading = controller.load();
+  controller.deactivate();
+  const state = controller.getState(), count = changes.length;
+  pending.resolve({ data: oversightData() });
+  await loading;
+  assert.equal(controller.getState(), state);
+  assert.equal(changes.length, count);
+  assert.equal(state.hasResolved, false);
+  controller.destroy();
+});
+
+test("Crafting deactivation retains resolved data while cancelling a refresh", async () => {
+  const pending = deferredCraftingResult();
+  let reads = 0;
+  const { controller } = controlledCrafting({ readCrafting: () => ++reads === 1 ? Promise.resolve({ data: oversightData() }) : pending.promise,
+    cancelCraftingRequest: () => true });
+  await controller.load();
+  const data = controller.getState().data;
+  const refresh = controller.load();
+  controller.deactivate();
+  assert.equal(controller.getState().status, "ready");
+  assert.equal(controller.getState().data, data);
+  pending.reject(new Error("late refresh error"));
+  await refresh;
+  assert.equal(controller.getState().status, "ready");
+  controller.destroy();
+});
+
+test("Crafting retry preserves replay key and blocks duplicate in-flight mutation", async () => {
+  const { createAdminErrorEnvelope } = await import("../admin/v2/src/core/error-envelope.js");
+  const pending = deferredCraftingResult(), calls = [];
+  const { controller } = controlledCrafting({ recoverCraftingJob: async (input) => {
+    calls.push(input); if (calls.length === 1) throw createAdminErrorEnvelope({ code: "NETWORK_ERROR", retryable: true });
+    return pending.promise;
+  } });
+  const job = { jobKey: JOB_KEY, recipeName: "Recipe" }, input = { outcome: "requeue", reason: "Retry" };
+  assert.equal((await controller.recoverJob(job, input)).ok, false);
+  const retry = controller.recoverJob(job, input);
+  assert.equal((await controller.recoverJob(job, input)).busy, true);
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].idempotencyKey, calls[1].idempotencyKey);
+  pending.resolve({ committed: true });
+  assert.equal((await retry).ok, true);
+  controller.destroy();
+});
+
+test("Crafting destruction ignores late reads and prevents post-commit notifications or refresh", async () => {
+  const read = deferredCraftingResult(), mutation = deferredCraftingResult();
+  const { controller, changes, notifications } = controlledCrafting({ readCrafting: () => read.promise, applyCraftingSupply: () => mutation.promise });
+  const loading = controller.load(), saving = controller.applySupply("ALLOY_PLATE", { availableQuantity: 1 });
+  controller.destroy();
+  const state = controller.getState(), count = changes.length;
+  read.resolve({ data: oversightData() }); mutation.resolve({ committed: true });
+  await loading;
+  const result = await saving;
+  assert.equal(result.ok, true);
+  assert.equal(result.refreshScheduled, false);
+  assert.equal(controller.getState(), state);
+  assert.equal(changes.length, count);
+  assert.deepEqual(notifications, []);
+});

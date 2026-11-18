@@ -89,3 +89,38 @@ test("repayment discloses the facility account and currency without assuming hom
     assert.doesNotMatch(html, /private-account-id|<img src=x>/);
   }
 });
+
+test("payment receipts are grouped by facility without combining debts or hiding reversals", () => {
+  const f = loansFixture();
+  f.lifecycle.facilities.items[1].currentProduct = { ...f.lifecycle.facilities.items[1].currentProduct, name: "Equipment loan" };
+  f.lifecycle.payments.items.push({ ...f.lifecycle.payments.items[0], id: `pay_${"f".repeat(32)}`, loanId: f.lifecycle.facilities.items[1].id, currencyCode: "LUM" });
+  const html = render(f);
+  const groups = [...html.matchAll(/<details[^>]+data-player-loan-payment-history="([^"]+)"[\s\S]*?<\/details>/g)];
+  assert.equal(groups.length, 2);
+  assert.equal(groups[0][1], f.lifecycle.facilities.items[0].id);
+  assert.match(groups[0][0], /Payments for Working capital/);
+  assert.match(groups[0][0], /2 recorded receipts/);
+  assert.match(groups[0][0], /Reversed payment; not counted/);
+  assert.doesNotMatch(groups[0][0], /Equipment loan|LUM/);
+  assert.match(groups[1][0], /Payments for Equipment loan/);
+  assert.match(groups[1][0], /1 recorded receipt/);
+  assert.match(groups[1][0], /Principal LUM 0.80/);
+  assert.doesNotMatch(groups[1][0], /Principal NRC/);
+});
+test("orphan receipts and incomplete windows never fabricate a facility or complete payment total", () => {
+  const f = loansFixture(); f.lifecycle.facilities.items = [];
+  f.lifecycle.payments.complete = false; f.lifecycle.payments.hasMore = true;
+  const html = render(f);
+  assert.match(html, /Payments for credit facility/);
+  assert.match(html, /Facility details are outside the available history/);
+  assert.match(html, /More entries exist; this is not a complete history/);
+  assert.match(html, /not a payoff quote or a total of all payments/);
+  assert.match(html, /Principal NRC 0.80/);
+});
+test("receipt group names are escaped and empty payment history has no fabricated disclosure", () => {
+  const f = loansFixture(); f.lifecycle.facilities.items[0].currentProduct.name = '<img src=x onerror="bad()">';
+  assert.doesNotMatch(render(f), /<img src=x/);
+  assert.match(render(f), /Payments for &lt;img/);
+  f.lifecycle.payments.items = [];
+  assert.doesNotMatch(render(f), /data-player-loan-payment-history=/);
+});
