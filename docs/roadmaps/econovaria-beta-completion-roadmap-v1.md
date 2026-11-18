@@ -21,6 +21,8 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+Serial merge checkpoint (2026-11-18): Contracts empty-status navigation #1013 merged as `9d0518906f4f5746b87a5cc179922145b29d767e`, tree identical to qualified `32bb59b5`, after25 workflow families/47 active jobs and CodeQL passed. Inventory #1012 postmerge finished18 successes/five guarded skips including provider success. Existing Market summary owner #1014 normally integrates this actual main; all preceding source/tests/authorities and honest loaded-only volume/missing-vs-zero behavior remain preserved. Independently review/requalify the new union, including corrected Stock funding workflow identities, before another merge. Earlier pending records are historical; backend #1009 stays held, no deployment/live acceptance claim.
+
 Serial merge checkpoint (2026-11-18): Inventory guidance #1012 merged as `963406abec844f783d1f8d0e388a4b107db21b80`, tree identical to qualified `2f5dba56`, after25 workflow families/47 active jobs and CodeQL passed. Loans progress #1011 postmerge finished35 successes/five guarded skips, including provider success. Existing Contracts empty-status owner #1013 normally integrates this actual main and preserves complete predecessor source/tests/authorities. Explicit selection and initial fallback source stay unchanged from qualified `d88d1a79`; independent integration review and fresh exact-head hosted gates remain mandatory. Earlier draft/pending records are historical; backend #1009 stays held, no manual deployment or live acceptance claimed.
 
 - **CONTRACTS-STATUS-NAVIGATION-001 (2026-11-18):** `IMPLEMENTED_NOT_MERGED`, local branch `feat/contracts-history-honesty-20261118`, based on main `03adc689`. Honor explicitly selected empty status filters and expose active-button state without retaining stale detail/actions; initial/invalid selection keeps existing fallback. No API, SQL, RPC, security or economic-write change. Focused Contracts/history/Story and source syntax checks pass; root aggregate and independent corrected-source review pass; browser and backend qualification blocked locally by missing executables. [Scope and evidence](../operations/evidence/contracts-empty-status-navigation-v1/scope.md). No merge/deployment/runtime completion claimed; next item is qualification then serial integration.
@@ -831,3 +833,15 @@ reviewed local `618fbaf42`. Root and Player verification pass; authority remains
 atomic hosted qualification, but that evidence does not qualify the new union.
 Next: verify new exact public frontend/backend pins, then all current-head
 connected and required checks before any merge. No deploy/live completion claim.
+
+### Scope Intake: Player Market loaded-summary honesty (2026-11-18)
+
+`PLAYER-MARKET-SUMMARY-001` is `IMPLEMENTED_NOT_MERGED`, owned by
+`fix/market-read-state-20261118`, a bounded T047 follow-up. Missing composite
+observations no longer render invented zero at the renderer boundary; genuine
+zero remains visible. Volume is explicitly scoped to loaded instruments. Root
+and Player verification pass; 31 directory tests pass; independent review found
+no blocking findings. Backend checks lack Deno and browser checks lack Chromium;
+no database qualification, merge, deployment or full task completion claimed.
+See `docs/operations/evidence/player-market-summary-v1/scope.md` for acceptance,
+ownership, toolchain limitations and remaining gates.
