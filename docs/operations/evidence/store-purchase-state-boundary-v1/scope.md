@@ -46,3 +46,7 @@ by esm.sh Supabase 2.108.2 connection refusal (smoke reaches game-sessions).
 All 36 browser cases could not launch: pinned Chromium 1217 absent and its download
 archive is truncated. No local browser/connected/live acceptance credit is claimed;
 exact-head hosted browser verification is required before considering a merge.
+
+## Actual-main serial integration (2026-11-18)
+
+Normally integrate actual main `51445fff957b15ffa6f8c0496300db255f2f4a03`, including merged Loans #1007 and Crafting #1008, into this existing owner. Preserve complete source/tests/authorities for all three capabilities; resolve additive roadmap intake and source pins, and regenerate the combined architecture inventory. Store source/tests remain unchanged from qualified `b8175443`. Bind both runtime roles to the published metadata-complete integration in a separate pin-only child. Independent review and fresh exact-head hosted gates remain required. No manual deployment, live DB mutation or provider-setting change.
