@@ -16,3 +16,7 @@ Focused Contracts flow (including new empty-filter, refresh, stale selection, de
 Next: finish aggregate/browser checks, independent review, then exact-head hosted qualification and serial integration. Only merged and qualified release evidence can close the roadmap item.
 
 Independent corrected-source review found no further blocking issue and independently passed Contracts tests plus 102 interaction/lifecycle characterization cases. Root aggregate uses Node22.23.1 with available npm11.9.0, not the pinned npm10.9.8; hosted pinned-toolchain qualification remains required.
+
+## Actual-main serial integration (2026-11-18)
+
+Normally integrate actual main `963406abec844f783d1f8d0e388a4b107db21b80`, retaining all merged Loans/Crafting/Store/Inventory source, tests, package registrations and authorities. Contracts app/page/browser/test bytes remain identical to qualified `d88d1a79`; initial unset selection fallback and explicit empty selection behavior unchanged. Resolve only additive roadmap and source pins; eight-path/ten-lock scope retained. Publish metadata-complete source then a four-value pin-only child; independent review and fresh exact-head hosted qualification required. No manual deployment, provider configuration or live DB action.
