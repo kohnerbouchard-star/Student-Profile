@@ -21,6 +21,8 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 
 ## Scope Intake
 
+Serial merge checkpoint (2026-11-18): Market summaries #1014 merged as `e22591309f0b5730f581157c5a239368bc05c121`, tree identical to qualified `d4b45c37`, after25 workflows/48 active jobs and CodeQL passed. Contracts #1013 postmerge finished18 successes/five guarded skips including provider success. Existing Portfolio disclosure owner #1015 normally integrates this actual main, preserving all predecessor capabilities and their verification registrations. Portfolio return/unavailable behavior stays unchanged from qualified `aa717028`; independent review and full fresh exact-head qualification remain mandatory. Earlier draft/pending records are historical. Backend #1009 and live quota-dependent acceptance remain held, autofocus correction remains separate, no manual deployment or broad T048 completion claim.
+
 Serial merge checkpoint (2026-11-18): Contracts empty-status navigation #1013 merged as `9d0518906f4f5746b87a5cc179922145b29d767e`, tree identical to qualified `32bb59b5`, after25 workflow families/47 active jobs and CodeQL passed. Inventory #1012 postmerge finished18 successes/five guarded skips including provider success. Existing Market summary owner #1014 normally integrates this actual main; all preceding source/tests/authorities and honest loaded-only volume/missing-vs-zero behavior remain preserved. Independently review/requalify the new union, including corrected Stock funding workflow identities, before another merge. Earlier pending records are historical; backend #1009 stays held, no deployment/live acceptance claim.
 
 Serial merge checkpoint (2026-11-18): Inventory guidance #1012 merged as `963406abec844f783d1f8d0e388a4b107db21b80`, tree identical to qualified `2f5dba56`, after25 workflow families/47 active jobs and CodeQL passed. Loans progress #1011 postmerge finished35 successes/five guarded skips, including provider success. Existing Contracts empty-status owner #1013 normally integrates this actual main and preserves complete predecessor source/tests/authorities. Explicit selection and initial fallback source stay unchanged from qualified `d88d1a79`; independent integration review and fresh exact-head hosted gates remain mandatory. Earlier draft/pending records are historical; backend #1009 stays held, no manual deployment or live acceptance claimed.
@@ -833,6 +835,34 @@ reviewed local `618fbaf42`. Root and Player verification pass; authority remains
 atomic hosted qualification, but that evidence does not qualify the new union.
 Next: verify new exact public frontend/backend pins, then all current-head
 connected and required checks before any merge. No deploy/live completion claim.
+
+### 2026-11-18 — T048 Portfolio return and empty-read disclosures (local candidate)
+
+Scope: the 100-task execution ledger's T048, bounded to Portfolio positions UI
+on main `03adc6891`. Independent of active Market summary PR #1014 and of
+Banking, Inventory, Contracts, and database qualification branches. A zero,
+negative, absent, nonfinite, or overflowed cost-basis return no longer fabricates
+`0%` or `Infinity%`: it reads `Return unavailable`. A genuine zero P&L with a
+positive basis still reads `+0.00%`. Failed empty reads say positions unavailable,
+not no active positions; retained holdings are explicitly last loaded.
+
+Status: `IMPLEMENTED_NOT_MERGED`, partial T048 only. Focused holdings/disclosure
+regressions (five tests) and Player smoke pass. Independent review identified
+computed-percentage overflow; fixed with a regression. Browser coverage added
+for desktop/mobile but all four cases were blocked before execution by local
+Chromium launch failure (SIGABRT / ptrace denied), including an approved retry.
+Root `npm test` was attempted but failed with missing local
+`@supabase/supabase-js`; backend typecheck cannot start (`tsc` unavailable).
+No DB tests, live reads/writes, merges, or deployments. This does not qualify
+missing-value handling in upstream normalization, which still defaults some
+missing monetary values to zero; full T048 and release acceptance remain open.
+
+T048 follow-up: lockfile-only installs under Node22.22.2/npm10.9.8 succeeded.
+Root `npm test` and full Player `verify` now PASS, superseding the missing-dependency
+attempts above. Backend TypeScript passes; aggregate Edge typecheck is blocked
+by missing Deno. Browser remains unverified. Absent explicit basis can still use
+a valid quantity-times-average-cost fallback. Independent re-review accepted
+the corrected overflow handling and focused tests. Full T048 remains open.
 
 ### Scope Intake: Player Market loaded-summary honesty (2026-11-18)
 

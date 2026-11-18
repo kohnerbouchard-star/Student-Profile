@@ -31,7 +31,7 @@
     "contracts-submit": "node tests/contracts-connected-submission.mjs",
     "story-decisions": "node tests/story-decision-flow.mjs",
     "market-flow": "node tests/market-order-flow.mjs && node --test tests/market-directory-pagination.mjs",
-    "market-holdings": "node tests/portfolio-market-holdings.mjs",
+    "market-holdings": "node tests/portfolio-market-holdings.mjs && node --test tests/portfolio-positions-disclosures.mjs",
     "banking-read": "node tests/banking-read-model.mjs && node --test tests/banking-freshness-ownership.mjs ../scripts/business-banking-readiness.test.mjs",
     "banking-fx": "node tests/banking-fx-surface.mjs",
     "inventory-read": "node tests/inventory-read-model.mjs && node --test tests/inventory-availability-guidance.mjs",
