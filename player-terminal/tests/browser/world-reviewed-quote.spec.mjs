@@ -64,7 +64,9 @@ test("native World installer quote review and unchanged confirmation", async ({ 
     const render=()=>{mount.innerHTML=renderWorldPage(model,{...getWorldRouteViewState(),capabilities});};
     window.quoteFixture=installWorldRuntimeFlow({mount,config,terminal:{getState:()=>state,subscribe:()=>()=>{},requestRender:render,refresh:async()=>{}}});render();
   });
-  await page.getByLabel("Destination",{exact:true}).selectOption("loc_finish");
+  const destination = page.getByRole("combobox", {name:"Destination",exact:true});
+  await expect(destination).toBeEnabled();
+  await destination.selectOption("loc_finish");
   await page.locator('[data-world-form="travelQuote"] button[type="submit"]').click();
   const quote=page.locator('[data-world-form="travelExecute"]');
   await expect(quote).toContainText("Expires");await expect(quote).toContainText("route revision 3");

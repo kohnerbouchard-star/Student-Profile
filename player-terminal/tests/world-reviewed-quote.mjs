@@ -48,6 +48,7 @@ async function fixture(t) {
 test("actual World installer creates, reviews and executes only the owned quote with unchanged payload", async t=>{
  const f=await fixture(t);f.submit("travelQuote",{toLocationId:"loc_finish"});await f.until(()=>f.flow.getState().quote);
  const q=f.flow.getState().quote, html=renderWorldPage(f.runtime,{quote:q,capabilities:f.capabilities});
+ assert.match(html,/<small>AUTHORITATIVE QUOTE<\/small>/);
  assert.match(html,/Expires/);assert.match(html,/route revision 3/);assert.match(html,/Quoted cost/);assert.match(html,/0\.00/);
  f.submit("travelExecute",{quoteId:"trq_"+"3".repeat(32)});await tick();assert.equal(f.calls.filter(c=>c.endpointKey==="travelExecute").length,0);
  f.submit("travelExecute",{quoteId:q.publicQuoteId});await f.until(()=>f.calls.some(c=>c.endpointKey==="travelExecute"));
@@ -137,4 +138,17 @@ test("a refresh begun before late commitment cannot clear the committed reconcil
  finish({journey:{publicJourneyId:"trj_"+"2".repeat(32),status:"in_transit"}});await f.until(()=>f.flow.getState().departureStatus==="committed");releaseRead(f.runtime);await oldRefresh;
  assert.equal(f.flow.getState().departureStatus,"committed");assert.match(f.mount.html,/Departure committed. Refresh World/);
  await f.flow.refresh();assert.equal(f.flow.getState().departureStatus,null);
+});
+
+test("existing preview onboarding travel contract retains the authoritative quote landmark and usable confirmation",async()=>{
+ const transport=new PreviewTransport({simulateWrites:true});
+ const runtime=await transport.request({endpointKey:"worldRuntime",method:"GET"});
+ const {quote:reviewed}=await transport.request({endpointKey:"travelQuote",method:"POST",payload:{toLocationId:"loc_valerion_capital_v1",allowedModes:["land"]}});
+ assert.equal(reviewTravelQuote(reviewed,runtime).usable,true);
+ const html=renderWorldPage(runtime,{quote:reviewed,capabilities:{actions:{travelExecute:true,travelQuote:true}}});
+ assert.match(html,/<small>AUTHORITATIVE QUOTE<\/small>/);
+ assert.match(html,/<h3>Review travel quote<\/h3>/);
+ assert.doesNotMatch(html,/disabled>Confirm travel/);
+ const {journey}=await transport.request({endpointKey:"travelExecute",method:"POST",payload:{quoteId:reviewed.publicQuoteId}});
+ assert.equal(journey.status,"in_transit");
 });
