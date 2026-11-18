@@ -27,3 +27,14 @@ Acceptance: absent index and nonnumeric/nonfinite renderer fields cannot masquer
 ## Remaining qualification
 
 Review/publish draft if authorized, exact-head CI and browser qualification, then any separately authorized merge. Database-dependent integration/runtime evidence stays deferred; this local UI slice is not production readiness or full feature completion.
+
+## Draft publication
+
+Draft PR #1014 publishes source commit `7197b731a868bbcf6387d7defe268a5db168d2da`,
+whose tree `d25000ef35dbaf1b4999e4d35299d619da74dd8f` exactly matches reviewed local
+implementation `af7c0b062`. Its PR-bound authority locks only changed files plus
+unchanged verifier/regression files, preserving all existing required and critical
+check identities. Integrated roster pins will select the final published source/tree including
+this scope and authority file for both sides, followed only by a pins-only commit. Authority verifier accepts six changed paths
+under eight locked paths; its 16 regression cases pass. Hosted/browser qualification
+remains outstanding. No check, workflow filter, assertion or manual guard is weakened.
