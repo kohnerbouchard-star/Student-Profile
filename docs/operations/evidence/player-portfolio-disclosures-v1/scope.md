@@ -38,3 +38,14 @@ including an approved retry (SIGABRT/ptrace permissions). Browser remains pendin
 After lockfile installs: root `npm test` PASS; full Player `verify` PASS. Backend
 TypeScript check passes, but aggregate `typecheck:all` remains blocked at the
 Deno Edge check (spawn deno ENOENT). No backend aggregate pass claimed.
+
+## Approved draft publication
+
+Draft PR #1015 publishes reviewed source `630faf392d2fac8d7c58b8e9fad189cca0e8bbbe`,
+exact reviewed tree `97af219d22dba4018ebaeb098df8edf52ef07245`. PR-specific
+authority locks eight changed paths plus two read-only verifier/test paths,
+25 naturally applicable workflow families and all executable PR job identities.
+Only the three existing guarded manual staging/release/parity jobs are excluded.
+Final integrated roster pins must reference the metadata-complete public source
+in a separate pin-only child; no runtime or gate weakening.
+Hosted exact-head checks remain pending. No merge, deployment or live acceptance.
