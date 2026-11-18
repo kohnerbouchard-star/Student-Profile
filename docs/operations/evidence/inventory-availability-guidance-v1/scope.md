@@ -37,7 +37,7 @@ copy width, full-width rows and no overflow. Existing skeleton thresholds remain
 unchanged. Local browser launch is still blocked by socket permissions; hosted
 exact-head browser evidence is required before claiming this correction qualified.
 
-Scoped PR authority is recorded in `pr-1012.json`: 73 required and 45 critical
+Scoped PR authority is recorded in `pr-1012.json`: 75 required and 46 critical
 workflow/job identities plus the retained mandatory verifier coverage; live-job
 guards remain unchanged. Local authority validation and its 16 regression cases
 pass. Final local root and Player aggregates pass after the geometry correction.

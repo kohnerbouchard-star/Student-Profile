@@ -107,7 +107,9 @@
     "Verify Player Store cutover and retained authorities",
     "Verify serial settlement, ordering races, and two-game isolation",
     "Verify standalone Player Terminal and full Chromium suite",
-    "Replay complete database twice and lint at warning level"
+    "Replay complete database twice and lint at warning level",
+    "Business Workforce Production Payroll V2",
+    "verify-payroll"
   ],
   "criticalJobChecks": [
     "Verify production promotion remains fail-closed",
@@ -154,7 +156,8 @@
     "Verify Player Store cutover and retained authorities",
     "Verify serial settlement, ordering races, and two-game isolation",
     "Verify standalone Player Terminal and full Chromium suite",
-    "Replay complete database twice and lint at warning level"
+    "Replay complete database twice and lint at warning level",
+    "verify-payroll"
   ],
   "readOnlyPaths": [
     "scripts/verify-player-cross-cutting-authority.mjs",
