@@ -1,3 +1,4 @@
+import { renderCraftingJobOutcome } from "../features/crafting/job-outcome.js";
 import { escapeHtml, formatNumber } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
@@ -44,8 +45,9 @@ function usableEffectItem(item) {
 
 export function renderCraftingPage(data, ui) {
   const crafting = data.crafting;
+  const jobOutcome = renderCraftingJobOutcome(data, ui);
   if (!crafting) {
-    return `<section class="player-terminal-page player-terminal-crafting-page"><div class="player-terminal-page-heading"><div><small>FABRICATION WORKSHOP</small><h2>Crafting</h2><p>Combine owned materials into approved workshop items.</p></div></div>${renderEmptyState({ title: "No recipes available", detail: "Recipes will appear after an approved physical-economy pack is activated.", iconName: "factory" })}</section>`;
+    return `<section class="player-terminal-page player-terminal-crafting-page"><div class="player-terminal-page-heading"><div><small>FABRICATION WORKSHOP</small><h2>Crafting</h2><p>Combine owned materials into approved workshop items.</p></div></div>${jobOutcome}${renderEmptyState({ title: "No recipes available", detail: "Recipes will appear after an approved physical-economy pack is activated.", iconName: "factory" })}</section>`;
   }
 
   const recipes = Array.isArray(crafting.recipes) ? crafting.recipes : [];
@@ -84,6 +86,7 @@ export function renderCraftingPage(data, ui) {
         <form data-player-form="craft-item" data-endpoint="craftItem" data-recipe-id="${escapeHtml(selected.id)}"><label>QUANTITY<input name="quantity" type="number" min="1" max="${escapeHtml(selected.maxCraft)}" value="1" required /></label><button class="player-terminal-primary-button" type="submit" ${craftable ? "" : "disabled"}>${icon("factory")} Craft item</button></form>
       </section>` : ""}
 
+      ${jobOutcome}
       <section class="player-terminal-panel player-terminal-crafting-queue">
         <header class="player-terminal-panel-header"><div><span>PRODUCTION QUEUE</span><strong>${escapeHtml(queue.length)} jobs</strong></div></header>
         <div>${queue.length ? queue.map(queueJob).join("") : `<p>No items are currently being fabricated.</p>`}</div>
