@@ -21,3 +21,7 @@ Draft #1008 source c72a865d matches reviewed local tree. Exact authority locks e
 
 ## Roster qualification pin repair
 Hosted e7d0e919 failed the pre-install runtime-equivalence check. Local exported verifier reproduces runtime-head-projection-drift: inherited integrated pins60a08987 describe the pre-refactor repository, while the gate intentionally compares every non-exempt repository input. This is not a Crafting behavior failure. Preserve the entire default-deny verifier, workflow and both full mode suites. Add only sources.json to the exact authority scope, then bind both integrated source pins to the reviewed published source checkpoint containing this metadata. The final pin-only commit must pass exact projection and disk integrity against that checkpoint. Nine changed paths, eleven locked paths; no production changes or weakened checks. Fresh hosted qualification is required.
+
+## Actual-main serial integration (2026-11-18)
+
+Normally merge #1007 main `4d5d1116453e8148675b486c58448a764cd85331` into this existing owner. Resolve only additive roadmap intake and inherited source pins; retain every Loans runtime, test, authority and scheduling byte. Crafting runtime and tests remain byte-identical to qualified `65291e20`. Nine-path own scope and eleven locks remain unchanged. Rebind both integrated pins to the metadata-complete published integration, then independently review and rerun full exact-head hosted gates. No manual release, live DB operation, provider setting change or live completion claim.

@@ -1,7 +1,7 @@
 {
-  "base": "03adc6891995fe1d780fe34629b1daf14470ea39",
+  "base": "4d5d1116453e8148675b486c58448a764cd85331",
   "sourceHead": "c72a865d3ef7f8386ff02e548db4b396059b4dfc",
-  "derivation": "Full PR1008 scope including metadata evaluated against current main-target opened/synchronize/reopened branch/path filters. 35 families,69 active tuples,5 guarded skips; no matrices. Closed-only Branch Hygiene excluded; external CodeQL required. No workflow, permission, gate or command edits. Roster pin repair adds scripts/roster-connected/sources.json to scope without editing workflow filters or gates; final source-pin-only commit binds the reviewed complete checkpoint.",
+  "derivation": "Full PR1008 scope including metadata evaluated against current main-target opened/synchronize/reopened branch/path filters. 35 families,69 active tuples,5 guarded skips; no matrices. Closed-only Branch Hygiene excluded; external CodeQL required. No workflow, permission, gate or command edits. Roster pin repair adds scripts/roster-connected/sources.json to scope without editing workflow filters or gates; final source-pin-only commit binds the reviewed complete checkpoint. Actual-main reconciliation 2026-11-18 preserves merged Loans #1007 source/tests and its Crafting scheduling trigger. PR1008 changed scope remains the same nine paths against this main; inherited filter addition names only pr-1007.json and does not alter applicable PR1008 jobs. Both source pins are regenerated after metadata-complete integration publication.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-browser-e2e.yml",
