@@ -809,3 +809,31 @@ reviewed local `618fbaf42`. Root and Player verification pass; authority remains
 atomic hosted qualification, but that evidence does not qualify the new union.
 Next: verify new exact public frontend/backend pins, then all current-head
 connected and required checks before any merge. No deploy/live completion claim.
+
+### 2026-11-18 — T048 Portfolio return and empty-read disclosures (local candidate)
+
+Scope: the 100-task execution ledger's T048, bounded to Portfolio positions UI
+on main `03adc6891`. Independent of active Market summary PR #1014 and of
+Banking, Inventory, Contracts, and database qualification branches. A zero,
+negative, absent, nonfinite, or overflowed cost-basis return no longer fabricates
+`0%` or `Infinity%`: it reads `Return unavailable`. A genuine zero P&L with a
+positive basis still reads `+0.00%`. Failed empty reads say positions unavailable,
+not no active positions; retained holdings are explicitly last loaded.
+
+Status: `IMPLEMENTED_NOT_MERGED`, partial T048 only. Focused holdings/disclosure
+regressions (five tests) and Player smoke pass. Independent review identified
+computed-percentage overflow; fixed with a regression. Browser coverage added
+for desktop/mobile but all four cases were blocked before execution by local
+Chromium launch failure (SIGABRT / ptrace denied), including an approved retry.
+Root `npm test` was attempted but failed with missing local
+`@supabase/supabase-js`; backend typecheck cannot start (`tsc` unavailable).
+No DB tests, live reads/writes, merges, or deployments. This does not qualify
+missing-value handling in upstream normalization, which still defaults some
+missing monetary values to zero; full T048 and release acceptance remain open.
+
+T048 follow-up: lockfile-only installs under Node22.22.2/npm10.9.8 succeeded.
+Root `npm test` and full Player `verify` now PASS, superseding the missing-dependency
+attempts above. Backend TypeScript passes; aggregate Edge typecheck is blocked
+by missing Deno. Browser remains unverified. Absent explicit basis can still use
+a valid quantity-times-average-cost fallback. Independent re-review accepted
+the corrected overflow handling and focused tests. Full T048 remains open.
