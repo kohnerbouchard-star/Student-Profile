@@ -44,3 +44,7 @@ pass. Final local root and Player aggregates pass after the geometry correction.
 Independent review corrections preserve the <=460px single-column layout, wrap
 long totals, and target the total-value field rather than the optional status
 pill in the new browser stress test. Hosted requalification remains pending.
+
+## Actual-main serial integration (2026-11-18)
+
+Normally integrate actual main `c8f8e7c5db49ba31c89f0535f1b59ac3b5af572c` containing merged Loans receipts, Crafting, Store state and Loans principal progress. Preserve every predecessor source/test/authority and all three additive Player package test registrations. Inventory source/CSS/browser tests remain unchanged from qualified `8e37e081`, including320px geometry and original skeleton tolerances. Resolve additive roadmap and inherited source pins only; nine-path scope/eleven locks retained. Publish this metadata-complete integration then a four-value pin-only child. Independently rederive applicable CI and qualify the fresh exact head; no manual deployment, provider-setting change or live DB action.

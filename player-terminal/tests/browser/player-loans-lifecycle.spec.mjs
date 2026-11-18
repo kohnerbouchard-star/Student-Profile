@@ -91,3 +91,25 @@ test("facility-bound repayment account updates on refresh without sending a paym
   await expect(disclosure).toContainText("Repayment account unavailable");
   expect(await page.evaluate(() => loansTest.repayments)).toEqual([]);
 });
+
+test("facility receipts open by keyboard, retain reversals, and clear after unavailable refresh", async ({ page }) => {
+  const receipts = page.locator('[data-player-loan-payment-history]');
+  await expect(receipts).toHaveCount(1);
+  await expect(receipts.locator('summary')).toContainText('Payments for Working capital');
+  await receipts.locator('summary').focus();
+  await page.keyboard.press('Enter');
+  await expect(receipts).toHaveAttribute('open', '');
+  await expect(receipts.getByText('Principal NRC 0.80', { exact: false })).toHaveCount(2);
+  await expect(receipts.getByText('Reversed payment; not counted toward installment payments.')).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(receipts).not.toHaveAttribute('open', '');
+  await receipts.locator('summary').click();
+  await expect(receipts).toHaveAttribute('open', '');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  await page.evaluate(async () => { loansTest.models.loans.lifecycle = { version: 1, state: 'unavailable' }; await loansTest.terminal.refreshResources(['loans']); });
+  await expect(receipts).toHaveCount(0);
+  await expect(page.getByText('Loan history unavailable', { exact: true })).toBeVisible();
+  await page.evaluate(async (loans) => { loansTest.models.loans = loans; await loansTest.terminal.refreshResources(['loans']); }, loansFixture());
+  await expect(receipts).toHaveCount(1);
+  expect(await page.evaluate(() => loansTest.repayments)).toEqual([]);
+});
