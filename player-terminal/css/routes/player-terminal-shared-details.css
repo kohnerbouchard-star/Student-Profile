@@ -84,3 +84,47 @@
   padding-block: var(--player-space-3) var(--player-space-4);
 }
 
+
+/* Auto-fit Inventory cards can be narrow even on desktop. Keep metadata and
+   guidance out of the image/copy row instead of squeezing copy between them. */
+.player-terminal-app-root .player-terminal-inventory-card {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.player-terminal-app-root .player-terminal-inventory-copy {
+  padding-inline: 0;
+}
+
+.player-terminal-app-root .player-terminal-inventory-guidance {
+  grid-column: 1 / -1;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--player-color-text-muted);
+  font-size: var(--player-text-meta);
+  line-height: 1.55;
+}
+
+.player-terminal-app-root .player-terminal-inventory-meta {
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
+  min-width: 0;
+  justify-items: stretch;
+  align-items: center;
+}
+
+.player-terminal-app-root .player-terminal-inventory-meta > span {
+  min-width: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.player-terminal-app-root .player-terminal-inventory-meta strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 460px) {
+  .player-terminal-app-root .player-terminal-inventory-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

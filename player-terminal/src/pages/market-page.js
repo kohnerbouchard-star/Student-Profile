@@ -61,7 +61,8 @@ export function renderMarketPage(data, ui) {
   const relatedNews = newsUnavailable ? [] : data.news.items.filter((item) => selected.newsIds?.includes(item.id)).slice(0, 3);
   const marketVolume = market.assets.reduce((sum, asset) => sum + asset.volume, 0);
   const composite = market.assets.find((asset) => asset.id === "cel-index");
-  const compositeChange = Number(composite?.change) || 0;
+  const compositePrice = Number.isFinite(composite?.price) ? formatNumber(composite.price, 2) : "Unavailable";
+  const compositeChange = Number.isFinite(composite?.change) ? composite.change : null;
   const checkingAccounts = bankingFxUnavailable
     ? []
     : (Array.isArray(data.bankingFx?.balances) ? data.bankingFx.balances : [])
@@ -86,10 +87,10 @@ export function renderMarketPage(data, ui) {
     </header>
 
     <div class="player-terminal-market-summary">
-      <article><small>COMPOSITE INDEX</small><strong>${escapeHtml(formatNumber(composite?.price || 0, 2))}</strong><span class="${toneFromChange(compositeChange)}">${escapeHtml(formatPercent(compositeChange))}</span></article>
+      <article><small>COMPOSITE INDEX</small><strong>${escapeHtml(compositePrice)}</strong><span class="${compositeChange === null ? "" : toneFromChange(compositeChange)}">${escapeHtml(compositeChange === null ? "Change unavailable" : formatPercent(compositeChange))}</span></article>
       <article><small>YOUR POSITIONS</small><strong>${escapeHtml(String(Array.isArray(data.portfolio?.holdings) ? data.portfolio.holdings.filter(h => h.quantity > 0).length : market.assets.filter(a => a.owned > 0).length))}</strong><span>Values by currency in Portfolio</span></article>
       <article><small>CHECKING FUNDING</small><strong>${escapeHtml(checkingAccounts.length ? `${checkingAccounts.length} account${checkingAccounts.length === 1 ? "" : "s"}` : "Unavailable")}</strong><span>${escapeHtml(accountSummary)}</span></article>
-      <article><small>MARKET VOLUME</small><strong>${escapeHtml(formatCompact(marketVolume))}</strong><span>Across listed assets</span></article>
+      <article><small>LOADED VOLUME</small><strong>${escapeHtml(formatCompact(marketVolume))}</strong><span>Across loaded instruments</span></article>
     </div>
 
     <div class="player-terminal-market-layout">

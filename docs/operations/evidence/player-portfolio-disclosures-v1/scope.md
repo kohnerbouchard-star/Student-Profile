@@ -49,3 +49,7 @@ Only the three existing guarded manual staging/release/parity jobs are excluded.
 Final integrated roster pins must reference the metadata-complete public source
 in a separate pin-only child; no runtime or gate weakening.
 Hosted exact-head checks remain pending. No merge, deployment or live acceptance.
+
+## Actual-main serial integration (2026-11-18)
+
+Normally integrate actual main `e22591309f0b5730f581157c5a239368bc05c121`, preserving all merged feature source/tests/authorities and every Player package registration. Portfolio runtime and unit/browser source remain byte-identical to qualified `aa717028`, including genuine zero vs unavailable return and unavailable empty holdings. Resolve additive roadmap and inherited source pins; eight-path/ten-lock scope retained. Publish metadata-complete integration then a four-value pin-only child, independently review and freshly qualify all exact-head gates. No manual deployment, provider setting, live DB operation or broad T048 completion claim.

@@ -156,3 +156,45 @@ for(const retirement of ['abort','session','newer-page']) test(`real adapter rej
  const detail=await adapter({...context('marketAsset',retirement==='session'?'two':'one'),signal:null});
  assert.equal(detail.assets.length,0,'retired OLD row must not enter the shared directory');
 });
+
+
+function summaryForComposite(composite) {
+  const data = structuredClone(previewData);
+  data.market.assets = data.market.assets.filter(asset => asset.id !== "cel-index");
+  if (composite) data.market.assets.push({ ...data.market.assets[0], id: "cel-index", ...composite });
+  data.market.pagination = { offset: 0, limit: 2, hasMore: true, nextOffset: 2 };
+  const html = renderMarketPage(data, {});
+  return html.split('class="player-terminal-market-summary">')[1].split('class="player-terminal-market-layout">')[0];
+}
+
+test("market summary scopes volume to loaded instruments", () => {
+  const summary = summaryForComposite(null);
+  assert.match(summary, /LOADED VOLUME/);
+  assert.match(summary, /Across loaded instruments/);
+  assert.doesNotMatch(summary, /MARKET VOLUME|Across listed assets/);
+});
+
+test("missing composite is unavailable, not an invented zero", () => {
+  const summary = summaryForComposite(null).split("</article>")[0];
+  assert.match(summary, /<strong>Unavailable<\/strong>/);
+  assert.match(summary, /Change unavailable/);
+  assert.doesNotMatch(summary, /0\.00|is-good|is-bad/);
+});
+
+test("genuine zero composite price and change remain visible", () => {
+  const summary = summaryForComposite({ price: 0, change: 0 }).split("</article>")[0];
+  assert.match(summary, /<strong>0<\/strong>/);
+  assert.match(summary, /0\.00%/);
+  assert.doesNotMatch(summary, /unavailable/i);
+});
+
+for (const invalid of [undefined, null, NaN, Infinity, "0"]) {
+  test(`composite nonnumeric or nonfinite fields are unavailable: ${String(invalid)}`, () => {
+    const missingPrice = summaryForComposite({ price: invalid, change: 1 }).split("</article>")[0];
+    assert.match(missingPrice, /<strong>Unavailable<\/strong>/);
+    assert.match(missingPrice, /1\.00%/);
+    const missingChange = summaryForComposite({ price: 123, change: invalid }).split("</article>")[0];
+    assert.match(missingChange, /<strong>123<\/strong>/);
+    assert.match(missingChange, /Change unavailable/);
+  });
+}
