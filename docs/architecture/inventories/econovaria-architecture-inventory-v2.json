@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1638,
+    "sourceFiles": 1639,
     "edgeEntrypoints": 28,
     "handlerFiles": 61,
     "persistenceOutsideInfrastructure": 84,
