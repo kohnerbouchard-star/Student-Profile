@@ -1,11 +1,48 @@
-import { readFile } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
 
 test("native World installer quote review and unchanged confirmation", async ({ page }) => {
   // Isolated real installer/renderer fixture, not the complete application bootstrap.
-  const shell = (await readFile(new URL("../../index.html", import.meta.url), "utf8")).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+  // Deliberately inert, static fixture: never sanitize or embed application HTML.
+  // Keep the production stylesheet cascade, but omit every bootstrap script.
+  const shell = `<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>World quote review fixture</title>
+  <link rel="stylesheet" href="./css/player-terminal-recovery-base.css" />
+  <link rel="stylesheet" href="./css/player-terminal-recovery-core.css" />
+  <link rel="stylesheet" href="./css/player-terminal-recovery-ux.css" />
+  <link rel="stylesheet" href="./css/player-terminal-recovery-polish.css" />
+  <link rel="stylesheet" href="./css/player-terminal-recovery-normalization.css" />
+  <link rel="stylesheet" href="./css/player-terminal-tokens.css" />
+  <link rel="stylesheet" href="./css/player-terminal-foundation.css" />
+  <link rel="stylesheet" href="./css/player-terminal-recovery-shell-compat.css" />
+  <link rel="stylesheet" href="./css/routes/player-terminal-shared-layout.css" />
+  <link rel="stylesheet" href="./css/routes/player-terminal-shared-cards.css" />
+  <link rel="stylesheet" href="./css/routes/player-terminal-shared-lists.css" />
+  <link rel="stylesheet" href="./css/routes/player-terminal-shared-states.css" />
+  <link rel="stylesheet" href="./css/routes/player-terminal-shared-details.css" />
+  <link rel="stylesheet" href="./css/routes/player-terminal-shared-responsive.css" />
+  <link rel="stylesheet" href="./css/routes/player-terminal-shared-overlays.css" />
+  <link rel="stylesheet" href="./css/player-terminal-recovery-route-compat.css" />
+  <link rel="stylesheet" href="./css/routes/player-terminal-dashboard.css" />
+  <link rel="stylesheet" href="./css/player-terminal-skeletons.css" />
+  <link rel="stylesheet" href="./css/player-terminal-skeleton-geometry.css" />
+  <link rel="stylesheet" href="./css/player-terminal-recovery.css" />
+  <link rel="stylesheet" href="./css/player-story-cutscene.css" />
+  <link rel="stylesheet" href="./css/player-world-runtime.css" />
+  <link rel="stylesheet" href="./css/player-terminal-interior-v2.css" />
+  <link rel="stylesheet" href="./css/player-terminal-finance-v2.css" />
+  <link rel="stylesheet" href="./css/player-terminal-communications-v2.css" />
+  <link rel="stylesheet" href="./css/player-terminal-economy-items-v2.css" />
+  <link rel="stylesheet" href="./css/player-terminal-operations-v2.css" />
+  <link rel="stylesheet" href="./css/player-terminal-business-v2.css" />
+  <link rel="stylesheet" href="./css/player-terminal-world-v2.css" />
+  <link rel="stylesheet" href="./css/business-phase12-touch-targets.css" />
+</head><body></body></html>`;
   await page.route("http://127.0.0.1:4173/", route => route.fulfill({ contentType: "text/html", body: shell }));
   await page.goto("/");
+  await expect(page.locator("script")).toHaveCount(0);
   await page.evaluate(async () => {
     const { installWorldRuntimeFlow } = await import("/src/features/world/world-runtime-flow.js");
     const { renderWorldPage } = await import("/src/pages/world-page.js");
