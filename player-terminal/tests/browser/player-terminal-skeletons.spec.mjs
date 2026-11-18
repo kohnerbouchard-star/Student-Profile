@@ -190,3 +190,35 @@ test("skeleton motion is disabled when reduced motion is requested", async ({ pa
   });
   expect(animationName).toBe("none");
 });
+
+
+test("inventory availability guidance and metadata retain full card-width rows", async ({ page }) => {
+  await openTerminal(page, "inventory");
+  for (const width of [page.viewportSize().width, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    const layout = await page.locator(".player-terminal-inventory-card").first().evaluate((card) => {
+      // Stress the display projection only, without introducing any economic write.
+      card.querySelector(".player-terminal-inventory-meta > span:nth-of-type(3) strong").textContent = "USD 123,456,789,012,345.67";
+      const box = card.getBoundingClientRect();
+      const copy = card.querySelector(".player-terminal-inventory-copy").getBoundingClientRect();
+      const guidance = card.querySelector(".player-terminal-inventory-guidance").getBoundingClientRect();
+      const meta = card.querySelector(".player-terminal-inventory-meta").getBoundingClientRect();
+      return {
+        copyWidth: copy.width,
+        guidanceWidthRatio: guidance.width / box.width,
+        metaWidthRatio: meta.width / box.width,
+        guidanceBelowCopy: guidance.top >= copy.bottom,
+        metaBelowGuidance: meta.top >= guidance.bottom,
+        valueOverflow: Math.max(...[...card.querySelectorAll(".player-terminal-inventory-meta > span")].map((span) => span.scrollWidth - span.clientWidth)),
+        overflow: card.scrollWidth - card.clientWidth
+      };
+    });
+    expect(layout.copyWidth, "item copy must not collapse between image and metadata").toBeGreaterThan(100);
+    expect(layout.guidanceWidthRatio).toBeGreaterThan(0.75);
+    expect(layout.metaWidthRatio).toBeGreaterThan(0.75);
+    expect(layout.guidanceBelowCopy).toBe(true);
+    expect(layout.metaBelowGuidance).toBe(true);
+    expect(layout.overflow).toBeLessThanOrEqual(1);
+    expect(layout.valueOverflow).toBeLessThanOrEqual(1);
+  }
+});

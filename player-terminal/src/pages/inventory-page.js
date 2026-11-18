@@ -52,7 +52,8 @@ function renderInventoryItem(item, fallbackCurrencyCode) {
   const currencyCode = item.currencyCode || fallbackCurrencyCode;
   return `<article class="player-terminal-inventory-card">
     <div class="player-terminal-inventory-image"><img src="${escapeHtml(item.image)}" alt="" /><span>${escapeHtml(item.quantityOwned ?? item.quantity)}×</span></div>
-    <div class="player-terminal-inventory-copy"><small>${escapeHtml(item.category)} · ${escapeHtml(item.state)} · ${escapeHtml(item.itemVisibility || "player")}</small><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p><p>${escapeHtml(inventoryAvailabilityGuidance(item))}</p></div>
+    <div class="player-terminal-inventory-copy"><small>${escapeHtml(item.category)} · ${escapeHtml(item.state)} · ${escapeHtml(item.itemVisibility || "player")}</small><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p></div>
+    <p class="player-terminal-inventory-guidance">${escapeHtml(inventoryAvailabilityGuidance(item))}</p>
     <div class="player-terminal-inventory-meta">
       <span><small>AVAILABLE</small><strong>${escapeHtml(item.quantityAvailable ?? item.quantity ?? 0)}</strong></span>
       <span><small>RESERVED</small><strong>${escapeHtml(item.quantityReserved ?? 0)}</strong></span>
