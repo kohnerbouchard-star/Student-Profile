@@ -356,6 +356,29 @@ const badQuantity = structuredClone(data.businessStockroom);
 badQuantity.locations[0].quantityAvailable = 21;
 assert.throws(() => normalizeApiResponse("businessStockroom", badQuantity, normalizerContext), /incomplete data/u);
 
+// Public normalizer keeps defaults and generic sanitization ahead of the
+// Business rules while preserving endpoint-specific error metadata.
+const businessRead = { products: [], suppliers: [], company: {}, operations: {}, storeSales: data.business.storeSales };
+assert.deepEqual(normalizeApiResponse("business", { ok: true, data: businessRead }, normalizerContext),
+  { ...businessRead, manufacturingJobs: [] });
+const jobKey = `mfg_${"a".repeat(32)}`;
+const job = { jobKey, businessKey, productKey: `bpr_${"a".repeat(32)}`,
+  status: "queued", quantity: 1, completedOutputQuantity: 0, canCancel: false };
+assert.deepEqual(normalizeApiResponse("business", { ...businessRead, manufacturingJobs: [job] }, normalizerContext).manufacturingJobs, [job]);
+for (const [endpointKey, payload] of [
+  ["business", { ...businessRead, manufacturingJobs: [{ ...job, completedOutputQuantity: null }] }],
+  ["business", { ...businessRead, workforceUtilization: { payroll: {} } }],
+  ["business", { ...businessRead, storeSales: { sales: [] } }],
+  ["businessStockroom", badQuantity],
+  ["businessRecipes", { recipes: [{ recipeKey: null }] }],
+]) {
+  const path = `/test/${endpointKey}`;
+  assert.throws(() => normalizeApiResponse(endpointKey, payload, { ...normalizerContext, path }),
+    (error) => error.name === "ApiRequestError" && error.code === "INVALID_RESPONSE" &&
+      error.endpointKey === endpointKey && error.requestId === normalizerContext.requestId && error.path === path);
+}
+
+
 const workspace = renderBusinessWorkspacePage(data);
 for (const token of [
   'data-business-workspace-v2',
