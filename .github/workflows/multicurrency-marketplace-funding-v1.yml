@@ -35,6 +35,8 @@ on:
       - backend/src/domains/marketplace/api/playerMarketplaceFundingHttpInputs.ts
       - backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.test.ts
       - backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts
+      - backend/src/domains/marketplace/api/playerMarketplaceRequestInputs.ts
+      - backend/src/domains/marketplace/api/playerMarketplaceRequestInputs.test.ts
       - backend/src/domains/marketplace/api/playerMarketplaceRoutePaths.ts
       - backend/src/domains/marketplace/contracts/playerMarketplaceFundingContracts.ts
       - backend/src/domains/marketplace/infrastructure/playerMarketplaceFundingResponse.ts
