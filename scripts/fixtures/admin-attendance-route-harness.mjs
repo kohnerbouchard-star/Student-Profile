@@ -26,15 +26,19 @@ export function createAttendanceRouteHarness() {
   }
   function AdminField(options) {
     const field = { options, value: options.value ?? "", control: createElement(options.type || "input"), element: createElement("field"), focused: 0,
-      getValue() { return String(this.value); }, setError(error) { this.error = error; }, focus() { this.focused += 1; },
+      getValue() { return String(this.value); }, setValue(value) { this.value = value; }, setError(error) { this.error = error; }, focus() { this.focused += 1; },
       setDisabled(value) { this.control.disabled = Boolean(value); },
     };
     fields.set(options.name, field); return field;
   }
   function AdminDataTable(options) {
     const table = { options, rows: options.rows || [], cells: [], element: createElement("table") };
-    table.cells = table.rows.map((row, index) => options.columns.map((column) => column.render ? column.render(row[column.key], row, index) : row[column.key]));
-    table.element.children = table.cells.flat(); tables.push(table); return table;
+    table.setRows = (rows) => {
+      table.rows = rows;
+      table.cells = rows.map((row, index) => options.columns.map((column) => column.render ? column.render(row[column.key], row, index) : row[column.key]));
+      table.element.children = rows.length ? table.cells.flat() : [options.emptyState];
+    };
+    table.setRows(table.rows); tables.push(table); return table;
   }
   function AdminConfirmDialog(options) {
     const confirm = { options, opens: [], destroyed: 0, resolve: null,

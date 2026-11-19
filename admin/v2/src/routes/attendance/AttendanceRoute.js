@@ -10,7 +10,9 @@ import {
 import { createElement } from "../../components/dom.js";
 import { ADMIN_DATA_STATES } from "../../core/data-state.js";
 import { AttendanceSkeleton } from "./AttendanceSkeleton.js";
-import { rosterTable, selectedPlayerCard, summary, titleCase } from "./AttendanceReadPanels.js";
+import { selectedPlayerCard, summary, titleCase } from "./AttendanceReadPanels.js";
+
+import { attendanceRoster } from "./AttendanceRoster.js";
 
 const CORRECTION_OPTIONS = ["present", "late", "absent", "excused"];
 
@@ -375,11 +377,7 @@ function resolvedContent({ model, scanner, onScan, onCorrect, onSaveNote, onAdju
     }));
   } else {
     root.append(
-      createElement("section", {
-        className: "admin-attendance-route__roster",
-        attrs: { "aria-label": "Attendance roster" },
-        children: [rosterTable(model)],
-      }),
+      attendanceRoster(model),
       playerActions({ model, onCorrect, onSaveNote, onAdjustReward }),
     );
   }
