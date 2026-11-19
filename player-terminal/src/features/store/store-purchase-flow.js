@@ -14,10 +14,10 @@ import {
 import { createStorePurchaseOwner, convergeCommittedStorePurchase, refreshStaleStoreOffer } from "./store-purchase-convergence.js";
 import {
   handleStoreFundingModalKeyDown,
-  storeFundingAvailability,
   storeFundingRequestFromModal,
   syncStoreFundingForm,
-} from "./store-funding-intent.js";
+} from "./store-funding-form.js";
+import { storeFundingAvailability } from "./store-funding-intent.js";
 export {
   dispatchStoreSessionInvalid,
   resolveStorePurchaseFailure,

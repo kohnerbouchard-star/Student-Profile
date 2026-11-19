@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { assertExtractedModulesReachable } from "./helpers/edge-runtime-source.mjs";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { readEdgeRuntimeSource as readFileSync } from "./helpers/edge-runtime-source.mjs";
@@ -73,6 +74,12 @@ assert.ok(
 const source = Object.fromEntries(
   Object.entries(files).map(([key, path]) => [key, readFileSync(path, "utf8")]),
 );
+const fundingFormPath = "player-terminal/src/features/store/store-funding-form.js";
+const fundingForm = readFileSync(fundingFormPath, "utf8");
+assertExtractedModulesReachable(files.playerPurchaseFlow, [fundingFormPath], new Map([
+  [files.playerPurchaseFlow, source.playerPurchaseFlow], [fundingFormPath, fundingForm],
+]));
+source.playerPurchaseFlow = [source.playerPurchaseFlow, fundingForm].join("\n");
 const authority = JSON.parse(source.authority);
 const retainedC1QuoteSource = readFileSync(retainedC1QuoteMigration, "utf8");
 const criticalJobChecks = Object.freeze([
