@@ -13,6 +13,8 @@ on:
       - "admin/session-timeout-safe-exit.js"
       - "auth/reset-password.js"
       - "frontend/src/core/api.js"
+      - "frontend/src/core/api-session-state.js"
+      - "scripts/frontend-api-session-state.test.mjs"
       - "frontend/src/core/admin-mfa.js"
       - "frontend/src/core/login.js"
       - "frontend/src/core/runtime-config.js"
