@@ -1,3 +1,4 @@
+import { readInstalledBusinessPageSource } from "./helpers/business-page-source.mjs";
 import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
@@ -25,7 +26,7 @@ const endpoints = read("player-terminal/src/api/endpoints.js");
 const backendRoutes = read("player-terminal/src/api/business-banking-backend-routes.js");
 const backendRouteComposition = read("player-terminal/src/api/backend-routes.js");
 const resourcePlan = read("player-terminal/src/api/resource-plan.js");
-const businessPage = read("player-terminal/src/pages/business-page.js");
+const businessPage = readInstalledBusinessPageSource();
 const authority = JSON.parse(
   read("docs/operations/contracts/player-cross-cutting-verification-authority-v1.json"),
 );

@@ -45,6 +45,7 @@ const files = {
   readModel: "player-terminal/src/api/read-model.js",
   storeInventoryReadModel: "player-terminal/src/api/store-inventory-read-model.js",
   responseNormalizer: "player-terminal/src/api/response-normalizer.js",
+  responseBusinessValidator: "player-terminal/src/api/response-business-validator.js",
   responseStoreValidator: "player-terminal/src/api/response-store-validator.js",
   resourcePlan: "player-terminal/src/api/resource-plan.js",
   storePage: "player-terminal/src/pages/store-page.js",
@@ -431,10 +432,14 @@ requireTokens(source.responseNormalizer, "Player Store response privacy", [
   "validStoreOfferPurchasability",
   "offer.purchasable === true",
   "system_offer",
-  "storeSales",
-  "spr_",
-  "sof_",
   "UUID",
+]);
+requireTokens(source.responseNormalizer, "Business response validator import", [
+  'from "./response-business-validator.js"',
+  "validateBusinessRead(value, context)",
+]);
+requireTokens(source.responseBusinessValidator, "Player Store response privacy", [
+  "storeSales", "spr_", "sof_", "UUID",
 ]);
 requireTokens(source.storePage, "one-card multi-offer Store UI", [
   "sellerCount",

@@ -11,6 +11,8 @@ const cases = [
   ["business-phase10-player-store-cutover-contract.mjs", "player-terminal/src/features/store/store-funding-form.js", "normalizeStoreFundingIntent(allocationDraft", /Store funding form missing token/],
   ["business-phase10-player-store-cutover-contract.mjs", "player-terminal/src/features/store/store-purchase-flow.js", 'from "./store-funding-form.js"', /reach|import|closure/i],
   ["business-player-store-fx-final-contract.mjs", "player-terminal/src/features/store/store-purchase-flow.js", 'from "./store-funding-form.js"', /reach|import|closure/i],
+  ["business-phase10-player-store-cutover-contract.mjs", "player-terminal/src/api/response-business-validator.js", "storeSales", /Player Store response privacy missing token/],
+  ["business-phase4c-player-recovery-contract.mjs", "player-terminal/src/api/response-business-validator.js", "validateBusinessWorkforceUtilization", /Player Business response validator/],
   ["business-phase10-player-store-cutover-contract.mjs", "player-terminal/src/features/store/store-purchase-state.js", 'refreshState: event.warnings.length ? "pending" : "complete"', /Store transaction state missing token/],
   ["business-phase10-player-store-cutover-contract.mjs", "player-terminal/src/features/store/store-purchase-flow.js", 'from "./store-purchase-state.js"', /reach|import|closure/i],
   ["player-local-currency-authority-contract.test.mjs", "backend/supabase/functions/admin-api/playerLedgerCurrency.ts", '"player_country_assignments"', /player_country_assignments/],

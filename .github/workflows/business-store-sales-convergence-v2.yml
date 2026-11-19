@@ -61,6 +61,8 @@ on:
       - player-terminal/src/data/empty-read-models.js
       - player-terminal/src/data/preview-data.js
       - player-terminal/src/pages/business-page.js
+      - player-terminal/src/pages/business-procurement-view.js
+      - scripts/helpers/business-page-source.mjs
       - player-terminal/tests/business-banking-surface.mjs
       - scripts/admin-v2-business-api.test.mjs
       - scripts/admin-v2-loans-api.test.mjs
@@ -115,6 +117,8 @@ on:
       - player-terminal/src/data/empty-read-models.js
       - player-terminal/src/data/preview-data.js
       - player-terminal/src/pages/business-page.js
+      - player-terminal/src/pages/business-procurement-view.js
+      - scripts/helpers/business-page-source.mjs
       - player-terminal/tests/business-banking-surface.mjs
       - scripts/admin-v2-business-api.test.mjs
       - scripts/admin-v2-loans-api.test.mjs
