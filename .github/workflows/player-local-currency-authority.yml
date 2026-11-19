@@ -59,6 +59,7 @@ on:
       - "backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql"
       - "backend/supabase/migrations/20260811072424_admin_v2_teacher_safety_v1.sql"
       - "player-terminal/src/integrations/student-profile-api-call.js"
+      - "player-terminal/src/integrations/student-profile-currency-projection.js"
       - "player-terminal/src/pages/store-page.js"
       - "player-terminal/tests/browser-safe-session-bootstrap.mjs"
       - "player-terminal/tests/store-local-currency.mjs"
@@ -106,6 +107,7 @@ on:
       - "backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql"
       - "backend/supabase/migrations/20260811072424_admin_v2_teacher_safety_v1.sql"
       - "player-terminal/src/integrations/student-profile-api-call.js"
+      - "player-terminal/src/integrations/student-profile-currency-projection.js"
       - "player-terminal/src/pages/store-page.js"
       - "player-terminal/tests/browser-safe-session-bootstrap.mjs"
       - "player-terminal/tests/store-local-currency.mjs"
@@ -183,6 +185,7 @@ jobs:
           node --check admin/v2/src/routes/contracts/ContractForm.js
           node --check admin/v2/src/routes/store/StoreController.js
           node --check player-terminal/src/integrations/student-profile-api-call.js
+          node --check player-terminal/src/integrations/student-profile-currency-projection.js
           node --check player-terminal/tools/connected-banking-loans-bff-adapter.mjs
 
       - name: Check focused TypeScript formatting and types

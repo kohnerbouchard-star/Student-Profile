@@ -349,3 +349,30 @@ assert.equal("senderPlayerId" in calls.at(-1).payload, false);
 assert.equal("gameSessionId" in calls.at(-1).payload, false);
 
 console.log("Student-Profile adapter passed: C3E quote, buy settlement, and destination-account sale use exact public-key bodies while cookie-session transport, ownership privacy, CSRF, and idempotency remain valid.");
+
+// Characterize currency projection through the public adapter before extracting it.
+for (const [label, balances, expectedCode] of [
+  ["unique checking currency", [{ accountType: "checking", currencyCode: " usd ", balance: 0 }], "USD"],
+  ["ambiguous checking currencies", [{ accountType: "checking", currencyCode: "USD" }, { accountType: "checking", currencyCode: "KRW" }], ""],
+  ["missing currency", [], ""],
+]) {
+  const input = { ...rawSession, player: { ...rawSession.player, countryCurrencyCode: undefined }, balances };
+  const adapter = createStudentProfileApiCall({ request: async ({ endpointKey }) => endpointKey === "session" ? input : capabilityManifest });
+  const result = await adapter(context("session", "GET", "/session"));
+  assert.equal(result.currencyCode, expectedCode, label);
+  assert.equal(result.currencyResolved, Boolean(expectedCode), label);
+}
+for (const [label, currentBalances, expectedBalance, configured] of [
+  ["missing account", [], null, false],
+  ["wrong currency", [{ accountType: "checking", currencyCode: "USD", balance: 9 }], null, false],
+  ["explicit zero", [{ accountType: "checking", currencyCode: "ELD", postedAmount: 0, balance: 9 }], 0, true],
+  ["missing amount", [{ accountType: "checking", currencyCode: "ELD" }], null, true],
+]) {
+  const adapter = createStudentProfileApiCall({ request: async ({ endpointKey }) => ({ session: rawSession, capabilities: capabilityManifest, banking: { currentBalances, transactions: [] } })[endpointKey] });
+  await adapter(context("session", "GET", "/session"));
+  const result = await adapter(context("banking", "GET", "/banking"));
+  assert.equal(result.checking.balance, expectedBalance, label);
+  assert.equal(result.checking.configured, configured, label);
+  assert.equal(result.savings.balance, null, label);
+}
+console.log("Currency projection characterization passed: unique/ambiguous currency, missing/wrong-currency account, zero and unavailable amounts.");

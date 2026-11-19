@@ -60,6 +60,10 @@ const bankingRepository = readBrowserSourceSync(
   "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts",
   "utf8",
 );
+const playerCurrencyProjection = readBrowserSourceSync(
+  "player-terminal/src/integrations/student-profile-currency-projection.js",
+  "utf8",
+);
 const playerApiIntegration = readBrowserSourceSync(
   "player-terminal/src/integrations/student-profile-api-call.js",
   "utf8",
@@ -286,12 +290,12 @@ assert.doesNotMatch(
   "Canonical Banking reads must not merge unlike account rows in the browser-facing repository.",
 );
 
-assert.match(playerApiIntegration, /function explicitSessionCurrency\(/);
-assert.match(playerApiIntegration, /function dashboardCurrency\(/);
-assert.match(playerApiIntegration, /function accountBalanceForCurrency\(/);
-assert.match(playerApiIntegration, /return rows\.length === 1 \? rows\[0\] : null/);
-assert.match(playerApiIntegration, /function bindBankingCurrency\(/);
-assert.match(playerApiIntegration, /currencyResolved: Boolean\(resolved\)/);
+assert.match(playerCurrencyProjection, /function explicitSessionCurrency\(/);
+assert.match(playerCurrencyProjection, /function dashboardCurrency\(/);
+assert.match(playerCurrencyProjection, /function accountBalanceForCurrency\(/);
+assert.match(playerCurrencyProjection, /return rows\.length === 1 \? rows\[0\] : null/);
+assert.match(playerCurrencyProjection, /function bindBankingCurrency\(/);
+assert.match(playerCurrencyProjection, /currencyResolved: Boolean\(resolved\)/);
 assert.match(playerApiIntegration, /snapshot = bindSessionCurrency\(snapshot, dashboardCurrency\(raw\)\)/);
 assert.match(playerApiIntegration, /snapshot = bindBankingCurrency\(snapshot, raw\)/);
 
@@ -337,3 +341,5 @@ assert.doesNotMatch(
 );
 
 console.log("Player local-currency authority contract passed: economic currency, Contract targeting, and canonical account identity all fail closed instead of inferring domain state from defaults, list order, or stale UI selection.");
+
+assert.match(playerApiIntegration, /import \{ explicitSessionCurrency, dashboardCurrency, bindSessionCurrency, bindBankingCurrency \} from "\.\/student-profile-currency-projection\.js"/);
