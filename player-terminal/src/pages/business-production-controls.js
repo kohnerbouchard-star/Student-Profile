@@ -52,3 +52,46 @@ export function renderBusinessOfferStock(data, offer) {
     ? `<form data-player-form="business-store-offer-publish" data-endpoint="businessStoreOfferPublish">${identity}<p>Publishing makes these units available for other players to buy at the displayed price.</p><button class="player-terminal-primary-button" type="submit" ${enabled(data, "businessStoreOfferPublish") ? "" : "disabled"}>Publish offer</button></form>` : "";
   return `<div class="player-terminal-heading-actions" data-business-offer-stock-controls="${escapeHtml(offer.offerKey)}">${stockForm}${publishForm}</div>`;
 }
+
+// Read-only job guidance. Scheduled time never overrides the server job status.
+export function renderBusinessManufacturingProgress(job) {
+  const states = {
+    queued: ['Waiting to start', 'This job is queued. Review its recorded status before starting another run.', 'Queued at', 'queuedAt'],
+    in_progress: ['Production in progress', 'A scheduled finish is not a completion receipt. Refresh Business data to check the recorded outcome.', 'Scheduled finish', 'completesAt'],
+    completed: ['Production completed', 'Review the Stockroom for current finished goods. Completed output is not current available stock or sales revenue.', 'Completed at', 'completedAt'],
+    cancelled: ['Production cancelled', 'This job is no longer scheduled to produce output. Review current readiness before starting a separate run.', 'Cancelled at', 'cancelledAt'],
+    failed: ['Production needs attention', 'Review current requirements and recorded resource state before starting a separate run. No retry is submitted here.', 'Failed at', 'failedAt'],
+  };
+  const state = Object.hasOwn(states, job?.status) ? states[job.status] : null;
+  if (!state) return '<p data-business-job-progress>Job progress unavailable. Refresh Business data to check its recorded status.</p>';
+  const [title, detail, timeLabel, timeKey] = state;
+  const timestamp = typeof job[timeKey] === 'string' ? Date.parse(job[timeKey]) : NaN;
+  const time = Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : '';
+  const timing = time ? `<time datetime="${time}">${escapeHtml(time.replace('T', ' ').replace('.000Z', 'Z').replace(/Z$/, ' UTC'))}</time>` : 'Not reported';
+  const rawOutput = job.completedOutputQuantity;
+  const output = (typeof rawOutput === 'number' || (typeof rawOutput === 'string' && rawOutput.trim() !== ''))
+    && Number.isSafeInteger(Number(rawOutput)) && Number(rawOutput) >= 0 ? formatNumber(Number(rawOutput)) : 'Unavailable';
+  return `<div data-business-job-progress="${escapeHtml(job.status)}"><strong>${title}</strong><p>${detail}</p><p>${timeLabel}: ${timing}</p>${job.status === 'completed' ? `<p>Recorded completed output: ${output} units.</p><a class="player-terminal-compact-button" href="#business-workspace-stockroom" data-business-workspace-link="stockroom">Review Stockroom</a>` : ''}</div>`;
+}
+
+// Display the loaded custody projection; never infer sales from missing stock.
+export function renderBusinessOfferCustody(offer) {
+  const quantity = (value) => (typeof value === 'number' || (typeof value === 'string' && value.trim() !== ''))
+    && Number.isSafeInteger(Number(value)) && Number(value) >= 0 ? Number(value) : null;
+  const owned = quantity(offer?.quantityOwned);
+  const reserved = quantity(offer?.quantityReserved);
+  const available = quantity(offer?.quantityAvailable);
+  const display = (value) => value === null ? 'Unavailable' : formatNumber(value);
+  const explanations = {
+    draft: 'Draft only: stocking this offer does not publish it. Review the price and available units before publishing.',
+    active: 'Published offer: a completed buyer purchase is still required for a sale. Available listing units are not earned revenue.',
+    paused: 'Paused offer: review its current stock and price before publishing again.',
+    withdrawal_pending: 'Withdrawal pending: purchases are disabled. The scheduled time is not confirmation that stock has returned; refresh to check the recorded outcome.',
+  };
+  const detail = Object.hasOwn(explanations, offer?.status) ? explanations[offer.status] : 'Offer lifecycle unavailable. Refresh Business data before deciding what to do next.';
+  const reservation = reserved !== null && reserved > 0
+    ? '<p>Reserved units are not currently available for another sale or listing reduction. A pending withdrawal may need reservations to clear.</p>' : '';
+  const empty = available === 0
+    ? '<p>No listing units are currently available. This does not prove they were sold; check reservations and committed sales receipts.</p>' : '';
+  return `<div data-business-offer-custody><dl><div><dt>OWNED IN LISTING</dt><dd>${display(owned)}</dd></div><div><dt>RESERVED IN LISTING</dt><dd>${display(reserved)}</dd></div><div><dt>AVAILABLE IN LISTING</dt><dd>${display(available)}</dd></div></dl><p>${detail}</p>${reservation}${empty}</div>`;
+}

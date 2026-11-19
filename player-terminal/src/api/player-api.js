@@ -426,6 +426,14 @@ export class PlayerApi {
     return this.loadResources(keys, { force: true });
   }
 
+  // Read-only introspection: callers may recover an existing intent, never choose its key.
+  retainedWriteState(endpointKey, payload, params = {}) {
+    const resolvedParams = actionPathParams(endpointKey, payload, params);
+    const { endpoint, path } = resolvedPath(endpointKey, resolvedParams);
+    const key = stableOperationKey({ endpointKey, method: endpoint.method, path, payload });
+    return this.inFlightWrites.has(key) ? "pending" : this.retryIdempotencyKeys.has(key) ? "retryable" : "none";
+  }
+
   execute(endpointKey, payload, params = {}, { signal = null } = {}) {
     this.syncFreshnessSession();
     const resolvedParams = actionPathParams(endpointKey, payload, params);
