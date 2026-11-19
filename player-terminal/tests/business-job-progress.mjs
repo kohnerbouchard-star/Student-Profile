@@ -62,3 +62,30 @@ test('Business verification keeps progress and existing production command recov
   assert.match(manifest.scripts['business-workspace-boundary'], /node tests\/business-production-loop\.mjs/);
   assert.match(manifest.scripts['business-workspace-boundary'], /node --test tests\/business-job-progress\.mjs/);
 });
+
+test('queued browser read fixture satisfies actual normalization before rendering', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { normalizeApiResponse } = await import('../src/api/response-normalizer.js');
+  const source = await readFile(new URL('./browser/player-business-production-loop.spec.mjs', import.meta.url), 'utf8');
+  const scenario = source.slice(source.indexOf("test('manufacturing progress shows"));
+  const fixture = scenario.match(/models\.business\.manufacturingJobs = (\[[\s\S]*?\]);/)[1];
+  const keys = { business: `biz_${'a'.repeat(32)}`, product: `bpr_${'d'.repeat(32)}` };
+  // Bind the exact browser fixture value without executing source text.
+  const outputLiteral = fixture.match(/completedOutputQuantity: (null|[0-9]+),/)[1];
+  const jobs = [{ jobKey: `mfg_${'f'.repeat(32)}`, businessKey: keys.business, productKey: keys.product,
+    status: 'queued', quantity: 10, completedOutputQuantity: JSON.parse(outputLiteral), canCancel: false }];
+  const business = structuredClone(previewData.business);
+  business.configured = true;
+  business.company.id = keys.business;
+  business.manufacturingJobs = jobs;
+  const normalized = normalizeApiResponse('business', business);
+  assert.equal(normalized.manufacturingJobs[0].completedOutputQuantity, 0);
+  const data = structuredClone(previewData);
+  data.business = normalized;
+  const html = renderBusinessWorkspacePage(data);
+  assert.match(html, /data-business-job-progress="queued"/);
+  assert.match(html, /Waiting to start/);
+  assert.doesNotMatch(html, /Recorded completed output:/);
+  business.manufacturingJobs[0].completedOutputQuantity = null;
+  assert.throws(() => normalizeApiResponse('business', business), { code: 'INVALID_RESPONSE' });
+});

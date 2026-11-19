@@ -137,7 +137,7 @@ test('manufacturing progress shows recorded output and navigates without a new c
     models.business.manufacturingJobs = [{
       jobKey: `mfg_${'f'.repeat(32)}`, businessKey: keys.business, productKey: keys.product,
       productName: 'Fixture Widget', status: 'queued', resourceState: 'reserved', priority: 'standard',
-      quantity: 10, completedOutputQuantity: null, queuedAt: '2026-11-01T12:00:00Z',
+      quantity: 10, completedOutputQuantity: 0, queuedAt: '2026-11-01T12:00:00Z',
       startedAt: null, completesAt: '2026-11-01T13:00:00Z',
       completedAt: null, cancelledAt: null, failedAt: null, failureCode: null, canCancel: false,
     }];
