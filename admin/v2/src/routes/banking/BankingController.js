@@ -11,7 +11,7 @@ import {
   normalizeAdminError,
 } from "../../core/error-envelope.js";
 import { BankingRoute } from "./BankingRoute.js";
-import { normalizeBankingReadModel, normalizeBankingHistory, UUID_PATTERN, safeFinite, safeText } from "./BankingReadModel.js";
+import { normalizeBankingReadModel, normalizeBankingHistory, UUID_PATTERN, CURRENCY_CODE_PATTERN, safeFinite, safeText } from "./BankingReadModel.js";
 export { normalizeBankingReadModel, normalizeBankingHistory } from "./BankingReadModel.js";
 
 function safeError(error) {

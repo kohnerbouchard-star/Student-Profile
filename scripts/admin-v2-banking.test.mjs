@@ -476,3 +476,26 @@ test("Banking controller keeps the read-model facade and leaf ownership boundary
   const controller = await readFile(new URL("../admin/v2/src/routes/banking/BankingController.js", import.meta.url), "utf8");
   assert.doesNotMatch(controller, /function normalizeBankingReadModel|function normalizeBankingHistory|function normalizeAccounts/);
 });
+
+
+test("Banking controller filter callback retains non-ECO, all, and invalid currency handling", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const controllerUrl = new URL("../admin/v2/src/routes/banking/BankingController.js", import.meta.url);
+  // Replace only the DOM route seam; execute the actual controller and its real imports.
+  const routeStub = "data:text/javascript," + encodeURIComponent("export function BankingRoute(options) { return options; }");
+  const source = (await readFile(controllerUrl, "utf8")).replace(/from "(\.[^"]+)"/g,
+    (_match, specifier) => `from ${JSON.stringify(specifier === "./BankingRoute.js" ? routeStub : new URL(specifier, controllerUrl).href)}`);
+  const { createBankingController: createController } = await import("data:text/javascript," + encodeURIComponent(source));
+  const api = { readBanking() { throw new Error("Unexpected read"); }, readBankingHistory() { throw new Error("Unexpected history read"); }, adjustBankingBalance() { throw new Error("Unexpected write"); } };
+  const controller = createController({ api, selectedGameId: GAME_ID });
+  const view = controller.render();
+  for (const [currency, expected] of [[" KRW ", "krw"], ["HWC", "hwc"], ["all", "all"], ["ALL", "all"], ["bad!", "all"], ["", "all"], ["1USD", "all"]]) {
+    view.onFiltersChange({ currency });
+    assert.equal(controller.getFilters().currency, expected);
+    assert.equal(Object.isFrozen(controller.getFilters()), true);
+  }
+  view.onFiltersChange({ currency: "KRW", query: "  teacher" });
+  view.onFiltersChange({ query: " next" });
+  assert.deepEqual(controller.getFilters(), { query: "next", currency: "krw" });
+  controller.destroy();
+});

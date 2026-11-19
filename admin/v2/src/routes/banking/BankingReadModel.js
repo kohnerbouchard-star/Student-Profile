@@ -175,4 +175,4 @@ export function normalizeBankingHistory(result) {
 }
 
 // Shared validation semantics also used by the controller adjustment boundary.
-export { UUID_PATTERN, safeFinite, safeText };
+export { UUID_PATTERN, CURRENCY_CODE_PATTERN, safeFinite, safeText };
