@@ -21,10 +21,11 @@ test("Attendance read-panel extraction preserves every complete function and cor
   // Recorded before extraction from unchanged main b77c9610.
   // TEACHER-ATTENDANCE-ROSTER-FILTER-001 updates resolvedContent to use the
   // filter panel, and rosterTable to optionally return its existing controller.
+  // Scanner panel relocation retains its original function hash unchanged.
   // All remaining function identities are retained.
   const expected = JSON.parse(readFileSync("scripts/fixtures/admin-attendance-function-hashes.json", "utf8"));
   const directory = "admin/v2/src/routes/attendance", actual = {}; let combined = "";
-  for (const file of readdirSync(directory).filter((name) => /^Attendance(?:Route|ReadPanels)\.js$/.test(name))) {
+  for (const file of readdirSync(directory).filter((name) => /^Attendance(?:Route|ReadPanels|ScannerPanel)\.js$/.test(name))) {
     const source = readFileSync(`${directory}/${file}`, "utf8"); combined += source;
     for (const match of source.matchAll(/^(?:export )?function (\w+)\(/gm)) {
       const end = match.index + source.slice(match.index).match(/^}$/m).index + 1;
