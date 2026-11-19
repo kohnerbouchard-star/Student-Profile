@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const registeredTests = [
+  "scripts/admin-v2-mutation-coordinator.test.mjs",
   "scripts/admin-inventory-review-dialog.test.mjs",
   "scripts/admin-v2-test-registration.test.mjs",
   "scripts/admin-v2-world-management.test.mjs",
