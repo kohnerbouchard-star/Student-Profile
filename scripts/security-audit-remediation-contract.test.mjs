@@ -40,6 +40,7 @@ test("purchase codes use keyed versioned digests with atomic legacy upgrade", as
 test("Player browser runtime contains no opaque session token", async () => {
   const paths = [
     "frontend/src/core/api.js",
+  "frontend/src/core/api-session-state.js",
     "frontend/src/core/login.js",
     "player-terminal/host-runtime.js",
     "player-terminal/src/api/http-transport.js",

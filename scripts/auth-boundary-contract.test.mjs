@@ -11,6 +11,7 @@ const browserSources = [
   "frontend/src/core/runtime-config.js",
   "frontend/src/core/constants.js",
   "frontend/src/core/api.js",
+  "frontend/src/core/api-session-state.js",
   "frontend/src/core/login.js",
   "admin/auth-session-manager.js",
   "admin/admin-auth.js",
