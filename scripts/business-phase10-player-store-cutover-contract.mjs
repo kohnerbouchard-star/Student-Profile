@@ -49,6 +49,7 @@ const files = {
   resourcePlan: "player-terminal/src/api/resource-plan.js",
   storePage: "player-terminal/src/pages/store-page.js",
   purchaseFlow: "player-terminal/src/features/store/store-purchase-flow.js",
+  fundingForm: "player-terminal/src/features/store/store-funding-form.js",
   purchaseState: "player-terminal/src/features/store/store-purchase-state.js",
   purchaseContract:
     "player-terminal/src/features/store/store-purchase-contract.js",
@@ -109,6 +110,7 @@ source.purchaseFlow = [
   source.purchaseFlow,
   source.purchaseContract,
   source.purchaseConvergence,
+  source.fundingForm,
 ].join("\n");
 source.rateLimits = [
   source.rateLimitDispatch,
@@ -454,9 +456,14 @@ requireTokens(source.purchaseFlow, "exact selected-offer flow", [
   "transaction?.processing === true && !force",
   'type: "settlement-started"',
 ]);
-assertExtractedModulesReachable(files.purchaseFlow, [files.purchaseState], new Map([
-  [files.purchaseFlow, source.purchaseFlow], [files.purchaseState, source.purchaseState],
+assertExtractedModulesReachable(files.purchaseFlow, [files.purchaseState, files.fundingForm], new Map([
+  [files.purchaseFlow, source.purchaseFlow], [files.purchaseState, source.purchaseState], [files.fundingForm, source.fundingForm],
 ]));
+requireTokens(source.fundingForm, "Store funding form", [
+  "normalizeStoreFundingIntent(allocationDraft",
+  "Final ${targetCurrencyCode} remainder is derived by the server",
+  "event.stopImmediatePropagation()",
+]);
 requireTokens(source.purchaseState, "Store transaction state", [
   'refreshState: event.warnings.length ? "pending" : "complete"',
   "processing: true",

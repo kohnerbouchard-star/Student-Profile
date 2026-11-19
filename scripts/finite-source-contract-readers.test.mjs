@@ -8,6 +8,9 @@ import test from "node:test";
 const root = path.resolve(import.meta.dirname, "..");
 const economy = "backend/supabase/functions/player-api/dispatchPlayerEconomyRoutes.ts";
 const cases = [
+  ["business-phase10-player-store-cutover-contract.mjs", "player-terminal/src/features/store/store-funding-form.js", "normalizeStoreFundingIntent(allocationDraft", /Store funding form missing token/],
+  ["business-phase10-player-store-cutover-contract.mjs", "player-terminal/src/features/store/store-purchase-flow.js", 'from "./store-funding-form.js"', /reach|import|closure/i],
+  ["business-player-store-fx-final-contract.mjs", "player-terminal/src/features/store/store-purchase-flow.js", 'from "./store-funding-form.js"', /reach|import|closure/i],
   ["business-phase10-player-store-cutover-contract.mjs", "player-terminal/src/features/store/store-purchase-state.js", 'refreshState: event.warnings.length ? "pending" : "complete"', /Store transaction state missing token/],
   ["business-phase10-player-store-cutover-contract.mjs", "player-terminal/src/features/store/store-purchase-flow.js", 'from "./store-purchase-state.js"', /reach|import|closure/i],
   ["player-local-currency-authority-contract.test.mjs", "backend/supabase/functions/admin-api/playerLedgerCurrency.ts", '"player_country_assignments"', /player_country_assignments/],
