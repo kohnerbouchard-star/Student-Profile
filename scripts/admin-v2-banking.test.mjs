@@ -465,3 +465,14 @@ test("Banking duplicate adjustment clicks do not retry an ambiguous failure", as
   assert.equal(controller.getState().data.players[0].checking[0].balance, 10);
   controller.destroy();
 });
+
+test("Banking controller keeps the read-model facade and leaf ownership boundary", async () => {
+  const leaf = await import("../admin/v2/src/routes/banking/BankingReadModel.js");
+  assert.equal(normalizeBankingReadModel, leaf.normalizeBankingReadModel);
+  assert.equal(normalizeBankingHistory, leaf.normalizeBankingHistory);
+  const { readFile } = await import("node:fs/promises");
+  const source = await readFile(new URL("../admin/v2/src/routes/banking/BankingReadModel.js", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /BankingController|BankingRoute|data-state|fetch\(|document\.|window\./);
+  const controller = await readFile(new URL("../admin/v2/src/routes/banking/BankingController.js", import.meta.url), "utf8");
+  assert.doesNotMatch(controller, /function normalizeBankingReadModel|function normalizeBankingHistory|function normalizeAccounts/);
+});
