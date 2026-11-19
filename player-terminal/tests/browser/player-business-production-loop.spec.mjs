@@ -15,7 +15,7 @@ async function mount(page) {
     const { resolvePlayerBackendRequest } = await import("/src/api/backend-routes.js");
     const keys = { business: `biz_${"a".repeat(32)}`, equipment: `eqp_${"b".repeat(32)}`, item: `itm_${"c".repeat(32)}`, product: `bpr_${"d".repeat(32)}`, offer: `sof_${"e".repeat(32)}` };
     const models = structuredClone(previewData), calls = [];
-    const commands = ["businessEquipmentInstall", "businessStoreOfferCreate", "businessStoreOfferStock", "businessStoreOfferPublish"];
+    const commands = ["businessEquipmentInstall", "businessStoreOfferCreate", "businessStoreOfferStock", "businessStoreOfferPublish", "businessStorePurchase"];
     models.session.capabilityEndpointKeys = ["dashboard", "countries", "business", ...commands, "businessManufacturingStart"];
     const business = models.business;
     business.configured = true; business.company.id = keys.business;
@@ -32,7 +32,7 @@ async function mount(page) {
       models.businessStockroom.items = quantity ? [{ accountKey: location.accountKey, locationKey: "finished_goods", itemKey: keys.item, canonicalKey: "fixture-widget", name: "Fixture Widget", itemClass: "finished_good", subtype: "product", quantityOwned: quantity, quantityReserved: 0, quantityAvailable: quantity, averageUnitCost: 5, costCurrencyCode: "ECO", version: 1 }] : [];
     }
     const config = buildPlayerTerminalConfig({ usePreviewData: false, authenticated: true, csrfToken: "B".repeat(43), gameSessionId: "business-loop-fixture", writeCooldownMs: 0,
-      capabilities: { routes: { business: true, news: true }, actions: { businessProduction: true, ...Object.fromEntries(commands.map((key) => [key, true])) } },
+      capabilities: { routes: { business: true, news: true }, actions: { businessProduction: true, storePurchase: true, ...Object.fromEntries(commands.map((key) => [key, true])) } },
       apiCall: async (context) => {
         if (context.method === "GET") return structuredClone(models[context.endpointKey]);
         const request = resolvePlayerBackendRequest({ ...context, payload: { ...context.payload, idempotencyKey: context.idempotencyKey } });
@@ -129,4 +129,84 @@ test("repeated submission cannot create two installation writes and navigation r
   await page.evaluate(() => businessLoop.terminal.navigate("business"));
   await expect(page.locator('[data-business-equipment-installation]')).toContainText("Fixture Press");
   await expect(page.getByRole("button", { name: "Install equipment", exact: true })).toHaveCount(0);
+});
+
+test('manufacturing progress shows recorded output and navigates without a new command', async ({ page }) => {
+  await page.evaluate(async () => {
+    const { models, keys, terminal } = businessLoop;
+    models.business.manufacturingJobs = [{
+      jobKey: `mfg_${'f'.repeat(32)}`, businessKey: keys.business, productKey: keys.product,
+      productName: 'Fixture Widget', status: 'queued', resourceState: 'reserved', priority: 'standard',
+      quantity: 10, completedOutputQuantity: null, queuedAt: '2026-11-01T12:00:00Z',
+      startedAt: null, completesAt: '2026-11-01T13:00:00Z',
+      completedAt: null, cancelledAt: null, failedAt: null, failureCode: null, canCancel: false,
+    }];
+    await terminal.refreshResources(['business']);
+  });
+  const queued = page.locator('[data-business-job-progress="queued"]');
+  await expect(queued).toContainText('Waiting to start');
+  await expect(queued.locator('time')).toHaveAttribute('datetime', '2026-11-01T12:00:00.000Z');
+  await expect(queued).not.toContainText('Recorded completed output');
+  await expect(queued.getByRole('link', { name: 'Review Stockroom' })).toHaveCount(0);
+  await expect(page.locator('[data-business-stockroom-location="finished_goods"]')).toHaveCount(0);
+  expect(await page.evaluate(() => businessLoop.calls.length)).toBe(0);
+  await page.evaluate(async () => {
+    const { models, keys, terminal } = businessLoop;
+    Object.assign(models.business.manufacturingJobs[0], {
+      status: 'completed', resourceState: 'consumed', completedOutputQuantity: 6,
+      startedAt: '2026-11-01T12:00:00Z', completedAt: '2026-11-01T13:00:00Z',
+    });
+    // Independent current inventory read: six recorded output units need not
+    // mean six available now. Never derive this projection from the job card.
+    const location = models.businessStockroom.locations.find((row) => row.locationKey === 'finished_goods');
+    Object.assign(location, { itemCount: 1, quantityOwned: 6, quantityReserved: 2, quantityAvailable: 4 });
+    models.businessStockroom.items = [{
+      accountKey: location.accountKey, locationKey: 'finished_goods', itemKey: keys.item,
+      canonicalKey: 'fixture-widget', name: 'Fixture Widget', itemClass: 'finished_good', subtype: 'product',
+      quantityOwned: 6, quantityReserved: 2, quantityAvailable: 4, averageUnitCost: 5, costCurrencyCode: 'ECO', version: 2,
+    }];
+    await terminal.refreshResources(['business', 'businessStockroom']);
+  });
+  await expect(queued).toHaveCount(0);
+  const progress = page.locator('[data-business-job-progress="completed"]');
+  await expect(progress).toContainText('Recorded completed output: 6 units');
+  await expect(progress).toContainText('not current available stock or sales revenue');
+  await expect(progress.locator('time')).toHaveAttribute('datetime', '2026-11-01T13:00:00.000Z');
+  await progress.getByRole('link', { name: 'Review Stockroom' }).click();
+  await expect(page.locator('#business-workspace-stockroom')).toBeFocused();
+  const itemKey = await page.evaluate(() => businessLoop.keys.item);
+  const finishedItem = page.locator(`#business-workspace-stockroom [data-business-stockroom-item="${itemKey}"][data-business-stockroom-location="finished_goods"]`);
+  await expect(finishedItem).toBeVisible();
+  await expect(finishedItem).toContainText('Fixture Widget');
+  await expect(finishedItem).toContainText('4 available · 2 reserved · 6 owned');
+  await expect(progress).toContainText('Recorded completed output: 6 units');
+  expect(await page.evaluate(() => businessLoop.calls.length)).toBe(0);
+});
+
+test('reserved listing stock is not presented as a completed sale or available withdrawal', async ({ page }) => {
+  await page.evaluate(async () => {
+    const { models, keys, terminal } = businessLoop;
+    models.business.salesOffers = [{
+      offerKey: keys.offer, itemKey: keys.item, canonicalKey: 'fixture-widget', itemName: 'Fixture Widget',
+      unitPrice: 20, currencyCode: 'ECO', status: 'active', version: 1,
+      quantityOwned: 8, quantityReserved: 3, quantityAvailable: 5, purchaseAllowed: true, withdrawal: null,
+    }];
+    await terminal.refreshResources(['business']);
+  });
+  const offer = page.locator('[data-business-sales-offer]');
+  await expect(offer.locator('[data-player-form="business-store-withdrawal-reduce"]')).toHaveCount(1);
+  await expect(offer.getByRole('button', { name: 'Reduce listing', exact: true })).toBeEnabled();
+  await page.evaluate(async () => {
+    const { models, terminal } = businessLoop;
+    Object.assign(models.business.salesOffers[0], { quantityReserved: 8, quantityAvailable: 0, version: 2 });
+    await terminal.refreshResources(['business']);
+  });
+  const custody = offer.locator('[data-business-offer-custody]');
+  await expect(custody.locator('dl > div').filter({ hasText: 'OWNED IN LISTING' }).locator('dd')).toHaveText('8');
+  await expect(custody.locator('dl > div').filter({ hasText: 'RESERVED IN LISTING' }).locator('dd')).toHaveText('8');
+  await expect(custody.locator('dl > div').filter({ hasText: 'AVAILABLE IN LISTING' }).locator('dd')).toHaveText('0');
+  await expect(custody).toContainText('This does not prove they were sold');
+  await expect(offer.locator('[data-player-form="business-store-withdrawal-reduce"]')).toHaveCount(0);
+  await expect(page.locator('[data-business-store-sale-receipt]')).toHaveCount(0);
+  expect(await page.evaluate(() => businessLoop.calls.length)).toBe(0);
 });
