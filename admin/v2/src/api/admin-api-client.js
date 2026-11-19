@@ -1,3 +1,4 @@
+import { createAdminMutationCoordinator } from "./admin-mutation-coordinator.js";
 import { createRosterImportRequest } from "./player-roster-import.js";
 import {
   ADMIN_OVERVIEW_RESOURCE_KEYS, ADMIN_MARKET_RESOURCE_KEYS, ADMIN_MARKET_DETAIL_RESOURCE_KEYS,
@@ -36,7 +37,11 @@ export function createAdminApiClient({
   let activeMarketController = null;
   let activeMarketDetailRequestVersion = 0;
   let activeMarketDetailController = null;
-  const inFlightMutations = new Map();
+  const coordinateMutation = createAdminMutationCoordinator({
+    requireIdempotencyKey,
+    serializeJsonBody,
+    conflict: () => asSafeRejection(new AdminTransportDiagnostic({ status: 409, code: "CONFLICT" })),
+  });
 
   async function readOverview({ gameId, signal, timeoutMs: requestTimeoutMs } = {}) {
     activeRequestVersion += 1;
@@ -227,19 +232,7 @@ export function createAdminApiClient({
     signal,
     timeoutMs: requestTimeoutMs,
   }) {
-    const key = requireIdempotencyKey(idempotencyKey);
-    const fingerprint = serializeJsonBody({ method, path, body });
-    const existing = inFlightMutations.get(key);
-    if (existing) {
-      if (existing.fingerprint !== fingerprint) {
-        return asSafeRejection(
-          new AdminTransportDiagnostic({ status: 409, code: "CONFLICT" }),
-        );
-      }
-      return existing.promise;
-    }
-
-    const promise = requestAdminJson(fetchImpl, path, {
+    return coordinateMutation({ method, path, body, idempotencyKey }, (key) => requestAdminJson(fetchImpl, path, {
       method,
       body,
       headers: {
@@ -249,14 +242,7 @@ export function createAdminApiClient({
       signal,
       timeoutMs: normalizeTimeout(requestTimeoutMs, normalizeTimeout(timeoutMs)),
       validate: validateStoreMutation,
-    });
-    const entry = { fingerprint, promise };
-    inFlightMutations.set(key, entry);
-    const clear = () => {
-      if (inFlightMutations.get(key) === entry) inFlightMutations.delete(key);
-    };
-    promise.then(clear, clear);
-    return promise;
+    }));
   }
 
   function playerMutation({
@@ -268,19 +254,7 @@ export function createAdminApiClient({
     timeoutMs: requestTimeoutMs,
     validate,
   }) {
-    const key = requireIdempotencyKey(idempotencyKey);
-    const fingerprint = serializeJsonBody({ method, path, body });
-    const existing = inFlightMutations.get(key);
-    if (existing) {
-      if (existing.fingerprint !== fingerprint) {
-        return asSafeRejection(
-          new AdminTransportDiagnostic({ status: 409, code: "CONFLICT" }),
-        );
-      }
-      return existing.promise;
-    }
-
-    const promise = requestAdminJson(fetchImpl, path, {
+    return coordinateMutation({ method, path, body, idempotencyKey }, (key) => requestAdminJson(fetchImpl, path, {
       method,
       body,
       headers: {
@@ -290,14 +264,7 @@ export function createAdminApiClient({
       signal,
       timeoutMs: normalizeTimeout(requestTimeoutMs, normalizeTimeout(timeoutMs)),
       validate,
-    });
-    const entry = { fingerprint, promise };
-    inFlightMutations.set(key, entry);
-    const clear = () => {
-      if (inFlightMutations.get(key) === entry) inFlightMutations.delete(key);
-    };
-    promise.then(clear, clear);
-    return promise;
+    }));
   }
 
   function createStoreItem({
