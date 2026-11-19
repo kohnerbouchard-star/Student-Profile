@@ -49,6 +49,8 @@ on:
       - frontend/**
       - index.html
       - scripts/apply-configurable-stock-market-timezone-v1.mjs
+      - scripts/helpers/dashboard-timezone-layout.mjs
+      - scripts/dashboard-timezone-layout.test.mjs
       - scripts/fix-required-timezone-rpc-fixture-v1.mjs
       - scripts/apply-shared-game-timezone-ui-v1.mjs
       - scripts/fix-shared-game-timezone-smoke-v1.mjs
@@ -66,6 +68,8 @@ on:
       - frontend/**
       - index.html
       - scripts/apply-configurable-stock-market-timezone-v1.mjs
+      - scripts/helpers/dashboard-timezone-layout.mjs
+      - scripts/dashboard-timezone-layout.test.mjs
       - scripts/fix-required-timezone-rpc-fixture-v1.mjs
       - scripts/apply-shared-game-timezone-ui-v1.mjs
       - scripts/fix-shared-game-timezone-smoke-v1.mjs
@@ -110,6 +114,9 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.9.3
+
+      - name: Verify Dashboard timezone replay layouts
+        run: node --test scripts/dashboard-timezone-layout.test.mjs
 
       - name: Install backend dependencies
         working-directory: backend

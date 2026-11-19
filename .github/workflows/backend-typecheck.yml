@@ -119,6 +119,14 @@ jobs:
           src/domains/marketplace/infrastructure/marketplaceRepositoryRowCharacterization.test.ts
           src/domains/marketplace/infrastructure/marketplaceRepositoryCommandCharacterization.test.ts
 
+      - name: Verify Dashboard repository projection compatibility
+        run: >-
+          deno test --config supabase/functions/deno.json
+          --lock=supabase/functions/deno.lock --frozen --deny-net
+          src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.test.ts
+          src/domains/game-dashboard/infrastructure/dashboardRepositoryProjection.test.ts
+          src/domains/game-dashboard/infrastructure/dashboardRepositoryValuation.test.ts
+
       - name: Run backend typecheck
         shell: bash
         run: |

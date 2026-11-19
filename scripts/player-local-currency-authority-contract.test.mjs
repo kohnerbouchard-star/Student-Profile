@@ -44,6 +44,10 @@ const playerDashboardRepository = readBrowserSourceSync(
   "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
   "utf8",
 );
+const playerDashboardPanels = readBrowserSourceSync(
+  "backend/src/domains/game-dashboard/infrastructure/dashboardPanelProjection.ts",
+  "utf8",
+);
 const playerDashboardProjection = readBrowserSourceSync(
   "backend/src/domains/game-dashboard/infrastructure/dashboardReadProjection.ts",
   "utf8",
@@ -234,26 +238,26 @@ assert.doesNotMatch(
 );
 
 assert.match(
-  playerDashboardRepository,
+  playerDashboardPanels,
   /const stockCash = toCashDto\(meCheckingBalances, "ECO"\)/,
   "Stock portfolio cash must remain in ECO rather than borrowing the player's local wallet total.",
 );
 assert.match(
-  playerDashboardRepository,
+  playerDashboardPanels,
   /const portfolio = summarizePortfolio\(stockCash, meHoldings\)/,
 );
 assert.match(
-  playerDashboardRepository,
+  playerDashboardPanels,
   /const excludedStockMarketValue = valuationCurrencyCode === "ECO"[\s\S]*?: portfolio\.holdingsMarketValue/,
   "Player net worth must mark unconverted ECO holdings as excluded from local-currency valuation.",
 );
 assert.match(
-  playerDashboardRepository,
+  playerDashboardPanels,
   /import \{[^}]*\btoLeaderboard\b[^}]*\} from "\.\/dashboardReadProjection\.ts"/,
   "Dashboard must import the reviewed leaderboard projection owner.",
 );
 assert.match(
-  playerDashboardRepository,
+  playerDashboardPanels,
   /const leaderboard = toLeaderboard\(\s*players,\s*countryByPlayerId,\s*financialBalances,\s*holdings,\s*stockByAssetId,\s*\)/,
   "Dashboard must use the reviewed currency-scoped leaderboard with authoritative rows.",
 );
@@ -343,3 +347,7 @@ assert.doesNotMatch(
 console.log("Player local-currency authority contract passed: economic currency, Contract targeting, and canonical account identity all fail closed instead of inferring domain state from defaults, list order, or stale UI selection.");
 
 assert.match(playerApiIntegration, /import \{ explicitSessionCurrency, dashboardCurrency, bindSessionCurrency, bindBankingCurrency \} from "\.\/student-profile-currency-projection\.js"/);
+
+assert.match(playerDashboardRepository, /import \{ projectDashboardPanels \} from "\.\/dashboardPanelProjection\.ts"/);
+assert.match(playerDashboardRepository, /return projectDashboardPanels\(\{ input, gameSession, marketOpen, publicMarket, players, countryByPlayerId, financialBalances, holdings, orders, trades, storeListings, inventory, purchases, marketNews, playerContracts \}\)/);
+assert.doesNotMatch(playerDashboardPanels, /\.from\(|\.rpc\(|Promise\.all|this\.client/);
