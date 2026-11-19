@@ -96,3 +96,16 @@ for (const [operation, input, valid, invalid] of [
   assert.equal(new Headers(calls[1].init.headers).get("Content-Type"), "application/json");
   calls[1].resolve(valid); assert.deepEqual(await retry, valid);
 });
+
+test("coordinator import preserves the exact backend-owned roster inverse seam", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { API_ROSTER_LINES } = await import("./roster-connected/runtime-inputs.mjs");
+  const { verifySharedApi } = await import("./roster-connected/runtime-equivalence.mjs");
+  const source = await readFile(new URL("../admin/v2/src/api/admin-api-client.js", import.meta.url), "utf8");
+  let inverse = source;
+  for (const line of API_ROSTER_LINES) {
+    assert.equal(inverse.split(line).length, 2);
+    inverse = inverse.replace(line, "");
+  }
+  verifySharedApi(Buffer.from(inverse), Buffer.from(source), "roster-two-line-inverse");
+});
