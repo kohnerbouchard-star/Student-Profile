@@ -264,3 +264,99 @@ test("Settings controller preserves last confirmed values as stale when refresh 
   assert.equal(blocked.error.code, "CONFLICT");
   controller.destroy();
 });
+
+
+test("Settings serializes all saves and blocks refresh or game switch until settlement", async () => {
+  let finish;
+  let reads = 0;
+  let writes = 0;
+  const controller = createSettingsController({
+    selectedGameId: GAME_ID,
+    hasPermission: () => true,
+    cryptoObject: { randomUUID: () => "30000000-0000-4000-8000-000000000003" },
+    api: {
+      async readSettings() { reads += 1; return readPayload(); },
+      updateSettings() { writes += 1; return new Promise((resolve) => { finish = resolve; }); },
+    },
+  });
+  await controller.load();
+  const saving = controller.save(validDraft());
+  assert.equal(controller.isSaving(), true);
+  assert.equal(controller.canDiscardChanges(), false);
+  await controller.load();
+  assert.equal(reads, 1);
+  const duplicate = await controller.save(validDraft());
+  const competing = await controller.save({ ...validDraft(), priceMultiplier: 1.5 });
+  assert.equal(duplicate.busy, true);
+  assert.equal(competing.busy, true);
+  assert.equal(writes, 1);
+  finish({ ok: true });
+  assert.equal((await saving).ok, true);
+  assert.equal(controller.isSaving(), false);
+  assert.equal(reads, 2);
+  assert.equal(controller.canDiscardChanges(), true);
+  controller.destroy();
+});
+
+test("Settings does not publish a late save result after its controller is destroyed", async () => {
+  for (const fail of [false, true]) {
+    let finish;
+    const notices = [];
+    const controller = createSettingsController({
+      selectedGameId: GAME_ID,
+      hasPermission: () => true,
+      notify: (notice) => notices.push(notice),
+      cryptoObject: { randomUUID: () => "30000000-0000-4000-8000-000000000003" },
+      api: {
+        async readSettings() { return readPayload(); },
+        updateSettings() { return new Promise((resolve, reject) => { finish = fail ? reject : resolve; }); },
+      },
+    });
+    await controller.load();
+    const saving = controller.save(validDraft());
+    controller.destroy();
+    finish(fail ? new Error("late failure") : { ok: true });
+    await saving;
+    assert.deepEqual(notices, []);
+  }
+});
+
+test("Attendance timing changes preserve unrelated authoritative settings", () => {
+  const draft = validDraft();
+  draft.attendanceWindowBase.lateCutoff = "09:15";
+  Object.assign(draft.attendanceWindow, { timezone: " America/New_York ", lateCutoff: "10:30" });
+  const result = validateSettingsDraft(draft);
+  assert.equal(result.ok, true);
+  assert.equal(result.settings.attendanceWindow.timezone, "America/New_York");
+  assert.equal(result.settings.attendanceWindow.lateCutoff, "10:30");
+  assert.equal(result.settings.attendanceWindow.preservedServerField, "keep");
+  assert.equal(draft.attendanceWindowBase.lateCutoff, "09:15");
+});
+
+test("Attendance timing validates server-compatible 24-hour boundaries and optional removal", () => {
+  for (const lateCutoff of ["", "00:00", "0:00", "09:15", "23:59"]) {
+    const draft = validDraft();
+    Object.assign(draft.attendanceWindow, { timezone: "UTC", lateCutoff });
+    const result = validateSettingsDraft(draft);
+    assert.equal(result.ok, true, lateCutoff);
+    assert.equal(result.settings.attendanceWindow.lateCutoff, lateCutoff);
+  }
+  for (const lateCutoff of ["24:00", "12:60", "9:5", "09:15:00", "noon"]) {
+    const draft = validDraft();
+    draft.attendanceWindow.lateCutoff = lateCutoff;
+    assert.equal(validateSettingsDraft(draft).errors.some(({ field }) => field === "lateCutoff"), true, lateCutoff);
+  }
+});
+
+test("Attendance timing rejects empty and invalid zones without falling back to device time", () => {
+  for (const timezone of ["", "   ", "Not/A_Zone", "x".repeat(65)]) {
+    const draft = validDraft();
+    draft.attendanceWindow.timezone = timezone;
+    assert.equal(validateSettingsDraft(draft).errors.some(({ field }) => field === "timezone"), true);
+  }
+  const draft = validDraft();
+  draft.attendanceWindowBase.lateCutoff = "09:15";
+  const result = validateSettingsDraft(draft);
+  assert.equal(result.settings.attendanceWindow.timezone, "Asia/Seoul");
+  assert.equal(result.settings.attendanceWindow.lateCutoff, "09:15");
+});

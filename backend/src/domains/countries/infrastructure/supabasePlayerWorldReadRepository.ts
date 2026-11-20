@@ -1,3 +1,4 @@
+import { readVisibleCountryReference, readVisibleCountryReferences } from "./supabaseCountryReferenceReads.ts";
 import {
   type PlayerWorldCountryCollectionRecord,
   type PlayerWorldCountryDetailRecord,
@@ -41,16 +42,6 @@ interface PlayerWorldReadClient {
 
 const MAX_COUNTRIES = 50;
 const MAX_SNAPSHOTS = 500;
-
-const PROFILE_SELECT = [
-  "id",
-  "country_code",
-  "country_name",
-  "capital_name",
-  "currency_code",
-  "status",
-  "metadata",
-].join(",");
 
 const SNAPSHOT_SELECT = [
   "game_session_id",
@@ -234,13 +225,7 @@ export class SupabasePlayerWorldReadRepository implements PlayerWorldReadReposit
     profileIds: readonly string[],
   ): Promise<readonly Omit<PlayerWorldCountryRecord, "snapshot">[]> {
     if (profileIds.length === 0) return [];
-    const response = await this.client
-      .from("country_profiles")
-      .select(PROFILE_SELECT)
-      .eq("status", "active")
-      .in("id", profileIds)
-      .order("country_name", { ascending: true })
-      .limit(MAX_COUNTRIES + 1);
+    const response = await readVisibleCountryReferences(this.client, profileIds, MAX_COUNTRIES + 1);
     if (response.error) throw mapPersistenceError(response.error);
     const rows = response.data ?? [];
     if (rows.length > MAX_COUNTRIES) throw readFailed();
@@ -250,13 +235,7 @@ export class SupabasePlayerWorldReadRepository implements PlayerWorldReadReposit
   private async readVisibleProfile(
     countryCode: string,
   ): Promise<Omit<PlayerWorldCountryRecord, "snapshot"> | null> {
-    const response = await this.client
-      .from("country_profiles")
-      .select(PROFILE_SELECT)
-      .eq("status", "active")
-      .eq("country_code", countryCode)
-      .limit(1)
-      .maybeSingle();
+    const response = await readVisibleCountryReference(this.client, countryCode);
     if (response.error) throw mapPersistenceError(response.error);
     return response.data ? toCountryProfileRecord(response.data) : null;
   }

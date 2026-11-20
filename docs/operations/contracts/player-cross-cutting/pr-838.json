@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref025b-currency-pr-838.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 838,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts",
+    "backend/src/domains/business-banking/infrastructure/supabasePlayerBusinessBankingRepository.ts",
+    "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.test.ts",
+    "docs/operations/evidence/refactor-execution-v1/REF-025/u5-currency-read.md",
+    "docs/operations/contracts/player-cross-cutting/pr-838.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-838.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "criticalJobChecks": [
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance",
+    "Verify C4 source, public contracts, and retained application boundaries",
+    "Verify C4 database, replay, isolation, rollback, and concurrency",
+    "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/u5-currency-read.md",
+  "authorizationNote": "Parent-approved amendment: REF025b nullable currency metadata in five changed paths, at most250 semantic lines. Verifier/test entries are locks, not edit permission. Preserve all prior fields, queries, predicates, eligibility and repayment rights. No economic policy, UI, SQL, workflow, live access, secrets, capture, dispatch, deployment or hold restoration. Preserve #668/#736 and all nine U1 guards. REF025 remains BLOCKED; parent reviews and merges."
+}

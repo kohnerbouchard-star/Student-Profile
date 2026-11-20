@@ -1,4 +1,4 @@
-import { publicSubmittedAnswers, resolveContractInteraction } from "./contract-interaction-v2.js";
+import { publicSubmittedAnswers, publicSubmittedStoryDecision, resolveContractInteraction } from "./contract-interaction-v2.js";
 
 const PUBLIC_CONTRACT_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
@@ -177,7 +177,8 @@ export function normalizePlayerContracts(response, { now = Date.now() } = {}) {
         time: shortDate(progress.submittedAt, "Submitted"),
         url: text(evidence.submissionUrl || evidence.url),
         note: text(evidence.note || evidence.response || evidence.text),
-        answers: publicSubmittedAnswers(evidence)
+        answers: publicSubmittedAnswers(evidence),
+        storyDecision: publicSubmittedStoryDecision(evidence)
       } : null,
       timeline: timeline(contract, progress, status)
     }];

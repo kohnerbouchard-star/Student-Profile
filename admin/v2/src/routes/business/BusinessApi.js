@@ -4,7 +4,6 @@ const DEFAULT_TIMEOUT_MS = 15_000;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const OPAQUE_GAME_PATTERN = /^[a-z0-9][a-z0-9._~-]{15,127}$/i;
 const BUSINESS_KEY_PATTERN = /^biz_[0-9a-f]{32}$/i;
-const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$/;
 
 function timeout(value, fallback = DEFAULT_TIMEOUT_MS) {
   const number = Number(value);
@@ -21,12 +20,6 @@ function businessToken(value) {
   const token = String(value || "").trim().toLowerCase();
   if (!BUSINESS_KEY_PATTERN.test(token)) throw invalidRequest();
   return encodeURIComponent(token);
-}
-
-function idempotencyKey(value) {
-  const key = String(value || "").trim();
-  if (!IDEMPOTENCY_KEY_PATTERN.test(key)) throw invalidRequest();
-  return key;
 }
 
 function invalidRequest(status = 400, code = "INVALID_REQUEST") {
@@ -120,34 +113,20 @@ function validateBusinessRead(payload) {
   return isRecord(payload?.data) && Array.isArray(payload.data.businesses);
 }
 
-function validateBusinessMutation(payload) {
-  return isRecord(payload?.data) && Object.hasOwn(payload.data, "result");
-}
-
-function complianceBody(input, key) {
-  if (!isRecord(input)) throw invalidRequest(422, "VALIDATION_FAILED");
-  return {
-    requirementKey: input.requirementKey,
-    requirementType: input.requirementType,
-    status: input.status,
-    feeAmount: input.feeAmount ?? 0,
-    policyEffects: {},
-    expiresAt: input.expiresAt || null,
-    reason: input.reason,
-    idempotencyKey: key,
-  };
+function validateBusinessDetail(payload) {
+  return isRecord(payload?.data) && isRecord(payload.data.business);
 }
 
 export function createBusinessApi({ fetchImpl, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   if (typeof fetchImpl !== "function") throw new TypeError("Business Admin BFF transport is unavailable.");
-  let activeRead = null;
-  const inFlight = new Map();
+  let activeDirectoryRead = null;
+  let activeDetailRead = null;
 
   function readBusinesses({ gameId, signal, timeoutMs: requestTimeoutMs } = {}) {
     try {
-      activeRead?.abort();
+      activeDirectoryRead?.abort();
       const controller = new AbortController();
-      activeRead = controller;
+      activeDirectoryRead = controller;
       const abort = () => controller.abort(signal?.reason);
       if (signal?.aborted) abort();
       else signal?.addEventListener?.("abort", abort, { once: true });
@@ -162,7 +141,33 @@ export function createBusinessApi({ fetchImpl, timeoutMs = DEFAULT_TIMEOUT_MS } 
       );
       return request.finally(() => {
         signal?.removeEventListener?.("abort", abort);
-        if (activeRead === controller) activeRead = null;
+        if (activeDirectoryRead === controller) activeDirectoryRead = null;
+      });
+    } catch (error) {
+      return Promise.reject(safeError(error));
+    }
+  }
+
+  function readBusiness({ gameId, businessKey, signal, timeoutMs: requestTimeoutMs } = {}) {
+    try {
+      activeDetailRead?.abort();
+      const controller = new AbortController();
+      activeDetailRead = controller;
+      const abort = () => controller.abort(signal?.reason);
+      if (signal?.aborted) abort();
+      else signal?.addEventListener?.("abort", abort, { once: true });
+      const request = requestJson(
+        fetchImpl,
+        `/games/${gameToken(gameId)}/businesses/${businessToken(businessKey)}`,
+        {
+          signal: controller.signal,
+          timeoutMs: timeout(requestTimeoutMs, timeout(timeoutMs)),
+          validate: validateBusinessDetail,
+        },
+      );
+      return request.finally(() => {
+        signal?.removeEventListener?.("abort", abort);
+        if (activeDetailRead === controller) activeDetailRead = null;
       });
     } catch (error) {
       return Promise.reject(safeError(error));
@@ -170,49 +175,13 @@ export function createBusinessApi({ fetchImpl, timeoutMs = DEFAULT_TIMEOUT_MS } 
   }
 
   function cancelBusinessRequest() {
-    if (!activeRead) return false;
-    activeRead.abort();
-    activeRead = null;
-    return true;
+    const active = Boolean(activeDirectoryRead || activeDetailRead);
+    activeDirectoryRead?.abort();
+    activeDetailRead?.abort();
+    activeDirectoryRead = null;
+    activeDetailRead = null;
+    return active;
   }
 
-  function setBusinessCompliance({
-    gameId,
-    businessKey,
-    input,
-    idempotencyKey: requestKey,
-    signal,
-    timeoutMs: requestTimeoutMs,
-  } = {}) {
-    try {
-      const key = idempotencyKey(requestKey);
-      const path = `/games/${gameToken(gameId)}/businesses/${businessToken(businessKey)}/compliance`;
-      const body = complianceBody(input, key);
-      const fingerprint = JSON.stringify({ path, body });
-      const existing = inFlight.get(key);
-      if (existing) {
-        if (existing.fingerprint !== fingerprint) return Promise.reject(safeError(invalidRequest(409, "CONFLICT")));
-        return existing.promise;
-      }
-      const promise = requestJson(fetchImpl, path, {
-        method: "POST",
-        body,
-        headers: { "Idempotency-Key": key },
-        signal,
-        timeoutMs: timeout(requestTimeoutMs, timeout(timeoutMs)),
-        validate: validateBusinessMutation,
-      });
-      const entry = { fingerprint, promise };
-      inFlight.set(key, entry);
-      const clear = () => {
-        if (inFlight.get(key) === entry) inFlight.delete(key);
-      };
-      promise.then(clear, clear);
-      return promise;
-    } catch (error) {
-      return Promise.reject(safeError(error));
-    }
-  }
-
-  return Object.freeze({ readBusinesses, cancelBusinessRequest, setBusinessCompliance });
+  return Object.freeze({ readBusinesses, readBusiness, cancelBusinessRequest });
 }

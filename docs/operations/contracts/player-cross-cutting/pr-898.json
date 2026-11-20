@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.loan-review-return-pr-898.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 898,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/loan-review-transition-qualification.yml",
+    "backend/supabase/migrations/20261103082914_qualify_business_loan_review_status_v1.sql",
+    "docs/operations/evidence/loan-review-transition-qualification-v1/scope.md",
+    "scripts/banking-fx-database-acceptance.sql",
+    "scripts/business-banking-runtime-contract.mjs",
+    "scripts/loan-review-transition-binding.mjs",
+    "scripts/loan-review-transition-database.test.mjs",
+    "scripts/loan-review-transition-fixtures.mjs",
+    "scripts/loan-review-transition-full-schema.test.mjs",
+    "scripts/loan-review-transition-qualification.test.mjs",
+    "scripts/loan-review-transition-race.test.mjs",
+    "scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+    "docs/operations/contracts/player-cross-cutting/pr-898.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    ".github/workflows/loan-review-transition-qualification.yml",
+    "backend/supabase/migrations/20261103082914_qualify_business_loan_review_status_v1.sql",
+    "docs/operations/evidence/loan-review-transition-qualification-v1/scope.md",
+    "scripts/banking-fx-database-acceptance.sql",
+    "scripts/business-banking-runtime-contract.mjs",
+    "scripts/loan-review-transition-binding.mjs",
+    "scripts/loan-review-transition-database.test.mjs",
+    "scripts/loan-review-transition-fixtures.mjs",
+    "scripts/loan-review-transition-full-schema.test.mjs",
+    "scripts/loan-review-transition-qualification.test.mjs",
+    "scripts/loan-review-transition-race.test.mjs",
+    "scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs",
+    "scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs",
+    "docs/operations/contracts/player-cross-cutting/pr-898.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Database Replay",
+    "banking-fx-clearing-v1",
+    "Loan Review Transition Qualification"
+  ],
+  "criticalJobChecks": [
+    "Backend Typecheck",
+    "Repository Quality",
+    "Loan Review Transition Qualification"
+  ],
+  "readOnlyPaths": [
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "authorizationNote": "Bounded retained legacy loan review status predicate correction and disposable database qualification. Preserve all prior suffix identities, immutable manifests, ownership/account/currency/creation gates, terminal replay, release holds and production separation. No roadmap, lending-policy activation, hosted mutation, deployment or review approval."
+}

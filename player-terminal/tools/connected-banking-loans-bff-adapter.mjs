@@ -75,6 +75,28 @@ source = replaceExactlyOnce(
 );
 source = replaceExactlyOnce(
   source,
+  "Banking fixture canonical ledger seed",
+  `'credit', 'acceptance', 'connected_banking_seed', gen_random_uuid(),
+        'system', null, jsonb_build_object('disposable', true)`,
+  `'credit', 'setup', 'initial_balance_seed', null,
+        'system', null, jsonb_build_object(
+          'bankTransactionIdempotencyKey', 'phase12-connected-banking-seed-v1',
+          'disposable', true
+        )`,
+);
+source = replaceExactlyOnce(
+  source,
+  "Savings fixture canonical ledger seed",
+  `'credit', 'acceptance', 'connected_savings_seed', gen_random_uuid(),
+        'system', null, jsonb_build_object('disposable', true)`,
+  `'credit', 'setup', 'initial_balance_seed', null,
+        'system', null, jsonb_build_object(
+          'bankTransactionIdempotencyKey', 'phase12-connected-savings-seed-v1',
+          'disposable', true
+        )`,
+);
+source = replaceExactlyOnce(
+  source,
   "Banking/Loans matched currency balances",
   `async function bankingBalances(page) {
   const checking = page.locator('[data-player-banking-balance^="checking:"] h3').first();
@@ -127,6 +149,10 @@ source = replaceExactlyOnce(
 
 if (source.includes("/functions/v1/classroom-api/players/login")) {
   throw new Error("Banking/Loans BFF adapter retained the retired Player login route.");
+}
+if (source.includes("'acceptance', 'connected_banking_seed'") ||
+    source.includes("'acceptance', 'connected_savings_seed'")) {
+  throw new Error("Banking/Loans BFF adapter retained a non-allowlisted ledger seed.");
 }
 
 const entryPath = fileURLToPath(import.meta.url);

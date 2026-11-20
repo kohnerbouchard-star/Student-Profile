@@ -1,8 +1,8 @@
 import {
   type PlayerInventoryItemDto,
+  type PlayerInventoryReadInput,
   type PlayerInventoryReadRepository,
   type PlayerInventoryReadResponseBody,
-  type PlayerInventoryReadScope,
   PlayerInventoryReadError,
   PlayerInventoryReadPersistenceError,
   type PlayerInventoryRecord,
@@ -15,22 +15,21 @@ export class PlayerInventoryReadService {
   constructor(private readonly repository: PlayerInventoryReadRepository) {}
 
   async readInventory(
-    scope: PlayerInventoryReadScope,
+    input: PlayerInventoryReadInput,
   ): Promise<PlayerInventoryReadResponseBody> {
     try {
       const result = await this.repository.readInventory({
-        gameId: scope.gameId,
-        playerUuid: scope.playerUuid,
+        applicationContext: input.applicationContext,
         limit: MAX_PLAYER_INVENTORY_HOLDINGS,
       });
 
       if (
-        result.gameId !== scope.gameId ||
-        result.playerUuid !== scope.playerUuid ||
+        result.gameId !== input.applicationContext.gameSessionId ||
+        result.playerUuid !== input.applicationContext.actor.playerUuid ||
         result.records.length > MAX_PLAYER_INVENTORY_HOLDINGS ||
         result.records.some((record) =>
-          record.gameId !== scope.gameId ||
-          record.playerUuid !== scope.playerUuid
+          record.gameId !== input.applicationContext.gameSessionId ||
+          record.playerUuid !== input.applicationContext.actor.playerUuid
         )
       ) {
         throw scopeViolation();
@@ -53,7 +52,7 @@ export class PlayerInventoryReadService {
 
       return {
         ok: true,
-        generatedAt: scope.effectiveAt,
+        generatedAt: input.effectiveAt,
         availability: "available",
         capacity: null,
         categories,

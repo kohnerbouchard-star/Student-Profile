@@ -1,178 +1,33 @@
+import { projectLoanRepaymentForecast } from "../domain/loanRepaymentForecast.ts";
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
 import {
-  type BusinessSnapshotDto,
   type LoansSnapshotDto,
+  type LoanLifecycleDto,
+  LOAN_LIFECYCLE_LIMIT,
+  LOAN_LIFECYCLE_SCOPE,
   PlayerBusinessBankingError,
   type PlayerBusinessBankingRepository,
+  type PlayerEconomicContext,
 } from "../contracts/playerBusinessBankingContracts.ts";
+
+import { projectLoanCurrencies, projectLoanLifecycle, type LoanCurrencyScheduleInput } from "../domain/loanCurrencyProjection.ts";
 
 type Row = Record<string, unknown>;
 
+// Publish only the account category, never persisted account identifiers.
+export function loanRepaymentAccountType(value: unknown): "checking" | "savings" | "business" | null {
+  if (value === "checking" || value === "savings") return value;
+  return typeof value === "string" && /^business:biz_[0-9a-f]{32}$/u.test(value) ? "business" : null;
+}
+
 export class SupabasePlayerBusinessBankingRepository
   implements PlayerBusinessBankingRepository {
-  constructor(private readonly client: EdgeSupabaseClient) {}
+  constructor(private readonly client: EdgeSupabaseClient, private readonly lifecycleTimeoutMs = 2000) {}
 
-  async assertBusinessCreationAllowed(input: {
+  async readEconomicContext(input: {
     readonly gameSessionId: string;
     readonly playerId: string;
-    readonly idempotencyKey: string;
-  }): Promise<void> {
-    const replayRows = await rows(
-      this.client.from("audit_log")
-        .select("id")
-        .eq("game_session_id", input.gameSessionId)
-        .eq("actor_id", input.playerId)
-        .eq("action", "business.create_or_acquire")
-        .eq("metadata->>idempotency_key", input.idempotencyKey)
-        .limit(1),
-    );
-    if (replayRows.length === 1) return;
-
-    const ownedBusinesses = (await rows(
-      this.client.from("business_entities").select("id,status,created_at")
-        .eq("game_session_id", input.gameSessionId)
-        .eq("owner_player_id", input.playerId)
-        .order("created_at", { ascending: true }),
-    )).filter((row) => text(row.status) !== "closed");
-    if (ownedBusinesses.length > 1) {
-      throw new PlayerBusinessBankingError(
-        "business_ownership_ambiguous",
-        "Multiple open businesses are owned by this player. Resolve ownership before continuing.",
-        409,
-      );
-    }
-    if (ownedBusinesses.length === 1) {
-      throw new PlayerBusinessBankingError(
-        "business_already_owned",
-        "Close the current business before creating or acquiring another one.",
-        409,
-      );
-    }
-  }
-
-  async readBusiness(input: {
-    readonly gameSessionId: string;
-    readonly playerId: string;
-  }): Promise<BusinessSnapshotDto> {
-    const ownedBusinesses = (await rows(
-      this.client.from("business_entities").select("*")
-        .eq("game_session_id", input.gameSessionId)
-        .eq("owner_player_id", input.playerId)
-        .order("created_at", { ascending: true }),
-    )).filter((row) => text(row.status) !== "closed");
-    if (ownedBusinesses.length > 1) {
-      throw new PlayerBusinessBankingError(
-        "business_ownership_ambiguous",
-        "Multiple open businesses are owned by this player. Resolve ownership before continuing.",
-        409,
-      );
-    }
-    const business = ownedBusinesses[0];
-    if (!business) return emptyBusiness();
-
-    const businessId = text(business.id);
-    const [products, employees, inventory, runs, balanceRows] = await Promise.all([
-      rows(this.client.from("business_products").select("*")
-        .eq("game_session_id", input.gameSessionId).eq("business_id", businessId)
-        .order("created_at", { ascending: true })),
-      rows(this.client.from("business_employees").select("*")
-        .eq("game_session_id", input.gameSessionId).eq("business_id", businessId)
-        .order("hired_at", { ascending: true })),
-      rows(this.client.from("business_inventory").select("*")
-        .eq("game_session_id", input.gameSessionId).eq("business_id", businessId)
-        .order("item_key", { ascending: true })),
-      rows(this.client.from("business_production_runs").select("*")
-        .eq("game_session_id", input.gameSessionId).eq("business_id", businessId)
-        .order("created_at", { ascending: false }).limit(100)),
-      rows(this.client.from("account_balances").select("*")
-        .eq("game_session_id", input.gameSessionId).eq("player_id", input.playerId)),
-    ]);
-
-    const businessAccount = `business:${text(business.public_key).toLowerCase()}`;
-    const cash = number(
-      balanceRows.find((row) => text(row.account_type) === businessAccount)?.balance,
-    );
-    const completedOutput = runs.filter((row) => text(row.status) === "completed")
-      .reduce((sum, row) => sum + number(row.output_quantity), 0);
-    const finished = inventory.filter((row) => text(row.inventory_kind) === "finished_good")
-      .reduce((sum, row) => sum + number(row.quantity), 0);
-    const activeEmployees = employees.filter((row) => text(row.status) === "active");
-    const capacity = Math.max(0, number(business.capacity_units, 100));
-    const latestOutput = runs.length ? number(runs[0].output_quantity) : 0;
-    const capacityUse = capacity > 0
-      ? Math.min(100, Math.round((latestOutput / capacity) * 100))
-      : 0;
-    const revenue = number(business.revenue_total);
-    const profit = number(business.profit_total);
-
-    return {
-      configured: true,
-      company: {
-        id: text(business.public_key),
-        name: text(business.legal_name, "Unnamed business"),
-        registration: text(business.public_key).toUpperCase(),
-        status: title(text(business.status, "active")),
-        industry: title(text(business.industry_code, "general")),
-        headquarters: text(business.country_code, "Unassigned"),
-        valuation: number(business.valuation),
-        valuationChange: 0,
-        cash,
-        revenue,
-        margin: revenue > 0 ? round((profit / revenue) * 100, 1) : 0,
-        reputation: number(business.reputation_score, 50),
-        reputationLabel: reputationLabel(number(business.reputation_score, 50)),
-        summary: `Ledger-backed ${title(text(business.entity_type))} operating in ${text(business.country_code)}.`,
-      },
-      operations: {
-        employees: activeEmployees.length,
-        output: completedOutput,
-        backlog: Math.round(finished),
-        capacityUse,
-        maxRun: Math.max(0, Math.floor(capacity * activeEmployees.reduce(
-          (sum, row) => sum + number(row.productivity_index, 1),
-          activeEmployees.length ? 0 : 1,
-        ))),
-        capacityNote: capacityUse >= 90
-          ? "Capacity is constrained. Additional labor or equipment may be required."
-          : "Capacity remains within the reviewed operating range.",
-      },
-      products: products.filter((row) => text(row.status) !== "retired").map((row) => {
-        const price = number(row.unit_price);
-        const cost = number(row.unit_input_cost) + number(row.unit_labor_cost);
-        return {
-          id: text(row.public_key),
-          category: title(text(row.category, "general")),
-          name: text(row.name, "Unnamed product"),
-          description: `${number(row.quality_score, 50)}/100 quality · ${number(row.base_demand_units)} baseline demand`,
-          price,
-          margin: price > 0 ? round(((price - cost) / price) * 100, 1) : 0,
-          demand: demandLabel(price, number(row.reference_price, price)),
-          icon: "factory",
-          version: integer(row.version, 1),
-        };
-      }),
-      suppliers: [],
-      employees: employees.map((row) => ({
-        id: text(row.public_key),
-        role: text(row.role_name),
-        contractType: text(row.contract_type),
-        wage: number(row.wage_per_cycle),
-        productivity: number(row.productivity_index, 1),
-        status: title(text(row.status)),
-      })),
-      inventory: inventory.map((row) => ({
-        itemKey: text(row.item_key),
-        kind: text(row.inventory_kind),
-        quantity: number(row.quantity),
-        unitCost: number(row.unit_cost),
-      })),
-    };
-  }
-
-  async readLoans(input: {
-    readonly gameSessionId: string;
-    readonly playerId: string;
-  }): Promise<LoansSnapshotDto> {
+  }): Promise<PlayerEconomicContext> {
     const context = await rpcMaybeRow(
       this.client,
       "resolve_player_economic_context_v1",
@@ -181,21 +36,31 @@ export class SupabasePlayerBusinessBankingRepository
         p_player_id: input.playerId,
       },
     );
-    const localCurrency = text(context?.currency_code).toUpperCase();
-    if (!localCurrency) {
+    const countryCode = text(context?.country_code).toUpperCase();
+    const currencyCode = text(context?.currency_code).toUpperCase();
+    if (!countryCode || !currencyCode) {
       throw new PlayerBusinessBankingError(
         "player_economic_context_missing",
-        "Player country and currency must be assigned before loans can be viewed.",
+        "Player country and currency must be assigned before this action.",
         409,
       );
     }
+    return { countryCode, currencyCode };
+  }
+
+  async readLoans(input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+  }): Promise<LoansSnapshotDto> {
+    const context = await this.readEconomicContext(input);
+    const localCurrency = context.currencyCode;
 
     const [products, loans, profileRows, paymentRows, businesses] = await Promise.all([
-      rows(this.client.from("loan_products").select("*")
+      rows(this.client.from("loan_products").select("*,maximum_amount_exact:maximum_amount::text")
         .eq("game_session_id", input.gameSessionId)
         .eq("currency_code", localCurrency)
         .order("minimum_amount", { ascending: true })),
-      rows(this.client.from("player_loans").select("*")
+      rows(this.client.from("player_loans").select("*,principal_balance_exact:principal_balance::text,accrued_interest_exact:accrued_interest::text,scheduled_payment_exact:scheduled_payment::text")
         .eq("game_session_id", input.gameSessionId).eq("player_id", input.playerId)
         .order("created_at", { ascending: false })),
       rows(this.client.from("credit_profiles").select("*")
@@ -207,6 +72,7 @@ export class SupabasePlayerBusinessBankingRepository
       rows(this.client.from("business_entities").select("id,public_key,status")
         .eq("game_session_id", input.gameSessionId).eq("owner_player_id", input.playerId)),
     ]);
+    const lifecycle = this.readLoanLifecycle(input);
     const businessKeys = new Map(businesses.map((row) => [text(row.id), text(row.public_key)]));
     const productById = new Map(products.map((row) => [text(row.id), row]));
     const profile = profileRows[0] ?? {};
@@ -216,14 +82,19 @@ export class SupabasePlayerBusinessBankingRepository
       (sum, row) => sum + number(row.principal_balance) + number(row.accrued_interest),
       0,
     );
-    const next = [...active].sort((a, b) => Date.parse(text(a.next_due_at)) - Date.parse(text(b.next_due_at)))[0];
+    const next = [...active].sort(
+      (a, b) => Date.parse(text(a.next_due_at)) - Date.parse(text(b.next_due_at)),
+    )[0];
     const eligibleProducts = products.filter((row) => {
       if (text(row.status) !== "active") return false;
       if (integer(row.minimum_credit_score, 550) > creditScore) return false;
-      return text(row.borrower_type) !== "business" || businesses.some((business) => ["active", "restructuring"].includes(text(business.status)));
+      return text(row.borrower_type) !== "business" || businesses.some(
+        (business) => ["active", "restructuring"].includes(text(business.status)),
+      );
     });
 
-    return {
+    const exactSchedule: LoanCurrencyScheduleInput[] = [];
+    const snapshot: LoansSnapshotDto = {
       configured: true,
       creditScore,
       availableCredit: eligibleProducts.reduce((sum, row) => sum + number(row.maximum_amount), 0),
@@ -234,6 +105,7 @@ export class SupabasePlayerBusinessBankingRepository
       onTimeRate: round(number(profile.on_time_payment_rate, 1) * 100, 1),
       paymentsMade: paymentRows.filter((row) => text(row.status) === "posted").length,
       offers: eligibleProducts.map((row) => ({
+        currencyCode: text(row.currency_code) || null,
         id: text(row.public_key),
         name: text(row.name, "Credit facility"),
         purpose: text(row.borrower_type) === "business" ? "Business finance" : "Player finance",
@@ -253,6 +125,7 @@ export class SupabasePlayerBusinessBankingRepository
         const balance = number(row.principal_balance) + number(row.accrued_interest);
         const product = productById.get(text(row.loan_product_id)) ?? {};
         return {
+          currencyCode: text(row.currency_code) || null,
           id: text(row.public_key),
           name: text(product.name, "Credit facility"),
           status: title(text(row.status)),
@@ -261,9 +134,13 @@ export class SupabasePlayerBusinessBankingRepository
           nextPayment: number(row.scheduled_payment),
           nextDue: text(row.next_due_at),
           repaidPercent: original > 0
-            ? Math.max(0, Math.min(100, round(((original - number(row.principal_balance)) / original) * 100, 1)))
+            ? Math.max(0, Math.min(100, round(
+              ((original - number(row.principal_balance)) / original) * 100,
+              1,
+            )))
             : 0,
           accruedInterest: number(row.accrued_interest),
+          repaymentAccountType: loanRepaymentAccountType(row.repayment_account_type),
           businessId: businessKeys.get(text(row.business_id)) ?? null,
         };
       }),
@@ -276,14 +153,97 @@ export class SupabasePlayerBusinessBankingRepository
         );
         const nextDue = Date.parse(text(row.next_due_at));
         if (!Number.isFinite(nextDue)) return [];
-        return Array.from({ length: paymentCount }, (_, index) => ({
-          cycle: `Payment ${index + 1}`,
-          due: new Date(nextDue + index * frequencyCycles * 7 * 86_400_000).toISOString(),
-          amount: number(row.scheduled_payment),
-          status: index === 0 && text(row.status) === "delinquent" ? "Late" : "Scheduled",
-        }));
+        return Array.from({ length: paymentCount }, (_, index) => {
+          const due = new Date(nextDue + index * frequencyCycles * 7 * 86_400_000).toISOString();
+          exactSchedule.push({ currencyCode: text(row.currency_code) || null, due, exactAmount: row.scheduled_payment_exact });
+          return {
+            currencyCode: text(row.currency_code) || null,
+            cycle: `Payment ${index + 1}`,
+            due,
+            amount: number(row.scheduled_payment),
+            status: index === 0 && text(row.status) === "delinquent" ? "Late" : "Scheduled",
+          };
+        });
       }),
     };
+    const recordedLifecycle = await lifecycle;
+    return { ...snapshot, currencyProjection: projectLoanCurrencies(eligibleProducts, active, exactSchedule),
+      lifecycle: recordedLifecycle, repaymentForecast: projectLoanRepaymentForecast(active, products, recordedLifecycle) };
+  }
+
+  private async readLoanLifecycle(input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+  }): Promise<LoanLifecycleDto> {
+    const controller = new AbortController();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const deadline = new Promise<LoanLifecycleDto>((resolve) => {
+        timeout = setTimeout(() => {
+          controller.abort();
+          resolve({ version: 1, state: "unavailable" });
+        }, this.lifecycleTimeoutMs);
+      });
+      return await Promise.race([this.queryLoanLifecycle(input, controller.signal), deadline]);
+    } finally {
+      clearTimeout(timeout);
+      controller.abort();
+    }
+  }
+
+  private async queryLoanLifecycle(input: {
+    readonly gameSessionId: string;
+    readonly playerId: string;
+  }, signal: AbortSignal): Promise<LoanLifecycleDto> {
+    try {
+      type Query = ReturnType<ReturnType<EdgeSupabaseClient["from"]>["select"]>;
+      // Supabase supports exact counts; keep this addition local to the new read.
+      type CountedSelect = { select(columns: string, options: { count: "exact" }): Query };
+      const abortable = (query: Query) =>
+        (query as Query & { abortSignal(value: AbortSignal): Query }).abortSignal(signal);
+      const scoped = (table: string, columns: string) => abortable((this.client.from(table) as CountedSelect)
+        .select(columns, { count: "exact" })).eq("game_session_id", input.gameSessionId)
+        .eq("player_id", input.playerId);
+      const window = async (query: Query) => {
+        const response = await query.order("created_at", { ascending: false })
+          .order("public_key", { ascending: false }).limit(LOAN_LIFECYCLE_LIMIT + 1);
+        if (response.error) throw mapDatabaseError(response.error.message);
+        const data = Array.isArray(response.data) ? response.data.filter(
+          (value): value is Row => Boolean(value && typeof value === "object" && !Array.isArray(value)),
+        ) : [];
+        return { rows: data, count: Array.isArray(response.data) &&
+          Number.isSafeInteger(response.count) && Number(response.count) >= 0 ? Number(response.count) : null };
+      };
+      const [applicationWindow, facilityWindow, paymentWindow] = await Promise.all([
+        window(scoped("loan_applications", "public_key,loan_product_id,liability_kind,status,amount_exact:amount::text,projected_payment_exact:projected_payment::text,created_at,updated_at,reviewed_at")
+          .eq("liability_kind", LOAN_LIFECYCLE_SCOPE)),
+        window(scoped("player_loans", "id,public_key,loan_product_id,liability_kind,status,currency_code,original_principal_exact:original_principal::text,principal_balance_exact:principal_balance::text,accrued_interest_exact:accrued_interest::text,last_accrued_at,created_at,updated_at,defaulted_at,closed_at")
+          .eq("liability_kind", LOAN_LIFECYCLE_SCOPE)),
+        window(scoped("loan_payments", "public_key,loan_id,status,amount_exact:amount::text,principal_amount_exact:principal_amount::text,interest_amount_exact:interest_amount::text,created_at,applied_due_at")),
+      ]);
+      if (signal.aborted) return { version: 1, state: "unavailable" };
+      const applications = applicationWindow.rows;
+      const facilities = facilityWindow.rows;
+      const payments = paymentWindow.rows;
+      const productIds = [...new Set([...applications, ...facilities]
+        .map((row) => text(row.loan_product_id)).filter(Boolean))];
+      const loanIds = [...new Set(payments.slice(0, LOAN_LIFECYCLE_LIMIT)
+        .map((row) => text(row.loan_id)).filter(Boolean))];
+      const [products, paymentLoans] = await Promise.all([
+        productIds.length ? rows(abortable(this.client.from("loan_products")
+          .select("id,public_key,name,currency_code")).eq("game_session_id", input.gameSessionId)
+          .in("id", productIds)) : [],
+        loanIds.length ? rows(scoped("player_loans", "id,public_key,liability_kind,currency_code")
+          .eq("liability_kind", LOAN_LIFECYCLE_SCOPE).in("id", loanIds)) : [],
+      ]);
+      if (signal.aborted) return { version: 1, state: "unavailable" };
+      return projectLoanLifecycle({ applications, facilities, payments, products, paymentLoans,
+        applicationCount: applicationWindow.count, facilityCount: facilityWindow.count,
+        paymentCount: paymentWindow.count });
+    } catch {
+      // Added history cannot turn an otherwise valid existing read into a failure.
+      return { version: 1, state: "unavailable" };
+    }
   }
 
   async execute(
@@ -291,14 +251,12 @@ export class SupabasePlayerBusinessBankingRepository
     args: Readonly<Record<string, unknown>>,
   ): Promise<Record<string, unknown>> {
     const response = await this.client.rpc<unknown>(command, args);
-    if (response.error) {
-      throw mapDatabaseError(response.error.message);
-    }
+    if (response.error) throw mapDatabaseError(response.error.message);
     const value = Array.isArray(response.data) ? response.data[0] : response.data;
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       throw new PlayerBusinessBankingError(
-        "business_banking_result_invalid",
-        "The operation completed without a valid result.",
+        "banking_result_invalid",
+        "The Banking operation completed without a valid result.",
         500,
       );
     }
@@ -306,11 +264,15 @@ export class SupabasePlayerBusinessBankingRepository
   }
 }
 
-async function rows(builder: PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<Row[]> {
+async function rows(
+  builder: PromiseLike<{ data: unknown; error: { message: string } | null }>,
+): Promise<Row[]> {
   const response = await builder;
   if (response.error) throw mapDatabaseError(response.error.message);
   return Array.isArray(response.data)
-    ? response.data.filter((value): value is Row => Boolean(value && typeof value === "object" && !Array.isArray(value)))
+    ? response.data.filter(
+      (value): value is Row => Boolean(value && typeof value === "object" && !Array.isArray(value)),
+    )
     : [];
 }
 
@@ -325,8 +287,8 @@ async function rpcMaybeRow(
   if (value === null || value === undefined) return null;
   if (typeof value !== "object" || Array.isArray(value)) {
     throw new PlayerBusinessBankingError(
-      "business_banking_result_invalid",
-      "The operation completed without a valid result.",
+      "banking_result_invalid",
+      "The Banking operation completed without a valid result.",
       500,
     );
   }
@@ -334,7 +296,7 @@ async function rpcMaybeRow(
 }
 
 function mapDatabaseError(message: string): PlayerBusinessBankingError {
-  const code = message.trim().split(/\s+/u)[0] || "BUSINESS_BANKING_FAILED";
+  const code = message.trim().split(/\s+/u)[0] || "BANKING_FAILED";
   const mappings: Record<string, [number, string]> = {
     PLAYER_SCOPE_REQUIRED: [401, "Player session scope is required."],
     PLAYER_NOT_FOUND: [404, "Player was not found in this game."],
@@ -344,73 +306,30 @@ function mapDatabaseError(message: string): PlayerBusinessBankingError {
     INSUFFICIENT_FUNDS: [409, "Available funds are insufficient."],
     IDEMPOTENCY_KEY_CONFLICT: [409, "This idempotency key was already used for a different request."],
     ACCOUNT_CURRENCY_MISMATCH: [409, "Checking and savings transfers must use the player's current local currency."],
-    BUSINESS_NOT_FOUND: [404, "Business was not found or is not owned by this player."],
-    PRODUCT_NOT_FOUND: [404, "Business product was not found."],
-    EMPLOYEE_NOT_FOUND: [404, "Business employee was not found."],
-    CAPACITY_EXCEEDED: [409, "The production run exceeds available capacity."],
-    PRODUCTION_UNAFFORDABLE: [409, "Business funds are insufficient for this production run."],
-    INSUFFICIENT_INPUT_INVENTORY: [409, "Business input inventory is insufficient."],
-    WAGE_UNAFFORDABLE: [409, "The business cannot afford the proposed wage."],
     LOAN_PRODUCT_NOT_FOUND: [404, "Loan offer was not found."],
     LOAN_CURRENCY_MISMATCH: [409, "Loan offers must use the player's current local currency."],
     LOAN_NOT_FOUND: [404, "Loan was not found."],
     CREDIT_SCORE_INELIGIBLE: [409, "Current economic behavior does not meet this offer's credit requirement."],
     LOAN_UNAFFORDABLE: [409, "Projected payments exceed the affordability limit."],
     AUTHORITATIVE_BUSINESS_BORROWER_REQUIRED: [409, "An active authoritative business borrower is required."],
-    STALE_PRODUCT_VERSION: [409, "Product pricing changed. Reload before retrying."],
-    CLOSED_BUSINESS_IMMUTABLE: [409, "A closed business cannot be reopened through this action."],
   };
   const mapped = mappings[code];
   return new PlayerBusinessBankingError(
     code.toLowerCase(),
-    mapped?.[1] ?? "The business or banking operation could not be completed.",
+    mapped?.[1] ?? "The Banking or Loans operation could not be completed.",
     mapped?.[0] ?? 400,
   );
 }
 
-function emptyBusiness(): BusinessSnapshotDto {
-  return {
-    configured: false,
-    company: {
-      id: "",
-      name: "Business not configured",
-      registration: "—",
-      status: "Unavailable",
-      industry: "Not configured",
-      headquarters: "Not configured",
-      valuation: 0,
-      valuationChange: 0,
-      cash: 0,
-      revenue: 0,
-      margin: 0,
-      reputation: 0,
-      reputationLabel: "No business profile",
-      summary: "Create or acquire a business to begin operating.",
-    },
-    operations: {
-      employees: 0,
-      output: 0,
-      backlog: 0,
-      capacityUse: 0,
-      maxRun: 0,
-      capacityNote: "No production capacity is configured.",
-    },
-    products: [],
-    suppliers: [],
-    employees: [],
-    inventory: [],
-  };
+function text(value: unknown, defaultValue = ""): string {
+  return typeof value === "string" && value.trim() ? value.trim() : defaultValue;
 }
-
-function text(value: unknown, fallback = ""): string {
-  return typeof value === "string" && value.trim() ? value.trim() : fallback;
-}
-function number(value: unknown, fallback = 0): number {
+function number(value: unknown, defaultValue = 0): number {
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
+  return Number.isFinite(parsed) ? parsed : defaultValue;
 }
-function integer(value: unknown, fallback = 0): number {
-  return Math.trunc(number(value, fallback));
+function integer(value: unknown, defaultValue = 0): number {
+  return Math.trunc(number(value, defaultValue));
 }
 function round(value: number, digits = 2): number {
   const scale = 10 ** digits;
@@ -418,16 +337,4 @@ function round(value: number, digits = 2): number {
 }
 function title(value: string): string {
   return value.replace(/[_-]+/gu, " ").replace(/\b\w/gu, (letter) => letter.toUpperCase());
-}
-function reputationLabel(score: number): string {
-  if (score >= 80) return "Trusted operator";
-  if (score >= 60) return "Established operator";
-  if (score >= 40) return "Developing operator";
-  return "At-risk operator";
-}
-function demandLabel(price: number, reference: number): string {
-  const ratio = reference > 0 ? price / reference : 1;
-  if (ratio <= 0.85) return "High";
-  if (ratio <= 1.15) return "Stable";
-  return "Low";
 }

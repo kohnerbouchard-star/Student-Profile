@@ -69,10 +69,22 @@ export interface PlayerStorePublicScope {
   readonly playerId: string;
 }
 
-export interface PlayerStorePublicRepository {
+export interface PlayerStorePublicReadRepository {
   listItems(
     scope: PlayerStorePublicScope,
   ): Promise<readonly PlayerStorePublicItemDto[]>;
+  listPurchases(
+    input: PlayerStorePublicScope & { readonly limit: number },
+  ): Promise<readonly PlayerStorePublicPurchaseHistoryItemDto[]>;
+}
+
+/**
+ * Combined pre-funding Store port retained for isolated regression coverage.
+ * Live Player Store composition must depend on PlayerStorePublicReadRepository
+ * plus the funded command port.
+ */
+export interface PlayerStorePublicRepository
+  extends PlayerStorePublicReadRepository {
   createQuote(
     input: PlayerStorePublicScope & {
       readonly itemKey: string;
@@ -87,9 +99,6 @@ export interface PlayerStorePublicRepository {
       readonly clientSubmittedAt: string | null;
     },
   ): Promise<PlayerStorePublicReceiptDto>;
-  listPurchases(
-    input: PlayerStorePublicScope & { readonly limit: number },
-  ): Promise<readonly PlayerStorePublicPurchaseHistoryItemDto[]>;
 }
 
 export class PlayerStorePublicError extends Error {

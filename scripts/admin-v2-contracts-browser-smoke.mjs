@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -73,6 +74,7 @@ function contractRecord(overrides = {}) {
 
 function contractsFor(mode) {
   if (mode === "empty") return [];
+  if (mode === "draft") return [contractRecord({ status: "draft", publishedAt: null, deadlineAt: null, expiresAt: null })];
   if (mode === "one") return [contractRecord()];
   return [
     contractRecord(),
@@ -168,13 +170,29 @@ function contractPath(pathname) {
   return pathname.includes(`/games/${ADMIN_V2_FIXTURE_GAME_ID}/contracts`);
 }
 
-async function installContractRoutes(page, { mode = "many", failReads = false, permissionDenied = false } = {}) {
+async function installContractRoutes(page, { mode = "many", failReads = false, permissionDenied = false, settingsDenied = false, detailMode = "default", failReview = false, timeZone = "Asia/Seoul" } = {}) {
+  const progress = progressResponse();
+  const submissions = submissionsResponse();
+  if (detailMode !== "default") {
+    progress.progress = Array.from({ length: detailMode === "empty" ? 0 : 16 }, (_, index) => ({
+      ...progressResponse().progress[0], id: `63000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      progressId: `63000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      status: index === 1 || index === 2 ? "completed" : index === 3 ? "in_progress" : "submitted",
+      rewardIssuedAt: index === 2 ? "2026-08-07T06:00:00.000Z" : null,
+    }));
+    submissions.data.submissions = progress.progress.map((row, index) => ({
+      ...submissionsResponse().data.submissions[0], id: row.id, progressId: row.id,
+      displayName: `<img src=x> Participant ${index + 1} — 긴 제출 이름`,
+      evidence: "<script>unsafe()</script> 가격과 생산량 근거. ".repeat(12),
+      resultPayload: { feedback: "<b>Review text</b>" },
+    }));
+  }
   await page.route("**/*", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const pathname = url.pathname;
 
-    if (permissionDenied && pathname.endsWith("/functions/v1/web-session-api/proxy/session/bootstrap")) {
+    if ((permissionDenied || settingsDenied) && pathname.endsWith("/functions/v1/web-session-api/proxy/session/bootstrap")) {
       return route.fulfill({
         status: 200,
         contentType: "application/json; charset=utf-8",
@@ -183,7 +201,7 @@ async function installContractRoutes(page, { mode = "many", failReads = false, p
             admin: { email: "contracts.admin@example.test", displayName: "Contracts Administrator" },
             activeGame: { id: ADMIN_V2_FIXTURE_GAME_ID, name: "Contracts Fixture", status: "active", gameCode: "CTRCT7" },
             games: [{ id: ADMIN_V2_FIXTURE_GAME_ID, name: "Contracts Fixture", status: "active", gameCode: "CTRCT7" }],
-            permissions: ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => permission !== "contracts.manage"),
+            permissions: ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => !(permissionDenied && permission === "contracts.manage") && !(settingsDenied && permission === "settings.manage")),
             roles: ["game_admin"],
             adminRole: "game_admin",
           },
@@ -193,6 +211,9 @@ async function installContractRoutes(page, { mode = "many", failReads = false, p
       });
     }
 
+    if (request.method() === "GET" && pathname.endsWith(`/games/${ADMIN_V2_FIXTURE_GAME_ID}/settings`)) {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { settings: { stockMarketWindow: { timezone: timeZone }, attendanceWindow: { timezone: "Asia/Seoul" } } } }) });
+    }
     if (!contractPath(pathname)) return route.continue();
 
     let body = {};
@@ -222,10 +243,14 @@ async function installContractRoutes(page, { mode = "many", failReads = false, p
       return route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify({ data: { contracts: contractsFor(mode), assignments: contractsFor(mode) } }) });
     }
     if (request.method() === "GET" && pathname.endsWith(`/${CONTRACT_ID}/progress`)) {
-      return route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify(progressResponse()) });
+      return route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify(progress) });
     }
     if (request.method() === "GET" && pathname.endsWith(`/${CONTRACT_ID}/submissions`)) {
-      return route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify(submissionsResponse()) });
+      return route.fulfill({ status: 200, contentType: "application/json; charset=utf-8", body: JSON.stringify(submissions) });
+    }
+
+    if (failReview && request.method() === "POST" && pathname.endsWith("/review")) {
+      return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ code: "CONFLICT", message: RAW_DIAGNOSTIC }) });
     }
 
     return route.fulfill({
@@ -241,12 +266,15 @@ async function createRuntime(browser, fixture, {
   viewport = VIEWPORTS[0],
   failReads = false,
   permissionDenied = false,
+  settingsDenied = false,
+  detailMode = "default",
+  failReview = false,
+  timeZone = "Asia/Seoul",
+  browserTimeZone = null,
 } = {}) {
-  const context = await browser.newContext({ viewport, colorScheme: "dark", reducedMotion: "reduce" });
+  const context = await browser.newContext({ viewport, colorScheme: "dark", reducedMotion: "reduce", ...(browserTimeZone ? { timezoneId: browserTimeZone } : {}) });
   const session = createAdminV2FixtureSession("ready");
-  if (permissionDenied) {
-    session.permissions = session.permissions.filter((permission) => permission !== "contracts.manage");
-  }
+  session.permissions = session.permissions.filter((permission) => !(permissionDenied && permission === "contracts.manage") && !(settingsDenied && permission === "settings.manage"));
   await context.addInitScript(({ sessionKey, deviceKey, seededSession, deviceId }) => {
     try {
       sessionStorage.setItem(sessionKey, JSON.stringify(seededSession));
@@ -254,7 +282,7 @@ async function createRuntime(browser, fixture, {
     } catch {}
   }, { sessionKey: SESSION_STORAGE_KEY, deviceKey: DEVICE_STORAGE_KEY, seededSession: session, deviceId: DEVICE_ID });
   const page = await context.newPage();
-  await installContractRoutes(page, { mode, failReads, permissionDenied });
+  await installContractRoutes(page, { mode, failReads, permissionDenied, settingsDenied, detailMode, failReview, timeZone });
   await page.goto(`${fixture.origin}/admin/v2.html?game=${ADMIN_V2_FIXTURE_GAME_ID}#contracts`, { waitUntil: "domcontentloaded", timeout: 15_000 });
   return { context, page, async close() { await context.close(); } };
 }
@@ -304,7 +332,8 @@ async function runCheck(name, callback) {
   }
 }
 
-const fixture = await startAdminV2FixtureServer();
+const staticRoot = path.resolve(REPOSITORY_ROOT, process.env.ADMIN_V2_CONTRACTS_STATIC_ROOT || ".");
+const fixture = await startAdminV2FixtureServer({ repositoryRoot: staticRoot });
 let browser;
 try {
   browser = await chromium.launch({ headless: true });
@@ -406,6 +435,119 @@ try {
     } finally { await runtime.close(); }
   });
 
+  await runCheck("selected-game-timezone-scheduling", async () => {
+    const before = requestEvidence.length;
+    const runtime = await createRuntime(browser, fixture, { timeZone: "America/New_York" });
+    try {
+      await waitForState(runtime.page, "ready");
+      await runtime.page.getByRole("button", { name: "Create Contract" }).first().click();
+      await runtime.page.getByText("All contract times use America/New_York, the selected game timezone.", { exact: true }).waitFor();
+      await runtime.page.getByLabel("Title").fill("New York Scheduled Contract");
+      await runtime.page.getByLabel("Objective").fill("Explain the causal mechanism.");
+      await runtime.page.getByLabel("Instructions").fill("Use classroom evidence.");
+      await runtime.page.getByLabel("Evidence / submission requirements").fill("Submit two observations.");
+      await runtime.page.getByLabel("Initial lifecycle state").selectOption("scheduled");
+      await runtime.page.getByLabel("Scheduled publish time").fill("2026-11-16T09:00");
+      await runtime.page.getByLabel("Due time").fill("2026-11-16T10:00");
+      await runtime.page.getByLabel("Expiration time").fill("2026-11-16T11:00");
+      await Promise.all([
+        runtime.page.waitForResponse((response) => response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/contracts")),
+        runtime.page.getByRole("button", { name: "Create Contract" }).last().click(),
+      ]);
+      const created = requestEvidence.slice(before).find((entry) => entry.method === "POST" && entry.pathname.endsWith("/contracts"));
+      assert.ok(created);
+      assert.deepEqual([created.body.scheduledAt, created.body.deadlineAt, created.body.expiresAt], ["2026-11-16T14:00:00.000Z", "2026-11-16T15:00:00.000Z", "2026-11-16T16:00:00.000Z"]);
+      return { canonicalZone: "America/New_York", noAttendanceFallback: true };
+    } finally { await runtime.close(); }
+  });
+
+  await runCheck("selected-zone-catalog-and-detail-not-browser-zone", async () => {
+    const runtime = await createRuntime(browser, fixture, { timeZone: "America/New_York", browserTimeZone: "Asia/Seoul" });
+    try {
+      await waitForState(runtime.page, "ready");
+      assert.match(await runtime.page.locator(".admin-contracts-route__dates").first().innerText(), /America\/New_York/);
+      await runtime.page.locator('[data-contracts-action="details"]').first().click();
+      const detail = runtime.page.locator(".admin-contracts-detail-drawer .admin-contracts-detail");
+      await detail.waitFor({ state: "visible" });
+      assert.match(await detail.locator(".admin-contracts-detail__definitions").innerText(), /America\/New_York/);
+      assert.equal((await detail.innerText()).includes("game timezone unavailable"), false);
+      return { selectedZone: true, independentBrowserZone: true };
+    } finally { await runtime.close(); }
+  });
+
+  await runCheck("contracts-only-role-can-create-and-edit-dateless-drafts", async () => {
+    const before = requestEvidence.length;
+    const runtime = await createRuntime(browser, fixture, { mode: "draft", settingsDenied: true, browserTimeZone: "Asia/Seoul" });
+    try {
+      await waitForState(runtime.page, "ready");
+      await runtime.page.getByRole("button", { name: "Create Contract" }).first().click();
+      await runtime.page.getByLabel("Title").fill("Dateless authorized draft");
+      await runtime.page.getByLabel("Objective").fill("Explain the mechanism.");
+      await runtime.page.getByLabel("Instructions").fill("Use classroom evidence.");
+      await runtime.page.getByLabel("Evidence / submission requirements").fill("Submit two observations.");
+      assert.equal(await runtime.page.getByLabel("Due time").isDisabled(), true);
+      await Promise.all([
+        runtime.page.waitForResponse((response) => response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/contracts")),
+        runtime.page.getByRole("button", { name: "Create Contract" }).last().click(),
+      ]);
+      await runtime.page.locator(".admin-contract-form").waitFor({ state: "detached" });
+      await runtime.page.locator('[data-contracts-action="edit"]').first().click();
+      await runtime.page.getByLabel("Title").fill("Dateless authorized edit");
+      await Promise.all([
+        runtime.page.waitForResponse((response) => response.request().method() === "PATCH" && new URL(response.url()).pathname.includes("/contracts/")),
+        runtime.page.getByRole("button", { name: "Save changes", exact: true }).click(),
+      ]);
+      const writes = requestEvidence.slice(before).filter((entry) => ["POST", "PATCH"].includes(entry.method));
+      assert.equal(writes.length, 2);
+      assert.ok(writes.every(({ body }) => !body.scheduledAt && !body.deadlineAt && !body.expiresAt));
+      return { datelessCreate: true, datelessEdit: true, noBroadSettingsGrant: true };
+    } finally { await runtime.close(); }
+  });
+
+  for (const mode of ["create", "edit"]) {
+    await runCheck(`new-overlap-time-blocked-${mode}`, async () => {
+      const before = requestEvidence.length;
+      const runtime = await createRuntime(browser, fixture, { mode: "draft", timeZone: "America/New_York" });
+      try {
+        await waitForState(runtime.page, "ready");
+        if (mode === "create") {
+          await runtime.page.getByRole("button", { name: "Create Contract" }).first().click();
+          await runtime.page.getByLabel("Title").fill("Ambiguous schedule");
+          await runtime.page.getByLabel("Objective").fill("Explain the mechanism.");
+          await runtime.page.getByLabel("Instructions").fill("Use classroom evidence.");
+          await runtime.page.getByLabel("Evidence / submission requirements").fill("Submit two observations.");
+        } else await runtime.page.locator('[data-contracts-action="edit"]').first().click();
+        await runtime.page.getByLabel(mode === "create" ? "Initial lifecycle state" : "Lifecycle state").selectOption("scheduled");
+        await runtime.page.getByLabel("Scheduled publish time").fill("2026-11-01T01:30");
+        await runtime.page.getByRole("button", { name: mode === "create" ? "Create Contract" : "Save changes", exact: true }).last().click();
+        await runtime.page.locator(".admin-field__error").filter({ hasText: "This local time occurs twice" }).first().waitFor({ state: "visible" });
+        assert.equal(requestEvidence.slice(before).some((entry) => entry.method !== "GET"), false);
+        return { ambiguousTimeRejected: true, mutationAbsent: true };
+      } finally { await runtime.close(); }
+    });
+  }
+
+  for (const timeZone of [null, "invalid/timezone"]) {
+    await runCheck(`unconfirmed-timezone-blocks-dated-inputs-${timeZone || "missing"}`, async () => {
+      const before = requestEvidence.length;
+      const runtime = await createRuntime(browser, fixture, { timeZone });
+      try {
+        await waitForState(runtime.page, "ready");
+        await runtime.page.getByRole("button", { name: "Create Contract" }).first().click();
+        const form = runtime.page.locator(".admin-contract-form");
+        assert.match(await form.innerText(), /Game timezone could not be confirmed/);
+        assert.equal(await runtime.page.getByRole("button", { name: "Create Contract" }).last().isDisabled(), false);
+        assert.equal(await runtime.page.getByLabel("Due time").isDisabled(), true);
+        assert.equal(await runtime.page.locator('.admin-contract-form option[value="scheduled"]').isDisabled(), true);
+        await runtime.page.getByRole("button", { name: "Cancel", exact: true }).click();
+        await form.waitFor({ state: "detached" });
+        await waitForState(runtime.page, "ready");
+        assert.equal(requestEvidence.slice(before).some((entry) => entry.method !== "GET"), false);
+        return { readsAvailable: true, datedInputsBlocked: true, datelessSubmissionAvailable: true };
+      } finally { await runtime.close(); }
+    });
+  }
+
   await runCheck("safe-read-failure", async () => {
     const runtime = await createRuntime(browser, fixture, { failReads: true });
     try {
@@ -429,6 +571,125 @@ try {
       return { deniedBeforeDomainRead: true };
     } finally { await runtime.close(); }
   });
+  for (const viewport of VIEWPORTS) {
+    for (const detailMode of ["empty", "mixed"]) {
+      await runCheck(`submission-detail-${detailMode}-${viewport.width}x${viewport.height}`, async () => {
+        const start = requestEvidence.length;
+        const runtime = await createRuntime(browser, fixture, { viewport, detailMode, failReview: true });
+        try {
+          await waitForState(runtime.page, "ready");
+          const opener = runtime.page.locator('[data-contracts-action="details"]').first();
+          await opener.focus();
+          await runtime.page.keyboard.press("Enter");
+          const drawer = runtime.page.locator(".admin-contracts-detail-drawer");
+          const detail = drawer.locator(".admin-contracts-detail");
+          await detail.waitFor({ state: "visible" });
+          assert.equal(await drawer.evaluate((node) => node.contains(document.activeElement)), true);
+          assert.deepEqual(requestEvidence.slice(start).map(({ method, pathname }) => `${method} ${pathname.split(CONTRACT_ID).at(-1)}`).sort(), [
+            `GET /functions/v1/web-session-api/proxy/games/${ADMIN_V2_FIXTURE_GAME_ID}/contracts`, "GET /progress", "GET /submissions",
+          ].sort());
+          const markupSha256 = createHash("sha256").update(await detail.evaluate((node) => node.outerHTML)).digest("hex");
+          if (detailMode === "empty") {
+            assert.match(await detail.innerText(), /No participant progress yet/);
+            assert.equal(await detail.locator("table, button").count(), 0);
+          } else {
+            const rows = detail.locator(".admin-data-table__row");
+            assert.equal(await rows.count(), 16);
+            assert.deepEqual(await rows.nth(0).locator("button").allTextContents(), ["Approve", "Revision", "Reject"]);
+            assert.deepEqual(await rows.nth(1).locator("button").allTextContents(), ["Issue rewards"]);
+            assert.equal(await rows.nth(2).locator("button").count(), 0);
+            assert.match(await rows.nth(2).innerText(), /Rewards issued/);
+            assert.match(await rows.nth(3).innerText(), /In Progress/);
+            assert.equal(await detail.locator("img, script, b").count(), 0);
+            assert.match(await rows.first().innerText(), /<img src=x> Participant 1/);
+            assert.match(await rows.first().innerText(), /<script>unsafe\(\)<\/script>/);
+            assert.match(await rows.first().innerText(), /<b>Review text<\/b>/);
+            assert.equal(await detail.locator("caption").textContent(), "Participant progress for Regional Supply Chain Resilience Briefing");
+            const revision = rows.first().getByRole("button", { name: "Revision", exact: true });
+            await revision.focus();
+            await runtime.page.keyboard.press("Enter");
+            const dialog = runtime.page.getByRole("dialog", { name: "Request revision", exact: true });
+            const feedback = dialog.getByRole("textbox", { name: /^Feedback/ });
+            await feedback.waitFor({ state: "visible" });
+            assert.equal(await feedback.evaluate((node) => node === document.activeElement), true);
+            const submit = dialog.getByRole("button", { name: "Request revision", exact: true });
+            await submit.click();
+            await dialog.getByText("Add feedback for this decision.", { exact: true }).waitFor({ state: "visible" });
+            assert.equal(requestEvidence.slice(start).filter(({ method }) => method !== "GET").length, 0);
+            await feedback.fill("Keep this review after a conflicting response.");
+            const response = runtime.page.waitForResponse((r) => r.url().endsWith("/review") && r.status() === 409);
+            await submit.evaluate((node) => { node.click(); node.click(); });
+            await response;
+            await runtime.page.waitForFunction(() => document.querySelector(".admin-contracts-review")?.closest('[role="dialog"]')?.getAttribute("aria-busy") === "false");
+            assert.equal(await feedback.inputValue(), "Keep this review after a conflicting response.");
+            const writes = requestEvidence.slice(start).filter(({ method }) => method !== "GET");
+            assert.equal(writes.length, 1);
+            assert.equal(writes[0].body.action, "request_revision");
+            assert.equal(writes[0].authorization, "");
+            assert.equal(writes[0].csrf, ADMIN_V2_FIXTURE_CSRF);
+            assert.equal(writes[0].gameId, ADMIN_V2_FIXTURE_GAME_ID);
+            assert.match(writes[0].idempotencyKey, /^admin\.contracts\.review-request_revision\./);
+            await runtime.page.keyboard.press("Escape");
+            await dialog.waitFor({ state: "detached" });
+            assert.equal(await revision.evaluate((node) => node === document.activeElement), true);
+          }
+          await noUuidLeak(runtime.page, `submission ${detailMode}`);
+          await noOverflow(runtime.page, `submission ${detailMode}`);
+          assert.equal(requestEvidence.slice(start).filter(({ method }) => method === "GET").length, 3);
+          await capture(runtime.page, `detail-${detailMode}`, viewport);
+          await runtime.page.keyboard.press("Escape");
+          await drawer.waitFor({ state: "hidden" });
+          assert.equal(await opener.evaluate((node) => node === document.activeElement), true);
+          return { rows: detailMode === "empty" ? 0 : 16, markupSha256, exactReadCount: 3 };
+        } finally { await runtime.close(); }
+      });
+    }
+  }
+
+  await runCheck("submission-game-remount-rejects-late-detail", async () => {
+    const runtime = await createRuntime(browser, fixture);
+    try {
+      await waitForState(runtime.page, "ready");
+      const observed = await runtime.page.evaluate(async ({ firstGame, row, detail }) => {
+        const { createContractsController } = await import("/admin/v2/src/routes/contracts/ContractsController.js");
+        const secondGame = "10000000-0000-4000-8000-000000000002";
+        const requests = [];
+        let finishOld;
+        let mutations = 0;
+        const oldRead = new Promise((resolve) => { finishOld = resolve; });
+        const make = (gameId) => {
+          const api = Object.fromEntries(["createContract", "updateContract", "publishContract", "archiveContract", "duplicateContract", "reviewProgress", "issueRewards"].map((name) => [name, () => { mutations += 1; throw new Error("Unexpected mutation"); }]));
+          api.readContracts = async ({ gameId: selected }) => { requests.push(["list", selected]); return { data: { contracts: [row] } }; };
+          api.readContractDetail = async ({ gameId: selected }) => { requests.push(["detail", selected]); return selected === firstGame ? oldRead : detail; };
+          return createContractsController({ api, selectedGameId: gameId, hasPermission: () => true });
+        };
+        const oldController = make(firstGame);
+        await oldController.load();
+        const oldView = oldController.render();
+        document.body.append(oldView.element);
+        oldView.element.querySelector('[data-contracts-action="details"]').click();
+        oldController.destroy(); oldView.element.remove();
+        const current = make(secondGame);
+        await current.load();
+        const view = current.render(); document.body.append(view.element);
+        view.element.querySelector('[data-contracts-action="details"]').click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const stale = structuredClone(detail);
+        stale.submissions.data.submissions[0].displayName = "Obsolete game participant";
+        finishOld(stale);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const visible = document.querySelector('.admin-contracts-detail-drawer:not([hidden])').textContent;
+        current.destroy(); view.element.remove();
+        return { requests, mutations, staleVisible: visible.includes("Obsolete game participant"), currentVisible: visible.includes("김서연"), drawersAfterDestroy: document.querySelectorAll(".admin-contracts-detail-drawer").length, secondGame };
+      }, { firstGame: ADMIN_V2_FIXTURE_GAME_ID, row: contractRecord(), detail: { progress: progressResponse(), submissions: submissionsResponse() } });
+      assert.deepEqual(observed.requests, [["list", ADMIN_V2_FIXTURE_GAME_ID], ["detail", ADMIN_V2_FIXTURE_GAME_ID], ["list", observed.secondGame], ["detail", observed.secondGame]]);
+      assert.equal(observed.mutations, 0);
+      assert.equal(observed.staleVisible, false);
+      assert.equal(observed.currentVisible, true);
+      assert.equal(observed.drawersAfterDestroy, 0);
+      return { selectedGameBinding: true, lateDetailIgnored: true, cleanup: true };
+    } finally { await runtime.close(); }
+  });
 } finally {
   await browser?.close();
   await fixture.close();
@@ -437,6 +698,7 @@ try {
 const failed = checks.filter((check) => check.status === "failed");
 const result = {
   route: "contracts",
+  staticRoot: path.relative(REPOSITORY_ROOT, staticRoot) || ".",
   baseSha: "b7827211f0ff15b8a963219a63738180b33a1b3d",
   generatedAt: new Date().toISOString(),
   viewports: VIEWPORTS.map(({ width, height }) => `${width}x${height}`),

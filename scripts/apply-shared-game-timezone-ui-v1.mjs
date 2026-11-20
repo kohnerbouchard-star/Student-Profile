@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readBrowserSource as readFile } from "./lib/browser-module-source.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 

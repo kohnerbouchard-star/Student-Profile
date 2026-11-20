@@ -1,0 +1,9 @@
+# Permitted Browser16 local candidate
+
+Status: IMPLEMENTED_NOT_MERGED. ARCH-LARGE-PARALLEL-LOCAL-001, provisional Browser16 on Backend29 869d101f8dcdc9507678b91a7fb6946970df4ba1 and Market6 9eaeac4510cab60eb21c532a735f0e761e32df9b. No future PR number, publication, merge or production authority. All 45 Browser runtime/HTML/helper blobs exactly match reviewed standalone 4c0a1052557bee2fb082e9ad74f20a91216363fe and union 3253f12cc009d3ca5477e8ecc99aeb2b62021430. Original owner and recovery packets remain unchanged.
+
+All 16 original Browser owners are below 500 lines. Expected cumulative oversized inventory is 38 to 22, never zero. Edge19, capability1 and simulations2 remain held and unchanged from actual-main baseline d2d951e542b12e9e47f6db1783bdf4ef9993e930. No REF-005 Edge seam relocation, Edge helper/map, migration, package, workflow or production change. Preserve inherited 151 required and 105 critical checks, all triggered gates and isolation/controller holds.
+
+Browser source readers compose only installed Browser modules. BFF assertions additionally retain four Backend security owners; original Edge source remains unmodified. Backend calendar source correction and regression stay untouched. Current Browser source bindings and reset-helper retirement protection retain historical reviews, safeToDelete=false and all retirement conditions. Market predecessor PR976 authority remains intact and is not future Browser authority.
+
+Exact-head local qualification, source and AST preservation, focused behavior/load-order tests and SDK/native-browser attempts are recorded in preparation evidence. No live or rendered UI proof is claimed without successful execution. Parent owns actual-main integration, concurrent ownership reconciliation including #933, independent review, exact-head hosted gates and any publication. Next exact item: independent review and actual-main integration after predecessor clearance. Production remains held.

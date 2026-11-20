@@ -1,4 +1,12 @@
 import type { EdgeSupabaseClient } from "../../../platform/supabase/edgeStaffSession.ts";
+import { EdgeActivationError } from "../../../platform/supabase/edgeResponse.ts";
+import { normalizeJoinCode } from "../../game-sessions/index.ts";
+import {
+  normalizePlayerIdentifier,
+  normalizeStudentCode,
+} from "../identifiers.ts";
+import { normalizePlayerIdentifier as canonicalPlayerIdentifier } from "../domain/playerIdentifiers.ts";
+import { normalizeStudentCode as canonicalStudentCode } from "../domain/playerAccessCodes.ts";
 import { handlePlayerLoginRequest } from "./playerLoginHttpHandler.ts";
 import { handlePlayerSessionBootstrapRequest } from "./playerSessionBootstrapHttpHandler.ts";
 
@@ -18,7 +26,37 @@ const THROTTLE_BUCKETS = [
   { dimension: "ip" as const, keyHash: "c".repeat(64) },
 ];
 
+Deno.test("public identifier normalizers preserve canonical identity and validation", () => {
+  assertEquals(normalizePlayerIdentifier === canonicalPlayerIdentifier, true);
+  assertEquals(normalizeStudentCode === canonicalStudentCode, true);
+  assertEquals(normalizeJoinCode("  ab cd-1234  "), "ABCD-1234");
+  assertEquals(normalizeStudentCode("  se cret-4826  "), "SECRET-4826");
+  assertEquals(normalizePlayerIdentifier("  rfid: ab_12-3  "), "RFID:AB_12-3");
+
+  for (const [normalize, value, code] of [
+    [normalizeJoinCode, " ", "game_join_code_required"],
+    [normalizeJoinCode, "a!", "invalid_game_join_code"],
+    [normalizeStudentCode, " ", "student_code_required"],
+    [normalizeStudentCode, "a!", "invalid_student_code"],
+    [normalizePlayerIdentifier, " ", "player_identifier_required"],
+    [normalizePlayerIdentifier, "a!", "invalid_player_identifier"],
+    [normalizePlayerIdentifier, "a".repeat(129), "player_identifier_too_long"],
+  ] as const) {
+    let caught: unknown;
+    try {
+      normalize(value);
+    } catch (error) {
+      caught = error;
+    }
+    assertEquals(caught instanceof EdgeActivationError, true);
+    assertEquals((caught as EdgeActivationError).code, code);
+    assertEquals((caught as EdgeActivationError).status, 400);
+    assertEquals((caught as EdgeActivationError).retryable, false);
+  }
+});
+
 Deno.test("player login returns a one-time token without internal UUIDs", async () => {
+  const verifiedCodes: string[] = [];
   const fake = fakeClient(
     {
       game_sessions: [row({
@@ -26,13 +64,6 @@ Deno.test("player login returns a one-time token without internal UUIDs", async 
         name: "Period 2",
         status: "active",
         game_join_code_status: "active",
-      })],
-      players: [row({
-        id: PLAYER,
-        display_name: "Alex Rivera",
-        roster_label: "Table 4",
-        player_identifier: "CARD-200",
-        status: "active",
       })],
       player_access_credentials: [row({
         id: CREDENTIAL,
@@ -46,6 +77,13 @@ Deno.test("player login returns a one-time token without internal UUIDs", async 
       })],
     },
     {
+      lookup_player_login_identity_v1: rowList([{
+        id: PLAYER,
+        display_name: "Alex Rivera",
+        roster_label: "Table 4",
+        player_identifier: "CARD-200",
+        status: "active",
+      }]),
       create_player_session_v2: rowList([{
         session_id: SESSION,
         expires_at: EXPIRES_AT,
@@ -58,14 +96,20 @@ Deno.test("player login returns a one-time token without internal UUIDs", async 
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        gameJoinCode: "ABCD-1234",
-        playerIdentifier: "CARD-200",
-        accessCode: "938204",
+        gameJoinCode: "  ab cd-1234  ",
+        playerIdentifier: "  ca rd-200  ",
+        accessCode: "  938 204  ",
       }),
     }),
-    dependencies(fake.client, {
-      generateSessionToken: () => "ps_one_time_authenticated_token",
-    }),
+    {
+      ...dependencies(fake.client, {
+        generateSessionToken: () => "ps_one_time_authenticated_token",
+      }),
+      verifyCredential: async (normalizedCode: string) => {
+        verifiedCodes.push(normalizedCode);
+        return true;
+      },
+    },
   );
 
   assertEquals(response.status, 200);
@@ -90,7 +134,40 @@ Deno.test("player login returns a one-time token without internal UUIDs", async 
     },
   });
   assertNoUuid(JSON.stringify(body));
+  assertEquals(verifiedCodes, ["938204"]);
+  assertEquals(
+    fake.filters.includes(
+      JSON.stringify([
+        "game_sessions",
+        "game_join_code_hash",
+        "hash:ABCD-1234",
+      ]),
+    ),
+    true,
+  );
+  assertEquals(
+    fake.filters.some((filter) => filter.includes("CARD-200")),
+    false,
+  );
+  assertEquals(
+    fake.filters.includes(
+      JSON.stringify(["player_access_credentials", "game_session_id", GAME]),
+    ),
+    true,
+  );
+  assertEquals(
+    fake.filters.includes(
+      JSON.stringify(["player_access_credentials", "player_id", PLAYER]),
+    ),
+    true,
+  );
   assertEquals(fake.rpcs, [{
+    functionName: "lookup_player_login_identity_v1",
+    args: {
+      p_game_session_id: GAME,
+      p_player_identifier_normalized: "CARD-200",
+    },
+  }, {
     functionName: "create_player_session_v2",
     args: {
       p_game_session_id: GAME,
@@ -101,6 +178,40 @@ Deno.test("player login returns a one-time token without internal UUIDs", async 
   }]);
 });
 
+Deno.test("invalid login identifiers fail before a service client is created", async () => {
+  const fake = fakeClient({});
+  let clientCreations = 0;
+  for (const [field, value, code] of [
+    ["gameJoinCode", "invalid!", "invalid_game_join_code"],
+    ["playerIdentifier", "invalid!", "invalid_player_identifier"],
+    ["accessCode", "invalid!", "invalid_student_code"],
+  ] as const) {
+    const response = await handlePlayerLoginRequest(
+      new Request("https://example.test/player-login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          gameJoinCode: "ABCD-1234",
+          playerIdentifier: "CARD-200",
+          accessCode: "938204",
+          [field]: value,
+        }),
+      }),
+      {
+        ...dependencies(fake.client),
+        createServiceClient: () => {
+          clientCreations += 1;
+          return fake.client;
+        },
+      },
+    );
+    assertEquals(response.status, 400);
+    assertEquals((await response.json()).error.code, code);
+  }
+  assertEquals(clientCreations, 0);
+  assertEquals(fake.rpcs, []);
+});
+
 Deno.test("player login fails closed when a legacy player lacks a public identifier", async () => {
   const fake = fakeClient({
     game_sessions: [row({
@@ -109,13 +220,14 @@ Deno.test("player login fails closed when a legacy player lacks a public identif
       status: "active",
       game_join_code_status: "active",
     })],
-    players: [row({
+  }, {
+    lookup_player_login_identity_v1: rowList([{
       id: PLAYER,
       display_name: "Alex Rivera",
       roster_label: null,
       player_identifier: "",
       status: "active",
-    })],
+    }]),
   });
 
   const response = await handlePlayerLoginRequest(
@@ -127,7 +239,9 @@ Deno.test("player login fails closed when a legacy player lacks a public identif
   const serialized = JSON.stringify(await response.json());
   assertEquals(serialized.includes(PLAYER), false);
   assertEquals(serialized.includes("CARD-200"), false);
-  assertEquals(fake.rpcs, []);
+  assertEquals(fake.rpcs.map((rpc) => rpc.functionName), [
+    "lookup_player_login_identity_v1",
+  ]);
 });
 
 Deno.test("player bootstrap derives scope from token and returns no token or UUID", async () => {
@@ -283,11 +397,12 @@ function fakeClient(
   rpcResponses: Record<string, { data: unknown; error: null }> = {},
 ) {
   const rpcs: Array<{ functionName: string; args: unknown }> = [];
+  const filters: string[] = [];
   const client = {
     from(table: string) {
       const response = responses[table]?.shift();
       if (!response) throw new Error(`Unexpected query for ${table}`);
-      return new FakeQuery(response);
+      return new FakeQuery(response, table, filters);
     },
     rpc(functionName: string, args: unknown) {
       rpcs.push({ functionName, args });
@@ -296,19 +411,22 @@ function fakeClient(
       return Promise.resolve(response);
     },
   } as unknown as EdgeSupabaseClient;
-  return { client, rpcs };
+  return { client, rpcs, filters };
 }
 
 class FakeQuery implements PromiseLike<{ data: unknown; error: null }> {
   constructor(
     private readonly response: { data: unknown; error: null },
+    private readonly table: string,
+    private readonly filters: string[],
   ) {}
 
   select(): this {
     return this;
   }
 
-  eq(): this {
+  eq(column: string, value: unknown): this {
+    this.filters.push(JSON.stringify([this.table, column, value]));
     return this;
   }
 

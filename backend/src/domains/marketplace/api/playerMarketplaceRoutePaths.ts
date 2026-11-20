@@ -1,13 +1,23 @@
-import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+import { readPlayerApiRouteSegments } from "../../../platform/supabase/playerApiRouteSegments.ts";
 import {
   MARKETPLACE_LISTING_KEY_PATTERN,
   MARKETPLACE_ORDER_KEY_PATTERN,
+  MARKETPLACE_RESERVATION_KEY_PATTERN,
 } from "../contracts/playerMarketplaceContracts.ts";
 
 export type PlayerMarketplaceRoute =
   | { readonly kind: "collection" }
   | { readonly kind: "activate"; readonly listingKey: string }
-  | { readonly kind: "purchase"; readonly listingKey: string }
+  | {
+    readonly kind: "purchase";
+    readonly action: "retired" | "quote";
+    readonly listingKey: string;
+  }
+  | {
+    readonly kind: "purchase";
+    readonly action: "settlement";
+    readonly reservationKey: string;
+  }
   | { readonly kind: "cancel"; readonly listingKey: string }
   | { readonly kind: "dispute"; readonly orderKey: string }
   | { readonly kind: "malformed" };
@@ -37,14 +47,34 @@ export function readPlayerMarketplaceRoutePath(
   if (path === "/" || path === "/listings") return { kind: "collection" };
 
   const listingAction = path.match(
-    /^\/listings\/([^/]+)\/(activate|purchase|cancel)\/?$/u,
+    /^\/listings\/([^/]+)\/(activate|purchase|cancel|quotes)\/?$/u,
   );
   if (listingAction) {
     const listingKey = decoded(listingAction[1]);
     if (!MARKETPLACE_LISTING_KEY_PATTERN.test(listingKey)) {
       return { kind: "malformed" };
     }
-    return { kind: listingAction[2] as "activate" | "purchase" | "cancel", listingKey };
+    const action = listingAction[2];
+    if (action === "quotes") {
+      return { kind: "purchase", action: "quote", listingKey };
+    }
+    if (action === "purchase") {
+      return { kind: "purchase", action: "retired", listingKey };
+    }
+    return {
+      kind: action as "activate" | "cancel",
+      listingKey,
+    };
+  }
+
+  const settlement = path.match(
+    /^\/reservations\/([^/]+)\/settlements\/?$/u,
+  );
+  if (settlement) {
+    const reservationKey = decoded(settlement[1]);
+    return MARKETPLACE_RESERVATION_KEY_PATTERN.test(reservationKey)
+      ? { kind: "purchase", action: "settlement", reservationKey }
+      : { kind: "malformed" };
   }
 
   const dispute = path.match(/^\/orders\/([^/]+)\/disputes\/?$/u);

@@ -146,3 +146,5 @@ assert.match(controllerSource, /fallbackWorldModel/);
 assert.match(controllerSource, /isEndpointEnabled\(currentCapabilities\(\), endpointKey\)/);
 
 console.log("World runtime Player publication checks passed");
+
+await import("./world-reviewed-quote.mjs");

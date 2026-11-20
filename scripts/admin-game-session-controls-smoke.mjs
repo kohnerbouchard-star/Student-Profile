@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 import { spawnSync } from "node:child_process";
 
 const index = readFileSync("admin/index.html", "utf8");

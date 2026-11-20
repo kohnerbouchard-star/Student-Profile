@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.stocks-market-window-pr-903.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 903,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
+    "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+    "backend/src/domains/game-sessions/application/createGame.ts",
+    "backend/src/domains/game-sessions/application/createGameStockWindow.test.ts",
+    "backend/src/domains/game-sessions/application/updateGameSettings.ts",
+    "backend/src/domains/licensing/contracts/activationRequestParser.test.ts",
+    "backend/src/domains/licensing/contracts/activationRequestParser.ts",
+    "backend/src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts",
+    "backend/src/domains/stocks/index.ts",
+    "backend/src/domains/stocks/marketWindow.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-903.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
+    "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+    "backend/src/domains/game-sessions/application/createGame.ts",
+    "backend/src/domains/game-sessions/application/createGameStockWindow.test.ts",
+    "backend/src/domains/game-sessions/application/updateGameSettings.ts",
+    "backend/src/domains/licensing/contracts/activationRequestParser.test.ts",
+    "backend/src/domains/licensing/contracts/activationRequestParser.ts",
+    "backend/src/domains/stocks/calendars/stockMarketExchangeCalendar.test.ts",
+    "backend/src/domains/stocks/index.ts",
+    "backend/src/domains/stocks/marketWindow.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-903.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Required Game Market Timezone",
+    "Exchange Calendar Runtime",
+    "multicurrency-stock-funding-v1",
+    "Business Financial Market",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Player Multiplayer and Load E2E",
+    "REF-018 and REF-022 Staff Mutation Qualification"
+  ],
+  "criticalJobChecks": [
+    "Exchange Calendar Runtime",
+    "multicurrency-stock-funding-v1",
+    "Business Financial Market",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Player Multiplayer and Load E2E"
+  ],
+  "readOnlyPaths": [
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "authorizationNote": "Binds the reviewed Stocks market-window and type-only Dashboard boundary, tests and generated inventory to this PR. Preserve canonical normalizer and error identity, caller translations, Dashboard read behavior, dependency locks and release holds. The verifier and its regression test are read-only. No roadmaps, production deployment, hosted mutation, secrets, or release-hold changes are included."
+}

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.multicurrency-funding-core-pr-673.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 673,
+  "baseRef": "feat/banking-fx-clearing-v1",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    ".github/workflows/banking-fx-clearing-v1.yml",
+    ".github/workflows/multicurrency-funding-core-v1.yml",
+    "backend/supabase/migrations/20260827090000_multicurrency_funding_quote_v1.sql",
+    "backend/supabase/migrations/20260827090500_multicurrency_funding_quote_stage_isolation_v1.sql",
+    "backend/supabase/migrations/20260827091000_multicurrency_funding_composer_v1.sql",
+    "backend/supabase/migrations/20260827092000_multicurrency_funding_assertions_v1.sql",
+    "docs/operations/contracts/player-cross-cutting/pr-673.json",
+    "docs/roadmaps/multicurrency-funding-core-implementation-handoff-v1.md",
+    "docs/roadmaps/multicurrency-funding-core-scope-v1.md",
+    "scripts/multicurrency-funding-concurrency.mjs",
+    "scripts/multicurrency-funding-core-contract.mjs",
+    "scripts/multicurrency-funding-core-simulation.mjs",
+    "scripts/multicurrency-funding-database.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-673.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "database-replay",
+    "banking-fx-clearing-v1",
+    "multicurrency-funding-core-v1"
+  ]
+}

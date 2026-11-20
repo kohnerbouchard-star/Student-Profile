@@ -26,6 +26,11 @@ export function createEmptyReadModels() {
       allocation: [],
       countryExposure: []
     },
+    businessWorkforce: {
+      businessKey: "",
+      generatedAt: "",
+      candidates: []
+    },
     business: {
       company: {
         name: "Business not configured",
@@ -33,11 +38,7 @@ export function createEmptyReadModels() {
         status: "Unavailable",
         industry: "Not configured",
         headquarters: "Not configured",
-        valuation: 0,
-        valuationChange: 0,
         cash: 0,
-        revenue: 0,
-        margin: 0,
         reputation: 0,
         reputationLabel: "Unavailable",
         summary: "Business information is unavailable."
@@ -77,6 +78,22 @@ export function createEmptyReadModels() {
       creditScore: undefined,
       transferLimit: undefined,
       transactions: []
+    },
+    bankingFx: {
+      configured: false,
+      generatedAt: "",
+      currencies: [],
+      balances: [],
+      fixing: null,
+      history: {
+        range: "7d",
+        points: [],
+        pagination: { cursor: null, nextCursor: null, hasMore: false, limit: 100 },
+      },
+      pendingOrders: [],
+      completedOrders: [],
+      currentQuote: null,
+      error: "",
     },
     loans: {
       creditScore: 0,

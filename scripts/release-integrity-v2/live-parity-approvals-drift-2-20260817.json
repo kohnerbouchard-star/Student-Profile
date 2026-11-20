@@ -1,0 +1,69 @@
+{
+  "approvedRoutineDefinitionDrift": [
+    {
+      "signature": "public.capture_stock_market_checkpoint_v2(p_game_session_id uuid, p_checkpoint_kind text)",
+      "stagingSha256": "42f8ecbea59297cfdb11d31072e4695e29d43f35af9def058802b0519dc01b79",
+      "productionSha256": "62214fc6854686ce5a43731f11177761eab097b6ff68e24b9c0b349347eae239"
+    },
+    {
+      "signature": "public.claim_confirmed_game_data_purge_v1()",
+      "stagingSha256": "f79299d7c18c978dcc664f2d5912a032581e9299da0c61120af022c9a09e1db6",
+      "productionSha256": "042f40b4b2212f6fb23bacfd9daa0855775571a7ea8d7a5807e1a1eadf7e2f5f"
+    },
+    {
+      "signature": "public.configure_game_data_purge_scheduler_v1(p_function_url text)",
+      "stagingSha256": "8e1899886b43fc10a9bfef200c25f6b21c58b20a84508b68d6d7618e61957694",
+      "productionSha256": "0b5317a95661feebad4da28e6530a74098d95d9a1a38175fbcdf2d5dc1475c98"
+    },
+    {
+      "signature": "public.configure_game_license_expiration_scheduler_v1()",
+      "stagingSha256": "34bca2fb976ca429dd9bb0a9deeb86af9b7a2fa4c557e944476a7a44af094b18",
+      "productionSha256": "5eba13e78dd8f9a350a8793d3eaac7752b4fc47db38ef78580040bb5b6cfce45"
+    },
+    {
+      "signature": "public.configure_platform_storage_health_scheduler_v1(p_environment_name text)",
+      "stagingSha256": "8fcd1a9f3bab9fd6ec3c05b564e1405460fd963fe6eb94e0b507c31db0802769",
+      "productionSha256": "21ee859c81550a408704fd23ccc0f47d3db53406fef5fee436a0839dffe65b8e"
+    },
+    {
+      "signature": "public.configure_stock_candle_retention_scheduler_v1()",
+      "stagingSha256": "4d0685063961e4ed7a397949dc9ad93442923aab28dd0bba54ae654affb24ca3",
+      "productionSha256": "d25ec634dcc91be5670800a09c8b494e420c7314399657dda8dbf6251833300f"
+    },
+    {
+      "signature": "public.confirm_game_data_purge_v2(p_request_id uuid, p_actor_staff_user_id uuid, p_confirmation_phrase text)",
+      "stagingSha256": "c46685c46222d223e0ad24e52352e3b596eb29e34893418cc74ce06760b7440a",
+      "productionSha256": "014f98e3a0f1e153f7c67d786293b8f266ab86fe33a0f66c4f99f1f1093a5eae"
+    },
+    {
+      "signature": "public.disarm_game_data_purge_v1(p_actor_staff_user_id uuid)",
+      "stagingSha256": "f8c738205bf4970d26ff9b28f4f453c1e747fe76d247504e872af7841479c8e6",
+      "productionSha256": "b4988b78eff05366808071bd71b2f8fa0cca13d95a397e1f9756d79017b1de93"
+    },
+    {
+      "signature": "public.enable_meridian_campaign_continuation_after_arrival_v1()",
+      "stagingSha256": "87d5ac9f5a836f8a2816e41430fd30676f8e3d4beb457cf1f28f40247ba06f0a",
+      "productionSha256": "29f1b12ebae2cc39a159d1b30dbf5ae2432942ed56249306ca9da573bdfbb8b2"
+    },
+    {
+      "signature": "public.enable_relationship_followups_after_arrival_contact_v1()",
+      "stagingSha256": "b44d5ac87a12f295d6fad8f4d84f5b5245570951d52506d666bbbe796646e71a",
+      "productionSha256": "b101b123d4f05c437eb1282526e1726166d5aa499f13aa5d6cfb07aab278c559"
+    },
+    {
+      "signature": "public.execute_game_data_purge_db_batch_v2(p_request_id uuid, p_batch_size integer)",
+      "stagingSha256": "9efed1271f429f197c1a2a81d277010f83907a503aec01a54cb9c0e9c17cfd9a",
+      "productionSha256": "f59de3e33b9e53f58c3e1924c7dd7778128b726880a8cb00c9a8aac1067a5eb8"
+    },
+    {
+      "signature": "public.finalize_game_data_purge_v1(p_request_id uuid)",
+      "stagingSha256": "240f9827d2fb4b3fe2144570028cfa60c83665af4c24bced83111fc8f434c1c4",
+      "productionSha256": "b853d1926de46ca5a1933052609033a677179d2b9dd08d903124f2e79a907925"
+    },
+    {
+      "signature": "public.get_current_stock_market_tick_index_v2(p_game_session_id uuid)",
+      "stagingSha256": "2614fb3c8871b8f4e22b37f86c863998e0ece54bb783838dc15fff22d5508d3d",
+      "productionSha256": "69bdc7daaefa7e71ea4da29863ef3762332126bb761f8718bb30a4e6d7cfd55e"
+    }
+  ]
+}

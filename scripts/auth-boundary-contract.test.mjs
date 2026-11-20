@@ -1,5 +1,7 @@
+import "./codeql-security-remediation.test.mjs";
+import "./codeql-security-reader-regression.test.mjs";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readEdgeRuntimeSource as readFile } from "./helpers/edge-runtime-source.mjs";
 import test from "node:test";
 
 const ROOT = new URL("../", import.meta.url);
@@ -9,6 +11,7 @@ const browserSources = [
   "frontend/src/core/runtime-config.js",
   "frontend/src/core/constants.js",
   "frontend/src/core/api.js",
+  "frontend/src/core/api-session-state.js",
   "frontend/src/core/login.js",
   "admin/auth-session-manager.js",
   "admin/admin-auth.js",
@@ -43,6 +46,7 @@ test("auth ledger is complete, unique, and machine-readable", async () => {
     "player-api",
     "classroom-api-compatibility",
     "stock-market-runner-family",
+    "business-operations-worker",
     "local-gateway",
   ]) {
     assert.ok(ids.includes(expected), `missing auth boundary ${expected}`);
@@ -218,7 +222,9 @@ test("server-side Admin BFF is the only Staff credential transport", async () =>
   assert.match(edge, /WEB_ADMIN_SESSION_COOKIE/);
   assert.match(edge, /HttpOnly|SameSite=Strict|constantTimeTextEqual/);
   assert.match(edge, /Authorization:\s*`Bearer \$\{accessToken\}`/);
-  assert.match(vercel, /COOKIE_ENVELOPE_PATTERN|proxyAdminBff|x-vercel-forwarded-for/);
+  assert.match(vercel, /COOKIE_ENVELOPE_PATTERN|proxyAdminBff/);
+  assert.match(vercel, /VERCEL_OIDC_TOKEN/);
+  assert.match(vercel, /x-forwarded-for/);
   assert.match(recoveryProxy, /password-reset-api/);
   assert.match(logoutProxy, /proxyAdminBff/);
   assert.match(logoutProxy, /path:\s*\["logout"\]/);
@@ -254,13 +260,26 @@ test("explicit Admin session routes cannot be placeholder stubs", async () => {
 });
 
 test("server runners use publishable identity plus timestamped HMAC and replay denial", async () => {
-  const [config, runner, stockRead, seed, playerRead, trading, scheduler, auth] = await Promise.all([
+  const [
+    config,
+    runner,
+    stockRead,
+    seed,
+    playerRead,
+    trading,
+    businessWorker,
+    businessWorkerHandler,
+    scheduler,
+    auth,
+  ] = await Promise.all([
     read("backend/supabase/config.toml"),
     read("backend/supabase/functions/stock-market-runner/index.ts"),
     read("backend/supabase/functions/stock-market-read/index.ts"),
     read("backend/supabase/functions/stock-market-seed-copy/index.ts"),
     read("backend/supabase/functions/stock-market-player-read/index.ts"),
     read("backend/supabase/functions/stock-market-trading/index.ts"),
+    read("backend/supabase/functions/business-operations-worker/index.ts"),
+    read("backend/src/domains/business/api/businessOperationsWorkerHttpHandler.ts"),
     read("scripts/trigger-stock-market-tick.mjs"),
     read("backend/src/security/internalRunnerAuth.ts"),
   ]);
@@ -285,6 +304,37 @@ test("server runners use publishable identity plus timestamped HMAC and replay d
   assert.match(scheduler, /createInternalRunnerHeaders/);
   assert.doesNotMatch(scheduler, /x-stock-market-runner-secret/);
   assert.match(config, /\[functions\.stock-market-runner\][\s\S]*verify_jwt\s*=\s*false/);
+  assert.match(config, /\[functions\.business-operations-worker\][\s\S]*verify_jwt\s*=\s*false/);
+  assert.match(businessWorker, /requirePublishableRequest\(request\)/);
+  assert.match(businessWorker, /authorizeInternalRunnerRequest/);
+  assert.match(businessWorker, /runnerName:\s*"business-operations-worker"/);
+  assert.match(businessWorker, /claim_internal_runner_nonce_v2/);
+  assert.match(businessWorker, /Deno\.env\.get\("STOCK_MARKET_RUNNER_SECRET"\)/);
+  assert.match(businessWorker, /handleBusinessOperationsWorkerRequest/);
+  assert.ok(
+    businessWorker.indexOf("businessOperationsWorkerBrowserRequestFailure(request)") <
+      businessWorker.indexOf("requirePublishableRequest(request)"),
+  );
+  assert.ok(
+    businessWorker.indexOf("requirePublishableRequest(request)") <
+      businessWorker.indexOf("authorizeInternalRunnerRequest(request"),
+  );
+  assert.ok(
+    businessWorker.indexOf("authorizeInternalRunnerRequest(request") <
+      businessWorker.indexOf("return handleBusinessOperationsWorkerRequest"),
+  );
+  assert.doesNotMatch(
+    businessWorker,
+    /request\.headers\.get\(["']x-business-operations-worker-secret["']\)/,
+  );
+  assert.match(businessWorkerHandler, /assertEmptyBody\(request\)/);
+  assert.match(businessWorkerHandler, /bytes\.byteLength\s*!==\s*0/);
+  assert.match(businessWorkerHandler, /authorization/);
+  assert.match(businessWorkerHandler, /cookie/);
+  assert.match(businessWorkerHandler, /origin/);
+  assert.match(businessWorkerHandler, /x-econovaria-csrf-token/);
+  assert.match(businessWorkerHandler, /x-player-session-token/);
+  assert.doesNotMatch(businessWorkerHandler, /access-control-allow-origin/);
 });
 
 test("local launcher never exposes a privileged browser bearer or arbitrary cookie", async () => {
@@ -293,4 +343,87 @@ test("local launcher never exposes a privileged browser bearer or arbitrary cook
   assert.doesNotMatch(gateway, /Authorization.*publishable/i);
   assert.doesNotMatch(gateway, /forward_headers\["cookie"\]/i);
   assert.doesNotMatch(gateway, /supabaseAnonKey/);
+});
+
+test("retired unused auth scaffolds stay absent while licensing retains staff authority", async () => {
+  const { access } = await import("node:fs/promises");
+  for (const name of ["gameAccess", "requestIdentity", "permissions"]) {
+    await assert.rejects(access(new URL(`backend/src/auth/${name}.ts`, ROOT)), { code: "ENOENT" });
+  }
+  for (const name of ["staffAccess", "types"]) {
+    await access(new URL(`backend/src/auth/${name}.ts`, ROOT));
+  }
+  const licensing = await read("backend/src/domains/licensing/api/activationRouteHandler.ts");
+  assert.match(licensing, /from "\.\.\/\.\.\/\.\.\/auth\/staffAccess\.ts"/);
+  const resolve = licensing.indexOf("await resolveStaffIdentity(");
+  const activate = licensing.indexOf("await handleStaffLicensingActivation(");
+  assert.ok(resolve >= 0 && activate > resolve, "staff identity must be resolved before licensing activation");
+});
+
+test("retired generic Supabase scaffolds stay absent while current auth adapters remain", async () => {
+  const { access } = await import("node:fs/promises");
+  for (const name of ["staffRepository", "serverClient", "playerSessionRepository"]) {
+    await assert.rejects(access(new URL(`backend/src/supabase/${name}.ts`, ROOT)), { code: "ENOENT" });
+  }
+  for (const path of ["backend/src/auth/staffAccess.ts", "backend/src/auth/types.ts", "backend/src/supabase/queryResult.ts", "backend/src/supabase/tableTypes.ts"]) {
+    await access(new URL(path, ROOT));
+  }
+  const licensing = await read("backend/src/domains/licensing/api/licensingActivationHttpHandler.ts");
+  assert.match(licensing, /await resolveStaffSessionForRequest\(/);
+  assert.match(licensing, /supabaseAuthUserId === staffResult\.staff\.supabase_auth_user_id/);
+  assert.match(licensing, /createSupabaseLicensingActivationRepository\(/);
+  const clients = await read("backend/supabase/functions/classroom-api/classroomClients.ts");
+  assert.match(clients, /createClient\(env\.supabaseUrl, env\.supabaseServiceRoleKey/);
+});
+
+// Removing the dead HTTP adapter also makes its private DTO/parser cluster unreachable.
+test("retired pre-licensing game creation route types stay absent", async () => {
+  const { access } = await import("node:fs/promises");
+  for (const name of ["createGameRouteContracts", "normalizeCreateGameRouteBody"]) {
+    await assert.rejects(access(new URL(`backend/src/domains/game-sessions/contracts/${name}.ts`, ROOT)), { code: "ENOENT" });
+  }
+  const provisioning = await read("backend/supabase/functions/admin-api/gameProvisioningOperations.ts");
+  assert.match(provisioning, /handleLicensingActivationRequest/);
+  assert.match(provisioning, /const activate = dependencies.activate \?\? defaultActivate/);
+  assert.match(provisioning, /await activate\(service, body, context\)/);
+});
+
+test("retired purchase-code eligibility scaffold stays absent without removing RPC authority", async () => {
+  const { access } = await import("node:fs/promises");
+  await assert.rejects(access(new URL("backend/src/domains/licensing/domain/purchaseCodeRules.ts", ROOT)), { code: "ENOENT" });
+  const service = await read("backend/src/domains/licensing/application/redeemPurchaseCode.ts");
+  assert.match(service, /await dependencies\.activationRepository\.redeemPurchaseCodeForGame\(/);
+  const repository = await read("backend/src/domains/licensing/infrastructure/licensingRepository.ts");
+  assert.match(repository, /await client\.rpc\(LICENSING_ACTIVATION_RPC_NAME/);
+  assert.match(repository, /"redeem_purchase_code_for_game"/);
+});
+
+test("unused V1 Player identity and Node environment scaffolds stay retired", async () => {
+  const { access } = await import("node:fs/promises");
+  for (const path of ["backend/src/auth/playerAccess.ts", "backend/src/config/env.ts"]) {
+    await assert.rejects(access(new URL(path, ROOT)), { code: "ENOENT" });
+  }
+  const scope = await read("backend/src/domains/players/api/playerRequestScope.ts");
+  assert.match(scope, /resolveActivePlayerSession/);
+  assert.match(scope, /playerSessionHttpHelpers\.ts/);
+  const session = await read("backend/src/domains/players/api/playerSessionHttpHelpers.ts");
+  for (const marker of ["session_token_hash", "revoked_at", "expires_at", "game_session_id"]) assert.ok(session.includes(marker));
+  const clients = await read("backend/supabase/functions/classroom-api/classroomClients.ts");
+  assert.match(clients, /readSupabaseEnv/);
+  const env = await read("backend/src/platform/supabase/edgeStaffSession.ts");
+  for (const marker of ["SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY", "SUPABASE_URL"]) assert.ok(env.includes(marker));
+});
+
+test("retired standalone game and staff creators stay absent while verified signup remains", async () => {
+  const { access } = await import("node:fs/promises");
+  for (const path of ["backend/src/staff/bootstrapStaff.ts", "backend/src/supabase/auditRepository.ts", "backend/src/domains/game-sessions/application/createGame.ts", "backend/src/domains/game-sessions/infrastructure/gameRepository.ts"]) {
+    await assert.rejects(access(new URL(path, ROOT)), { code: "ENOENT" });
+  }
+  const login = await read("backend/src/domains/auth/api/staffLoginHttpHandler.ts");
+  assert.match(login, /activate_verified_staff_identity_v1/);
+  const provisioning = await read("backend/supabase/functions/admin-api/gameProvisioningOperations.ts");
+  assert.match(provisioning, /handleLicensingActivationRequest/);
+  const reconciler = await read("scripts/apply-configurable-stock-market-timezone-v1.mjs");
+  assert.ok(!reconciler.includes("backend/src/domains/game-sessions/application/createGame.ts"));
+  assert.ok(reconciler.includes("backend/src/domains/licensing/contracts/activationRequestParser.ts"));
 });

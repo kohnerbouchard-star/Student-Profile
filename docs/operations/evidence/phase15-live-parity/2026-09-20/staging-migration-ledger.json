@@ -1,0 +1,2219 @@
+{
+  "capturedAt": "2026-09-20T00:06:49.596Z",
+  "projectRef": "eecvbssdvarfcykcfrny",
+  "readOnly": true,
+  "migrations": [
+    {
+      "version": "20260615161835",
+      "name": "create_core_tables_v1",
+      "statement_count": 68,
+      "joined_statement_sha256": "53833e4edee7482077df2c586da9cc64b8fed58ca39aa579ece2fd13fd0ea342",
+      "statement_array_sha256": "71b1f7a064fb033e2373e819fac289250e4d83b517882bdb014744933116a28c"
+    },
+    {
+      "version": "20260615220305",
+      "name": "add_rls_policies_v1",
+      "statement_count": 24,
+      "joined_statement_sha256": "2cf70463fc970564d53a280dde0be35a28386981bda67e05a0d164fdadf3268d",
+      "statement_array_sha256": "120a375320dc1a37c6c1705a3851e851c465020402f8800383761955476cb5e3"
+    },
+    {
+      "version": "20260616142000",
+      "name": "add_licensing_activation_rpc_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "63e0b60de3988a4562a1096c123100d00fb54cff4b7d4a88e5356ae992302dca",
+      "statement_array_sha256": "4966a444faf231a81c7ceaa44859194cb137a61e190f1ddc0115b81636c98d87"
+    },
+    {
+      "version": "20260617072000",
+      "name": "fix_licensing_activation_rpc_column_refs_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "c7966c7be64a008693d29fe8921565d778dcedf584d2dced939dcdd308db69cb",
+      "statement_array_sha256": "57e1c3d78e437183442b343023bf97fd425d8232acf97d2cc3864290b2771e81"
+    },
+    {
+      "version": "20260617113000",
+      "name": "add_ledger_transaction_rpc_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "451bfd75500f55db8f25fa22a8b1f283c6bb5254526fd2f76a41b5e8f48ee9e7",
+      "statement_array_sha256": "6931e088aeff75ff24fe94ee6e6e05deb28945ce95badce0907b9c6b7a1042b9"
+    },
+    {
+      "version": "20260617114500",
+      "name": "add_initial_balance_seed_rpc_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "ac78db2679b0d4cb411d1a4fe954b8af1ed7030ee836901358dd4b5ff5f8837e",
+      "statement_array_sha256": "8ab0045fbfa48c3de872510e050a640f31eb37f69d7d57ad3061a4c592b1d711"
+    },
+    {
+      "version": "20260617120000",
+      "name": "add_player_attendance_clock_in_v1",
+      "statement_count": 10,
+      "joined_statement_sha256": "b50ee703c707b4d82736eeb9cf7dd8ead0b357b4cccc8d1197d406676bd7bcb6",
+      "statement_array_sha256": "9ae40b9e5751a21bd72d38cc3dc5f4ec72c6f49822dd46910e2ef5a8e649477e"
+    },
+    {
+      "version": "20260617133000",
+      "name": "create_store_items_v1",
+      "statement_count": 16,
+      "joined_statement_sha256": "f19c102cf52cc2adb47fa932ccedb6b004b98d8aaf1db6587cf6b4a3aec67ebe",
+      "statement_array_sha256": "27a7897ddfd5603aeb05f566d5f78b70a44c047155581533e38f943d2a9c35a7"
+    },
+    {
+      "version": "20260621002500",
+      "name": "create_store_purchase_foundation_v1",
+      "statement_count": 40,
+      "joined_statement_sha256": "89cc98e948dac59ad03902436b53490647e60862badb22f08e7efca09d9347a5",
+      "statement_array_sha256": "65abdcd7280682c683b6a1552c2f8d78f4b33f77166aba3260fb7db7fb8054f8"
+    },
+    {
+      "version": "20260621004500",
+      "name": "create_country_profiles_v1",
+      "statement_count": 60,
+      "joined_statement_sha256": "66dc7fcccc8386a19202bc75b2de629ecb77f2d343b7693d606423dcad8089aa",
+      "statement_array_sha256": "2b3cd98486155067ddaae42e215dd4ac4bf967323d7417d999db9badd6320d2a"
+    },
+    {
+      "version": "20260621015000",
+      "name": "add_store_purchase_execution_rpc_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "3acc747c9834ff4686d552c4e6860cd65140edd788a404e61d257d51f1bcd1f8",
+      "statement_array_sha256": "dca4af117503538f4b70eb1f519f2b97862bc33465d4e90c65961fde25b3210d"
+    },
+    {
+      "version": "20260621021000",
+      "name": "add_balanced_player_country_assignment_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "1eae3cf88397ed6dd8c0f7c464aa7ac326ff52dcfd1f7f3f46af34dc8b65ab71",
+      "statement_array_sha256": "4769c63629523f4d007488fabbc4c3a83141a097e7a2e2cfe44cf0dc69e05ff3"
+    },
+    {
+      "version": "20260621023000",
+      "name": "patch_balanced_player_country_assignment_lock_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "5dfa066cd4eaa8d030e1131ba99819fa855d489d35ff58362bfdd66f5d15c498",
+      "statement_array_sha256": "2a588a9f846f87dcd0725e81768e98ebfe74ffdb9435fee5bc10e2035e61d0dd"
+    },
+    {
+      "version": "20260623093000",
+      "name": "add_stock_market_schema_foundation_v1",
+      "statement_count": 43,
+      "joined_statement_sha256": "c176307bc9429070a5c18ed75a6d0658c4094bc820f42d9e50ac46e0a1fdf0cf",
+      "statement_array_sha256": "a91ac62d732e5fd85a5e32222f413c88392f58b034d03dc4bc9a5dfbb335031f"
+    },
+    {
+      "version": "20260623103000",
+      "name": "add_stock_market_runner_apply_rpc_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "0e06f16c09e9eeff72d5cf4d67b0334682146c5cad7cec86266dfd370748a058",
+      "statement_array_sha256": "fac280aacc6f4007c5eb77dc07e875294314d67b3c9e3215755beca36de783cf"
+    },
+    {
+      "version": "20260623113000",
+      "name": "seed_default_stock_templates_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "a405b81875dfbec4c0a6d9538b696d5f02297ca5c55fb8c835b446700a53b020",
+      "statement_array_sha256": "72791f932361aa9b3f392e2ff95e5adc95487ca279d3db5995154c068f818591"
+    },
+    {
+      "version": "20260623114000",
+      "name": "add_stock_market_seed_copy_rpc_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "bbd476f23f3b96558379e6a967980e9bfc29734d19dcf902833335821eb4a784",
+      "statement_array_sha256": "ba07d3dce85e4e85c5ece911681b56e3a80f2cacc633640a5d7a5b1e0cdad4a6"
+    },
+    {
+      "version": "20260623115000",
+      "name": "add_stock_market_latest_ticks_read_rpc_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "18149fe30d827c41b5bfb605582c0ae5b8a36568b5ea9e15c47af3d8655562d4",
+      "statement_array_sha256": "8a4d8340fe2949e9928dba263efada003e8fa2b7c431e849c55649db7fd8bde2"
+    },
+    {
+      "version": "20260623123000",
+      "name": "add_stock_market_trading_foundation_v1",
+      "statement_count": 23,
+      "joined_statement_sha256": "c56027e91d8a89b4206f6b3dc4653f9f6be5d62c2c37c53b15c22e5ecc55a850",
+      "statement_array_sha256": "3954eedb047df299e06209793c699085bdcf06455ccf1d27c092a640db660b41"
+    },
+    {
+      "version": "20260623123500",
+      "name": "harden_stock_market_trading_active_session_v1",
+      "statement_count": 6,
+      "joined_statement_sha256": "5a02bceede0b988357bff46ae26964272227520299f4024aaee63be81219b549",
+      "statement_array_sha256": "71b38faf199ac878d8aebccdf406d696928c5ff4e99f6dfa88e729a00653261e"
+    },
+    {
+      "version": "20260623124500",
+      "name": "fix_stock_market_seed_copy_ambiguous_columns_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "7d234c5a2a9329cd46a63ad09dd349da337ef30bcb5286dd591317645d41f642",
+      "statement_array_sha256": "844969e394c394fa6ec4fb14fec7af88a9ae694d37f47a9f3ee792edfb8638b4"
+    },
+    {
+      "version": "20260623125000",
+      "name": "fix_country_snapshot_initializer_conflict_v1",
+      "statement_count": 2,
+      "joined_statement_sha256": "5c71a33a5bc08e5c866de88d631536bd6b208ea000f12dc2f14c4764f930de0a",
+      "statement_array_sha256": "1b608778311b927f958069fd78c0029a4005e77c15b0d7d4a0ac783cb9dc3a47"
+    },
+    {
+      "version": "20260623125500",
+      "name": "fix_country_snapshot_default_baseline_v1",
+      "statement_count": 2,
+      "joined_statement_sha256": "ab9be347409a9595492b21b57c1bbd212f0149d76268c20d5df07a2d2d348cff",
+      "statement_array_sha256": "e8dfab3d5988965d7a1460320eff57344bac2aa9b8d94bd6ae52b0f8399aa0a2"
+    },
+    {
+      "version": "20260624051000",
+      "name": "repair_store_purchase_foundation_schema",
+      "statement_count": 30,
+      "joined_statement_sha256": "7d401aa11ab72727d25ea41bde3f1eb92d1d19713b288d61ca0e8bb897a4ebea",
+      "statement_array_sha256": "5498690e51c2f5245663d60017b6d6b112033f06c216309f0ba9de62e9af34ff"
+    },
+    {
+      "version": "20260624064500",
+      "name": "repair_store_purchase_execution_rpc",
+      "statement_count": 4,
+      "joined_statement_sha256": "3843c254be7e80fe3ba9ebf75045c8cd6d4f60d90b156a948fd27f6dfb5cbd14",
+      "statement_array_sha256": "339cadb133556049919cb818cc53ae421e122f90c7c3b9bf1c53e0f41ccc927b"
+    },
+    {
+      "version": "20260624065500",
+      "name": "fix_store_purchase_rpc_digest_schema",
+      "statement_count": 4,
+      "joined_statement_sha256": "eed9a2184510023cde3e1ca4ce9c2d928c53a5fce8930cc2f9f02e63b87bdbb3",
+      "statement_array_sha256": "e747d7c7bd6f8a8fff7d35678741f0ebd8019123178871d6ec55ad8f7c904bbb"
+    },
+    {
+      "version": "20260624070500",
+      "name": "fix_store_purchase_rpc_ambiguous_columns",
+      "statement_count": 4,
+      "joined_statement_sha256": "9163cf4dd1e3e40406eaca2921bdd1d4c141c4ce6d1f29f9853afcb7ca9c9f8d",
+      "statement_array_sha256": "ff583167a131ec545c8f2f0c9fda8bfef35ab7323f9447baac00fc3fcd0a2a2b"
+    },
+    {
+      "version": "20260624072000",
+      "name": "add_multi_currency_foundation_v1",
+      "statement_count": 5,
+      "joined_statement_sha256": "02e87d779fb35192081b4160fd4427447a1408352cd6e2ba613fd4a5e25bb03a",
+      "statement_array_sha256": "9a0364e24c63ce4c0af30745fbd25d5c42068fb9d8c27bf8d91c548544691701"
+    },
+    {
+      "version": "20260624073500",
+      "name": "seed_initial_currency_exchange_rates_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "7165cf2fdd2c87ce1572ea0277570b823c2bf4a4396caabfcbb399097c3fd3d4",
+      "statement_array_sha256": "905904c0642035f39b4e220bd951f13bb17942a944eefcea8b18a2571580f8c9"
+    },
+    {
+      "version": "20260624075000",
+      "name": "align_country_profiles_with_country_currencies_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "1ec55ef961d217dac54104f7f8e68a148b3789e6b7367159e00c93d3b6fb74d5",
+      "statement_array_sha256": "ee0bec1af1cb5377bd6f7c31a3ae9693478df74fea3b461e4a51720acc4b6199"
+    },
+    {
+      "version": "20260624075500",
+      "name": "fix_official_country_currencies_v1",
+      "statement_count": 5,
+      "joined_statement_sha256": "7de8d42cb0c25d9845459ee78f1ee5656966dbf5b7f06f6d986a654020dad006",
+      "statement_array_sha256": "a13349e470a138208f0dd81db89f8117e52b111851e4df77c451ee9ecf70fdac"
+    },
+    {
+      "version": "20260624081500",
+      "name": "repair_country_profile_currency_codes_v1",
+      "statement_count": 7,
+      "joined_statement_sha256": "cf0106a88d8bf68bdeb908703d53a5206d949f6da81674304aa9be0367553879",
+      "statement_array_sha256": "38edd76fe371e8124505700da33491b5a5137b82a4e9903f262573df401046b0"
+    },
+    {
+      "version": "20260624082000",
+      "name": "delete_invalid_country_currencies_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "c9f8a1d8266b2796e2676f79bbc4b8d915e59dd251f05b28253c1ea829f49923",
+      "statement_array_sha256": "94c5d8ba62b154b67815ab482487b5b409074f282925d4ebf2c4a3de972d396a"
+    },
+    {
+      "version": "20260624083500",
+      "name": "cleanup_currency_metadata_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "446a3a1cf2fc7de516ceab64eac12fe59f02b1e692cdf310417743cae961b857",
+      "statement_array_sha256": "d2bb85dd41aa05202fe085b877c55b51698d58a7c7923f401649e962421433bc"
+    },
+    {
+      "version": "20260624084500",
+      "name": "add_store_country_currency_purchase_fields_v1",
+      "statement_count": 12,
+      "joined_statement_sha256": "bdee64525762be663bc5ff4acc035840a4fd9f72e26d4754709f64252fbbe70d",
+      "statement_array_sha256": "92c01b4164a1ba412e82781ba1374e0da7873b47f69ad14364d568d1e5a3abc0"
+    },
+    {
+      "version": "20260624123000",
+      "name": "remove_legacy_eco_store_defaults_v1",
+      "statement_count": 3,
+      "joined_statement_sha256": "ea917e3038399f388e2fb7d41e9258ebddb7fff93e5446128bcf41c50b217598",
+      "statement_array_sha256": "c8c514a958a8461d2a89577d663220ed16afdf2d1c55e6e3a71a6ddff9e4ebf3"
+    },
+    {
+      "version": "20260624130000",
+      "name": "stock_country_cash_currency_v1",
+      "statement_count": 2,
+      "joined_statement_sha256": "c5ca3dc0ae555a5216b6ffa1f78625fe021ff4c3c47ca840794bcb82f793bcb2",
+      "statement_array_sha256": "f63945100f1b08245ab6ce2c898b301a88e3f8c50e0adfa6ec607baf997e5962"
+    },
+    {
+      "version": "20260624131500",
+      "name": "fix_stock_market_order_country_cash_rpc_v1",
+      "statement_count": 2,
+      "joined_statement_sha256": "1318308e16ad5780d1c4ea38488f40fd81d291bee7b7e24ff295cdb9f7364e19",
+      "statement_array_sha256": "bc3828fc16e3ebd2e6c7c957c3002b06a11e97ae5fbe9e5e2bcfb480ab56872c"
+    },
+    {
+      "version": "20260624132500",
+      "name": "drop_unused_stock_order_rpc_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "0c2dcf51e7765063b9f8291b822ed1e0d0d9a27bfa8a65b3a9d3a95602e78999",
+      "statement_array_sha256": "7374161fcab70d1f426c153d790fb96bd64b801dca935f3be140c45c329df16d"
+    },
+    {
+      "version": "20260625103000",
+      "name": "extend_stock_market_events_news_metadata_v1",
+      "statement_count": 17,
+      "joined_statement_sha256": "b456b8805786edd077fbeebe18ece820fed79d952a91e7e752f1625af8c36c68",
+      "statement_array_sha256": "f8b6990e50bba33e8bbace9adce82173d9aa33bdcadf34e5a52fd552a8d3de59"
+    },
+    {
+      "version": "20260625120000",
+      "name": "add_storyline_schema_v1",
+      "statement_count": 37,
+      "joined_statement_sha256": "61c52122775e2ddbc5e26b1c6f530ee0db6138584f36c6265f5f140adfe6eedf",
+      "statement_array_sha256": "c157841860232ae9a0ea2308b6e956a77a9d70744b43ac10f2e796db95779459"
+    },
+    {
+      "version": "20260625123000",
+      "name": "add_contracts_schema_v1",
+      "statement_count": 26,
+      "joined_statement_sha256": "f93c238e728c2264227a5281103b860fe7a89be39ca4a83f0510417970fa187f",
+      "statement_array_sha256": "fa9390f20ef256b8efee24af5c22ad2ec6e5d40d40a2bb6b37492f64612efdfc"
+    },
+    {
+      "version": "20260625143000",
+      "name": "add_demo_storyline_seed_rpc_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "cda3a5c68f198a5926a3d1a8034e0fe16829d31905a4a0535240e6b566047aa7",
+      "statement_array_sha256": "5112707c724f1cf39ae8e6a114c9a433a2163d113e393ce2567716688b2fde91"
+    },
+    {
+      "version": "20260713085704",
+      "name": "repair_player_attendance_clock_in_v1",
+      "statement_count": 8,
+      "joined_statement_sha256": "9da4269f1fef75b242d28359412e1f9a23b050b7ea50a2e3d5d605596682287b",
+      "statement_array_sha256": "b9c127104301672624635646b06286dff8edb2ad1d1878f79766cdba266fa498"
+    },
+    {
+      "version": "20260713085743",
+      "name": "repair_contracts_schema_v1",
+      "statement_count": 16,
+      "joined_statement_sha256": "acd08a63ec589e560b03f92a4af0d0b7ba7d1d62cdea0aa1cda5059712fee5f1",
+      "statement_array_sha256": "278d4823dcacf8ffe99934b6525d405b0233d5489cdd1b9aaf23347608f2b9c0"
+    },
+    {
+      "version": "20260713193000",
+      "name": "create_admin_audit_log_flags_v1",
+      "statement_count": 7,
+      "joined_statement_sha256": "2ee371d8a26ac74aec550fce13f1f2d2459681db30be0663613423fb81a0c2be",
+      "statement_array_sha256": "910dc51417441af6cf1c63215e60607cfa9c6a6f7f84ee4f49093590361006f4"
+    },
+    {
+      "version": "20260713194500",
+      "name": "issue_contract_rewards_atomic_v1",
+      "statement_count": 10,
+      "joined_statement_sha256": "38c9356ab4102a88d4bc515a36ef8a7b2e2c87e258361c2af582126eeb35a168",
+      "statement_array_sha256": "d8742c9da6821a41bd9eda07ae17578276b96adbe3ae4e643d9ef11d1af5a236"
+    },
+    {
+      "version": "20260713223000",
+      "name": "complete_admin_control_surfaces_v1",
+      "statement_count": 25,
+      "joined_statement_sha256": "15bf40c3f91c1cd0806d37ac7c24198f4f7ce1dfe9ad3a4570e5b5cae32efd21",
+      "statement_array_sha256": "34d8150e782a0937d75d20eec85717fb9a4b3dd87a60420c1d0e5eabd6853a13"
+    },
+    {
+      "version": "20260714034518",
+      "name": "post_merge_admin_performance_cleanup_v1",
+      "statement_count": 27,
+      "joined_statement_sha256": "5f60b7f8916088d7dec053aefee6d526ebc9a78d046ca96d2c9a6fdb003c0638",
+      "statement_array_sha256": "3ec94727b4bb84a8f335bc03462166588a04b96af23347d940ea3cfeeed72913"
+    },
+    {
+      "version": "20260714224000",
+      "name": "harden_admin_data_api_tables_v1",
+      "statement_count": 13,
+      "joined_statement_sha256": "7ba63240c5b587ab63b21d950ca59418a415a7a76c9240983eb918077837745c",
+      "statement_array_sha256": "2ab2bd130f90e235c643afc26a38780289b2d39ceb319dc4e6e88a79fd546d40"
+    },
+    {
+      "version": "20260714233000",
+      "name": "harden_security_definer_rpc_privileges_v1",
+      "statement_count": 34,
+      "joined_statement_sha256": "e274566f28fe244c7e786f051dca0cdb74b58c484d7e4e93397dcfdcb9432027",
+      "statement_array_sha256": "027c0232a81930fef3f525a15a346582d6bd9ebe7f4b1f069e20b4857eb1b089"
+    },
+    {
+      "version": "20260714234500",
+      "name": "index_admin_control_surface_foreign_keys_v1",
+      "statement_count": 11,
+      "joined_statement_sha256": "f4568f373062da07011bd9a76300d5f76eeb5ced62bb0bb16c91930c0d227f18",
+      "statement_array_sha256": "b71a9befffdace92dd8bd2b46aed77e9bb847e70163feda9f9f398f27ebdc598"
+    },
+    {
+      "version": "20260714235950",
+      "name": "add_configurable_player_identity_v1",
+      "statement_count": 15,
+      "joined_statement_sha256": "465d021f8e51374886b5de32ed2a9d4a14dfb41240ceab548e3a0c257e921adf",
+      "statement_array_sha256": "1c06d68cf540e39a0140588b4ba2df7e0b1f49eb56df23da1b75b4aca4788ade"
+    },
+    {
+      "version": "20260715001000",
+      "name": "harden_configurable_player_identity_rpc_grants_v1",
+      "statement_count": 8,
+      "joined_statement_sha256": "3d8ccbf4182b3213bc8b345063ad54904745a8a7d4efcb48edbd7b3ac516d8f6",
+      "statement_array_sha256": "d437fadaeb6812ee45abbe8dfea088d3568fb7e497a1bab8ffdcb2ebd3c982fc"
+    },
+    {
+      "version": "20260715002000",
+      "name": "fix_player_identity_rpc_column_ambiguity_v1",
+      "statement_count": 5,
+      "joined_statement_sha256": "66493c9f006ec13e76b832e82888a6008d1b3a2c0bd3eff9d97031564fed192c",
+      "statement_array_sha256": "98285cdd9e5d4dcf0ea93e0a1c251663c3084c51f61033c3650083976da5c224"
+    },
+    {
+      "version": "20260715003000",
+      "name": "add_story_notification_tables_v1",
+      "statement_count": 16,
+      "joined_statement_sha256": "240fd21eafe60e61c8e1cd85b5559039192ce03c9b9d5fb8e9dc0aa1e1053a83",
+      "statement_array_sha256": "b44a63da2ef544efa41c3984bfac06dcea12d4689161dde0117a59ea6f929724"
+    },
+    {
+      "version": "20260717090000",
+      "name": "harden_story_notification_scope_v1",
+      "statement_count": 9,
+      "joined_statement_sha256": "a8162b08b82c5cd33eb8c4de2affb38e8836eb7362816952ed4d0dd28fb0ef50",
+      "statement_array_sha256": "fb8a4fa3ab593963692117de376b0ae1ddde8a45246113adb66095f1c95a6903"
+    },
+    {
+      "version": "20260718064000",
+      "name": "add_player_stock_watchlist_v1",
+      "statement_count": 17,
+      "joined_statement_sha256": "9da10e1ff53d7df7d1bebc28382805852a0b2adb83bf63886b7468beede0dd23",
+      "statement_array_sha256": "5e036bf2799595319e0057e661bd7567442d89dd0fc554cc00938c31d46ac5d3"
+    },
+    {
+      "version": "20260718083500",
+      "name": "add_player_notification_public_ids_v1",
+      "statement_count": 21,
+      "joined_statement_sha256": "09a5e59b7bc30d80fdd22f620ab45a52afce3c6a14ca36deee13c7730d150e1f",
+      "statement_array_sha256": "6a089bfe62ffdcedaee0b76d75bb557bd262f107df246edc2ae79632eebdeba2"
+    },
+    {
+      "version": "20260718112000",
+      "name": "accept_player_contract_by_key_v2",
+      "statement_count": 6,
+      "joined_statement_sha256": "8df3c068a7616bc56a7a499fbfe0a511ca3395829a8b0c23c5c4653da47f9108",
+      "statement_array_sha256": "a0ab8e3669daf2d8ca322c9eb1d9102869b2cce5f63ad15b4a681552f555c97e"
+    },
+    {
+      "version": "20260718113000",
+      "name": "add_inventory_redemption_player_workflow_v1",
+      "statement_count": 28,
+      "joined_statement_sha256": "272b76d42636e5bd4745e7e7fbf4ea0e693c2dae62d7e867953a7d99ec43ed9b",
+      "statement_array_sha256": "c6d2ac157cf15d1c001da53339ab09f4d72e846be1e68dacf332415d73a9c804"
+    },
+    {
+      "version": "20260718123000",
+      "name": "add_inventory_redemption_admin_review_v1",
+      "statement_count": 13,
+      "joined_statement_sha256": "82ef87c64e19d74d082061b6535d45b54d1b7e49b1a3ba9a448c7d54fd6a3105",
+      "statement_array_sha256": "fec4ffb517a9235a65300b88b1fc6d334a91e36a55a55cdf337b6cb260590995"
+    },
+    {
+      "version": "20260718173000",
+      "name": "add_shared_request_rate_limits_v1",
+      "statement_count": 13,
+      "joined_statement_sha256": "a7e08c5ebad86b13e7a6f60326b5b779bcac219900ccedc46e82e9f4f6aaf323",
+      "statement_array_sha256": "09750690e8c8d212f9d024aa5d003338f91778f64cb5bd43f987ea0f59c96b8b"
+    },
+    {
+      "version": "20260718190000",
+      "name": "add_pre_auth_rate_limit_rpc_v1",
+      "statement_count": 6,
+      "joined_statement_sha256": "1d0dfa20bbf46c20f63250e708aaa66d5e32581d69fcb3f4d0d4c20e94e197f7",
+      "statement_array_sha256": "0dd20dee08bcdbf623e91d80bddb2765e11e762f598a2598bd9725c47251990a"
+    },
+    {
+      "version": "20260719120000",
+      "name": "add_stock_exchange_calendar_runtime_v1",
+      "statement_count": 8,
+      "joined_statement_sha256": "3368fb2e5f256da5eafb1911626811dec0ac1c2875e62f29f9e407dfeabfc231",
+      "statement_array_sha256": "58cf5b04aaf387ebf46087259367519b46c327a1c58f75b774a5c380775131c2"
+    },
+    {
+      "version": "20260719133000",
+      "name": "require_stock_market_timezone_v1",
+      "statement_count": 15,
+      "joined_statement_sha256": "ae534039329310e2c4b08367185b315072566aef3fe752c2990d84556fcc2ac7",
+      "statement_array_sha256": "30e0be004a32db585087d374a32d7be2a67c6f6af10f99359cf06c74ca9d8256"
+    },
+    {
+      "version": "20260719150000",
+      "name": "add_player_store_public_keys_v1",
+      "statement_count": 11,
+      "joined_statement_sha256": "f26719f354f0d3f0b4a02992e0d275e641a6f2391504eb61bf38cb90a4b71cbf",
+      "statement_array_sha256": "bf91ff1d098d40fc5384c042a50d8c52569942c37532f3855c78d5d0131e2d6f"
+    },
+    {
+      "version": "20260719170000",
+      "name": "gate_public_store_purchase_by_game_state_v1",
+      "statement_count": 6,
+      "joined_statement_sha256": "9a5b65fd0288faa85e3662985b5b0499b7847559ac76f3d76df747e87f927016",
+      "statement_array_sha256": "8aa26251c432422883d4f0732693035ad934e10cd6bb2aad24966be5b7f2a2d1"
+    },
+    {
+      "version": "20260719193000",
+      "name": "add_idempotent_staff_ledger_adjustment_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "c7480ebc0bc7258d8b17f431cc77951940fbb8e47341ebe3ddbd0f3723ce865c",
+      "statement_array_sha256": "bd3808040d2dd00ebc0fb902f033f74f4c8fbc546e0e98a334ff1c540ec7a5d6"
+    },
+    {
+      "version": "20260719200000",
+      "name": "add_game_lifecycle_controls_v1",
+      "statement_count": 21,
+      "joined_statement_sha256": "702e364a1c1bd1d074bed75e5aa3ae0ba6be8550a70a296c52b2f09cb9026ef0",
+      "statement_array_sha256": "705cc3d20fac8750d126a2df44a07f1e5343070f1a3878aa5b5e1c64e58388a0"
+    },
+    {
+      "version": "20260720235900",
+      "name": "harden_canonical_database_exposure_v1",
+      "statement_count": 18,
+      "joined_statement_sha256": "5d04e502480a3e3b2e7535249805a3b6562fa71a300b4db664d82ecd9a909c69",
+      "statement_array_sha256": "5fb9eaca80a7c0b2077fb37535afd8319ac2dc51b56453b4c6192cb1bedb6de8"
+    },
+    {
+      "version": "20260721002625",
+      "name": "harden_request_rate_limit_operations_v3",
+      "statement_count": 11,
+      "joined_statement_sha256": "c8d7f7885f31cc62d964afab00fbd23641a2ca8fb4901a3c1adda0ac6667c826",
+      "statement_array_sha256": "063c3d32878823d76daa374b4efd0c5aed19815fba27b3bfdad673d3cd93b50e"
+    },
+    {
+      "version": "20260721003228",
+      "name": "repair_request_rate_limit_jsonb_object_length_v1",
+      "statement_count": 9,
+      "joined_statement_sha256": "e3a6b32c1900e2f9bc8f3c82155fa0592464b2e030880f916436445143a98c5e",
+      "statement_array_sha256": "9b946027694daec0541d571d771e6568ae973d8eb0c9e4e632115adb6506ab8e"
+    },
+    {
+      "version": "20260721093000",
+      "name": "add_transactional_seed_content_release_v1",
+      "statement_count": 28,
+      "joined_statement_sha256": "36410f49c0871726267288c23d5f96c8ec6462849724ca3a44880738e7aa1608",
+      "statement_array_sha256": "64000c28016865be808c5eabde7facc11ed7e8a623ce940c76f7040e8ad15767"
+    },
+    {
+      "version": "20260721094000",
+      "name": "harden_transactional_seed_release_rollback_v1",
+      "statement_count": 5,
+      "joined_statement_sha256": "68c5ab209f14299b0f5636baacc8ad33a3e1c964c948d67288bdc40b9d18e0df",
+      "statement_array_sha256": "cfcda6aa19c6aea181d44812c1feabb95eb86aa24c7e4e249e7e8d4b85a9b594"
+    },
+    {
+      "version": "20260721095000",
+      "name": "accept_current_service_role_claims_for_seed_release_v1",
+      "statement_count": 5,
+      "joined_statement_sha256": "1f81a4d3c78213f6cac2ad8b56811f69920f223748e7b47c3400591088e5c865",
+      "statement_array_sha256": "7e6f891f341d9d910087ab518cce6dd3270601e79907bd5b9e3f9f47254a9fbc"
+    },
+    {
+      "version": "20260721100000",
+      "name": "add_campaign_arrival_world_runtime_v1",
+      "statement_count": 55,
+      "joined_statement_sha256": "76f27d7e2e2daed93b8e9c0e4af456174821abc629ea23f31d98073f5c1a9a18",
+      "statement_array_sha256": "40c1dfec9ec62ff82d32af538a8d57a74e4ce048b32ee74ff33d872d006b8b0f"
+    },
+    {
+      "version": "20260721101000",
+      "name": "enforce_campaign_game_lifecycle_v1",
+      "statement_count": 7,
+      "joined_statement_sha256": "206dbe919b5a9e275f4f478d97c72fe85446cbb36e7f71cdab3d05db5ee13cce",
+      "statement_array_sha256": "90ba1595afbbd60c436dfe88957d26db854fa4b04d8399749137a36a73f3100d"
+    },
+    {
+      "version": "20260721102000",
+      "name": "add_world_runtime_metadata_v1",
+      "statement_count": 22,
+      "joined_statement_sha256": "7c1088cecca4d7010ee9018c4d632a5fa5af9cba4010c672a5cda5004528e4d0",
+      "statement_array_sha256": "446f87d93ec4dc3210ed54d3c7347d694632721faa0f8dfc0b569d6d20d72350"
+    },
+    {
+      "version": "20260721103000",
+      "name": "add_player_travel_execution_v1",
+      "statement_count": 28,
+      "joined_statement_sha256": "07aa45ee2d022fc36e0bf97ab139d0c3d600403bd88196533249c91f87f079c0",
+      "statement_array_sha256": "2658c8d812d21980792121f0ef4b0eadc7ab885c534b9a0d8d5fd01565c0b016"
+    },
+    {
+      "version": "20260721104000",
+      "name": "add_world_country_onboarding_v1",
+      "statement_count": 16,
+      "joined_statement_sha256": "3ffbf99015711c1502bf2a06ae7a06581deef8e8daa9ab92c3587fd77f343cb0",
+      "statement_array_sha256": "401d67269d3e4b06ed4ff993b335e3fc7579f99cd48bcfe7bc70ca46701f75f7"
+    },
+    {
+      "version": "20260721105000",
+      "name": "bind_world_country_and_class_grants_v1",
+      "statement_count": 25,
+      "joined_statement_sha256": "5b1afb6d2420813e43085e41b23f412976a3ece48ce565cb0c22e571659390b9",
+      "statement_array_sha256": "389c57b38d8f6c97102eb97e510712f0ffaf5b2730c5425a3fcf60ed90d6fda7"
+    },
+    {
+      "version": "20260721106000",
+      "name": "add_player_residency_requests_v1",
+      "statement_count": 5,
+      "joined_statement_sha256": "b04d9c13359f19f2b2aa39519fa641b253878a7114944f19607598808c193544",
+      "statement_array_sha256": "0a24e2e55cfae5a6992c48bd333a23e72e079224e8c797f3eba33e805956a174"
+    },
+    {
+      "version": "20260721107000",
+      "name": "add_campaign_control_and_outbox_v1",
+      "statement_count": 25,
+      "joined_statement_sha256": "0ca44dcf0ae30679d8791bac5294c2d4ca5b5422421fa7eec755a00a46722f06",
+      "statement_array_sha256": "aac16cd1fa53e73429dac34f74aa5fd8673e87954664776fc9c67d5916ceeaec"
+    },
+    {
+      "version": "20260721108000",
+      "name": "add_campaign_event_atomic_v2",
+      "statement_count": 7,
+      "joined_statement_sha256": "25832c0f90a129f8c6c0b77759f05a7b461d152c16075460f6f6d5330b49cf9a",
+      "statement_array_sha256": "98ccb26b4942c4cc9b903da8f9827bc54d32c1ced5e15f1db44ed86af4f7d990"
+    },
+    {
+      "version": "20260721120000",
+      "name": "add_business_banking_credit_runtime_v1",
+      "statement_count": 94,
+      "joined_statement_sha256": "77f9be28723f1ec3b8719d3f6ec2245f32d6c516c1e8f4204207de74efdc1697",
+      "statement_array_sha256": "4c571af6bff0afb075c2f1a80178144403dbb8f84b733f39d7881e84ebca0d0b"
+    },
+    {
+      "version": "20260721121000",
+      "name": "complete_business_operating_controls_v1",
+      "statement_count": 29,
+      "joined_statement_sha256": "a18e3cf87fac1210a4c9b1fcbc1f4d042bc10b459b8fe7e97c789b3ec741f3d7",
+      "statement_array_sha256": "c740892f64c4d507ad03efc2ba1f0587c6a2e7c8260c4a3fc27f20f332f689a6"
+    },
+    {
+      "version": "20260721122000",
+      "name": "harden_business_banking_invariants_v1",
+      "statement_count": 18,
+      "joined_statement_sha256": "b1113b56a819b851657dfd202da40b808f37f12d3e2ef60354b74b7848058786",
+      "statement_array_sha256": "da546b244633e998821d255d00804c72e828d4a6628e3c7b0fe8ddc8d6746736"
+    },
+    {
+      "version": "20260721122100",
+      "name": "fix_business_banking_rpc_signatures_v1",
+      "statement_count": 10,
+      "joined_statement_sha256": "17be5a1304801e18c0d5f730090272f07ab3bec32c1078e1ee515d34ebcfc8dd",
+      "statement_array_sha256": "d1f625150604baa66200704da7b65bfb5d99c814b337c6899e81bb692bc3679c"
+    },
+    {
+      "version": "20260721122200",
+      "name": "fix_business_connected_banking_v1",
+      "statement_count": 7,
+      "joined_statement_sha256": "cb5e9c3650218109f3a154da739b8d08ba221985ce2691ac790fdca116ca676b",
+      "statement_array_sha256": "6ccd79f470547b67f183fc8c80167516320f5abdc5de5932d09ca31dd8dce4b1"
+    },
+    {
+      "version": "20260721122300",
+      "name": "fix_business_connected_operations_v1",
+      "statement_count": 7,
+      "joined_statement_sha256": "d9292a690de2f42c1bba64f4260980a50c89eb827c87c9b3bc472245eb26b5a3",
+      "statement_array_sha256": "5525228deca344adda148a3c8015fa00641af2afcf7f5d6707e286e4aad22eaa"
+    },
+    {
+      "version": "20260721122400",
+      "name": "fix_business_connected_settlement_v1",
+      "statement_count": 5,
+      "joined_statement_sha256": "89a5b1519d8aa3b4aa516e570d7f1becf5b991fb3774c2c58e93fc819b17a610",
+      "statement_array_sha256": "5247f26923b47fe901336b4f52b0bc4bc232aff7d591d67d765150bfa95b86aa"
+    },
+    {
+      "version": "20260721122500",
+      "name": "pin_business_account_function_search_path_v1",
+      "statement_count": 6,
+      "joined_statement_sha256": "c8eb56e73505e5c1cd72b6e8d45296908dd68505aa437f76d19236950b0d7abe",
+      "statement_array_sha256": "405f01f27034e0ca4f77b98162df9fe9350626ca79e577f9b7b7016e0aad50d4"
+    },
+    {
+      "version": "20260721130000",
+      "name": "add_crafting_item_definitions_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "120e3bbe5f9585b53362b46c030902787d388cce86be3e1c1670c753775da80d",
+      "statement_array_sha256": "b1d9784d25e033550dd7899b294a94d514436f8cbae6840c711b6bdffc02c3fd"
+    },
+    {
+      "version": "20260721130100",
+      "name": "add_crafting_recipe_definitions_v1",
+      "statement_count": 5,
+      "joined_statement_sha256": "4c7bc616dc8963fd3c929953e1062901231f8692d6c908d4f757c681af832188",
+      "statement_array_sha256": "a8ab457a4fa1f693e6863f3bad7c183344c4a73a5964f3d6432cca53ddab66fd"
+    },
+    {
+      "version": "20260721130200",
+      "name": "add_game_physical_economy_scope_v1",
+      "statement_count": 5,
+      "joined_statement_sha256": "be6b2a4041f7b409922000f96d65d0da61a51be4c5f57f73d7adf09ceeb0e252",
+      "statement_array_sha256": "24c5897e68810fdbd38a39bbcec00794622f7713eb52f3243d74c28c34d60973"
+    },
+    {
+      "version": "20260721130300",
+      "name": "add_crafting_job_reservations_v1",
+      "statement_count": 7,
+      "joined_statement_sha256": "e5e007f6749f4444eb3aa941ac95271f0ebfec65a6394f0024204d9797eec090",
+      "statement_array_sha256": "2862235216c1f3b869a2dc3f2dff98c655eeb7d901cc9ecb4c321b76d92c3c0a"
+    },
+    {
+      "version": "20260721130400",
+      "name": "add_equipment_and_item_effect_state_v1",
+      "statement_count": 6,
+      "joined_statement_sha256": "c385ae66b892d4079d9875d3be6f4a4826b90158cff8e4388b09730acedf383d",
+      "statement_array_sha256": "2bc51b9a66997152f047d38f39a92c7681bd2fee969d1fcb3aba5b821b7863c0"
+    },
+    {
+      "version": "20260721130500",
+      "name": "add_crafting_salvage_admin_security_v1",
+      "statement_count": 11,
+      "joined_statement_sha256": "afe60710f300c3bffc1624781039c184df924aabd8a2aeb111efc58d65cc8269",
+      "statement_array_sha256": "f0921206878a35da563fd82e8d6fe6f05e33082e5d22e74091ee1b3b512d6f3b"
+    },
+    {
+      "version": "20260721131000",
+      "name": "add_crafting_pack_import_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "81a54bed2fb439e2a40a2f155ca432ccb60976ed49fe9149cd464b63fbcbdd13",
+      "statement_array_sha256": "bb2b8f489fda4474c766302a72bf120d69ae5d57b2f25680f480ad1a78e3aef7"
+    },
+    {
+      "version": "20260721131200",
+      "name": "harden_crafting_pack_import_identity_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "edaf9d5f8445e871307e9b6260f2eed23e5131baf64856d7d9a91ed85df8b6a9",
+      "statement_array_sha256": "837bcefe00e2044ce03477de51d52c11247a7ac74c1f2668bae128e87c09fe3c"
+    },
+    {
+      "version": "20260721131300",
+      "name": "harden_crafting_pack_version_identity_v1",
+      "statement_count": 3,
+      "joined_statement_sha256": "d211f8bc1edc4e3f8b96b22db8a30826ebc2ecdc15de682ea804be22c2f8234e",
+      "statement_array_sha256": "361eb5bd965360fcbc286e390fe32073e8721811df93bd57aebd5a0e9d243820"
+    },
+    {
+      "version": "20260721131500",
+      "name": "add_crafting_pack_activation_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "699be07ee94cfe2b4b33350bdfb3e111fdb677e1b7efbfc5a3c84b8609affc95",
+      "statement_array_sha256": "e5c3d29c3e56255978b7e9eae9ea8d3eb38577a00951cb034d030a0452f4ee82"
+    },
+    {
+      "version": "20260721132000",
+      "name": "add_player_crafting_read_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "508bedbe7d7d3b604df6b694a666f53274162eb17af44f4d1033a9bb5b192f39",
+      "statement_array_sha256": "0d92401a755085182d4cffcf990043343063e9db9f788eb1a0b8b451895b476e"
+    },
+    {
+      "version": "20260721132500",
+      "name": "add_player_crafting_job_start_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "4684266a67f152b56000a7573af584c841551ad6e0b27c72587b66193265deb2",
+      "statement_array_sha256": "3e929d3337fb15c11efe5fccf089d3bfd1d1e8e10e0de057c627037f52c14cae"
+    },
+    {
+      "version": "20260721133000",
+      "name": "add_player_crafting_cancel_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "6da5d440f383d2539af05c7af202b73bed898c7f461a54a7b57fbf20f5d45a5b",
+      "statement_array_sha256": "eb16ef7decb7f2dc309e590a98214869b8124c049db54975c246ddd9bd2d350d"
+    },
+    {
+      "version": "20260721133500",
+      "name": "add_player_crafting_claim_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "21038ac2eb934bd8f6e694c7993b70757f418f65f5b5b1cc27058f8563d289de",
+      "statement_array_sha256": "391aab600205c47f8f6a40ca2455ccfdf9167876a10175f00e325fbbd1486262"
+    },
+    {
+      "version": "20260721133700",
+      "name": "add_player_equipment_slots_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "95bc76133e457b39ee41a7700ce28e43e845a57467da8fd14a2d1aaf68663827",
+      "statement_array_sha256": "28281da0a9034f73ee9c8df338e9cd87ae581d5c554fd554cf53cec7f69432d0"
+    },
+    {
+      "version": "20260721134000",
+      "name": "add_player_item_effects_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "3d467fe91006628e366a3644697795170fa6f4575110c391454880cf5d61a3ff",
+      "statement_array_sha256": "23f917e45fa07560dd14d5e20b97267ab07c3b141bc7063299cc34cb6132295a"
+    },
+    {
+      "version": "20260721134500",
+      "name": "add_player_equipment_salvage_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "0e43ad713c9a9168271de088778540732c12c9246944a644afd8a99bc0098c31",
+      "statement_array_sha256": "48750c64ca5ed59471b1088306c01143ce88217e18f1390f68c5859eacd8902e"
+    },
+    {
+      "version": "20260721135000",
+      "name": "add_admin_crafting_read_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "17675da16ef5b848eba4a892335598d3ee7cb5d8f4cd6012da5ab0bc4de72e2e",
+      "statement_array_sha256": "4f2e0c0f739a9744a2b72611f3839f8bd11e117ad73638a06f45c7bfb0ce81b1"
+    },
+    {
+      "version": "20260721135500",
+      "name": "add_admin_crafting_recovery_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "bbce3b1836c0fca2cfe42ee629351aca936f85788b3ffbbf0a5c6697548790e3",
+      "statement_array_sha256": "88fe942778bbdebbafbedaa8f2babcb242ba58b1d65b19f0d12518abbe91935c"
+    },
+    {
+      "version": "20260721135700",
+      "name": "add_admin_crafting_supply_and_grants_v1",
+      "statement_count": 18,
+      "joined_statement_sha256": "c6cfe9724b6c1c1e9912ef233decf89e42b73f1e34755faa547e0cabce8b0a41",
+      "statement_array_sha256": "90bd0d651f6f35f2e53863b65b625722956067d4405761d9647eb2cde0846e59"
+    },
+    {
+      "version": "20260721140000",
+      "name": "add_marketplace_reference_scopes_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "383821c854ce1c8d524b030bbaa248d7cc8e4d6b194e15856e6f95dd2355bd53",
+      "statement_array_sha256": "cbb7e8daa7d5bd41905a12943d257928bffad76c77caffafbc441e2c171ae320"
+    },
+    {
+      "version": "20260721141000",
+      "name": "add_player_marketplace_lifecycle_v2",
+      "statement_count": 98,
+      "joined_statement_sha256": "b697f08f3631c92b0a152b054fef1c441d69ca9e56c625cee1d4561987477739",
+      "statement_array_sha256": "bac08acaf8b1980209c7be584838a0749ba355c91f5741c7ce78f088ed803571"
+    },
+    {
+      "version": "20260721142000",
+      "name": "harden_marketplace_resolution_replay_v1",
+      "statement_count": 52,
+      "joined_statement_sha256": "97f8ade23b225104c1dd628b2941a16ef699fa27491963c4edd0ad2169e0a4c3",
+      "statement_array_sha256": "7944f1ad32a0d131a786a70997111ef69a96e68b275ee5080f28d7d9af696647"
+    },
+    {
+      "version": "20260721142500",
+      "name": "add_marketplace_inventory_event_types_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "d86a3a5a51aedac64c82e068baa50f5aa19e0fcd5fb5a39633e7dbb2acff6098",
+      "statement_array_sha256": "593e570f26e83a72bb2a3a0345f969cbc6d902dd7c9a1c2f0477148d64fbc350"
+    },
+    {
+      "version": "20260721142600",
+      "name": "fix_marketplace_listing_item_lookup_v1",
+      "statement_count": 5,
+      "joined_statement_sha256": "a8f39b200f6e650c3f86499ac221c4165d30d337010e19f4d91b422c780b9f5b",
+      "statement_array_sha256": "c6d3ed224094e7a5bdde74538e2e876cf2d7e341b90ebcf5ba74afe93a516866"
+    },
+    {
+      "version": "20260721142700",
+      "name": "fix_marketplace_listing_currency_lookup_v1",
+      "statement_count": 5,
+      "joined_statement_sha256": "9468a44bce843ad04005ebffb0aa34142aaccf9900b7232b8c2f7b2f43468a42",
+      "statement_array_sha256": "851895a253e62a525a93282e802cdca2005a3472b9f94f882f3720e9bf3a2b17"
+    },
+    {
+      "version": "20260721142800",
+      "name": "restore_marketplace_listing_reservation_wrapper_v1",
+      "statement_count": 5,
+      "joined_statement_sha256": "269a22f7f3d92a9cfe19cc8c28e6682668bba7e8df1d078599973d758a101942",
+      "statement_array_sha256": "62a5d4b08f76c65b0d294e829cd8f8d59ef30e7f6a089d5173f50085a629dd79"
+    },
+    {
+      "version": "20260721142900",
+      "name": "fix_marketplace_listing_legacy_lookups_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "76fcd54c667aeff31c654f9d50bad52e506168e3a5a3b547fae21933512d01b2",
+      "statement_array_sha256": "429bf52b47bfa09828a6dff46e237ced94679da65c8c47b60cb32b778c84e785"
+    },
+    {
+      "version": "20260721143000",
+      "name": "harden_marketplace_legacy_projection_conflicts_v1",
+      "statement_count": 9,
+      "joined_statement_sha256": "aa6f2a96166eaf13b3c005144739da1e41568bd1a0c90a522db491636fd1d034",
+      "statement_array_sha256": "eb5fdca418332f00b63462ee9f14e54de3f16e4eb7464833975638b4708f8e35"
+    },
+    {
+      "version": "20260721143100",
+      "name": "harden_marketplace_table_return_conflicts_v1",
+      "statement_count": 3,
+      "joined_statement_sha256": "9673dd456a48817cf7889e99b6c0458d5bc3e393ba00a2704fe0581ecc0009bd",
+      "statement_array_sha256": "95e83f82a40656d27ec98b88027025047af95e2c96829bf6a4980e35886c7b91"
+    },
+    {
+      "version": "20260721150000",
+      "name": "add_messaging_communication_v2",
+      "statement_count": 52,
+      "joined_statement_sha256": "b9768b5c011bfdf0c67a84efb159444326f3d56078428b85ac316e94d5cf3258",
+      "statement_array_sha256": "22550ddf41fa844208c355348a5d8c81f00854e90dfa1cf6bf6940b79c0f3c20"
+    },
+    {
+      "version": "20260721151000",
+      "name": "harden_messaging_retention_and_audit_v2",
+      "statement_count": 18,
+      "joined_statement_sha256": "8e1c1802689c1f3dd7235d33184bdf936a5d77d4a2f020fe68755158fbc1c1ba",
+      "statement_array_sha256": "f32fa95044bdb9d43178a2512db66654f6cdaad602375544f7c2b543838b39c0"
+    },
+    {
+      "version": "20260721152000",
+      "name": "complete_messaging_lifecycle_v1",
+      "statement_count": 34,
+      "joined_statement_sha256": "6c59ebda41c14f80f9d95543292b946d5fa05ec1d2b9c98109cf7da3a17c960b",
+      "statement_array_sha256": "63c6d837438ab14ce7cebfef3e80583ee6350d4e74a5910bacfcf9fbdadce424"
+    },
+    {
+      "version": "20260721153000",
+      "name": "compat_messaging_player_status_v1",
+      "statement_count": 29,
+      "joined_statement_sha256": "09b1b9f3604d65893ce8ed4b15850827e424f0188ee1d2d1cd71f62625056c74",
+      "statement_array_sha256": "a9ff56b125a6bcf8a65d7c82f0fbf86ade7f89682d0f55736eccb4879c84b9f9"
+    },
+    {
+      "version": "20260721160000",
+      "name": "add_progression_reputation_runtime_v1",
+      "statement_count": 102,
+      "joined_statement_sha256": "fdde38068f8b91ceb37a9442561a8c516e53a6d5cb9c4b855b8dd8ad02e858fa",
+      "statement_array_sha256": "d85fcd987c847b76cf15a1305c9fbfa6221cd9a1589a813dd83a17f8ac687eb2"
+    },
+    {
+      "version": "20260721161000",
+      "name": "fix_progression_read_volatility_v1",
+      "statement_count": 8,
+      "joined_statement_sha256": "ccacabc66c7face3d663487f16d3a09f52aedabc5d7b9b5417b66f699aaf309d",
+      "statement_array_sha256": "c939c4ccc46cb8e2103c352cdf99a074aa92fa250108b5dd49f7452de57888e8"
+    },
+    {
+      "version": "20260721162000",
+      "name": "harden_progression_event_idempotency_v1",
+      "statement_count": 9,
+      "joined_statement_sha256": "c039d22c623ce999f3b3b8770cf9a0dafebb3451fc9d1d50080c0ad6a6483abd",
+      "statement_array_sha256": "ef843cf8ec2d5b78f3936701d1b3ca27e4daee3deefb837a1158176651607b1f"
+    },
+    {
+      "version": "20260721163000",
+      "name": "rebalance_progression_curve_v1",
+      "statement_count": 13,
+      "joined_statement_sha256": "f639049d486af609d5cde417d42740a2a5bf9b40166e0f8515ab2ff8603e79d5",
+      "statement_array_sha256": "fc88a6886d27743370f2627b2fd8c4bd7ca3cbe5858e48ad434cc779ea9aed96"
+    },
+    {
+      "version": "20260723213038",
+      "name": "restore_player_country_assignment_compatibility_v1",
+      "statement_count": 13,
+      "joined_statement_sha256": "6ceda1639c0c9e25c66d936f916de8b689a2ea8972a1c731c925062e84ae790b",
+      "statement_array_sha256": "4cf9b1112758484159a0991f0ac841011fd9b48929edc9bbcc044eaa1fe45ed7"
+    },
+    {
+      "version": "20260724013000",
+      "name": "repair_game_lifecycle_version_ambiguity_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "fc900d6d63a5db94b192321b1061e7792ec0aa2829a6dca5be96204adb9493a7",
+      "statement_array_sha256": "a863f79cda459cc84b8d1bc84e794e6ba8b9a64e5cf49735746e7d050c59f1b0"
+    },
+    {
+      "version": "20260724030000",
+      "name": "add_game_creation_provisioning_orchestrator_v1",
+      "statement_count": 17,
+      "joined_statement_sha256": "83c3203ae4988e3d41f9f8ef755ac9f801f93197d429ced4e7ddf4f5bfc73d1e",
+      "statement_array_sha256": "69d6976880a8ba403255727bf7c10f3c5f22fa21179afd2d05a9d4e9d8da3523"
+    },
+    {
+      "version": "20260724053000",
+      "name": "add_seed_release_revision_ledger_v1",
+      "statement_count": 26,
+      "joined_statement_sha256": "6c885d80db1eb13de0cd98ab7b381e2c1a6b92ba0dd93c55ee0ddeb73426d1ed",
+      "statement_array_sha256": "4f037483e08a466e9baf66741aa50274b181d1dfc6a0d33349337fbe1872acb6"
+    },
+    {
+      "version": "20260724080000",
+      "name": "fix_attendance_world_runtime_staging_v1",
+      "statement_count": 11,
+      "joined_statement_sha256": "1212952af76fe2e2c4e05f43374dbe742d5f8d15d90d74094ff37fff99c424f4",
+      "statement_array_sha256": "3483e9fe2f06cff8b571d4fa2eec6279013fb8122a5eaf25e696a5283a66ca26"
+    },
+    {
+      "version": "20260724120000",
+      "name": "add_full_game_feature_activation_v2",
+      "statement_count": 55,
+      "joined_statement_sha256": "07f77971c860c00bef063bccf676547cfb21cbba1003be58430053b5f7564a86",
+      "statement_array_sha256": "4a423b36d9eac0fd2f917a7baf26125e3abd56799b457651079e8aba58fe08bc"
+    },
+    {
+      "version": "20260724123000",
+      "name": "bind_crafting_activation_authority_v2",
+      "statement_count": 6,
+      "joined_statement_sha256": "49f87427f51133e22e68385f6336f6a0cad8c37856757ffbc857f3add6a6ade6",
+      "statement_array_sha256": "7b5586576360d8b52b29cc73719be2cce88432b3179be73cca8c56a5d428a29c"
+    },
+    {
+      "version": "20260724124000",
+      "name": "repair_demo_storyline_activation_conflict_v1",
+      "statement_count": 4,
+      "joined_statement_sha256": "8a65fe2e22a4c7fd4bbd7d2fb4fdafce5f19a3f22df1c2670a28b08c11e18351",
+      "statement_array_sha256": "49c5d1b7e42ee81c687410ef51b12046761730ac98291c013c22580a56ce20fe"
+    },
+    {
+      "version": "20260724125000",
+      "name": "bind_full_game_v2_to_active_crafting_source_v1",
+      "statement_count": 6,
+      "joined_statement_sha256": "5401a2b781551751fbb59a02907391b6b92eeb09ede69cd9d83a0fda036f1f0d",
+      "statement_array_sha256": "7e829af461174a46d6429a954af7680d19c73e6d0ccec58e24a68b5d90166ce5"
+    },
+    {
+      "version": "20260724234454",
+      "name": "restore_rate_limit_jsonb_object_length_compat_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "95819c518120b3a12123a63eb17f4ffa93c5d72911552218ebb4e5ee34cd0e4f",
+      "statement_array_sha256": "9567555dc171bc987a55d81783acc8ce31b611b74ec9670381ef84255fa8b83f"
+    },
+    {
+      "version": "20260725021239",
+      "name": "qualify_purchase_code_redemption_columns_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "6f6ca2693bd9c03f0c906fd4e28ef84b10e487dc42cfd504d9b3c917d0810445",
+      "statement_array_sha256": "043c83774304302d92898d19ef0fe589b0622e497386246c3ec8d20d69805cb9"
+    },
+    {
+      "version": "20260725090000",
+      "name": "harden_game_creation_provisioning_integrity_v3",
+      "statement_count": 18,
+      "joined_statement_sha256": "1ce522fb49a87a9d55d232a4a9ed6845db2b3f45970a650a15beaf3ec3f0aa31",
+      "statement_array_sha256": "a7f19f04000c1be0edda9cb8bf97dc2a288e010fd9ca058d43635ace42f3a019"
+    },
+    {
+      "version": "20260725091000",
+      "name": "restore_rate_limit_json_compat_and_grants_v1",
+      "statement_count": 14,
+      "joined_statement_sha256": "e59f74e67f59b50e80ed6fee5da2afe260e36563e8d6ef916d3adb2532a5e552",
+      "statement_array_sha256": "8728089d8de79ee72141904b498805509123c439ebd5ab3f7a96e32eca488afb"
+    },
+    {
+      "version": "20260725092000",
+      "name": "refine_joinable_game_provisioning_guard_v1",
+      "statement_count": 8,
+      "joined_statement_sha256": "331d8a2ac7f679ef0aa180d4de28c561d50adad611736263e757e78238626828",
+      "statement_array_sha256": "3bc4eefd126eab1fc50f40408bd02d77b40a8659fea7a0ecd7d71331facc36d0"
+    },
+    {
+      "version": "20260725093000",
+      "name": "qualify_purchase_code_redemption_columns_canonical_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260725100000",
+      "name": "repair_arrival_grant_scope_ambiguity_v3",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260725113000",
+      "name": "restore_staff_users_service_role_access_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260725120000",
+      "name": "restore_admin_control_service_role_access_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260725123000",
+      "name": "persist_memorable_game_join_codes_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260725130000",
+      "name": "restore_player_auth_service_role_access_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260725131000",
+      "name": "restore_crafting_service_role_execute_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726084000",
+      "name": "add_player_stock_watchlist_mutation_rpc_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726090000",
+      "name": "add_authentication_throttle_v2",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726091000",
+      "name": "add_staff_security_state_v2",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726092000",
+      "name": "revoke_player_sessions_on_credential_rotation_v2",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726093000",
+      "name": "create_single_active_player_session_v2",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726094000",
+      "name": "add_versioned_player_access_credentials_v2",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726095000",
+      "name": "add_staff_permission_grants_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "4f9f24b9f6ddad31a05d673245f3eafefb098d8bd870e50952b9b2f58fdda7a1",
+      "statement_array_sha256": "b943d79105573ab4eb853ab298c84f73f2cbb60cf5e831d7524f347a4fb1bd4f"
+    },
+    {
+      "version": "20260726095100",
+      "name": "exempt_default_staff_grants_from_version_bump_v2",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726096000",
+      "name": "add_staff_password_reset_security_transition_v2",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726097000",
+      "name": "add_internal_runner_nonce_replay_v2",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726113000",
+      "name": "reload_authentication_throttle_rpc_schema_v2",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726114500",
+      "name": "expose_authentication_throttle_rpc_wrappers_v2",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726120000",
+      "name": "expose_auth_throttle_wrappers_to_postgrest_v2",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726121000",
+      "name": "finalize_authentication_throttle_postgrest_contract_v2",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726193000",
+      "name": "restore_store_quote_service_role_access_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726194500",
+      "name": "initialize_complete_game_fx_matrix_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260726220000",
+      "name": "restore_player_contract_progress_service_role_access_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260727090000",
+      "name": "bound_arrival_class_grant_idempotency_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260727091000",
+      "name": "reconcile_arrival_residency_eligibility_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260727102000",
+      "name": "fix_player_travel_checking_account_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260727103000",
+      "name": "fix_arrival_grant_checking_account_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260727130000",
+      "name": "harden_purchase_code_hmac_upgrade_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260728033000",
+      "name": "skip_zero_marketplace_settlement_postings_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260728054000",
+      "name": "replay_marketplace_purchase_before_resource_checks_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260729123000",
+      "name": "reconcile_admin_bootstrap_join_code_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260731130000",
+      "name": "add_verified_staff_onboarding_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260731131000",
+      "name": "harden_onboarding_cleanup_and_license_replay_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260731132000",
+      "name": "wire_expired_signup_cleanup_into_claim_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260731133000",
+      "name": "schedule_expired_staff_signup_cleanup_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260731133100",
+      "name": "resolve_player_contract_public_key_v3",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260731134000",
+      "name": "align_supabase_verification_link_authority_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260801084000",
+      "name": "harden_browser_role_default_privileges_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260805023228",
+      "name": "admin_local_application_mutations_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "60b28723ba2b7e7d8e5f4c84a22879a8c6dc5f0071eb65f524651f0ed516a180",
+      "statement_array_sha256": "dff3f0328f1cfd763b992b6d3d43cd4ae6b8a650db74ca1e2e5d0ec3feb6ed1c"
+    },
+    {
+      "version": "20260806070000",
+      "name": "canonicalize_player_checking_wallet_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260806093000",
+      "name": "provision_player_banking_and_credit_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260806120000",
+      "name": "add_economic_asset_identity_and_accounts_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "2c5cdc62a87342e4229e1d2a933a1caadbdbcfa32c7b7028db980e5ce3ad0153",
+      "statement_array_sha256": "4cc2af70b46199fd5084246833f0842c893538efa3b95bb3df138f7e1d2d232d"
+    },
+    {
+      "version": "20260806120010",
+      "name": "add_economic_asset_context_resolvers_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "2d2031c6d92e60dfda4c3a27c493b8c719b69fe19998836825c4c002070d1b27",
+      "statement_array_sha256": "1023eda4d9cbb60c8744e580b2126171b08fc7ceda1a096b19e0b3e7698b4816"
+    },
+    {
+      "version": "20260806120020",
+      "name": "backfill_economic_asset_catalog_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "db7a1b14c2ac5e7a0682036860ce0508ff557acf0264042d4046c3d8e18d9afa",
+      "statement_array_sha256": "5b6acd8b97c8110f4e6283aa7b76d89371c3b15572126875400bc64d552485bd"
+    },
+    {
+      "version": "20260806120030",
+      "name": "enforce_economic_asset_constraints_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "948d483d08f01a83301ed48a1fc7f1678f8c8bd476b5a9a9b3a7b64a9fb49028",
+      "statement_array_sha256": "7720f6b69dba603f527f53326463440362fd1bb09bc2e022e97d224530888e6b"
+    },
+    {
+      "version": "20260806120040",
+      "name": "add_economic_asset_projection_context_triggers_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "eeaf42a6a59ea521bd52904bf575181231f0aa3b9d722d0cc23f00a7737960bf",
+      "statement_array_sha256": "39a1155494d6f3b2a27ba25d4edd1ae51133e189706f584f2326f8bdaee970e8"
+    },
+    {
+      "version": "20260806120050",
+      "name": "add_economic_asset_runtime_compatibility_triggers_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "a0eee42262d9550a1b4dd9c90cb8514a5212118abb7f925e8548c7d5274657b6",
+      "statement_array_sha256": "487f2d488f81a5d0a5cad6727283fd48797ed9e714458e38ca7d7b58846db747"
+    },
+    {
+      "version": "20260806120055",
+      "name": "repair_store_source_identity_resolution_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "d00567ed6de0362df17708d85bad93337600e79990297df66d4c7932c6bf78f3",
+      "statement_array_sha256": "9b11d4f3ecab51b201519bcf4aa4fead56ab9c592b1a274f4ab268faaa98d120"
+    },
+    {
+      "version": "20260806120060",
+      "name": "add_economic_asset_sync_gate_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "9b161c703c2454536cc2e8d4a6813408ba70fb2de3611ebfef11df26f7cc66c3",
+      "statement_array_sha256": "80ac927d00d1a653d386e6c1742f175ade8e705b71a7d97bbaa2634e2d35f08c"
+    },
+    {
+      "version": "20260806120100",
+      "name": "add_canonical_inventory_posting_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "b70250eb740dcf7e7fd5da9a02a3766e8fed30aa5352d51cfebb75dfbe38e541",
+      "statement_array_sha256": "cede08b8b661a8c7964243e6b4d00edd6c983785672256ec43489a23334e51a2"
+    },
+    {
+      "version": "20260806120110",
+      "name": "cutover_store_settlement_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "ffb900c874281b90a51416a09ecf69b15ec1b01b1eb3135f9facf8b1433c83bb",
+      "statement_array_sha256": "2858186c63d4e19bf70ddb0525c7f591505bf561dca99369461d56c599b29d77"
+    },
+    {
+      "version": "20260806120120",
+      "name": "cutover_crafting_read_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "f8e9e1c88295c8e3da8549fd1cd2e161c7e29e5a161792df446871a1eb68c1c5",
+      "statement_array_sha256": "1e5e57ce425d854b0c01ca3812e0292971f818bf36dbb66230042f3db1d708a7"
+    },
+    {
+      "version": "20260806120125",
+      "name": "decouple_inventory_reservations_from_store_identity_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "6ea785b788614ad2cd886c1770d6a85cbd330cd46df202f04a6f05716e742832",
+      "statement_array_sha256": "1461d286baec9542079059b70269eb9f04810c26914eda791178b81083bf4b3f"
+    },
+    {
+      "version": "20260806120130",
+      "name": "cutover_crafting_start_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "4d74032560647a55c6978a32f251b4155c0c935890edd7e0b97f3be06811b4c2",
+      "statement_array_sha256": "be5a61892d33791681c31df1dae8da877042f21759178dcec2b24cb21ac69fc7"
+    },
+    {
+      "version": "20260806120140",
+      "name": "cutover_crafting_cancel_claim_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "e3c360c63fba7b3f1e24285d9546a58472e7205c1f96c1d9740c48b21223e7d9",
+      "statement_array_sha256": "ca7f27591aec3593d37390d1dea58b5a1c016d1d59cb56d15d7df80682b48684"
+    },
+    {
+      "version": "20260806120150",
+      "name": "cutover_inventory_effects_salvage_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "f06fe043213975dd8967254f7ae10133f79b23646d76fc9c57fc9ca0fba89db0",
+      "statement_array_sha256": "ade64016fa7f3e6725f5f1385cca748ca5c30ed8dd4214c826874474b4c93a56"
+    },
+    {
+      "version": "20260806120200",
+      "name": "add_business_material_flow_foundation_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "5dcb01a22f0d39636cf1643ffb35911a3cefa0939f1a6472bc06cb1ba3e5b7be",
+      "statement_array_sha256": "7e5cceb8fc575a5ffb9484e907860259be68cb01935f795efcadfc11a35cbf2b"
+    },
+    {
+      "version": "20260806120210",
+      "name": "cutover_business_production_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "b6744c5bdeee26c65d40652f61489c3d30174b2099266e1d6489ea00638e5fc1",
+      "statement_array_sha256": "dcacb91969829bb3d63d525c25dc605559e3f94c6be536b83c16a0e215975423"
+    },
+    {
+      "version": "20260806120220",
+      "name": "add_business_cogs_helper_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "9903662374c23f4e74d008d9402ec4b2cc6ce4690a1353aab666ad02767a580a",
+      "statement_array_sha256": "08a002c03704cb94235811edda3ca89980b96c28fd4c0ab1f6c6aa5758f9d779"
+    },
+    {
+      "version": "20260806120230",
+      "name": "cutover_business_settlement_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "253b879c249c0062bd2c678052d11398202f8bc879ac6502efec43530f138ddd",
+      "statement_array_sha256": "d1642020c99cd10180ed62710b3d8d9fcd16ac8f38e7ff912540f41cd56e6186"
+    },
+    {
+      "version": "20260806120300",
+      "name": "integrate_seed_catalog_with_economic_core_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "c00601627ef635f2c567fd5ad319d28c25a92b55d6544d2ef40e91a1b12fbca9",
+      "statement_array_sha256": "e49adbe360a49aaadde73357d948b1f78089d8b6acd28a8cb24dfb8bafd4c4f3"
+    },
+    {
+      "version": "20260806120400",
+      "name": "add_marketplace_redemption_canonical_context_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "7fee5e417b1085881bad604c3b9a208a01c37f9f1d0992523aff8dbd9e867ddc",
+      "statement_array_sha256": "9984eb7034c9de77e61269a0cd8ae3e49155e60a2e776156559a272c7d724c47"
+    },
+    {
+      "version": "20260806120410",
+      "name": "add_economic_asset_integrity_validator_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "270b315ce9d8e515407b62658162a6a71fba5c2cc999b43041bdfa58800940e0",
+      "statement_array_sha256": "90f22debe723802a60af1dcb78e540ee6fcb6b1cad5f42aae76ae507f04a6a3d"
+    },
+    {
+      "version": "20260806120420",
+      "name": "harden_inventory_journal_append_only_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "f6b71c4aece24b0171bd4716e283db83f362bd6d5ffb6b03e01a7921c2da7a70",
+      "statement_array_sha256": "d298c9507241d7d2746e69fde3dfa7abccecef52031f4274257d5884754cba56"
+    },
+    {
+      "version": "20260806120430",
+      "name": "repair_seed_and_supply_canonical_identity_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "7399686bfecf9b302f204716cb3c07c997360e6457165997310b601d72102131",
+      "statement_array_sha256": "ffe467dff96c91e3149e5aba4f7c6e29d8345529183070b9b153b6303aea350c"
+    },
+    {
+      "version": "20260806120440",
+      "name": "repair_seed_store_rollback_compatibility_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "99631c345db14e8a7095f2d58ab582c2e857e60414b2b30e033f8e0a74739553",
+      "statement_array_sha256": "9e8db89951b754703a48ed0bafef46ef162a6b212d1d3f54e9b96072a540b613"
+    },
+    {
+      "version": "20260806120450",
+      "name": "finalize_seed_store_rollback_ordering_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "e1d7c902b8db6b58dcda728e631a93cbf9a8633ef12691fa3ca1e5c2f6805fb2",
+      "statement_array_sha256": "09dd6dfbec35313612766e7051ffe6d943fbbd22f8d31a2cac6007afec00d450"
+    },
+    {
+      "version": "20260806120460",
+      "name": "rebind_store_settlement_to_checking_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "d617e5dda06c5d0653fde2dc6922d14a7b8b898c57805038abe1a5685c6c0655",
+      "statement_array_sha256": "bb0486eb583b4a271fb118d44b3e5221a88c9d9f18241b936c30fb1f9c4f265e"
+    },
+    {
+      "version": "20260810070000",
+      "name": "converge_browser_role_acl_live_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260810073000",
+      "name": "add_stock_market_runtime_scheduler_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260810083500",
+      "name": "configure_stock_market_runtime_scheduler_every_minute_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260810120000",
+      "name": "add_daily_country_macro_runtime_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260810123500",
+      "name": "add_autonomous_timed_services_runtime_v1",
+      "statement_count": null,
+      "joined_statement_sha256": null,
+      "statement_array_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "version": "20260810130000",
+      "name": "archive_legacy_runtime_and_migration_history_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "57daf217da0753126bd6a19cf78de0950177eee6cf4abb7592e69200ac9bd754",
+      "statement_array_sha256": "cdcde66c8291a22af8d9c587060eb5a054d3421a6c14a03e34ccfb71dc85bb0e"
+    },
+    {
+      "version": "20260811072424",
+      "name": "admin_v2_teacher_safety_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "3c48010355c532e7b087e92f02e3b88b1c4511fc27dd28731aa69e6d094e491f",
+      "statement_array_sha256": "960c338ca9e29e205684a591745e0be0b93304928cf59f586d2038657cecb4dc"
+    },
+    {
+      "version": "20260811110000",
+      "name": "story_character_messaging_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "405edfe63623bc36a0d6de954e2065eedff9573853c2b648d5ff7320618eed37",
+      "statement_array_sha256": "dbcfa713a40cb9cd55a90074f24d2232a02dfe82fe6c8b20e30c3f4354dcee84"
+    },
+    {
+      "version": "20260811111000",
+      "name": "story_character_message_render_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "3b33b8b6ea09a53178990f0e53cdd2aaa056fe5fe231ad68cb5fa0f016f2feac",
+      "statement_array_sha256": "225cadebc0359d0a5227eaf2dce8bc86bde8840d89c2e85cdce907602a80ebec"
+    },
+    {
+      "version": "20260811112000",
+      "name": "northreach_character_opening_seed_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "1a3a2ab02836baafd482ee9097a9c6f48b285a77fd3b2b240dc4d99e6bc9efd2",
+      "statement_array_sha256": "20fd10a896ad6552fc63f83a4232fd50abca163141ba06129f8d079b19cd5242"
+    },
+    {
+      "version": "20260811231144",
+      "name": "optimize_latest_stock_market_ticks_read_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "b08ec4e760b7def3eb0bf42e36184b595b110fb4b54c344af420dcb98db4dbc1",
+      "statement_array_sha256": "64eefd6a7056c15e8a6338c993a9b08ea9a788cb41c4efcce5546754689ed3f2"
+    },
+    {
+      "version": "20260812043956",
+      "name": "stock_tick_hot_cold_archive_foundation_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "48481f46d973a741911c5b7700e83287f77c15125020574e40f118bc354c3bf4",
+      "statement_array_sha256": "ac9fdb0e31d788179c486e3547780e0d8dc396536fbe1d27801e5ddf30ed126e"
+    },
+    {
+      "version": "20260812044228",
+      "name": "stock_tick_archive_candle_safety_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "8def00bbdc471dc1202dc9dd6261f9cef06dc51a9914c9a0bd682fc390a685a3",
+      "statement_array_sha256": "6e3d3910a0927caaa6bae754f4267dc9a0958e9c4d354f60700d1fb1a6f7e310"
+    },
+    {
+      "version": "20260812063709",
+      "name": "harden_stock_tick_archive_service_contract_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "94e9d659b3062ead0c5b61d786af6ee92f5e5dc5374e1412243a0dae78519ca1",
+      "statement_array_sha256": "663fcdf3abf35f3054029bf26e34717aff63b790400067d227c4e1ec35f14a74"
+    },
+    {
+      "version": "20260812064325",
+      "name": "optimize_stock_tick_archive_prepare_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "8870cb0eed6a33ef533d3c1802b700afb73ba6f9e01b6a4d4edcfb6872b240b2",
+      "statement_array_sha256": "f19e663d08579e5f872bc8d7fb7bf1e845e2482016f66164a1756cdf60cb81fa"
+    },
+    {
+      "version": "20260812064905",
+      "name": "index_bound_stock_archive_candles_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "2d8a264bb5bbd1dfaee4392d2781b208b154078a0c8b75ff54c79282779090b8",
+      "statement_array_sha256": "87e2008207333ef99e62921e2c321434b8957d1e4606eb52c5558f9ca3f851e6"
+    },
+    {
+      "version": "20260812065519",
+      "name": "drop_redundant_stock_tick_asset_desc_index_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "144a04ed0834712f156eba99e8c6e88e320cbd90af39ce429805021090b29bd0",
+      "statement_array_sha256": "c099847c24f8be43c353bbcd8fad9ddd5b27b36b6611caee553a4a0a4f88477c"
+    },
+    {
+      "version": "20260812070049",
+      "name": "preserve_latest_stock_tick_hour_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "b7cb269a13307ff438b38da8a7c6923653dc730d73908dd8ad28855f66b5bcbb",
+      "statement_array_sha256": "69ecc634d6a4b811344d24da0468e014dd981141b6b69b279d9f77b01e1d0b9c"
+    },
+    {
+      "version": "20260812071423",
+      "name": "temporarily_drop_stock_tick_ticker_index_for_compaction_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "b05ebd2eccd78d843b515a430828d0c724920392ee652ff02d202c4320b0a4eb",
+      "statement_array_sha256": "899e69fd5d1f3d0848580f1298e40d6fbdc7fe54dff18a0b265934662f5f7d45"
+    },
+    {
+      "version": "20260812071553",
+      "name": "restore_compacted_stock_tick_ticker_index_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "bc208473262a34dd8896a533e28df08c9f11872dfc773275abdf8e9e4467f0fd",
+      "statement_array_sha256": "eaf402bc587db371b66ec7d4a0faac51451b15b17aca66019774ca0d8726927e"
+    },
+    {
+      "version": "20260812071632",
+      "name": "schedule_stock_tick_archive_retention_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "302a14170b015d4b7b6ece3ce1b0c277da424a7dfaa882cac93e7a9d4c5f138f",
+      "statement_array_sha256": "9b5e3201ef5e5b593dba4490ad27fe6ee4e9b493660191c8b3c5fd767e5fb722"
+    },
+    {
+      "version": "20260812081410",
+      "name": "add_license_expiration_and_purge_confirmation_foundation_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "9d8a34b55312a4b0d72354f05a7e513b83f6a2f30f339e00fc080ef55580fa63",
+      "statement_array_sha256": "f90c88c9a6571ba76c1fe908a906dde11e5beeda89750f8ffcb896cef6973347"
+    },
+    {
+      "version": "20260812081833",
+      "name": "restrict_game_purge_to_dedicated_permission_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "ce8a5f24922845665c842111e87e9735957f1751098619cfba9a769657f45898",
+      "statement_array_sha256": "540871e27d8d6c35fd8051335e61c426a3247b63044756c7a74e52e27728daef"
+    },
+    {
+      "version": "20260812082207",
+      "name": "harden_game_purge_grace_and_arm_binding_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "23589a5e286b6067faba636abb030e49388f4f19b05dda225158821775e425a2",
+      "statement_array_sha256": "6b9d4463b67c8332608625c930657deedade6ffd20b193b26308185846ea7e13"
+    },
+    {
+      "version": "20260812082436",
+      "name": "add_game_purge_dispatch_state_machine_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "d41f854343a1c594a96102ef9f87ed32d9eefdaefcf8684cd0c7230157c428d8",
+      "statement_array_sha256": "39cf3b3b835eb5152c665d2334e881a56fc22073b1c7fc2775d22d721b358ff2"
+    },
+    {
+      "version": "20260812082727",
+      "name": "add_resumable_game_purge_database_cursor_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "9294a86646190db8879a2a6480a052cfd1cf9237daf0eb50311f6c454129eb14",
+      "statement_array_sha256": "9d0a62810d137ffc726407ca382ddebf9d76a10673e13c39d49aaf7f39013a98"
+    },
+    {
+      "version": "20260812082927",
+      "name": "add_atomic_game_purge_finalizer_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "a9455fef68ce3faa82d47176eec20c8c23fecd9a1d8869a6504386da8c028bda",
+      "statement_array_sha256": "f128cbd8ce1efbc074efc5fc67aae50eba5afe6d87ed3ad47b4e615db5cfa299"
+    },
+    {
+      "version": "20260812082948",
+      "name": "patch_game_purge_failure_recovery_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "1fe92dd633a1a78ab11ab40129eca8ba586d1801480028d3b807463394ba49a1",
+      "statement_array_sha256": "c1601843ce07a68cddfde1516cdd810be8c2c58e4f50d2d3bdced174b0f51a7e"
+    },
+    {
+      "version": "20260812090000",
+      "name": "add_story_relationship_memory_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "0822d61def46513f99beb034293d3df63edd01f60a2fa04c57b6dc73456518ac",
+      "statement_array_sha256": "4f919206d3c84bc1bfd774e2ac9f777a9292c8f9c3aafed5fa8488833ca8ad26"
+    },
+    {
+      "version": "20260812091000",
+      "name": "seed_remaining_country_character_openings_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "49780f1a0c9af3e5ffcb0229a9ad6c41814fa0f9642feb60ffb7daf51dc67d97",
+      "statement_array_sha256": "579e7d7bc1acf94dbbd1f44f0025a5bc82360ce9aa63dd7a86a145fbbdca874d"
+    },
+    {
+      "version": "20260812091500",
+      "name": "harden_story_trigger_function_privileges_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "42d5eaa684566d1091966d9d2f9098c5d77e3b2e41b939ab10b551ec1762dfc0",
+      "statement_array_sha256": "b9c3c5004b6fc78ff8bbfc6ffebd93d67c36358188db1e67f8214fab8ca5f1ba"
+    },
+    {
+      "version": "20260812092000",
+      "name": "seed_relationship_followups_and_meridian_fracture_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "5aa7700776d82474a3fda9f26ac11caf639bf981fa36f650d03d8cf0d661ffb8",
+      "statement_array_sha256": "239d4ffeb5edbb5330ef879bbeefb88191c289901ff9ea271638d852f0b66554"
+    },
+    {
+      "version": "20260812092500",
+      "name": "defer_relationship_followups_until_arrival_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "ca77d4a1a494e4ac2a9f69fb07e7a8d0f945f60598268b47124112253612ddb6",
+      "statement_array_sha256": "88569f35561a2238999a9dfc6d9fc08256319ce39cb43f22884c2bd32fe16134"
+    },
+    {
+      "version": "20260812093000",
+      "name": "harden_relationship_followup_trigger_privileges_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "39bee053a340459385396c73d47eafbb81d53eb0d0017aaf21f71f51cf78b1a8",
+      "statement_array_sha256": "0fbaac74972e00528f9625d080a9082717004c27be39b87e44edf701be8b69cd"
+    },
+    {
+      "version": "20260812103000",
+      "name": "seed_meridian_customs_security_intrusion_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "fb9500999718ed9fff1664839e9741e854e09fb225131920b33dafb6577037af",
+      "statement_array_sha256": "5aadc836848bbb61c7c38e517958644a26fe19ad5efa6418287a845da40c77cf"
+    },
+    {
+      "version": "20260812110000",
+      "name": "add_story_currency_volatility_runtime_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "7917728bbea34fedd27e74122870b6850713e5ebab25670d44c2125c806a7e3d",
+      "statement_array_sha256": "25d1b8f1b73317c2c4c7f262c4eb683dde193bc3a04d55761ac4c13ec41defec"
+    },
+    {
+      "version": "20260812111000",
+      "name": "seed_meridian_security_center_attack_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "85e2281b550e7cc94514b9303bfe3916d1fc0680c00e5e1e580c1f9a8601faf6",
+      "statement_array_sha256": "cd7f6253c163b15ec1f4d2060b8e56831049ce36324a8261452db88548411782"
+    },
+    {
+      "version": "20260812113000",
+      "name": "bind_loan_repayment_accounts_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "db59a86d431bac09cf3a87905228f411f96ccf4ae5c3d81f7cecc513f12475cc",
+      "statement_array_sha256": "798f57a0f2fdc5b02dc8cfdd34a0da36fdfcbad931225d955baf45c20f485e14"
+    },
+    {
+      "version": "20260812114000",
+      "name": "seed_meridian_emergency_response_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "9abd42e10c298b0fbcc9969ec501dc449a1a23e97257cc2b19ed65a73b4d8001",
+      "statement_array_sha256": "dad6d39cb004ae97e60ed9e30374f22231329ab751990271d156fe9900457c24"
+    },
+    {
+      "version": "20260812114500",
+      "name": "fix_world_runtime_revision_ambiguity_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "e6181b11cd2ab7349da3b4a903acca350b8dac5a0314aad456d5301a255cd7e9",
+      "statement_array_sha256": "046141047167068debad8a7c4b19fbc381d69ae8528d206c286f52de01cb8416"
+    },
+    {
+      "version": "20260812115000",
+      "name": "add_story_effect_replay_safety_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "ad2ed534258f9ce72b20861957394f333db825490e82cf0505ac9d99efe1df44",
+      "statement_array_sha256": "a280340395e09cf39b8e08470a82a8223a8fa4ef43368dd2af1f6a0495732e73"
+    },
+    {
+      "version": "20260812120000",
+      "name": "add_story_event_execution_lease_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "c706804523d737c8458a81aa258502a09d9845fc3e56c7f8bd2d26dd8c72c450",
+      "statement_array_sha256": "c402296bbb9422a6b7ebdc3b65b2a586190390059a64de47efaff010e4cf4300"
+    },
+    {
+      "version": "20260812212949",
+      "name": "bound_stock_candle_retention_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "edafd88b5221317349132e47e8456e3ea15159cc46f03939ff29728b8f45b170",
+      "statement_array_sha256": "54c8bf1bd5619c99757f8731a8a5c2d462b31952f9cf6579452159663593ed71"
+    },
+    {
+      "version": "20260812213217",
+      "name": "drop_exact_duplicate_marketplace_reference_indexes_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "b5564d56bbabd007914102752196a483b1dd6a65b5747617eddbc3c65900691d",
+      "statement_array_sha256": "a4ff5b20341e813f4e6df992912798b44062b3930180199ffbb3a2f71ac108be"
+    },
+    {
+      "version": "20260812213540",
+      "name": "remove_duplicate_entitlement_license_trigger_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "7cc25dc661cf387caef76baf9002181b8ae52ceb5a903f8858f0a3c17369b4df",
+      "statement_array_sha256": "700f19d4f332b1f43aba60703d9d46cd99af57da4c7482c1fdd141b38859d3d3"
+    },
+    {
+      "version": "20260812213905",
+      "name": "revoke_public_meridian_customs_trigger_execute_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "1d678c3d01c5df48f084286c4acfc7278a28a72097db02c7940c521583cd8937",
+      "statement_array_sha256": "d459892178ec6c76d72f1a41f8efeaa0bd27d2e2b3f359a96166dd782f103ca1"
+    },
+    {
+      "version": "20260812214042",
+      "name": "add_platform_storage_health_monitor_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "b26736eca12e63c00b07bc90120aa4fd2c8e5364f577dd66e7c221e6b399ef18",
+      "statement_array_sha256": "699316ed2ea508b293cd23533716610a7584f541ae96668c153302155b219288"
+    },
+    {
+      "version": "20260812214130",
+      "name": "fix_platform_storage_health_counts_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "2a9bbb1d38836e7bdc1885afdf3ee7a47c5a54273ae99e7daedca6e16a993154",
+      "statement_array_sha256": "33693bf26609cd05cf9a4c0b4bf81472b5a74f94b05e232251ac387e3f685e18"
+    },
+    {
+      "version": "20260813085905",
+      "name": "stock_market_runtime_state_foundation_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "b3ab8d222b16f09c8d6836fa5168d7a04aaa01b8feea38a61e7ae661b2a3c5e9",
+      "statement_array_sha256": "96c467c1d164b53959d42d2b427bf145a453f2779fa3a6b8d6ff9dca3728356d"
+    },
+    {
+      "version": "20260813090000",
+      "name": "add_durable_license_issuance_queue_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "64081dfe7e38f61c6363381a08f0ac4a1cd02636b8fab1760db07a5367dd76d0",
+      "statement_array_sha256": "346b941df4f4d0aada61c7cacf94e907b5cfed11ad5d6c5a6169726934f7b00f"
+    },
+    {
+      "version": "20260813090014",
+      "name": "stock_market_runtime_eligibility_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "c1c5d6de065ad216173fb02daafd6410f0c6a52b10f7bf271947f7e603138232",
+      "statement_array_sha256": "de28ae5b7253bd98b0c7fce24ebfd637ac497d93f704c0c6a4406414df73284e"
+    },
+    {
+      "version": "20260813091500",
+      "name": "harden_license_email_idempotency_window_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "c4829b58434f5277e4bde1304c2de4d506b241a17814ad43d82714fb93b01f68",
+      "statement_array_sha256": "f05d5fb33eb44a9b51d61a0c93ba277c123608d64f49a2452f395767abb91adf"
+    },
+    {
+      "version": "20260813093000",
+      "name": "add_license_issuance_scheduler_safety_switch_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "de764fe30bd90f843b24143c9445dede73564bc5bb0ec88fb588d48507dfaccf",
+      "statement_array_sha256": "42b08d39ac7c57bcaafa688e4684caa91c4b78b00d9987cc32ee473833365ae7"
+    },
+    {
+      "version": "20260813100000",
+      "name": "harden_license_fulfillment_snapshots_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "e8fb5c6c389f743cb773fe5962f093bb0362cf3caf78abfa22581e1c2c1d139f",
+      "statement_array_sha256": "df9e35a897d5c0a3cd0a65148d436b1a9e02c7b89a0967ac668066780a16512c"
+    },
+    {
+      "version": "20260813103000",
+      "name": "add_license_email_outbox_schema_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "366d1462de63c4bf198abff18b60c7dd536588e479a22c80324f6b31df0881bc",
+      "statement_array_sha256": "2a6e851f23317338fab770b34af3f61f40955b251375d0fd1802dc8725dec1a2"
+    },
+    {
+      "version": "20260813103100",
+      "name": "add_atomic_license_materialization_outbox_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "51b3d2b60bb257384e14e84836031f7036ec5e75b450d42a1560dda4378ce4d6",
+      "statement_array_sha256": "5274a0eb520dbbaee3c0193d92358e8417233df3c285c80f85468e8fd5a3aa27"
+    },
+    {
+      "version": "20260813103200",
+      "name": "add_durable_license_email_worker_queue_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "9069351b4a26298bca67b33820730d519bc4519db3dae554fbb922cb68730baf",
+      "statement_array_sha256": "ff328a0ebe94e50819367f50a027237a5d04209a5d3e892d087ea9fc711e4189"
+    },
+    {
+      "version": "20260813103300",
+      "name": "add_license_delivery_operations_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "2fbca645cdb23015b569d44e9153120bcef562c8d027e09f96fa0452343185d5",
+      "statement_array_sha256": "1ad5c622c816b06ef437c0fc7560bacd743fbe0b774c9c02f4d582dac42616fb"
+    },
+    {
+      "version": "20260813154748",
+      "name": "add_stock_tick_hot_history_index_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "ed01e8ff7baa19958ddc1f9abaca7a8af0141c6de65bdb5838ff6f109c1667c4",
+      "statement_array_sha256": "21bedeae730ba8b81f65881f2d4afa363499edc24ad4f5e02a1479b16041b419"
+    },
+    {
+      "version": "20260813211300",
+      "name": "stock_market_simulation_checkpoint_contract_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "239ac9a1bb0059f1dc8370a7d1acd556d0dc0c4725b3f30a587966924e1262c6",
+      "statement_array_sha256": "f7dfcee55c38683cf83318c43a03bc26b79d8c1aaa90f0832b8500eae012513b"
+    },
+    {
+      "version": "20260813220712",
+      "name": "stock_market_simulation_checkpoint_v3_and_fallback",
+      "statement_count": 1,
+      "joined_statement_sha256": "374f103042f555627af644d50e9e2acd2008f9870bf7f3bf8d32166c4f7341b4",
+      "statement_array_sha256": "6b3610206a94ee489df5c4dab06e651d5f38f22158bb59e930cf87a94d241fd3"
+    },
+    {
+      "version": "20260813220753",
+      "name": "fix_stock_market_checkpoint_v3_config_conflict",
+      "statement_count": 1,
+      "joined_statement_sha256": "1dd9ee63b86d8fa5c9073b1b2c9b43da3375f620b6b3ec331495a20eaeb629da",
+      "statement_array_sha256": "95804a125e4a45531d26378ead7f8005e48b1093b5c0fdc5bcfc0fabca360b68"
+    },
+    {
+      "version": "20260813221053",
+      "name": "stock_market_checkpoint_recovery_chain_v3",
+      "statement_count": 1,
+      "joined_statement_sha256": "b0fe53544ff0f6cd605293dd5c35f6449d4e0cd5e17884a8680bf4381a3cd664",
+      "statement_array_sha256": "2cdd99f05e1766c8f0d8138ddf4dc9a281adefa26e2109306544843f91008fc5"
+    },
+    {
+      "version": "20260813221715",
+      "name": "stock_market_checkpoint_interval_capture_v3_safe",
+      "statement_count": 1,
+      "joined_statement_sha256": "27a40289982019e91aea0b38e542a38c118e31242080e6d983044d0a57e2e8dd",
+      "statement_array_sha256": "80250406a486885067bd8ba36b634ae908de6e93e11cb92c29eb784a6efc26c7"
+    },
+    {
+      "version": "20260814022058",
+      "name": "harden_player_contract_progress_service_role_access_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "f4dc8aea9475d38b3c8011af689e80a9379049e563457e932544ee06aea164f2",
+      "statement_array_sha256": "5551d49107691cf30c48c2ecd4fca411814c0ba1f093ef94b778c8131d83dbf8"
+    },
+    {
+      "version": "20260814042826",
+      "name": "attach_stock_market_checkpoint_after_full_tick_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "c910424127655f6ba96557c10c23f1a5961c283c05fd9cede89048f4e3830b85",
+      "statement_array_sha256": "b372987cc379a2caefa92f2b4174b430b2065a26cf2f6ced157e4eb2e0143df3"
+    },
+    {
+      "version": "20260814083008",
+      "name": "stock_tick_archive_stopped_game_drain_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "36ba62c5cd3b5771156786ae8dc2438cb04208b659a83c3dc86811c4f966d39b",
+      "statement_array_sha256": "c08d9dc5adb1d5891e0d063dcd6ac4822dd983f0321dfee91ac727b00e07d3ff"
+    },
+    {
+      "version": "20260814084305",
+      "name": "stock_market_read_cursor_history_v3",
+      "statement_count": 1,
+      "joined_statement_sha256": "096242b3cfd092d21406cc76424a907603445b4a3979e366c70f0e2f092ecf90",
+      "statement_array_sha256": "d86446bf8f5f2b63b3e62cf86f708a69e72663f5b7c93e24d6d96319579a90d8"
+    },
+    {
+      "version": "20260814084638",
+      "name": "stop_stock_runtime_chart_history_rewrite_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "3d054c5b18df890ce3d6a2637cf43a031c5ae9d4a7b5928f7040e5491aa1e4af",
+      "statement_array_sha256": "4a8331a9f78cec1e02cf859f4ce89823bfc53a89e22d1e9736bf6633b51ffb02"
+    },
+    {
+      "version": "20260816075554",
+      "name": "index_stock_checkpoint_config_fk_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "28473187f48f41c5518e12fc3c522c55b4da5541e9d5a063ed5b31dd84936ac4",
+      "statement_array_sha256": "40eb0f99fcfb5652bdf2ce4b2a7f0ac244ce7ab6d0d3965b5d5d8067a6c81717"
+    },
+    {
+      "version": "20260816101236",
+      "name": "source_20260816090000_add_contract_story_flag_rewards_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "b73c0b91783eff22b056bd886febb9057dc90ebdeac7ec135c6dfed850cb804e",
+      "statement_array_sha256": "4fd28dc18d65b2b110022af5a32a47f1bef995d8e3bb58d94a029ef5f0e65ae4"
+    },
+    {
+      "version": "20260816101439",
+      "name": "source_20260816090100_seed_meridian_competing_models_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "bf00db5947da6ee28610995f9b6c801be3bd979d84cfc7ceae304b3e94eca01f",
+      "statement_array_sha256": "c0001bb07c3f994b47e5728081f111a044dbf98ecb937ffd1dd044cc9e96c1e2"
+    },
+    {
+      "version": "20260816101555",
+      "name": "source_20260816090200_seed_meridian_outbreak_of_war_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "57ab0819ab86822b455084ebf51c4ab27874ffa8176fc8a371bed21b039806aa",
+      "statement_array_sha256": "8e732d65a8e347efcb01f87d080017204831bf6b92645e4f9c84997308d98f51"
+    },
+    {
+      "version": "20260816101740",
+      "name": "source_20260816090300_seed_meridian_fortune_during_war_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "d3b8aaf6c738f5abcdfb2257254f79299f1cd8981d62fbeb563495f6b697e447",
+      "statement_array_sha256": "f4c35ea70224cd304f4f169b6086eea2e99260a4c2bb1b474a57a016b844c8f6"
+    },
+    {
+      "version": "20260816101854",
+      "name": "source_20260816090400_seed_meridian_question_of_belonging_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "80d4f2a9fc7d57cc6f3a6a7a54278163862afe44db8d83ac8330fbefcd1dbb8a",
+      "statement_array_sha256": "f713eda79b35a402124d2e593315902fe7efae6e16503adcb67e67a59979a5c7"
+    },
+    {
+      "version": "20260816102032",
+      "name": "source_20260816090500_seed_meridian_reckoning_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "7385cbb1729423d99c9eabb6824614576a8bd696243d90926a2cd2be104d0df7",
+      "statement_array_sha256": "d1af7fe49d64aec1b6d0807afb73b7418d1d3bb54c4ed75cc8573972500e8b29"
+    },
+    {
+      "version": "20260816102237",
+      "name": "source_20260816090600_seed_meridian_local_friend_relationships_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "48be585798cbd3b97b30e6737f422b2c8b7e40778f00377ffd636a523c92f889",
+      "statement_array_sha256": "21b9ec166528a380a00038f601a5011c0a40e698cd7b80cac9f37506bbea4d38"
+    },
+    {
+      "version": "20260816102426",
+      "name": "source_20260816090700_harden_meridian_arrival_clock_gate_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "198143a8c726865a10616cfb2a71be17018db887ead078e0001afc4500b214e9",
+      "statement_array_sha256": "72136ccbc4c9a69c1eded2a13b8464c8fe56bc1c1fffcf2dd014feb4284cd992"
+    },
+    {
+      "version": "20260816115625",
+      "name": "reconcile_admin_v2_contract_edit_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "9aede3929eacd21d86082f17c8c5dcf65f75c234d8c15192b84c68fd92704ecb",
+      "statement_array_sha256": "a66694e7d864f2c2b00c659b6250fe697ec8addd2ce7ac3f7ac53847fdd65963"
+    },
+    {
+      "version": "20260816115808",
+      "name": "retire_dead_historical_runtime_helpers_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "ea0f0bf98f92e67f49a0696917dbaa2d2ee40c676bd8f7e7bf9a0337870745d7",
+      "statement_array_sha256": "6717e5c596229f7de11efbdd5fd452978bb9f814e6b5983a42eb21384b2b3185"
+    },
+    {
+      "version": "20260816120013",
+      "name": "retire_legacy_game_purge_confirmation_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "83a665a8bf02a11a38ed09ff122bcde67617365935deca6e41f8c79312004278",
+      "statement_array_sha256": "3fa7501e49b1fe4c7a86cdbf9e94ddfcd15576e7290978cd0e10d906b5532b3c"
+    },
+    {
+      "version": "20260817122000",
+      "name": "require_teacher_approval_redemption_mode_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "911e898c6538b46d2c937dfe2cb7bad581adba4a4ce6258218472bea8510c1d4",
+      "statement_array_sha256": "c090e38715d043f6b94528ba8ed62e697e7626d558a82420517102f6e720b43b"
+    },
+    {
+      "version": "20260817130000",
+      "name": "add_story_decision_microdetail_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "797d9c447f8090e2af68655936b93cebd653d5cc3ccf4d8c20b7b7c125f9691c",
+      "statement_array_sha256": "0b54eb8dab0a6258a4844430be7fa666b74850ee3979e43ee8952935858ff610"
+    },
+    {
+      "version": "20260817130100",
+      "name": "harden_meridian_ending_decision_predicates_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "41c977579be3cb3090952fb3ad6db10bbab4b1a6f8699a31a2ef2c75c87f6dbf",
+      "statement_array_sha256": "56870af765f91ab99bc3ad4df1b9625ba2999902f4b75f0fc2600d91729d4b2b"
+    },
+    {
+      "version": "20260817130200",
+      "name": "add_story_decision_callbacks_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "064bfdb8a4789a2c54082634726c429b00aedb81c787591803388f6e4a9479c3",
+      "statement_array_sha256": "d8019cea4f15f303bd01c4f860e791a0fc0dc48ad9ae5d26cfff25acea46056f"
+    },
+    {
+      "version": "20260818032252",
+      "name": "activate_campaign_runtime_provisioning_v3",
+      "statement_count": 1,
+      "joined_statement_sha256": "93d9bbbaed5a70265316eaf866b11f086cd11f9007e01a70333608ae087b4b2c",
+      "statement_array_sha256": "7c9265aace789ac55950f218811236e58fd64e8c012e3f4008272c6dc503088a"
+    },
+    {
+      "version": "20260818032749",
+      "name": "add_campaign_runtime_scheduler_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "88416579a4425ae6ddc9b00fe0193dab0f8dcbffb3a09b456959e4749c2b4ee9",
+      "statement_array_sha256": "9fa3845792dcd407e25661f0dadc67004afbebb8d9c53dae89514bd62b093d27"
+    },
+    {
+      "version": "20260818033344",
+      "name": "fix_campaign_event_trigger_key_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "2c0e3544d4aa5fb32cc26ddffe514f78a1f7b8a854e211f52ea8b041eac56670",
+      "statement_array_sha256": "6e00fb7bd49f010a6abc2f847a062853825f090ade3739e0d134ee164dbd266a"
+    },
+    {
+      "version": "20260818033549",
+      "name": "fix_campaign_event_revision_ambiguity_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "b2cfb5bfeb68269de69810c04b215876d1c7888f4064fb0db8beb293e3d96cfd",
+      "statement_array_sha256": "fa15d29de0d44a1ccb96de3cbb74e3fd9cb173f3098418e9276c11d96ba4296b"
+    },
+    {
+      "version": "20260818033613",
+      "name": "fix_campaign_event_revision_ambiguity_v2b",
+      "statement_count": 1,
+      "joined_statement_sha256": "f1ee3b0f51d6935f71487413cd380138eec79595113eb046650710e984dcdbe2",
+      "statement_array_sha256": "edc03f9d835c17329a72a27bc3e856e6ecdae521dbe9b7dc7a3a2f14d53b87f4"
+    },
+    {
+      "version": "20260818034021",
+      "name": "harden_campaign_program_digest_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "1c1ab37bc2df5f04cd3e88e2515418db8fd1e58cfe77c2a285786b38ed27bd4a",
+      "statement_array_sha256": "4b69fe75beb3d243b422eb8f7f38f17e83c5143e75e0dbad4e154f84cacdcc80"
+    },
+    {
+      "version": "20260818034217",
+      "name": "harden_campaign_trigger_permissions_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "f2a4e3b4e875b6728315e8a8edb75bff73783d0cd0af1aea30cd15f20abb0a6b",
+      "statement_array_sha256": "660de0010cd53d9c89b9103eec02d0a85e57edd0a96f80cbac43076a8447f19b"
+    },
+    {
+      "version": "20260818034755",
+      "name": "fix_game_provisioning_preflight_source_selection_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "b33a92e1f5ed693604a950aa82c6f2d49bfa2ba1a3fa4a87c191fffd0da5cc89",
+      "statement_array_sha256": "a5a54f8aeab3dc04adb18b9f7fd56ceb91d4e2390ef7578a21b48f169ea3da14"
+    },
+    {
+      "version": "20260818034914",
+      "name": "add_game_provisioning_failure_observability_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "9a0e0f81cfcc6dc744aee083da4ecbc555fad6f8382af48ca643ecea7c84ce85",
+      "statement_array_sha256": "2dcb214e7e07f6a57d098a953c877afc51678cb8fea9795b7b7ab075063a382e"
+    },
+    {
+      "version": "20260818035017",
+      "name": "add_private_game_provisioning_failure_log_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "0ea761be25a7757ce533ad4477f364da0e913467012bb9674a94a071462605da",
+      "statement_array_sha256": "5b8ef8cc1b19b3fd7e82d14f3e7473de539c23cb1f55833883c59d447432b07a"
+    },
+    {
+      "version": "20260818035134",
+      "name": "inherit_canonical_stock_market_window_v2",
+      "statement_count": 1,
+      "joined_statement_sha256": "6ad4216d8ac60cf8aa6475fedfa683746e247be6edd977b3e87e0f8d59a65fed",
+      "statement_array_sha256": "3de86701779957fbb84cfb454dcaf14c60da81381323851a9d7b2ba6c420d00f"
+    },
+    {
+      "version": "20260818035437",
+      "name": "keep_pinned_retired_campaign_programs_valid_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "342a9e1b45bee632a3cea8da3d74d82c0f12ab3012b841b4e7578a07276b20a6",
+      "statement_array_sha256": "dd1e32f4121abc484a2bddb98ac894314e1a9bbcab930f12bc087072f8420996"
+    },
+    {
+      "version": "20260818045533",
+      "name": "add_story_character_reply_engine_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "e8205a44855ad5b89021f0d29fb8f0a8ef931dc1dac999310a250b08021c25cb",
+      "statement_array_sha256": "70f0bbf0a5cba19482704d75d12bd8bf8b7bf1b5592f3893e723a9a9ed37f417"
+    },
+    {
+      "version": "20260818045638",
+      "name": "refine_story_character_reply_intents_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "32753b0a3242faa5c4187534c7610d56fcffb3026c750385fd968bc80c6ce99b",
+      "statement_array_sha256": "52d3a7d30e1d4803d8a5aaa16e7e56c1a326ac9d9fb362a10b5075a19d8a37e5"
+    },
+    {
+      "version": "20260818045851",
+      "name": "scale_story_character_reply_worker_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "3ebb70489ce3856f2e4050e27e09bb1ffb81cefb76c8327beb230860ed04b238",
+      "statement_array_sha256": "59337b9a44b62af6b4f02c342b47b52a3ae157a9a46274a46ff5c694e23d87f8"
+    },
+    {
+      "version": "20260818082728",
+      "name": "reconcile_campaign_terminal_program_definition_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "89e84ee55a85e2cff383417d4e751b4d734d75bb8a0ed6d586e999d796115e86",
+      "statement_array_sha256": "8160e765f6e358773ee48c4336bf573754f519c1e0b1eb64b9c35b74d1b6deca"
+    },
+    {
+      "version": "20260818084557",
+      "name": "backfill_ready_game_campaigns_v1",
+      "statement_count": 1,
+      "joined_statement_sha256": "e0d2abde308cb172b25a3277ed00dce4a76a8c633eb401dab2a44c67f104c9f1",
+      "statement_array_sha256": "5ec2328ff17cada6313324d0b18accc7ad929d3c19ef4dfea1438d54a78b7d97"
+    }
+  ]
+}

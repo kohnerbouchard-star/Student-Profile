@@ -1,3 +1,5 @@
+import type { PlayerInventoryApplicationContext } from "./playerInventoryApplicationContext.ts";
+
 export type PlayerInventoryRedemptionStatus =
   | "pending"
   | "approved"
@@ -39,8 +41,7 @@ export interface PlayerInventoryRedemptionDto {
 
 export interface PlayerInventoryRedemptionRepository {
   request(input: {
-    readonly gameId: string;
-    readonly playerUuid: string;
+    readonly applicationContext: PlayerInventoryApplicationContext;
     readonly itemId: string;
     readonly command: PlayerInventoryRedemptionCommand;
   }): Promise<{
@@ -49,8 +50,7 @@ export interface PlayerInventoryRedemptionRepository {
   }>;
 
   read(input: {
-    readonly gameId: string;
-    readonly playerUuid: string;
+    readonly applicationContext: PlayerInventoryApplicationContext;
     readonly status: PlayerInventoryRedemptionStatus | null;
     readonly limit: number;
     readonly offset: number;

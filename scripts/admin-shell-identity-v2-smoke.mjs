@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { readBrowserSourceSync as readFileSync } from "./lib/browser-module-source.mjs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -17,7 +18,7 @@ const expectedScripts = [
   "../frontend/src/core/admin-game-selection.js",
   "./auth-session-manager.js",
   "./session-gate.js",
-  "./admin-auth.js",
+  "./admin-request-normalization.js", "./admin-auth.js",
   "./dist/admin-overview-terminal.js",
   "./asset-wiring.js",
   "./classroom-write-fallback.js",
@@ -26,13 +27,13 @@ const expectedScripts = [
   "./modal-accessibility.js",
   "./player-create-lifecycle.js",
   "./player-drawer-wiring.js",
-  "./player-identity-wiring.js",
+  "./player-identity-reset-scope.js", "./player-identity-roster.js", "./player-identity-profile.js", "./player-identity-wiring.js",
   "./player-create-ux.js",
-  "./game-code-wiring.js",
+  "./game-code-share-presentation.js", "./game-code-wiring.js",
   "./logout-confirmation.js",
-  "./game-session-controls.js",
+  "./game-session-context.js", "./game-session-share-surface.js", "./game-session-controls.js",
   "./admin-stabilization.js",
-  "./interaction-quality.js",
+  "./interaction-form-validation.js", "./interaction-quality.js",
   "./data-state-contracts.js",
   "./interaction-quality-control-reset.js",
   "./dist/admin-overview-boot.js",

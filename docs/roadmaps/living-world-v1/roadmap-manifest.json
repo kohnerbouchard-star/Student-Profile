@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "roadmapId": "econovaria.living-world.v1",
+  "revision": "1.1.0-planning",
+  "status": "PLANNED",
+  "repository": "kohnerbouchard-star/Student-Profile",
+  "baselineMainSha": "22dc9ce5023eb200a6608d5bb90a9ac30cb36c90",
+  "roadmapPredecessorSha": "7cbe0e3a51c9f08744a87e0df72dd535465026ca",
+  "directory": "docs/roadmaps/living-world-v1",
+  "productionDeploymentAuthorized": false,
+  "liveDatabaseMutationAuthorized": false,
+  "implementationAuthorized": false,
+  "phase15ReleaseWorkSeparate": true,
+  "master": "00-MASTER-ROADMAP.md",
+  "masterRole": "Preserved v1 technical baseline; read with required addenda. Current counts, dependencies and integration gates supersede its predecessor summaries.",
+  "requiredAddenda": [
+    "10-player-delight-flavor.md",
+    "11-player-value-gates.md"
+  ],
+  "dependencyGraph": "dependency-graph.json",
+  "integrationGates": "09-integration-certification.md",
+  "scopeAndAcceptanceSource": "Markdown workstream documents plus required addenda; graph contains exact prerequisites.",
+  "productTrackCount": 8,
+  "productMilestoneCount": 64,
+  "foundationMilestoneCount": 4,
+  "integrationMilestoneCount": 2,
+  "milestoneCount": 70,
+  "workstreams": [
+    {
+      "id": "FND",
+      "file": "01-shared-foundation.md",
+      "milestones": [
+        "FND-01",
+        "FND-02",
+        "FND-03",
+        "FND-04"
+      ]
+    },
+    {
+      "id": "LIFE",
+      "file": "02-player-life-economy.md",
+      "milestones": [
+        "LIFE-01",
+        "LIFE-02",
+        "LIFE-03",
+        "LIFE-04",
+        "LIFE-05",
+        "LIFE-06",
+        "LIFE-07",
+        "LIFE-08"
+      ]
+    },
+    {
+      "id": "MAC",
+      "file": "03-macroeconomy-v2.md",
+      "milestones": [
+        "MAC-01",
+        "MAC-02",
+        "MAC-03",
+        "MAC-04",
+        "MAC-05",
+        "MAC-06",
+        "MAC-07",
+        "MAC-08"
+      ]
+    },
+    {
+      "id": "REL",
+      "file": "04-characters-relationships-v2.md",
+      "milestones": [
+        "REL-01",
+        "REL-02",
+        "REL-03",
+        "REL-04",
+        "REL-05",
+        "REL-06",
+        "REL-07",
+        "REL-08"
+      ]
+    },
+    {
+      "id": "WORLD",
+      "file": "05-one-year-living-world.md",
+      "milestones": [
+        "WORLD-01",
+        "WORLD-02",
+        "WORLD-03",
+        "WORLD-04",
+        "WORLD-05",
+        "WORLD-06",
+        "WORLD-07",
+        "WORLD-08"
+      ]
+    },
+    {
+      "id": "CAP",
+      "file": "06-advanced-markets-analyst.md",
+      "milestones": [
+        "CAP-01",
+        "CAP-02",
+        "CAP-03",
+        "CAP-04",
+        "CAP-05",
+        "CAP-06",
+        "CAP-07",
+        "CAP-08",
+        "CAP-09"
+      ]
+    },
+    {
+      "id": "PROG",
+      "file": "07-progression-credentials.md",
+      "milestones": [
+        "PROG-01",
+        "PROG-02",
+        "PROG-03",
+        "PROG-04",
+        "PROG-05",
+        "PROG-06",
+        "PROG-07"
+      ]
+    },
+    {
+      "id": "UX",
+      "file": "08-player-identity-ux.md",
+      "milestones": [
+        "UX-01",
+        "UX-02",
+        "UX-03",
+        "UX-04",
+        "UX-05",
+        "UX-06",
+        "UX-07",
+        "UX-08"
+      ]
+    },
+    {
+      "id": "DELIGHT",
+      "file": "10-player-delight-flavor.md",
+      "milestones": [
+        "DELIGHT-01",
+        "DELIGHT-02",
+        "DELIGHT-03",
+        "DELIGHT-04",
+        "DELIGHT-05",
+        "DELIGHT-06",
+        "DELIGHT-07",
+        "DELIGHT-08"
+      ]
+    },
+    {
+      "id": "INT",
+      "file": "09-integration-certification.md",
+      "milestones": [
+        "PILOT-01",
+        "SYSTEM-01"
+      ]
+    }
+  ],
+  "recommendedStart": [
+    "FND-01"
+  ],
+  "firstIntegratedTarget": "PILOT-01",
+  "playerValueGateRequiredForEveryMilestone": true,
+  "enjoymentAcceptanceRequiresHumanPlaytests": true,
+  "implementationRule": "Re-audit live main and ownership before every milestone; original technical gates remain required and roadmap publication is not implementation evidence.",
+  "releaseRule": "No production deployment, live SQL, secret mutation, scheduler mutation, merge or release bypass is authorized by this planning addition."
+}

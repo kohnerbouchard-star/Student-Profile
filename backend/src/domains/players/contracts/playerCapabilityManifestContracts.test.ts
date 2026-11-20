@@ -8,6 +8,7 @@ import {
 } from "./playerCapabilityManifestContracts.ts";
 import { readPlayerCapabilityManifestRoutePath } from "../api/playerCapabilityManifestRoutePaths.ts";
 import { readPlayerBankingPublicRoutePath } from "../../economy/api/playerBankingPublicRoutePaths.ts";
+import { readPlayerBankingFxRoutePath } from "../../banking-fx/index.ts";
 import { readPlayerSessionLogoutRoutePath } from "../api/playerSessionLogoutRoutePaths.ts";
 import { readPlayerWorldRoutePath } from "../../countries/api/playerWorldRoutePaths.ts";
 import { parsePlayerWorldRuntimeRoute } from "../../world/api/playerWorldRuntimeRoutePaths.ts";
@@ -25,22 +26,48 @@ import { readPlayerStockAssetListRoutePath } from "../../stocks/api/playerStockA
 import { readPlayerStockMarketPublicRoutePath } from "../../stocks/api/playerStockMarketPublicRoutePaths.ts";
 import { readPlayerStorePublicRoutePath } from "../../store/api/playerStorePublicRoutePaths.ts";
 import { readPlayerBusinessBankingRoutePath } from "../../business-banking/api/playerBusinessBankingRoutePaths.ts";
+import { readPlayerBusinessRoutePath } from "../../business/index.ts";
 import { readPlayerProgressionRoutePath } from "../../progression/api/playerProgressionRoutePaths.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-const BUSINESS_BANKING_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
+const BUSINESS_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
   "business",
+  "businessWorkforce",
+  "businessIpos",
+  "businessIpoPropose",
+  "businessIpoVote",
+  "businessIpoSubscribe",
+  "businessTreasury",
+  "businessTreasuryAccountOpen",
+  "businessTreasuryFxQuote",
+  "businessTreasuryFxStandard",
+  "businessTreasuryFxInstant",
+  "businessTreasuryFxCancel",
+  "businessStoreQuote",
+  "businessStorePurchase",
   "businessCreate",
+  "businessFormationPropose",
+  "businessFormationRespond",
+  "businessFormationActivate",
   "businessProductCreate",
-  "businessInputPurchase",
   "businessProduction",
+  "businessManufacturingJobs",
+  "businessManufacturingStart",
+  "businessManufacturingCancel",
+  "businessEquipmentInstall",
+  "businessStoreOfferCreate",
+  "businessStoreOfferStock",
+  "businessStoreOfferPublish",
   "businessPrice",
-  "businessHire",
+  "businessCandidateHire",
   "businessTerminate",
   "businessStatus",
+]);
+
+const BANKING_ENDPOINTS = new Set<PlayerCapabilityEndpointKey>([
   "bankTransfer",
   "savingsTransfer",
   "loans",
@@ -53,41 +80,158 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
   assertEquals(manifest.schemaVersion, PLAYER_CAPABILITY_SCHEMA_VERSION);
   assertEquals(manifest.manifestVersion, PLAYER_CAPABILITY_MANIFEST_VERSION);
   assertEquals(manifest.service, "classroom-api");
-  assertEquals(Object.keys(manifest.capabilities.routes), [...PLAYER_ROUTE_CAPABILITY_KEYS]);
-  assertEquals(Object.keys(manifest.capabilities.actions), [...PLAYER_ACTION_CAPABILITY_KEYS]);
+  assertEquals(Object.keys(manifest.capabilities.routes), [
+    ...PLAYER_ROUTE_CAPABILITY_KEYS,
+  ]);
+  assertEquals(Object.keys(manifest.capabilities.actions), [
+    ...PLAYER_ACTION_CAPABILITY_KEYS,
+  ]);
 
-  for (const key of [
-    "dashboard", "profile", "news", "market", "portfolio", "contracts",
-    "inventory", "store", "banking", "business", "loans", "world", "marketplace", "messages", "progression",
-  ] as const) assertEquals(manifest.capabilities.routes[key], true);
+  for (
+    const key of [
+      "dashboard",
+      "profile",
+      "news",
+      "market",
+      "portfolio",
+      "contracts",
+      "inventory",
+      "store",
+      "banking",
+      "bankingFx",
+      "business",
+      "loans",
+      "world",
+      "marketplace",
+      "messages",
+      "progression",
+    ] as const
+  ) assertEquals(manifest.capabilities.routes[key], true);
 
-  for (const key of [
-    "marketWatchlist", "notificationsRead", "logout", "contractAccept",
-    "contractSubmit", "inventoryUse", "marketOrder", "storePurchase",
-    "storyDeliveryState", "arrivalClassSubmit", "travelQuote", "travelExecute",
-    "travelComplete", "residencyRequest", "bankTransfer", "savingsTransfer",
-    "businessCreate", "businessProductCreate", "businessInputPurchase",
-    "businessProduction", "businessPrice", "businessHire",
-    "businessEmployeeTerminate", "businessStatus", "loanApply", "loanRepay",
-    "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
-    "marketplaceCancel", "marketplaceDispute",
-    "messageSearch", "messageSend", "progressionUnlock", "progressionClaim",
-  ] as const) assertEquals(manifest.capabilities.actions[key], true);
+  for (
+    const key of [
+      "marketWatchlist",
+      "notificationsRead",
+      "logout",
+      "contractAccept",
+      "contractSubmit",
+      "inventoryUse",
+      "marketOrder",
+      "storePurchase",
+      "storyDeliveryState",
+      "arrivalClassSubmit",
+      "travelQuote",
+      "travelExecute",
+      "travelComplete",
+      "residencyRequest",
+      "bankTransfer",
+      "savingsTransfer",
+      "bankingFxQuote",
+      "bankingFxStandard",
+      "bankingFxInstant",
+      "bankingFxCancel",
+      "businessCreate",
+      "businessFormationPropose",
+      "businessFormationRespond",
+      "businessFormationActivate",
+      "businessTreasuryAccountOpen",
+      "businessTreasuryFxQuote",
+      "businessTreasuryFxStandard",
+      "businessTreasuryFxInstant",
+      "businessTreasuryFxCancel",
+      "businessProductCreate",
+      "businessProduction",
+      "businessPrice",
+      "businessCandidateHire",
+      "businessEmployeeTerminate",
+      "businessStatus",
+      "loanApply",
+      "loanRepay",
+      "marketplaceListing",
+      "marketplaceActivate",
+      "marketplacePurchase",
+      "marketplaceCancel",
+      "marketplaceDispute",
+      "messageSearch",
+      "messageSend",
+      "progressionUnlock",
+      "progressionClaim",
+    ] as const
+  ) assertEquals(manifest.capabilities.actions[key], true);
 
   assertEquals(manifest.capabilities.actions.messageAttachment, false);
+  assertEquals(
+    "businessInputPurchase" in manifest.capabilities.actions,
+    false,
+  );
+  assertEquals(
+    JSON.stringify(manifest.endpoints).includes('"businessInputPurchase"'),
+    false,
+  );
 
   const endpointKeys = manifest.endpoints.map((endpoint) => endpoint.key);
   assertEquals(new Set(endpointKeys).size, endpointKeys.length);
+  const marketplacePurchase = manifest.endpoints.find((endpoint) =>
+    endpoint.key === "marketplacePurchase"
+  );
+  assertEquals(marketplacePurchase?.operations, [
+    {
+      method: "POST",
+      pathTemplate: "/players/me/marketplace/listings/:listingId/quotes",
+    },
+    {
+      method: "POST",
+      pathTemplate:
+        "/players/me/marketplace/reservations/:reservationId/settlements",
+    },
+  ]);
   const expectedEndpointKeys: readonly PlayerCapabilityEndpointKey[] = [
-    "bootstrap", "capabilities", "banking", "contractAccept", "contractSubmit",
-    "contracts", "dashboard", "inventoryRedemptions", "marketOrder", "portfolio",
-    "store", "storeQuote", "storePurchase", "storyDeliveries", "storyDeliveryState",
-    "worldRuntime", "arrivalClass", "travelQuote", "travelExecute",
-    "travelComplete", "residencyRequest", "marketplace",
-    "marketplaceListing", "marketplaceActivate", "marketplacePurchase",
-    "marketplaceCancel", "marketplaceDispute", "messages", "messageThread",
-    "messagePolicy", "messageSearch", "messageThreadCreate", "messageSend",
-    "messageRead", "progression", "progressionUnlock", "progressionClaim", ...BUSINESS_BANKING_ENDPOINTS,
+    "bootstrap",
+    "capabilities",
+    "banking",
+    "contractAccept",
+    "contractSubmit",
+    "bankingFx",
+    "bankingFxHistory",
+    "bankingFxOrders",
+    "bankingFxQuote",
+    "bankingFxStandard",
+    "bankingFxInstant",
+    "bankingFxCancel",
+    "contracts",
+    "dashboard",
+    "inventoryRedemptions",
+    "marketOrder",
+    "portfolio",
+    "store",
+    "storeQuote",
+    "storePurchase",
+    "storyDeliveries",
+    "storyDeliveryState",
+    "worldRuntime",
+    "arrivalClass",
+    "travelQuote",
+    "travelExecute",
+    "travelComplete",
+    "residencyRequest",
+    "marketplace",
+    "marketplaceListing",
+    "marketplaceActivate",
+    "marketplacePurchase",
+    "marketplaceCancel",
+    "marketplaceDispute",
+    "messages",
+    "messageThread",
+    "messagePolicy",
+    "messageSearch",
+    "messageThreadCreate",
+    "messageSend",
+    "messageRead",
+    "progression",
+    "progressionUnlock",
+    "progressionClaim",
+    ...BUSINESS_ENDPOINTS,
+    ...BANKING_ENDPOINTS,
   ];
   for (const endpoint of expectedEndpointKeys) {
     assertEquals(endpointKeys.includes(endpoint), true);
@@ -96,13 +240,18 @@ Deno.test("player capability manifest is generated from the reviewed endpoint al
 
 Deno.test("player capability manifest contains no UUID-shaped identifiers", () => {
   const serialized = JSON.stringify(buildPlayerCapabilityManifest());
-  if (/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.test(serialized)) {
+  if (
+    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i
+      .test(serialized)
+  ) {
     throw new Error(`UUID leaked in capability manifest: ${serialized}`);
   }
 });
 
 Deno.test("every advertised endpoint path is recognized by the authoritative dispatch boundary", () => {
-  const operations = buildPlayerCapabilityManifest().endpoints.flatMap((endpoint) =>
+  const operations = buildPlayerCapabilityManifest().endpoints.flatMap((
+    endpoint,
+  ) =>
     endpoint.operations.map((operation) => ({
       key: endpoint.key,
       path: operation.pathTemplate
@@ -112,16 +261,24 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
         .replace(":itemId", "meal-pass")
         .replace(":requestId", `red_${"a".repeat(32)}`)
         .replace(":listingId", `lst_${"b".repeat(32)}`)
+        .replace(":reservationId", `mpr_${"d".repeat(32)}`)
         .replace(":orderId", `ord_${"c".repeat(32)}`)
         .replace(":threadId", `thr_${"a".repeat(32)}`)
         .replace(":deliveryId", `ndl_${"a".repeat(32)}`)
         .replace(":journeyId", `trj_${"a".repeat(32)}`)
+        .replace(":ipoKey", `bgp_${"a".repeat(32)}`)
+        .replace(":formationKey", `bfp_${"f".repeat(32)}`)
+        .replace(":businessKey", `biz_${"e".repeat(32)}`)
+        .replace(":jobKey", `mfg_${"7".repeat(32)}`)
         .replace(":productKey", `bpr_${"a".repeat(32)}`)
+        .replace(":candidateKey", `wfc_${"d".repeat(32)}`)
         .replace(":employeeKey", `emp_${"a".repeat(32)}`)
-        .replace(":offerKey", `lop_${"a".repeat(32)}`)
+        .replace(":offerKey", `${endpoint.key.startsWith("businessStoreOffer") ? "sof" : "lop"}_${"a".repeat(32)}`)
         .replace(":loanKey", `lon_${"a".repeat(32)}`)
+        .replace(":orderKey", `fxo_${"9".repeat(32)}`)
         .replace(":skillId", "skl_market_literacy_v1")
-        .replace(":rewardId", `rwd_${"b".repeat(32)}`),
+        .replace(":rewardId", `rwd_${"b".repeat(32)}`)
+        .replace(":receiptKey", `spr_${"c".repeat(32)}`),
     }))
   );
 
@@ -129,28 +286,44 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
     const parsed = operation.key === "bootstrap"
       ? operation.path === "/players/me" ? { kind: "bootstrap" } : null
       : operation.key === "dashboard"
-      ? operation.path === "/players/me/game/dashboard" ? { kind: "dashboard" } : null
+      ? operation.path === "/players/me/game/dashboard"
+        ? { kind: "dashboard" }
+        : null
       : operation.key === "capabilities"
       ? readPlayerCapabilityManifestRoutePath(operation.path)
-      : ["worldRuntime", "arrivalClass", "travelQuote", "travelExecute", "travelComplete", "residencyRequest"].includes(operation.key)
+      : [
+          "worldRuntime",
+          "arrivalClass",
+          "travelQuote",
+          "travelExecute",
+          "travelComplete",
+          "residencyRequest",
+        ].includes(operation.key)
       ? parsePlayerWorldRuntimeRoute(operation.path)
-      : BUSINESS_BANKING_ENDPOINTS.has(operation.key)
+      : BUSINESS_ENDPOINTS.has(operation.key)
+      ? readPlayerBusinessRoutePath(operation.path)
+      : BANKING_ENDPOINTS.has(operation.key)
       ? readPlayerBusinessBankingRoutePath(operation.path)
       : operation.key === "banking"
       ? readPlayerBankingPublicRoutePath(operation.path)
+      : operation.key.startsWith("bankingFx")
+      ? readPlayerBankingFxRoutePath(operation.path)
       : operation.key === "contractAccept"
       ? readPlayerContractAcceptanceRoutePath(operation.path)
       : operation.key === "contractSubmit"
       ? readPlayerContractPublicSubmitRoutePath(operation.path)
       : operation.key === "contracts"
       ? readPlayerContractPublicListRoutePath(operation.path)
-      : operation.key === "countries" || operation.key === "country" || operation.key === "news"
+      : operation.key === "countries" || operation.key === "country" ||
+          operation.key === "news"
       ? readPlayerWorldRoutePath(operation.path)
-      : operation.key === "market" || operation.key === "marketAsset" || operation.key === "marketWatchlist"
+      : operation.key === "market" || operation.key === "marketAsset" ||
+          operation.key === "marketWatchlist"
       ? readPlayerStockAssetListRoutePath(operation.path)
       : operation.key === "marketOrder" || operation.key === "portfolio"
       ? readPlayerStockMarketPublicRoutePath(operation.path)
-      : operation.key === "store" || operation.key === "storeQuote" || operation.key === "storePurchase"
+      : operation.key === "store" || operation.key === "storeQuote" ||
+          operation.key === "storePurchase"
       ? readPlayerStorePublicRoutePath(operation.path)
       : operation.key === "inventory"
       ? readPlayerInventoryRoutePath(operation.path)
@@ -163,32 +336,64 @@ Deno.test("every advertised endpoint path is recognized by the authoritative dis
           operation.key === "marketplaceCancel" ||
           operation.key === "marketplaceDispute"
       ? readPlayerMarketplaceRoutePath(operation.path)
-      : operation.key === "messagePolicy" || operation.key === "messageThreadCreate"
+      : operation.key === "messagePolicy" ||
+          operation.key === "messageThreadCreate"
       ? readPlayerMessageThreadLifecycleRoutePath(operation.path)
       : operation.key === "messages" || operation.key === "messageThread" ||
-          operation.key === "messageSearch" || operation.key === "messageSend" ||
+          operation.key === "messageSearch" ||
+          operation.key === "messageSend" ||
           operation.key === "messageRead"
       ? readPlayerMessagingRoutePath(operation.path)
       : operation.key === "progression" ||
           operation.key === "progressionUnlock" ||
           operation.key === "progressionClaim"
       ? readPlayerProgressionRoutePath(operation.path)
-      : operation.key === "notifications" || operation.key === "notificationsRead"
+      : operation.key === "notifications" ||
+          operation.key === "notificationsRead"
       ? readPlayerNotificationRoutePath(operation.path)
-      : operation.key === "storyDeliveries" || operation.key === "storyDeliveryState"
+      : operation.key === "storyDeliveries" ||
+          operation.key === "storyDeliveryState"
       ? readPlayerStoryDeliveryRoutePath(operation.path)
       : operation.key === "logout"
       ? readPlayerSessionLogoutRoutePath(operation.path)
       : null;
 
     if (!parsed || ("kind" in parsed && parsed.kind === "malformed")) {
-      throw new Error(`Advertised endpoint ${operation.key} is not dispatchable: ${operation.path}`);
+      throw new Error(
+        `Advertised endpoint ${operation.key} is not dispatchable: ${operation.path}`,
+      );
     }
   }
 });
 
+Deno.test("Business Store operations reuse the retained Store capability keys", () => {
+  const manifest = buildPlayerCapabilityManifest();
+  const storeQuote = manifest.endpoints.find((endpoint) =>
+    endpoint.key === "storeQuote"
+  );
+  const storePurchase = manifest.endpoints.find((endpoint) =>
+    endpoint.key === "storePurchase"
+  );
+
+  assertEquals(storeQuote?.operations, [
+    { method: "POST", pathTemplate: "/players/me/store/quotes" },
+    { method: "POST", pathTemplate: "/players/me/store/offer-quotes" },
+  ]);
+  assertEquals(storePurchase?.operations, [
+    { method: "GET", pathTemplate: "/players/me/store/purchases" },
+    { method: "POST", pathTemplate: "/players/me/store/purchases" },
+    { method: "POST", pathTemplate: "/players/me/store/offer-purchases" },
+    { method: "GET", pathTemplate: "/players/me/store/receipts/:receiptKey" },
+  ]);
+  assertEquals(manifest.capabilities.routes.store, true);
+  assertEquals(manifest.capabilities.actions.storePurchase, true);
+  assertEquals("storeOfferPurchase" in manifest.capabilities.actions, false);
+});
+
 function assertEquals(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`);
+    throw new Error(
+      `Actual: ${JSON.stringify(actual)} Expected: ${JSON.stringify(expected)}`,
+    );
   }
 }

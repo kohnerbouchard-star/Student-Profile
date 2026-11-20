@@ -1,3 +1,4 @@
+import { BUSINESS_IPO_BACKEND_ROUTE_KEYS, hasBusinessIpoBackendRoute, resolveBusinessIpoBackendRequest } from "./business-ipo-backend-routes.js";
 import {
   hasPlayerBackendRoute as hasCorePlayerBackendRoute,
   PLAYER_BACKEND_ROUTE_KEYS as CORE_PLAYER_BACKEND_ROUTE_KEYS,
@@ -18,29 +19,76 @@ import {
   hasProgressionBackendRoute,
   resolveProgressionBackendRequest,
 } from "./progression-backend-routes.js";
+import {
+  BANKING_FX_BACKEND_ROUTE_KEYS,
+  hasBankingFxBackendRoute,
+  resolveBankingFxBackendRequest,
+} from "./banking-fx-backend-routes.js";
+
+// These operations are implemented by the Business/Banking adapter, while the
+// core route-key list predates their public endpoint identities. Keep the
+// bridge exact and bounded until Business owns a composed backend-route module.
+const BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS = Object.freeze([
+  "businessStockroom",
+  "businessRecipes",
+  "businessEquipment",
+  "businessEquipmentInstall",
+  "businessStoreOfferCreate",
+  "businessStoreOfferStock",
+  "businessStoreOfferPublish",
+  "businessFormationPropose",
+  "businessFormationRespond",
+  "businessFormationActivate",
+  "businessManufacturingJobs",
+  "businessManufacturingStart",
+  "businessManufacturingCancel",
+  "businessStoreWithdrawal",
+]);
 
 export const PLAYER_BACKEND_ROUTE_KEYS = Object.freeze([
+  ...BUSINESS_IPO_BACKEND_ROUTE_KEYS,
   ...CORE_PLAYER_BACKEND_ROUTE_KEYS,
-  ...CRAFTING_BACKEND_ROUTE_KEYS.filter((key) => !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key)),
+  ...BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.filter((key) =>
+    !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key)
+  ),
+  ...CRAFTING_BACKEND_ROUTE_KEYS.filter((key) =>
+    !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key) &&
+    !BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.includes(key)
+  ),
   ...MESSAGING_BACKEND_ROUTE_KEYS.filter((key) =>
     !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key) &&
+    !BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.includes(key) &&
     !CRAFTING_BACKEND_ROUTE_KEYS.includes(key)
   ),
   ...PROGRESSION_BACKEND_ROUTE_KEYS.filter((key) =>
     !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key) &&
+    !BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.includes(key) &&
     !CRAFTING_BACKEND_ROUTE_KEYS.includes(key) &&
     !MESSAGING_BACKEND_ROUTE_KEYS.includes(key)
+  ),
+  ...BANKING_FX_BACKEND_ROUTE_KEYS.filter((key) =>
+    !CORE_PLAYER_BACKEND_ROUTE_KEYS.includes(key) &&
+    !BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.includes(key) &&
+    !CRAFTING_BACKEND_ROUTE_KEYS.includes(key) &&
+    !MESSAGING_BACKEND_ROUTE_KEYS.includes(key) &&
+    !PROGRESSION_BACKEND_ROUTE_KEYS.includes(key)
   ),
 ]);
 
 export function hasPlayerBackendRoute(endpointKey) {
-  return hasCorePlayerBackendRoute(endpointKey) ||
+  return hasBusinessIpoBackendRoute(endpointKey) || hasCorePlayerBackendRoute(endpointKey) ||
+    BUSINESS_ADAPTER_BACKEND_ROUTE_KEYS.includes(endpointKey) ||
     hasCraftingBackendRoute(endpointKey) ||
     hasMessagingBackendRoute(endpointKey) ||
-    hasProgressionBackendRoute(endpointKey);
+    hasProgressionBackendRoute(endpointKey) ||
+    hasBankingFxBackendRoute(endpointKey);
 }
 
 export function resolvePlayerBackendRequest(input) {
+  if (hasBusinessIpoBackendRoute(input.endpointKey)) return resolveBusinessIpoBackendRequest(input);
+  if (hasBankingFxBackendRoute(input.endpointKey)) {
+    return resolveBankingFxBackendRequest(input);
+  }
   if (hasProgressionBackendRoute(input.endpointKey)) {
     return resolveProgressionBackendRequest(input);
   }
@@ -50,5 +98,7 @@ export function resolvePlayerBackendRequest(input) {
   if (hasCraftingBackendRoute(input.endpointKey)) {
     return resolveCraftingBackendRequest(input);
   }
+  // The core resolver delegates Business/Banking adapter keys after its own
+  // route lookup, preserving one request-normalization path.
   return resolveCorePlayerBackendRequest(input);
 }

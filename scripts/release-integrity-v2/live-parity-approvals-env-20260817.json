@@ -1,0 +1,111 @@
+{
+  "approvedStagingOnlyRoutines": [
+    {
+      "signature": "public.claim_license_email_jobs_v1(p_batch_size integer, p_lease_seconds integer)",
+      "sha256": "753088eb2d9b1676b7c9d15fe04abebe83e6c62bf6bdf92eba424cd20e5e9a5e"
+    },
+    {
+      "signature": "public.claim_license_issuance_jobs_v1(p_batch_size integer, p_lease_seconds integer)",
+      "sha256": "561abf54816432064114c09e6f9ae6e19f152f149f07e42ffa24c9a54b1b2aef"
+    },
+    {
+      "signature": "public.claim_license_materialization_jobs_v2(p_batch_size integer, p_lease_seconds integer)",
+      "sha256": "5eab2d8b8ddb708978a9286dedc48c4131aff9084ebe5cc6f2c0b332dc87379e"
+    },
+    {
+      "signature": "public.complete_license_email_delivery_v1(p_email_job_id uuid, p_lease_token uuid, p_email_provider_message_id text)",
+      "sha256": "55fce17012631f6c4eb84fd35b07e480690e46c4a5c18c2739efdd39cfac0025"
+    },
+    {
+      "signature": "public.complete_license_issuance_job_v1(p_job_id uuid, p_lease_token uuid, p_email_provider_message_id text)",
+      "sha256": "30f7c453aac583166fd760b55fac5a14b96da0a5cf9d57da99434523ac3a2b9e"
+    },
+    {
+      "signature": "public.configure_license_email_scheduler_v1(p_function_url text)",
+      "sha256": "5c850b2683d6cf7e0ac4322e8b3b362194b4d65c4189291e16cb39ca2f11b5ab"
+    },
+    {
+      "signature": "public.configure_license_issuance_scheduler_v1(p_function_url text)",
+      "sha256": "4ef83b47f8277b36ae73f21bcd370f05631b3a86c9cb1639694cdae64e336d6a"
+    },
+    {
+      "signature": "public.configure_license_product_v1(p_provider text, p_provider_price_ref text, p_product_sku text, p_currency text, p_amount_minor bigint, p_license_duration_days integer, p_purchase_code_expires_after_days integer, p_status text)",
+      "sha256": "7067d2bc37ede0f7518be2c323478f29f52e46a7627fa170c5da4d1ca7f8f58f"
+    },
+    {
+      "signature": "public.disable_license_email_scheduler_v1()",
+      "sha256": "3df320e1ce83f4d9d14ae580f6903039d9dc6cbfa8b132f0a893e2aa78542dff"
+    },
+    {
+      "signature": "public.disable_license_issuance_scheduler_v1()",
+      "sha256": "1d123c0e5aa0eebbb6e57243e76806598cc3874b614fd8c38758e1f2d5c85aef"
+    },
+    {
+      "signature": "public.enqueue_paid_license_v1(p_provider text, p_provider_event_id text, p_provider_payment_id text, p_provider_price_ref text, p_recipient_email text, p_amount_minor bigint, p_currency text, p_occurred_at timestamp with time zone, p_payload_sha256 text)",
+      "sha256": "db2fb5eb70df58332456377c09b7b3da29cda44acaa1ef4213c2645ddd009c3c"
+    },
+    {
+      "signature": "public.materialize_issued_purchase_code_v1(p_job_id uuid, p_lease_token uuid, p_code_hash text, p_code_hash_version text, p_code_generation_nonce integer)",
+      "sha256": "d89167f9c2e61b883d63b9f5c504d80aff22b0f2436e9a623873f46e58728245"
+    },
+    {
+      "signature": "public.materialize_license_and_enqueue_email_v2(p_job_id uuid, p_lease_token uuid, p_code_hash text, p_code_hash_version text, p_code_generation_nonce integer, p_template_version text)",
+      "sha256": "5ff865c9e03d3fcee80389d13b8985f3044352a04d4f7ba10ca7debcc54d1690"
+    },
+    {
+      "signature": "public.read_license_fulfillment_reconciliation_v1()",
+      "sha256": "0742fde29e895fbb596bb81278f632dfa19526a183c18ce925661def504113c4"
+    },
+    {
+      "signature": "public.read_license_issuance_queue_health_v1()",
+      "sha256": "a9824131f3097df8db674f7ebf99d5b2e3f3a04822d7613298a9ba13c88a77dc"
+    },
+    {
+      "signature": "public.read_license_issuance_secret_rotation_guard_v1()",
+      "sha256": "8855d6e5ed86997000b840af0917cf7e9d5801775da91a8fe759d693c3875cc7"
+    },
+    {
+      "signature": "public.retry_license_email_job_v1(p_email_job_id uuid, p_lease_token uuid, p_error_code text, p_error_detail text, p_retry_after_seconds integer, p_terminal boolean)",
+      "sha256": "271b87445f50aaf1368e5cb76f4218ab3b484c68bd0a525dfe9a4ad9e12246ca"
+    },
+    {
+      "signature": "public.retry_license_issuance_job_v1(p_job_id uuid, p_lease_token uuid, p_error_code text, p_error_detail text, p_retry_after_seconds integer, p_terminal boolean)",
+      "sha256": "176aa87e26f728c77ff7840fbfa9682cbeebb0d44cdf7023178d1b667f3f8284"
+    }
+  ],
+  "approvedProductionOnlyRoutines": [
+    {
+      "signature": "public.configure_stock_tick_archive_retention_v2(p_function_url text)",
+      "sha256": "1d3cf0c7d779acaabd80f7d94c0a5545d6fa631981a6e9afa8c9294d17b0cd7b"
+    }
+  ],
+  "approvedStagingOnlyRoutineGrants": [
+    {
+      "schema": "private",
+      "grantee": "PUBLIC",
+      "grantor": "postgres",
+      "routine": "apply_entitlement_license_expiration_v1",
+      "arguments": "",
+      "grantable": false,
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "private",
+      "grantee": "PUBLIC",
+      "grantor": "postgres",
+      "routine": "assert_game_purge_authority_v1",
+      "arguments": "p_staff_user_id uuid",
+      "grantable": false,
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "private",
+      "grantee": "PUBLIC",
+      "grantor": "postgres",
+      "routine": "build_game_data_purge_review_v2",
+      "arguments": "p_request_id uuid",
+      "grantable": false,
+      "privilege": "EXECUTE"
+    }
+  ]
+}

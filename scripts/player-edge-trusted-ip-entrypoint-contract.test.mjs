@@ -12,19 +12,35 @@ const isolatedBffAcceptances = [
 ];
 
 for (const functionName of functions) {
-  test(`${functionName} binds gateway client IP before loading its runtime`, async () => {
+  test(`${functionName} installs trusted-IP binding before statically loading its runtime`, async () => {
     const root = `backend/supabase/functions/${functionName}`;
     const entrypoint = await readFile(`${root}/index.ts`, "utf8");
+    const trustedServe = await readFile(`${root}/trustedClientIpServe.ts`, "utf8");
     const runtime = await readFile(`${root}/runtime.ts`, "utf8");
 
-    const binder = entrypoint.indexOf("bindGatewayTrustedClientIp(");
-    const runtimeImport = entrypoint.indexOf('await import("./runtime.ts")');
+    const trustedServeImport = entrypoint.indexOf(
+      'import "./trustedClientIpServe.ts";',
+    );
+    const runtimeImport = entrypoint.indexOf('import "./runtime.ts";');
 
-    assert.ok(binder >= 0, "entrypoint must bind the reviewed gateway client IP");
-    assert.ok(runtimeImport > binder, "runtime must load only after trusted-IP binding is installed");
-    assert.match(entrypoint, /ECONOVARIA_TRUSTED_CLIENT_IP_HEADER/u);
+    assert.ok(
+      trustedServeImport >= 0,
+      "entrypoint must statically preload the reviewed trusted-IP serve binding",
+    );
+    assert.ok(
+      runtimeImport > trustedServeImport,
+      "runtime must load only after the trusted-IP serve binding",
+    );
+    assert.doesNotMatch(entrypoint, /await import\(/u);
+    assert.match(trustedServe, /bindGatewayTrustedClientIp\(/u);
+    assert.match(trustedServe, /ECONOVARIA_TRUSTED_CLIENT_IP_HEADER/u);
     assert.match(runtime, /Deno\.serve\(/u);
     assert.doesNotMatch(runtime, /raw\.githubusercontent\.com/u);
+
+    if (functionName === "player-web-session-api") {
+      assert.match(trustedServe, /materializeBoundedRequestBody/u);
+      assert.match(trustedServe, /MAX_MATERIALIZED_BODY_BYTES/u);
+    }
   });
 }
 
@@ -117,4 +133,22 @@ test("connected functional journeys and load handoff use stable isolated Edge ru
   assert.match(isolation, /status === 204/u);
   assert.match(isolation, /restricted to the local acceptance gateway/u);
   assert.doesNotMatch(isolation, /sb_publishable_[A-Za-z0-9_-]{20,}/u);
+});
+
+test("multiplayer workflow warms its disposable runtime before strict startup probes", async () => {
+  const workflow = await readFile(".github/workflows/player-multiplayer-load-e2e.yml", "utf8");
+  const start = workflow.indexOf("- name: Start same-origin Player gateway");
+  const journey = workflow.indexOf("- name: Execute connected two-browser Player journey", start);
+  assert.ok(start >= 0 && journey > start);
+  const startup = workflow.slice(start, journey);
+  const gateway = startup.indexOf("echo $! > /tmp/player-runtime-gateway.pid");
+  const staticReady = startup.indexOf('test "$STATIC_READY" = "true"');
+  const recovery = startup.indexOf("await restartLocalEdgeRuntime();");
+  const probes = startup.indexOf("for ATTEMPT in $(seq 1 90)");
+  assert.ok(gateway >= 0 && staticReady > gateway && recovery > staticReady && probes > recovery);
+  assert.match(startup, /local-edge-runtime-isolation\.mjs/u);
+  assert.match(startup, /\[ "\$PLAYER_STATUS" = "204" \]/u);
+  assert.match(startup, /\[ "\$BOOTSTRAP_STATUS" = "204" \]/u);
+  assert.match(startup, /exit 1/u);
+  assert.match(workflow, /- name: Enforce connected Player results/u);
 });

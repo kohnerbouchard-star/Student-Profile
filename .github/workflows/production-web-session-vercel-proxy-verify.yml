@@ -11,6 +11,11 @@ on:
       - "api/admin-session/**"
       - "api/admin/**"
       - "scripts/vercel-auth-proxy-contract.test.mjs"
+      - "scripts/production-admin-probe-guard.sh"
+      - "scripts/production-admin-probe-guard.test.mjs"
+      - "docs/operations/contracts/player-cross-cutting/pr-871.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-735.json"
+      - "docs/roadmaps/production-admin-probe-guard-v1.md"
   push:
     branches:
       - main
@@ -21,10 +26,29 @@ on:
       - "api/admin-session/**"
       - "api/admin/**"
       - "scripts/vercel-auth-proxy-contract.test.mjs"
+      - "scripts/production-admin-probe-guard.sh"
+      - "scripts/production-admin-probe-guard.test.mjs"
+      - "docs/operations/contracts/player-cross-cutting/pr-871.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-735.json"
+      - "docs/roadmaps/production-admin-probe-guard-v1.md"
+
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: "Exact current main SHA reviewed for the production route probe"
+        required: true
+        type: string
+      confirm_origin:
+        description: "Type the exact PRODUCTION_ORIGIN value from this reviewed workflow"
+        required: true
+        type: string
+      confirm_action:
+        description: "Type PROBE PRODUCTION ADMIN SESSION ROUTE"
+        required: true
+        type: string
 
 permissions:
   contents: read
-  statuses: write
 
 concurrency:
   group: production-web-session-vercel-proxy-${{ github.ref }}
@@ -33,14 +57,56 @@ concurrency:
 env:
   PRODUCTION_ORIGIN: https://econovaria.vercel.app
   STATUS_CONTEXT: econovaria/vercel-admin-session-route
+  # Dispatch data is transported as inert environment values, never shell source.
+  SOURCE_COMMIT: ${{ inputs.source_commit }}
+  CONFIRM_ORIGIN: ${{ inputs.confirm_origin }}
+  CONFIRM_ACTION: ${{ inputs.confirm_action }}
 
 jobs:
-  publish_pending:
-    name: Publish production route verification location
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+  authorize_production_probe:
+    name: Authorize scoped production route probe
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    environment: production
+    outputs:
+      approved_commit: ${{ steps.approval.outputs.approved_commit }}
     steps:
+      - name: Check out exact workflow source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Enforce explicit production probe authorization
+        id: approval
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/production-admin-probe-guard.sh authorize
+
+  publish_pending:
+    name: Publish production route verification location
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs:
+      - authorize_production_probe
+      - validate
+    permissions:
+      contents: read
+      statuses: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      APPROVED_COMMIT: ${{ needs.authorize_production_probe.outputs.approved_commit }}
+    steps:
+      - name: Check out exact workflow source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
       - name: Publish pending commit status
         shell: bash
         env:
@@ -59,12 +125,13 @@ jobs:
           };
           fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify(payload));
           NODE
+          bash scripts/production-admin-probe-guard.sh recheck
           curl --fail --silent --show-error \
             --request POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$APPROVED_COMMIT" \
             --data-binary "@$PAYLOAD_PATH" > /dev/null
           rm -f "$PAYLOAD_PATH"
 
@@ -99,6 +166,11 @@ jobs:
       - name: Run Vercel Admin proxy contracts
         run: node --test scripts/vercel-auth-proxy-contract.test.mjs
 
+      - name: Test production probe authorization without network access
+        run: |
+          bash -n scripts/production-admin-probe-guard.sh
+          node --test scripts/production-admin-probe-guard.test.mjs
+
       - name: Validate observable verification contract
         shell: bash
         run: |
@@ -109,7 +181,6 @@ jobs:
             'utf8',
           );
           for (const required of [
-            'statuses: write',
             'econovaria/vercel-admin-session-route',
             'api/admin-session/**',
             'api/admin/**',
@@ -123,24 +194,69 @@ jobs:
               throw new Error(`Observable production verification contract missing: ${required}`);
             }
           }
+
+          const dispatchTrigger = ['workflow_', 'dispatch:'].join('');
+          const dispatchExpression = ['github.event_name', " == 'workflow_dispatch'"].join('');
+          const forbiddenPushExpression = ['github.event_name', " == 'push'"].join('');
+          const productionEnvironment = ['environment', ': production'].join('');
+          const statusWrite = ['statuses', ': write'].join('');
+          const actionPhrase = ['PROBE PRODUCTION', ' ADMIN SESSION ROUTE'].join('');
+          const originInput = ['confirm_', 'origin:'].join('');
+
+          if (workflow.split(dispatchTrigger).length - 1 < 1) {
+            throw new Error('Manual production probe trigger is missing.');
+          }
+          if (workflow.split(dispatchExpression).length - 1 < 4) {
+            throw new Error('A live production job is not restricted to manual dispatch.');
+          }
+          if (workflow.includes(forbiddenPushExpression)) {
+            throw new Error('Live production verification must not run from ordinary push activity.');
+          }
+          if (workflow.split(productionEnvironment).length - 1 !== 1) {
+            throw new Error('Production environment approval gate drifted.');
+          }
+          if (workflow.split(statusWrite).length - 1 !== 2) {
+            throw new Error('Commit-status write permission must remain scoped to the two publisher jobs.');
+          }
+          if (!workflow.includes(actionPhrase) || !workflow.includes(originInput)) {
+            throw new Error('Explicit production probe confirmation inputs are missing.');
+          }
+
+          const probeNeedle = ['--request POST "', '$PRODUCTION_ORIGIN/api/admin-session/login"'].join('');
+          if (workflow.split(probeNeedle).length - 1 !== 1) {
+            throw new Error('Production Admin route probe count drifted from one bounded verifier.');
+          }
           NODE
 
   verify_production:
     name: Verify deployed Vercel Admin session route
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     needs:
+      - authorize_production_probe
       - publish_pending
       - validate
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      APPROVED_COMMIT: ${{ needs.authorize_production_probe.outputs.approved_commit }}
     steps:
+      - name: Check out exact workflow source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
       - name: Wait for controlled production proxy response
         shell: bash
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INVALID_PATH: ${{ runner.temp }}/vercel-invalid.json
         run: |
           set -euo pipefail
           for attempt in $(seq 1 72); do
+            # Recheck after queueing and again after every retry delay, before POST.
+            bash scripts/production-admin-probe-guard.sh recheck
             status="$(curl --silent --show-error \
               --connect-timeout 10 \
               --max-time 20 \
@@ -186,19 +302,33 @@ jobs:
             echo '- Controlled invalid-input response: `400`'
             echo '- Route-not-found response: `rejected`'
             echo '- Supabase deployment performed: `false`'
-            echo '- Secret or database mutation performed: `false`'
+            echo '- Credential or account mutation requested: `false`'
+            echo '- Request-protection nonce database effects: `possible (claim/expiry cleanup)`'
           } >> "$GITHUB_STEP_SUMMARY"
 
   publish_final:
     name: Publish production route verification result
-    if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && needs.authorize_production_probe.result == 'success' }}
     needs:
+      - authorize_production_probe
       - publish_pending
       - validate
       - verify_production
+    permissions:
+      contents: read
+      statuses: write
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    env:
+      APPROVED_COMMIT: ${{ needs.authorize_production_probe.outputs.approved_commit }}
     steps:
+      - name: Check out exact workflow source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
       - name: Publish terminal commit status
         shell: bash
         env:
@@ -227,11 +357,100 @@ jobs:
           };
           fs.writeFileSync(process.env.PAYLOAD_PATH, JSON.stringify(payload));
           NODE
+          bash scripts/production-admin-probe-guard.sh recheck
           curl --fail --silent --show-error \
             --request POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$APPROVED_COMMIT" \
             --data-binary "@$PAYLOAD_PATH" > /dev/null
           rm -f "$PAYLOAD_PATH"
+
+  backend_qualification:
+    name: Qualify exact-head backend typecheck and smoke
+    # General repository qualification only; never a live/manual execution job.
+    if: ${{ github.event_name != 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      QUALIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out exact qualification head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify and record exact source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          [[ "$QUALIFICATION_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$actual" = "$QUALIFICATION_SHA"
+          git show --no-patch --format='commit=%H%ntree=%T' HEAD > "$RUNNER_TEMP/pr871-backend-source.txt"
+          cat "$RUNNER_TEMP/pr871-backend-source.txt"
+
+      - name: Set up repository Node version
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Pin repository npm version
+        run: npm install --global npm@10.9.8
+
+      - name: Set up repository Deno version
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+
+      - name: Install locked backend tooling
+        id: tooling
+        run: npm --prefix backend ci
+
+      - name: Run complete backend typecheck
+        id: backend_typecheck
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          npm --prefix backend run typecheck:all > "$RUNNER_TEMP/pr871-backend-typecheck.log" 2>&1
+          status=$?
+          set -e
+          printf '%s\n' "$status" > "$RUNNER_TEMP/pr871-backend-typecheck.status"
+          tail -n 260 "$RUNNER_TEMP/pr871-backend-typecheck.log"
+          exit "$status"
+
+      - name: Run complete backend smoke independently
+        id: backend_smoke
+        if: ${{ !cancelled() && steps.tooling.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          npm --prefix backend run smoke > "$RUNNER_TEMP/pr871-backend-smoke.log" 2>&1
+          status=$?
+          set -e
+          printf '%s\n' "$status" > "$RUNNER_TEMP/pr871-backend-smoke.status"
+          tail -n 260 "$RUNNER_TEMP/pr871-backend-smoke.log"
+          exit "$status"
+
+      - name: Preserve exact-head backend qualification diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr871-exact-head-backend-qualification
+          path: |
+            ${{ runner.temp }}/pr871-backend-source.txt
+            ${{ runner.temp }}/pr871-backend-typecheck.log
+            ${{ runner.temp }}/pr871-backend-typecheck.status
+            ${{ runner.temp }}/pr871-backend-smoke.log
+            ${{ runner.temp }}/pr871-backend-smoke.status
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-017",
+  "status": "VERIFIED_COMPLETE",
+  "implementationPullRequest": 768,
+  "baseMainSha": "0ff48af9b7392b131aa94fa6560ef49843356f82",
+  "implementationSha": "ee5ef5da5d5cfb5eea1386666788f3a7dad2cdc6",
+  "mergeSha": "bf9066d7c53c5ddc3613633c7cc804ecac9576fb",
+  "mergeMethod": "squash",
+  "expectedHeadGuard": true,
+  "qualification": {
+    "triggeredExactHeadWorkflows": 29,
+    "successful": 29,
+    "failed": 0,
+    "pending": 0,
+    "vercel": "success",
+    "notable": [
+      "Backend Typecheck and smoke",
+      "Repository Quality",
+      "Supply Chain Security",
+      "Player Terminal Verify",
+      "Player Multiplayer and Load E2E",
+      "PR #768 roster gate",
+      "Business Player Store Cutover V2",
+      "business-player-store-fx-final-v2",
+      "multicurrency-store-funding-v1",
+      "multicurrency-stock-funding-v1",
+      "multicurrency-marketplace-funding-v1"
+    ]
+  },
+  "delivered": [
+    "Roster GET direct persistence removed from HTTP handler.",
+    "Minimal Players-owned roster read port and Supabase adapter added.",
+    "Game scope, selected columns, created_at ascending order, active credential lookup and empty-roster call count preserved.",
+    "Credential material excluded; only player_id selected from active credentials.",
+    "POST/create responsibility preserved."
+  ],
+  "correctionsBeforeFinalHead": [
+    "Aligned repository client response structure with existing EdgeSupabaseClient.",
+    "Converted focused tests to backend/Deno-compatible test declarations.",
+    "Regenerated deterministic architecture inventory.",
+    "Added exact PR #768 cross-cutting verification manifest.",
+    "Removed temporary inventory materialization workflow before final qualification."
+  ],
+  "boundaries": {
+    "productionCertified": false,
+    "explicitProductionDeployment": false,
+    "hostedDatabaseMutation": false,
+    "schemaMigrationRpcChanges": false,
+    "task18Started": false
+  },
+  "nextTask": "REF-018",
+  "nextTaskStarted": false
+}

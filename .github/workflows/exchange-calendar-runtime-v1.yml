@@ -3,10 +3,54 @@ name: Exchange Calendar Runtime
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-933.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-981.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-982.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-980.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-979.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-978.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-977.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-976.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-973.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-974.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-975.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-972.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-969.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-971.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-968.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-965.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-964.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-967.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-966.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-970.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-960.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-959.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-956.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-955.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-954.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-952.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-946.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-951.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-950.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-949.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-944.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-943.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-948.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-942.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-940.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-927.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-939.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-941.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-924.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-913.json"
       - backend/**
       - frontend/**
       - index.html
       - scripts/apply-configurable-stock-market-timezone-v1.mjs
+      - scripts/helpers/dashboard-timezone-layout.mjs
+      - scripts/dashboard-timezone-layout.test.mjs
       - scripts/fix-required-timezone-rpc-fixture-v1.mjs
       - scripts/apply-shared-game-timezone-ui-v1.mjs
       - scripts/fix-shared-game-timezone-smoke-v1.mjs
@@ -14,6 +58,7 @@ on:
       - scripts/fix-timezone-migration-preflight-v1.mjs
       - scripts/shared-game-timezone-ui-smoke.mjs
       - .github/workflows/exchange-calendar-runtime-v1.yml
+      - "docs/operations/contracts/player-cross-cutting/pr-914.json"
   push:
     branches:
       - agent/exchange-calendar-runtime-v1
@@ -23,6 +68,8 @@ on:
       - frontend/**
       - index.html
       - scripts/apply-configurable-stock-market-timezone-v1.mjs
+      - scripts/helpers/dashboard-timezone-layout.mjs
+      - scripts/dashboard-timezone-layout.test.mjs
       - scripts/fix-required-timezone-rpc-fixture-v1.mjs
       - scripts/apply-shared-game-timezone-ui-v1.mjs
       - scripts/fix-shared-game-timezone-smoke-v1.mjs
@@ -49,6 +96,8 @@ jobs:
       - name: Check out evaluated ref
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Set up Node
@@ -65,6 +114,9 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.9.3
+
+      - name: Verify Dashboard timezone replay layouts
+        run: node --test scripts/dashboard-timezone-layout.test.mjs
 
       - name: Install backend dependencies
         working-directory: backend

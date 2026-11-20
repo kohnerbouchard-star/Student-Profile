@@ -151,6 +151,17 @@ async function handlePasswordReset(request, response) {
       ));
     }
 
+    const operation = requestOperation(request);
+    if (operation.startsWith("recovery-")) {
+      if (safeHeader(request.headers?.origin) !== origin) return sendJson(response,403,errorBody("origin_not_allowed","Recovery must continue from this application."));
+      return await handleSystemRecoveryProxy(request,response,operation,origin,clientIp,match[1]);
+    }
+    if (operation === "mfa-status" || operation === "mfa-verify") {
+      if (safeHeader(request.headers?.origin) !== origin) {
+        return sendJson(response, 403, errorBody("origin_not_allowed", "Recovery must continue from this application."));
+      }
+      return await handleRecoveryMfa(request, response, operation, origin, clientIp, match[1]);
+    }
     const body = readPasswordResetBody(request);
     if (!body.ok) return sendJson(response, body.status, errorBody(body.code, body.message));
     const config = readConfig(body.projectRef);
@@ -190,6 +201,50 @@ async function handlePasswordReset(request, response) {
       "Administrator password reset is unavailable."
     ));
   }
+}
+
+async function handleRecoveryMfa(request, response, operation, origin, clientIp, accessToken) {
+  const body = readJsonObject(request);
+  if (!body.ok) return sendJson(response, body.status, errorBody(body.code, body.message));
+  const { projectRef, factorHandle, code } = body.value;
+  const verify = operation === "mfa-verify";
+  const allowed = verify ? ["projectRef", "factorHandle", "code"] : ["projectRef"];
+  if (Object.keys(body.value).some((key) => !allowed.includes(key)) ||
+      ![STAGING_PROJECT_REF, PRODUCTION_PROJECT_REF].includes(projectRef) ||
+      (verify && (typeof factorHandle !== "string" || !/^mfa1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]{32,2048}$/u.test(factorHandle) ||
+        typeof code !== "string" || !/^\d{6}$/u.test(code)))) {
+    return sendJson(response, 400, errorBody("invalid_mfa_request", "Recovery verification input is invalid."));
+  }
+  const config = readConfig(projectRef);
+  const upstream = await fetch(`${config.supabaseUrl}/functions/v1/staff-mfa-api/staff/mfa${verify ? "/verify" : ""}`, {
+    method: verify ? "POST" : "GET",
+    headers: { apikey: config.publishableKey, Authorization: `Bearer ${accessToken}`, Origin: origin,
+      "Content-Type": "application/json", "x-real-ip": clientIp },
+    ...(verify ? { body: JSON.stringify({ factorHandle, code }) } : {}),
+    cache: "no-store", redirect: "error"
+  });
+  const bytes = new Uint8Array(await upstream.arrayBuffer());
+  if (bytes.byteLength > MAX_AUTH_RESPONSE_BYTES) throw new Error("invalid MFA response");
+  const data = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  if (!upstream.ok || data?.ok !== true) {
+    const invalidCode = data?.error?.code === "mfa_verification_failed";
+    return sendJson(response, upstream.ok ? 502 : upstream.status, errorBody(
+      invalidCode ? "mfa_verification_failed" : "recovery_mfa_unavailable",
+      invalidCode ? "The authenticator code is invalid or expired." : "Recovery verification is unavailable. Request a fresh recovery email or contact your administrator."
+    ));
+  }
+  if (verify) {
+    if (data.session?.assuranceLevel !== "aal2" || !JWT_PATTERN.test(String(data.session?.accessToken || ""))) {
+      throw new Error("invalid elevated session");
+    }
+    // Keep the existing memory-only recovery bearer contract; never return refresh tokens.
+    return sendJson(response, 200, { ok: true, accessToken: data.session.accessToken });
+  }
+  const factors = (Array.isArray(data.factors) ? data.factors : []).filter((factor) =>
+    factor.factorType === "totp" && factor.status === "verified" && typeof factor.handle === "string").map((factor) => ({
+      handle: factor.handle, friendlyName: String(factor.friendlyName || "Authenticator").slice(0, 80)
+    }));
+  return sendJson(response, 200, { ok: true, factors });
 }
 
 async function verifyToken(config, tokenHash, type) {
@@ -359,4 +414,42 @@ function sendJson(response, status, body) {
 
 function errorBody(code, message) {
   return { ok: false, error: { code, message, retryable: false } };
+}
+
+async function handleSystemRecoveryProxy(request,response,operation,origin,clientIp,accessToken) {
+  const action=operation.slice("recovery-".length);
+  const parsed=readJsonObject(request);
+  if(!parsed.ok) return sendJson(response,parsed.status,errorBody(parsed.code,parsed.message));
+  const body=parsed.value;
+  const fields=action==="enroll" ? ["projectRef","grant","slot"] : action==="verify"
+    ? ["projectRef","grant","slot","factorHandle","code"] : action==="complete"
+    ? ["projectRef","grant","password"] : ["projectRef","grant"];
+  if(!["claim","status","enroll","verify","complete"].includes(action) || ![STAGING_PROJECT_REF,PRODUCTION_PROJECT_REF].includes(body.projectRef) ||
+    Object.keys(body).some(key=>!fields.includes(key)) || typeof body.grant!=="string" || !/^[A-Za-z0-9_-]{43}$/u.test(body.grant)) {
+    return sendJson(response,400,errorBody("invalid_recovery_request","Recovery request is invalid."));
+  }
+  const config=readConfig(body.projectRef);
+  if (config.supabaseUrl !== `https://${body.projectRef}.supabase.co`) throw Error("Recovery target configuration mismatch");
+  const {projectRef,...payload}=body;
+  const upstream=await fetch(`${config.supabaseUrl}/functions/v1/${action==="complete" ? "password-reset-api" : `staff-mfa-api/staff/mfa/recovery/${action}`}`,{
+    method:"POST",headers:{apikey:config.publishableKey,Authorization:`Bearer ${accessToken}`,Origin:origin,"Content-Type":"application/json","x-real-ip":clientIp},
+    body:JSON.stringify(payload),cache:"no-store",redirect:"error",
+  });
+  const bytes=new Uint8Array(await upstream.arrayBuffer());
+  if(bytes.byteLength>256*1024) throw Error("invalid recovery response");
+  const data=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
+  if(!upstream.ok || data.ok!==true) return sendJson(response,upstream.status>=400?upstream.status:502,
+    errorBody(data?.error?.code === "mfa_verification_failed" ? "mfa_verification_failed" : "recovery_unavailable","Recovery could not continue. Contact the system operator if setup was interrupted."));
+  if(action==="enroll") {
+    if(typeof data.factor?.handle!=="string" || typeof data.factor?.qrCode!=="string" || !data.factor.qrCode.startsWith("data:image/") ||
+      !/^[A-Z2-7]{16,128}$/u.test(data.factor?.secret||"")) throw Error("invalid recovery enrollment");
+    return sendJson(response,201,{ok:true,factor:{handle:data.factor.handle,qrCode:data.factor.qrCode,secret:data.factor.secret}});
+  }
+  if(action==="verify") {
+    if(!JWT_PATTERN.test(data.accessToken||"")) throw Error("invalid elevated recovery bearer");
+    return sendJson(response,200,{ok:true,accessToken:data.accessToken});
+  }
+  return sendJson(response,200,{ok:true,...(action==="complete" ? {passwordReset:true,sessionsRevoked:true} : {
+    primaryVerified:data.primaryVerified===true,backupVerified:data.backupVerified===true,setupInterrupted:data.setupInterrupted===true,
+  })});
 }

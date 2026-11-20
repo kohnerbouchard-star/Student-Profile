@@ -85,3 +85,19 @@ test("Dashboard refresh preserves the interactive map and establishes readable h
   expect(overflow.document).toBeLessThanOrEqual(1);
   expect(overflow.body).toBeLessThanOrEqual(1);
 });
+
+test("Dashboard Arrival guidance opens World without forcing navigation or blocking the core loop", async ({ page }) => {
+  await openDashboard(page);
+  const nextActions = page.locator(".player-terminal-next-actions");
+  await expect(nextActions.locator("button").first()).toHaveAttribute("data-route", "world");
+  await expect(nextActions).toContainText("Complete Arrival Class");
+  await expect(nextActions.locator('[data-route="contracts"]')).toBeEnabled();
+  await expect(nextActions.locator('[data-route="news"]')).toBeEnabled();
+  await expect(page).toHaveURL(/#dashboard$/);
+  await nextActions.locator("button").first().click();
+  await expect(page.locator("#world-arrival-title")).toHaveText("Choose how you begin");
+  await expect(page.locator(".player-world-page")).toContainText("No class permanently blocks economic activity");
+  await page.goBack();
+  await expect(page.locator(".player-terminal-dashboard-page")).toBeVisible();
+  await expect(page).toHaveURL(/#dashboard$/);
+});

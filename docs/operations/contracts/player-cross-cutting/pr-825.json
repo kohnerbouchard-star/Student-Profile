@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref042a-resource-freshness-pr-825.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 825,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "player-terminal/src/api/resource-freshness-coordinator.js",
+    "player-terminal/src/api/player-api.js",
+    "player-terminal/tests/read-invalidation-ordering.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-042/u3a-evidence.md",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-825.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/backend-typecheck.yml"
+  ],
+  "requiredFiles": [
+    "player-terminal/src/api/resource-freshness-coordinator.js",
+    "player-terminal/src/api/player-api.js",
+    "player-terminal/tests/read-invalidation-ordering.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-042/u3a-evidence.md",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-825.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    ".github/workflows/backend-typecheck.yml"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "players",
+    "inventory"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-042/u3a-evidence.md",
+  "authorizationNote": "Parent-authorized REF042a under accepted PR824 registration: optional per-terminal coordinator and PlayerApi plumbing, existing ordering tests and scoped metadata only. Terminal/action/realtime composition remains child b; no whole REF042 closeout. The verifier/test paths are locked requirements, not edit authorization. No backend, economic, resource-list, CSS, package, workflow job-body, main/PR823/824, U1, capture or deployment changes."
+}

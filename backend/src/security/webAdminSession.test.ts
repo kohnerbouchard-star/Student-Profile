@@ -57,8 +57,15 @@ Deno.test("rejects tampered and expired Admin web sessions", async () => {
     },
   });
   const envelope = await sealWebAdminSession(payload, KEY);
+  // Change a significant ciphertext character, never an unchanged trailing A
+  // or only unused base64 padding bits.
+  const ciphertextStart = envelope.lastIndexOf(".") + 1;
+  const replacement = envelope[ciphertextStart] === "A" ? "B" : "A";
+  const tamperedEnvelope = envelope.slice(0, ciphertextStart) + replacement +
+    envelope.slice(ciphertextStart + 1);
+  assertEquals(tamperedEnvelope === envelope, false);
   await assertRejects(() =>
-    openWebAdminSession(`${envelope.slice(0, -1)}A`, KEY, NOW + 60)
+    openWebAdminSession(tamperedEnvelope, KEY, NOW + 60)
   );
   await assertRejects(() =>
     openWebAdminSession(

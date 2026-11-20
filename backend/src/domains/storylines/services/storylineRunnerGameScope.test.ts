@@ -1,3 +1,4 @@
+import "../server/stockTickStorylineRunner.test.ts";
 import type { JsonObject, JsonValue } from "../../../supabase/tableTypes.ts";
 import type { PlayerStoryContext } from "../contracts/playerStoryContext.ts";
 import type {

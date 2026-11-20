@@ -1,5 +1,12 @@
+import * as publicPlayers from "../index.ts";
+import {
+  invalidPlayerSessionResponse,
+  readPlayerSessionTokenFromRequest,
+  resolveActivePlayerSession,
+} from "./playerSessionHttpHelpers.ts";
 import { EdgeActivationError } from "../../../platform/supabase/edgeResponse.ts";
 import {
+  createPlayerRequestApplicationContext,
   readRequestedGameSessionId,
   rejectClientSuppliedBodyIdentity,
   rejectClientSuppliedPlayerIdentity,
@@ -49,6 +56,41 @@ Deno.test("player request scope derives immutable identity only from the active 
     },
   });
   assertEquals(hashes, ["player-token", "hash:player-token"]);
+});
+
+Deno.test("player application context reuses the resolved scope and is deeply immutable", async () => {
+  const scope = await resolvePlayerRequestScope(
+    request(),
+    dependencies(activeResolution()),
+  );
+  const context = createPlayerRequestApplicationContext({
+    scope,
+    requestId: "request-player-001",
+  });
+
+  assertEquals(context.gameSessionId, GAME_ID);
+  assertEquals(context.actor, {
+    kind: "player",
+    playerUuid: PLAYER_UUID,
+    playerSessionId: SESSION_ID,
+  });
+  assertEquals(context.role, "player");
+  assertEquals(context.permissions, ["own_player"]);
+  assertEquals(context.requestId, "request-player-001");
+  assertEquals(context.playerUuid, scope.playerUuid);
+  assertEquals(context.gameId, scope.gameId);
+  assertEquals(
+    [
+      Object.isFrozen(context),
+      Object.isFrozen(context.actor),
+      Object.isFrozen(context.permissions),
+      Object.isFrozen(context.authorizationContext),
+    ],
+    [true, true, true, true],
+  );
+  const serialized = JSON.stringify(context);
+  assertEquals(serialized.includes("player-token"), false);
+  assertEquals(serialized.includes("service"), false);
 });
 
 Deno.test("player request scope rejects a missing player session", async () => {
@@ -369,3 +411,43 @@ function assertEquals(actual: unknown, expected: unknown): void {
     );
   }
 }
+
+Deno.test("Players public boundary preserves scope and session helper identity", () => {
+  for (const [name, implementation] of Object.entries({
+    createPlayerRequestApplicationContext,
+    readRequestedGameSessionId,
+    rejectClientSuppliedBodyIdentity,
+    rejectClientSuppliedPlayerIdentity,
+    requireMatchingPlayerGameSession,
+    resolvePlayerRequestScope,
+    invalidPlayerSessionResponse,
+    readPlayerSessionTokenFromRequest,
+    resolveActivePlayerSession,
+  })) {
+    if (publicPlayers[name as keyof typeof publicPlayers] !== implementation) {
+      throw new Error(`Public Players export ${name} must preserve implementation identity.`);
+    }
+  }
+});
+
+Deno.test("Players public invalid-session response preserves the 401 HTTP contract", async () => {
+  const response = publicPlayers.invalidPlayerSessionResponse();
+  assertEquals(response.status, 401);
+  assertEquals(response.headers.get("content-type"), "application/json; charset=utf-8");
+  assertEquals(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  assertEquals(response.headers.get("pragma"), "no-cache");
+  assertEquals(
+    response.headers.get("vary"),
+    "Origin, Authorization, X-Player-Session-Token, X-Econovaria-Device-Id",
+  );
+  assertEquals(response.headers.get("x-content-type-options"), "nosniff");
+  assertEquals(response.headers.get("x-frame-options"), "DENY");
+  assertEquals(await response.json(), {
+    ok: false,
+    error: {
+      code: "invalid_player_session",
+      message: "Player session is invalid or expired.",
+      retryable: false,
+    },
+  });
+});

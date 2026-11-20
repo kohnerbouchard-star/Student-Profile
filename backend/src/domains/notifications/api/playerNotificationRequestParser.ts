@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 
 import { isRecord } from "../../../platform/supabase/edgeParsing.ts";
-import { rejectClientSuppliedBodyIdentity } from "../../players/api/playerRequestScope.ts";
+import { rejectClientSuppliedBodyIdentity } from "../../players/index.ts";
 import {
   PLAYER_NOTIFICATION_STATUSES,
   type PlayerNotificationCursor,

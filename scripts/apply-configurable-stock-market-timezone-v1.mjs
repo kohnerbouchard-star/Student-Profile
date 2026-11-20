@@ -1,3 +1,4 @@
+import { reconcileDashboardMarketStatus } from "./helpers/dashboard-timezone-layout.mjs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -567,7 +568,7 @@ await patch(
 );
 
 await patch(
-  "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+  "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.fixtures.support.ts",
   (source) => {
     let expected = source;
 
@@ -583,11 +584,20 @@ await patch(
     if (!expected.includes("readMarketOpenState: options.readMarketOpenState")) {
       expected = replaceRequired(
         expected,
-        `    now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),\n    createRepository: () => repository,`,
-        `    now: options.now ?? (() => new Date("2026-07-20T00:00:00.000Z")),\n    readMarketOpenState: options.readMarketOpenState ?? (async () => true),\n    createRepository: () => repository,`,
+        `    now: options.now ?? (() => new Date(WALL_CLOCK_TIME)),\n    createRepository: () => repository,`,
+        `    now: options.now ?? (() => new Date(WALL_CLOCK_TIME)),\n    readMarketOpenState: options.readMarketOpenState ?? (async () => true),\n    createRepository: () => repository,`,
         "runner test default market-state reader",
       );
     }
+
+    return expected;
+  },
+);
+
+await patch(
+  "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.authorizationAndPublication.cases.ts",
+  (source) => {
+    let expected = source;
 
     expected = expected.replace(
       `      now: () => new Date("2026-07-19T00:00:00.000Z"),`,
@@ -598,12 +608,79 @@ await patch(
   },
 );
 
+const dashboardMarketStateSource = await read(
+  "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+);
+const usesPublicMarketStatePort =
+  /[Ss]tockMarketOpenStateReadRepository/.test(dashboardMarketStateSource);
+if (usesPublicMarketStatePort) {
+  const [stocksPublicSource, dashboardHttpSource] = await Promise.all([
+    read("backend/src/domains/stocks/index.ts"),
+    read("backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts"),
+  ]);
+  const compact = (source) => source.replace(/\s+/g, "");
+  const repository = compact(dashboardMarketStateSource);
+  const stocks = compact(stocksPublicSource);
+  const http = compact(dashboardHttpSource);
+  const positionalWiring =
+    repository.includes("privatereadonlystockMarketOpenStateReadRepository:StockMarketOpenStateReadRepository,") &&
+    repository.includes("this.stockMarketOpenStateReadRepository.read(input.gameSessionId,this.now()),") &&
+    http.includes("newSupabasePlayerGameDashboardRepository(serviceClientasany,createStockMarketReadRepository(serviceClient),createStockMarketOpenStateReadRepository(serviceClient),");
+  const namedWiring =
+    repository.includes(compact(`export interface PlayerGameDashboardReadDependencies {
+      readonly stockMarketReadRepository: StockMarketReadRepository;
+      readonly stockMarketOpenStateReadRepository: StockMarketOpenStateReadRepository;
+      readonly playerContractsReadQuery: PlayerContractsReadQuery;
+      readonly storeListingsReadQuery: DashboardStoreListingsReadQuery;
+    }`)) &&
+    repository.includes(compact(`private readonly dependencies: PlayerGameDashboardReadDependencies;
+    constructor(
+      private readonly client: SupabasePlayerGameDashboardClient,
+      dependencies: PlayerGameDashboardReadDependencies,
+      private readonly now: () => Date = () => new Date(),
+    ) {
+      this.dependencies = {
+        stockMarketReadRepository: dependencies.stockMarketReadRepository,
+        stockMarketOpenStateReadRepository: dependencies.stockMarketOpenStateReadRepository,
+        playerContractsReadQuery: dependencies.playerContractsReadQuery,
+        storeListingsReadQuery: dependencies.storeListingsReadQuery,
+      };
+    }`)) &&
+    repository.includes("this.dependencies.stockMarketOpenStateReadRepository.read(input.gameSessionId,this.now()),") &&
+    http.includes(compact(`new SupabasePlayerGameDashboardRepository(
+      serviceClient as any,
+      {
+        stockMarketReadRepository: createStockMarketReadRepository(serviceClient),
+        stockMarketOpenStateReadRepository: createStockMarketOpenStateReadRepository(serviceClient),
+        playerContractsReadQuery: createPlayerContractsReadQuery(serviceClient),
+        storeListingsReadQuery: createDashboardStoreListingsReadQuery(serviceClient),
+      },
+    )`));
+  if (
+    !/import\s*\{[^}]*\btype\s+StockMarketOpenStateReadRepository\b[^}]*\}\s*from\s*"\.\.\/\.\.\/stocks\/index\.ts"/.test(dashboardMarketStateSource) ||
+    !(positionalWiring || namedWiring) ||
+    repository.includes("supabaseStockMarketWindowRepository.ts") ||
+    !/import\{readStockMarketOpenState,?\}from"\.\/infrastructure\/supabaseStockMarketWindowRepository\.ts";/.test(stocks) ||
+    !/exportfunctioncreateStockMarketOpenStateReadRepository\(client:Pick<EdgeSupabaseClient,"rpc">,?\):StockMarketOpenStateReadRepository\{return\{read:\(gameSessionId,at\)=>readStockMarketOpenState\(client,gameSessionId,at\),?\};?\}/.test(stocks) ||
+    !/import\{[^}]*createStockMarketOpenStateReadRepository[,}][^;]*from"\.\.\/\.\.\/stocks\/index\.ts";/.test(http)
+  ) {
+    throw new Error("Unsupported Dashboard public market-state wiring.");
+  }
+}
+
+const dashboardPanelProjectionSource = await read(
+  "backend/src/domains/game-dashboard/infrastructure/dashboardPanelProjection.ts",
+).catch((error) => {
+  if (error.code === "ENOENT") return "";
+  throw error;
+});
+
 await patch(
   "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
   (source) => {
     let expected = source;
 
-    if (!expected.includes("supabaseStockMarketWindowRepository.ts")) {
+    if (!usesPublicMarketStatePort && !expected.includes("supabaseStockMarketWindowRepository.ts")) {
       expected = replaceRegexRequired(
         expected,
         /import \{\n  DEFAULT_STOCK_EXCHANGE_CODE,\n  evaluateStockMarketSession,\n\} from "\.\.\/\.\.\/stocks\/calendars\/stockMarketExchangeCalendar\.ts";/,
@@ -621,7 +698,7 @@ await patch(
       );
     }
 
-    if (!expected.includes("readStockMarketOpenState(this.client")) {
+    if (!usesPublicMarketStatePort && !expected.includes("readStockMarketOpenState(this.client")) {
       expected = replaceRequired(
         expected,
         `      this.readGameSession(input.gameSessionId),\n      this.readPublicStockMarket(input.gameSessionId),`,
@@ -630,14 +707,7 @@ await patch(
       );
     }
 
-    if (!expected.includes("gameSession.status === \"active\" && marketOpen")) {
-      expected = replaceRegexRequired(
-        expected,
-        /        marketStatus: gameSession\.status === "active"[\s\S]*?          : "closed",/,
-        `        marketStatus: gameSession.status === "active" && marketOpen\n          ? "open"\n          : "closed",`,
-        "dashboard market status",
-      );
-    }
+    expected = reconcileDashboardMarketStatus(expected, dashboardPanelProjectionSource);
 
     return expected;
   },
@@ -701,41 +771,7 @@ await patch(
   },
 );
 
-await patch(
-  "backend/src/domains/game-sessions/application/createGame.ts",
-  (source) => {
-    let expected = source;
-
-    if (!expected.includes("normalizeRequiredStockMarketWindowSetting")) {
-      expected = replaceRequired(
-        expected,
-        `import type { GameSessionRecord, UUID } from "../../../auth/types";`,
-        `import type { GameSessionRecord, UUID } from "../../../auth/types";\nimport {\n  normalizeRequiredStockMarketWindowSetting,\n  StockMarketWindowConfigError,\n} from "../../stocks/calendars/stockMarketWindowConfig";`,
-        "create-game timezone validator import",
-      );
-    }
-
-    if (!expected.includes("stockMarketWindow: normalizeRequiredStockMarketWindow(")) {
-      expected = replaceRequired(
-        expected,
-        `    stockMarketWindow: normalizeJsonObject(input.stockMarketWindow),`,
-        `    stockMarketWindow: normalizeRequiredStockMarketWindow(\n      input.stockMarketWindow,\n    ),`,
-        "create-game required timezone",
-      );
-    }
-
-    if (!expected.includes("function normalizeRequiredStockMarketWindow(")) {
-      expected = replaceRequired(
-        expected,
-        `function normalizeJsonObject(value: JsonObject | null | undefined): JsonObject {`,
-        `function normalizeRequiredStockMarketWindow(\n  value: JsonObject | null | undefined,\n): JsonObject {\n  try {\n    return normalizeRequiredStockMarketWindowSetting(value) as JsonObject;\n  } catch (error) {\n    if (error instanceof StockMarketWindowConfigError) {\n      throw new CreateGameValidationError(error.message);\n    }\n    throw error;\n  }\n}\n\nfunction normalizeJsonObject(value: JsonObject | null | undefined): JsonObject {`,
-        "create-game required timezone normalizer",
-      );
-    }
-
-    return expected;
-  },
-);
+// Standalone pre-licensing game creation is retired; keep the active activation parser patch below.
 
 await patch(
   "backend/src/domains/licensing/contracts/activationRequestParser.ts",

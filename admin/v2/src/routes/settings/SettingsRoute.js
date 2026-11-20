@@ -12,6 +12,8 @@ import { createElement } from "../../components/dom.js";
 import { ADMIN_DATA_STATES } from "../../core/data-state.js";
 
 const FIELD_IDS = Object.freeze({
+  timezone: "admin-settings-attendance-timezone",
+  lateCutoff: "admin-settings-attendance-late-cutoff",
   difficultyPreset: "admin-settings-difficulty-preset",
   priceMultiplier: "admin-settings-price-multiplier",
   incomeMultiplier: "admin-settings-income-multiplier",
@@ -81,7 +83,7 @@ function change(label, before, after, format = String) {
   return { label, before: format(before), after: format(after) };
 }
 
-function settingsForm(model, { onValidate, onSave, canSave = true }) {
+function settingsForm(model, { onValidate, onSave, canSave = true, refreshing = false }) {
   const form = createElement("form", {
     className: "admin-settings-form",
     attrs: { novalidate: "", "aria-label": "Game settings" },
@@ -145,6 +147,19 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
   });
   fields.set("lateRewardAmount", lateReward);
 
+  const timezone = AdminField({
+    id: FIELD_IDS.timezone, name: "timezone", label: "Attendance timezone",
+    hint: "Used for student clock-ins. Staff scans use the scanner device timezone when valid, with this timezone as fallback. Example: Asia/Seoul.",
+    value: model.attendanceWindow.timezone,
+  });
+  const lateCutoff = AdminField({
+    id: FIELD_IDS.lateCutoff, name: "lateCutoff", label: "Late cutoff (24-hour time)",
+    hint: "Clock-ins after this time are late. At the cutoff minute they are present. Leave blank for no late cutoff. Applies to future clock-ins only.",
+    value: model.attendanceWindow.lateCutoff ?? "",
+  });
+  fields.set("timezone", timezone);
+  fields.set("lateCutoff", lateCutoff);
+
   const sensitiveNote = createElement("div", {
     className: "admin-settings-security-note",
     attrs: { role: "note" },
@@ -190,6 +205,8 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
     validationSummary.element,
     section("Game difficulty and economy", "Difficulty and economy controls. Modifiers are limited to the supported 0.5–2.0 range.", [difficulty.element, ...modifierFields]),
     section("Attendance and rewards", "Attendance reward amounts. Currency conversion remains automatic for each player country.", [
+      timezone.element,
+      lateCutoff.element,
       presentReward.element,
       lateReward.element,
     ]),
@@ -226,6 +243,8 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
       tradeMultiplier: fields.get("tradeMultiplier").getValue(),
       attendanceWindowBase: model.attendanceWindow,
       attendanceWindow: {
+        timezone: timezone.getValue(),
+        lateCutoff: lateCutoff.getValue(),
         presentRewardAmount: presentReward.getValue(),
         lateRewardAmount: lateReward.getValue(),
       },
@@ -242,6 +261,8 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
       change("Shock severity", model.shockSeverity, input.shockSeverity),
       change("Recovery support", model.recoverySupport, input.recoverySupport),
       change("Trade multiplier", model.tradeMultiplier, input.tradeMultiplier),
+      change("Attendance timezone", model.attendanceWindow.timezone, input.attendanceWindow.timezone),
+      change("Late cutoff", model.attendanceWindow.lateCutoff ?? "", input.attendanceWindow.lateCutoff),
       change("Present reward", model.attendanceWindow.presentRewardAmount, input.attendanceWindow.presentRewardAmount),
       change("Late reward", model.attendanceWindow.lateRewardAmount, input.attendanceWindow.lateRewardAmount),
     ].filter(Boolean);
@@ -262,6 +283,8 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
     presetWasAutoCustom = false;
     difficulty.setValue(model.difficultyPreset);
     MODIFIER_FIELDS.forEach((name) => fields.get(name).setValue(model[name]));
+    timezone.setValue(model.attendanceWindow.timezone);
+    lateCutoff.setValue(model.attendanceWindow.lateCutoff ?? "");
     presentReward.setValue(model.attendanceWindow.presentRewardAmount);
     lateReward.setValue(model.attendanceWindow.lateRewardAmount);
     fields.forEach((field) => field.setError(""));
@@ -280,6 +303,8 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
   }
 
   let presetWasAutoCustom = false;
+  let submitting = false;
+  let destroyed = false;
   MODIFIER_FIELDS.forEach((name) => {
     fields.get(name).control.addEventListener("input", () => {
       const modifiersDiffer = MODIFIER_FIELDS.some((fieldName) => (
@@ -299,13 +324,15 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
     presetWasAutoCustom = false;
     updateDirtyState();
   });
+  timezone.control.addEventListener("input", updateDirtyState);
+  lateCutoff.control.addEventListener("input", updateDirtyState);
   presentReward.control.addEventListener("input", updateDirtyState);
   lateReward.control.addEventListener("input", updateDirtyState);
   resetButton.addEventListener("click", reset);
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (!canSave) return;
+    if (!canSave || refreshing || submitting || destroyed) return;
     const input = draft();
     const validation = onValidate(input);
     if (!showValidation(validation)) return;
@@ -316,8 +343,11 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
       before: String(entry.before),
       after: String(entry.after),
     })));
+    submitting = true;
+    saveConfirm.setBusy(false);
     const accepted = await saveConfirm.open(saveButton);
-    if (!accepted) return;
+    if (!accepted || destroyed) { submitting = false; return; }
+    fields.forEach((field) => { field.control.disabled = true; });
     saveButton.disabled = true;
     resetButton.disabled = true;
     saveButton.textContent = "Saving…";
@@ -326,15 +356,22 @@ function settingsForm(model, { onValidate, onSave, canSave = true }) {
       if (result?.validation) showValidation(result.validation);
       if (result?.ok === true) dirtyStatus.textContent = "Saved; refreshing authoritative values…";
     } finally {
-      saveButton.textContent = canSave ? "Review changes" : "Refresh before saving";
-      updateDirtyState();
+      submitting = false;
+      if (!destroyed) {
+        fields.forEach((field) => { field.control.disabled = refreshing; });
+        saveButton.textContent = canSave ? "Review changes" : "Refresh before saving";
+        updateDirtyState();
+      }
     }
   });
 
   reset();
+  fields.forEach((field) => { field.control.disabled = refreshing; });
   return {
     element: form,
-    destroy() { saveConfirm.destroy(); },
+    isDirty: () => changeSet().length > 0,
+    deactivate() { saveConfirm.close("navigation"); },
+    destroy() { destroyed = true; saveConfirm.destroy(); },
   };
 }
 
@@ -375,7 +412,8 @@ export function SettingsRoute({ state, onRetry = () => {}, onValidate = () => ({
   const formView = settingsForm(state.data, {
     onValidate,
     onSave: async (draft) => onSave(draft),
-    canSave: state.status !== ADMIN_DATA_STATES.STALE,
+    canSave: ![ADMIN_DATA_STATES.STALE, ADMIN_DATA_STATES.REFRESHING].includes(state.status),
+    refreshing: state.status === ADMIN_DATA_STATES.REFRESHING,
   });
 
   const form = formView.element;
@@ -403,6 +441,8 @@ export function SettingsRoute({ state, onRetry = () => {}, onValidate = () => ({
   });
   return {
     element: frame.element,
+    isDirty: formView.isDirty,
+    deactivate: formView.deactivate,
     destroy() { formView.destroy(); },
   };
 }

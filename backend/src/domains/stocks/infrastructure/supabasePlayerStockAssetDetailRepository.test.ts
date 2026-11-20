@@ -32,6 +32,7 @@ Deno.test("stock asset detail scopes asset and hybrid history RPC", async () => 
   const result = await repository.readAsset({ gameId: GAME_ID, ticker: "AURA", historyLimit: 2 });
 
   assertEquals(result.asset?.internalAssetUuid, ASSET_UUID);
+  assertEquals(result.asset?.listingCurrencyCode, "XAL");
   assertEquals(result.history.map((point) => point.tickIndex), [42, 41]);
   assertEquals(result.history[0].createdAt, "2026-07-18T05:42:00.000Z");
   assertEquals(client.queries.map((query) => query.tableName), ["game_session_stock_assets"]);
@@ -97,6 +98,7 @@ function asset(overrides: Record<string, unknown> = {}) {
     company_name: "Aurora Aerospace Systems",
     sector_key: "AI_AEROSPACE",
     country_code: "SOLVEND",
+    listing_currency_code: "XAL",
     description: "Public company description",
     current_price: 105,
     previous_close: 100,

@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref025-disposable-lifecycle-pr-865.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 865,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "scripts/ref025-business-loan-concurrency.mjs",
+    "scripts/ref025-business-loan-concurrency.test.mjs",
+    ".github/workflows/banking-fx-clearing-v1.yml",
+    "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md",
+    "docs/operations/contracts/player-cross-cutting/pr-865.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-865.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Verify Banking FX database acceptance"
+  ],
+  "criticalJobChecks": [
+    "Verify Banking FX database acceptance"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-races.md",
+  "authorizationNote": "Approved Child1 five paths/360 semantic lines; unchanged verifier dependencies confer no edit authority. Exclusive disposable Banking lifecycle only, both gates retained; full reset and independent verification. No hosted access/backend termination/lending activation. Parent review/merge; nine U1 holds retained."
+}

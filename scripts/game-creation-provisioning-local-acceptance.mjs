@@ -256,7 +256,49 @@ async function verifyTargetGame(created) {
       'messagingPolicies', (select count(*) from public.message_game_policies where game_session_id=(select id from target)),
       'marketplacePolicies', (select count(*) from public.marketplace_policies where game_session_id=(select id from target)),
       'players', (select count(*) from public.players where game_session_id=(select id from target)),
-      'balances', (select count(*) from public.account_balances where game_session_id=(select id from target)),
+      'balances', (
+        select count(*)
+        from public.account_balances balance_row
+        join public.bank_accounts account_row
+          on account_row.game_session_id = balance_row.game_session_id
+         and account_row.id = balance_row.bank_account_id
+        join public.economic_parties party_row
+          on party_row.game_session_id = account_row.game_session_id
+         and party_row.id = account_row.party_id
+        where balance_row.game_session_id = (select id from target)
+          and party_row.party_kind in ('player', 'business')
+      ),
+      'systemBankAccounts', (
+        select count(*)
+        from public.bank_accounts account_row
+        join public.economic_parties party_row
+          on party_row.game_session_id = account_row.game_session_id
+         and party_row.id = account_row.party_id
+        where account_row.game_session_id = (select id from target)
+          and account_row.status = 'active'
+          and party_row.party_kind = 'system'
+          and party_row.system_key in (
+            'fx.clearing-house', 'fx.central-reserve',
+            'fx.fee-revenue', 'banking.compatibility-offset'
+          )
+      ),
+      'systemBankBalances', (
+        select count(*)
+        from public.account_balances balance_row
+        join public.bank_accounts account_row
+          on account_row.game_session_id = balance_row.game_session_id
+         and account_row.id = balance_row.bank_account_id
+        join public.economic_parties party_row
+          on party_row.game_session_id = account_row.game_session_id
+         and party_row.id = account_row.party_id
+        where balance_row.game_session_id = (select id from target)
+          and account_row.status = 'active'
+          and party_row.party_kind = 'system'
+          and party_row.system_key in (
+            'fx.clearing-house', 'fx.central-reserve',
+            'fx.fee-revenue', 'banking.compatibility-offset'
+          )
+      ),
       'playerInventory', (
         select count(*)
         from public.inventory_holdings h
@@ -309,6 +351,8 @@ async function verifyTargetGame(created) {
     marketplacePolicies: 1,
     players: 0,
     balances: 0,
+    systemBankAccounts: 44,
+    systemBankBalances: 44,
     playerInventory: 0,
     storeStockHoldings: 50,
     progressionProfiles: 0,

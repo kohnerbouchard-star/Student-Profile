@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref034-story-notifications-pr-849.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 849,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/notifications/public/storyNotifications.ts",
+    "backend/src/domains/notifications/public/storyNotifications.test.ts",
+    "backend/src/domains/storylines/contracts/storyNotificationContracts.ts",
+    "backend/src/domains/storylines/contracts/storylineRunnerContracts.ts",
+    "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/package.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-034/preflight.md",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-849.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/notifications/public/storyNotifications.ts",
+    "backend/src/domains/notifications/public/storyNotifications.test.ts",
+    "backend/src/domains/storylines/contracts/storyNotificationContracts.ts",
+    "backend/src/domains/storylines/contracts/storylineRunnerContracts.ts",
+    "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/package.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-034/preflight.md",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-849.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected",
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "criticalJobChecks": [
+    "business-player-store-fx-final-v2-source",
+    "business-player-store-fx-final-v2-database",
+    "business-player-store-fx-final-v2-player-browser",
+    "business-player-store-fx-final-v2-connected"
+  ],
+  "affectedDomains": [
+    "notifications",
+    "storylines",
+    "stocks"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-034/preflight.md",
+  "authorizationNote": "Parent-approved REF-034 eleven-path public writer handoff; both stock consumers retain the same repository/client, awaited notification and delivery writes, errors, deduplication and Story finalization. Package change is focused test registration only. Task/backlog, SQL, verifier/tests, release holds, deployment and secrets remain unchanged."
+}

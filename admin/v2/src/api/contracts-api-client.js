@@ -1,4 +1,5 @@
 import { normalizeAdminError } from "../core/error-envelope.js";
+import { normalizeContractTimeZone } from "../core/contract-time-zone.js";
 
 const ADMIN_API_BASE_PATH = "/api/admin";
 const DEFAULT_TIMEOUT_MS = 15_000;
@@ -256,17 +257,30 @@ export function createContractsApiClient({
   let detailController = null;
   const inFlightMutations = new Map();
 
-  function readContracts({ gameId, signal, timeoutMs: requestTimeoutMs } = {}) {
+  function readContracts({ gameId, signal, timeoutMs: requestTimeoutMs, includeTimeZone = true } = {}) {
     try {
       listController?.abort();
       const controller = new AbortController();
       listController = controller;
       const unlink = linkAbortSignal(signal, controller);
-      return requestJson(fetchImpl, contractCollectionPath(gameId), {
+      const options = {
         signal: controller.signal,
         timeoutMs: normalizeTimeout(requestTimeoutMs, normalizeTimeout(timeoutMs)),
-        validate: validateContracts,
-      }).finally(() => {
+      };
+      // Game activation persists its selected zone here, independently of attendance.
+      const zone = includeTimeZone ? requestJson(fetchImpl, `/games/${requireGameToken(gameId)}/settings`, {
+        ...options,
+        validate: (payload) => normalizeContractTimeZone(payload?.data?.settings?.stockMarketWindow?.timezone),
+      }).catch((error) => {
+        if (["SESSION_REQUIRED", "MFA_REQUIRED", "REQUEST_ABORTED"].includes(error?.code)) throw error;
+        return null;
+      }) : Promise.resolve(null);
+      return Promise.all([
+        requestJson(fetchImpl, contractCollectionPath(gameId), { ...options, validate: validateContracts }),
+        zone,
+      ]).then(([payload, timeZone]) => ({
+        ...payload, data: { ...payload.data, timeZone },
+      })).finally(() => {
         unlink();
         if (listController === controller) listController = null;
       });

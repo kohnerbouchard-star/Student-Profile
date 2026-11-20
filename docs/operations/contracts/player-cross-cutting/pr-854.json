@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref025c2-0-characterization-pr-854.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 854,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "scripts/banking-fx-database-acceptance.sql",
+    "scripts/business-banking-runtime-contract.mjs",
+    "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-characterization.md",
+    "docs/operations/contracts/player-cross-cutting/pr-854.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "docs/operations/contracts/player-cross-cutting/pr-854.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Repository Quality",
+    "Business Banking Runtime",
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance"
+  ],
+  "criticalJobChecks": [
+    "Certify Banking FX clearing source",
+    "Verify Banking FX database acceptance",
+    "Verify Banking FX Chromium acceptance"
+  ],
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-025/u5-c2-characterization.md",
+  "authorizationNote": "Parent approved the exact fourth path pr-854.json and240-line total cap solely for required PR-bound authority. Verifier/test paths are locked dependencies, not edit permission. No runtime, migration, product, ledger, policy, caller, gate or workflow changes. Both creation gates and nine U1 holds remain. Parent review/merge; c2-1 onward not activated; income-policy answer remains pending."
+}

@@ -3,8 +3,44 @@ name: Admin Browser E2E
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main]
+    branches: [main, feat/player-business-workspace-v2, feat/business-financial-reporting-v2, feat/business-common-equity-v2, feat/business-ipo-issuance-v2]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-981.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-982.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-980.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-979.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-978.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-977.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-976.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-973.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-974.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-975.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-972.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-969.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-971.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-968.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-965.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-964.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-967.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-966.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-970.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-963.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-962.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-961.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-958.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-957.json"
+      - "scripts/admin-v2-attendance-read-model.test.mjs"
+      - "scripts/fixtures/admin-attendance-controller-function-hashes.json"
+      - "scripts/admin-v2-world-read-model.test.mjs"
+      - "scripts/admin-v2-marketplace-read-model.test.mjs"
+      - "scripts/admin-account-controls-dom-fixture.mjs"
+      - "scripts/admin-account-controls.test.mjs"
+      - "scripts/admin-account-controls-browser-check.mjs"
+      - "docs/operations/contracts/player-cross-cutting/pr-951.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-945.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-949.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-948.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
       - ".github/workflows/admin-browser-e2e.yml"
       - "index.html"
       - "admin/**"
@@ -19,6 +55,10 @@ on:
       - "backend/supabase/config.toml"
       - "backend/supabase/functions/**"
       - "backend/supabase/migrations/**"
+      - "scripts/admin-v2-browser-smoke.mjs"
+      - "scripts/admin-session-redirect-diagnostics.mjs"
+      - "scripts/admin-session-redirect-diagnostics.test.mjs"
+      - "scripts/admin-v2-runtime-ux-stabilization.test.mjs"
       - "scripts/admin-browser-reconnaissance.mjs"
       - "scripts/admin-connected-ledger-mutation-browser-acceptance.mjs"
       - "scripts/button-action-coverage-contract.mjs"
@@ -122,6 +162,31 @@ jobs:
             sleep $((ATTEMPT * 5))
           done
           exit 1
+
+      # U2 handoff from #810: retain the unchanged suite and separate baseline evidence.
+      - name: Verify Admin V2 browser states
+        env:
+          ADMIN_V2_EVIDENCE_DIR: /tmp/econovaria-browser/admin-v2
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASELINE="$RUNNER_TEMP/ref043-browser-baseline"
+          git worktree add --detach "$BASELINE" 56957a9265fb2890ac45417663582726103cd91e
+          trap 'git worktree remove "$BASELINE"' EXIT
+          set +e
+          ADMIN_V2_STATIC_ROOT="$BASELINE" ADMIN_V2_EVIDENCE_DIR=/tmp/econovaria-browser/admin-v2-baseline npm run test:admin-v2:browser
+          BASELINE_EXIT=$?
+          set -e
+          printf 'Baseline browser exit: %s\n' "$BASELINE_EXIT"
+          test "$BASELINE_EXIT" -ne 0
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          const baseline = JSON.parse(readFileSync("/tmp/econovaria-browser/admin-v2-baseline/admin-v2-overview-regression-results.json", "utf8"));
+          assert.equal(baseline.status, "failed");
+          assert.match(baseline.failure, /^AssertionError \[ERR_ASSERTION\]: ready 1440x900 route market truncates horizontally\n/);
+          NODE
+          npm run test:admin-v2:browser
 
       - name: Build exact authorized Crafting pack
         shell: bash

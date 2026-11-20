@@ -11,6 +11,10 @@ const CREATE_ACCESS_CODE = "CREATE-8246";
 const UPDATE_IDENTIFIER = "RFID:UPDATED-203";
 const UPDATE_ACCESS_CODE = "UPDATED-9357";
 const ID_ONLY_IDENTIFIER = "RFID:UPDATED-204";
+const REOPEN_IDENTIFIER = "RFID:REOPEN-205";
+const STALE_IDENTIFIER = "RFID:STALE-206";
+const STALE_ACCESS_CODE = "STALE-4172";
+const OTHER_GAME_ID = "00000000-0000-4000-8000-000000000099";
 
 function flattenedBody(value) {
   const body = value && typeof value === "object" ? value : {};
@@ -20,6 +24,12 @@ function flattenedBody(value) {
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
+
+let releaseStaleReset = null;
+let resolveStaleResetStarted = null;
+const staleResetStarted = new Promise((resolve) => {
+  resolveStaleResetStarted = resolve;
+});
 
 const existingPlayer = {
   id: PLAYER_UUID,
@@ -59,7 +69,7 @@ const harness = await createSpecializedQualityHarness("admin-player-identity", {
       marketStatus: "open",
     },
   },
-  handleProxy: ({ method, path, parsedBody }) => {
+  handleProxy: async ({ method, path, parsedBody }) => {
     const payload = flattenedBody(parsedBody);
     if (method === "POST" && path.endsWith(`/games/${GAME_ID}/players`)) {
       return {
@@ -85,6 +95,12 @@ const harness = await createSpecializedQualityHarness("admin-player-identity", {
       return { body: { ok: true, data: { saved: true, settings: parsedBody?.settings || {} } } };
     }
     if (method === "POST" && path.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/access-code/reset`)) {
+      if (payload.accessCode === STALE_ACCESS_CODE) {
+        await new Promise((resolve) => {
+          releaseStaleReset = resolve;
+          resolveStaleResetStarted?.();
+        });
+      }
       return {
         body: {
           ok: true,
@@ -201,7 +217,7 @@ try {
   await settingsAction.waitFor({ state: "visible", timeout: 8000 });
   await settingsAction.click();
 
-  const profile = page.locator('[data-admin-terminal-modal-backdrop][data-modal-id="player-settings-editor"]').last();
+  let profile = page.locator('[data-admin-terminal-modal-backdrop][data-modal-id="player-settings-editor"]').last();
   await profile.waitFor({ state: "visible", timeout: 8000 });
   await profile.locator("[data-admin-player-profile-save-status]").waitFor({ state: "visible", timeout: 8000 });
   assert(
@@ -213,8 +229,8 @@ try {
     "Opening Edit Player Profile recreated the removed inline identity panel.",
   );
 
-  const identifierInput = profile.locator('[name="playerIdentifier"]');
-  const accessCodeInput = profile.locator('[name="accessCode"]');
+  let identifierInput = profile.locator('[name="playerIdentifier"]');
+  let accessCodeInput = profile.locator('[name="accessCode"]');
   assert(
     await identifierInput.inputValue() === existingPlayer.playerIdentifier,
     `Edit Player Profile showed a generated ID instead of ${existingPlayer.playerIdentifier}.`,
@@ -242,6 +258,62 @@ try {
   await profile.getByText("Player profile and Player ID saved. The current Access Code was not changed.", { exact: true })
     .waitFor({ state: "visible", timeout: 8000 });
 
+  phase = "closing and reopening Edit Player Profile without duplicate reset writes";
+  const resetsBeforeClose = mappedWrites().filter((write) =>
+    write.service === "admin-bff" &&
+    write.pathname.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/access-code/reset`)
+  ).length;
+  await page.keyboard.press("Escape");
+  await profile.waitFor({ state: "hidden", timeout: 5000 });
+  assert(
+    mappedWrites().filter((write) =>
+      write.service === "admin-bff" &&
+      write.pathname.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/access-code/reset`)
+    ).length === resetsBeforeClose,
+    "Closing Player Settings emitted an unexpected reset request.",
+  );
+
+  await settingsAction.click();
+  profile = page.locator('[data-admin-terminal-modal-backdrop][data-modal-id="player-settings-editor"]').last();
+  await profile.waitFor({ state: "visible", timeout: 8000 });
+  await profile.locator("[data-admin-player-profile-save-status]").waitFor({ state: "visible", timeout: 8000 });
+  identifierInput = profile.locator('[name="playerIdentifier"]');
+  accessCodeInput = profile.locator('[name="accessCode"]');
+  await identifierInput.fill(REOPEN_IDENTIFIER);
+  await accessCodeInput.fill("");
+  await profile.locator('[data-admin-terminal-action="confirm-player-settings-save"]').click();
+  await profile.getByText("Player profile and Player ID saved. The current Access Code was not changed.", { exact: true })
+    .waitFor({ state: "visible", timeout: 8000 });
+  const resetsAfterReopen = mappedWrites().filter((write) =>
+    write.service === "admin-bff" &&
+    write.pathname.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/access-code/reset`)
+  ).length;
+  assert(
+    resetsAfterReopen === resetsBeforeClose + 1,
+    `Reopened Player Settings emitted duplicate reset writes: before=${resetsBeforeClose}, after=${resetsAfterReopen}.`,
+  );
+
+  phase = "rejecting stale reset response after selected-game switch";
+  await identifierInput.fill(STALE_IDENTIFIER);
+  await accessCodeInput.fill(STALE_ACCESS_CODE);
+  await profile.locator('[data-admin-terminal-action="confirm-player-settings-save"]').click();
+  await staleResetStarted;
+  const statusBeforeSwitch = (await profile.locator("[data-admin-player-profile-save-status]").textContent())?.trim() || "";
+  assert(statusBeforeSwitch.includes("Saving player profile"), "Stale reset fixture did not reach the in-flight state.");
+  await page.evaluate((gameId) => window.EconovariaAdminGameSelection.write(gameId), OTHER_GAME_ID);
+  releaseStaleReset?.();
+  await page.waitForTimeout(250);
+  const statusAfterStaleResponse = (await profile.locator("[data-admin-player-profile-save-status]").textContent())?.trim() || "";
+  assert(
+    statusAfterStaleResponse === statusBeforeSwitch,
+    `Late reset response mutated the switched-game UI: before=${statusBeforeSwitch}, after=${statusAfterStaleResponse}.`,
+  );
+  assert(
+    await page.locator("[data-admin-player-created-confirmation]").count() === 0,
+    "Late existing-player reset opened the create-player one-time credential UI.",
+  );
+  await page.evaluate((gameId) => window.EconovariaAdminGameSelection.write(gameId), GAME_ID);
+
   phase = "verifying BFF profile and identity writes";
   currentWrites = mappedWrites();
   const profileWrites = currentWrites.filter((write) =>
@@ -249,7 +321,7 @@ try {
     write.method === "PATCH" &&
     write.pathname.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/settings`)
   );
-  assert(profileWrites.length === 2, `Expected two profile settings writes, received ${profileWrites.length}.`);
+  assert(profileWrites.length === 4, `Expected four profile settings writes, received ${profileWrites.length}.`);
   for (const write of profileWrites) {
     assert(
       write.body?.settings?.displayName === existingPlayer.displayName,
@@ -265,7 +337,7 @@ try {
     write.service === "admin-bff" &&
     write.pathname.endsWith(`/games/${GAME_ID}/players/${PLAYER_UUID}/access-code/reset`)
   );
-  assert(identityWrites.length === 2, `Expected two credential writes, received ${identityWrites.length}.`);
+  assert(identityWrites.length === 4, `Expected four credential writes, received ${identityWrites.length}.`);
   assert(
     identityWrites[0].payload.playerIdentifier === UPDATE_IDENTIFIER &&
       identityWrites[0].payload.accessCode === UPDATE_ACCESS_CODE,
@@ -275,6 +347,16 @@ try {
     identityWrites[1].payload.playerIdentifier === ID_ONLY_IDENTIFIER &&
       !Object.hasOwn(identityWrites[1].payload, "accessCode"),
     `Player-ID-only update reset the Access Code: ${JSON.stringify(identityWrites[1].body)}.`,
+  );
+  assert(
+    identityWrites[2].payload.playerIdentifier === REOPEN_IDENTIFIER &&
+      !Object.hasOwn(identityWrites[2].payload, "accessCode"),
+    `Reopened Player Settings changed reset semantics: ${JSON.stringify(identityWrites[2].body)}.`,
+  );
+  assert(
+    identityWrites[3].payload.playerIdentifier === STALE_IDENTIFIER &&
+      identityWrites[3].payload.accessCode === STALE_ACCESS_CODE,
+    `Stale-response fixture sent the wrong reset payload: ${JSON.stringify(identityWrites[3].body)}.`,
   );
 
   for (const write of [...profileWrites, ...identityWrites]) {

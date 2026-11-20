@@ -11,8 +11,8 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
-import { resolvePlayerRequestScope } from "../../players/api/playerRequestScope.ts";
+import { resolveActivePlayerSession } from "../../players/index.ts";
+import { resolvePlayerRequestScope } from "../../players/index.ts";
 import {
   PlayerNotificationError,
   type PlayerNotificationListResponseBody,

@@ -6,15 +6,17 @@ declare const Deno: {
 };
 
 const GAME = "00000000-0000-4000-8000-000000000001";
+const OTHER_GAME = "00000000-0000-4000-8000-000000000099";
 const PLAYER = "00000000-0000-4000-8000-000000000002";
+const SESSION = "00000000-0000-4000-8000-000000000003";
 const REQUEST_ID = `red_${"a".repeat(32)}`;
 
 Deno.test("Redemption repository invokes server-scoped atomic request RPC and exposes public IDs only", async () => {
   const client = new FakeClient([row({ request_outcome: "created" })]);
   const repository = new SupabasePlayerInventoryRedemptionRepository(client);
+  const context = applicationContext();
   const result = await repository.request({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: context,
     itemId: "meal-pass",
     command: { quantity: 2, note: "Lunch", idempotencyKey: "redeem:001" },
   });
@@ -31,6 +33,8 @@ Deno.test("Redemption repository invokes server-scoped atomic request RPC and ex
   }]);
   assertEquals(result.outcome, "created");
   assertEquals(result.redemption.id, REQUEST_ID);
+  assertEquals("idempotencyKey" in context, false);
+  assertEquals("idempotencyContext" in context, false);
   assertNoUuid(JSON.stringify(result));
 });
 
@@ -39,8 +43,7 @@ Deno.test("Redemption repository preserves exact idempotent replay", async () =>
     new FakeClient([row({ request_outcome: "replayed" })]),
   );
   const result = await repository.request({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: applicationContext(),
     itemId: "meal-pass",
     command: { quantity: 2, note: "Lunch", idempotencyKey: "redeem:001" },
   });
@@ -51,8 +54,7 @@ Deno.test("Redemption repository invokes player-scoped history RPC without inter
   const client = new FakeClient([row()]);
   const repository = new SupabasePlayerInventoryRedemptionRepository(client);
   const result = await repository.read({
-    gameId: GAME,
-    playerUuid: PLAYER,
+    applicationContext: applicationContext(),
     status: "pending",
     limit: 25,
     offset: 0,
@@ -71,6 +73,36 @@ Deno.test("Redemption repository invokes player-scoped history RPC without inter
   });
   assertEquals(result.length, 1);
   assertNoUuid(JSON.stringify(result));
+});
+
+Deno.test("Redemption repository preserves RPC cross-game denial after context scalarization", async () => {
+  const client = new FakeClient(null, {
+    message: "INVENTORY_REDEMPTION_PLAYER_SCOPE_INACTIVE",
+  });
+  const repository = new SupabasePlayerInventoryRedemptionRepository(client);
+  await assertRejectsCode(
+    () =>
+      repository.read({
+        applicationContext: applicationContext(OTHER_GAME),
+        status: null,
+        limit: 25,
+        offset: 0,
+        requestId: null,
+      }),
+    "player_inventory_redemption_unavailable",
+    404,
+  );
+  assertEquals(client.calls[0], {
+    functionName: "read_player_inventory_redemptions_v1",
+    args: {
+      p_game_session_id: OTHER_GAME,
+      p_player_id: PLAYER,
+      p_status: null,
+      p_limit: 25,
+      p_offset: 0,
+      p_request_public_id: null,
+    },
+  });
 });
 
 Deno.test("Redemption repository maps availability, quantity, idempotency, and missing schema errors", async () => {
@@ -104,8 +136,7 @@ Deno.test("Redemption repository maps availability, quantity, idempotency, and m
     await assertRejectsCode(
       () =>
         repository.read({
-          gameId: GAME,
-          playerUuid: PLAYER,
+          applicationContext: applicationContext(),
           status: null,
           limit: 25,
           offset: 0,
@@ -133,8 +164,7 @@ Deno.test("Redemption repository fails closed on malformed, mismatched, or exces
     await assertRejectsCode(
       () =>
         repository.read({
-          gameId: GAME,
-          playerUuid: PLAYER,
+          applicationContext: applicationContext(),
           status: null,
           limit: 25,
           offset: 0,
@@ -150,8 +180,7 @@ Deno.test("Redemption repository fails closed on malformed, mismatched, or exces
   await assertRejectsCode(
     () =>
       repository.read({
-        gameId: GAME,
-        playerUuid: PLAYER,
+        applicationContext: applicationContext(),
         status: null,
         limit: 1,
         offset: 0,
@@ -181,6 +210,20 @@ class FakeClient {
     this.calls.push({ functionName, args });
     return Promise.resolve({ data: this.data as T | null, error: this.error });
   }
+}
+
+function applicationContext(gameSessionId = GAME) {
+  return Object.freeze({
+    gameSessionId,
+    actor: Object.freeze({
+      kind: "player" as const,
+      playerUuid: PLAYER,
+      playerSessionId: SESSION,
+    }),
+    role: "player" as const,
+    permissions: Object.freeze(["own_player"] as const),
+    requestId: "request-player-redemption-repository-001",
+  });
 }
 
 function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {

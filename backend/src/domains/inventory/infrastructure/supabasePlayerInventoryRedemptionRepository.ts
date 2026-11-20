@@ -49,8 +49,8 @@ export class SupabasePlayerInventoryRedemptionRepository
     const response = await this.client.rpc<readonly RedemptionRpcRow[]>(
       "request_inventory_redemption_atomic_v1",
       {
-        p_game_session_id: input.gameId,
-        p_player_id: input.playerUuid,
+        p_game_session_id: input.applicationContext.gameSessionId,
+        p_player_id: input.applicationContext.actor.playerUuid,
         p_item_key: input.itemId,
         p_quantity: input.command.quantity,
         p_request_note: input.command.note,
@@ -78,8 +78,8 @@ export class SupabasePlayerInventoryRedemptionRepository
     const response = await this.client.rpc<readonly RedemptionRpcRow[]>(
       "read_player_inventory_redemptions_v1",
       {
-        p_game_session_id: input.gameId,
-        p_player_id: input.playerUuid,
+        p_game_session_id: input.applicationContext.gameSessionId,
+        p_player_id: input.applicationContext.actor.playerUuid,
         p_status: input.status,
         p_limit: input.limit,
         p_offset: input.offset,

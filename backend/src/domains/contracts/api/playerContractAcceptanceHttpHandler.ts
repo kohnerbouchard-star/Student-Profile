@@ -12,11 +12,11 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
+import { resolveActivePlayerSession } from "../../players/index.ts";
 import {
   rejectClientSuppliedBodyIdentity,
   resolvePlayerRequestScope,
-} from "../../players/api/playerRequestScope.ts";
+} from "../../players/index.ts";
 import {
   PlayerContractAcceptanceError,
   PlayerContractAcceptancePersistenceError,

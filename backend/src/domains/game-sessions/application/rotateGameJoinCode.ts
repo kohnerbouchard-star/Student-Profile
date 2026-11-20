@@ -1,15 +1,16 @@
 import {
   AdminMutationError,
-  type AdminMutationIdentity,
-  type AdminMutationRpcClient,
-  executeAdminMutationRpc,
 } from "../../../platform/supabase/adminMutation.ts";
+import type {
+  GameSessionMutationIdentity,
+  GameSessionMutationRepository,
+} from "../contracts/gameSessionMutationRepository.ts";
+import type { GameSessionsStaffApplicationContext } from "../contracts/gameSessionsStaffApplicationContext.ts";
 
 export interface RotateGameJoinCodeInput {
-  readonly gameSessionId: string;
-  readonly staffUserId: string;
+  readonly applicationContext: GameSessionsStaffApplicationContext;
   readonly requestBody: unknown;
-  readonly mutation: AdminMutationIdentity;
+  readonly mutation: GameSessionMutationIdentity;
 }
 
 export interface RotateGameJoinCodeResult {
@@ -23,27 +24,17 @@ export interface RotateGameJoinCodeResult {
 }
 
 export async function rotateGameJoinCode(
-  client: AdminMutationRpcClient,
+  repository: GameSessionMutationRepository,
   input: RotateGameJoinCodeInput,
 ): Promise<RotateGameJoinCodeResult> {
   const requestPayload = normalizeGameJoinCodeRotationPayload(
     input.requestBody,
   );
-  const result = await executeAdminMutationRpc(
-    client,
-    "admin_rotate_game_join_code_v1",
-    {
-      p_game_session_id: input.gameSessionId,
-      p_staff_user_id: input.staffUserId,
-      p_request_payload: requestPayload,
-      p_idempotency_key: input.mutation.idempotencyKey,
-      p_request_id: input.mutation.requestId,
-    },
-    {
-      code: "join_code_reset_failed",
-      message: "Game join code could not be reset.",
-    },
-  );
+  const result = await repository.rotateGameJoinCode({
+    applicationContext: input.applicationContext,
+    requestPayload,
+    mutation: input.mutation,
+  });
 
   const row = isRecord(result.body.joinCode) ? result.body.joinCode : null;
   const gameJoinCode = text(row?.game_join_code);

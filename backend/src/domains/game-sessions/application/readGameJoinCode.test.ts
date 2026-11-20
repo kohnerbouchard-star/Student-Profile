@@ -5,6 +5,7 @@ import {
   type GameJoinCodeReadScope,
   readGameJoinCode,
 } from "./readGameJoinCode.ts";
+import type { GameSessionsStaffApplicationContext } from "../contracts/gameSessionsStaffApplicationContext.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -18,12 +19,14 @@ const UPDATED_AT = "2026-08-04T04:30:00.000Z";
 
 Deno.test("join-code read returns only the owner-scoped public contract", async () => {
   const repository = new FakeRepository(record());
-  const result = await readGameJoinCode(scope(), repository);
+  const applicationContext = context();
+  const result = await readGameJoinCode(
+    scope({ applicationContext }),
+    repository,
+  );
 
-  assertEquals(repository.inputs, [{
-    gameSessionId: GAME_ID,
-    staffUserId: STAFF_ID,
-  }]);
+  assertEquals(repository.inputs.length, 1);
+  assertSame(repository.inputs[0]?.applicationContext, applicationContext);
   assertEquals(result, {
     gameSession: {
       id: GAME_ID,
@@ -39,6 +42,7 @@ Deno.test("join-code read returns only the owner-scoped public contract", async 
   const serialized = JSON.stringify(result);
   assertEquals(serialized.includes(STAFF_ID), false);
   assertEquals(serialized.includes("ownerStaffUserId"), false);
+  assertEquals(serialized.includes(applicationContext.requestId), false);
 });
 
 Deno.test("join-code read hides games outside the authenticated owner scope", async () => {
@@ -70,7 +74,7 @@ Deno.test("join-code read rejects a mismatched owned game before privileged I/O"
     "join_code_read_failed",
     500,
     false,
-    scope({ gameSessionId: OTHER_GAME_ID }),
+    scope({ applicationContext: context(OTHER_GAME_ID) }),
   );
   assertEquals(repository.inputs, []);
 });
@@ -101,7 +105,7 @@ Deno.test("join-code persistence failures are sanitized and nonretryable", async
 });
 
 class FakeRepository implements GameJoinCodeReadRepository {
-  readonly inputs: unknown[] = [];
+  readonly inputs: GameJoinCodeReadScope[] = [];
   error: Error | null = null;
 
   constructor(private readonly value: GameJoinCodeReadRecord | null) {}
@@ -117,13 +121,11 @@ class FakeRepository implements GameJoinCodeReadRepository {
 
 function scope(
   overrides: Partial<{
-    gameSessionId: string;
-    staffUserId: string;
+    applicationContext: GameSessionsStaffApplicationContext;
   }> = {},
 ) {
   return {
-    gameSessionId: GAME_ID,
-    staffUserId: STAFF_ID,
+    applicationContext: context(),
     gameSession: {
       id: GAME_ID,
       name: "Period 4 Economy",
@@ -131,6 +133,20 @@ function scope(
     },
     ...overrides,
   };
+}
+
+function context(
+  gameSessionId = GAME_ID,
+  staffUserId = STAFF_ID,
+): GameSessionsStaffApplicationContext {
+  return Object.freeze({
+    gameSessionId,
+    actor: Object.freeze({ kind: "staff" as const, staffUserId }),
+    role: "game_admin" as const,
+    permissions: Object.freeze(["game.read"]),
+    requestId: "server-request-game-session-001",
+    assuranceLevel: "aal2" as const,
+  });
 }
 
 function record(
@@ -176,4 +192,8 @@ function assertEquals(actual: unknown, expected: unknown): void {
       }`,
     );
   }
+}
+
+function assertSame(actual: unknown, expected: unknown): void {
+  if (actual !== expected) throw new Error("Expected identical references.");
 }

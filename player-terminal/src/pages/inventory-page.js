@@ -26,11 +26,34 @@ function renderItemAction(item) {
   return renderStatusPill(item.state, itemTone(item));
 }
 
+// Explain the current projection without guessing which workflow owns a reservation.
+export function inventoryAvailabilityGuidance(item) {
+  const available = Number(item.quantityAvailable);
+  const reserved = Number(item.quantityReserved);
+  if (item.quantityAvailable == null || item.quantityReserved == null
+    || !Number.isFinite(available) || available < 0 || !Number.isFinite(reserved) || reserved < 0) {
+    return "Availability details are not available. Refresh before taking action.";
+  }
+  const reservation = reserved > 0
+    ? "Reserved units are committed to another action and cannot be used here. "
+    : "";
+  if (available === 0) return `${reservation}No units are currently available to use or request for redemption.`;
+  const actions = Array.isArray(item.availableActions) ? item.availableActions : [];
+  if (actions.some((action) => ["use", "inventory.use"].includes(action))) {
+    return `${reservation}Use applies to available units only.`;
+  }
+  if (actions.includes("inventory.redeem")) {
+    return `${reservation}Request redemption for teacher review; a request is not confirmed fulfillment.`;
+  }
+  return `${reservation}Available units are unreserved, but no use or redemption action is offered here.`;
+}
+
 function renderInventoryItem(item, fallbackCurrencyCode) {
   const currencyCode = item.currencyCode || fallbackCurrencyCode;
   return `<article class="player-terminal-inventory-card">
     <div class="player-terminal-inventory-image"><img src="${escapeHtml(item.image)}" alt="" /><span>${escapeHtml(item.quantityOwned ?? item.quantity)}×</span></div>
     <div class="player-terminal-inventory-copy"><small>${escapeHtml(item.category)} · ${escapeHtml(item.state)} · ${escapeHtml(item.itemVisibility || "player")}</small><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p></div>
+    <p class="player-terminal-inventory-guidance">${escapeHtml(inventoryAvailabilityGuidance(item))}</p>
     <div class="player-terminal-inventory-meta">
       <span><small>AVAILABLE</small><strong>${escapeHtml(item.quantityAvailable ?? item.quantity ?? 0)}</strong></span>
       <span><small>RESERVED</small><strong>${escapeHtml(item.quantityReserved ?? 0)}</strong></span>

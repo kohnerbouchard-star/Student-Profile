@@ -33,7 +33,7 @@ export function createRequestId() {
 
 export function createIdempotencyKey(endpointKey) {
   const safeEndpoint = String(endpointKey || "write").replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 48);
-  return `ptr_${safeEndpoint}_${randomToken()}`;
+  return `ptr_${safeEndpoint}_${randomToken().replaceAll("-", "")}`;
 }
 
 export function parseRetryAfter(value, now = Date.now()) {
@@ -44,8 +44,10 @@ export function parseRetryAfter(value, now = Date.now()) {
   return Number.isFinite(date) ? Math.max(0, date - now) : 0;
 }
 
-export function stableRequestKey({ endpointKey, method, path }) {
-  return `${String(method || "GET").toUpperCase()}:${endpointKey}:${path}`;
+export function stableRequestKey({ endpointKey, method, path, params = {}, payload }) {
+  const base = `${String(method || "GET").toUpperCase()}:${endpointKey}:${path}`;
+  if (!Object.keys(params).length && payload === undefined) return base;
+  return `${base}:${JSON.stringify(stableValue([params, payload]))}`;
 }
 
 export function stableOperationKey({ endpointKey, method, path, payload }) {

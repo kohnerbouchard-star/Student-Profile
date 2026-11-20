@@ -1,0 +1,3814 @@
+{
+  "schemaVersion": 1,
+  "inventoryId": "econovaria.architecture.inventory.v2",
+  "baselineMainSha": "72cefb73a0038aa2bc24261d63e70c113cb7c24c",
+  "generatedBy": "scripts/architecture/build-architecture-inventory.mjs",
+  "thresholds": {
+    "oversizedSourceFileLines": 500
+  },
+  "counts": {
+    "domains": 30,
+    "sourceFiles": 1659,
+    "edgeEntrypoints": 28,
+    "handlerFiles": 61,
+    "persistenceOutsideInfrastructure": 84,
+    "crossDomainDeepImports": 70,
+    "browserTransportShimFiles": 26,
+    "compatibilityMarkerFiles": 209,
+    "schedulerEntrypoints": 10,
+    "oversizedSourceFiles": 0,
+    "capabilityStrings": 144
+  },
+  "domains": [
+    {
+      "name": "analyst",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "domain",
+        "infrastructure",
+        "tests"
+      ],
+      "sourceFiles": 0,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "arrival",
+      "layers": [
+        "contracts",
+        "services"
+      ],
+      "sourceFiles": 5,
+      "publicBoundaryFiles": [
+        "backend/src/domains/arrival/index.ts"
+      ]
+    },
+    {
+      "name": "attendance",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "domain",
+        "infrastructure",
+        "tests"
+      ],
+      "sourceFiles": 19,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "audit",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "domain",
+        "infrastructure",
+        "tests"
+      ],
+      "sourceFiles": 0,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "auth",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "domain",
+        "infrastructure",
+        "tests"
+      ],
+      "sourceFiles": 16,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "banking-fx",
+      "layers": [
+        "api",
+        "contracts",
+        "infrastructure",
+        "services",
+        "tests"
+      ],
+      "sourceFiles": 20,
+      "publicBoundaryFiles": [
+        "backend/src/domains/banking-fx/index.ts"
+      ]
+    },
+    {
+      "name": "business",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "infrastructure",
+        "services"
+      ],
+      "sourceFiles": 59,
+      "publicBoundaryFiles": [
+        "backend/src/domains/business/index.ts"
+      ]
+    },
+    {
+      "name": "business-banking",
+      "layers": [
+        "api",
+        "contracts",
+        "domain",
+        "infrastructure"
+      ],
+      "sourceFiles": 8,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "campaign",
+      "layers": [
+        "contracts",
+        "infrastructure",
+        "services",
+        "tests"
+      ],
+      "sourceFiles": 17,
+      "publicBoundaryFiles": [
+        "backend/src/domains/campaign/index.ts"
+      ]
+    },
+    {
+      "name": "contracts",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "infrastructure",
+        "services",
+        "tests"
+      ],
+      "sourceFiles": 68,
+      "publicBoundaryFiles": [
+        "backend/src/domains/contracts/index.ts"
+      ]
+    },
+    {
+      "name": "countries",
+      "layers": [
+        "api",
+        "contracts",
+        "infrastructure",
+        "services"
+      ],
+      "sourceFiles": 12,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "crafting",
+      "layers": [
+        "api",
+        "contracts",
+        "domain",
+        "infrastructure"
+      ],
+      "sourceFiles": 17,
+      "publicBoundaryFiles": [
+        "backend/src/domains/crafting/index.ts"
+      ]
+    },
+    {
+      "name": "economy",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "domain",
+        "infrastructure",
+        "services",
+        "tests"
+      ],
+      "sourceFiles": 20,
+      "publicBoundaryFiles": [
+        "backend/src/domains/economy/index.ts"
+      ]
+    },
+    {
+      "name": "fx",
+      "layers": [
+        "api",
+        "calculations",
+        "contracts",
+        "infrastructure",
+        "services",
+        "tests"
+      ],
+      "sourceFiles": 17,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "game-dashboard",
+      "layers": [
+        "api",
+        "contracts",
+        "infrastructure",
+        "realtime"
+      ],
+      "sourceFiles": 32,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "game-realtime",
+      "layers": [],
+      "sourceFiles": 4,
+      "publicBoundaryFiles": [
+        "backend/src/domains/game-realtime/index.ts"
+      ]
+    },
+    {
+      "name": "game-sessions",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "domain",
+        "infrastructure",
+        "tests"
+      ],
+      "sourceFiles": 28,
+      "publicBoundaryFiles": [
+        "backend/src/domains/game-sessions/index.ts"
+      ]
+    },
+    {
+      "name": "games",
+      "layers": [
+        "tests"
+      ],
+      "sourceFiles": 1,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "inventory",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "domain",
+        "infrastructure",
+        "services",
+        "tests"
+      ],
+      "sourceFiles": 31,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "licensing",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "domain",
+        "infrastructure",
+        "tests"
+      ],
+      "sourceFiles": 25,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "marketplace",
+      "layers": [
+        "api",
+        "contracts",
+        "infrastructure",
+        "tests"
+      ],
+      "sourceFiles": 30,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "markets",
+      "layers": [
+        "calculations",
+        "contracts",
+        "simulations",
+        "state",
+        "validation"
+      ],
+      "sourceFiles": 78,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "messaging",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "infrastructure",
+        "tests"
+      ],
+      "sourceFiles": 28,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "notifications",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "domain",
+        "infrastructure",
+        "public",
+        "services",
+        "tests"
+      ],
+      "sourceFiles": 26,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "players",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "domain",
+        "infrastructure",
+        "tests"
+      ],
+      "sourceFiles": 51,
+      "publicBoundaryFiles": [
+        "backend/src/domains/players/index.ts"
+      ]
+    },
+    {
+      "name": "progression",
+      "layers": [
+        "api",
+        "contracts",
+        "services",
+        "tests"
+      ],
+      "sourceFiles": 12,
+      "publicBoundaryFiles": []
+    },
+    {
+      "name": "stocks",
+      "layers": [
+        "api",
+        "application",
+        "calculations",
+        "calendars",
+        "contracts",
+        "domain",
+        "infrastructure",
+        "services",
+        "tests"
+      ],
+      "sourceFiles": 137,
+      "publicBoundaryFiles": [
+        "backend/src/domains/stocks/index.ts"
+      ]
+    },
+    {
+      "name": "store",
+      "layers": [
+        "api",
+        "application",
+        "contracts",
+        "domain",
+        "infrastructure",
+        "tests"
+      ],
+      "sourceFiles": 55,
+      "publicBoundaryFiles": [
+        "backend/src/domains/store/index.ts"
+      ]
+    },
+    {
+      "name": "storylines",
+      "layers": [
+        "api",
+        "contracts",
+        "infrastructure",
+        "server",
+        "services",
+        "tests"
+      ],
+      "sourceFiles": 112,
+      "publicBoundaryFiles": [
+        "backend/src/domains/storylines/index.ts"
+      ]
+    },
+    {
+      "name": "world",
+      "layers": [
+        "api",
+        "contracts",
+        "infrastructure",
+        "services",
+        "tests"
+      ],
+      "sourceFiles": 26,
+      "publicBoundaryFiles": []
+    }
+  ],
+  "entrypoints": {
+    "edge": [
+      "backend/supabase/functions/admin-api/index.ts",
+      "backend/supabase/functions/admin-email-verification/index.ts",
+      "backend/supabase/functions/admin-password-recovery/index.ts",
+      "backend/supabase/functions/banking-fx-orchestrator/index.ts",
+      "backend/supabase/functions/bootstrap-api/index.ts",
+      "backend/supabase/functions/business-operations-worker/index.ts",
+      "backend/supabase/functions/campaign-orchestrator/index.ts",
+      "backend/supabase/functions/classroom-api/index.ts",
+      "backend/supabase/functions/fx-orchestrator/index.ts",
+      "backend/supabase/functions/game-data-purger/index.ts",
+      "backend/supabase/functions/license-email-worker/index.ts",
+      "backend/supabase/functions/license-issuance-worker/index.ts",
+      "backend/supabase/functions/license-payment-webhook/index.ts",
+      "backend/supabase/functions/password-reset-api/index.ts",
+      "backend/supabase/functions/player-api/index.ts",
+      "backend/supabase/functions/player-web-session-api/index.ts",
+      "backend/supabase/functions/staff-api/index.ts",
+      "backend/supabase/functions/staff-mfa-api/index.ts",
+      "backend/supabase/functions/stock-market-orchestrator/index.ts",
+      "backend/supabase/functions/stock-market-player-read/index.ts",
+      "backend/supabase/functions/stock-market-read/index.ts",
+      "backend/supabase/functions/stock-market-runner/index.ts",
+      "backend/supabase/functions/stock-market-seed-copy/index.ts",
+      "backend/supabase/functions/stock-market-trading/index.ts",
+      "backend/supabase/functions/stock-tick-archiver/index.ts",
+      "backend/supabase/functions/stripe-checkout-session/index.ts",
+      "backend/supabase/functions/stripe-license-webhook/index.ts",
+      "backend/supabase/functions/web-session-api/index.ts"
+    ],
+    "handlers": [
+      "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts",
+      "backend/src/domains/attendance/api/staffAttendanceDailyHttpHandler.ts",
+      "backend/src/domains/attendance/api/staffAttendanceScanHttpHandler.ts",
+      "backend/src/domains/auth/api/staffBootstrapHttpHandler.ts",
+      "backend/src/domains/auth/api/staffLoginHttpHandler.ts",
+      "backend/src/domains/auth/api/staffSignupCancelHttpHandler.ts",
+      "backend/src/domains/auth/api/staffSignupHttpHandler.ts",
+      "backend/src/domains/auth/api/staffSignupResendHttpHandler.ts",
+      "backend/src/domains/banking-fx/api/bankingFxOrchestratorHttpHandler.ts",
+      "backend/src/domains/banking-fx/api/playerBankingFxHttpHandler.ts",
+      "backend/src/domains/business-banking/api/playerBusinessBankingHttpHandler.ts",
+      "backend/src/domains/business/api/businessOperationsWorkerHttpHandler.ts",
+      "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
+      "backend/src/domains/contracts/api/playerContractAcceptanceHttpHandler.ts",
+      "backend/src/domains/contracts/api/playerContractPublicListHttpHandler.ts",
+      "backend/src/domains/contracts/api/playerContractPublicSubmitHttpHandler.ts",
+      "backend/src/domains/contracts/api/staffContractHttpHandler.ts",
+      "backend/src/domains/contracts/api/staffContractProgressHttpHandler.ts",
+      "backend/src/domains/contracts/api/staffContractRewardHttpHandler.ts",
+      "backend/src/domains/countries/api/playerWorldReadHttpHandler.ts",
+      "backend/src/domains/crafting/api/playerCraftingHttpHandler.ts",
+      "backend/src/domains/economy/api/initialBalanceSeedHttpHandler.ts",
+      "backend/src/domains/economy/api/playerBankingPublicHttpHandler.ts",
+      "backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts",
+      "backend/src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts",
+      "backend/src/domains/fx/api/fxOrchestratorHttpHandler.ts",
+      "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
+      "backend/src/domains/game-sessions/api/gameJoinCodeResetHttpHandler.ts",
+      "backend/src/domains/game-sessions/api/gameSettingsHttpHandler.ts",
+      "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
+      "backend/src/domains/inventory/api/playerInventoryRedemptionHttpHandler.ts",
+      "backend/src/domains/licensing/api/activationRouteHandler.ts",
+      "backend/src/domains/licensing/api/licensingActivationHttpHandler.ts",
+      "backend/src/domains/licensing/infrastructure/licensingActivationHandler.ts",
+      "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.ts",
+      "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.ts",
+      "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
+      "backend/src/domains/notifications/api/playerNotificationHttpHandler.ts",
+      "backend/src/domains/notifications/api/playerStoryDeliveryHttpHandler.ts",
+      "backend/src/domains/players/api/playerAccessCodeResetHttpHandler.ts",
+      "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts",
+      "backend/src/domains/players/api/playerLoginHttpHandler.ts",
+      "backend/src/domains/players/api/playerRosterHttpHandler.ts",
+      "backend/src/domains/players/api/playerRosterImportHttpHandler.ts",
+      "backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts",
+      "backend/src/domains/players/api/playerSessionLogoutHttpHandler.ts",
+      "backend/src/domains/progression/api/playerProgressionHttpHandler.ts",
+      "backend/src/domains/stocks/api/playerStockAssetListHttpHandler.ts",
+      "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.ts",
+      "backend/src/domains/stocks/api/playerStockMarketTradingHttpHandler.ts",
+      "backend/src/domains/stocks/api/playerStockWatchlistHttpHandler.ts",
+      "backend/src/domains/stocks/api/stockMarketPlayerReadHttpHandler.ts",
+      "backend/src/domains/stocks/api/stockMarketReadHttpHandler.ts",
+      "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+      "backend/src/domains/stocks/api/stockMarketSeedCopyHttpHandler.ts",
+      "backend/src/domains/stocks/api/stockMarketTradingHttpHandler.ts",
+      "backend/src/domains/store/api/playerStorePublicHttpHandler.ts",
+      "backend/src/domains/store/api/storeCatalogHttpHandler.ts",
+      "backend/src/domains/store/api/storeCatalogRouteHandler.ts",
+      "backend/src/domains/storylines/api/staffDemoStorylineInitializationHttpHandler.ts",
+      "backend/src/domains/world/api/playerWorldRuntimeHttpHandler.ts"
+    ],
+    "schedulers": [
+      "backend/supabase/functions/banking-fx-orchestrator/index.ts",
+      "backend/supabase/functions/business-operations-worker/index.ts",
+      "backend/supabase/functions/campaign-orchestrator/index.ts",
+      "backend/supabase/functions/fx-orchestrator/index.ts",
+      "backend/supabase/functions/game-data-purger/index.ts",
+      "backend/supabase/functions/license-email-worker/index.ts",
+      "backend/supabase/functions/license-issuance-worker/index.ts",
+      "backend/supabase/functions/stock-market-orchestrator/index.ts",
+      "backend/supabase/functions/stock-market-runner/index.ts",
+      "backend/supabase/functions/stock-tick-archiver/index.ts"
+    ]
+  },
+  "measuredDebt": {
+    "persistenceOutsideInfrastructure": [
+      {
+        "file": "backend/src/domains/attendance/api/attendanceRewardPolicy.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/auth/api/staffLoginHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/auth/api/staffSignupCancelHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/auth/api/staffSignupHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/auth/api/staffSignupResendHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/business/api/playerBusinessIpoHttpDispatch.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/business/api/playerBusinessManufacturing.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/contracts/services/contractRewardLedgerWriter.ts",
+        "layer": "services"
+      },
+      {
+        "file": "backend/src/domains/economy/api/initialBalanceSeedHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/economy/api/staffLedgerAdjustmentHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/economy/api/staffPlayerLedgerHistoryHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/economy/services/idempotentStaffLedgerAdjustment.ts",
+        "layer": "services"
+      },
+      {
+        "file": "backend/src/domains/game-sessions/api/gameSettingsHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/messaging/api/playerMessagingHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/players/api/playerAccessCodeResetHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/players/api/playerLoginHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/players/api/playerSessionHttpHelpers.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/progression/api/playerProgressionHttpHandler.ts",
+        "layer": "api"
+      },
+      {
+        "file": "backend/src/domains/progression/services/progressionIntegrationEventService.ts",
+        "layer": "services"
+      },
+      {
+        "file": "backend/src/domains/store/tests/playerStoreNegativeStateMatrix.test.ts",
+        "layer": "tests"
+      },
+      {
+        "file": "backend/src/security/attendanceRateLimitContract.test.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/src/security/authenticationThrottle.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/src/security/staffMessagingRateLimitDispatch.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/src/security/staffRequestRateLimit.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/src/security/supabaseRateLimitRepository.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/_shared/econovariaAuth.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/accountOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/attendanceOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/attendanceReadModels.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/attendanceWealthReadSupport.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/bankingOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/businessBankingOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/campaignOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/common.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/contractRewards.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/craftingOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/gameLifecycleOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/gameProvisioningOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/gameReadSupport.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/gameResourceReadModels.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/gameRoutes.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/idempotentLedgerOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/inventoryRedemptionOperationsCore.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/logs.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/marketAssetOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/marketplaceOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/messagingOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/messagingOperationsCore.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/messagingParticipantOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/playerLedgerCurrency.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/playerOperationSupport.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/playerOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/playerReadModel.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/progressionOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/progressionRateLimit.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/readExtensions.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/routeData.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/settingsMutationNormalization.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/worldRuntimeValidation.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/worldTravelOperations.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/business-operations-worker/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/classroom-api/classroomClients.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/game-data-purger/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/license-email-worker/emailDelivery.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/license-email-worker/emailWorkerAuthorization.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/license-email-worker/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/license-issuance-worker/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/license-payment-webhook/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/password-reset-api/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/staff-mfa-api/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/staff-mfa-api/systemRecovery.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/stock-market-orchestrator/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/stock-market-player-read/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/stock-market-read/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/stock-market-runner/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/stock-market-seed-copy/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/stock-market-trading/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/stock-tick-archiver/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/stripe-checkout-session/index.ts",
+        "layer": "outside-domain"
+      },
+      {
+        "file": "backend/supabase/functions/web-session-api/index.ts",
+        "layer": "outside-domain"
+      }
+    ],
+    "crossDomainDeepImports": [
+      {
+        "consumer": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
+        "ownerDomain": "attendance",
+        "importedDomain": "players",
+        "target": "../../players/identifiers.ts"
+      },
+      {
+        "consumer": "backend/src/domains/attendance/infrastructure/supabaseAttendanceRecordRepository.ts",
+        "ownerDomain": "attendance",
+        "importedDomain": "players",
+        "target": "../../players/identifiers.ts"
+      },
+      {
+        "consumer": "backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts",
+        "ownerDomain": "crafting",
+        "importedDomain": "inventory",
+        "target": "../../inventory/api/playerInventoryReadHttpHandler.ts"
+      },
+      {
+        "consumer": "backend/src/domains/crafting/api/playerCraftingInventoryBridge.test.ts",
+        "ownerDomain": "crafting",
+        "importedDomain": "inventory",
+        "target": "../../inventory/api/playerInventoryRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/crafting/contracts/playerCraftingCapabilityManifest.test.ts",
+        "ownerDomain": "crafting",
+        "importedDomain": "players",
+        "target": "../../players/contracts/playerCapabilityManifestContracts.ts"
+      },
+      {
+        "consumer": "backend/src/domains/economy/tests/economicMutationLedgerInvariant.test.ts",
+        "ownerDomain": "economy",
+        "importedDomain": "contracts",
+        "target": "../../contracts/services/contractRewardService.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.repositoryFakes.support.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "storylines",
+        "target": "../../storylines/server/notificationCapabilities.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.test.requestFixtures.support.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/dashboardReadModel.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/dashboardReadModel.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/api/playerGameDashboardHttpHandler.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "storylines",
+        "target": "../../storylines/server/notificationCapabilities.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/dashboardReadModel.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/purchaseHistoryTypes.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "storylines",
+        "target": "../../storylines/server/notificationCapabilities.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "game-realtime",
+        "target": "../../game-realtime/gamePublicRealtimeEvents.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/infrastructure/dashboardReadRows.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/purchaseHistoryTypes.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.test.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/dashboardReadModel.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
+        "ownerDomain": "game-dashboard",
+        "importedDomain": "store",
+        "target": "../../store/dashboardReadModel.ts"
+      },
+      {
+        "consumer": "backend/src/domains/game-sessions/application/updateGameSettings.ts",
+        "ownerDomain": "game-sessions",
+        "importedDomain": "stocks",
+        "target": "../../stocks/marketWindow.ts"
+      },
+      {
+        "consumer": "backend/src/domains/inventory/api/playerInventoryReadHttpHandler.ts",
+        "ownerDomain": "inventory",
+        "importedDomain": "crafting",
+        "target": "../../crafting/server.ts"
+      },
+      {
+        "consumer": "backend/src/domains/licensing/contracts/activationRequestParser.ts",
+        "ownerDomain": "licensing",
+        "importedDomain": "stocks",
+        "target": "../../stocks/marketWindow.ts"
+      },
+      {
+        "consumer": "backend/src/domains/notifications/public/storyNotifications.test.ts",
+        "ownerDomain": "notifications",
+        "importedDomain": "storylines",
+        "target": "../../storylines/services/storyNotificationService.ts"
+      },
+      {
+        "consumer": "backend/src/domains/notifications/public/storyNotifications.ts",
+        "ownerDomain": "notifications",
+        "importedDomain": "storylines",
+        "target": "../../storylines/server/notificationCapabilities.ts"
+      },
+      {
+        "consumer": "backend/src/domains/notifications/public/storyNotifications.ts",
+        "ownerDomain": "notifications",
+        "importedDomain": "storylines",
+        "target": "../../storylines/server/notificationCapabilities.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "business-banking",
+        "target": "../../business-banking/api/playerBusinessBankingRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "contracts",
+        "target": "../../contracts/api/playerContractAcceptanceRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "contracts",
+        "target": "../../contracts/api/playerContractPublicListRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "contracts",
+        "target": "../../contracts/api/playerContractPublicSubmitRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "countries",
+        "target": "../../countries/api/playerWorldRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "crafting",
+        "target": "../../crafting/api/playerCraftingRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "economy",
+        "target": "../../economy/api/playerBankingPublicRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "inventory",
+        "target": "../../inventory/api/playerInventoryRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "marketplace",
+        "target": "../../marketplace/api/playerMarketplaceRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "messaging",
+        "target": "../../messaging/api/playerMessageThreadLifecycleRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "messaging",
+        "target": "../../messaging/api/playerMessagingRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "notifications",
+        "target": "../../notifications/api/playerNotificationRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "notifications",
+        "target": "../../notifications/api/playerStoryDeliveryRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "progression",
+        "target": "../../progression/api/playerProgressionRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/playerStockAssetListRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "store",
+        "target": "../../store/api/playerStorePublicRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "world",
+        "target": "../../world/api/playerWorldRuntimeRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "economy",
+        "target": "../../economy/api/playerBankingPublicRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "countries",
+        "target": "../../countries/api/playerWorldRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "world",
+        "target": "../../world/api/playerWorldRuntimeRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "contracts",
+        "target": "../../contracts/api/playerContractAcceptanceRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "contracts",
+        "target": "../../contracts/api/playerContractPublicListRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "contracts",
+        "target": "../../contracts/api/playerContractPublicSubmitRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "inventory",
+        "target": "../../inventory/api/playerInventoryRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "inventory",
+        "target": "../../inventory/api/playerInventoryRedemptionRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "marketplace",
+        "target": "../../marketplace/api/playerMarketplaceRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "messaging",
+        "target": "../../messaging/api/playerMessageThreadLifecycleRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "messaging",
+        "target": "../../messaging/api/playerMessagingRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "notifications",
+        "target": "../../notifications/api/playerNotificationRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "notifications",
+        "target": "../../notifications/api/playerStoryDeliveryRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/playerStockAssetListRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/playerStockMarketPublicRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "store",
+        "target": "../../store/api/playerStorePublicRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "business-banking",
+        "target": "../../business-banking/api/playerBusinessBankingRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.test.ts",
+        "ownerDomain": "players",
+        "importedDomain": "progression",
+        "target": "../../progression/api/playerProgressionRoutePaths.ts"
+      },
+      {
+        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.fixtures.support.ts",
+        "ownerDomain": "stocks",
+        "importedDomain": "game-dashboard",
+        "target": "../../game-dashboard/publicRealtime.ts"
+      },
+      {
+        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.realtimeBoundary.cases.ts",
+        "ownerDomain": "stocks",
+        "importedDomain": "game-dashboard",
+        "target": "../../game-dashboard/contracts/playerGameDashboardContracts.ts"
+      },
+      {
+        "consumer": "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+        "ownerDomain": "stocks",
+        "importedDomain": "storylines",
+        "target": "../../storylines/server/stockTickStorylineRunner.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/contracts/storylineContracts.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/news.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.test.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/news.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/news.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/stockMarketRunnerHttpHandler.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/stockMarketRunnerHttpHandler.test.fixtures.support.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.eventFixtures.support.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "game-dashboard",
+        "target": "../../game-dashboard/publicRealtime.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.eventFixtures.support.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/contracts/stockMarketEngineContracts.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.lifecycle.cases.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/stockMarketRunnerHttpHandler.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.stockRunnerFixture.support.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/contracts/stockMarketRunnerContracts.ts"
+      }
+    ],
+    "browserTransportShims": [
+      {
+        "file": "admin/admin-auth.js",
+        "patterns": [
+          "window.fetch="
+        ]
+      },
+      {
+        "file": "admin/admin-stabilization.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "admin/asset-wiring.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "admin/attendance-reward-settings-v4.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "admin/classroom-write-fallback.js",
+        "patterns": [
+          "window.fetch="
+        ]
+      },
+      {
+        "file": "admin/create-action-adapter.js",
+        "patterns": [
+          "window.fetch="
+        ]
+      },
+      {
+        "file": "admin/game-creation-runtime-bridge.js",
+        "patterns": [
+          "window.fetch="
+        ]
+      },
+      {
+        "file": "admin/interaction-quality-control-reset.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "admin/player-access-code-bridge.js",
+        "patterns": [
+          "window.fetch="
+        ]
+      },
+      {
+        "file": "admin/player-create-lifecycle.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "admin/player-create-ux.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "admin/player-drawer-wiring.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "admin/player-identity-wiring.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "admin/scanner-auto-refresh.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "admin/settings-simplified.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "backend/src/domains/economy/api/ledgerHistoryReadRepository.test.ts",
+        "patterns": [
+          "globalThis.fetch="
+        ]
+      },
+      {
+        "file": "backend/src/domains/economy/api/playerBankingSessionBoundary.test.ts",
+        "patterns": [
+          "globalThis.fetch="
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/common.test.ts",
+        "patterns": [
+          "globalThis.fetch="
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/localGameMutations.test.ts",
+        "patterns": [
+          "globalThis.fetch="
+        ]
+      },
+      {
+        "file": "frontend/src/core/constants.js",
+        "patterns": [
+          "window.fetch="
+        ]
+      },
+      {
+        "file": "frontend/src/core/login-retry-countdown.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "frontend/src/features/auth/login-quotes.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "player-terminal/src/accessibility/country-focus-controller.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "player-terminal/src/accessibility/toast-host-controller.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "player-terminal/src/forms/form-draft-preserver.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      },
+      {
+        "file": "player-terminal/src/recovery/player-recovery-controller.js",
+        "patterns": [
+          "MutationObserver"
+        ]
+      }
+    ],
+    "compatibilityPaths": [
+      {
+        "file": "admin/admin-auth.js",
+        "markers": []
+      },
+      {
+        "file": "admin/admin-bootstrap.js",
+        "markers": []
+      },
+      {
+        "file": "admin/admin-logout-controller.js",
+        "markers": [
+          "fallbackwebsessionlogout"
+        ]
+      },
+      {
+        "file": "admin/asset-wiring.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/attendance-reward-save-controller-v3.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/attendance-reward-settings-route-bridge-v2.js",
+        "markers": [
+          "compatibility"
+        ]
+      },
+      {
+        "file": "admin/attendance-reward-settings-v4.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/auth-session-manager.js",
+        "markers": [
+          "fallbackcode",
+          "fallbackmessage"
+        ]
+      },
+      {
+        "file": "admin/classroom-write-fallback.js",
+        "markers": [
+          "fallback",
+          "legacyclassroomfallbackretired"
+        ]
+      },
+      {
+        "file": "admin/create-action-adapter.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/export-history-modal-accessibility.js",
+        "markers": []
+      },
+      {
+        "file": "admin/game-code-wiring.js",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "admin/game-session-controls.js",
+        "markers": [
+          "fallback",
+          "fallback__dialog",
+          "fallbacksharesurface",
+          "legacy"
+        ]
+      },
+      {
+        "file": "admin/game-session-share-link-contract.js",
+        "markers": [
+          "fallback",
+          "fallback_surface_class"
+        ]
+      },
+      {
+        "file": "admin/interaction-quality-control-reset.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/inventory-redemption-queue-client.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/logout-confirmation.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/overview-quick-actions.js",
+        "markers": [
+          "compatibility",
+          "legacy_contract_tokens",
+          "legacytokens"
+        ]
+      },
+      {
+        "file": "admin/player-drawer-wiring.js",
+        "markers": [
+          "fallback",
+          "fallbackmessage"
+        ]
+      },
+      {
+        "file": "admin/player-identity-wiring.js",
+        "markers": [
+          "legacy_selector"
+        ]
+      },
+      {
+        "file": "admin/scanner-auto-refresh.js",
+        "markers": [
+          "fallback",
+          "fallbackcode"
+        ]
+      },
+      {
+        "file": "admin/scanner-reward-localization.js",
+        "markers": []
+      },
+      {
+        "file": "admin/settings-simplified.js",
+        "markers": [
+          "legacy",
+          "legacyformula"
+        ]
+      },
+      {
+        "file": "admin/share-game-code-layout-fix.js",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "admin/v2/src/api/admin-api-diagnostics.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/api/admin-bff-transport.js",
+        "markers": [
+          "compatibility"
+        ]
+      },
+      {
+        "file": "admin/v2/src/api/contracts-api-client.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/app.js",
+        "markers": [
+          "fallback",
+          "legacy",
+          "legacyhref",
+          "legacymessage",
+          "legacytitle"
+        ]
+      },
+      {
+        "file": "admin/v2/src/components/AdminMedia.js",
+        "markers": [
+          "fallback",
+          "fallbackalt",
+          "fallbackimage",
+          "fallbacklabel",
+          "fallbacksrc"
+        ]
+      },
+      {
+        "file": "admin/v2/src/components/AdminRouteBoundary.js",
+        "markers": [
+          "legacy",
+          "legacyhref",
+          "legacymessage",
+          "legacytitle"
+        ]
+      },
+      {
+        "file": "admin/v2/src/components/dom.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/core/data-state.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/core/date-time.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/core/navigation-registry.js",
+        "markers": [
+          "legacy",
+          "legacydestination",
+          "legacyhref",
+          "legacysection"
+        ]
+      },
+      {
+        "file": "admin/v2/src/core/route-boundary.js",
+        "markers": [
+          "legacy",
+          "legacydestination",
+          "legacysection"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/attendance/AttendanceReadModel.js",
+        "markers": [
+          "fallback",
+          "fallbackstatus"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/banking/BankingApi.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/banking/BankingReadModel.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/banking/BankingViewHelpers.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/business/BusinessApi.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/business/BusinessRoute.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/contracts/ContractsReadModel.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/contracts/ContractsRoute.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/crafting/CraftingApi.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/crafting/CraftingViewHelpers.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/inventory/InventoryController.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/inventory/InventoryModel.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/inventory/InventoryRoute.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/loans/LoansApiClient.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/loans/LoansController.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/loans/LoansRoute.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/logs/LogsApi.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/logs/LogsController.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/logs/LogsRoute.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/market/MarketChart.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/market/MarketInstrumentDetail.js",
+        "markers": [
+          "fallback",
+          "fallbackinstrument"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/market/MarketReadModel.js",
+        "markers": [
+          "fallback",
+          "fallbackinstrument"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/market/MarketViewHelpers.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/marketplace/MarketplaceApiClient.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/messages/MessagesApi.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/messages/MessagesController.js",
+        "markers": [
+          "fallbackreturned"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/messages/MessagesReadPanels.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/news-events/NewsEventsController.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/news-events/NewsEventsViewHelpers.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/overview/OverviewController.js",
+        "markers": []
+      },
+      {
+        "file": "admin/v2/src/routes/overview/OverviewNotifications.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/overview/OverviewRoute.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/players/PlayerRoutePresentation.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/progression/ProgressionClient.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/settings/SettingsController.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/settings/SettingsRoute.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/store/StoreRoute.js",
+        "markers": [
+          "fallback",
+          "fallbackalt",
+          "fallbacklabel",
+          "fallbacksrc"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/world-management/WorldManagementProtocol.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/world-management/WorldManagementReadModel.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/world-management/WorldViewHelpers.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/shell-ux-enhancements.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/world-runtime-console.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/attendance/api/attendanceHttpHelpers.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/attendance/api/attendanceHttpHelpers.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/attendance/api/attendanceRewardPolicy.test.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/attendance/api/attendanceRewardPolicy.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/attendance/api/staffAttendanceScanHttpHandler.ts",
+        "markers": []
+      },
+      {
+        "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.test.scanner.cases.ts",
+        "markers": [
+          "legacy",
+          "legacydigest",
+          "legacyhashcalls",
+          "legacyhashinputs"
+        ]
+      },
+      {
+        "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/auth/api/staffSignupHttpHandler.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/auth/api/staffSignupResendHttpHandler.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/business-banking/contracts/playerBusinessBankingContracts.ts",
+        "markers": [
+          "legacy_v1"
+        ]
+      },
+      {
+        "file": "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/contracts/contracts/contractContracts.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/economy/tests/economicMutationLedgerInvariant.test.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/fx/tests/canonicalFxMigrationContract.test.ts",
+        "markers": [
+          "compatibility",
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/game-sessions/api/gameJoinCodeResetHttpHandler.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/game-sessions/application/readGameJoinCode.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/game-sessions/application/readGameJoinCode.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/games/tests/gameLifecycleMigrationContract.test.ts",
+        "markers": [
+          "compatibility"
+        ]
+      },
+      {
+        "file": "backend/src/domains/inventory/api/playerInventoryRedemptionRequestParser.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/inventory/contracts/playerInventoryReadContracts.ts",
+        "markers": [
+          "compatibility"
+        ]
+      },
+      {
+        "file": "backend/src/domains/licensing/application/redeemPurchaseCode.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/licensing/infrastructure/purchaseCodeHasher.ts",
+        "markers": [
+          "compatibility",
+          "legacyhash",
+          "legacypurchasecodehash"
+        ]
+      },
+      {
+        "file": "backend/src/domains/marketplace/infrastructure/marketplaceRepositoryRowMapping.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/marketplace/tests/playerMarketplaceLegacyProjectionConflictMigrationContract.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/marketplace/tests/playerMarketplaceListingWrapperRestorationMigrationContract.test.ts",
+        "markers": []
+      },
+      {
+        "file": "backend/src/domains/marketplace/tests/playerMarketplaceReplayFirstMigrationContract.test.ts",
+        "markers": []
+      },
+      {
+        "file": "backend/src/domains/marketplace/tests/playerMarketplaceReservationConvergenceMigrationContract.test.ts",
+        "markers": [
+          "legacy",
+          "legacydirectwrites",
+          "legacyname"
+        ]
+      },
+      {
+        "file": "backend/src/domains/marketplace/tests/playerMarketplaceZeroSettlementPostingMigrationContract.test.ts",
+        "markers": []
+      },
+      {
+        "file": "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.test.ts",
+        "markers": [
+          "compatibility",
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/messaging/api/playerMessagingHttpHandler.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/messaging/api/playerMessagingRequestParser.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/messaging/tests/messagingCompatibilityMigrationContract.test.ts",
+        "markers": [
+          "compatibility"
+        ]
+      },
+      {
+        "file": "backend/src/domains/notifications/infrastructure/playerStoryDeliveryProjection.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/notifications/services/playerNotificationService.ts",
+        "markers": [
+          "fallbackunreadcount"
+        ]
+      },
+      {
+        "file": "backend/src/domains/players/api/playerBrowserSessionPrivacyHttpHandlers.test.ts",
+        "markers": [
+          "fallback",
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/players/api/playerLoginHttpHandler.ts",
+        "markers": [
+          "legacyhash"
+        ]
+      },
+      {
+        "file": "backend/src/domains/players/api/playerRequestScope.test.ts",
+        "markers": [
+          "compatibility"
+        ]
+      },
+      {
+        "file": "backend/src/domains/progression/api/playerProgressionIdempotencyHeader.test.ts",
+        "markers": [
+          "compatibility",
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/progression/api/playerProgressionReadModel.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/progression/contracts/progressionContracts.ts",
+        "markers": []
+      },
+      {
+        "file": "backend/src/domains/progression/services/progressionIntegrationEventBoundary.test.ts",
+        "markers": []
+      },
+      {
+        "file": "backend/src/domains/stocks/api/playerStockMarketPublicBoundary.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/stocks/api/playerStockMarketReadHttpHandler.ts",
+        "markers": [
+          "legacy",
+          "legacyscopedrequest"
+        ]
+      },
+      {
+        "file": "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/stocks/contracts/stockMarketNewsContracts.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/stocks/infrastructure/supabaseStockMarketNewsRepository.ts",
+        "markers": [
+          "fallbackcode"
+        ]
+      },
+      {
+        "file": "backend/src/domains/store/application/adminStoreItemMutation.test.ts",
+        "markers": [
+          "compatibility"
+        ]
+      },
+      {
+        "file": "backend/src/domains/storylines/contracts/storylineContractPrimitives.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/storylines/contracts/storylineContracts.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/storylines/infrastructure/supabaseStoryContractWriter.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/storylines/infrastructure/supabaseStoryImpactWriter.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/storylines/services/storyDecisionRoleplayService.ts",
+        "markers": [
+          "fallback",
+          "fallbackacknowledgement"
+        ]
+      },
+      {
+        "file": "backend/src/domains/storylines/services/storyMeridianQuestionOfBelongingMigrationContract.test.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/domains/storylines/services/storylineRunner.ts",
+        "markers": [
+          "legacy",
+          "legacy_compatibility",
+          "legacyclaimstate",
+          "legacyresolutionexecutionrepository"
+        ]
+      },
+      {
+        "file": "backend/src/domains/storylines/services/storylineRunnerLease.test.ts",
+        "markers": [
+          "legacy",
+          "legacyresolutioncalls"
+        ]
+      },
+      {
+        "file": "backend/src/domains/world/infrastructure/betaSeedPackRuntimeAdapter.test.ts",
+        "markers": []
+      },
+      {
+        "file": "backend/src/domains/world/infrastructure/betaSeedPackRuntimeAdapter.ts",
+        "markers": []
+      },
+      {
+        "file": "backend/src/domains/world/tests/playerCountryAssignmentCompatibilityMigration.test.ts",
+        "markers": [
+          "compatibility"
+        ]
+      },
+      {
+        "file": "backend/src/platform/supabase/adminMutation.ts",
+        "markers": [
+          "compatibilityheader",
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/src/platform/supabase/adminMutationMigrationContract.test.ts",
+        "markers": [
+          "compatibility"
+        ]
+      },
+      {
+        "file": "backend/src/platform/supabase/edgeStaffSession.ts",
+        "markers": []
+      },
+      {
+        "file": "backend/src/platform/supabase/edgeTime.ts",
+        "markers": [
+          "fallbacktimezone"
+        ]
+      },
+      {
+        "file": "backend/src/security/internalRunnerAuth.test.ts",
+        "markers": [
+          "legacy_runner_secret_forbidden"
+        ]
+      },
+      {
+        "file": "backend/src/security/internalRunnerAuth.ts",
+        "markers": [
+          "fallback",
+          "legacy",
+          "legacy_runner_secret_forbidden"
+        ]
+      },
+      {
+        "file": "backend/src/security/playerBrowserPayloadPrivacy.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/security/playerCredentialHashing.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/security/playerCredentialHashing.ts",
+        "markers": []
+      },
+      {
+        "file": "backend/src/security/webPlayerSession.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/_shared/econovariaAuth.ts",
+        "markers": [
+          "legacyanonkey"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/accountOperations.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/accountOperations.ts",
+        "markers": [
+          "fallback",
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
+        "markers": [
+          "compatibility",
+          "compatibilityoperations"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/attendanceOperations.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/attendanceReadModels.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/attendanceWealthReadSupport.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/bankingOperations.test.ts",
+        "markers": [
+          "compatibility",
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/bankingOperations.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/common.test.ts",
+        "markers": [
+          "compatibility",
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/common.ts",
+        "markers": [
+          "fallback",
+          "fallbackid"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/compatibilityOperations.ts",
+        "markers": [
+          "compatibility",
+          "compatibilityoperation",
+          "compatibilityoperationsforcanonicalroute",
+          "compatibilityroutemismatch",
+          "fallback",
+          "legacycontractdto",
+          "legacystoreitemdto"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/controlSurfaceOperations.test.ts",
+        "markers": [
+          "fallback",
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/gameJoinCodeOperations.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/gameProvisioningOperations.test.ts",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/idempotentLedgerOperations.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/inventoryRedemptionOperationsCore.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/localGameMutations.ts",
+        "markers": [
+          "compatibility",
+          "compatibilityoperations"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/messagingOperationValidation.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/mutationAdapters.test.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/mutationValues.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/playerCurrencyAuthority.test.ts",
+        "markers": [
+          "compatible",
+          "legacy"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/playerHistoryAudit.test.ts",
+        "markers": [
+          "fallback",
+          "fallbacks"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/playerOperationSupport.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/progressionOperations.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/unsupportedOperations.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/admin-api/worldRuntimeValidation.ts",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/player-web-session-api/staging-compat-entrypoint-v2.ts",
+        "markers": [
+          "compatibilitytarget"
+        ]
+      },
+      {
+        "file": "backend/supabase/functions/player-web-session-api/staging-compat-entrypoint.ts",
+        "markers": [
+          "compatibilitytarget"
+        ]
+      },
+      {
+        "file": "frontend/src/core/admin-game-selection.js",
+        "markers": [
+          "legacy_prefix",
+          "legacyselection"
+        ]
+      },
+      {
+        "file": "frontend/src/core/admin-mfa.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "frontend/src/core/api.js",
+        "markers": [
+          "fallbackcode",
+          "fallbackmessage"
+        ]
+      },
+      {
+        "file": "frontend/src/core/constants.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "frontend/src/core/login.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "frontend/src/core/runtime-config.js",
+        "markers": []
+      },
+      {
+        "file": "player-terminal/src/api/portfolio-market-holdings.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/api/resource-status.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/api/store-inventory-read-model.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/app.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/components/modal.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/components/player-interior.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/config/player-terminal.config.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/core/route-renderer.js",
+        "markers": [
+          "fallbackworldmodel"
+        ]
+      },
+      {
+        "file": "player-terminal/src/features/contracts/contract-interaction-v2.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/features/contracts/contract-read-model.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/features/inventory/inventory-action-flow.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/features/inventory/inventory-read-model.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/features/market/market-order-flow.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/features/marketplace/marketplace-read-model.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/features/notifications/notification-inbox-flow.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/features/store/store-artwork.js",
+        "markers": [
+          "fallback",
+          "legacy"
+        ]
+      },
+      {
+        "file": "player-terminal/src/features/world/world-runtime-flow.js",
+        "markers": [
+          "fallback",
+          "fallbackworldmodel"
+        ]
+      },
+      {
+        "file": "player-terminal/src/integrations/player-logout-controller.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/integrations/student-profile-read-resilience.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/pages/banking-page.js",
+        "markers": [
+          "fallback",
+          "fallbackcurrencycode"
+        ]
+      },
+      {
+        "file": "player-terminal/src/pages/contracts-page.js",
+        "markers": [
+          "fallbacktab"
+        ]
+      },
+      {
+        "file": "player-terminal/src/pages/inventory-page.js",
+        "markers": [
+          "fallbackcurrencycode"
+        ]
+      },
+      {
+        "file": "player-terminal/src/pages/marketplace-page.js",
+        "markers": []
+      },
+      {
+        "file": "player-terminal/src/pages/world-page.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "player-terminal/src/realtime/live-status-presenter.js",
+        "markers": [
+          "legacy"
+        ]
+      },
+      {
+        "file": "player-terminal/src/session-timeout-safe-exit.js",
+        "markers": [
+          "fallback"
+        ]
+      }
+    ],
+    "oversizedFiles": [],
+    "capabilityStrings": [
+      {
+        "capability": "account.balance",
+        "locations": [
+          "player-terminal/src/features/business-treasury/business-treasury-read-model.js"
+        ]
+      },
+      {
+        "capability": "account.read",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "backend/supabase/functions/admin-api/adminBootstrapComposition.test.ts",
+          "backend/supabase/functions/admin-api/adminBootstrapResponseParity.test.ts",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      },
+      {
+        "capability": "action.default",
+        "locations": [
+          "backend/src/simulations/economy/crossDomainExploitDetection.test.ts"
+        ]
+      },
+      {
+        "capability": "admin-logout-override.js",
+        "locations": [
+          "frontend/src/core/runtime-config.js"
+        ]
+      },
+      {
+        "capability": "admin.world",
+        "locations": [
+          "admin/world-runtime-console.js"
+        ]
+      },
+      {
+        "capability": "arrival-calibration-v1.json",
+        "locations": [
+          "backend/src/domains/world/infrastructure/betaSeedPackRuntimeAdapter.test.ts",
+          "backend/src/domains/world/infrastructure/betaSeedPackRuntimeAdapter.ts"
+        ]
+      },
+      {
+        "capability": "arrival.correct",
+        "locations": [
+          "admin/v2/src/routes/world-management/WorldManagementController.js"
+        ]
+      },
+      {
+        "capability": "arrival.correction",
+        "locations": [
+          "admin/world-runtime-presentation.js"
+        ]
+      },
+      {
+        "capability": "arrival.intro",
+        "locations": [
+          "backend/src/domains/campaign/services/campaignStateMachine.test.ts"
+        ]
+      },
+      {
+        "capability": "arrival.invalid-terminal",
+        "locations": [
+          "backend/src/domains/campaign/services/campaignStateMachine.test.ts"
+        ]
+      },
+      {
+        "capability": "arrival.welcome",
+        "locations": [
+          "backend/src/domains/campaign/services/campaignCoordinator.test.ts"
+        ]
+      },
+      {
+        "capability": "asset.beta",
+        "locations": [
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
+        ]
+      },
+      {
+        "capability": "asset.liquidity",
+        "locations": [
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
+        ]
+      },
+      {
+        "capability": "asset.sector",
+        "locations": [
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
+        ]
+      },
+      {
+        "capability": "asset.ticker",
+        "locations": [
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
+        ]
+      },
+      {
+        "capability": "assignment.v1",
+        "locations": [
+          "backend/src/domains/markets/validation/issuerDomain.test.ts"
+        ]
+      },
+      {
+        "capability": "attendance.manage",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/attendance/AttendanceController.js",
+          "admin/v2/src/routes/overview/OverviewRoute.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
+        ]
+      },
+      {
+        "capability": "attendance.scan",
+        "locations": [
+          "backend/src/domains/attendance/infrastructure/supabaseAttendanceRecordRepository.ts"
+        ]
+      },
+      {
+        "capability": "audit.read",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/logs/LogsController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      },
+      {
+        "capability": "award.arbitrary",
+        "locations": [
+          "backend/src/domains/progression/services/progressionIntegrationEventService.test.ts"
+        ]
+      },
+      {
+        "capability": "blocked.txt",
+        "locations": [
+          "backend/src/domains/messaging/api/playerMessagingHttpHandler.test.ts",
+          "backend/supabase/functions/admin-api/messagingParticipantOperations.test.ts"
+        ]
+      },
+      {
+        "capability": "business.manage",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/business/BusinessController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      },
+      {
+        "capability": "business.store-procurement",
+        "locations": [
+          "backend/src/domains/business/api/playerBusinessStoreProcurement.testSupport.ts",
+          "backend/src/domains/business/api/playerBusinessStoreProcurementProjection.ts",
+          "player-terminal/src/features/business-treasury/business-procurement-read-model.js"
+        ]
+      },
+      {
+        "capability": "campaign-v1.json",
+        "locations": [
+          "backend/src/domains/world/infrastructure/betaSeedPackRuntimeAdapter.test.ts",
+          "backend/src/domains/world/infrastructure/betaSeedPackRuntimeAdapter.ts"
+        ]
+      },
+      {
+        "capability": "campaign.test",
+        "locations": [
+          "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
+        ]
+      },
+      {
+        "capability": "checkout.session",
+        "locations": [
+          "backend/supabase/functions/stripe-checkout-session/index.ts",
+          "backend/supabase/functions/stripe-license-webhook/stripeCheckoutValidation.ts"
+        ]
+      },
+      {
+        "capability": "client.ts",
+        "locations": [
+          "backend/src/security/classroomApiRateLimitDispatch.test.ts"
+        ]
+      },
+      {
+        "capability": "collective.v1",
+        "locations": [
+          "backend/src/domains/markets/calculations/collectiveInvestmentAnalytics.test.ts"
+        ]
+      },
+      {
+        "capability": "condition.all",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyConditionContracts.ts"
+        ]
+      },
+      {
+        "capability": "condition.amount",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyConditionContracts.ts"
+        ]
+      },
+      {
+        "capability": "condition.any",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyConditionContracts.ts"
+        ]
+      },
+      {
+        "capability": "condition.count",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyConditionContracts.ts"
+        ]
+      },
+      {
+        "capability": "condition.operator",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyConditionContracts.ts"
+        ]
+      },
+      {
+        "capability": "condition.percent",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyConditionContracts.ts"
+        ]
+      },
+      {
+        "capability": "condition.quantity",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyConditionContracts.ts"
+        ]
+      },
+      {
+        "capability": "condition.score",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyConditionContracts.ts"
+        ]
+      },
+      {
+        "capability": "condition.sector",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyConditionContracts.ts"
+        ]
+      },
+      {
+        "capability": "condition.stage",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyConditionContracts.ts"
+        ]
+      },
+      {
+        "capability": "condition.value",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyConditionContracts.ts"
+        ]
+      },
+      {
+        "capability": "contract.arrival",
+        "locations": [
+          "backend/src/domains/campaign/services/campaignCoordinator.test.ts"
+        ]
+      },
+      {
+        "capability": "contract.category",
+        "locations": [
+          "backend/src/domains/contracts/contracts/contractContracts.ts"
+        ]
+      },
+      {
+        "capability": "contract.completed",
+        "locations": [
+          "backend/src/domains/progression/contracts/progressionContracts.ts",
+          "backend/src/domains/progression/services/progressionIntegrationEventService.test.ts"
+        ]
+      },
+      {
+        "capability": "contract.description",
+        "locations": [
+          "backend/src/domains/contracts/contracts/contractContracts.ts"
+        ]
+      },
+      {
+        "capability": "contract.instructions",
+        "locations": [
+          "backend/src/domains/contracts/contracts/contractContracts.ts"
+        ]
+      },
+      {
+        "capability": "contract.metadata",
+        "locations": [
+          "backend/src/domains/contracts/contracts/contractContracts.ts"
+        ]
+      },
+      {
+        "capability": "contract.status",
+        "locations": [
+          "backend/src/domains/contracts/contracts/contractContracts.ts"
+        ]
+      },
+      {
+        "capability": "contract.story-test",
+        "locations": [
+          "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts"
+        ]
+      },
+      {
+        "capability": "contract.title",
+        "locations": [
+          "backend/src/domains/contracts/contracts/contractContracts.ts",
+          "backend/src/domains/contracts/infrastructure/contractRepositoryRowCharacterization.test.ts"
+        ]
+      },
+      {
+        "capability": "contract.visibility",
+        "locations": [
+          "backend/src/domains/contracts/contracts/contractContracts.ts"
+        ]
+      },
+      {
+        "capability": "contracts.manage",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/contracts/ContractsController.js",
+          "admin/v2/src/routes/overview/OverviewRoute.js",
+          "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts",
+          "backend/supabase/functions/admin-api/contractProgressReadOperation.ts",
+          "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
+          "backend/supabase/functions/admin-api/contractReviewOperation.ts",
+          "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
+          "backend/supabase/functions/admin-api/contractRewardIssueOperation.ts",
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
+        ]
+      },
+      {
+        "capability": "curriculum.apple",
+        "locations": [
+          "backend/src/domains/store/infrastructure/supabasePlayerStoreOfferPublicRepositoryTestFixtures.ts"
+        ]
+      },
+      {
+        "capability": "dashboard.view",
+        "locations": [
+          "backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts",
+          "backend/src/security/playerBrowserPayloadPrivacy.test.ts"
+        ]
+      },
+      {
+        "capability": "data.price",
+        "locations": [
+          "backend/supabase/functions/stripe-license-webhook/stripeCheckoutValidation.ts"
+        ]
+      },
+      {
+        "capability": "dispatch.ts",
+        "locations": [
+          "backend/src/security/classroomApiRateLimitDispatch.test.ts"
+        ]
+      },
+      {
+        "capability": "economic-balance-reference-evidence.v1",
+        "locations": [
+          "backend/src/simulations/economy/runReferenceEconomicSimulation.ts"
+        ]
+      },
+      {
+        "capability": "economy.adjust",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/banking/BankingController.js",
+          "admin/v2/src/routes/loans/LoansController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/bankingOperations.test.ts"
+        ]
+      },
+      {
+        "capability": "effect.amount",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "effect.body",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "effect.label",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "effect.payload",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "effect.reason",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "effect.recover",
+        "locations": [
+          "admin/v2/src/routes/world-management/WorldManagementController.js"
+        ]
+      },
+      {
+        "capability": "effect.recovery",
+        "locations": [
+          "admin/world-runtime-presentation.js"
+        ]
+      },
+      {
+        "capability": "effect.status",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "effect.summary",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "effect.title",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "effect.type",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "effect.value",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "equipment.press",
+        "locations": [
+          "backend/src/domains/business/api/playerBusinessStockroomHttpHandler.test.ts"
+        ]
+      },
+      {
+        "capability": "event.contract",
+        "locations": [
+          "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts"
+        ]
+      },
+      {
+        "capability": "event.default",
+        "locations": [
+          "backend/src/simulations/economy/crossDomainExploitDetection.test.ts"
+        ]
+      },
+      {
+        "capability": "extensions.digest",
+        "locations": [
+          "backend/src/domains/marketplace/tests/playerMarketplaceMigrationContract.test.ts"
+        ]
+      },
+      {
+        "capability": "financial-market-issuer-validation.v1",
+        "locations": [
+          "backend/src/domains/markets/validation/issuerDomain.ts"
+        ]
+      },
+      {
+        "capability": "financial-market-reference-simulation.v1",
+        "locations": [
+          "backend/src/domains/markets/simulations/referenceMarketSimulation.ts",
+          "backend/src/domains/markets/simulations/runReferenceMarketSimulation.ts"
+        ]
+      },
+      {
+        "capability": "financial-markets.v1",
+        "locations": [
+          "backend/src/domains/markets/contracts/financialMarketContracts.ts",
+          "backend/src/domains/markets/state/marketOrderExtractionCharacterization.test.ts"
+        ]
+      },
+      {
+        "capability": "financial-statement-generator.v1",
+        "locations": [
+          "backend/src/domains/markets/calculations/financialStatements.test.ts"
+        ]
+      },
+      {
+        "capability": "flag.value",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "full-financial-markets-reference-simulation.json",
+        "locations": [
+          "backend/src/domains/markets/simulations/runReferenceMarketSimulation.ts"
+        ]
+      },
+      {
+        "capability": "game.create",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      },
+      {
+        "capability": "game.read",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/overview/GameLifecycleController.js",
+          "admin/v2/src/routes/overview/OverviewController.js",
+          "backend/src/domains/auth/application/staffGameSessionBootstrap.test.ts",
+          "backend/src/domains/auth/infrastructure/supabaseStaffGameSessionBootstrapRepository.test.ts",
+          "backend/src/domains/game-sessions/application/readGameJoinCode.test.ts",
+          "backend/src/domains/game-sessions/infrastructure/supabaseGameJoinCodeReadRepository.test.ts",
+          "backend/src/shared/staffRequestApplicationContextFactory.test.ts",
+          "backend/supabase/functions/admin-api/adminBootstrapComposition.test.ts",
+          "backend/supabase/functions/admin-api/adminBootstrapResponseParity.test.ts",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
+          "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/contractProgressReadOperation.test.ts",
+          "backend/supabase/functions/admin-api/gameJoinCodeOperations.test.ts",
+          "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts"
+        ]
+      },
+      {
+        "capability": "game.switch",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "backend/supabase/functions/admin-api/adminBootstrapResponseParity.test.ts",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      },
+      {
+        "capability": "game.update",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/routes/overview/GameLifecycleController.js",
+          "admin/v2/src/routes/overview/GameLifecyclePanel.js",
+          "backend/src/domains/game-sessions/application/rotateGameJoinCode.test.ts",
+          "backend/src/domains/game-sessions/application/updateGameSettings.test.ts",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/contractReviewOperation.test.ts",
+          "backend/supabase/functions/admin-api/contractReviewOperation.ts",
+          "backend/supabase/functions/admin-api/contractRewardIssueOperation.test.ts",
+          "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts",
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
+        ]
+      },
+      {
+        "capability": "idem.default",
+        "locations": [
+          "backend/src/simulations/economy/crossDomainExploitDetection.test.ts"
+        ]
+      },
+      {
+        "capability": "img.admin-terminal-bank-currency-symbol",
+        "locations": [
+          "admin/asset-wiring.js"
+        ]
+      },
+      {
+        "capability": "index-method.v1",
+        "locations": [
+          "backend/src/domains/markets/calculations/collectiveInvestmentAnalytics.test.ts"
+        ]
+      },
+      {
+        "capability": "inflation.normalizer",
+        "locations": [
+          "backend/src/domains/fx/calculations/fxFixingPolicy.ts"
+        ]
+      },
+      {
+        "capability": "instrument.v1",
+        "locations": [
+          "backend/src/domains/markets/validation/issuerDomain.test.ts",
+          "backend/src/domains/markets/validation/publicContractGuards.test.ts"
+        ]
+      },
+      {
+        "capability": "intro.trade-1",
+        "locations": [
+          "backend/src/domains/contracts/contracts/playerContractPublicListContracts.test.ts"
+        ]
+      },
+      {
+        "capability": "inventory.redeem",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/crafting/CraftingController.js",
+          "admin/v2/src/routes/inventory/InventoryController.js",
+          "backend/src/domains/inventory/services/playerInventoryReadService.ts",
+          "backend/src/domains/inventory/services/playerInventoryRedemptionPolicy.test.ts",
+          "backend/src/domains/inventory/tests/playerInventoryRedemptionFullLifecycleIntegration.test.fixtures.support.ts",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
+          "backend/supabase/functions/admin-api/adminResourcePermissionAuthority.test.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/inventoryCraftingDispatch.test.ts",
+          "backend/supabase/functions/admin-api/inventoryRedemptionOperations.test.ts",
+          "player-terminal/src/pages/inventory-page.js"
+        ]
+      },
+      {
+        "capability": "inventory.use",
+        "locations": [
+          "backend/src/domains/inventory/services/playerInventoryReadService.test.ts",
+          "backend/src/domains/inventory/services/playerInventoryReadService.ts",
+          "backend/src/domains/inventory/services/playerInventoryRedemptionPolicy.test.ts",
+          "player-terminal/src/pages/crafting-page.js",
+          "player-terminal/src/pages/inventory-page.js"
+        ]
+      },
+      {
+        "capability": "issuer.v1",
+        "locations": [
+          "backend/src/domains/markets/validation/issuerDomain.test.ts"
+        ]
+      },
+      {
+        "capability": "item.png",
+        "locations": [
+          "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts"
+        ]
+      },
+      {
+        "capability": "ledger.view",
+        "locations": [
+          "backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts"
+        ]
+      },
+      {
+        "capability": "location-registry-verified-v1.json",
+        "locations": [
+          "backend/src/domains/world/infrastructure/betaSeedPackRuntimeAdapter.test.ts",
+          "backend/src/domains/world/infrastructure/betaSeedPackRuntimeAdapter.ts"
+        ]
+      },
+      {
+        "capability": "manual.trigger",
+        "locations": [
+          "admin/world-runtime-presentation.js"
+        ]
+      },
+      {
+        "capability": "market.manage",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/market/MarketController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      },
+      {
+        "capability": "marketplace.moderate",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/marketplace/MarketplaceController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      },
+      {
+        "capability": "marketplace.purchase",
+        "locations": [
+          "backend/src/domains/marketplace/api/playerMarketplaceHttpHandler.test.ts",
+          "backend/src/domains/marketplace/contracts/playerMarketplaceFundingContracts.ts",
+          "backend/src/domains/marketplace/infrastructure/playerMarketplaceFundingResponse.ts",
+          "player-terminal/src/features/marketplace/marketplace-funding-read-model.js"
+        ]
+      },
+      {
+        "capability": "messaging.moderate",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/messages/MessagesController.js",
+          "admin/v2/src/routes/messages/MessagesPolicyPanel.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      },
+      {
+        "capability": "news.arrival",
+        "locations": [
+          "backend/src/domains/campaign/services/campaignCoordinator.test.ts"
+        ]
+      },
+      {
+        "capability": "order.binding",
+        "locations": [
+          "player-terminal/src/features/business-treasury/business-treasury-read-model.js",
+          "player-terminal/src/features/marketplace/marketplace-funding-read-model.js"
+        ]
+      },
+      {
+        "capability": "payment.succeeded",
+        "locations": [
+          "backend/supabase/functions/license-payment-webhook/paymentWebhookContracts.ts",
+          "backend/supabase/functions/license-payment-webhook/paymentWebhookValidation.ts",
+          "backend/supabase/functions/stripe-license-webhook/index.ts"
+        ]
+      },
+      {
+        "capability": "player.alpha",
+        "locations": [
+          "backend/src/simulations/economy/crossDomainExploitDetection.test.ts"
+        ]
+      },
+      {
+        "capability": "player.beta",
+        "locations": [
+          "backend/src/simulations/economy/crossDomainExploitDetection.test.ts"
+        ]
+      },
+      {
+        "capability": "players.archive",
+        "locations": [
+          "backend/src/platform/supabase/adminMutationMigrationContract.test.ts"
+        ]
+      },
+      {
+        "capability": "players.manage",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/overview/OverviewRoute.js",
+          "admin/v2/src/routes/players/PlayersController.js",
+          "admin/v2/src/routes/players/RosterImportController.js",
+          "backend/src/domains/players/api/playerRosterImportHttpHandler.ts",
+          "backend/src/domains/players/application/importPlayerRoster.test.ts",
+          "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/bankingOperations.test.ts",
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts",
+          "backend/supabase/functions/admin-api/playerAccessCodeResetOperation.ts"
+        ]
+      },
+      {
+        "capability": "policy.payload",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "policy.update",
+        "locations": [
+          "admin/v2/src/routes/marketplace/MarketplaceController.js"
+        ]
+      },
+      {
+        "capability": "progression.review",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/progression/ProgressionController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      },
+      {
+        "capability": "proposed.amount",
+        "locations": [
+          "backend/src/domains/business-banking/domain/businessBankingEconomicSimulation.ts"
+        ]
+      },
+      {
+        "capability": "quote.binding",
+        "locations": [
+          "player-terminal/src/features/business-treasury/business-procurement-read-model.js",
+          "player-terminal/src/features/business-treasury/business-treasury-read-model.js"
+        ]
+      },
+      {
+        "capability": "receipt.binding",
+        "locations": [
+          "player-terminal/src/features/business-treasury/business-procurement-read-model.js",
+          "player-terminal/src/features/business-treasury/business-treasury-read-model.js"
+        ]
+      },
+      {
+        "capability": "receipt.fingerprint",
+        "locations": [
+          "backend/src/domains/marketplace/infrastructure/marketplaceInventoryReservationAdapter.ts"
+        ]
+      },
+      {
+        "capability": "recipe.test-widget",
+        "locations": [
+          "backend/src/domains/crafting/api/playerCraftingHttpHandler.test.ts",
+          "backend/src/domains/crafting/api/playerCraftingNegativeStateHttpHandler.test.ts",
+          "backend/src/domains/crafting/infrastructure/supabasePlayerCraftingRepository.test.ts"
+        ]
+      },
+      {
+        "capability": "reservation.binding",
+        "locations": [
+          "player-terminal/src/features/marketplace/marketplace-funding-read-model.js"
+        ]
+      },
+      {
+        "capability": "retention.delete",
+        "locations": [
+          "admin/v2/src/routes/messages/MessagesController.js"
+        ]
+      },
+      {
+        "capability": "reveal.headline",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "reveal.payload",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "reveal.summary",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storyEffectContracts.ts"
+        ]
+      },
+      {
+        "capability": "route.state",
+        "locations": [
+          "admin/world-runtime-presentation.js"
+        ]
+      },
+      {
+        "capability": "route.ts",
+        "locations": [
+          "backend/src/security/classroomApiRateLimitDispatch.test.ts"
+        ]
+      },
+      {
+        "capability": "session.token",
+        "locations": [
+          "backend/src/security/playerBrowserPayloadPrivacy.test.ts"
+        ]
+      },
+      {
+        "capability": "settings.manage",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/contracts/ContractsController.js",
+          "admin/v2/src/routes/settings/SettingsController.js",
+          "backend/src/domains/game-sessions/application/readGameSettings.test.ts",
+          "backend/src/domains/game-sessions/infrastructure/supabaseGameSessionMutationRepository.test.ts",
+          "backend/src/domains/game-sessions/infrastructure/supabaseGameSettingsReadRepository.test.ts",
+          "backend/src/shared/staffRequestApplicationContextFactory.test.ts",
+          "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.test.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/gameJoinCodeRoute.test.ts",
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
+        ]
+      },
+      {
+        "capability": "shock.confidence",
+        "locations": [
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
+        ]
+      },
+      {
+        "capability": "shock.decay",
+        "locations": [
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
+        ]
+      },
+      {
+        "capability": "shock.explanation",
+        "locations": [
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
+        ]
+      },
+      {
+        "capability": "shock.headline",
+        "locations": [
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
+        ]
+      },
+      {
+        "capability": "shock.magnitude",
+        "locations": [
+          "backend/src/domains/stocks/calculations/stockMarketEngineInput.ts"
+        ]
+      },
+      {
+        "capability": "shock.nrc-41",
+        "locations": [
+          "backend/src/domains/countries/api/playerWorldRequestParser.test.ts"
+        ]
+      },
+      {
+        "capability": "store.business-offer",
+        "locations": [
+          "backend/src/domains/store/api/playerStorePublicHttpHandlerTestSupport.ts",
+          "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts",
+          "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.test.ts",
+          "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.ts",
+          "player-terminal/src/api/preview-transport.js",
+          "player-terminal/src/features/store/store-purchase-contract.js"
+        ]
+      },
+      {
+        "capability": "store.manage",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/store/StoreController.js",
+          "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts",
+          "backend/supabase/functions/admin-api/localGameMutations.test.ts"
+        ]
+      },
+      {
+        "capability": "store.seeded",
+        "locations": [
+          "backend/src/domains/business/api/playerBusinessStoreProcurement.test.ts"
+        ]
+      },
+      {
+        "capability": "store.system-offer",
+        "locations": [
+          "backend/src/domains/store/api/playerStorePublicHttpHandlerTestSupport.ts",
+          "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.test.ts",
+          "backend/src/domains/store/infrastructure/playerStoreFundingPublicResponse.ts",
+          "backend/src/domains/store/infrastructure/supabasePlayerStoreFundingPublicRepository.test.ts",
+          "backend/src/domains/store/tests/playerStoreFullLifecycleIntegration.test.ts",
+          "backend/src/domains/store/tests/playerStoreNegativeStateIntegration.test.ts",
+          "backend/src/domains/store/tests/playerStoreNegativeStateMatrix.test.ts",
+          "player-terminal/src/api/preview-transport.js",
+          "player-terminal/src/features/store/store-purchase-contract.js"
+        ]
+      },
+      {
+        "capability": "storyline.description",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storylineContracts.ts"
+        ]
+      },
+      {
+        "capability": "storyline.key",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storylineContracts.ts"
+        ]
+      },
+      {
+        "capability": "storyline.title",
+        "locations": [
+          "backend/src/domains/storylines/contracts/storylineContracts.ts"
+        ]
+      },
+      {
+        "capability": "summary.arrival",
+        "locations": [
+          "backend/src/domains/campaign/services/campaignCoordinator.test.ts",
+          "backend/src/domains/world/services/playerWorldRuntimeService.test.ts"
+        ]
+      },
+      {
+        "capability": "summary.future",
+        "locations": [
+          "backend/src/domains/campaign/services/campaignCoordinator.test.ts"
+        ]
+      },
+      {
+        "capability": "summary.opportunity",
+        "locations": [
+          "backend/src/domains/campaign/services/campaignCoordinator.test.ts"
+        ]
+      },
+      {
+        "capability": "unlisted.ts",
+        "locations": [
+          "backend/src/security/classroomApiRateLimitDispatch.test.ts"
+        ]
+      },
+      {
+        "capability": "unsafe.exe",
+        "locations": [
+          "backend/src/domains/messaging/api/playerMessageThreadLifecycleHttpHandler.test.ts"
+        ]
+      },
+      {
+        "capability": "valuation.v1",
+        "locations": [
+          "backend/src/domains/markets/calculations/bondMath.ts"
+        ]
+      },
+      {
+        "capability": "workforce.other",
+        "locations": [
+          "player-terminal/src/pages/business-workforce-market.js"
+        ]
+      },
+      {
+        "capability": "world.manage",
+        "locations": [
+          "admin/admin-auth.js",
+          "admin/auth-session-manager.js",
+          "admin/v2/src/core/navigation-registry.js",
+          "admin/v2/src/routes/news-events/NewsEventsController.js",
+          "admin/v2/src/routes/world-management/WorldManagementController.js",
+          "backend/supabase/functions/admin-api/adminPermissions.ts",
+          "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
+        ]
+      }
+    ]
+  },
+  "caveats": [
+    "Static inventory identifies candidates, not proof that each match is a live violation.",
+    "SQL-defined cross-domain mutations and semantic state-machine duplication require the accompanying human audit.",
+    "Imports through another domain's explicit index.ts public boundary are not classified as deep imports.",
+    "Standard JavaScript and typed-array .from constructors, including generic forms, are excluded from persistence-call detection.",
+    "Persistence detection is lexical: direct calls and generic member candidates are included; comments, strings and generic instantiation expressions may match. Counts are files, not calls, violations or proven live paths.",
+    "Generated Admin dist output and dependencies are excluded."
+  ]
+}

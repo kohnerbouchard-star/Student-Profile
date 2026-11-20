@@ -118,15 +118,172 @@ export interface ExecuteStockMarketOrderRpcRow {
   readonly average_cost: number | string;
 }
 
+export type PlayerStockMarketTradingAction =
+  | "create_buy_quote"
+  | "settle_buy_quote"
+  | "settle_sell";
+
+export interface StockMarketFundingAllocation {
+  readonly sourceAccountKey: string;
+  readonly targetAmount: number;
+}
+
+export interface StockMarketBuyQuoteInput {
+  readonly gameSessionId: string;
+  readonly playerId: string;
+  readonly ticker: string;
+  readonly quantity: number;
+  readonly expectedPrice: number;
+  readonly expectedTickIndex: number;
+  readonly allocations: readonly StockMarketFundingAllocation[];
+  readonly idempotencyKey: string;
+}
+
+export interface StockMarketBuySettlementInput {
+  readonly gameSessionId: string;
+  readonly playerId: string;
+  readonly quoteKey: string;
+  readonly idempotencyKey: string;
+}
+
+export interface StockMarketSellSettlementInput {
+  readonly gameSessionId: string;
+  readonly playerId: string;
+  readonly ticker: string;
+  readonly quantity: number;
+  readonly expectedPrice: number;
+  readonly expectedTickIndex: number;
+  readonly destinationAccountKey: string;
+  readonly idempotencyKey: string;
+}
+
+export type StockMarketPublicEvidence = Readonly<Record<string, unknown>>;
+
+export interface StockMarketBuyQuoteDto {
+  readonly quoteKey: string;
+  readonly ticker: string;
+  readonly listingCurrencyCode: string;
+  readonly quantity: number;
+  readonly quotedPrice: number;
+  readonly priceTickIndex: number;
+  readonly grossValue: number;
+  readonly expiresAt: string;
+  readonly funding: StockMarketPublicEvidence;
+}
+
+export interface StockMarketBuySettlementDto {
+  readonly quoteKey: string;
+  readonly ticker: string;
+  readonly listingCurrencyCode: string;
+  readonly quantity: number;
+  readonly executionPrice: number;
+  readonly priceTickIndex: number;
+  readonly grossValue: number;
+  readonly holdingQuantityAfter: number;
+  readonly averageCostAfter: number;
+  readonly filledAt: string;
+  readonly alreadyCompleted: boolean;
+  readonly funding: StockMarketPublicEvidence;
+}
+
+export interface StockMarketSellSettlementDto {
+  readonly ticker: string;
+  readonly listingCurrencyCode: string;
+  readonly quantity: number;
+  readonly executionPrice: number;
+  readonly priceTickIndex: number;
+  readonly grossValue: number;
+  readonly holdingQuantityAfter: number;
+  readonly averageCostAfter: number;
+  readonly filledAt: string;
+  readonly destinationAccountKey: string;
+  readonly settlementTransactionKey: string;
+  readonly alreadyCompleted: boolean;
+}
+
+export interface PlayerSafeStockMarketBuyQuoteSuccessBody {
+  readonly ok: true;
+  readonly action: "create_buy_quote";
+  readonly quote: StockMarketBuyQuoteDto;
+}
+
+export interface PlayerSafeStockMarketBuySettlementSuccessBody {
+  readonly ok: true;
+  readonly action: "settle_buy_quote";
+  readonly settlement: StockMarketBuySettlementDto;
+}
+
+export interface PlayerSafeStockMarketSellSettlementSuccessBody {
+  readonly ok: true;
+  readonly action: "settle_sell";
+  readonly settlement: StockMarketSellSettlementDto;
+}
+
+export type PlayerSafeStockMarketTradingSuccessBody =
+  | PlayerSafeStockMarketBuyQuoteSuccessBody
+  | PlayerSafeStockMarketBuySettlementSuccessBody
+  | PlayerSafeStockMarketSellSettlementSuccessBody;
+
+export interface CreateStockBuyQuoteRpcArgs {
+  readonly p_game_session_id: string;
+  readonly p_player_id: string;
+  readonly p_ticker: string;
+  readonly p_quantity: number;
+  readonly p_expected_price: number;
+  readonly p_expected_tick_index: number;
+  readonly p_allocations: readonly {
+    readonly sourceAccountKey: string;
+    readonly targetAmount: number;
+  }[];
+  readonly p_idempotency_key: string;
+}
+
+export interface SettleStockBuyQuoteRpcArgs {
+  readonly p_game_session_id: string;
+  readonly p_player_id: string;
+  readonly p_quote_key: string;
+  readonly p_idempotency_key: string;
+}
+
+export interface SettleStockSellRpcArgs {
+  readonly p_game_session_id: string;
+  readonly p_player_id: string;
+  readonly p_ticker: string;
+  readonly p_quantity: number;
+  readonly p_expected_price: number;
+  readonly p_expected_tick_index: number;
+  readonly p_destination_account_key: string;
+  readonly p_idempotency_key: string;
+}
+
+export interface PlayerStockMarketTradingRepository {
+  createBuyQuote(input: StockMarketBuyQuoteInput): Promise<StockMarketBuyQuoteDto>;
+  settleBuyQuote(
+    input: StockMarketBuySettlementInput,
+  ): Promise<StockMarketBuySettlementDto>;
+  settleSell(
+    input: StockMarketSellSettlementInput,
+  ): Promise<StockMarketSellSettlementDto>;
+}
+
 export type StockMarketTradingErrorCode =
   | "invalid_stock_market_trading_request"
+  | "stock_market_trading_retired"
   | "game_session_not_found"
   | "player_session_not_found"
+  | "player_not_found"
   | "stock_asset_not_found"
   | "stock_market_closed"
   | "stale_stock_price"
+  | "stale_stock_tick"
+  | "stock_quote_not_found"
+  | "stock_quote_expired"
+  | "stock_quote_consumed"
+  | "stock_destination_account_invalid"
   | "insufficient_cash"
   | "insufficient_shares"
+  | "stock_market_liquidity_insufficient"
+  | "stock_market_idempotency_conflict"
   | "invalid_stock_market_trading_state"
   | "stock_market_trading_schema_not_applied"
   | "stock_market_trading_failed";

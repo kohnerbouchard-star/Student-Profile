@@ -13,6 +13,8 @@ import {
 } from "../../../src/domains/store/application/adminStoreItemMutation.ts";
 import { archivePlayerForAuthorizedStaff } from "../../../src/domains/players/application/archivePlayerForAuthorizedStaff.ts";
 import { resetGameSettingsGroup } from "../../../src/domains/game-sessions/application/updateGameSettings.ts";
+import { createSupabaseGameSessionMutationRepository } from "../../../src/domains/game-sessions/infrastructure/supabaseGameSessionMutationRepository.ts";
+import type { AdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 
 function text(value: unknown, fallback = ""): string {
   const normalized = String(value ?? "").trim();
@@ -70,14 +72,15 @@ function legacyStoreItemDto(
 export async function handleCompatibilityOperation(
   service: AdminMutationRpcClient,
   input: {
-    gameSessionId: string;
-    staffUserId: string;
+    applicationContext: AdminRequestApplicationContext;
     path: string;
     method: string;
     body: Record<string, any>;
     identity?: AdminMutationIdentity;
   },
 ): Promise<any> {
+  const gameSessionId = input.applicationContext.gameSessionId;
+  const staffUserId = input.applicationContext.actor.staffUserId;
   const requestedOperation = text(input.body.adminOperation).toLowerCase();
   const operationResolution = resolveCompatibilityOperation(
     input.path,
@@ -111,8 +114,8 @@ export async function handleCompatibilityOperation(
     if (operation === "archive-contract") {
       if (!input.identity) return mutationIdentityRequired();
       const result = await mutateAdminContract(service, {
-        gameSessionId: input.gameSessionId,
-        staffUserId: input.staffUserId,
+        gameSessionId,
+        staffUserId,
         operation: "archive",
         contractId,
         body: input.body,
@@ -133,8 +136,8 @@ export async function handleCompatibilityOperation(
     if (operation === "duplicate-contract") {
       if (!input.identity) return mutationIdentityRequired();
       const result = await mutateAdminContract(service, {
-        gameSessionId: input.gameSessionId,
-        staffUserId: input.staffUserId,
+        gameSessionId,
+        staffUserId,
         operation: "duplicate",
         contractId,
         body: input.body,
@@ -155,8 +158,8 @@ export async function handleCompatibilityOperation(
     if (operation === "restock-store-item") {
       if (!input.identity) return mutationIdentityRequired();
       const result = await mutateAdminStoreItem(service, {
-        gameSessionId: input.gameSessionId,
-        staffUserId: input.staffUserId,
+        gameSessionId,
+        staffUserId,
         operation: "restock",
         itemId,
         body: input.body,
@@ -177,8 +180,8 @@ export async function handleCompatibilityOperation(
     if (operation === "rebalance-store-price") {
       if (!input.identity) return mutationIdentityRequired();
       const result = await mutateAdminStoreItem(service, {
-        gameSessionId: input.gameSessionId,
-        staffUserId: input.staffUserId,
+        gameSessionId,
+        staffUserId,
         operation: "rebalance",
         itemId,
         body: input.body,
@@ -198,8 +201,8 @@ export async function handleCompatibilityOperation(
     if (operation === "archive-player") {
       if (!input.identity) return mutationIdentityRequired();
       const result = await archivePlayerForAuthorizedStaff(service, {
-        gameSessionId: input.gameSessionId,
-        staffUserId: input.staffUserId,
+        gameSessionId,
+        staffUserId,
         playerId,
         identity: input.identity,
       });
@@ -218,12 +221,14 @@ export async function handleCompatibilityOperation(
     }
     if (operation === "reset-settings-group") {
       if (!input.identity) return mutationIdentityRequired();
-      const result = await resetGameSettingsGroup(service, {
-        gameSessionId: input.gameSessionId,
-        staffUserId: input.staffUserId,
-        group: settingsGroup,
-        mutation: input.identity,
-      });
+      const result = await resetGameSettingsGroup(
+        createSupabaseGameSessionMutationRepository(service),
+        {
+          applicationContext: input.applicationContext,
+          group: settingsGroup,
+          mutation: input.identity,
+        },
+      );
       return {
         handled: true,
         status: result.status,

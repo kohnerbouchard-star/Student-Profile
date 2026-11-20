@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref046-owned-disposable-pr-882.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 882,
+  "baseRef": "refactor/ref-046-cleanup-registration",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": ["scripts/ref-046-disposable-qualification.mjs", "scripts/ref-046-campaign-acceptance.ts", "docs/operations/evidence/refactor-execution-v1/REF-046/recovery.md", "docs/operations/contracts/player-cross-cutting/pr-882.json", ".github/workflows/ref-018-attendance-qualification.yml", "scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs", ".github/workflows/banking-fx-clearing-v1.yml", ".github/workflows/backend-typecheck.yml", ".github/workflows/world-runtime.yml", ".github/workflows/admin-api-check.yml", "docs/roadmaps/refactor-execution-v1/tasks/REF-046.md", "docs/roadmaps/refactor-execution-v1/backlog.json"],
+  "requiredFiles": ["docs/operations/contracts/player-cross-cutting/pr-882.json", "scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "requiredChecks": ["player-terminal-verify", "player-edge-trusted-ip-entrypoint-contract", "player-production-secret-provision-contract", "player-api-read-resilience", "Backend Typecheck", "Repository Quality", "World Runtime", "Admin API Check", "Certify Banking FX clearing source", "Verify Banking FX database acceptance", "Verify Banking FX Chromium acceptance", "Staff Attendance and ledger adjustment database/race qualification", "REF046 exclusive disposable qualification"],
+  "criticalJobChecks": ["Certify Banking FX clearing source", "Verify Banking FX database acceptance", "Verify Banking FX Chromium acceptance"],
+  "readOnlyPaths": ["scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "nonblankChangedLineLimit": 380,
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-046/recovery.md",
+  "authorizationNote": "User approved exclusive run/attempt/phase disposable cleanup; parent registered PR881 and allocated only required test workflow changes, preserving PR620 action pins. Exact ownership, meaningful foreign fixtures, preserved assertions/lint, provisional receipts and independent teardown proof are required. No merge, production, guard/constraint/purge/credential change or local registry retry. Missing required checks remain blockers. User approved four narrow PR path filters and serial task/backlog registration, cumulative16; B remains gated on complete exact-head A evidence."
+}

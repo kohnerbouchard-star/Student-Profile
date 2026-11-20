@@ -74,17 +74,9 @@
     height: var(--player-control-sm);
   }
 
-  .player-terminal-app-root :is(.player-terminal-store-toolbar, .player-terminal-inventory-toolbar) {
-    align-items: stretch;
-    flex-direction: column;
-    min-width: 0;
-    max-width: 100%;
-  }
-
   .player-terminal-app-root .player-terminal-search-field {
-    flex: 0 1 auto;
+    flex-basis: 100%;
     width: 100%;
-    min-width: 0;
   }
 
   .player-terminal-app-root .player-terminal-panel-header {

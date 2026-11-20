@@ -25,14 +25,71 @@ Deno.test("Player redemption request derives scope and returns UUID-private crea
   const body = await response.json();
   assertEquals(response.status, 201);
   assertEquals(response.headers.get("cache-control"), "private, no-store");
-  assertEquals(repository.requestInputs, [{
-    gameId: GAME,
-    playerUuid: PLAYER,
+  assertEquals(repository.requestInputs.length, 1);
+  assertEquals({
+    gameSessionId: repository.requestInputs[0]?.applicationContext
+      .gameSessionId,
+    actor: repository.requestInputs[0]?.applicationContext.actor,
+    itemId: repository.requestInputs[0]?.itemId,
+    command: repository.requestInputs[0]?.command,
+  }, {
+    gameSessionId: GAME,
+    actor: {
+      kind: "player",
+      playerUuid: PLAYER,
+      playerSessionId: SESSION,
+    },
     itemId: "meal-pass",
     command: { quantity: 2, note: "Lunch", idempotencyKey: "redeem:001" },
-  }]);
+  });
+  assertUuid(repository.requestInputs[0]?.applicationContext.requestId);
+  assertEquals(
+    Object.isFrozen(repository.requestInputs[0]?.applicationContext),
+    true,
+  );
+  assertEquals(
+    "idempotencyKey" in (repository.requestInputs[0]?.applicationContext ?? {}),
+    false,
+  );
+  assertEquals(
+    "idempotencyContext" in
+      (repository.requestInputs[0]?.applicationContext ?? {}),
+    false,
+  );
+  assertEquals(Object.keys(repository.requestInputs[0] ?? {}).sort(), [
+    "applicationContext",
+    "command",
+    "itemId",
+  ]);
   assertEquals(body.outcome, "created");
   assertNoUuid(JSON.stringify(body));
+});
+
+Deno.test("Player redemption reuses the injected application context without resolving scope again", async () => {
+  const repository = new FakeRepository();
+  const context = applicationContext();
+  let resolverCalls = 0;
+  const response = await handlePlayerInventoryRedemptionRequest(
+    request(),
+    { kind: "request", itemId: "meal-pass" },
+    {
+      ...dependencies(repository),
+      hashSessionToken: () => {
+        resolverCalls += 1;
+        return Promise.reject(new Error("scope must already be resolved"));
+      },
+      resolvePlayerSession: () => {
+        resolverCalls += 1;
+        return Promise.reject(new Error("scope must already be resolved"));
+      },
+    },
+    context,
+  );
+
+  assertEquals(response.status, 201);
+  assertEquals(resolverCalls, 0);
+  assertSame(repository.requestInputs[0]?.applicationContext, context);
+  assertNoUuid(JSON.stringify(await response.json()));
 });
 
 Deno.test("Player redemption exact retry returns 200 replay without changing scope", async () => {
@@ -47,6 +104,7 @@ Deno.test("Player redemption exact retry returns 200 replay without changing sco
 
 Deno.test("Player redemption collection and status reads stay scoped and public", async () => {
   const repository = new FakeRepository();
+  const collectionContext = applicationContext();
   const collection = await handlePlayerInventoryRedemptionRequest(
     request({
       method: "GET",
@@ -55,18 +113,34 @@ Deno.test("Player redemption collection and status reads stay scoped and public"
     }),
     { kind: "collection" },
     dependencies(repository),
+    collectionContext,
   );
   assertEquals(collection.status, 200);
-  assertEquals(repository.readInputs[0], {
-    gameId: GAME,
-    playerUuid: PLAYER,
+  assertSame(
+    repository.readInputs[0]?.applicationContext,
+    collectionContext,
+  );
+  assertEquals({
+    status: repository.readInputs[0]?.status,
+    limit: repository.readInputs[0]?.limit,
+    offset: repository.readInputs[0]?.offset,
+    requestId: repository.readInputs[0]?.requestId,
+  }, {
     status: "pending",
     limit: 10,
     offset: 5,
     requestId: null,
   });
+  assertEquals(Object.keys(repository.readInputs[0] ?? {}).sort(), [
+    "applicationContext",
+    "limit",
+    "offset",
+    "requestId",
+    "status",
+  ]);
   assertNoUuid(JSON.stringify(await collection.json()));
 
+  const itemContext = applicationContext();
   const item = await handlePlayerInventoryRedemptionRequest(
     request({
       method: "GET",
@@ -74,8 +148,10 @@ Deno.test("Player redemption collection and status reads stay scoped and public"
     }),
     { kind: "item", requestId: REQUEST_ID },
     dependencies(repository),
+    itemContext,
   );
   assertEquals(item.status, 200);
+  assertSame(repository.readInputs[1]?.applicationContext, itemContext);
   assertEquals(repository.readInputs[1]?.requestId, REQUEST_ID);
   assertNoUuid(JSON.stringify(await item.json()));
 });
@@ -262,6 +338,33 @@ function dependencies(
   };
 }
 
+function applicationContext() {
+  return Object.freeze(
+    {
+      gameSessionId: GAME,
+      actor: Object.freeze({
+        kind: "player" as const,
+        playerUuid: PLAYER,
+        playerSessionId: SESSION,
+      }),
+      role: "player" as const,
+      permissions: Object.freeze(["own_player"] as const),
+      requestId: "request-player-redemption-001",
+      playerUuid: PLAYER,
+      gameId: GAME,
+      activeSessionId: SESSION,
+      sessionValid: true,
+      sessionExpiresAt: "2026-07-19T00:00:00.000Z",
+      authorizationContext: Object.freeze({
+        actorType: "player",
+        source: "player_session",
+        gameScope: "session",
+        resourceScope: "own_player",
+      }),
+    } as const,
+  );
+}
+
 function activeResolution(overrides: { readonly playerStatus?: string } = {}) {
   return {
     ok: true as const,
@@ -340,6 +443,22 @@ function assertNoUuid(value: string): void {
     /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i
       .test(value)
   ) throw new Error(`UUID leaked: ${value}`);
+}
+
+function assertUuid(value: unknown): void {
+  if (
+    typeof value !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(value)
+  ) {
+    throw new Error(
+      `Expected a server-generated UUID, received ${String(value)}`,
+    );
+  }
+}
+
+function assertSame(actual: unknown, expected: unknown): void {
+  if (actual !== expected) throw new Error("Expected identical references");
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {

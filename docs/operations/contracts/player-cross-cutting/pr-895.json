@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.player-route-prefix-pr-895.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 895,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
+    "backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts",
+    "backend/src/domains/contracts/api/playerContractPublicListRoutePaths.ts",
+    "backend/src/domains/contracts/api/playerContractPublicSubmitRoutePaths.ts",
+    "backend/src/domains/countries/api/playerWorldRoutePaths.ts",
+    "backend/src/domains/crafting/api/playerCraftingRoutePaths.ts",
+    "backend/src/domains/economy/api/playerBankingPublicRoutePaths.ts",
+    "backend/src/domains/inventory/api/playerInventoryRedemptionRoutePaths.ts",
+    "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts",
+    "backend/src/domains/players/api/playerApiRouteSegments.ts",
+    "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+    "backend/src/platform/supabase/playerApiRouteSegments.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-895.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-005/route-prefix-transfer-plan.md",
+    "docs/operations/evidence/refactor-execution-v1/REF-005/seam-baseline.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/business-banking/api/playerBusinessBankingRoutePaths.ts",
+    "backend/src/domains/contracts/api/playerContractAcceptanceRoutePaths.ts",
+    "backend/src/domains/contracts/api/playerContractPublicListRoutePaths.ts",
+    "backend/src/domains/contracts/api/playerContractPublicSubmitRoutePaths.ts",
+    "backend/src/domains/countries/api/playerWorldRoutePaths.ts",
+    "backend/src/domains/crafting/api/playerCraftingRoutePaths.ts",
+    "backend/src/domains/economy/api/playerBankingPublicRoutePaths.ts",
+    "backend/src/domains/inventory/api/playerInventoryRedemptionRoutePaths.ts",
+    "backend/src/domains/inventory/api/playerInventoryRoutePaths.ts",
+    "backend/src/domains/players/api/playerApiRouteSegments.ts",
+    "backend/src/domains/players/api/playerCapabilityManifestRoutePaths.test.ts",
+    "backend/src/platform/supabase/playerApiRouteSegments.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/contracts/player-cross-cutting/pr-895.json",
+    "docs/operations/evidence/refactor-execution-v1/REF-005/route-prefix-transfer-plan.md",
+    "docs/operations/evidence/refactor-execution-v1/REF-005/seam-baseline.json",
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Player Terminal Verify",
+    "Player Multiplayer and Load E2E",
+    "Business Banking Runtime"
+  ],
+  "criticalJobChecks": [
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "readOnlyPaths": [
+    "scripts/player-cross-cutting-authority.test.mjs",
+    "scripts/verify-player-cross-cutting-authority.mjs"
+  ],
+  "authorizationNote": "This draft covers the Player route-prefix transport transfer, its nine callers, generated inventory and REF-005 evidence. The existing verifier requires its own script and test in the allowlist; readOnlyPaths records intent but is not enforced by that verifier, so their unchanged state must be checked against main at the final PR head. Exact-head CI and Preview are required. This manifest does not authorize production deployment, production mutation, or secret-value handling."
+}

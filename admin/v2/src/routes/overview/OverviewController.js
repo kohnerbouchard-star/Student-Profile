@@ -1,3 +1,5 @@
+import { createGameLifecycleController } from "./GameLifecycleController.js";
+import { GameLifecyclePanel } from "./GameLifecyclePanel.js";
 import { normalizeOverviewReadModel } from "../../api/overview-read-model.js";
 import {
   beginAdminDataLoad,
@@ -20,12 +22,24 @@ export function createOverviewController({
   if (!api?.readOverview) throw new TypeError("Overview API is unavailable.");
   let state = createAdminDataState();
   let destroyed = false;
+  let lifecycleView = null;
+  const lifecycle = createGameLifecycleController({
+    api, gameId: selectedGameId, hasPermission,
+    onChange: () => lifecycleView?.update(),
+    onApplied: () => { void loadOverview(); },
+  });
 
   function publish() {
     if (!destroyed) onChange(state);
   }
 
-  async function load() {
+  function load() {
+    lifecycleView?.deactivate();
+    void lifecycle.load();
+    return loadOverview();
+  }
+
+  async function loadOverview() {
     if (destroyed || !hasPermission("game.read")) return;
     const requestedVersion = api.getRequestVersion() + 1;
     state = beginAdminDataLoad(state, { requestVersion: requestedVersion });
@@ -66,19 +80,25 @@ export function createOverviewController({
     getState: () => state,
     load,
     render({ onOpenLegacy } = {}) {
+      if (!lifecycleView) lifecycleView = GameLifecyclePanel({ controller: lifecycle, hasPermission });
+      lifecycleView.setGameName(state.data?.model?.game?.name);
       return OverviewRoute({
+        lifecyclePanel: lifecycleView.element,
         state,
         hasPermission,
         onOpenLegacy,
         onRefresh: load,
       });
     },
+    deactivate() { lifecycleView?.deactivate(); },
     renderNotifications() {
       return OverviewNotifications({ data: state.data, onRetry: load });
     },
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      lifecycleView?.destroy();
+      lifecycle.destroy();
       api.cancelOverviewRequest();
     },
   });

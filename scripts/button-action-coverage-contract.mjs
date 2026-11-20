@@ -8,7 +8,9 @@ const LEDGER_PATH = resolve(
   ROOT,
   "docs/operations/contracts/button-action-coverage-v1.json",
 );
-const EXPECTED_ADMIN_MUTATION_COUNT = 39;
+// Phase 13E retired Business compliance intervention. Its absence is enforced
+// by admin-v2-business-api.test.mjs; this registry counts enabled API actions.
+const EXPECTED_ADMIN_MUTATION_COUNT = 38;
 const releaseMode = process.argv.includes("--release");
 const ledger = JSON.parse(await readFile(LEDGER_PATH, "utf8"));
 const failures = [];

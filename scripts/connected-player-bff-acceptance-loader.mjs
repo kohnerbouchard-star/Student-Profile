@@ -186,49 +186,6 @@ function adaptMarketExpectedNegativeConsoleErrors(source) {
   );
 }
 
-function adaptBusinessFundedBalanceWait(source) {
-  if (!source.includes("The Player Banking page did not render the ${currencyCode} checking balance.")) {
-    return source;
-  }
-
-  const oldBlock = `async function checkingBalance(page, currencyCode, { optional = false } = {}) {
-  await openRoute(page, "banking", ".player-terminal-banking-page");
-  const card = page.locator(\`[data-player-banking-balance="checking:\${currencyCode}"]\`).first();
-  if (!(await card.count())) {
-    if (optional) return 0;
-    throw new Error(\`The Player Banking page did not render the \${currencyCode} checking balance.\`);
-  }
-  await card.waitFor({ state: "visible", timeout: 30_000 });
-  const text = String(await card.locator("h3").innerText()).replace(/,/g, "");
-  const amount = Number(text.match(/-?[0-9]+(?:\\.[0-9]{1,2})?/)?.[0]);
-  if (!Number.isFinite(amount)) throw new Error(\`Could not parse the \${currencyCode} checking balance from \${redact(text)}.\`);
-  return amount;
-}`;
-
-  const newBlock = `async function checkingBalance(page, currencyCode, { optional = false } = {}) {
-  await openRoute(page, "banking", ".player-terminal-banking-page");
-  const card = page.locator(\`[data-player-banking-balance="checking:\${currencyCode}"]\`).first();
-  if (optional && !(await card.count())) return 0;
-  try {
-    await card.waitFor({ state: "visible", timeout: 30_000 });
-  } catch (_) {
-    if (optional) return 0;
-    throw new Error(\`The Player Banking page did not render the \${currencyCode} checking balance.\`);
-  }
-  const text = String(await card.locator("h3").innerText()).replace(/,/g, "");
-  const amount = Number(text.match(/-?[0-9]+(?:\\.[0-9]{1,2})?/)?.[0]);
-  if (!Number.isFinite(amount)) throw new Error(\`Could not parse the \${currencyCode} checking balance from \${redact(text)}.\`);
-  return amount;
-}`;
-
-  return replaceExactlyOnce(
-    source,
-    "Business funded Banking render wait",
-    oldBlock,
-    newBlock,
-  );
-}
-
 function adaptCommerceUsableInventoryFixture(source) {
   const oldBlock = `  const button = session.page.locator("[data-player-purchase]:not([disabled])").first();
   await button.waitFor({ state: "visible", timeout: 30_000 });
@@ -401,7 +358,6 @@ export async function runConnectedPlayerBffAcceptance(entryUrl) {
   );
   source = adaptMarketAuthenticatedReads(source);
   source = adaptMarketExpectedNegativeConsoleErrors(source);
-  source = adaptBusinessFundedBalanceWait(source);
   source = adaptCommerceUsableInventoryFixture(source);
   source = adaptInventoryUsableHoldingFixture(source);
 

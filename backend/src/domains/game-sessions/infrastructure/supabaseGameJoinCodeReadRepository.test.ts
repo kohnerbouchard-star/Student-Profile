@@ -4,6 +4,7 @@ import {
 import {
   createSupabaseGameJoinCodeReadRepository,
 } from "./supabaseGameJoinCodeReadRepository.ts";
+import type { GameSessionsStaffApplicationContext } from "../contracts/gameSessionsStaffApplicationContext.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -24,8 +25,7 @@ Deno.test("Supabase join-code repository applies both owner scope predicates", a
   });
   const repository = createSupabaseGameJoinCodeReadRepository(client);
   const result = await repository.readOwnedGameJoinCode({
-    gameSessionId: GAME_ID,
-    staffUserId: STAFF_ID,
+    applicationContext: context(),
   });
 
   assertEquals(client.calls, [
@@ -52,8 +52,7 @@ Deno.test("Supabase join-code repository returns null for a non-owned row", asyn
     fixtureClient(null),
   );
   const result = await repository.readOwnedGameJoinCode({
-    gameSessionId: GAME_ID,
-    staffUserId: STAFF_ID,
+    applicationContext: context(),
   });
   assertEquals(result, null);
 });
@@ -68,8 +67,7 @@ Deno.test("Supabase join-code repository hides query and malformed-row details",
     try {
       await createSupabaseGameJoinCodeReadRepository(client)
         .readOwnedGameJoinCode({
-          gameSessionId: GAME_ID,
-          staffUserId: STAFF_ID,
+          applicationContext: context(),
         });
     } catch (error) {
       if (error instanceof GameJoinCodeReadPersistenceError) continue;
@@ -105,6 +103,17 @@ function fixtureClient(
       return builder;
     },
   };
+}
+
+function context(): GameSessionsStaffApplicationContext {
+  return Object.freeze({
+    gameSessionId: GAME_ID,
+    actor: Object.freeze({ kind: "staff" as const, staffUserId: STAFF_ID }),
+    role: "game_admin" as const,
+    permissions: Object.freeze(["game.read"]),
+    requestId: "server-request-join-code-read-001",
+    assuranceLevel: "aal2" as const,
+  });
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {

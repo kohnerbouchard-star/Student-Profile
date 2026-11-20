@@ -1,0 +1,502 @@
+name: Production Current Convergence 2026-08-17
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/production-current-convergence-20260817.yml"
+      - "scripts/release-integrity-v2/live-parity-policy.json"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/production-current-convergence-20260817.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: production-current-convergence-20260817
+  cancel-in-progress: false
+
+env:
+  RELEASE_ID: econovaria-production-current-20260817-v1
+  STAGING_PROJECT_REF: eecvbssdvarfcykcfrny
+  PRODUCTION_PROJECT_REF: cgiukdjwicykrmtkhudh
+  POLICY_PATH: scripts/release-integrity-v2/live-parity-policy.json
+  CA_BUNDLE_PATH: scripts/release-integrity-v2/certs/supabase-ca-bundle.crt
+  HISTORICAL_CUTOFF: "20260816120013"
+  SUPABASE_CLI_VERSION: 2.109.1
+  VERCEL_CLI_VERSION: 58.1.0
+  M1_PATH: backend/supabase/migrations/20260817122000_require_teacher_approval_redemption_mode_v1.sql
+  M1_VERSION: "20260817122000"
+  M1_NAME: require_teacher_approval_redemption_mode_v1
+  M1_BLOB: aa5e755ac2a98cf55315af800eb2234fc5eba1fc
+  M2_PATH: backend/supabase/migrations/20260817130000_add_story_decision_microdetail_v1.sql
+  M2_VERSION: "20260817130000"
+  M2_NAME: add_story_decision_microdetail_v1
+  M2_BLOB: 0e5112fc52e473258b448dd1db42b1d20c76325a
+  M3_PATH: backend/supabase/migrations/20260817130100_harden_meridian_ending_decision_predicates_v1.sql
+  M3_VERSION: "20260817130100"
+  M3_NAME: harden_meridian_ending_decision_predicates_v1
+  M3_BLOB: fd0f6080e0d0295c0b8fb51ca8fa96c51a244dfd
+  M4_PATH: backend/supabase/migrations/20260817130200_add_story_decision_callbacks_v1.sql
+  M4_VERSION: "20260817130200"
+  M4_NAME: add_story_decision_callbacks_v1
+  M4_BLOB: b829f9f076e1f9fac0b4ae2165f69c4926c7693f
+
+jobs:
+  static-contract:
+    name: Validate bounded production convergence contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+
+      - name: Verify frozen historical policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const policy = require('./scripts/release-integrity-v2/live-parity-policy.json');
+          const expected = {
+            schemaVersion: 'econovaria.release-integrity-v2.policy.v1',
+            policyId: 'econovaria-live-parity-2026-08-17',
+            historicalLedgerCutoff: '20260816120013',
+            stagingSha256: '133ec56ec85a1f5adc766ee7721f133079f320cf97ad5aa5fb62a32ed3562763',
+            productionSha256: '3d3ef73cad648d4d9d89ec142aca5c823c0c469064e663cbf4dead8bb676c0e3',
+          };
+          if (policy.schemaVersion !== expected.schemaVersion) throw new Error('Unexpected policy schema.');
+          if (policy.policyId !== expected.policyId) throw new Error('Unexpected policy id.');
+          if (policy.historicalLedgerCutoff !== expected.historicalLedgerCutoff) throw new Error('Historical cutoff moved.');
+          if (policy.historicalLedgerBaselines?.stagingSha256 !== expected.stagingSha256) throw new Error('Staging historical baseline moved.');
+          if (policy.historicalLedgerBaselines?.productionSha256 !== expected.productionSha256) throw new Error('Production historical baseline moved.');
+          NODE
+          node --check scripts/release-integrity-v2/compare-live-parity.mjs
+          test -s "$CA_BUNDLE_PATH"
+
+      - name: Verify exact post-cutoff migration manifest and source blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_paths=("$M1_PATH" "$M2_PATH" "$M3_PATH" "$M4_PATH")
+          expected_blobs=("$M1_BLOB" "$M2_BLOB" "$M3_BLOB" "$M4_BLOB")
+          mapfile -t actual_paths < <(
+            find backend/supabase/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' \
+              | awk -F_ -v cutoff="$HISTORICAL_CUTOFF" 'substr($1,1,14) ~ /^[0-9]{14}$/ && substr($1,1,14) > cutoff {print "backend/supabase/migrations/" $0}' \
+              | sort
+          )
+          test "${#actual_paths[@]}" -eq 4
+          for index in 0 1 2 3; do
+            test "${actual_paths[$index]}" = "${expected_paths[$index]}"
+            test "$(git hash-object "${expected_paths[$index]}")" = "${expected_blobs[$index]}"
+            grep -Eq '^begin;[[:space:]]*$' "${expected_paths[$index]}"
+            grep -Eq '^commit;[[:space:]]*$' "${expected_paths[$index]}"
+            if grep -Eiq '\b(drop[[:space:]]+(table|schema|database)|truncate|alter[[:space:]]+table[^;]+drop[[:space:]]+column)\b' "${expected_paths[$index]}"; then
+              echo "Destructive SQL rejected in ${expected_paths[$index]}." >&2
+              exit 1
+            fi
+          done
+
+      - name: Verify migration-specific safety contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'enforce_teacher_approval_redemption_mode_v1' "$M1_PATH"
+          grep -q 'redemptionMode' "$M1_PATH"
+          grep -q 'create table if not exists public.player_story_decisions' "$M2_PATH"
+          grep -q 'capture_player_story_decision_v1' "$M2_PATH"
+          grep -q 'rewrite_meridian_long_term_status_condition_v1' "$M3_PATH"
+          grep -q 'meridian_story_decision_mode_v1' "$M3_PATH"
+          grep -q 'rewrite_meridian_story_decision_callback_rules_v1' "$M4_PATH"
+          grep -q 'semanticMemoryCallback' "$M4_PATH"
+
+  staging-converge:
+    name: Apply exact post-cutoff migrations to staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: static-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/release-integrity-v2/certs/supabase-ca-bundle.crt
+    steps:
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce exact staging release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$SUPABASE_PROJECT_REF" = "$STAGING_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -s "$PGSSLROOTCERT"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1
+        with:
+          version: 2.109.1
+      - name: Bind exact staging database
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          cp backend/supabase/config.next.toml backend/supabase/config.toml
+          (cd backend && supabase --yes link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD")
+          database_url="$(tr -d '\r\n' < backend/supabase/.temp/pooler-url)"
+          case "$database_url" in
+            "postgresql://postgres.${STAGING_PROJECT_REF}@"*:5432/postgres) ;;
+            *) echo 'Unexpected staging database binding.' >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$database_url"
+          echo "DATABASE_URL=$database_url" >> "$GITHUB_ENV"
+          echo "PGPASSWORD=$SUPABASE_DB_PASSWORD" >> "$GITHUB_ENV"
+      - name: Converge exact staging migration ledger and schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<SQL > "$RUNNER_TEMP/ledger-preflight.json"
+          select json_build_object('presentCount',count(*),'exactCount',count(*) filter (where
+            (version='$M1_VERSION' and name='$M1_NAME' and statements=array['$M1_PATH@$M1_BLOB']) or
+            (version='$M2_VERSION' and name='$M2_NAME' and statements=array['$M2_PATH@$M2_BLOB']) or
+            (version='$M3_VERSION' and name='$M3_NAME' and statements=array['$M3_PATH@$M3_BLOB']) or
+            (version='$M4_VERSION' and name='$M4_NAME' and statements=array['$M4_PATH@$M4_BLOB'])))
+          from supabase_migrations.schema_migrations where version in ('$M1_VERSION','$M2_VERSION','$M3_VERSION','$M4_VERSION');
+          SQL
+          apply="$(PREFLIGHT="$RUNNER_TEMP/ledger-preflight.json" node - <<'NODE'
+          const fs=require('node:fs');const v=JSON.parse(fs.readFileSync(process.env.PREFLIGHT,'utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));
+          if(v.presentCount===0&&v.exactCount===0)process.stdout.write('true');else if(v.presentCount===4&&v.exactCount===4)process.stdout.write('false');else throw new Error(`Partial/conflicting staging ledger: ${JSON.stringify(v)}`);
+          NODE
+          )"
+          if [ "$apply" = true ]; then
+            OUTPUT="$RUNNER_TEMP/current-migrations.sql" node - <<'NODE'
+          const fs=require('node:fs');const ms=[1,2,3,4].map(n=>({path:process.env[`M${n}_PATH`],version:process.env[`M${n}_VERSION`],name:process.env[`M${n}_NAME`],blob:process.env[`M${n}_BLOB`]}));
+          const lit=v=>`'${String(v).replaceAll("'","''")}'`;const chunks=['begin;'];
+          for(const m of ms){const s=fs.readFileSync(m.path,'utf8').trim();const b=s.match(/^begin;\s*\n([\s\S]*?)\ncommit;\s*$/iu);if(!b)throw new Error(`${m.path} is not transaction bounded.`);const statement=`${m.path}@${m.blob}`;chunks.push(`do $$ begin if exists (select 1 from supabase_migrations.schema_migrations where version=${lit(m.version)}) then raise exception 'Migration ledger conflict for ${m.version}'; end if; end $$;`,b[1].trim(),`insert into supabase_migrations.schema_migrations(version,name,statements) values(${lit(m.version)},${lit(m.name)},array[${lit(statement)}]);`);}
+          chunks.push("notify pgrst, 'reload schema';",'commit;','');fs.writeFileSync(process.env.OUTPUT,chunks.join('\n\n'),{mode:0o600});
+          NODE
+            psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --file "$RUNNER_TEMP/current-migrations.sql"
+            rm -f "$RUNNER_TEMP/current-migrations.sql"
+          fi
+          rm -f "$RUNNER_TEMP/ledger-preflight.json"
+      - name: Verify staging postconditions and export evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/staging-evidence"
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 <<SQL > "$RUNNER_TEMP/post.json"
+          select json_build_object(
+            'ledgerExact',(select count(*)=4 from supabase_migrations.schema_migrations where
+              (version='$M1_VERSION' and name='$M1_NAME' and statements=array['$M1_PATH@$M1_BLOB']) or
+              (version='$M2_VERSION' and name='$M2_NAME' and statements=array['$M2_PATH@$M2_BLOB']) or
+              (version='$M3_VERSION' and name='$M3_NAME' and statements=array['$M3_PATH@$M3_BLOB']) or
+              (version='$M4_VERSION' and name='$M4_NAME' and statements=array['$M4_PATH@$M4_BLOB'])),
+            'inventoryGuard',to_regprocedure('economy_private.enforce_teacher_approval_redemption_mode_v1()') is not null,
+            'playerDecisions',to_regclass('public.player_story_decisions') is not null,
+            'decisionCapture',to_regprocedure('public.capture_player_story_decision_v1()') is not null,
+            'endingPredicate',to_regprocedure('public.rewrite_meridian_long_term_status_condition_v1(jsonb)') is not null,
+            'decisionCallbacks',to_regprocedure('public.rewrite_meridian_story_decision_callback_rules_v1(text,jsonb)') is not null);
+          SQL
+          POST="$RUNNER_TEMP/post.json" node - <<'NODE'
+          const fs=require('node:fs');const v=JSON.parse(fs.readFileSync(process.env.POST,'utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));for(const [k,ok] of Object.entries(v))if(ok!==true)throw new Error(`Staging postcondition failed: ${k}`);
+          NODE
+          ledger_sql="select coalesce(jsonb_agg(jsonb_build_object('version',version,'name',coalesce(name,'')) order by version),'[]'::jsonb)::text from supabase_migrations.schema_migrations"
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -c "$ledger_sql" > "$RUNNER_TEMP/staging-evidence/staging-ledger.json"
+          psql "$DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -f scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/staging-evidence/staging-schema.json"
+          rm -f "$RUNNER_TEMP/post.json"
+      - name: Upload staging parity evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: production-current-staging-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ runner.temp }}/staging-evidence
+
+  production-converge:
+    name: Apply exact post-cutoff migrations to production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: staging-converge
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: production
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: ${{ github.workspace }}/scripts/release-integrity-v2/certs/supabase-ca-bundle.crt
+    steps:
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce exact production release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL"
+          test -s "$PGSSLROOTCERT"
+          test "$STAGING_PROJECT_REF" != "$PRODUCTION_PROJECT_REF"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          node scripts/release-integrity/cli.mjs validate-db-url --url-env SUPABASE_DB_URL --expected-project-ref "$PRODUCTION_PROJECT_REF"
+      - name: Converge exact production migration ledger and schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 <<SQL > "$RUNNER_TEMP/ledger-preflight.json"
+          select json_build_object('presentCount',count(*),'exactCount',count(*) filter (where
+            (version='$M1_VERSION' and name='$M1_NAME' and statements=array['$M1_PATH@$M1_BLOB']) or
+            (version='$M2_VERSION' and name='$M2_NAME' and statements=array['$M2_PATH@$M2_BLOB']) or
+            (version='$M3_VERSION' and name='$M3_NAME' and statements=array['$M3_PATH@$M3_BLOB']) or
+            (version='$M4_VERSION' and name='$M4_NAME' and statements=array['$M4_PATH@$M4_BLOB'])))
+          from supabase_migrations.schema_migrations where version in ('$M1_VERSION','$M2_VERSION','$M3_VERSION','$M4_VERSION');
+          SQL
+          apply="$(PREFLIGHT="$RUNNER_TEMP/ledger-preflight.json" node - <<'NODE'
+          const fs=require('node:fs');const v=JSON.parse(fs.readFileSync(process.env.PREFLIGHT,'utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));
+          if(v.presentCount===0&&v.exactCount===0)process.stdout.write('true');else if(v.presentCount===4&&v.exactCount===4)process.stdout.write('false');else throw new Error(`Partial/conflicting production ledger: ${JSON.stringify(v)}`);
+          NODE
+          )"
+          if [ "$apply" = true ]; then
+            OUTPUT="$RUNNER_TEMP/current-migrations.sql" node - <<'NODE'
+          const fs=require('node:fs');const ms=[1,2,3,4].map(n=>({path:process.env[`M${n}_PATH`],version:process.env[`M${n}_VERSION`],name:process.env[`M${n}_NAME`],blob:process.env[`M${n}_BLOB`]}));
+          const lit=v=>`'${String(v).replaceAll("'","''")}'`;const chunks=['begin;'];
+          for(const m of ms){const s=fs.readFileSync(m.path,'utf8').trim();const b=s.match(/^begin;\s*\n([\s\S]*?)\ncommit;\s*$/iu);if(!b)throw new Error(`${m.path} is not transaction bounded.`);const statement=`${m.path}@${m.blob}`;chunks.push(`do $$ begin if exists (select 1 from supabase_migrations.schema_migrations where version=${lit(m.version)}) then raise exception 'Migration ledger conflict for ${m.version}'; end if; end $$;`,b[1].trim(),`insert into supabase_migrations.schema_migrations(version,name,statements) values(${lit(m.version)},${lit(m.name)},array[${lit(statement)}]);`);}
+          chunks.push("notify pgrst, 'reload schema';",'commit;','');fs.writeFileSync(process.env.OUTPUT,chunks.join('\n\n'),{mode:0o600});
+          NODE
+            psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 --file "$RUNNER_TEMP/current-migrations.sql"
+            rm -f "$RUNNER_TEMP/current-migrations.sql"
+          fi
+          rm -f "$RUNNER_TEMP/ledger-preflight.json"
+      - name: Verify production postconditions and export evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/production-evidence"
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 <<SQL > "$RUNNER_TEMP/post.json"
+          select json_build_object(
+            'ledgerExact',(select count(*)=4 from supabase_migrations.schema_migrations where
+              (version='$M1_VERSION' and name='$M1_NAME' and statements=array['$M1_PATH@$M1_BLOB']) or
+              (version='$M2_VERSION' and name='$M2_NAME' and statements=array['$M2_PATH@$M2_BLOB']) or
+              (version='$M3_VERSION' and name='$M3_NAME' and statements=array['$M3_PATH@$M3_BLOB']) or
+              (version='$M4_VERSION' and name='$M4_NAME' and statements=array['$M4_PATH@$M4_BLOB'])),
+            'inventoryGuard',to_regprocedure('economy_private.enforce_teacher_approval_redemption_mode_v1()') is not null,
+            'playerDecisions',to_regclass('public.player_story_decisions') is not null,
+            'decisionCapture',to_regprocedure('public.capture_player_story_decision_v1()') is not null,
+            'endingPredicate',to_regprocedure('public.rewrite_meridian_long_term_status_condition_v1(jsonb)') is not null,
+            'decisionCallbacks',to_regprocedure('public.rewrite_meridian_story_decision_callback_rules_v1(text,jsonb)') is not null);
+          SQL
+          POST="$RUNNER_TEMP/post.json" node - <<'NODE'
+          const fs=require('node:fs');const v=JSON.parse(fs.readFileSync(process.env.POST,'utf8').trim().split(/\r?\n/).filter(Boolean).at(-1));for(const [k,ok] of Object.entries(v))if(ok!==true)throw new Error(`Production postcondition failed: ${k}`);
+          NODE
+          ledger_sql="select coalesce(jsonb_agg(jsonb_build_object('version',version,'name',coalesce(name,'')) order by version),'[]'::jsonb)::text from supabase_migrations.schema_migrations"
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "$ledger_sql" > "$RUNNER_TEMP/production-evidence/production-ledger.json"
+          psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -f scripts/release-integrity/export-schema-fingerprint.sql > "$RUNNER_TEMP/production-evidence/production-schema.json"
+          rm -f "$RUNNER_TEMP/post.json"
+      - name: Upload production parity evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: production-current-production-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ runner.temp }}/production-evidence
+
+  enforce-live-parity:
+    name: Enforce bounded live staging-production parity
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [staging-converge, production-converge]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact merged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+      - name: Download staging evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: production-current-staging-${{ github.sha }}
+          path: ${{ runner.temp }}/parity/staging
+      - name: Download production evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: production-current-production-${{ github.sha }}
+          path: ${{ runner.temp }}/parity/production
+      - name: Enforce v2 live parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/release-integrity-v2/compare-live-parity.mjs --mode enforce --policy "$POLICY_PATH" --staging-schema "$RUNNER_TEMP/parity/staging/staging-schema.json" --production-schema "$RUNNER_TEMP/parity/production/production-schema.json" --staging-ledger "$RUNNER_TEMP/parity/staging/staging-ledger.json" --production-ledger "$RUNNER_TEMP/parity/production/production-ledger.json" --output "$RUNNER_TEMP/parity-report.json"
+      - name: Upload parity attestation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: production-current-parity-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: ${{ runner.temp }}/parity-report.json
+
+  vercel-promote:
+    name: Build, verify, and promote exact current production source
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: enforce-live-parity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    environment: production
+    env:
+      SOURCE_COMMIT: ${{ github.sha }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Check out exact current main source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce exact current main and Vercel release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test -n "$VERCEL_PROJECT_ID"
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          git fetch --no-tags --prune origin '+refs/heads/main:refs/remotes/origin/main'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          node - <<'NODE'
+          const config=require('./vercel.json');if(config.git?.deploymentEnabled?.main!==false)throw new Error('Automatic main deployments are not disabled.');
+          NODE
+      - name: Require successful exact-SHA Edge Function convergence
+        id: edge
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/edge-function-inventory-converge.yml/runs?head_sha=$SOURCE_COMMIT&event=push&per_page=20"
+          for attempt in $(seq 1 180); do
+            response="$(curl --fail --silent --show-error -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GITHUB_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28' "$api")"
+            state="$(RESPONSE="$response" SOURCE_COMMIT="$SOURCE_COMMIT" node - <<'NODE'
+          const body=JSON.parse(process.env.RESPONSE);const run=(body.workflow_runs||[]).find(v=>v.head_sha===process.env.SOURCE_COMMIT);if(!run)process.stdout.write('missing');else process.stdout.write(`${run.id}|${run.status}|${run.conclusion||''}`);
+          NODE
+            )"
+            if [ "$state" = missing ]; then sleep 20; continue; fi
+            IFS='|' read -r run_id status conclusion <<< "$state"
+            if [ "$status" = completed ]; then test "$conclusion" = success; echo "run_id=$run_id" >> "$GITHUB_OUTPUT"; exit 0; fi
+            sleep 20
+          done
+          exit 1
+      - name: Download exact Edge Function attestation
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: edge-function-convergence-${{ github.sha }}
+          run-id: ${{ steps.edge.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/edge-attestation
+      - name: Enforce exact Edge Function attestation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ATTESTATION="$RUNNER_TEMP/edge-attestation/final-attestation.json" node - <<'NODE'
+          const fs=require('node:fs');const v=JSON.parse(fs.readFileSync(process.env.ATTESTATION,'utf8'));if(v.ok!==true||v.sourceCommit!==process.env.SOURCE_COMMIT||(v.digestMismatches||[]).length!==0)throw new Error('Exact Edge Function attestation failed.');
+          NODE
+      - name: Set up exact Node.js runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22.23.1"
+          cache: npm
+      - name: Install locked repository dependencies
+        run: npm ci
+      - name: Run release and health contracts
+        run: |
+          set -euo pipefail
+          node --test scripts/runtime-health-contract.test.mjs scripts/live-runtime-attestation-contract.test.mjs scripts/vercel-deployment-contract.test.mjs scripts/release-integrity/workflow-contract.test.mjs scripts/production-runtime-promotion-contract.test.mjs
+      - name: Link exact Vercel project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .vercel
+          umask 077
+          node - <<'NODE' > .vercel/project.json
+          process.stdout.write(JSON.stringify({orgId:process.env.VERCEL_ORG_ID,projectId:process.env.VERCEL_PROJECT_ID}));
+          NODE
+      - name: Pull production environment and build staged output
+        run: |
+          set -euo pipefail
+          npx --yes "vercel@$VERCEL_CLI_VERSION" pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" build --prod --token="$VERCEL_TOKEN"
+      - name: Create unaliased staged production deployment
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/vercel-deploy-output.txt"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" deploy --prebuilt --prod --skip-domain --yes --env "ECONOVARIA_SOURCE_SHA=$SOURCE_COMMIT" --token="$VERCEL_TOKEN" | tee "$output"
+          deployment_url="$(grep -Eo 'https://[A-Za-z0-9.-]+\.vercel\.app' "$output" | tail -n 1)"
+          test -n "$deployment_url"
+          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+      - name: Verify staged deployment before promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_url="${{ steps.deploy.outputs.deployment_url }}"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" inspect "$deployment_url" --token="$VERCEL_TOKEN"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl /api/health --deployment "$deployment_url" --token="$VERCEL_TOKEN" > "$RUNNER_TEMP/staged-health.json"
+          HEALTH="$RUNNER_TEMP/staged-health.json" node - <<'NODE'
+          const health=require(process.env.HEALTH);if(health.ok!==true||health.status!=='ready'||health.environment!=='production'||health.projectRef!==process.env.PRODUCTION_PROJECT_REF||health.sourceCommit!==process.env.SOURCE_COMMIT)throw new Error('Staged production health attestation failed.');
+          NODE
+          npx --yes "vercel@$VERCEL_CLI_VERSION" logs "$deployment_url" --level error --limit 50 --token="$VERCEL_TOKEN" > "$RUNNER_TEMP/staged-error-logs.txt"
+          test ! -s "$RUNNER_TEMP/staged-error-logs.txt"
+      - name: Promote verified staged deployment
+        run: |
+          set -euo pipefail
+          npx --yes "vercel@$VERCEL_CLI_VERSION" promote "${{ steps.deploy.outputs.deployment_url }}" --yes --token="$VERCEL_TOKEN"
+          npx --yes "vercel@$VERCEL_CLI_VERSION" promote status --token="$VERCEL_TOKEN"
+      - name: Verify promoted production runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes "vercel@$VERCEL_CLI_VERSION" curl /api/health --token="$VERCEL_TOKEN" > "$RUNNER_TEMP/production-health.json"
+          HEALTH="$RUNNER_TEMP/production-health.json" node - <<'NODE'
+          const health=require(process.env.HEALTH);if(health.ok!==true||health.status!=='ready'||health.environment!=='production'||health.projectRef!==process.env.PRODUCTION_PROJECT_REF||health.sourceCommit!==process.env.SOURCE_COMMIT)throw new Error('Promoted production health attestation failed.');
+          NODE
+          npx --yes "vercel@$VERCEL_CLI_VERSION" logs --environment production --level error --since 5m --token="$VERCEL_TOKEN" > "$RUNNER_TEMP/production-error-logs.txt"
+          test ! -s "$RUNNER_TEMP/production-error-logs.txt"
+      - name: Upload production promotion evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: production-current-vercel-${{ github.sha }}
+          if-no-files-found: ignore
+          retention-days: 30
+          path: |
+            ${{ runner.temp }}/staged-health.json
+            ${{ runner.temp }}/production-health.json

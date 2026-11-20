@@ -1,0 +1,1290 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "repository": "kohnerbouchard-star/Student-Profile",
+      "pullRequestNumber": 980,
+      "baseRef": "main",
+      "purpose": "held14-structural-refactor",
+      "tranche": "economy2",
+      "baseTreeDigest": "dc205920cbaf841090b2e205ce74ff60256be3c55f38a95532d6f3476613072f",
+      "sourceReaderPaths": [],
+      "evidencePaths": [
+        "docs/simulations/held-economy-refactor-v1.md"
+      ],
+      "changes": [
+        {
+          "path": ".github/workflows/admin-api-check.yml",
+          "oldOid": "d1b4be27a9c0968ac208c317be64dc8e9cd4fa96",
+          "newOid": "e12ff2f6c0bff7e3be75f7302c01be4ce7ef3b13",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-browser-e2e.yml",
+          "oldOid": "fed2c0a8d71d4875d7fb9633c57152bcaed27cfa",
+          "newOid": "88434edb5f50d051a7445d42289ce5bcccc916e2",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-business-supervision.yml",
+          "oldOid": "02e9b64856335457b4ee2229df7e33a5eb2813a0",
+          "newOid": "36549aeee6d31d67128e365a1b36dea4c834234d",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-game-lifecycle-controls-v1.yml",
+          "oldOid": "eb70fe262bb4df35312410c25bb16395e8232b6f",
+          "newOid": "87398d29fc77503125c234f7c029f3a261825fec",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-scroll-integrity.yml",
+          "oldOid": "2b60f9a8b7a8d9ce4b27152ba784138713e1e349",
+          "newOid": "5fb302a111cf0f1873fef5d01237adf98d3b76aa",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-shell-smoke.yml",
+          "oldOid": "3eaf2c9118deaf39f5d1b019facc3406149e9475",
+          "newOid": "f16ff31ff855a2f9684f96a6de434b2ec6679fe5",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-attendance.yml",
+          "oldOid": "39bd63c9b130e7508803bb8a809865bce723c882",
+          "newOid": "b7dab781d6be676296023582cd25d58880189266",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-banking.yml",
+          "oldOid": "0a4c46cbce9fece8e32aca5d26f5f8ca0990dc6b",
+          "newOid": "89ded59c6384ab2c6f90501cd6cb99aa8d009b95",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-contracts.yml",
+          "oldOid": "500b86438e150d3446f99fb60cc1c73121f5dba4",
+          "newOid": "1b31b0fd161aeab1e0ebc4df138fc39f8d9f7bae",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-crafting.yml",
+          "oldOid": "49d235785e555f65f1562f5618fb0e9cac38a004",
+          "newOid": "573d27c6a8529a182e21ce6d23c87fbe98d7cc0b",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-market.yml",
+          "oldOid": "eb001b69577ff499f4f0ba82f72a6f19f0ac427f",
+          "newOid": "fc952de18c59d22a4dbf0dd9bb66c03cfe7c512d",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-messages.yml",
+          "oldOid": "5cf0c99e5b8430263d5978bcbc5881b540922a4f",
+          "newOid": "322ea720b4e06674eb0f41cfd6c6ffd7fdf4348c",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-news-events.yml",
+          "oldOid": "6581f3771c79e3a334ab8de6b0c6904723311064",
+          "newOid": "61ddde111550e32088d5080196e622852f048b25",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-settings-check.yml",
+          "oldOid": "d69e47188b02985eb374eac5c9c23c43e29be317",
+          "newOid": "8a06a969784f79639f0f9837ce8bf6a282793e3c",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/backend-typecheck.yml",
+          "oldOid": "4d88633b59b9e1e1cafec6dbe56034f178d72803",
+          "newOid": "3d4739014d08a4e0abe6042e2e875562f24501bf",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/banking-fx-clearing-v1.yml",
+          "oldOid": "0b9dee5e9e3b3e1921dfae28a22971ee981636d2",
+          "newOid": "aa65edca2ea9a6cb5bf72fd65a7572bf7d909732",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-economy-v2.yml",
+          "oldOid": "3784366c018b4942c5ee5e707d8887620cdc8942",
+          "newOid": "2d0dd4399c749d9cc3717b64b61a4d845e8f4e22",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-financial-market.yml",
+          "oldOid": "7a96e527786c9d8860af312b2e005e5ce7aea2da",
+          "newOid": "7b9acc4d0978939fcc5cb7957efbc01966073ac1",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-multicurrency-treasury-v1.yml",
+          "oldOid": "efcca65f9a540e3f4d8a3f47d652a353ca14c325",
+          "newOid": "d78e964d966da089eabe97932161555eb07dda18",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-player-store-cutover-v2.yml",
+          "oldOid": "d43c16413b2af824ac78fece662074ff953f5ba0",
+          "newOid": "91b792a3ba34ef635bd3b1493c4967fd6621961a",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-player-store-fx-final-v2.yml",
+          "oldOid": "f37ef8d463989ec8018d68b4b7c683c5c918225d",
+          "newOid": "9995c083a62e993f3bfbbc02590082279fe0ddc1",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-primary-ipo.yml",
+          "oldOid": "d23b54983359094ece4e82c478d339a9e913681f",
+          "newOid": "e71eab072ffc723a6cfc124c211ebba9c2f3d6da",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-store-atomic-settlement-v2.yml",
+          "oldOid": "50947085a878c4d7b5dd2c86ce3d1dc9e88d3d0f",
+          "newOid": "9d0ab54f3d7cd0b195286492adf0e9a168a6063c",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-store-listing-inventory-v2.yml",
+          "oldOid": "cb91fed79b69a72d4b37178a393b7ebf7ffced63",
+          "newOid": "76d968c65dc1665fe33227579d674f9e94e513b0",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-store-sales-convergence-v2.yml",
+          "oldOid": "a7a8e0186f0550a14e03acf36ad0703cee33e5fa",
+          "newOid": "1e6030d9c5903081dc35584970e42745c89ac360",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-store-seller-offers-v2.yml",
+          "oldOid": "35572c1a0dc0c02d523ab4a393cf4ffd048e7ebb",
+          "newOid": "be61431332c3f2a5f73dd73fc8e9ed59f1d18076",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-store-withdrawal-safety-v2.yml",
+          "oldOid": "0637df924927bb42d3b9273a09bf57bcea7f7982",
+          "newOid": "d15032fe1e3b302183224ba2b71fbbf58cf26f5d",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-timed-manufacturing-v2.yml",
+          "oldOid": "c5defaa3b8ca5df7575db929bd97495c917797f5",
+          "newOid": "8ff245e58c2a6864bda9cd53d27bf03e065356e1",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/button-action-coverage.yml",
+          "oldOid": "e49b80315780b4f96fc4013971803d84d871e922",
+          "newOid": "d169fabc3a76792f97116a5812d3da66eeb14e53",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/configurable-stock-market-timezone-v1.yml",
+          "oldOid": "3951d6fa14cc0a8353854fd6d79ff6e15efe585b",
+          "newOid": "116309de2e820932c8c1ce66bd643181e3dd3b5b",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/crafting-item-runtime.yml",
+          "oldOid": "91586f2c2f340fef5ea4a21c08deb55a9577e6f9",
+          "newOid": "71fa6a9fa734c06917f897a693cdd383db3bea5d",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/database-replay.yml",
+          "oldOid": "892b9746802355c8d714520e990cfd04bb713f3c",
+          "newOid": "2a33a8dc21b5d5b5887a42cf2c52660422b34284",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/economic-balance-exploit-lab.yml",
+          "oldOid": "59efbcf46bf1dc61b50d46aee35a1a8c7eacf684",
+          "newOid": "6eb474fc0b88bc5999aa8aae6c2f875aac0c8633",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/economic-core-request-claims.yml",
+          "oldOid": "1f38740aab52f63aa0afc2e793b5d7abf8e32b5b",
+          "newOid": "a49a337a58f70e7e0955242542f858402c893585",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/environment-neutral-browser.yml",
+          "oldOid": "d206c18d3c236e3941c68738ddbd8d9acec3fa05",
+          "newOid": "1588cbe5167c2b3b6f0cc4487d07ef8922bf92e3",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/exchange-calendar-runtime-v1.yml",
+          "oldOid": "234a5d32f40fbfabc80b1d88b2c8c300ec4994fb",
+          "newOid": "4e6e9fcf3b9b57cbbad9e569ce6b16a3d1701fec",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/full-financial-markets-expansion.yml",
+          "oldOid": "bfbe73034f1224e814b7796a0b312aba351d1bd9",
+          "newOid": "df35bb8cf8b0c563a801a357a13710e86a592056",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/loans-lifecycle-read-v1.yml",
+          "oldOid": "3f495872a8b02d90759b390dedbafce24b36a083",
+          "newOid": "fb180bfbe0703b896f16852561bb0e83c54b2a8a",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/multicurrency-marketplace-funding-v1.yml",
+          "oldOid": "a0ba13423804657b6353bba0094b42bfeabe4990",
+          "newOid": "945a27fa3808a1bdc82907735e740508e04ec4e6",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/multicurrency-stock-funding-v1.yml",
+          "oldOid": "2a1cc8e24e373048e47e83f4ea6eee0645844242",
+          "newOid": "c29f644d8dc55cb5b9b021c370849e06ff4a9de5",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/multicurrency-store-funding-v1.yml",
+          "oldOid": "0e3b1ea09d7c597423f0128f58e04a51f317ef7c",
+          "newOid": "d718082579dee2306ac4df73d561ec3022ccd31a",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/player-button-click-safety.yml",
+          "oldOid": "ad0895f27c4ef39d1a5aae0b7823c5d2fbc9a7d5",
+          "newOid": "1456787662accf850f4c1e900a1e9dabcc43f4b2",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/player-local-currency-authority.yml",
+          "oldOid": "6e4f8792ac26a83379bdf7a93a1ca8d708f61eba",
+          "newOid": "bb8af78d578e88e19d4e8b680fcd41ca5e03af9f",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/player-multiplayer-load-e2e.yml",
+          "oldOid": "e3f9fd3cb3aacb6608daf6e95afe2a54aa50c99e",
+          "newOid": "f5464cff8d6a46f0993d8e2f0b9544479c4a3794",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/player-response-privacy.yml",
+          "oldOid": "5ccc36e2767147848635dae79e786c8ba8061cae",
+          "newOid": "39181bbb1f8e163f42ce09fdea9a720e4bb689d0",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/ref-009-contract-reward-qualification.yml",
+          "oldOid": "3b0f80c1cb96ea3043d621b70e8cc660fb761727",
+          "newOid": "64c0b703c6b93985c33e0bf10e04682552794d53",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/ref-018-attendance-qualification.yml",
+          "oldOid": "1dc3056cf1b1599960788c32cc032fff11b83239",
+          "newOid": "422861b7083245db79c94419d4201b05d3779920",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/release-promote.yml",
+          "oldOid": "1f1dbf475473b988514d1f4bb210087523602e75",
+          "newOid": "da9aa48d56879b384cff640c94cfca83324f1225",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/runtime-interaction-wiring.yml",
+          "oldOid": "5088fdd7ab6b7837dfbfdc0d82d801544eea3038",
+          "newOid": "3d341ad3b239d8dc0170be35e578a901c1751e26",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/story-replay-safety.yml",
+          "oldOid": "11198644d458fef6b637fb245acc4cfd943955b7",
+          "newOid": "a7c0d9b52bd23a12a94e7bb1b5a1c88e511a7691",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/world-runtime.yml",
+          "oldOid": "29c010701fd4a95046eec89728f52d9ce504fc34",
+          "newOid": "334b1e2b7ef58b602fda5dd76554191fbef74971",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/simulations/economy/creditRecoveryScenarioSimulation.ts",
+          "oldOid": "8324d40af5b41b61594a46eace6dcf39db93090d",
+          "newOid": "c69f935ee303a07e37df9adb3862cf479c716f34",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/simulations/economy/creditRecoveryScenarioValidation.ts",
+          "oldOid": null,
+          "newOid": "78a3f7eea113a4dcb6aa3bee23d919b8295339c0",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/simulations/economy/deterministicEconomicSimulation.ts",
+          "oldOid": "11a3f2e602232da62548162833de6352e2e245c4",
+          "newOid": "a4894a7402a10d44b810e36e7c328f980930f6b3",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/simulations/economy/economicSimulationActions.ts",
+          "oldOid": null,
+          "newOid": "6aec573a1ff3ab8c27455887a7e55f3b91800d10",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/simulations/economy/economicSimulationState.ts",
+          "oldOid": null,
+          "newOid": "9e7bf56ad9bb1d54910deeb5b23cee2c25508a0d",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/simulations/economy/economicSimulationValidation.ts",
+          "oldOid": null,
+          "newOid": "c7576af8b01e69341a8163efae846cc55a197f77",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+          "oldOid": "88c1f72cd4a7eadbba05eaec520881d764ceb4d7",
+          "newOid": "ea4622893e7c03fa0e61dd29b65fc136512c1e30",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "docs/operations/contracts/player-cross-cutting/pr-980.json",
+          "oldOid": null,
+          "newOid": "13cae9ca5f91d03a76760747ea0fcf581e6463a9",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+          "oldOid": "068b0c93a7e7c185bde660862019045866090abb",
+          "newOid": "6ed40627e05127bbef8e4e7d24e2644aabda0e6d",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "docs/simulations/held-economy-refactor-v1.md",
+          "oldOid": null,
+          "newOid": "d19f00ba795cffd2c313bbdc407b17c1f6e9a581",
+          "oldMode": null,
+          "newMode": "100644"
+        }
+      ]
+    },
+    {
+      "repository": "kohnerbouchard-star/Student-Profile",
+      "pullRequestNumber": 981,
+      "baseRef": "main",
+      "purpose": "held14-structural-refactor",
+      "tranche": "admin12",
+      "baseTreeDigest": "5e52a1a37f0aef792c2548e8fed468dbab45d7bdcad84c7a5f32200d86478575",
+      "sourceReaderPaths": [
+        "backend/package.json",
+        "backend/src/domains/game-sessions/api/gameSessionsSharedRootComposition.test.ts",
+        "backend/src/security/classroomApiRateLimitDispatch.test.ts",
+        "backend/src/security/edgeCompositionSource.test.support.ts",
+        "scripts/admin-local-handler-architecture-contract.test.mjs",
+        "scripts/admin-v2-teacher-safety-contract.test.mjs",
+        "scripts/admin-world-runtime-console-contract.mjs",
+        "scripts/business-banking-runtime-contract.mjs",
+        "scripts/business-input-purchase-retirement-contract.mjs",
+        "scripts/business-multicurrency-treasury-contract.mjs",
+        "scripts/business-phase4c-player-recovery-contract.mjs",
+        "scripts/business-workforce-hiring-contract.mjs",
+        "scripts/edge-runtime-source.test.mjs",
+        "scripts/finite-source-contract-readers.test.mjs",
+        "scripts/helpers/edge-runtime-source.mjs",
+        "scripts/player-local-currency-authority-contract.test.mjs"
+      ],
+      "evidencePaths": [
+        "docs/operations/evidence/held-admin-refactor-v1/scope.md",
+        "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json"
+      ],
+      "changes": [
+        {
+          "path": ".github/workflows/admin-api-check.yml",
+          "oldOid": "fbbc91305f67182713a657723c827a0edf593354",
+          "newOid": "86cfed153f8b4d0f5ded0002ed4bbf1c1fb78d0a",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-browser-e2e.yml",
+          "oldOid": "8b1ab8d486f3611bc31a3b2877510faa6a1bfb29",
+          "newOid": "33d09320b2a4922f9f9e7dc3201d6fc9b494ef57",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-business-supervision.yml",
+          "oldOid": "36549aeee6d31d67128e365a1b36dea4c834234d",
+          "newOid": "439ea42da069349c39cba260a8ff0ea5a2a6748f",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-game-lifecycle-controls-v1.yml",
+          "oldOid": "4bd6a748ca103796461e2ce369ebca829a6df6e6",
+          "newOid": "0bf24694e7af83fdcf19b03caeaf9f7feecfceed",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-scroll-integrity.yml",
+          "oldOid": "d9991bd5031da751ca3ef47d9a8ad21ff28c0ac7",
+          "newOid": "b4c87f39e41d74b242e208062964fb39594ed5e2",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-shell-smoke.yml",
+          "oldOid": "f16ff31ff855a2f9684f96a6de434b2ec6679fe5",
+          "newOid": "0b2f0c262948143de96dd9bec2355f4cfe987ca6",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-attendance.yml",
+          "oldOid": "821b2bf29698cd91e4fc27fa4cc01409efab7b99",
+          "newOid": "3a8338dc03cbda253613abbfb3715c491215ddca",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-banking.yml",
+          "oldOid": "12a020d2af8a27e2cc49066dbe479417d692309f",
+          "newOid": "f04f0b0ec74e571d20c0593bd9a8ffd7e8dfe654",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-contracts.yml",
+          "oldOid": "b8fd2e0ffe274d4817918db701a56b2b5f032413",
+          "newOid": "b9cded19a438c9238cdb498e76dade68fb4acee8",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-crafting.yml",
+          "oldOid": "b074930b9be772c0056d60a9c3241ca177f8c7b0",
+          "newOid": "a1ed2908a3c21e1633bd994e7bfea1b13239bb26",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-market.yml",
+          "oldOid": "283c6555f5f51bcee1906417508b5c159c286214",
+          "newOid": "0291975bf70fd677f20a39926b37e45f5affc4be",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-messages.yml",
+          "oldOid": "6ca91f29df74365877ef534ab52a437b239f5784",
+          "newOid": "bf768f0b75437cbc849093133a4e6b5f10a15153",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-news-events.yml",
+          "oldOid": "a5ef21dade8c4543874627ec447d3db9763da87c",
+          "newOid": "5c875c76001da975ca7226e9cff4731a2a6be60c",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/admin-v2-settings-check.yml",
+          "oldOid": "088d76f2ffb4bbac1b6948aaf226512633cd04be",
+          "newOid": "867b0693088bf11811ec9c746753b7577b13b712",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/backend-typecheck.yml",
+          "oldOid": "a8b919a108e0d0397151387531244ef6c0a77d82",
+          "newOid": "c69e0e18b83715264f69983a440a5c72e3858cfc",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/banking-fx-clearing-v1.yml",
+          "oldOid": "d484eebf81e223832b52958928df11fd4e50417d",
+          "newOid": "d265fb3c3cff358dcb698563b569741a9f9b6ee5",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-economy-v2.yml",
+          "oldOid": "590ce4a300c235eb9c1dbbb9224f09928085e378",
+          "newOid": "161e6a29b042632738a9a4b8e6c6a5d777ec5723",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-financial-market.yml",
+          "oldOid": "a9e4d7e634fe5095c8bedb3ceea9f047defeaf6f",
+          "newOid": "1494186fa9ad7cbfce1a542e63cd41287caac31a",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-multicurrency-treasury-v1.yml",
+          "oldOid": "d78e964d966da089eabe97932161555eb07dda18",
+          "newOid": "d564738aab9acca315ec816bbdf6a851223cbc01",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-player-store-cutover-v2.yml",
+          "oldOid": "54ff65cbeaa4dae0ae8990ccc077841930c57b9b",
+          "newOid": "67cc30f6dea5488cbd39f00fd59441218363d0a3",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-player-store-fx-final-v2.yml",
+          "oldOid": "9995c083a62e993f3bfbbc02590082279fe0ddc1",
+          "newOid": "b1b5b2464cd073bbcc67e095a86eebe8cb17e227",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-primary-ipo.yml",
+          "oldOid": "4f84799f0c205355955bac3b0dcd1ed0396f90d3",
+          "newOid": "3ea091c3949953e74d20535dc56c38be3d2dc61b",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-store-atomic-settlement-v2.yml",
+          "oldOid": "8ff0ed5bee4f92ccf00091f4c02000d2419c7859",
+          "newOid": "34d5e725d5872bcbf973b78b26fbcf28173da88a",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-store-listing-inventory-v2.yml",
+          "oldOid": "dcb132310960fec795d817e6297d8c5381ca895b",
+          "newOid": "254de11802b55b6290ce2dd5b0fa25106bf5ba06",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-store-sales-convergence-v2.yml",
+          "oldOid": "1e6030d9c5903081dc35584970e42745c89ac360",
+          "newOid": "6645500641acb0241f1abb2261c60e919a608e47",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-store-seller-offers-v2.yml",
+          "oldOid": "ab754f5c4431246ce26427171c07e3dda2e84473",
+          "newOid": "653637252456982fe3db1dea468fdf93a73b59a1",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-store-withdrawal-safety-v2.yml",
+          "oldOid": "d249d8b71001a30fa98f5f024936cd3d0c808712",
+          "newOid": "b9eaf20d6969a8a5c611e23724e12b04815ab224",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/business-timed-manufacturing-v2.yml",
+          "oldOid": "8eea402ec8a2d8dbdefb78b33b8f7cdb53b840a6",
+          "newOid": "26ea1c311c8e9712deb4f9abaae810419b9d2fc4",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/button-action-coverage.yml",
+          "oldOid": "e8088325ca5792d43d86a9c1ea6593ae29db7322",
+          "newOid": "01b20def66c05d4e921efa13e722b2a22fb8c102",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/configurable-stock-market-timezone-v1.yml",
+          "oldOid": "c2f4409eb9f6c9c52aac8d4d5bf345db37fb61f1",
+          "newOid": "1db09a37b747bd28f0df404c826203e9170fcf09",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/crafting-item-runtime.yml",
+          "oldOid": "7bd8ee06e7b6fda08748259e3452775a844a9fe9",
+          "newOid": "0bbbd7e191f0f212cdf898a8a44de75a5c89eb90",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/database-replay.yml",
+          "oldOid": "be099ccd2672d068b0e6cda06fdf3fdb4075e1b0",
+          "newOid": "1aafd4c6a3cd8f2fc5518cfc6deda48d75f94553",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/economic-core-request-claims.yml",
+          "oldOid": "b92b59c5f3c18755410999cc502b7d47ce0c4ebb",
+          "newOid": "a3ef27e7aea39798af07288b16d76feb2f9f5580",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/environment-neutral-browser.yml",
+          "oldOid": "87f46486447b6b39f357ec5bd4e5c0d963481b76",
+          "newOid": "63e8606a170fbb328a58ed3c5cd29fe47e1f3331",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/exchange-calendar-runtime-v1.yml",
+          "oldOid": "e84757c7856c0c1f14f5329e9c51aa9600b7a98f",
+          "newOid": "ed6c53723706e6f49594ee8f4a3d28e15ba702da",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/full-financial-markets-expansion.yml",
+          "oldOid": "7b1a1938ece5db4ace300eeddb1e19fb9e508397",
+          "newOid": "14e9ac8156ac5332b6c58f83c43a53299ccdfa43",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/loans-lifecycle-read-v1.yml",
+          "oldOid": "c270464c8314877ca1dfd4f91f45e79786feb952",
+          "newOid": "ee4eef63f9c6d1b43ffdda5c5d16e55e6e4b8524",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/multicurrency-marketplace-funding-v1.yml",
+          "oldOid": "8c8a1111ebaf8c9365739e951e73b4451e7d6ff7",
+          "newOid": "db44cb643e44c3c9edbc9124c850345b3aa8bf03",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/multicurrency-stock-funding-v1.yml",
+          "oldOid": "25ccf061596c974c4baddd9b698691e5e83554e2",
+          "newOid": "965fda97c280050afd541cab9c6195c79476ebb7",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/multicurrency-store-funding-v1.yml",
+          "oldOid": "2f82624dae0802159240c29678dc86b75350870c",
+          "newOid": "f28dca53a4367a618eb9bb8303ea6754d6e5d32e",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/player-button-click-safety.yml",
+          "oldOid": "e34969d71356a5a95eabd1eeeb39a49613d3cb50",
+          "newOid": "5939c89c427aeae18185f7a66ce5183a896853cb",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/player-local-currency-authority.yml",
+          "oldOid": "41cecf401c2683936c62f74b904d64121cae54a9",
+          "newOid": "3bdeab128a9a54a3f7c168a236d792a8c0f695f2",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/player-multiplayer-load-e2e.yml",
+          "oldOid": "d62aa5971e000eae265e291c8b702af991ca9320",
+          "newOid": "73a718142754e75436228c67f5bf4bef51d09456",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/player-response-privacy.yml",
+          "oldOid": "889045e903a6a779d5ef9a738282021bbbdcda3e",
+          "newOid": "2ef24a148be301ff3784a37c6d816c9c2d2aeef5",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/ref-009-contract-reward-qualification.yml",
+          "oldOid": "85a6b3bb597f1706477287a04f80fea5d2f6fe76",
+          "newOid": "1d28b586f44c1dc9e01b24c30fda5b4e19e0bcf0",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/ref-018-attendance-qualification.yml",
+          "oldOid": "7b2cad428353777908e39ca688ebc4d9ccc4879a",
+          "newOid": "5df37d8cf60d4b1acdb1f22b7fd02a7a480121aa",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/release-promote.yml",
+          "oldOid": "da9aa48d56879b384cff640c94cfca83324f1225",
+          "newOid": "e9c26002d04139e1261e31040c5539f3ea63a583",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/runtime-interaction-wiring.yml",
+          "oldOid": "510cad293597ba777a18204c4ea6eeea80200bb7",
+          "newOid": "27fe1920afd649afed8afd86fa9c86c7b535faf4",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/story-replay-safety.yml",
+          "oldOid": "27ad5f16727fb0fbe35918dafc2e9764e34eebce",
+          "newOid": "e19a4eb7940ca1b9199ada7587d79c2d2853db1a",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": ".github/workflows/world-runtime.yml",
+          "oldOid": "5716d067dc633d43e71ff6ad366a1eaf032384c0",
+          "newOid": "396baead43ac945d938939104d6602b1cd0102d9",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/package.json",
+          "oldOid": "0f7120c77024841e4a97d325470a8b9f1dff0fc7",
+          "newOid": "f6c7786ba3ac5626766236448e54ced027901ca4",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/domains/game-sessions/api/gameSessionsSharedRootComposition.test.ts",
+          "oldOid": "c7dd792c232a221aef775f6461059a626ec952fd",
+          "newOid": "2ccba350dca71a5b71254f4169583b2d8ab0f926",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/domains/players/contracts/playerBusinessCapabilityEndpoints.ts",
+          "oldOid": null,
+          "newOid": "0d3644b287db53390e071e0825b82a7900eaf536",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
+          "oldOid": "379f8fcd38efdcaa4bd2ebf48cbf6250b282e784",
+          "newOid": "c1a4dcc4467e45a68903466152a8d3285ce11dfd",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/domains/players/contracts/playerGameplayCapabilityEndpoints.ts",
+          "oldOid": null,
+          "newOid": "810c58f31aa8eddc30e9e0a7be93532ec90598da",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/domains/players/contracts/playerSocialCapabilityEndpoints.ts",
+          "oldOid": null,
+          "newOid": "f52f88aa5741dc71a5301b53c6d30977ae71d812",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/domains/players/contracts/playerWorldBankingCapabilityEndpoints.ts",
+          "oldOid": null,
+          "newOid": "b326dec0ad00d09d2a360bd59e7d9fa86239737d",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/security/classroomApiRateLimitDispatch.test.ts",
+          "oldOid": "fb97baaecbec632e49e7a8850481bb4bcb93590f",
+          "newOid": "15779ae52030c919fd0e6727f068546318f4a524",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/src/security/edgeCompositionSource.test.support.ts",
+          "oldOid": "1e390d05dbfb5879597f4aafe65ee9e75042724e",
+          "newOid": "3bf7330acdf64fa0073cc5f013ca970ba83df4c2",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/adminGlobalRoutes.ts",
+          "oldOid": null,
+          "newOid": "c8be06f71df3a9843869f4af76e6448b0906c759",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/adminLocalMutationFixtures.test.support.ts",
+          "oldOid": null,
+          "newOid": "7fc74de5acb862e86ced36d5d4413db6985ced48",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
+          "oldOid": null,
+          "newOid": "a62ee2856b2120e2a89f204f670dec2bcf3e7daa",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/attendanceReadModels.ts",
+          "oldOid": null,
+          "newOid": "a46a07fbe03bfeddb9b5af22fdf5859221bc3c0b",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/attendanceWealthReadSupport.ts",
+          "oldOid": null,
+          "newOid": "e961a64b3a1c5eb872814c16fca5d345c3d53c5e",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/businessBankingOperations.test.businessRead.cases.ts",
+          "oldOid": null,
+          "newOid": "cf22c0505cb44af4ca186940d0398a7eb356dcf5",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/businessBankingOperations.test.loanMutations.cases.ts",
+          "oldOid": null,
+          "newOid": "9a3a4f046648100dacf073715cdbf3ef1928688f",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/businessBankingOperations.test.loanSupervision.cases.ts",
+          "oldOid": null,
+          "newOid": "235e24a7df3a3de942247679e95fb31e01a96993",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/businessBankingOperations.test.ts",
+          "oldOid": "0b6dfd1823f55e9bfe30c2705ac5c292178568ad",
+          "newOid": "d0806a523b5679e78995a041ac3e8d06437342de",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/campaignOperations.ts",
+          "oldOid": null,
+          "newOid": "1170a5aa6fcd6c52e16f9cc6fdb6feb390a48c88",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/compatibilityOperations.test.ts",
+          "oldOid": "f14346ab014967c82fab905d92e59019ad10024c",
+          "newOid": "7911fe6c20feb83e18db4a4b9bfafd49a243f487",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/gameReadSupport.ts",
+          "oldOid": null,
+          "newOid": "c6a7f2721468af11ff3b3eef1f142b06c52334f7",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/gameResourceReadModels.ts",
+          "oldOid": null,
+          "newOid": "d16db0abb36dfcdfda19be3c356834b98c01fbbb",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/gameRoutes.ts",
+          "oldOid": "89a255762af220998f63b848f75713221680b6cf",
+          "newOid": "36b11fedd9e90da4ec0099c011bfee5f0e0f6baa",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/gameWriteRoutes.ts",
+          "oldOid": null,
+          "newOid": "6508eda4f1a886c937517d628c5add5b3b9eabca",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/index.ts",
+          "oldOid": "ddfcabfb8f1e595f2c955966dddaaccc0c6ce77e",
+          "newOid": "af1a7397e0a79f257d2ae61ec4154c7c4469f388",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/messagingOperationContracts.ts",
+          "oldOid": null,
+          "newOid": "3ec17f36307a73114b44ac39733f244ad33a52ee",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/messagingOperationValidation.ts",
+          "oldOid": null,
+          "newOid": "1568ff4d98344cbf265364c9b0b1e0d190bc6d6f",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/messagingOperationsCore.ts",
+          "oldOid": "327d4a91fa84dbf06d8c5ce391755f1fe59620fa",
+          "newOid": "04a9cdcdec256d8ef3ae6ef6c6619e6c39c76116",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/mutationAdapters.ts",
+          "oldOid": "2f1a125c96c7413956b131e1b8c47eb880e6c529",
+          "newOid": "e63583dca2c74843f713b929a06542dc8331d148",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/mutationValues.ts",
+          "oldOid": null,
+          "newOid": "600fa58e88ef7cd09d4817b514871a69dd52bcd9",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/playerHistoryAudit.ts",
+          "oldOid": null,
+          "newOid": "1584b5503fff5477b43092618bbf3d8dac66e77c",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/playerLedgerCurrency.ts",
+          "oldOid": null,
+          "newOid": "139f88974d935ca092dc474ec8f9c4fcce583308",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/playerOperationSupport.ts",
+          "oldOid": null,
+          "newOid": "bab66d77538f4eaf50f154a9bc3c23d5e55f96d4",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/playerOperations.ts",
+          "oldOid": "c2e784ec6bfd500a0b9988b963e70287ef2355a3",
+          "newOid": "32d0c4f0b5e0c4a35a77d10937df740a8fd3fe6f",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/playerReadModel.ts",
+          "oldOid": null,
+          "newOid": "66f0f92778a1a374a43bbe7c80b4240d57dec829",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/playerReadSupport.ts",
+          "oldOid": null,
+          "newOid": "6d60ed7bbcdcfe99fac452b38120f67df5d0d61d",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/readExtensions.ts",
+          "oldOid": "8691d33d65239b17448fe03d0104b1876c4105c1",
+          "newOid": "c85ebb8d3d2d60563c4ceca448134d4d71f0e870",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/readModels.ts",
+          "oldOid": "102c5a839a390247b9349a06f58f98246aceba1f",
+          "newOid": "3f0eff66133f102cef3a7a08b077d54d560a3123",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/settingsMutationNormalization.ts",
+          "oldOid": null,
+          "newOid": "6ea2028c75096c1537a01e1bc89f9481f84b3b32",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/storeMutationNormalization.ts",
+          "oldOid": null,
+          "newOid": "44144cd5417e5ccf868173184a3a7a908632a86c",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/worldRuntimeContracts.ts",
+          "oldOid": null,
+          "newOid": "0df669c729d8337cb7843c9868a57d2eebf85eb4",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/worldRuntimeOperations.ts",
+          "oldOid": "018e602c0e18e1f961f6a34138be27ba8f2305f6",
+          "newOid": "c95d6eb3465f8374f0198f8fe8911528f9744924",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/worldRuntimeValidation.ts",
+          "oldOid": null,
+          "newOid": "9443980fe240a2dd5fec19c49705345c11cd203c",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/admin-api/worldTravelOperations.ts",
+          "oldOid": null,
+          "newOid": "b35841b0ccd958a645d29569702ec16eefa19b2d",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/classroom-api/classroomClients.ts",
+          "oldOid": null,
+          "newOid": "f627ac146eac0ff96ed695715d65a1eeafa8757a",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/classroom-api/dispatchPlayerEconomyRoutes.ts",
+          "oldOid": null,
+          "newOid": "6d7ce580c044ec82e667c8f4e7efdee601d2caeb",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/classroom-api/dispatchPlayerWorldRoutes.ts",
+          "oldOid": null,
+          "newOid": "23aede3a8c2ce64f3166aba1a1c5435da87e8356",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/classroom-api/dispatchStaffRoutes.ts",
+          "oldOid": null,
+          "newOid": "534f83ce40883d9d65d4f12cbf298fe8f0860dce",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "backend/supabase/functions/classroom-api/index.ts",
+          "oldOid": "1b4691f278b8fea057851de520fdfe4773be46f7",
+          "newOid": "3d4ed4e97ac857b612212805b297344cb466b60b",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+          "oldOid": "ea4622893e7c03fa0e61dd29b65fc136512c1e30",
+          "newOid": "142dfad5c5bf04849e177d8d114239f7bfcd08c6",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "docs/operations/contracts/player-cross-cutting/pr-981.json",
+          "oldOid": null,
+          "newOid": "a754a96352bc8319935eca5a22d15e51c2216ca8",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "docs/operations/evidence/held-admin-refactor-v1/scope.md",
+          "oldOid": null,
+          "newOid": "d6b558730df82eafda85a42d7cf6ca41b39db455",
+          "oldMode": null,
+          "newMode": "100644"
+        },
+        {
+          "path": "docs/operations/evidence/refactor-execution-v1/REF-003/candidates.json",
+          "oldOid": "2c11847010793b9eb802494475a35535a91fb0fe",
+          "newOid": "37260f12deb6aa5d22e02a9462e067e896d4576f",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+          "oldOid": "a80f1b3093fb04e1e93956568a5506fbd21d9a1b",
+          "newOid": "9066a2c6f81bc684ecb74d62fba6040e77a6a60a",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/admin-local-handler-architecture-contract.test.mjs",
+          "oldOid": "c7aec80f98aa9dcbc918d060a80499e0862858a4",
+          "newOid": "0a0cb0b7579d1b3523a77d0461958df80bd0b607",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/admin-v2-teacher-safety-contract.test.mjs",
+          "oldOid": "60c9f8be4aa10fbf7a576538aedb1cb0360fa273",
+          "newOid": "1f718fc2425fd93eec870dacb84ad52acef1d7ce",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/admin-world-runtime-console-contract.mjs",
+          "oldOid": "0fc902da751d84a8be48aadc30e1f88547cba302",
+          "newOid": "b9e35538fcabdf9366f7b1de96de11eff03ea329",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/business-banking-runtime-contract.mjs",
+          "oldOid": "768d27336f79d8ef718703d08ed63d6c156f1623",
+          "newOid": "60f1d9847374208b7c6029f64fb630dec4b7c71c",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/business-input-purchase-retirement-contract.mjs",
+          "oldOid": "af22d0cdec78c962b9f0cf93f150c88e841e03f6",
+          "newOid": "c25c85e921c9629096ce32e633eac3af2aeedcdf",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/business-multicurrency-treasury-contract.mjs",
+          "oldOid": "c53496fb6ffb74b2fc1f57d7ac4cfa8d6b1ee08d",
+          "newOid": "e46b1fef3f1ee515eb14fd9cf869e3cd7153cd8c",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/business-phase4c-player-recovery-contract.mjs",
+          "oldOid": "ff07b3549ae8c244f4a3fd67f410517603456d69",
+          "newOid": "9a1e8de7d86e9cf7190e37e7098ba5ef532f81a5",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/business-workforce-hiring-contract.mjs",
+          "oldOid": "36c5e46533706e01d95c7fbbc282f31483c36fc3",
+          "newOid": "78f3fe94d16a291acbe05a519ccb32932daca063",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/edge-runtime-source.test.mjs",
+          "oldOid": "260eb949e51b5c70bbfaaebfbd2f5df3a533803b",
+          "newOid": "f46a574e392fe454f561c4bf89c5fed52272490a",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/finite-source-contract-readers.test.mjs",
+          "oldOid": "fe124392e0fbac58547001a35664b812cb6bf0bf",
+          "newOid": "609f7e29ab832f884725bcff250bcd641cf94bae",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/helpers/edge-runtime-source.mjs",
+          "oldOid": "829a2044a9bc42f0ba5ed9a9b4eea39c1c77f111",
+          "newOid": "6f662cffdd610ecf7693e1137e3817329e443a3f",
+          "oldMode": "100644",
+          "newMode": "100644"
+        },
+        {
+          "path": "scripts/player-local-currency-authority-contract.test.mjs",
+          "oldOid": "08f20e17068cebf1a3e65fe913265abd0ebb892d",
+          "newOid": "3263dc8df03e19b35a92142959529f2d723ade8d",
+          "oldMode": "100644",
+          "newMode": "100644"
+        }
+      ]
+    }
+  ]
+}

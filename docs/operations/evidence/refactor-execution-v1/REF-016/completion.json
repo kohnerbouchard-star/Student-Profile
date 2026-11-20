@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "task": "REF-016",
+  "status": "VERIFIED_COMPLETE",
+  "scope": "Repository-only adoption of existing Players public exports by the selected Messaging consumer family; no production certification.",
+  "implementationPullRequest": 766,
+  "baseMainSha": "b4f803fb3957ee7ad33bab2c0a8eea53952bb231",
+  "implementationSha": "1ef2b3b2c5b167b2da9c6d54174d22ef09714bfe",
+  "qualifiedTreeSha": "4fcfa6e6e1e1646bca18585dec6e82daeda3a95e",
+  "mergeSha": "c80b0b515657eb4a0fec8797314f7ece4d53933a",
+  "mergeMethod": "squash",
+  "mergeUsedExpectedHeadGuard": true,
+  "qualification": {
+    "pullRequestWorkflowCount": 28,
+    "completedSuccessfulPullRequestWorkflows": 28,
+    "failedWorkflows": 0,
+    "unfinishedWorkflows": 0,
+    "vercel": "success",
+    "betaSecurityRun": 36702574009,
+    "backendRun": 36702573772,
+    "playerTerminalRun": 36702573994,
+    "messagingHarnessRun": 36702573875,
+    "transactionalMessagingAcceptance": "credential-gated expected skip; not credited as connected staging transaction pass"
+  },
+  "delivered": [
+    "Four Messaging modules consume three already-public Players helpers through players/index.ts.",
+    "Selected Messaging deep value imports reduced from 6 to 0; repository inventory reduced from 168 to 162.",
+    "Non-import handler bodies, context calls, Players implementations/exports, authentication, RPCs, transactions and public HTTP behavior preserved.",
+    "Two route regressions cover supported bare/Player/Classroom prefixes and spoofed/Admin namespace denial."
+  ],
+  "boundaries": {
+    "productionCertified": false,
+    "explicitProductionPromotionInvoked": false,
+    "hostedDatabaseMutationInvoked": false,
+    "task15Status": "BLOCKED",
+    "task17Started": false
+  },
+  "nextTask": "REF-017",
+  "nextTaskStarted": false
+}

@@ -1,41 +1,30 @@
+import { normalizeLoanLifecycle, normalizeLoanForecast } from "./loans-read-model.js";
+import { normalizeBusinessIpoResponse } from "./business-ipo-response.js";
 import { ApiRequestError } from "./errors.js";
-
+import { validateBusinessRead, validateBusinessStockroom, validateBusinessRecipes } from "./response-business-validator.js";
+import { validateStoreResponse } from "./response-store-validator.js";
+import { normalizeBusinessTreasurySnapshot } from "../features/business-treasury/business-treasury-read-model.js";
 const ARRAY_READS = new Set(["countries", "notifications"]);
-const READ_ENDPOINTS = new Set([
-  "session",
-  "dashboard",
-  "countries",
-  "country",
-  "news",
-  "worldRuntime",
-  "market",
-  "portfolio",
-  "business",
-  "store",
-  "marketplace",
-  "contracts",
-  "inventory",
-  "crafting",
-  "banking",
-  "loans",
-  "messages",
-  "progression",
-  "notifications",
-  "notificationsPage",
-  "storyDeliveries",
-]);
+const READ_ENDPOINTS = new Set(["session", "dashboard", "countries", "country", "news", "worldRuntime", "market", "portfolio", "business", "businessWorkforce", "businessTreasury", "businessIpos", "businessStockroom", "businessRecipes", "businessEquipment", "store", "marketplace", "contracts", "inventory", "crafting", "banking", "bankingFx", "bankingFxHistory", "bankingFxOrders", "loans", "messages", "progression", "notifications", "notificationsPage", "storyDeliveries"]);
 const REQUIRED_ARRAY_FIELDS = Object.freeze({
   dashboard: Object.freeze(["worldEvents", "marketPulse"]),
   news: Object.freeze(["categories", "items"]),
   market: Object.freeze(["sectors", "assets"]),
   portfolio: Object.freeze(["history", "allocation", "countryExposure"]),
   business: Object.freeze(["products", "suppliers"]),
+  businessWorkforce: Object.freeze(["candidates"]),
+  businessStockroom: Object.freeze(["locations", "items"]),
+  businessRecipes: Object.freeze(["recipes"]),
+  businessEquipment: Object.freeze(["equipment"]),
   store: Object.freeze(["categories", "items"]),
   marketplace: Object.freeze(["categories", "listings", "myListings"]),
   contracts: Object.freeze(["tabs", "lifecycle", "items"]),
   inventory: Object.freeze(["categories", "items"]),
   crafting: Object.freeze(["recipes", "queue"]),
   banking: Object.freeze(["transactions"]),
+  bankingFx: Object.freeze(["currencies", "balances", "pendingOrders", "completedOrders"]),
+  bankingFxHistory: Object.freeze(["points"]),
+  bankingFxOrders: Object.freeze(["orders"]),
   loans: Object.freeze(["offers", "activeLoans", "schedule"]),
   messages: Object.freeze(["threads"]),
   progression: Object.freeze(["reputation", "milestones", "skills", "achievements", "licenses"]),
@@ -45,6 +34,8 @@ const REQUIRED_ARRAY_FIELDS = Object.freeze({
 const REQUIRED_OBJECT_FIELDS = Object.freeze({
   business: Object.freeze(["company", "operations"]),
   banking: Object.freeze(["checking", "savings"]),
+  bankingFxHistory: Object.freeze(["pagination"]),
+  bankingFxOrders: Object.freeze(["pagination"]),
   loans: Object.freeze(["nextPayment"]),
   notificationsPage: Object.freeze(["page", "summary"]),
   worldRuntime: Object.freeze(["arrival", "travel"]),
@@ -55,16 +46,11 @@ const MAX_OBJECT_KEYS = 300;
 const MAX_STRING_LENGTH = 5000;
 const URL_KEY = /(?:image|imageUrl|avatar|photo|thumbnail|assetUrl|currencySymbolAsset)$/i;
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
-
 function invalidResponse(endpointKey, requestId, path) {
   return new ApiRequestError("This section received incomplete data and could not be opened safely.", {
-    code: "INVALID_RESPONSE",
-    endpointKey,
-    requestId,
-    path,
+    code: "INVALID_RESPONSE", endpointKey, requestId, path,
   });
 }
-
 function allowedRemoteUrl(value, config) {
   const text = String(value || "").trim();
   if (!text || /^\s*(?:javascript|vbscript|file):/i.test(text) || text.startsWith("//")) return "";
@@ -80,7 +66,6 @@ function allowedRemoteUrl(value, config) {
     return "";
   }
 }
-
 function sanitizeValue(value, config, depth = 0, key = "") {
   if (depth > MAX_DEPTH) return null;
   if (value === null || typeof value === "boolean") return value;
@@ -97,39 +82,30 @@ function sanitizeValue(value, config, depth = 0, key = "") {
   }
   return output;
 }
-
 function unwrap(endpointKey, raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   if (
-    endpointKey === "progression" &&
-    raw.progression &&
-    typeof raw.progression === "object" &&
-    !Array.isArray(raw.progression)
+    endpointKey === "progression" && raw.progression &&
+    typeof raw.progression === "object" && !Array.isArray(raw.progression)
   ) return raw.progression;
   if (
-    endpointKey === "worldRuntime" &&
-    raw.context &&
-    typeof raw.context === "object" &&
-    !Array.isArray(raw.context)
+    endpointKey === "worldRuntime" && raw.context &&
+    typeof raw.context === "object" && !Array.isArray(raw.context)
   ) return raw.context;
   if (Object.prototype.hasOwnProperty.call(raw, "data") && (raw.ok === true || Object.keys(raw).length <= 3)) return raw.data;
   return raw;
 }
-
 function applySafeDefaults(endpointKey, value) {
+  if (endpointKey === "business" && !Array.isArray(value.manufacturingJobs)) value.manufacturingJobs = [];
   if (endpointKey === "news" && !Array.isArray(value.categories)) value.categories = ["All"];
   if (endpointKey === "store" && !Array.isArray(value.categories)) value.categories = ["All"];
   if (endpointKey === "market" && !Array.isArray(value.sectors)) value.sectors = ["All"];
   if (
-    endpointKey === "progression" &&
-    !Number.isSafeInteger(value.currentLevelXp) &&
+    endpointKey === "progression" && !Number.isSafeInteger(value.currentLevelXp) &&
     Number.isSafeInteger(value.xp) && value.xp >= 0
-  ) {
-    value.currentLevelXp = 0;
-  }
+  ) value.currentLevelXp = 0;
   return value;
 }
-
 function validateWorldRuntime(value, context) {
   if (UUID.test(JSON.stringify(value))) throw invalidResponse("worldRuntime", context.requestId, context.path);
   if (typeof value.arrival.required !== "boolean") throw invalidResponse("worldRuntime", context.requestId, context.path);
@@ -147,31 +123,47 @@ function validateWorldRuntime(value, context) {
     throw invalidResponse("worldRuntime", context.requestId, context.path);
   }
 }
-
 function validateEndpointShape(endpointKey, value, context) {
   for (const key of REQUIRED_ARRAY_FIELDS[endpointKey] || []) {
     if (!Array.isArray(value[key])) throw invalidResponse(endpointKey, context.requestId, context.path);
   }
   for (const key of REQUIRED_OBJECT_FIELDS[endpointKey] || []) {
-    if (!value[key] || typeof value[key] !== "object" || Array.isArray(value[key])) {
-      throw invalidResponse(endpointKey, context.requestId, context.path);
-    }
+    if (!value[key] || typeof value[key] !== "object" || Array.isArray(value[key])) throw invalidResponse(endpointKey, context.requestId, context.path);
   }
   if (endpointKey === "worldRuntime") validateWorldRuntime(value, context);
+  if (endpointKey === "business") validateBusinessRead(value, context);
+  if (endpointKey === "businessStockroom") validateBusinessStockroom(value, context);
+  if (endpointKey === "businessRecipes") validateBusinessRecipes(value, context);
+  if (endpointKey === "businessEquipment") {
+    if (UUID.test(JSON.stringify(value))) throw invalidResponse(endpointKey, context.requestId, context.path);
+    for (const [field, pattern, idField] of [
+      ["availableEquipment", /^eqp_[0-9a-f]{32}$/, "equipmentKey"],
+      ["saleableStoreItems", /^[a-z0-9_-]{1,64}$/, "itemKey"],
+    ]) {
+      if (value[field] === undefined) continue; // Older servers cannot enable the new actions.
+      if (!Array.isArray(value[field])) throw invalidResponse(endpointKey, context.requestId, context.path);
+      const seen = new Set();
+      for (const item of value[field]) {
+        if (!item || !pattern.test(item[idField]) || seen.has(item[idField]) || typeof item.name !== "string" || !item.name.trim() ||
+          !/^itm_[0-9a-f]{32}$/.test(field === "availableEquipment" ? item.itemKey : item.catalogItemKey) ||
+          (field === "saleableStoreItems" && !/^[A-Z0-9_]{3,16}$/.test(item.currencyCode))) {
+          throw invalidResponse(endpointKey, context.requestId, context.path);
+        }
+        seen.add(item[idField]);
+      }
+    }
+  }
+  if (endpointKey === "store") validateStoreResponse(value, context);
+  if (endpointKey === "businessWorkforce" && UUID.test(JSON.stringify(value))) throw invalidResponse(endpointKey, context.requestId, context.path);
   if (endpointKey === "progression") {
     if (
       !Number.isSafeInteger(value.level) || value.level < 1 || value.level > 20 ||
       !Number.isSafeInteger(value.xp) || value.xp < 0 ||
-      !Number.isSafeInteger(value.currentLevelXp) || value.currentLevelXp < 0 ||
-      value.currentLevelXp > value.xp ||
+      !Number.isSafeInteger(value.currentLevelXp) || value.currentLevelXp < 0 || value.currentLevelXp > value.xp ||
       !Number.isSafeInteger(value.nextLevelXp) || value.nextLevelXp < value.xp ||
       !Number.isSafeInteger(value.skillPoints) || value.skillPoints < 0 || value.skillPoints > 200 ||
-      typeof value.playerName !== "string" ||
-      typeof value.title !== "string" ||
-      typeof value.summary !== "string"
-    ) {
-      throw invalidResponse(endpointKey, context.requestId, context.path);
-    }
+      typeof value.playerName !== "string" || typeof value.title !== "string" || typeof value.summary !== "string"
+    ) throw invalidResponse(endpointKey, context.requestId, context.path);
   }
   if (endpointKey === "notificationsPage") {
     const unreadCount = value.summary.unreadCount;
@@ -183,19 +175,43 @@ function validateEndpointShape(endpointKey, value, context) {
     }
   }
 }
-
+function normalizeLoanCurrencies(projection) {
+  if (!projection || projection.version !== 1 || typeof projection.complete !== "boolean" ||
+      !Number.isSafeInteger(projection.unknownCurrencyRows) || projection.unknownCurrencyRows < 0 ||
+      !Array.isArray(projection.groups) || projection.groups.length > MAX_ARRAY_LENGTH) return null;
+  const money = (value) => value === null ? !projection.complete :
+    typeof value === "string" && value === value.trim() && value.length <= MAX_STRING_LENGTH && /^(0|[1-9][0-9]*)\.[0-9]{2}$/u.test(value);
+  const date = (value) => typeof value === "string" && value.length <= 100 && Number.isFinite(Date.parse(value));
+  const codes = new Set();
+  const groups = [];
+  for (const group of projection.groups) {
+    if (!group || typeof group.currencyCode !== "string" || !group.currencyCode.trim() ||
+        group.currencyCode !== group.currencyCode.trim() || group.currencyCode.length > 100 || codes.has(group.currencyCode) ||
+        !money(group.availableCredit) || !money(group.outstanding) ||
+        !Array.isArray(group.schedule) || group.schedule.length > MAX_ARRAY_LENGTH) return null;
+    const payment = group.nextPayment;
+    if (payment !== null && (!payment || !money(payment.amount) ||
+        !(date(payment.due) || (!projection.complete && payment.due === null)))) return null;
+    if (group.schedule.some((row) => !row || !date(row.due) || !money(row.amount))) return null;
+    codes.add(group.currencyCode);
+    groups.push({ currencyCode: group.currencyCode, availableCredit: group.availableCredit, outstanding: group.outstanding,
+      nextPayment: payment === null ? null : { amount: payment.amount, due: payment.due },
+      schedule: group.schedule.map(({ due, amount }) => ({ due, amount })) });
+  }
+  if (projection.complete && projection.unknownCurrencyRows !== 0) return null;
+  return { version: 1, complete: projection.complete, unknownCurrencyRows: projection.unknownCurrencyRows, groups };
+}
 export function normalizeApiResponse(endpointKey, raw, context = {}) {
   let value = sanitizeValue(unwrap(endpointKey, raw), context.config || {});
+  if (endpointKey === "businessIpos" || ["businessIpoPropose", "businessIpoVote", "businessIpoSubscribe"].includes(endpointKey)) return normalizeBusinessIpoResponse(endpointKey, value, context.intent);
   if (!READ_ENDPOINTS.has(endpointKey)) return value;
+  if (endpointKey === "businessTreasury") return normalizeBusinessTreasurySnapshot(value);
   if (ARRAY_READS.has(endpointKey)) {
     if (!Array.isArray(value)) throw invalidResponse(endpointKey, context.requestId, context.path);
   } else if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw invalidResponse(endpointKey, context.requestId, context.path);
   }
   if (endpointKey === "session") {
-    // Internal game/session UUIDs are intentionally omitted from browser-safe
-    // session bootstrap responses. The terminal only requires player-facing
-    // identity and currency data to establish the local read model.
     for (const key of ["displayName", "currencyCode"]) {
       if (typeof value[key] !== "string" || !value[key].trim()) throw invalidResponse(endpointKey, context.requestId, context.path);
     }
@@ -203,6 +219,12 @@ export function normalizeApiResponse(endpointKey, raw, context = {}) {
   if (!ARRAY_READS.has(endpointKey)) {
     value = applySafeDefaults(endpointKey, value);
     validateEndpointShape(endpointKey, value, context);
+    if (endpointKey === "loans") {
+      const loans = unwrap(endpointKey, raw);
+      value.currencyProjection = normalizeLoanCurrencies(loans?.currencyProjection);
+      value.lifecycle = normalizeLoanLifecycle(loans?.lifecycle);
+      value.repaymentForecast = normalizeLoanForecast(loans?.repaymentForecast);
+    }
   }
   return value;
 }

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.story-player-context-read-pr-891.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 891,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/storylines/server/playerContextReadQuery.ts",
+    "backend/src/domains/storylines/server/playerContextReadQuery.test.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+    "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts",
+    "backend/supabase/functions/stock-market-orchestrator/storylineWiringContract.test.ts",
+    "backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.test.ts",
+    "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/story-player-context-read-main-v1/scope.md",
+    "docs/operations/contracts/player-cross-cutting/pr-891.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/storylines/server/playerContextReadQuery.ts",
+    "backend/src/domains/storylines/server/playerContextReadQuery.test.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.test.ts",
+    "backend/supabase/functions/stock-market-runner/storylineRunnerAfterTick.ts",
+    "backend/supabase/functions/stock-market-orchestrator/storylineWiringContract.test.ts",
+    "backend/src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.test.ts",
+    "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/operations/evidence/story-player-context-read-main-v1/scope.md",
+    "docs/operations/contracts/player-cross-cutting/pr-891.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Story Replay Safety",
+    "Exchange Calendar Runtime"
+  ],
+  "criticalJobChecks": [
+    "Backend Typecheck",
+    "Repository Quality"
+  ],
+  "readOnlyPaths": [
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "authorizationNote": "On 2026-11-03 the user authorized finishing three bounded cleanup batches after qualification. This PR binds the third batch to actual PR891/main and the exact Story player-context read extraction from open PR888 head 1b350848b00140d1b1069615afc2ea8a0de4b49a, not the complete donor branch. Preserve lazy game-scoped reads, error identity, persist-before-context-before-effects ordering, existing tests, shared tslib/lock and release holds. Independent source review and local tests are recorded in the evidence file; original exact-head CI and Preview must qualify. The unchanged Stock scheduler workflow will deploy the orchestrator and configure its production scheduler automatically if these paths enter main; the user has been asked for fresh explicit confirmation and merge remains held until it is received. Draft preparation and publication do not authorize that production action, PR review approval, force operations, manual deployment, hosted SQL/Edge/Auth/settings writes, secret handling or changes to release holds."
+}

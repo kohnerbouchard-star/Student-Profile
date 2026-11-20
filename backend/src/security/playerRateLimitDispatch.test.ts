@@ -1,6 +1,9 @@
 import { EdgeActivationError } from "../platform/supabase/edgeResponse.ts";
 import type { EdgeSupabaseClient } from "../platform/supabase/edgeStaffSession.ts";
-import type { PlayerRequestScope } from "../domains/players/api/playerRequestScope.ts";
+import type {
+  PlayerRequestApplicationContext,
+  PlayerRequestScope,
+} from "../domains/players/api/playerRequestScope.ts";
 import {
   dispatchRateLimitedPlayerLoginRequest,
   dispatchRateLimitedReviewedPlayerRequest,
@@ -22,6 +25,46 @@ Deno.test("reviewed Player route mapping is server-owned and exhaustive", () => 
     "bootstrap:GET": ["player.session.read", "read"],
     "capabilities:GET": ["player.capabilities.read", "read"],
     "banking:GET": ["player.banking.read", "read"],
+    "bankingFx:GET": ["player.banking.fx.read", "read"],
+    "bankingFxHistory:GET": ["player.banking.fx.history.read", "read"],
+    "bankingFxOrders:GET": ["player.banking.fx.orders.read", "read"],
+    "bankingFxQuote:POST": ["player.banking.fx.quotes.create", "write"],
+    "bankingFxStandard:POST": [
+      "player.banking.fx.orders.standard",
+      "sensitive",
+    ],
+    "bankingFxInstant:POST": ["player.banking.fx.orders.instant", "sensitive"],
+    "bankingFxCancel:POST": ["player.banking.fx.orders.cancel", "sensitive"],
+    "businessIpos:GET": ["player.business.ipos.read", "read"],
+    "businessIpoPropose:POST": ["player.business.ipos.propose", "sensitive"],
+    "businessIpoVote:POST": ["player.business.ipos.vote", "sensitive"],
+    "businessIpoSubscribe:POST": ["player.business.ipos.subscribe", "sensitive"],
+    "businessTreasury:GET": ["player.business.treasury.read", "read"],
+    "businessTreasuryAccountOpen:POST": [
+      "player.business.treasury.accounts.open",
+      "write",
+    ],
+    "businessTreasuryFxQuote:POST": [
+      "player.business.treasury.fx.quotes.create",
+      "write",
+    ],
+    "businessTreasuryFxStandard:POST": [
+      "player.business.treasury.fx.orders.standard",
+      "sensitive",
+    ],
+    "businessTreasuryFxInstant:POST": [
+      "player.business.treasury.fx.orders.instant",
+      "sensitive",
+    ],
+    "businessTreasuryFxCancel:POST": [
+      "player.business.treasury.fx.orders.cancel",
+      "sensitive",
+    ],
+    "businessStoreQuote:POST": ["player.business.store.quote", "write"],
+    "businessStorePurchase:POST": [
+      "player.business.store.purchase",
+      "sensitive",
+    ],
     "contractAccept:POST": ["player.contracts.accept", "write"],
     "contractSubmit:POST": ["player.contracts.submit", "write"],
     "contracts:GET": ["player.contracts.read", "read"],
@@ -30,7 +73,10 @@ Deno.test("reviewed Player route mapping is server-owned and exhaustive", () => 
     "dashboard:GET": ["player.dashboard.read", "read"],
     "inventory:GET": ["player.inventory.read", "read"],
     "inventoryRedemption:GET": ["player.inventory.redemptions.read", "read"],
-    "inventoryRedemption:POST": ["player.inventory.redemptions.request", "write"],
+    "inventoryRedemption:POST": [
+      "player.inventory.redemptions.request",
+      "write",
+    ],
     "logout:POST": ["player.session.logout", "sensitive"],
     "market:GET": ["player.market.read", "read"],
     "marketAsset:GET": ["player.asset.read", "read"],
@@ -69,11 +115,14 @@ Deno.test("post-auth dispatch resolves scope, consumes once, and invokes route o
   let scopeCalls = 0;
   let limiterCalls = 0;
   let handlerCalls = 0;
+  let limiterScope: PlayerRequestScope | null = null;
+  let applicationContext: PlayerRequestApplicationContext | undefined;
   const response = await dispatchRateLimitedReviewedPlayerRequest(
     playerRequest("GET", "/players/me/inventory"),
     "inventory",
-    () => {
+    (context) => {
       handlerCalls += 1;
+      applicationContext = context;
       return new Response("ok");
     },
     dependencies({
@@ -85,7 +134,14 @@ Deno.test("post-auth dispatch resolves scope, consumes once, and invokes route o
         limiterCalls += 1;
         assertEquals(input.action, "player.inventory.read");
         assertEquals(input.profile, "read");
-        assertEquals(input.scope, SCOPE);
+        assertEquals(input.scope.playerUuid, SCOPE.playerUuid);
+        assertEquals(input.scope.gameId, SCOPE.gameId);
+        assertEquals(input.scope.activeSessionId, SCOPE.activeSessionId);
+        assertEquals(
+          input.scope.authorizationContext,
+          SCOPE.authorizationContext,
+        );
+        limiterScope = input.scope;
         return Promise.resolve(ALLOWED);
       },
     }),
@@ -93,6 +149,16 @@ Deno.test("post-auth dispatch resolves scope, consumes once, and invokes route o
 
   assertEquals(response.status, 200);
   assertEquals([scopeCalls, limiterCalls, handlerCalls], [1, 1, 1]);
+  assertEquals(applicationContext?.gameSessionId, GAME);
+  assertEquals(applicationContext?.actor, {
+    kind: "player",
+    playerUuid: PLAYER,
+    playerSessionId: SESSION,
+  });
+  assertEquals(applicationContext?.permissions, ["own_player"]);
+  assertEquals(applicationContext?.requestId, "request-player-rate-limit-001");
+  assertSame(limiterScope, applicationContext);
+  assertEquals(Object.isFrozen(applicationContext), true);
 });
 
 Deno.test("post-auth denial and outage fail closed before route work", async () => {
@@ -160,11 +226,13 @@ Deno.test("post-auth session errors are preserved without limiter consumption", 
 Deno.test("unsupported route methods bypass consumption and retain handler semantics", async () => {
   let limiterCalls = 0;
   let handlerCalls = 0;
+  let receivedContext: PlayerRequestApplicationContext | undefined;
   const response = await dispatchRateLimitedReviewedPlayerRequest(
     playerRequest("POST", "/players/me/inventory"),
     "inventory",
-    () => {
+    (context) => {
       handlerCalls += 1;
+      receivedContext = context;
       return new Response(null, { status: 405 });
     },
     dependencies({
@@ -176,6 +244,7 @@ Deno.test("unsupported route methods bypass consumption and retain handler seman
   );
   assertEquals(response.status, 405);
   assertEquals([limiterCalls, handlerCalls], [0, 1]);
+  assertEquals(receivedContext, undefined);
 });
 
 Deno.test("login dispatch uses classroom policy without parsing credentials", async () => {
@@ -329,8 +398,15 @@ function dependencies(
     resolveScope: () => Promise.resolve(SCOPE),
     enforcePostAuth: () => Promise.resolve(ALLOWED),
     enforcePreAuth: () => Promise.resolve(ALLOWED),
+    createRequestId: () => "request-player-rate-limit-001",
     ...overrides,
   };
+}
+
+function assertSame(actual: unknown, expected: unknown): void {
+  if (actual !== expected) {
+    throw new Error("Expected values to have object identity.");
+  }
 }
 
 function assertEquals(actual: unknown, expected: unknown): void {

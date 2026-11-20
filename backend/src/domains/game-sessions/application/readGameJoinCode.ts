@@ -1,6 +1,7 @@
+import type { GameSessionsStaffApplicationContext } from "../contracts/gameSessionsStaffApplicationContext.ts";
+
 export interface GameJoinCodeReadScope {
-  readonly gameSessionId: string;
-  readonly staffUserId: string;
+  readonly applicationContext: GameSessionsStaffApplicationContext;
 }
 
 export interface ReadGameJoinCodeInput extends GameJoinCodeReadScope {
@@ -61,24 +62,22 @@ export async function readGameJoinCode(
   input: ReadGameJoinCodeInput,
   repository: GameJoinCodeReadRepository,
 ): Promise<ReadGameJoinCodeResult> {
-  if (input.gameSession.id !== input.gameSessionId) {
+  const applicationContext = input.applicationContext;
+  if (input.gameSession.id !== applicationContext.gameSessionId) {
     throw readFailure();
   }
 
   let record: GameJoinCodeReadRecord | null;
   try {
-    record = await repository.readOwnedGameJoinCode({
-      gameSessionId: input.gameSessionId,
-      staffUserId: input.staffUserId,
-    });
+    record = await repository.readOwnedGameJoinCode({ applicationContext });
   } catch {
     throw readFailure();
   }
 
   if (
     record && (
-      record.gameSessionId !== input.gameSessionId ||
-      record.ownerStaffUserId !== input.staffUserId
+      record.gameSessionId !== applicationContext.gameSessionId ||
+      record.ownerStaffUserId !== applicationContext.actor.staffUserId
     )
   ) {
     throw readFailure();

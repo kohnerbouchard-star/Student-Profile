@@ -1,4 +1,4 @@
-import { readPlayerApiRouteSegments } from "../../players/api/playerApiRouteSegments.ts";
+import { readPlayerApiRouteSegments } from "../../../platform/supabase/playerApiRouteSegments.ts";
 import type {
   PlayerStockWatchlistRoute,
 } from "../contracts/playerStockWatchlistContracts.ts";

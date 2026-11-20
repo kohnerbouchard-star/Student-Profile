@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 
+import { PlayerApi } from "../src/api/player-api.js";
+import { createResourceSupport } from "../src/api/resource-support.js";
+import { isResourceReady, isResourceUnavailable } from "../src/api/resource-status.js";
 import { resolvePlayerBackendRequest } from "../src/api/backend-routes.js";
 import { normalizePlayerInventory } from "../src/features/inventory/inventory-read-model.js";
 import { renderInventoryPage } from "../src/pages/inventory-page.js";
@@ -135,3 +138,146 @@ assert.equal(route.path, "/players/me/inventory");
 assert.equal(route.payload, undefined);
 
 console.log("Inventory read model passed: authoritative quantities, reservations, currencies, split item actions, and UUID privacy are valid.");
+
+// REF-041: exercise Inventory through its existing shared owner, without a
+// second loader/cache or relying on another resource's ordering coverage.
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+function inventoryApi(apiCall) {
+  return new PlayerApi({
+    usePreviewData: false, authenticated: true, csrfToken: "I".repeat(43),
+    gameSessionId: "inventory-game-one", requestTimeoutMs: 1000,
+    resourceFreshnessMs: { inventory: 60000 }, allowedImageHosts: [], apiCall
+  });
+}
+const model = (id) => ({ categories: ["All"], items: id ? [{ id }] : [] });
+const cacheKey = "GET:inventory:/inventory";
+const gate = deferred();
+const started = deferred();
+let reads = 0;
+const lifecycle = inventoryApi(async ({ endpointKey, method, path }) => {
+  assert.deepEqual([endpointKey, method, path], ["inventory", "GET", "/inventory"]);
+  reads += 1;
+  if (reads === 1) { started.resolve(); await gate.promise; }
+  return model("held-item");
+});
+const first = lifecycle.loadResources(["inventory", "inventory"]);
+await started.promise;
+const duplicate = lifecycle.loadResources(["inventory"]);
+assert.equal(lifecycle.inFlightReads.size, 1, "One pending Inventory operation owns loading bookkeeping.");
+gate.resolve();
+const [loaded, concurrent] = await Promise.all([first, duplicate]);
+assert.deepEqual(loaded.data.inventory, concurrent.data.inventory);
+assert.equal(reads, 1, "Duplicate resource keys and simultaneous consumers share one request.");
+assert.equal(isResourceReady(loaded.data, "inventory"), true);
+assert.equal(Object.isFrozen(loaded.resourceStatus), true);
+assert.deepEqual(loaded.resourceStatus.inventory, { state: "ready", status: 200, code: "", retryAfterMs: 0 });
+assert.deepEqual([...lifecycle.readCache.keys()], [cacheKey]);
+await lifecycle.loadResources(["inventory"]);
+assert.equal(reads, 1, "Fresh Inventory uses the same cached response without extra I/O.");
+assert.equal(lifecycle.inFlightReads.size, 0);
+
+// A stale completion cannot replace the post-invalidation authoritative value.
+const staleGate = deferred();
+const staleStarted = deferred();
+let orderedReads = 0;
+const ordered = inventoryApi(async () => {
+  const sequence = ++orderedReads;
+  if (sequence === 1) { staleStarted.resolve(); await staleGate.promise; }
+  return model(sequence === 1 ? "old-item" : "new-item");
+});
+const stale = ordered.request("inventory");
+const staleRejected = assert.rejects(stale, { code: "REQUEST_SUPERSEDED" });
+await staleStarted.promise;
+ordered.invalidateResources(["inventory"]);
+assert.deepEqual(await ordered.request("inventory", { force: true }), model("new-item"));
+staleGate.resolve();
+await staleRejected;
+assert.deepEqual(await ordered.request("inventory"), model("new-item"));
+assert.equal(orderedReads, 2);
+assert.equal(ordered.inFlightReads.size, 0);
+
+// Cancellation is shared transport policy, including logout and game switch.
+for (const boundary of ["caller", "logout", "game-switch"]) {
+  const pending = deferred();
+  const begun = deferred();
+  const caller = new AbortController();
+  let observedSignal;
+  let count = 0;
+  const cancelled = inventoryApi(async ({ signal }) => {
+    count += 1;
+    if (count === 1) {
+      observedSignal = signal;
+      begun.resolve();
+      await pending.promise;
+      return model("previous-session-item");
+    }
+    return model("current-session-item");
+  });
+  const read = cancelled.request("inventory", { signal: caller.signal });
+  const rejection = assert.rejects(read, { code: "REQUEST_ABORTED" });
+  await begun.promise;
+  if (boundary === "caller") caller.abort();
+  else if (boundary === "logout") cancelled.abortSessionRequests();
+  else cancelled.setSession({ authenticated: true, gameSessionId: "inventory-game-two" });
+  await rejection;
+  assert.equal(observedSignal.aborted, true, boundary);
+  assert.equal(cancelled.readCache.size, 0, boundary);
+  assert.equal(cancelled.inFlightReads.size, 0, boundary);
+  assert.deepEqual(await cancelled.request("inventory"), model("current-session-item"));
+  pending.resolve();
+  await Promise.resolve();
+  assert.deepEqual(await cancelled.request("inventory"), model("current-session-item"));
+  assert.equal(count, 2, "Late cancelled responses neither cache nor trigger extra reads.");
+}
+
+// Even a transport that ignores cancellation cannot repopulate a new session.
+const ignoredAbort = inventoryApi(async () => model(""));
+const oldCompletion = deferred();
+const newCompletion = deferred();
+let ignoredAbortReads = 0;
+ignoredAbort.transport = { request: () => ++ignoredAbortReads === 1 ? oldCompletion.promise : newCompletion.promise };
+const oldSessionRead = ignoredAbort.request("inventory");
+const oldSessionRejected = assert.rejects(oldSessionRead, { code: "REQUEST_ABORTED" });
+ignoredAbort.setSession({ authenticated: true, gameSessionId: "another-inventory-game" });
+const newSessionRead = ignoredAbort.request("inventory");
+oldCompletion.resolve(model("old-session-item"));
+await oldSessionRejected;
+assert.equal(ignoredAbort.readCache.size, 0);
+assert.equal(ignoredAbort.inFlightReads.size, 1, "Old cleanup cannot remove the new session's pending operation.");
+newCompletion.resolve(model("new-session-item"));
+await newSessionRead;
+assert.deepEqual(await ignoredAbort.request("inventory"), model("new-session-item"));
+assert.equal(ignoredAbortReads, 2);
+assert.equal(ignoredAbort.inFlightReads.size, 0);
+
+// Backend absence must not substitute preview Inventory or mark an empty success.
+let recoveryReads = 0;
+const recovering = inventoryApi(async () => {
+  recoveryReads += 1;
+  if (recoveryReads === 1) throw { code: "OFFLINE", status: 0 };
+  return model("");
+});
+const failed = await recovering.loadResources(["inventory"]);
+assert.equal(isResourceUnavailable(failed.data, "inventory"), true);
+assert.equal(failed.resourceStatus.inventory.code, "OFFLINE");
+assert.equal(failed.data.inventory, undefined);
+assert.equal(recovering.readCache.size, 0);
+const recovered = await recovering.loadResources(["inventory"]);
+assert.equal(isResourceReady(recovered.data, "inventory"), true);
+assert.deepEqual(recovered.data.inventory.items, []);
+assert.deepEqual(recovered.errors, {});
+assert.equal(recoveryReads, 2);
+
+let deniedReads = 0;
+const denied = inventoryApi(async () => { deniedReads += 1; throw new Error("Unexpected read"); });
+denied.resourceSupport = createResourceSupport({ session: { capabilityEndpointKeys: [] } });
+const unavailable = await denied.loadResources(["inventory", "inventory"]);
+assert.equal(unavailable.resourceStatus.inventory.code, "CAPABILITY_UNAVAILABLE");
+assert.equal(isResourceUnavailable(unavailable.data, "inventory"), true);
+assert.equal(deniedReads, 0, "Manifest denial performs no Inventory request.");
+assert.equal(denied.readCache.size, 0);
+console.log("Inventory shared lifecycle passed: dedup/cache 1 read; invalidation 2; each abort boundary 2; recovery 2; denied 0.");

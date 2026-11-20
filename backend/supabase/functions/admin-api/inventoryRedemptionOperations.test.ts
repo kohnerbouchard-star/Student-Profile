@@ -1,8 +1,10 @@
 import { handleInventoryRedemptionOperation } from "./inventoryRedemptionOperations.ts";
+import { createAdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
 
 const GAME = "00000000-0000-4000-8000-000000000001";
 const STAFF = "00000000-0000-4000-8000-000000000002";
 const REQUEST_ID = `red_${"a".repeat(32)}`;
+const APPLICATION_REQUEST_ID = "admin-inventory-request-001";
 
 Deno.test("admin redemption queue defaults to pending and returns UUID-private public models", async () => {
   const service = new FakeService([row()]);
@@ -31,6 +33,10 @@ Deno.test("admin redemption queue defaults to pending and returns UUID-private p
   assertEquals(data.redemptions[0].id, REQUEST_ID);
   assertEquals(data.redemptions[0].player.displayName, "Student");
   assertEquals(data.summary.pending, 1);
+  assert(
+    !JSON.stringify(result.body).includes(APPLICATION_REQUEST_ID),
+    "internal application request ID must not be serialized",
+  );
 });
 
 Deno.test("admin redemption queue supports bounded historical pagination and lookahead", async () => {
@@ -318,8 +324,17 @@ function operation(service: FakeService, options: {
   );
   return handleInventoryRedemptionOperation(service, {
     request,
-    gameId: GAME,
-    staffUserId: STAFF,
+    applicationContext: createAdminRequestApplicationContext({
+      ownedGame: { id: GAME },
+      staffUserId: STAFF,
+      requestId: APPLICATION_REQUEST_ID,
+      security: {
+        ok: true,
+        assuranceLevel: "aal2",
+        permissions: ["inventory.redeem"],
+        requiredPermission: "inventory.redeem",
+      },
+    }),
     suffix: options.suffix ?? "/inventory/redemptions",
   });
 }

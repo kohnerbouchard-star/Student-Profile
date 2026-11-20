@@ -8,8 +8,8 @@ import {
   withOptionalStoryEventOverrideReads,
 } from "../../../src/domains/storylines/infrastructure/optionalStoryEventOverrideClient.ts";
 import {
-  SupabasePlayerStoryContextRepository,
-} from "../../../src/domains/storylines/infrastructure/supabasePlayerStoryContextRepository.ts";
+  createPlayerStoryContextReadQuery,
+} from "../../../src/domains/storylines/server/playerContextReadQuery.ts";
 import {
   StockMarketStoryNewsWriter,
 } from "../../../src/domains/storylines/infrastructure/stockMarketStoryNewsWriter.ts";
@@ -26,8 +26,8 @@ import {
   SupabaseStoryImpactWriter,
 } from "../../../src/domains/storylines/infrastructure/supabaseStoryImpactWriter.ts";
 import {
-  SupabaseStoryNotificationRepository,
-} from "../../../src/domains/storylines/infrastructure/supabaseStoryNotificationRepository.ts";
+  createStoryNotificationPublisher,
+} from "../../../src/domains/notifications/public/storyNotifications.ts";
 import {
   SupabaseStorylineRepository,
 } from "../../../src/domains/storylines/infrastructure/supabaseStorylineRepository.ts";
@@ -53,10 +53,10 @@ export function createStorylineRunnerAfterTick(
   const executionRepository = new SupabaseStoryEventExecutionRepository(
     client as any,
   );
-  const notificationRepository = new SupabaseStoryNotificationRepository(
+  const notificationRepository = createStoryNotificationPublisher(
     client as any,
   );
-  const playerContextRepository = new SupabasePlayerStoryContextRepository(
+  const playerContextReadQuery = createPlayerStoryContextReadQuery(
     client as any,
   );
   const contractWriter = new SupabaseStoryContractWriter(client as any);
@@ -68,7 +68,7 @@ export function createStorylineRunnerAfterTick(
   const worldFx = new SupabaseStoryWorldFxWriter(client as any);
 
   return async (input: StorylineTickInput): Promise<void> => {
-    const playerContexts = await playerContextRepository
+    const playerContexts = await playerContextReadQuery
       .listPlayerStoryContexts(input.gameSessionId);
 
     await runDueStorylineEvents({

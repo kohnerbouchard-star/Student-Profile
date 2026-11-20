@@ -152,7 +152,56 @@ try {
     timeout: 15_000,
   });
 
+  const cdp = await page.context().newCDPSession(page);
+  const listenerCounts = {};
+  for (const expression of ["window", "document"]) {
+    const { result } = await cdp.send("Runtime.evaluate", { expression });
+    const { listeners } = await cdp.send("DOMDebugger.getEventListeners", { objectId: result.objectId });
+    listenerCounts[expression] = listeners.map(({ type, useCapture }) => `${type}:${useCapture}`).sort();
+  }
+  await page.waitForLoadState("networkidle");
+  const signatures = async () => {
+    const { result } = await cdp.send("Runtime.evaluate", { expression: "window" });
+    const { listeners } = await cdp.send("DOMDebugger.getEventListeners", { objectId: result.objectId });
+    return JSON.stringify(listeners.filter(({ type }) => ["click", "keydown"].includes(type)).map(({ type, useCapture, scriptId, lineNumber, columnNumber }) => [type, useCapture, scriptId, lineNumber, columnNumber]));
+  };
+  const beforeRepeats = await signatures();
+  await page.evaluate(async () => {
+    const owner = window.EconovariaAdminLogoutConfirmation, bridge = window.EconovariaAdminLogoutAccountTriggerBridge;
+    const script = (src) => new Promise((resolve, reject) => { const node = document.createElement("script"); node.src = src; node.onload = resolve; node.onerror = reject; document.head.append(node); });
+    owner.installAccountTriggerBridge();
+    await script("./logout-confirmation.js?repeat-owner");
+    await import("./logout-account-trigger-bridge.js");
+    await import("./logout-account-trigger-bridge.js?repeat-module");
+    await script("./logout-account-trigger-bridge.js");
+    await script("./logout-account-trigger-bridge.js?repeat-classic");
+    owner.installAccountTriggerBridge();
+    if (owner !== window.EconovariaAdminLogoutConfirmation || bridge !== window.EconovariaAdminLogoutAccountTriggerBridge) throw new Error("Repeated initialization replaced public APIs.");
+  });
+  assert(await signatures() === beforeRepeats, "Repeated initialization changed logout listener identities/order.");
+  for (const fallbackFirst of [false, true]) {
+    const isolated = await page.context().newPage();
+    await isolated.setContent("<!doctype html><title>Logout initialization fixture</title>");
+    await isolated.addScriptTag({ content: "void 0;" }); // Initialize Playwright instrumentation before counting.
+    const probeCdp = await isolated.context().newCDPSession(isolated);
+    const { result } = await probeCdp.send("Runtime.evaluate", { expression: "window" });
+    const snapshot = async () => (await probeCdp.send("DOMDebugger.getEventListeners", { objectId: result.objectId })).listeners.filter(({ type }) => ["click", "keydown"].includes(type));
+    const initialCount = (await snapshot()).length;
+    const bridgeUrl = `${ORIGIN}/admin/logout-account-trigger-bridge.js`, ownerUrl = `${ORIGIN}/admin/logout-confirmation.js`;
+    if (fallbackFirst) await isolated.addScriptTag({ url: bridgeUrl });
+    await isolated.addScriptTag({ url: ownerUrl });
+    await isolated.evaluate(() => { window.savedOwner = window.EconovariaAdminLogoutConfirmation; window.savedOwner.installAccountTriggerBridge(); window.savedBridge = window.EconovariaAdminLogoutAccountTriggerBridge; });
+    await isolated.addScriptTag({ url: `${ownerUrl}?again` });
+    await isolated.addScriptTag({ url: `${bridgeUrl}?again` });
+    assert(await isolated.evaluate(() => { window.savedOwner.installAccountTriggerBridge(); return window.savedOwner === window.EconovariaAdminLogoutConfirmation && window.savedBridge === window.EconovariaAdminLogoutAccountTriggerBridge; }), "Standalone repeated initialization replaced APIs.");
+    assert((await snapshot()).length === initialCount + 4, `Standalone initialization duplicated listeners: ${JSON.stringify({ fallbackFirst, initialCount, listeners: (await snapshot()).map(({type, useCapture, lineNumber}) => ({type,useCapture,lineNumber})) })}`);
+    await probeCdp.detach(); await isolated.close();
+  }
+  report.repeatedInitializationStable = true;
+  await cdp.detach();
+  const logoutRequests = () => requests.filter((value) => value.startsWith("POST ") && value.includes("/web-session-api/logout"));
   const realControl = await clickRealAccountLogout();
+  assert(logoutRequests().length === 0, "Opening confirmation sent logout.");
   const modal = page.locator("[data-econovaria-admin-logout-confirmation]");
   await modal.waitFor({ state: "visible", timeout: 5_000 });
   const legacyVisible = await page.locator(
@@ -242,6 +291,21 @@ try {
     "Cancel incorrectly cleared the Admin session.",
   );
 
+  assert(logoutRequests().length === 0, "Cancellation sent logout.");
+  for (const tag of ["a", "button"]) {
+    await page.evaluate((tag) => { const node = document.createElement(tag); node.id = "repeatLogoutProbe"; node.setAttribute("role", "button"); node.tabIndex = 0; node.textContent = "Logout"; document.body.append(node); }, tag);
+    const probe = page.locator("#repeatLogoutProbe");
+    for (const key of ["Enter", "Space"]) {
+      await probe.focus(); await probe.press(key);
+      await modal.waitFor({ state: "visible", timeout: 5_000 });
+      assert(logoutRequests().length === 0, "Keyboard opening sent logout.");
+      await modal.locator("[data-econovaria-logout-cancel]").last().click();
+      await modal.waitFor({ state: "detached", timeout: 5_000 });
+      assert(await probe.evaluate((node) => document.activeElement === node), "Cancel lost opener focus.");
+      assert(logoutRequests().length === 0, "Keyboard cancellation sent logout.");
+    }
+    await probe.evaluate((node) => node.remove());
+  }
   await clickRealAccountLogout();
   await modal.waitFor({ state: "visible", timeout: 5_000 });
   await Promise.all([
@@ -271,6 +335,7 @@ try {
     ),
     `Server-mediated Admin logout was not attempted: ${JSON.stringify(requests)}`,
   );
+  assert(logoutRequests().length === 1, "Confirmation did not issue exactly one logout POST.");
   assert(logoutResponseFulfilled, "The mocked Admin logout response did not complete.");
 
   const expectedNavigationAbort = /POST .*\/functions\/v1\/web-session-api\/logout net::ERR_ABORTED/i;
@@ -280,6 +345,8 @@ try {
   assert(remainingErrors.length === 0, remainingErrors.join("\n"));
   Object.assign(report, {
     realControl,
+    listenerCounts,
+    logoutRequestCount: logoutRequests().length,
     state,
     storage,
     serverMediatedLogoutObserved: true,

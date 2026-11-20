@@ -1,3 +1,6 @@
+import { nextMarketPage } from "../features/market/market-directory-model.js";
+import { renderBusinessShareFacts } from "../features/market/business-share-view.js";
+import { renderBusinessIpoPanel } from "../features/business-ipo/business-ipo-panel.js";
 import { escapeHtml, formatCompact, formatCurrency, formatNumber, formatPercent, toneFromChange } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderChange, renderEmptyState, renderStatusPill } from "../components/ui.js";
@@ -16,19 +19,29 @@ function chartPath(values, width = 720, height = 260, padding = 18) {
   }).join(" ");
 }
 
-function renderAssetRow(asset, selectedId) {
+function listingCurrencyForAsset(asset, countries, defaultCurrency) {
+  const country = countries.find((entry) => entry.id === asset.countryId);
+  return String(asset.listingCurrencyCode || country?.currencyCode || defaultCurrency || "ECO").toUpperCase();
+}
+
+function renderAssetRow(asset, selectedId, countries, defaultCurrency) {
+  const listingCurrency = listingCurrencyForAsset(asset, countries, defaultCurrency);
   return `<button class="player-terminal-asset-row${asset.id === selectedId ? " is-selected" : ""}" type="button" data-player-market-select="${escapeHtml(asset.id)}">
     <span class="player-terminal-asset-symbol">${escapeHtml(asset.symbol.slice(0, 2))}</span>
     <span><strong>${escapeHtml(asset.symbol)}</strong><small>${escapeHtml(asset.name)}</small></span>
-    <span><strong>${escapeHtml(formatCurrency(asset.price, ""))}</strong><small>${escapeHtml(asset.type)} · ${escapeHtml(asset.sector)}</small></span>
+    <span><strong>${escapeHtml(formatCurrency(asset.price, listingCurrency))}</strong><small>${escapeHtml(asset.type)} · ${escapeHtml(asset.sector)} · ${escapeHtml(listingCurrency)}</small></span>
     ${renderChange(asset.change)}
   </button>`;
+}
+
+function checkingAccountOptions(accounts, selectedKey = "") {
+  return accounts.map((account) => `<option value="${escapeHtml(account.accountKey)}"${account.accountKey === selectedKey ? " selected" : ""}>${escapeHtml(account.currencyCode)} · ${escapeHtml(formatCurrency(account.availableAmount, account.currencyCode))} available</option>`).join("");
 }
 
 export function renderMarketPage(data, ui) {
   const market = data.market;
   if (!Array.isArray(market?.assets) || !market.assets.length) {
-    return `<section class="player-terminal-page player-terminal-market-page" data-page="market"><header class="player-terminal-page-heading"><div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets and prepare market orders.</p></div></header>${renderEmptyState({ title: "No assets are listed", detail: "The exchange directory will populate when tradable instruments become available.", iconName: "market" })}</section>`;
+    return `<section class="player-terminal-page player-terminal-market-page" data-page="market"><header class="player-terminal-page-heading"><div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets and prepare market orders.</p></div></header>${renderEmptyState({ title: "No assets are listed", detail: "The exchange directory will populate when tradable instruments become available.", iconName: "market" })}${renderBusinessIpoPanel(data)}</section>`;
   }
   const selectedId = ui.marketAssetId || market.selectedAssetId;
   const selected = market.assets.find((asset) => asset.id === selectedId) || market.assets[0];
@@ -36,50 +49,70 @@ export function renderMarketPage(data, ui) {
   const assets = market.assets.filter((asset) => sector === "All" || asset.sector === sector);
   const path = chartPath(selected.history);
   const chartHistory = escapeHtml(JSON.stringify(Array.isArray(selected.history) ? selected.history : []));
-  const currencyCode = data.session.currencyCode;
+  const sessionCurrencyCode = data.session.currencyCode;
+  const selectedCountry = data.countries.find((country) => country.id === selected.countryId);
+  const listingCurrencyCode = listingCurrencyForAsset(selected, data.countries, sessionCurrencyCode);
   const position = marketPositionForAsset(data.portfolio, selected);
   const positionValue = position.owned * selected.price;
   const gain = position.owned ? positionValue - position.owned * position.averageCost : 0;
-  const selectedCountry = data.countries.find((country) => country.id === selected.countryId);
   const bankingUnavailable = isResourceUnavailable(data, "banking");
+  const bankingFxUnavailable = isResourceUnavailable(data, "bankingFx");
   const newsUnavailable = isResourceUnavailable(data, "news");
   const relatedNews = newsUnavailable ? [] : data.news.items.filter((item) => selected.newsIds?.includes(item.id)).slice(0, 3);
   const marketVolume = market.assets.reduce((sum, asset) => sum + asset.volume, 0);
   const composite = market.assets.find((asset) => asset.id === "cel-index");
-  const compositeChange = Number(composite?.change) || 0;
-  const availableChecking = bankingUnavailable ? "Unavailable" : formatCurrency(data.banking.checking.available, currencyCode);
+  const compositePrice = Number.isFinite(composite?.price) ? formatNumber(composite.price, 2) : "Unavailable";
+  const compositeChange = Number.isFinite(composite?.change) ? composite.change : null;
+  const checkingAccounts = bankingFxUnavailable
+    ? []
+    : (Array.isArray(data.bankingFx?.balances) ? data.bankingFx.balances : [])
+      .filter((account) => account.accountKind === "checking" && account.accountKey);
+  const listingCurrencyCheckingAccounts = checkingAccounts
+    .filter((account) => String(account.currencyCode || "").toUpperCase() === listingCurrencyCode);
+  const primaryFundingKey = listingCurrencyCheckingAccounts[0]?.accountKey || checkingAccounts[0]?.accountKey || "";
+  const buyAccountOptions = checkingAccountOptions(checkingAccounts, primaryFundingKey);
+  const sellDestinationKey = listingCurrencyCheckingAccounts[0]?.accountKey || "";
+  const sellAccountOptions = checkingAccountOptions(listingCurrencyCheckingAccounts, sellDestinationKey);
+  const defaultTargetAmount = Math.round(Number(selected.price || 0) * 10_000) / 10_000;
+  const accountSummary = checkingAccounts.length
+    ? checkingAccounts.map((account) => `${account.currencyCode} ${formatCurrency(account.availableAmount, account.currencyCode)}`).join(" · ")
+    : "Unavailable";
+  const buyDisabled = !checkingAccounts.length || market.status === "CLOSED";
+  const sellDisabled = !listingCurrencyCheckingAccounts.length || market.status === "CLOSED" || position.owned <= 0;
 
   return `<section class="player-terminal-page player-terminal-market-page" data-page="market">
     <header class="player-terminal-page-heading">
-      <div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets, understand event exposure, inspect your positions, and place market orders.</p></div>
+      <div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets, fund immediate purchases from canonical Checking accounts, and route sale proceeds only to an active Checking account in the Stock listing currency.</p></div>
       <div class="player-terminal-heading-actions"><button class="player-terminal-secondary-button" type="button" data-route="portfolio">${icon("portfolio")} Portfolio</button>${renderStatusPill(`${market.status} · ${market.nextClose}`, "green")}<button class="player-terminal-icon-button" type="button" data-player-action="refresh-data" aria-label="Refresh market data">${icon("refresh")}</button></div>
     </header>
 
     <div class="player-terminal-market-summary">
-      <article><small>COMPOSITE INDEX</small><strong>${escapeHtml(formatNumber(composite?.price || 0, 2))}</strong><span class="${toneFromChange(compositeChange)}">${escapeHtml(formatPercent(compositeChange))}</span></article>
-      <article><small>YOUR PORTFOLIO</small><strong>${escapeHtml(formatCurrency(data.dashboard.portfolioValue, currencyCode))}</strong><span class="${toneFromChange(data.dashboard.dailyChange)}">${escapeHtml(formatPercent(data.dashboard.dailyChange))}</span></article>
-      <article><small>AVAILABLE CHECKING</small><strong>${escapeHtml(availableChecking)}</strong><span>${bankingUnavailable ? "Balance service unavailable" : "Ready to trade"}</span></article>
-      <article><small>MARKET VOLUME</small><strong>${escapeHtml(formatCompact(marketVolume))}</strong><span>Across listed assets</span></article>
+      <article><small>COMPOSITE INDEX</small><strong>${escapeHtml(compositePrice)}</strong><span class="${compositeChange === null ? "" : toneFromChange(compositeChange)}">${escapeHtml(compositeChange === null ? "Change unavailable" : formatPercent(compositeChange))}</span></article>
+      <article><small>YOUR POSITIONS</small><strong>${escapeHtml(String(Array.isArray(data.portfolio?.holdings) ? data.portfolio.holdings.filter(h => h.quantity > 0).length : market.assets.filter(a => a.owned > 0).length))}</strong><span>Values by currency in Portfolio</span></article>
+      <article><small>CHECKING FUNDING</small><strong>${escapeHtml(checkingAccounts.length ? `${checkingAccounts.length} account${checkingAccounts.length === 1 ? "" : "s"}` : "Unavailable")}</strong><span>${escapeHtml(accountSummary)}</span></article>
+      <article><small>LOADED VOLUME</small><strong>${escapeHtml(formatCompact(marketVolume))}</strong><span>Across loaded instruments</span></article>
     </div>
 
     <div class="player-terminal-market-layout">
       <section class="player-terminal-panel player-terminal-asset-browser">
         <header class="player-terminal-panel-header"><div><span>ASSET DIRECTORY</span><strong>${escapeHtml(assets.length)} instruments</strong></div><button class="player-terminal-icon-button" type="button" aria-label="Search assets" aria-expanded="false" aria-controls="playerMarketSearchPanel" data-player-local-action="market-search">${icon("eye")}</button></header>
         <div id="playerMarketSearchPanel" class="player-terminal-filter-row" data-player-market-search-panel hidden>
-          <label><span class="sr-only">Search listed assets</span><input type="search" data-player-market-search autocomplete="off" placeholder="Search symbol, company, or sector"></label>
+          <label><span class="sr-only">Search listed assets</span><input type="search" data-player-market-search autocomplete="off" placeholder="Search loaded instruments"></label>
           <small data-player-market-search-status>${escapeHtml(assets.length)} listed instruments</small>
         </div>
         <div class="player-terminal-filter-row">
           ${market.sectors.map((item) => `<button type="button" class="${item === sector ? "active" : ""}" data-player-market-sector="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("")}
         </div>
-        <div class="player-terminal-asset-list">${assets.length ? assets.map((asset) => renderAssetRow(asset, selected.id)).join("") : renderEmptyState({ title: "No assets in this sector", detail: "Select another sector to continue browsing.", iconName: "market" })}<p class="player-terminal-inline-empty" data-player-market-search-empty hidden>No listed assets match this search.</p></div>
+        <div class="player-terminal-asset-list">${assets.length ? assets.map((asset) => renderAssetRow(asset, selected.id, data.countries, sessionCurrencyCode)).join("") : renderEmptyState({ title: "No assets in this sector", detail: "Select another sector to continue browsing.", iconName: "market" })}<p class="player-terminal-inline-empty" data-player-market-search-empty hidden>No listed assets match this search.</p></div>
+        <p class="player-terminal-inline-empty" data-player-market-directory-status role="status" tabindex="-1">${escapeHtml(market.assets.length)} instruments loaded${nextMarketPage(market) ? ". More instruments are available." : "."} Search and sector filters apply to loaded instruments.</p>
+        ${nextMarketPage(market) ? '<button class="player-terminal-secondary-button" type="button" data-player-market-load-more>Load more instruments</button>' : ""}
       </section>
 
       <section class="player-terminal-panel player-terminal-chart-panel">
         <header class="player-terminal-selected-asset-head">
           <div class="player-terminal-selected-symbol">${escapeHtml(selected.symbol.slice(0, 2))}</div>
-          <div><small>${escapeHtml(selected.type)} · ${escapeHtml(selected.sector)}</small><h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.symbol)} · ${escapeHtml(selectedCountry?.name || "Celestial Exchange")}</p></div>
-          <div class="player-terminal-selected-price"><strong>${escapeHtml(formatCurrency(selected.price, currencyCode))}</strong>${renderChange(selected.change)}<button class="player-terminal-watchlist-button${selected.watchlisted ? " is-active" : ""}" type="button" data-player-market-watchlist="${escapeHtml(selected.id)}" data-watchlisted="${String(selected.watchlisted)}">${icon("star")} ${selected.watchlisted ? "Watching" : "Watch"}</button></div>
+          <div><small>${escapeHtml(selected.type)} · ${escapeHtml(selected.sector)} · LISTED IN ${escapeHtml(listingCurrencyCode)}</small><h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.symbol)} · ${escapeHtml(selectedCountry?.name || "Celestial Exchange")}</p></div>
+          <div class="player-terminal-selected-price"><strong>${escapeHtml(formatCurrency(selected.price, listingCurrencyCode))}</strong>${renderChange(selected.change)}<button class="player-terminal-watchlist-button${selected.watchlisted ? " is-active" : ""}" type="button" data-player-market-watchlist="${escapeHtml(selected.id)}" data-watchlisted="${String(selected.watchlisted)}">${icon("star")} ${selected.watchlisted ? "Watching" : "Watch"}</button></div>
         </header>
         <div class="player-terminal-chart-toolbar"><button type="button" data-player-local-action="chart-range" data-range="1D" aria-pressed="false">1D</button><button class="active" type="button" data-player-local-action="chart-range" data-range="1M" aria-pressed="true">1M</button><button type="button" data-player-local-action="chart-range" data-range="3M" aria-pressed="false">3M</button><button type="button" data-player-local-action="chart-range" data-range="1Y" aria-pressed="false">1Y</button><button type="button" data-player-local-action="chart-range" data-range="ALL" aria-pressed="false">ALL</button><small data-player-market-chart-range-label>1M SERIES</small></div>
         <div class="player-terminal-chart-frame" data-player-market-chart-history="${chartHistory}">
@@ -91,41 +124,73 @@ export function renderMarketPage(data, ui) {
           </svg>
         </div>
         <div class="player-terminal-asset-facts player-terminal-asset-facts-expanded">
-          <span><small>OPEN</small><strong>${escapeHtml(formatCurrency(selected.open, currencyCode))}</strong></span>
-          <span><small>DAY HIGH</small><strong>${escapeHtml(formatCurrency(selected.dayHigh, currencyCode))}</strong></span>
-          <span><small>DAY LOW</small><strong>${escapeHtml(formatCurrency(selected.dayLow, currencyCode))}</strong></span>
+          <span><small>OPEN</small><strong>${escapeHtml(formatCurrency(selected.open, listingCurrencyCode))}</strong></span>
+          <span><small>DAY HIGH</small><strong>${escapeHtml(formatCurrency(selected.dayHigh, listingCurrencyCode))}</strong></span>
+          <span><small>DAY LOW</small><strong>${escapeHtml(formatCurrency(selected.dayLow, listingCurrencyCode))}</strong></span>
           <span><small>VOLUME</small><strong>${escapeHtml(formatCompact(selected.volume))}</strong></span>
           <span><small>MARKET CAP</small><strong>${selected.marketCap ? escapeHtml(formatCompact(selected.marketCap)) : "—"}</strong></span>
           <span><small>P/E RATIO</small><strong>${selected.pe ? escapeHtml(selected.pe.toFixed(1)) : "—"}</strong></span>
           <span><small>DIVIDEND</small><strong>${selected.yield ? `${escapeHtml(selected.yield.toFixed(1))}%` : "—"}</strong></span>
           <span><small>RISK / OUTLOOK</small><strong>${escapeHtml(selected.risk)} · ${escapeHtml(selected.outlook)}</strong></span>
         </div>
+        ${renderBusinessShareFacts(selected)}
         <div class="player-terminal-position-strip">
           <div><small>YOUR POSITION</small><strong>${escapeHtml(formatNumber(position.owned))} shares</strong></div>
-          <div><small>AVERAGE COST</small><strong>${position.owned ? escapeHtml(formatCurrency(position.averageCost, currencyCode)) : "—"}</strong></div>
-          <div><small>POSITION VALUE</small><strong>${escapeHtml(formatCurrency(positionValue, currencyCode))}</strong></div>
-          <div><small>UNREALIZED GAIN</small><strong class="${toneFromChange(gain)}">${escapeHtml(formatCurrency(gain, currencyCode))}</strong></div>
+          <div><small>AVERAGE COST</small><strong>${position.owned ? escapeHtml(formatCurrency(position.averageCost, listingCurrencyCode)) : "—"}</strong></div>
+          <div><small>POSITION VALUE</small><strong>${escapeHtml(formatCurrency(positionValue, listingCurrencyCode))}</strong></div>
+          <div><small>UNREALIZED GAIN</small><strong class="${toneFromChange(gain)}">${escapeHtml(formatCurrency(gain, listingCurrencyCode))}</strong></div>
         </div>
         <div class="player-terminal-market-news-strip"><header><small>RELATED INTELLIGENCE</small><button type="button" data-route="news">Open news ${icon("chevronRight")}</button></header><div>${newsUnavailable ? "<p>Related intelligence is unavailable.</p>" : relatedNews.map((item) => `<button type="button" data-player-news-link="${escapeHtml(item.id)}"><span class="is-${escapeHtml(item.tone)}">${icon("news")}</span><div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.time)} · ${escapeHtml(item.severity)} impact</small></div></button>`).join("") || "<p>No active stories for this asset.</p>"}</div></div>
       </section>
 
       <section class="player-terminal-panel player-terminal-order-ticket">
-        <header class="player-terminal-panel-header"><div><span>ORDER TICKET</span><strong>${escapeHtml(selected.symbol)}</strong></div>${renderStatusPill("CONFIRMATION REQUIRED", "cyan")}</header>
-        <form data-player-form="market-order" data-endpoint="marketOrder">
-          <input type="hidden" name="assetId" value="${escapeHtml(selected.id)}" />
-          <label>ORDER SIDE<div class="player-terminal-segmented"><label><input type="radio" name="side" value="buy" checked /><span>Buy</span></label><label><input type="radio" name="side" value="sell" /><span>Sell</span></label></div></label>
-          <label>ORDER TYPE<select name="orderType"><option value="market">Market</option><option value="limit">Limit</option></select></label>
-          <label>QUANTITY<input name="quantity" type="number" min="1" step="1" value="10" required /></label>
-          <label>LIMIT PRICE<input name="limitPrice" type="number" min="0" step="0.01" placeholder="Optional for limit order" /></label>
+        <header class="player-terminal-panel-header"><div><span>IMMEDIATE TRADING</span><strong>${escapeHtml(selected.symbol)} · ${escapeHtml(listingCurrencyCode)}</strong></div>${renderStatusPill("C3 QUOTE + SETTLEMENT", "cyan")}</header>
+        <div class="player-terminal-order-estimate"><span>Authoritative funding</span><small>${bankingFxUnavailable ? "Canonical Banking FX account data is unavailable; trading is disabled." : "Only canonical Checking accounts are eligible. Foreign-currency accounts are converted through Banking FX; allocation amounts below are target amounts in the Stock listing currency."}</small></div>
+
+        <form data-player-form="market-buy" data-player-market-order-form="buy-quote" data-endpoint="marketOrder">
+          <input type="hidden" name="action" value="create_buy_quote" />
+          <input type="hidden" name="ticker" value="${escapeHtml(selected.symbol)}" />
+          <input type="hidden" name="expectedPrice" value="${escapeHtml(String(selected.price))}" />
+          <input type="hidden" name="expectedTickIndex" value="${escapeHtml(String(market.tickIndex || 0))}" />
+          <label>BUY QUANTITY<input name="quantity" type="number" min="${selected.commonEquity ? "1" : "0.0001"}" step="${selected.commonEquity ? "1" : "0.0001"}" value="1" required /></label>
+          <fieldset>
+            <legend>FUNDING SPLIT · TARGET ${escapeHtml(listingCurrencyCode)}</legend>
+            <label>CHECKING ACCOUNT 1<select name="sourceAccountKey1" required><option value="">Select Checking account</option>${buyAccountOptions}</select></label>
+            <label>TARGET AMOUNT 1<input name="targetAmount1" type="number" min="0.0001" step="0.0001" value="${escapeHtml(String(defaultTargetAmount))}" required /></label>
+            <label>CHECKING ACCOUNT 2<select name="sourceAccountKey2"><option value="">Optional second account</option>${checkingAccountOptions(checkingAccounts)}</select></label>
+            <label>TARGET AMOUNT 2<input name="targetAmount2" type="number" min="0.0001" step="0.0001" placeholder="Optional" /></label>
+            <label>CHECKING ACCOUNT 3<select name="sourceAccountKey3"><option value="">Optional third account</option>${checkingAccountOptions(checkingAccounts)}</select></label>
+            <label>TARGET AMOUNT 3<input name="targetAmount3" type="number" min="0.0001" step="0.0001" placeholder="Optional" /></label>
+          </fieldset>
           <div class="player-terminal-order-review">
-            <span><small>ESTIMATED VALUE</small><strong data-player-market-estimated-value>${escapeHtml(formatCurrency(selected.price * 10, currencyCode))}</strong></span>
-            <span><small>AVAILABLE CHECKING</small><strong>${escapeHtml(availableChecking)}</strong></span>
-            <span><small>ESTIMATED FEES</small><strong data-player-market-estimated-fees>${escapeHtml(formatCurrency(selected.price * 10 * 0.0025, currencyCode))}</strong></span>
+            <span><small>ESTIMATED GROSS</small><strong data-player-market-estimated-total>${escapeHtml(formatCurrency(defaultTargetAmount, listingCurrencyCode))}</strong></span>
+            <span><small>FUNDED</small><strong data-player-market-funded-total>${escapeHtml(formatCurrency(defaultTargetAmount, listingCurrencyCode))}</strong></span>
+            <span><small>REMAINING</small><strong data-player-market-remaining-total>${escapeHtml(formatCurrency(0, listingCurrencyCode))}</strong></span>
           </div>
-          <div class="player-terminal-order-estimate"><span>Execution notice</span><small>${bankingUnavailable ? "Available checking funds could not be pre-validated. The backend will perform the authoritative balance check." : "Price, fees, available funds, and final holdings update only after the order is confirmed."}</small></div>
-          <button class="player-terminal-primary-button" type="submit">${icon("send")} Send order for processing</button>
+          <div class="player-terminal-order-estimate"><span>Quote before settlement</span><small>The server locks the exact C3B price, tick, funding split, FX rates, and expiry. Review that immutable quote before authorizing C3C settlement.</small></div>
+          <button class="player-terminal-primary-button" type="submit"${buyDisabled ? " disabled" : ""}>${icon("send")} Create exact quote</button>
         </form>
+
+        <form data-player-form="market-sell" data-player-market-order-form="sell-review" data-endpoint="marketOrder">
+          <input type="hidden" name="action" value="settle_sell" />
+          <input type="hidden" name="ticker" value="${escapeHtml(selected.symbol)}" />
+          <input type="hidden" name="expectedPrice" value="${escapeHtml(String(selected.price))}" />
+          <input type="hidden" name="expectedTickIndex" value="${escapeHtml(String(market.tickIndex || 0))}" />
+          <label>SELL QUANTITY<input name="quantity" type="number" min="${selected.commonEquity ? "1" : "0.0001"}" step="${selected.commonEquity ? "1" : "0.0001"}" max="${escapeHtml(String(position.owned || 0))}" value="${position.owned > 0 ? "1" : "0"}" required /></label>
+          <label>PROCEEDS DESTINATION · ${escapeHtml(listingCurrencyCode)}<select name="destinationAccountKey" required><option value="">Select ${escapeHtml(listingCurrencyCode)} Checking account</option>${sellAccountOptions}</select></label>
+          <div class="player-terminal-order-review">
+            <span><small>ESTIMATED PROCEEDS</small><strong data-player-market-sell-proceeds>${escapeHtml(formatCurrency(defaultTargetAmount, listingCurrencyCode))}</strong></span>
+            <span><small>OWNED</small><strong>${escapeHtml(formatNumber(position.owned))} shares</strong></span>
+            <span><small>SETTLEMENT CURRENCY</small><strong>${escapeHtml(listingCurrencyCode)} · no sell-side FX</strong></span>
+          </div>
+          <div class="player-terminal-order-estimate"><span>Sell settlement</span><small>C3D debits shares once, settles proceeds through canonical market liquidity, and credits one active ${escapeHtml(listingCurrencyCode)} Checking account. Cross-currency sale conversion is not part of this settlement.</small></div>
+          ${listingCurrencyCheckingAccounts.length ? "" : `<p class="player-terminal-inline-empty" role="status">Open an active ${escapeHtml(listingCurrencyCode)} Checking account before selling this asset.</p>`}
+          <button class="player-terminal-secondary-button" type="submit"${sellDisabled ? " disabled" : ""}>${icon("send")} Review sale</button>
+        </form>
+
+        ${bankingUnavailable ? "<p class=\"player-terminal-inline-empty\">Banking summary is unavailable; Stock funding still relies only on the canonical Banking FX account model.</p>" : ""}
       </section>
     </div>
+    ${renderBusinessIpoPanel(data)}
   </section>`;
 }

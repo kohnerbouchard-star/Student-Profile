@@ -75,6 +75,7 @@ export function resolveMessagingBackendRequest({ endpointKey, payload = {}, para
     return {
       method: "GET",
       path: queryPath("/players/me/messages", {
+        cursor: payload.cursor,
         threadLimit: payload.threadLimit,
         messageLimit: payload.messageLimit,
       }),
@@ -88,6 +89,7 @@ export function resolveMessagingBackendRequest({ endpointKey, payload = {}, para
       method: "GET",
       path: queryPath("/players/me/messages/search", {
         q: boundedText(payload.query || payload.q, "query", 100, endpointKey),
+        cursor: payload.cursor,
         threadLimit: payload.threadLimit,
         messageLimit: payload.messageLimit,
       }),
@@ -95,7 +97,7 @@ export function resolveMessagingBackendRequest({ endpointKey, payload = {}, para
   }
   if (endpointKey === "messageThread") {
     const id = threadId(params.threadId || payload.threadId, endpointKey);
-    return { method: "GET", path: `/players/me/messages/threads/${encodeURIComponent(id)}` };
+    return { method: "GET", path: queryPath(`/players/me/messages/threads/${encodeURIComponent(id)}`, { messageLimit: payload.messageLimit }) };
   }
   if (endpointKey === "messageThreadCreate") {
     const recipientPlayerId = required(payload.recipientPlayerId, "recipientPlayerId", endpointKey);

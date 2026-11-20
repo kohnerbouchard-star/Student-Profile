@@ -1,3 +1,5 @@
+import { createSupabasePlayerRosterImportRepository } from "../../../src/domains/players/infrastructure/supabasePlayerRosterImportRepository.ts";
+import { handlePlayerRosterImport } from "../../../src/domains/players/api/playerRosterImportHttpHandler.ts";
 import {
   AdminMutationError,
   adminMutationErrorBody,
@@ -20,16 +22,18 @@ import { mutateAdminContract } from "../../../src/domains/contracts/application/
 import { ContractContractError } from "../../../src/domains/contracts/contracts/contractContractErrors.ts";
 import { updateGameSettings } from "../../../src/domains/game-sessions/application/updateGameSettings.ts";
 import { rotateGameJoinCode } from "../../../src/domains/game-sessions/application/rotateGameJoinCode.ts";
+import { createSupabaseGameSessionMutationRepository } from "../../../src/domains/game-sessions/infrastructure/supabaseGameSessionMutationRepository.ts";
 import {
   normalizeContractCreate,
   normalizeStoreMutation,
 } from "./mutationAdapters.ts";
 import { handleCompatibilityOperation } from "./compatibilityOperations.ts";
+import type { AdminRequestApplicationContext } from "./adminRequestApplicationContext.ts";
+import { isAffectedMutation, isSettingsMutation } from "./localGameMutationRoutes.ts";
 
 export interface LocalAdminGameMutationContext {
   readonly request: Request;
-  readonly gameSessionId: string;
-  readonly staffUserId: string;
+  readonly applicationContext: AdminRequestApplicationContext;
   readonly suffix: string;
   readonly gameSession: {
     readonly id: string;
@@ -55,6 +59,8 @@ export async function handleLocalAdminGameMutation(
   serviceClient: AdminMutationRpcClient & EdgeSupabaseClient,
   input: LocalAdminGameMutationContext,
 ): Promise<LocalAdminGameMutationResult> {
+  const rosterImport = await handlePlayerRosterImport(createSupabasePlayerRosterImportRepository(serviceClient), input);
+  if (rosterImport.handled) return rosterImport;
   if (!isAffectedMutation(input.request.method, input.suffix)) {
     return { handled: false };
   }
@@ -62,14 +68,13 @@ export async function handleLocalAdminGameMutation(
   try {
     const rawBody = await readJsonObjectBody(input.request, input.suffix);
     const identity = readAdminMutationIdentity(input.request, rawBody);
+    const gameSessionId = input.applicationContext.gameSessionId;
+    const staffUserId = input.applicationContext.actor.staffUserId;
     const compatibility = await handleCompatibilityOperation(
       serviceClient,
       {
-        gameSessionId: input.gameSessionId,
-        staffUserId: input.staffUserId,
-        path: `/games/${
-          encodeURIComponent(input.gameSessionId)
-        }${input.suffix}`,
+        applicationContext: input.applicationContext,
+        path: `/games/${encodeURIComponent(gameSessionId)}${input.suffix}`,
         method: input.request.method,
         body: rawBody,
         identity,
@@ -79,8 +84,8 @@ export async function handleLocalAdminGameMutation(
       return handled(compatibility.status, compatibility.body);
     }
     const common = {
-      gameSessionId: input.gameSessionId,
-      staffUserId: input.staffUserId,
+      gameSessionId,
+      staffUserId,
     };
 
     if (input.suffix === "/players" && input.request.method === "POST") {
@@ -250,11 +255,14 @@ export async function handleLocalAdminGameMutation(
     if (
       isSettingsMutation(input.request.method, input.suffix)
     ) {
-      const result = await updateGameSettings(serviceClient, {
-        ...common,
-        requestBody: settingsRequestBody(input.suffix, rawBody),
-        mutation: identity,
-      });
+      const result = await updateGameSettings(
+        createSupabaseGameSessionMutationRepository(serviceClient),
+        {
+          applicationContext: input.applicationContext,
+          requestBody: settingsRequestBody(input.suffix, rawBody),
+          mutation: identity,
+        },
+      );
       return handled(result.status, {
         ok: true,
         gameSession: input.gameSession,
@@ -267,11 +275,14 @@ export async function handleLocalAdminGameMutation(
     if (
       input.suffix === "/join-code/reset" && input.request.method === "POST"
     ) {
-      const result = await rotateGameJoinCode(serviceClient, {
-        ...common,
-        requestBody: rawBody,
-        mutation: identity,
-      });
+      const result = await rotateGameJoinCode(
+        createSupabaseGameSessionMutationRepository(serviceClient),
+        {
+          applicationContext: input.applicationContext,
+          requestBody: rawBody,
+          mutation: identity,
+        },
+      );
       return handled(result.status, {
         ok: true,
         gameSession: input.gameSession,
@@ -317,51 +328,6 @@ export async function handleLocalAdminGameMutation(
     }
     throw error;
   }
-}
-
-function isAffectedMutation(method: string, suffix: string): boolean {
-  if (
-    method === "POST" && [
-      "/players",
-      "/attendance/scans",
-      "/attendance/scan",
-      "/attendance/corrections",
-      "/store/items",
-      "/contracts",
-      "/join-code/reset",
-    ].includes(suffix)
-  ) return true;
-  if (/^\/contracts\/[^/]+\/publish$/.test(suffix)) {
-    return method === "POST";
-  }
-  if (/^\/contracts\/[^/]+$/.test(suffix)) {
-    return method === "PATCH";
-  }
-  if (/^\/contracts\/[^/]+\/(?:archive|duplicate)$/.test(suffix)) {
-    return method === "POST";
-  }
-  if (/^\/players\/[^/]+\/archive$/.test(suffix)) {
-    return method === "POST";
-  }
-  if (/^\/players\/[^/]+$/.test(suffix)) {
-    return method === "DELETE";
-  }
-  if (/^\/store\/items\/[^/]+\/(?:restock|rebalance-price)$/.test(suffix)) {
-    return method === "POST";
-  }
-  if (/^\/store\/items\/[^/]+\/status$/.test(suffix)) {
-    return ["POST", "PATCH", "PUT"].includes(method);
-  }
-  if (/^\/store\/items\/[^/]+$/.test(suffix)) {
-    return ["PATCH", "PUT", "DELETE"].includes(method);
-  }
-  return isSettingsMutation(method, suffix);
-}
-
-function isSettingsMutation(method: string, suffix: string): boolean {
-  if (!["POST", "PUT", "PATCH"].includes(method)) return false;
-  return suffix === "/settings" || /^\/settings\/[^/]+$/.test(suffix) ||
-    (method === "POST" && /^\/settings\/[^/]+\/reset$/.test(suffix));
 }
 
 function settingsRequestBody(

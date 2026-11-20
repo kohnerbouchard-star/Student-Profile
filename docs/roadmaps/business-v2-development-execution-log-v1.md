@@ -1,0 +1,1540 @@
+Warning: truncated output (original token count: 41371)
+Total output lines: 1791
+
+# Business V2 Development Execution Log v1
+
+**Purpose:** durable cross-chat completion notes for `docs/roadmaps/business-v2-development-execution-plan-v1.md`.  
+**Integration PR:** #648  
+**Branch:** `refactor/business-ux-mechanics-v1`  
+**Rule:** update this log at every completed checkpoint with changes, verification, blockers, decisions, exact state, and next step.
+
+---
+
+## 2026-08-19 — Phase 0 checkpoint A: convergence decision and commit
+
+### Baseline
+
+- Plan commit: `ecf319bab5620780e8331cd43fba1710149779e6`.
+- Phase 0 convergence commit: `7ce58d826f9d23b835a6324d6f787054aff32d60`.
+- PR #648 remains draft and unmerged.
+- No Business V2 migration from this branch was applied to staging or production during this checkpoint.
+- Connected staging was used read-only to verify canonical schema contracts.
+
+### What was inspected
+
+- All Business V2 migration layers on the current #648 branch.
+- Canonical Inventory v2 tables and inventory poster contract from merged `main`.
+- Existing physical-economy/Crafting recipe schema.
+- Business Player API and `business-banking` read/write composition.
+- Current GitHub Actions results and exact Database Replay failure logs.
+
+### Confirmed blockers
+
+1. **Database Replay hard failure.** The pre-convergence branch reached `20260819067500_business_liquidation_settlement_v2.sql` and failed on a composite foreign key to `business_liquidations(game_session_id, id)` because the referenced table had no matching composite unique constraint. The failure reproduced on every retry in workflow run `32197397668`.
+2. **Workspace/formation schema drift.** The speculative workspace read table/column names that did not exist in the retained formation schema, including `business_formation_proposal_owners`, `decision`, `total_capitalization`, and proposal `expires_at`.
+3. **Duplicate recipe authority.** The speculative Business recipe layer created `business_recipe_definitions` and `business_recipe_inputs`, while merged canonical physical-economy recipes already exist as `physical_economy_recipe_definitions`, `physical_economy_recipe_inputs`, `physical_economy_recipe_outputs`, game recipe availability, and Player recipe unlocks. This conflicted with the locked product decision to use the existing catalog recipe.
+4. **Canonical Inventory API mismatch.** Multiple speculative Business migrations called `economy_private.post_inventory_transaction_v2` with a non-existent alternate named-argument signature. Merged authority accepts a transaction type/source/idempotency/metadata plus JSON journal lines. No compatible overload existed on #648.
+5. **Canonical Inventory column drift.** Speculative liquidation code read `inventory_holdings.quantity` instead of `quantity_owned` and treated `inventory_accounts.business_id` as real even though Business identity belongs on `economic_parties` joined through `inventory_accounts.party_id`.
+6. **Loan schema drift.** Speculative acquisition code wrote `player_loans.repayment_account_player_id`, which does not exist in the canonical loan schema.
+7. **Business entity field drift.** Speculative reputation code wrote `business_entities.reputation`; canonical Business uses `reputation_score`.
+8. **Tax classification mismatch.** Speculative tax assessment values (`corporate`, `partnership_pass_through`) did not match the retained legal/tax classification authority (`c_corporation`, `partnership`, `disregarded`).
+9. **Debt undercount risk.** Speculative debt helpers omitted the actual canonical `player_loans.principal_balance` field and could therefore resolve outstanding debt incorrectly.
+10. **Competing sales authorities.** The speculative automatic Business sales engine directly consumed Finished Goods and created Business revenue, conflicting with the locked plan that Store seller offers are the primary sales/inventory settlement authority.
+
+### What changed in checkpoint A
+
+The active Phase 0 candidate was converged back to the replayed foundation. The following speculative, unmerged, unreleased migration layers were removed from the integration branch so they can be rebuilt in the ordered execution phases:
+
+- `20260819063100_business_governance_settlements_v2.sql`
+- `20260819063110_fix_business_governance_locking_v2.sql`
+- `20260819064000_business_recipes_and_research_v2.sql`
+- `20260819064100_business_wholesale_procurement_v2.sql`
+- `20260819064200_business_equipment_and_production_v2.sql`
+- `20260819064210_fix_business_production_reservation_v2.sql`
+- `20260819065000_business_workforce_market_v2.sql`
+- `20260819066000_business_demand_sales_reputation_v2.sql`
+- `20260819067000_business_tax_valuation_distress_v2.sql`
+- `20260819067010_business_finance_hardening_v2.sql`
+- `20260819067500_business_liquidation_settlement_v2.sql`
+- `20260819068000_business_economy_runtime_v2.sql`
+- `20260819069000_business_workspace_read_model_v2.sql`
+
+Retained active foundation:
+
+- `20260819062000_business_authority_foundation_v2.sql` — formation/legal entity/ownership/activity authority.
+- `20260819062100_business_party_banking_and_activation_v2.sql` — first-class Business money identity and atomic formation capitalization.
+- `20260819063000_business_governance_equity_v2.sql` — generic governance/voting and bounded ownership-transfer foundation.
+
+The `scripts/business-economy-authority-contract.mjs` contract was rewritten to enforce this exact Phase 0 boundary. It fails if deferred speculative layers reappear before their planned phase and verifies that Phase 0 does not introduce a parallel recipe, production, labor, automatic-sales, tax, or liquidation authority.
+
+### Decision
+
+Do **not** continue patching the speculative productive-economy stack in place. Those migrations were unmerged/unreleased draft-branch work. Rebuild each feature only when its execution phase opens and only against the canonical domain authority it consumes.
+
+This is a convergence correction, not loss of completed production history. The removed files were never merged to `main` or applied as authorized production migrations. Keeping them would preserve knowingly conflicting authorities and force later phases to untangle more spaghetti.
+
+---
+
+## 2026-08-19 — Phase 0 checkpoint B: Player publication and architecture cleanup
+
+### Commits
+
+- `8f2e6029e99d0e24614cb9b47a0ae070b0018b40` — bind Business formation routes to Player verification and top-level backend-route composition.
+- `55d5ed8db1ea4b63b665d247ab597b4885f8900a` — record new formation operations truthfully as `contract_only` in the button/action evidence ledger because no Player Business formation UI exists yet.
+- `67a635c570562de9b13c00fe35bd1c44b3f68aff` — reduce Phase 0 Business adapter architecture debt without changing behavior.
+
+### What changed
+
+- Added the three formation endpoint keys to the connected Player backend-route composition:
+  - `businessFormationPropose`
+  - `businessFormationRespond`
+  - `businessFormationActivate`
+- Bound the cross-cutting Player verification authority to PR #648 with an exact path allowlist; production deployment, production mutation, and secret-value authority remain false.
+- Added truthful button/action evidence for formation endpoints as `contract_only`; no browser evidence was fabricated.
+- Renamed the pre-V2 direct Business creation operation from the vague adapter label `legacy` to `directCreate`.
+- Compacted the already mixed Business/Banking HTTP adapter below the repository oversized-source threshold rather than accepting new architecture debt.
+- Compacted capability-manifest additions so the architecture inventory did not gain line-count debt merely from publication wiring.
+- Preserved the architecture ratchet unchanged; Repository Quality returned green without editing the architecture inventory baseline.
+
+### Decisions
+
+- Do not fake browser coverage for APIs that do not yet have UI. Formation actions remain release-blocking `contract_only` until the Player Business workspace phase provides real connected-browser evidence.
+- Do not teach the global rate-limit dispatcher Business URL semantics as a shortcut. The current Edge compatibility dispatch still collapses formation commands to the generic `businessCreate` operation identity, but all four operations use the same `sensitive` rate-limit class. The safety threshold is therefore equivalent; the operation/audit identity mismatch is the first explicit Phase 1 extraction task.
+- Keep `business-banking` as a bounded compatibility façade during extraction, but do not add new Business mechanics to that mixed domain.
+
+---
+
+## 2026-08-19 — Phase 0 COMPLETE: replayable Business authority foundation
+
+### Completion head
+
+- Phase 0 code head: `67a635c570562de9b13c00fe35bd1c44b3f68aff`.
+- PR #648: open, draft, mergeable, unmerged.
+- No Business V2 staging or production migration/deployment was performed.
+
+### Verification completed on the Phase 0 code head
+
+- **Database Replay — PASS** (`32198952107`): complete migration ledger replayed from zero twice; rebuilt database lint passed.
+- **Backend Typecheck — PASS** (`32198951911`): typecheck and backend smoke passed.
+- **Business Banking Runtime — PASS** (`32198952134`): deterministic simulations, formation authority contract, runtime/migration contract, complete Player Business surface, focused Player/Admin tests, Business/Banking typecheck, and route-adapter syntax all passed.
+- **Business Economy V2 — PASS** (`32198952056`): Phase 0 authority boundary contract passed.
+- **Repository Quality — PASS** (`32198952111`): architecture inventory/ratchet and repository audit passed without baseline relaxation.
+- **Button Action Coverage — PASS** (`32198951985`): new formation operations are accounted for truthfully.
+- **Runtime Interaction Wiring — PASS** (`32198952177`).
+- **Beta Security Contract — PASS** (`32198952237`).
+- **Player Response Privacy — PASS** (`32198952161`).
+- **Staging Readiness Preflight — PASS** (`32198951974`).
+- **Crafting Item Runtime / connected activation — PASS** (`32198952088`, `32198952081`), providing regression evidence across the canonical item/Inventory dependency boundary.
+- **Admin API Check / Admin Browser E2E — PASS** (`32198952074`, `32198952147`).
+- **Seed Executable Beta Pack — PASS** (`32198952055`).
+- **World Runtime / market-timezone / release-integrity / supply-chain gates — PASS** on the same head.
+
+Additional broad Player browser/load workflows were still executing when Phase 0 was recorded; they are not used to claim the new formation UI is complete because formation remains intentionally `contract_only`. Their results remain useful regression evidence for subsequent phases.
+
+### Phase 0 exit criteria result
+
+- Clean replay twice: **met**.
+- Database lint: **met**.
+- No known retained-schema contract drift: **met** for the three retained migrations and current published foundation.
+- Business contracts/typechecks green: **met**.
+- Banking and canonical item/Inventory regression gates green: **met** at the repository/runtime contract level.
+- Deferred/compatibility boundaries documented: **met**.
+- No production deployment: **met**.
+
+### Carry-forward blockers / Phase 1 intake
+
+1. Extract Business from `backend/src/domains/business-banking/` into a real `backend/src/domains/business/` boundary without changing Banking behavior.
+2. Make `business-banking` a thin forwarding façade for Business during cutover.
+3. Split formation operations into their own Business route/operation identities so Edge rate-limit/audit dispatch no longer collapses them to generic `businessCreate`.
+4. Preserve all public URLs and same-origin Player BFF contracts during extraction.
+5. Do not restore recipes, production, workforce, Store seller offers, tax, or other later-phase mechanics during Phase 1.
+
+### Next authorized step
+
+**Phase 1 — Business domain extraction is OPEN.** Begin with contracts/application/repository/API separation and compatibility forwarding only. Update this log at the first completed extraction checkpoint before moving to Phase 2.
+
+---
+
+## 2026-08-19 — Recovery correction: reported work reconciled to Git
+
+### Why this entry exists
+
+A prior execution narrative reported Phases 1–4 complete and Phase 5 underway, but inspection of PR #648 showed that those reported states were not durably present on the integration branch. Later extraction commits had also damaged `classroom-api`. The branch was therefore restored to the last known-good extraction lineage and the later phases were rebuilt from repository truth instead of trusting chat-state claims.
+
+### Durable recovery authority
+
+- Recovery note: `docs/roadmaps/business-v2-development-recovery-20260819.md`.
+- Restored known-good extraction source: `28ae44a1aefead1a9c7efc3fc174075115b81255`.
+- Recovery documentation commit: `f697f8a477f4447bb9c15f2a1db6bc85f124e3b0`.
+
+### Reporting rule established after recovery
+
+A phase is **not complete** unless all four conditions are true:
+
+1. implementation exists on the PR branch;
+2. an exact source commit is identified;
+3. required acceptance gates pass for that source state; and
+4. this execution log records the completion, evidence, blockers, decisions, and next authorized step.
+
+Anything short of those four conditions must be reported as **in progress**.
+
+---
+
+## 2026-08-19 — Phase 1 COMPLETE: Business domain boundary and Banking separation
+
+### Certified source head
+
+- **Certified implementation source:** `06867bb8bfd4c24c540a7f78ea4319d6ea9c9d4b`.
+- PR #648 remained open, draft, mergeable, and unmerged during certification.
+- The commit that adds this documentation entry is intentionally later than the certified source. Do not substitute the notes-only commit for the tested implementation SHA.
+
+### What is now authoritative
+
+- `backend/src/domains/business/` owns Player Business route parsing, Business contracts, Business HTTP handling, and Business persistence.
+- `business-banking` remains only as a compatibility routing façade for Business plus the actual Banking/Loans domain runtime.
+- The mixed handler recognizes a Business route and immediately forwards it to `handlePlayerBusinessRequest`; it does not execute Business mutation RPCs itself.
+- The mixed `SupabasePlayerBusinessBankingRepository` is now **Banking/Loans-only**. Dead Business creation/read/product/inventory/employee/production persistence was removed.
+- The mixed Banking repository is never injected into Business execution. The Business handler constructs/uses the Business-owned repository.
+- Player Business route parsing is self-contained and does not deep-import Players internals for URL interpretation.
+- Formation propose/respond/activate retain distinct Business operation identities through the extracted boundary.
+- Existing public Player URLs remain compatible. The large `classroom-api` composition was not rewritten to accomplish the separation.
+
+### Architecture enforcement added
+
+`scripts/business-domain-boundary-contract.mjs` now fails if any of the following regressions occur:
+
+- Business contracts depend back on `business-banking`;
+- Business route authority starts owning Banking/Loans URLs;
+- mixed handler regains direct Business mutation cases;
+- mixed handler injects its Banking repository into Business execution;
+- mixed repository regains Business persistence such as `readBusiness`, `assertBusinessCreationAllowed`, `business_products`, `business_inventory`, `business_employees`, or `business_production_runs`.
+
+The legacy Business/Banking runtime contract was also updated rather than weakened. It still validates Banking/Loans concurrency, idempotency, money/currency authority, repayment rules, Admin lifecycle guards, and Player adapter publication while validating Business behavior at the extracted Business boundary.
+
+### Blockers found and resolved during Phase 1
+
+1. **Corrupted classroom extraction history.** Recovered rather than layering more changes onto the bad head.
+2. **Stale runtime contract.** Old tests expected Business implementation inside the mixed handler. Rewritten to enforce forwarding plus the extracted authority.
+3. **Mixed persistence duplication.** Runtime forwarding initially left dead Business repository methods behind. Those were removed before declaring Phase 1 complete.
+4. **Architecture inventory drift.** Regenerated deterministically. The ratchet was not relaxed.
+5. **Accidental compatibility marker increase.** Removed the new marker instead of raising the baseline.
+6. **Capability-route regression during test maintenance.** An intermediate test edit guessed several import paths and failed typecheck. It was reverted to the known-good imports, then only the Business expectations were changed.
+7. **Cross-cutting PR scope allowlist.** Expanded only for the exact reviewed Business/Stockroom/recovery files; production deployment/mutation/secret authority remains false.
+
+### Architecture result
+
+- No architecture-ratchet baseline was raised.
+- Cross-domain deep imports remained at the repository maximum rather than increasing due to the Business extraction.
+- Compatibility-marker count remained at its existing maximum rather than increasing.
+- Repository Quality passed after committing the generator-produced architecture inventory.
+
+### Verification on certified source `06867bb8...`
+
+- **Business Economy V2 — PASS** (`32218265894`): backend typecheck plus formation, Business authority, Phase 1 domain-boundary, recipe-access, and Stockroom authority contracts all passed.
+- **Backend Typecheck — PASS** (`32218265960`): complete backend typecheck and backend smoke suite passed.
+- **Business Banking Runtime — PASS** (`32218265916`): deterministic simulations, formation contract, runtime/migration contract, complete Player Business surface, focused Player/Admin tests, Deno typecheck/Admin publication, and route-adapter syntax all passed.
+- **Repository Quality — PASS** (`32218265890`): full audit, deterministic architecture inventory, architecture ratchet, dependency checks, supply-chain checks, and backend dependency audit passed.
+- **Database Replay — PASS** (`32218266012`): complete migration ledger replayed from zero twice and rebuilt database lint passed.
+- **Player Terminal Verify — PASS** (`32218265909`): PR scope authority, Player boundary contracts, bounded read resilience, standalone Player verification, Chromium installation/runtime fixture, and full Chromium browser verification passed.
+- **Runtime Interaction Wiring — PASS** (`32218266011`).
+- **Button Action Coverage — PASS** (`32218265983`).
+
+### Phase 1 exit result
+
+- Business has a real domain boundary: **met**.
+- Banking behavior preserved: **met**.
+- Mixed namespace is a thin Business forwarding façade, not Business persistence authority: **met**.
+- Public Player URLs retained: **met**.
+- Architecture ratchet not relaxed: **met**.
+- Exact source/browser/database certification: **met**.
+
+### Next authorized step
+
+Phase 2 may continue, but only against the existing canonical physical-economy recipe authority. No Business recipe/BOM definition system may be added.
+
+---
+
+## 2026-08-19 — Phase 2 checkpoint A COMPLETE: Business-owned canonical recipe access foundation
+
+### Scope status
+
+**Checkpoint A is complete; Phase 2 itself remains OPEN.** The missing Phase 2 work is the browser-safe Business recipe read surface.
+
+### Implemented authority
+
+- `backend/supabase/migrations/20260819064000_business_recipe_access_v2.sql` creates `public.business_recipe_access`.
+- Business recipe access references `public.physical_economy_recipe_definitions` directly.
+- The Business layer does **not** create recipe definitions, input/BOM definitions, output definitions, variants, quality tiers, or custom product definitions.
+- `grant_business_recipe_access_v2` is a trusted service-role-only grant path using Business public key + canonical recipe key.
+- Recipe access is owned by the Business entity, so ownership changes/acquisition do not implicitly erase the company’s recipe knowledge.
+- No Player Crafting unlock is automatically inherited by a Business.
+
+### Decisions locked in this checkpoint
+
+- Businesses begin with **no implicit recipe inheritance** from a Player’s Crafting profile.
+- Recipe grants must come from an explicit trusted flow such as formation/content seed, contract, staff/admin, event, or acquisition.
+- Do not invent a research tree to solve recipe acquisition.
+- Do not expose internal recipe UUIDs to the Player browser.
+- For the upcoming read surface, mirror existing Crafting availability semantics: an empty availability `country_codes` array means global; current game availability/scarcity and Business country determine whether the recipe is usable now.
+- The read surface should preserve ownership visibility even when current scarcity/location makes manufacturing unavailable; temporary availability must not destroy the company’s recipe-access record.
+
+### Verification
+
+The canonical recipe-access contract passed as part of **Business Economy V2** on certified source `06867bb8...` (`32218265894`), and the migration participated in the successful **Database Replay** (`32218266012`).
+
+### Current blocker / next task
+
+`GET /players/me/business/recipes` does not yet exist. That read API is being implemented as the next Phase 2 tranche and must expose canonical recipe keys/operating metadata only, without copying BOM/output authority into Business tables.
+
+A stacked preparation branch was created from the certified source:
+
+- `feat/business-recipe-read-v2`
+
+Do not call Phase 2 complete until that read tranche is merged into #648, exact-head gates pass, and this log is updated again.
+
+---
+
+## 2026-08-19 — Phase 3 checkpoint A COMPLETE: canonical Business Stockroom read
+
+### Scope status
+
+**Stockroom read checkpoint is complete; Phase 3 procurement remains OPEN.** No Business procurement mutation is claimed complete by this entry.
+
+### Implemented authority
+
+- `backend/supabase/migrations/20260819064100_business_stockroom_read_v2.sql` adds `resolve_player_business_v2` and the canonical Stockroom read.
+- Business resolution uses active `business_ownership_positions` for V2 ownership and retains bounded model-v1 controller compatibility.
+- Multi-owner partnerships/LLCs therefore resolve through the ownership ledger rather than forcing every read through `business_entities.owner_player_id`.
+- Stockroom reads only the canonical ownership chain:
+  - `economic_parties`
+  - `inventory_accounts` with `account_kind='warehouse'`
+  - `inventory_holdings`
+  - `game_items`
+- Stockroom exposes canonical public item identity plus:
+  - quantity owned;
+  - quantity reserved;
+  - quantity available;
+  - average carried unit cost;
+  - cost currency;
+  - holding version.
+- `business_inventory` is explicitly rejected as Stockroom authority by `scripts/business-stockroom-authority-contract.mjs`.
+- The Player Business read surface recognizes `/players/me/business/stockroom` as a `businessRead` resource and keeps it under the existing read-only Business rate-limit/capability budget.
+- A dedicated `supabaseBusinessStockroomReadRepository.ts` isolates canonical Stockroom persistence from the legacy Business snapshot, which still has compatibility debt scheduled for later retirement.
+
+### Decisions and blockers resolved
+
+- Do not create a parallel Business stockroom table.
+- Do not make the legacy `business_inventory` compatibility projection authoritative again.
+- Do not introduce another Player capability merely for Stockroom; it is part of the Business read surface.
+- A partially introduced `businessStockroomRead` route kind caused broad type fallout. It was simplified to `businessRead` with a resource discriminator (`overview` / `stockroom`), preserving existing Edge dispatch maps and avoiding risky giant-entrypoint edits.
+- Exact cross-cutting allowlist coverage was added for the reviewed Stockroom migration/repository/tests without broadening production authority.
+
+### Verification
+
+The Stockroom authority contract passed as part of **Business Economy V2** on certified source `06867bb8...` (`32218265894`). The Stockroom migration participated in **Database Replay — PASS** (`32218266012`), and the published route survived **Backend Typecheck/Smoke — PASS** (`32218265960`), **Business Banking Runtime — PASS** (`32218265916`), **Repository Quality — PASS** (`32218265890`), **Player Terminal Chromium verification — PASS** (`32218265909`), and **Runtime Interaction Wiring — PASS** (`32218266011`).
+
+### Phase 3 procurement decision already resolved
+
+Current Store quote pricing is derived from Player country/currency. A Business procurement flow must **not** proxy a quote through an arbitrary owner Player, because multi-owner Businesses would then inherit the wrong geographic/currency authority.
+
+The Phase 3B procurement implementation must:
+
+- reuse the same authoritative Store pricing/scarcity policy;
+- derive pricing geography/currency from the Business’s own `country_code` / `currency_code`;
+- create a short-lived Business procurement quote;
+- settle Store canonical stock to the Business canonical warehouse atomically;
+- debit first-class Business cash through the Business money authority;
+- carry the actual acquisition price into warehouse average cost basis;
+- avoid a parallel wholesale/supplier catalog.
+
+### Next authorized step
+
+1. Complete the missing Phase 2 Business recipe read tranche on `feat/business-recipe-read-v2` and integrate it only after its checks pass.
+2. Then implement Phase 3B Business Store procurement using Business geography/currency and the canonical Store + Inventory + Business money authorities.
+3. Phase 4 workforce does **not** open until Phase 2 and Phase 3 are durably complete and logged.
+
+---
+
+## 2026-08-20 — Phase 2 COMPLETE: canonical Business recipe read certified
+
+### Certified source head
+
+- **Certified implementation source:** `cd79b683f6a569b6e098e4ec56dbf8c3a6eb8ec4`.
+- PR #648 remained open, draft, mergeable, and unmerged during certification.
+- PR #649 was merged into the integration branch as the bounded Phase 2B tranche.
+- This documentation commit is later than the tested implementation source. It must not replace `cd79b683...` as the certification identity.
+- No Business V2 staging or production migration/deployment was performed.
+
+### What is now authoritative
+
+- `GET /players/me/business/recipes` is published through the extracted Business route parser and HTTP handler.
+- The read resolves only Business-owned `business_recipe_access` records joined to the existing canonical physical-economy recipe definitions and current game recipe availability.
+- Recipe availability is derived from the Business country, active game pack, enabled recipe availability, and current scarcity state.
+- Empty recipe `country_codes` remain globally available, matching the canonical Crafting availability rule.
+- The browser contract exposes public access and recipe keys plus bounded operating metadata; internal UUIDs, canonical BOM rows, and output-definition authority remain private.
+- No Business recipe-definition, Business BOM, Business input-definition, Business output-definition, variant, or quality-tier authority was introduced.
+- No Player Crafting unlock is inherited automatically by a Business.
+- The Phase 2B tranche intentionally did not change the Player Business workspace. Legacy Product Creator and abstract operating forms remain explicit compatibility debt for the later workspace convergence phase; they are not canonical physical-product authority and must not be expanded.
+
+### Exact-head verification
+
+All required gates passed on `cd79b683...`:
+
+- **Business Economy V2 — PASS** (`32310399944`): backend typecheck plus formation, Business authority, domain-boundary, canonical recipe-access, and Stockroom authority contracts passed.
+- **Database Replay — PASS** (`32310400111`): complete migration ledger replayed from zero twice and rebuilt database lint passed.
+- **Backend Typecheck — PASS** (`32310400051`): backend typecheck and smoke suite passed.
+- **Business Banking Runtime — PASS** (`32310400177`): deterministic simulations, Business runtime contracts, complete Player Business surface, focused Player/Admin tests, Deno typecheck, and route-adapter syntax passed.
+- **Player Terminal Verify — PASS** (`32310400015`): exact PR scope authorization, Player boundary contracts, read resilience, standalone verification, and Chromium browser verification passed.
+- **Repository Quality — PASS** (`32310400055`).
+- **Runtime Interaction Wiring — PASS** (`32310400075`).
+- **Button Action Coverage — PASS** (`32310400150`).
+- **Player Multiplayer and Load E2E — PASS** (`32310400030`): connected Business and World journeys completed; all 30 baseline Players and all 40 maximum Players were provisioned and active; 210/210 baseline reads and 280/280 maximum-load reads returned HTTP 200; server errors were zero.
+
+Immutable multiplayer/load artifact:
+
+- artifact ID: `9386509800`;
+- artifact name: `player-multiplayer-load-cd79b683f6a569b6e098e4ec56dbf8c3a6eb8ec4`;
+- artifact digest: `sha256:84563969bf25aaa812eadb994ac0364f3dbaed0e4fb393a0d7d7b93c3718abc0`;
+- 30-Player login p95: `2029.35 ms`;
+- 30-Player read p95: `1913 ms`;
+- 40-Player read p95: `2343.73 ms`;
+- maximum observed read: `4133.06 ms`;
+- server errors: `0`.
+
+### Phase 2 exit result
+
+- Business recipe ownership references the canonical recipe authority: **met**.
+- Browser-safe Business recipe read exists: **met**.
+- Current usability derives from canonical game/country/scarcity state: **met**.
+- Internal UUID and BOM/output authority remain private: **met**.
+- No duplicate Business recipe/BOM system exists: **met**.
+- No Player recipe inheritance exists: **met**.
+- Exact source/database/browser/40-Player certification exists: **met**.
+- No production deployment occurred: **met**.
+
+### Compatibility boundary
+
+The current legacy Business product, abstract input, immediate production, manual workforce, and status forms remain compatibility surfaces pending their ordered replacement. They must not be treated as the canonical Phase 2 recipe/product model, and they must not gain new physical-product authoring authority. Player workspace removal/replacement remains scheduled for Phase 12 after the new operating mechanics exist.
+
+### Next authorized step
+
+**Phase 3B — Business Store procurement is OPEN.** The implementation must:
+
+1. reuse the canonical Store catalog, stock, scarcity, and price policy;
+2. derive geography and currency from the Business rather than an arbitrary owner Player;
+3. create a short-lived server-authoritative Business procurement quote;
+4. atomically debit first-class Business cash and move canonical Store stock into the Business warehouse;
+5. carry the settled acquisition price into canonical warehouse average cost basis;
+6. preserve idempotency, cross-game isolation, public-key-only browser contracts, and exact audit evidence;
+7. avoid a parallel wholesale or supplier catalog.
+
+Phase 4 remains closed until Phase 3 procurement is implemented, exact-head certified, and recorded here.
+
+---
+
+## 2026-08-21 — Phase 3B COMPLETE: canonical Business Store procurement
+
+### Certified implementation source
+
+- **Exact implementation SHA:** `acbbff20a4afa8296bdfb30dbc0c8e84e37702c9`.
+- Feature branch: `feat/business-store-procurement-v2`.
+- Stacked draft PR: #654, based on `refactor/business-ux-mechanics-v1`.
+- Integration PR #648 remained open, draft, mergeable, and unmerged.
+- No staging or production deployment or data mutation was performed.
+- This documentation commit is later than the certified implementation SHA and must not replace it as the tested source.
+
+### What changed
+
+- Added short-lived, server-timed Business procurement quotes using the canonical Store quote-pricing resolver.
+- Reused the canonical Store catalog, finite Store stock, country economic snapshot, scarcity, foreign-exchange, and pricing-version authority.
+- Derived quote geography and settlement currency from the resolved Business `country_code` and `currency_code`; no owner Player supplies those outcomes.
+- Added atomic purchase settlement that locks Store stock, the Business warehouse holding, and first-class Business cash in a fixed order.
+- Debited Business cash through the canonical Business ledger adapter.
+- Moved the canonical Store item directly into the canonical Business warehouse through `economy_private.post_inventory_transaction_v2`; the owner’s personal Inventory is never used.
+- Applied the actual settled total divided by quantity as the warehouse acquisition unit basis, allowing the canonical Inventory poster to maintain weighted-average cost.
+- Preserved frozen quote and receipt evidence, immutable Business activity evidence, game isolation, idempotency conflict detection, retry semantics, and browser responses containing public keys only.
+- Split the oversized Business HTTP adapter into bounded validation and mutation-execution modules without weakening the architecture ratchet.
+- Removed all temporary repair and source-export scaffolding before certification.
+
+### Verification on exact source `acbbff20...`
+
+- **Business Economy V2 — PASS** (`32476298326`).
+- **Database Replay ×2 + database lint — PASS** (`32476298602`).
+- **Backend Typecheck and backend smoke — PASS** (`32476298458`).
+- **Business Banking Runtime — PASS** (`32476298617`).
+- **Repository Quality — PASS** (`32476298253`).
+- **Runtime Interaction Wiring — PASS** (`32476298376`).
+- **Supply Chain Security — PASS** (`32476298243`).
+- **Progression Runtime — PASS** (`32476298273`).
+- **Player Terminal Verify, including Chromium — PASS** (`32476298658`).
+- **Admin API Check — PASS** (`32476298354`).
+- **Beta Security Contract — PASS** (`32476298374`).
+- **Staging Readiness Preflight — PASS** (`32476298277`).
+- **World Runtime, Required Game Market Timezone, and Exchange Calendar Runtime — PASS** (`32476298517`, `32476298522`, `32476298289`).
+
+### Architecture and gameplay decisions
+
+- Quote and receipt tables are operation evidence only; they are not a parallel catalog, inventory authority, money authority, supplier catalog, or pricing engine.
+- Multi-owner Businesses use the Business’s own geography and currency. An arbitrary owner Player cannot change procurement pricing.
+- New physical procurement does not call or expand `purchase_business_input_v1` and does not route material through personal Inventory.
+- Existing legacy Business forms remain compatibility debt until their ordered replacement checkpoint.
+
+### Remaining Phase 3 blockers
+
+Phase 3 is not complete. The current Stockroom read still exposes the canonical warehouse only, while the roadmap requires separate Materials/Warehouse, Work in Progress, Finished Goods, and In Transit locations. New reliance on the legacy abstract `unit_input_cost` purchase path must also be retired before Phase 4 opens.
+
+### Next authorized step
+
+**Phase 3C — location-complete canonical Business Stockroom read is OPEN.** Build a bounded read model over canonical Business inventory accounts for warehouse/materials, work in progress, finished goods, and in transit. Preserve public-key-only browser output and do not introduce a parallel Business inventory table. After Phase 3C certification, retire new Player API reliance on the legacy abstract input-purchase path as a separate bounded checkpoint. Phase 4 workforce/payroll remains closed.
+
+---
+## 2026-08-21 — Phase 3C COMPLETE: location-complete canonical Business Stockroom
+
+### Certified implementation source
+
+- **Exact implementation SHA:** `6799c0b44025dd71b54ed75636dd8f2af3358150`.
+- Feature branch: `feat/business-stockroom-locations-v2`.
+- Stacked draft PR: #655, based on `feat/business-store-procurement-v2`.
+- PR #654 and integration PR #648 remained open, draft, mergeable, and unmerged.
+- No staging or production deployment or data mutation was performed.
+- This documentation commit is later than the certified implementation SHA and must not replace it as the tested source.
+
+### What changed
+
+- Extended the canonical Business inventory-account authority to `in_transit` while retaining Warehouse, Work in Progress, and Finished Goods.
+- Provisioned all four canonical Stockroom accounts on authoritative Business creation and backfilled active existing Businesses during the forward migration.
+- Replaced the warehouse-only item read with public-key-only location and holding reads over canonical `economic_parties`, `inventory_accounts`, `inventory_holdings`, and game_items`.
+- Added a single stable server-authoritative snapshot RPC so location aggregates and item holdings are read from one PostgreSQL statement snapshot during concurrent procurement or production settlement.
+- Returned all four locations even when a location is empty.
+- Added strict browser-boundary validation for exact envelope fields, four unique location keys, public Business/account/item keys, quantity invariants, aggregate reconciliation, bounded item count, cost basis, currency, version, and recursive UUID exclusion.
+- Preserved the existing `items` collection while adding explicit `businessKey` and `locations` fields.
+- Explicitly dropped and recreated the Phase 3A table-returning RPC before changing its OUT row contract; CI now ratchets that PostgreSQL requirement.
+- Added the extracted Business domain and current Business migration dates to the focused Business Banking Runtime workflow trigger without weakening its verification scope.
+- Regenerated the deterministic architecture inventory; no architecture-ratchet ceiling was raised.
+
+### Verification on exact source `6799c0b4...`
+
+- **Business Economy V2 — PASS** (`32482943370`).
+- **Database Replay ×2 + database lint — PASS** (`32482943435`).
+- **Backend Typecheck and backend smoke — PASS** (`32482943445`).
+- **Business Banking Runtime — PASS** (`32482943416`).
+- **Repository Quality — PASS** (`32482943428`).
+- **Runtime Interaction Wiring — PASS** (`32482943464`).
+- **Supply Chain Security — PASS** (`32482943442`).
+- **Player Terminal Verify, including Chromium — PASS** (`32482943372`).
+- **Admin API Check — PASS** (`32482943393`).
+- **Staging Readiness Preflight — PASS** (`32482943549`).
+- **Required Game Market Timezone and Exchange Calendar Runtime — PASS** (`32482943403`, `32482943398`).
+
+### Architecture and gameplay decisions
+
+- Stockroom is a read model over canonical Inventory accounts, never a Business-specific inventory authority or projection table.
+- Browser reads never provision or mutate inventory; account provisioning occurs only through authoritative Business lifecycle writes and migration backfill.
+- Empty canonical locations are first-class operational state and remain visible.
+- One snapshot RPC is required to avoid transient aggregate/item disagreement under concurrent settlement.
+- Store-listing stock remains a later Phase 8 location and was not introduced early.
+
+### Remaining Phase 3 blocker
+
+Phase 3 is not complete. The legacy Player API still advertises and executes the abstract `businessInputPurchase` path backed by `unit_input_cost`. Historical compatibility data must remain readable, but new Player execution and capability advertisement must be retired before Phase 4 opens.
+
+### Next authorized step
+
+**Phase 3D — retire new Player API reliance on legacy abstract input purchasing is OPEN.** Preserve historical records and the bounded compatibility URL, return a stable `410 Gone` retirement response for authenticated attempts, remove the action from server/client capability manifests and active browser controls, and eliminate the live `purchase_business_input_v1` execution path. Canonical Business Store procurement remains the only new material-acquisition authority. Phase 4 workforce/payroll remains closed.
+
+---
+## 2026-08-22 — Phase 3D COMPLETE and Phase 3 COMPLETE: abstract input-purchase retirement
+
+### Certified implementation and verification sources
+
+- **Exact implementation SHA:** `bd186ba86b4952bff7f4ab9b34c5e067dbd70116`.
+- **Exact clean verification head:** `832c609679e4d423e968ee2e42bd810d7aa6a862`.
+- Feature branch: `refactor/business-abstract-input-retirement-v2`.
+- Stacked draft PR: #656, based on certified Phase 3C branch `feat/business-stockroom-locations-v2`.
+- PR #648, PR #654, PR #655, and PR #656 remained open, draft, mergeable, unmerged, and undeployed.
+- No staging or production deployment or data mutation was performed.
+- The clean verification head differs from the implementation SHA only by static workflow cleanup, a focused test assertion refinement, and deterministic architecture-inventory convergence; it does not change production runtime behavior.
+- This certification documentation is later than both tested SHAs and must not replace either as evidence.
+
+### What changed
+
+- Preserved the bounded URL `/players/me/business/inputs/purchases` so old clients receive an explicit retirement response rather than an ambiguous route failure.
+- Preserved normal Player authentication, scope derivation, request-envelope validation, method validation, and sensitive rate limiting before retirement handling.
+- Valid authenticated requests now return HTTP `410 Gone` with code `business_input_purchase_retired` and direct Players to canonical Business Store procurement.
+- Removed the live `businessInputPurchase` mutation case and all runtime execution of `purchase_business_input_v1` from the Player Business application path.
+- Preserved historical SQL functions, Business inventory records, ledger evidence, and audit history; no historical data was deleted or rewritten.
+- Removed `businessInputPurchase` from the server capability manifest and bumped the manifest version to `2026-08-21.2`.
+- Removed the action from Player endpoint resolution, Business route helpers, capability validation, write invalidation, Business controls, and button-action evidence.
+- Removed the connected-browser abstract input-purchase step while retaining the broader Business lifecycle regression through a zero-input-cost historical product fixture.
+- Kept canonical Business Store procurement as the only authority for new material acquisition.
+- Regenerated the deterministic architecture inventory and returned compatibility-marker debt to the existing maximum of `209`; no architecture-ratchet ceiling was raised.
+
+### Verification on clean head `832c6096...`
+
+- **Business Economy V2 — PASS** (`32521931016`).
+- **Business Banking Runtime — PASS** (`32521931181`).
+- **Repository Quality — PASS** (`32521931055`).
+- **Backend Typecheck and backend smoke — PASS** (`32521930987`).
+- **Player Terminal Verify, including Chromium — PASS** (`32521930935`).
+- **Progression Runtime, including Chromium, security, typecheck, and backend smoke — PASS** (`32521930881`).
+- **Environment Neutral Browser — PASS** (`32521930999`).
+- **Runtime Interaction Wiring — PASS** (`32521931005`).
+- **Supply Chain Security — PASS** (`32521931149`).
+- **Beta Security Contract — PASS** (`32521930924`).
+- **World Runtime — PASS** (`32521930953`).
+- **Staging Readiness Preflight — PASS** (`32521930969`).
+- **Required Game Market Timezone — PASS** (`32521931017`).
+- **Exchange Calendar Runtime — PASS** (`32521930901`).
+- No migration was added or modified in Phase 3D, so Database Replay was not a changed-path gate; retained historical SQL and the absence of new migration authority were covered by the retirement and Business runtime contracts.
+
+### Architecture and gameplay decisions
+
+- A retired mutation may remain as an authenticated compatibility route, but it must not remain advertised as a capability or reachable through an active browser control.
+- Retirement responses execute only after normal authentication and validation; the route is not an unauthenticated information oracle.
+- Historical Business products, abstract cost records, and ledger history remain readable for audit and migration safety, but they cannot be expanded through new Player execution.
+- Canonical Store procurement and canonical Inventory accounts are the sole new material-acquisition and stock authority.
+- Phase 3 is complete. No remaining Phase 3 blocker authorizes expansion of the retired abstract model.
+
+### Blockers and unresolved risks
+
+- No Phase 3 blocker remains.
+- Historical abstract Business data still exists by design and must remain compatibility-only until a later explicit data-retirement migration is separately planned and verified.
+- The integration stack remains draft and unmerged; release, staging deployment, production deployment, and data migration remain unauthorized.
+
+### Next authorized step
+
+**Phase 4 — workforce capacity and payroll is OPEN.** Begin with a bounded authority audit and foundation checkpoint: preserve server-generated candidates and roles, define recipe labor-minute/role requirements, model finite employee availability and reservations, preserve recurring payroll independent of utilization, prevent double-booking, and prohibit Player-authored productivity or economic outcomes. Do not widen this checkpoint into equipment, timed manufacturing, Store seller offers, IPO, merge, or deployment.
+
+---
+## 2026-08-22 — Phase 4A COMPLETE: workforce and payroll authority foundation
+
+### Certified state
+
+- **Exact implementation SHA:** `f72626f055004007823eb8de22569035ac897797`.
+- **Exact required-gate head:** `1c405c86d773d133fb13da268a95a32eb46a9bd7`.
+- **Certification workflow source:** `102ef444d39cd4722a5c4ef190bf0ad58f804864`.
+- Feature branch: `feat/business-workforce-payroll-foundation-v2`; stacked draft PR #657.
+- PR #648 and parent Phase 3 PR #656 remained open, draft, and unmerged.
+- No staging or production deployment or live data mutation was performed.
+
+### What changed
+
+- Added canonical workforce roles, game-scoped candidate offers, recipe labor requirements, finite labor reservations, payroll runs, and payroll entries.
+- Bound labor and payroll evidence to one Business, employee, role, run, game, country, and currency scope.
+- Preserved service-owned economics, public-key browser contracts, game isolation, immutable payroll evidence, and the no-settlement/no-production-integration boundary.
+
+### Exact-head verification
+
+- **Business Workforce Payroll V2 — PASS** (`32544375317`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Database Replay — PASS** (`32544375343`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Backend Typecheck — PASS** (`32544375326`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Business Banking Runtime — PASS** (`32545599820`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Repository Quality — PASS** (`32544375307`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Runtime Interaction Wiring — PASS** (`32545600548`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Supply Chain Security — PASS** (`32544375335`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Admin API Check — PASS** (`32544375332`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Staging Readiness Preflight — PASS** (`32544375337`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Required Game Market Timezone — PASS** (`32544375325`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Exchange Calendar Runtime — PASS** (`32544375304`, head `1c405c86d773d133fb13da268a95a32eb46a9bd7`).
+- **Player Terminal Verify and Chromium browser verification — PASS** in finalizer run `32544375336` attempt 2.
+
+### Blocker resolution
+
+- The original finalizer passed all implementation, browser, and exact-head gates but failed in its workflow-file cleanup/certification write.
+- This bounded docs-only certifier independently revalidated every required exact-head run and recorded the certification without weakening any gate or ratchet.
+
+### Decisions and remaining work
+
+- Workforce economics and finite capacity remain server authority; Phase 4A records payroll evidence but performs no settlement and no production-labor integration.
+- Phase 4 remains incomplete. Payroll settlement and production-labor integration remain closed.
+
+### Next authorized step
+
+**Phase 4B — candidate pools and server-owned hiring is OPEN.** Expose role-grouped, game-scoped candidates; derive wage, skill, productivity, capacity, country, and currency from server-owned candidate rows; atomically reserve candidates; prevent duplicate active hires; and retire new Player execution through the legacy free-text hiring RPC.
+
+---
+
+## 2026-08-22 — Phase 4B COMPLETE: candidate pools and server-owned hiring
+
+### Certified source and repository state
+
+- **Exact certified implementation source:** `73bb4bfb4a6d7eca1f36e8fd6ef707ca5c797cdf`.
+- Initial generated implementation source: `fd83a17779254ac4ed386ef3ea65fe9c774ee3d2`.
+- Generator and error-envelope correction: `054c2d3e86928fc44e17b4872830b8b1fee5d111`.
+- Feature branch: `feat/business-workforce-hiring-v2`; stacked draft PR #658.
+- PR #658 and integration PR #648 remain open, draft, unmerged, and undeployed.
+- No staging or production migration, deployment, secret change, or live database mutation was performed.
+- This documentation commit is later than the tested implementation source and must not replace `73bb4bfb4a6d7eca1f36e8fd6ef707ca5c797cdf` as certification evidence.
+
+### What is now authoritative
+
+- The Player reads a public-key-only workforce candidate pool scoped to the authenticated game and an owned Business.
+- Candidate availability is filtered server-side by status, availability window, active role, Business country, and Business currency.
+- The browser submits only Business public key, candidate public key, and idempotency intent.
+- Role, wage, labor minutes, skill, productivity, contract type, country, and currency are copied from trusted candidate authority inside the hiring transaction.
+- Hiring locks the Business and candidate, rejects unavailable, expired, self, country-mismatched, currency-mismatched, and duplicate candidate-backed employment, advances the candidate state, creates the canonical employee, and records audit evidence.
+- Matching idempotency retries replay the original receipt; conflicting reuse is rejected.
+- The legacy free-text employee-creation URL remains authenticated compatibility-only and returns HTTP `410 Gone` with `business_free_text_hiring_retired`.
+- Payroll settlement and production-labor integration remain outside Phase 4B and are not claimed complete.
+
+### Canonical-gate corrections completed before certification
+
+- Added a real candidate fixture and candidate-selection assertions to the complete Player Business surface contract.
+- Removed stale browser expectations for Player-authored wage, role, and productivity fields.
+- Replaced the Phase 3D retirement contract's brittle regex-distance assertion with an explicit source-order invariant.
+- Bound cross-cutting Player verification authority to PR #658, its exact stacked base, and the reviewed Phase 4B paths.
+- Corrected shared and mixed Player Edge dispatch to use `businessCandidateHire` and `businessRetiredHire` rate-limit identities.
+- Advanced the Phase 4A payroll-foundation contract to validate the Phase 4B hiring cutover rather than require the retired free-text mutation.
+- Preserved the deterministic architecture inventory without raising an architecture-ratchet ceiling.
+
+### Exact-source verification on `73bb4bfb4a6d7eca1f36e8fd6ef707ca5c797cdf`
+
+- **Business Workforce Hiring V2 — PASS** (`32566581956`).
+- **Business Workforce Payroll V2 — PASS** (`32566581952`).
+- **Player Terminal Verify, including Chromium — PASS** (`32566581998`).
+- **Database Replay from zero twice plus rebuilt-database lint — PASS** (`32566582036`).
+- **Repository Quality — PASS** (`32566581981`).
+- **Backend Typecheck — PASS** (`32566581994`).
+- **Beta Security Contract, including all Edge typechecks — PASS** (`32566581975`).
+- **Business Banking Runtime — PASS** (`32566581978`).
+- **Business Economy V2 — PASS** (`32566581948`).
+- **Progression Runtime, including browser verification, backend smoke, and credential scan — PASS** (`32566582024`).
+- **Runtime Interaction Wiring — PASS** (`32566581990`).
+- **Environment Neutral Browser — PASS** (`32566581924`).
+- **Supply Chain Security — PASS** (`32566582026`).
+- **Admin API Check — PASS** (`32566582016`).
+- **World Runtime, Staging Readiness, market-timezone, and exchange-calendar gates — PASS** (`32566581965`, `32566582004`, `32566582034`, `32566582020`).
+
+### Phase 4B exit result
+
+- Authoritative candidate pool: **met**.
+- Candidate-only server-owned hiring: **met**.
+- Browser-authored employee economics retired: **met**.
+- Business ownership, cross-game isolation, public-key privacy, concurrency, and idempotency boundaries: **met**.
+- Canonical repository, database, backend, security, static Player, and Chromium gates: **met**.
+- Exact source and durable execution-log evidence: **met**.
+
+### Carry-forward scope
+
+1. Bind production orders to eligible role-specific labor requirements and finite employee minutes.
+2. Reserve, activate, consume, release, and recover labor without double booking.
+3. Remove the immediate synthetic production wage debit while retaining labor allocation in production cost basis.
+4. Create deterministic payroll runs and employee entries from authoritative employment state, independent of production utilization.
+5. Settle payroll through Business Checking with explicit completed, partially paid, and unpaid outcomes plus idempotent recovery.
+6. Publish utilization and idle-capacity read models without exposing internal identifiers.
+
+### Next authorized step
+
+**Phase 4C — production-labor integration and deterministic payroll settlement is OPEN.** Build it on a stacked branch from this certified Phase 4B lineage. Do not widen the tranche into equipment, timed manufacturing, Store seller offers, IPO, merge, staging, or production deployment. Do not declare Phase 4C complete until implementation, exact source, required gates, and a durable execution-log entry all exist.
+
+---
+
+## 2026-08-23 — Phase 4C COMPLETE and Phase 4 COMPLETE: production labor and deterministic payroll
+
+### Certified source and repository state
+
+- **Exact certified implementation and verification source:** `857ab6ec77bf02ad619092632e2def80f12d4329`.
+- Feature branch: `feat/business-workforce-production-labor-v2`.
+- Stacked draft PR: #659, based on certified Phase 4B branch `feat/business-workforce-hiring-v2`.
+- PR #659 remained open, draft, mergeable, unmerged, and undeployed at certification.
+- Integration PR #648 remained open, draft, and unmerged.
+- No staging or production migration, deployment, secret change, or live database mutation was performed.
+- The documentation commits that record this certification are later than the tested implementation source and must not replace `857ab6ec77bf02ad619092632e2def80f12d4329` as certification evidence.
+
+### What is now authoritative
+
+- Production resolves one exact Business-owned canonical recipe and its active role, headcount, minimum-skill, fixed-minute, and per-unit labor requirements server-side.
+- The current payroll period is derived from authoritative game/cycle state.
+- Eligible employees are selected and locked in deterministic order from the same game, Business, active employment, role, and skill scope.
+- Finite employee minutes are reserved against one payroll period and one production run, preventing concurrent double booking.
+- Matching production retries replay the original run without new labor reservations, material movement, or output settlement; conflicting idempotency reuse fails closed.
+- Successful instant compatibility production consumes its reservations exactly once. Explicit recovery can release or consume unresolved reservations without duplicating capacity.
+- Production no longer performs an immediate synthetic wage cash debit. Labor allocation remains recorded as managerial production cost basis from authoritative wage and capacity terms.
+- Recurring payroll creates one deterministic run and one entry per eligible employee even when production utilization is zero.
+- Business Checking payroll settlement supports completed, partially paid, and unpaid outcomes rather than rolling back an underfunded cycle.
+- Partial-payment recovery settles only remaining unpaid wages exactly once.
+- Player-linked employees are credited through canonical Player Checking ledger authority; system candidates retain payroll evidence without invented Player accounts.
+- The Player Business read model exposes public Business, employee, role, payroll-run and period keys; capacity, reserved, consumed, available and idle minutes; utilization basis points; and wage due, paid and unpaid without internal UUIDs.
+- The Player Business UI renders workforce utilization and payroll state and maps stable labor/payroll errors to bounded player-safe messages.
+
+### Focused contracts and simulations
+
+- `business-phase4c-production-labor-contract.mjs` verifies canonical recipe/labor scope, finite capacity, no synthetic wage debit, cost-basis allocation, idempotency, recovery and browser-safe publication.
+- `business-phase4c-labor-reservation-simulation.mjs` verifies double-book prevention, replay, conflict and capacity behavior.
+- `business-phase4c-payroll-settlement-contract.mjs` verifies deterministic payroll authority, canonical ledger settlement and partial/unpaid states.
+- `business-phase4c-payroll-simulation.mjs` verifies payroll clock, zero-production payroll, partial funding, replay and recovery.
+- `business-phase4c-player-recovery-contract.mjs` verifies Player utilization publication, stable recovery errors and bounded browser contracts.
+
+### Exact-head verification on `857ab6ec77bf02ad619092632e2def80f12d4329`
+
+- **Business Workforce Production Payroll V2 — PASS** (`32601382383`).
+- **Business Workforce Payroll V2 — PASS** (`32601382371`).
+- **Business Workforce Hiring V2 — PASS** (`32601382382`).
+- **Database Replay from zero twice and rebuilt-database lint — PASS** (`32601382380`).
+- **Backend Typecheck and backend smoke — PASS** (`32601382359`).
+- **Repository Quality — PASS** (`32601382340`).
+- **Player Terminal Verify, including Chromium browser verification — PASS** (`32601382375`).
+- **Business Banking Runtime — PASS** (`32601382366`).
+- **Business Economy V2 — PASS** (`32601382376`).
+- **Progression Runtime — PASS** (`32601382338`).
+- **Environment Neutral Browser — PASS** (`32601382374`).
+- **Supply Chain Security — PASS** (`32601382337`).
+- **Runtime Interaction Wiring — PASS** (`32601382351`).
+- **Admin API Check — PASS** (`32601382356`).
+- **World Runtime — PASS** (`32601382370`).
+- **Staging Readiness Preflight — PASS** (`32601382342`).
+- **Required Game Market Timezone — PASS** (`32601382363`).
+- **Exchange Calendar Runtime — PASS** (`32601382357`).
+
+### Phase 4C exit result
+
+- Canonical production-labor authority: **met**.
+- Finite employee-minute reservation and double-book prevention: **met**.
+- Exact-once reservation consumption/recovery: **met**.
+- No second wage cash debit from production: **met**.
+- Labor cost-basis allocation without duplicate money movement: **met**.
+- Deterministic recurring payroll independent of utilization: **met**.
+- Completed, partially paid and unpaid payroll settlement: **met**.
+- Exact-once unpaid-wage recovery: **met**.
+- Player-linked and system-candidate payroll evidence: **met**.
+- Public-key-only utilization and idle-capacity read model: **met**.
+- Database, backend, Edge, repository, security, Player and Chromium gates: **met**.
+- Exact implementation source and durable plan/log evidence: **met**.
+- No production deployment: **met**.
+
+### Architecture and gameplay decisions
+
+- Existing instant production remains a bounded compatibility lifecycle until Phase 6 replaces…11371 tokens truncated…tomatic sales convergence, equity/IPO, merge, deployment, secrets, or live database mutation.
+
+---
+
+## 2026-08-25 — Phase 10A.3 verified starting state
+
+- Fetched `origin/main` at `dcb68958102f4ecbf07fe9e52d6eede4d5e692ff` before implementation.
+- PR #667 is open, draft, unmerged, mergeable, and based on the exact certified Phase 10A.2 handoff `38d040748a62c5aa21a7111eeab80cd7e74b9263`.
+- PR #667 head is `2a163a0d036973fa1b3f5b237a516fb10b2add4c`; its net parent-relative diff is exactly this checkpoint's scope document.
+- The temporary Phase 10A.3 source-snapshot workflow has zero net presence.
+- PRs #665, #666, and integration PR #648 are open, draft, unmerged, and undeployed. The Business V2 stack #654–#667 remains open and unmerged.
+- No repository evidence identifies a Business V2 staging or production release from the certified or stacked sources. No deployment, secret mutation, or live database mutation is authorized for this checkpoint.
+- Controlling roadmap item: `BUSINESS-V2-10A3`. The authorized later sequence is `BUSINESS-V2-10A4`, Phase 11, Phase 12, Phase 13, and Phase 14A–14D, each through a separately bounded stacked checkpoint.
+- Implementation continues on the existing owner branch `feat/business-store-atomic-settlement-v2`; no replacement branch was created.
+
+---
+
+## 2026-08-25 — Phase 10A.3 IMPLEMENTATION IN PROGRESS: atomic Business seller-offer settlement
+
+### Current repository and evidence boundary
+
+- Existing owner branch: `feat/business-store-atomic-settlement-v2`.
+- Existing stacked draft PR: #667 over the clean certified Phase 10A.2 handoff `38d040748a62c5aa21a7111eeab80cd7e74b9263` / PR #666.
+- PR #667 and integration PR #648 remain draft, open, unmerged, and undeployed. This entry does not mark Phase 10A.3 `VERIFIED_COMPLETE` or certified.
+- **Exact implementation SHA:** `PENDING — current evidence is from the local implementation worktree, not one immutable committed source`.
+- **Exact-head workflow run and jobs:** `PENDING — no Phase 10A.3 CI run is claimed`.
+- **Clean handoff SHA:** `PENDING — requires green exact-head evidence and zero temporary machinery`.
+
+### Forward database authority implemented locally
+
+- `20260825110000_business_store_offer_purchase_receipt_v2.sql` adds immutable completed `public.store_offer_purchase_receipts`, same-game composite evidence foreign keys, exact public snapshots, Buyer-scoped idempotency, one receipt per quote, insert-evidence validation, update/delete immutability, forced RLS, and explicit least-privilege ACLs.
+- `20260825110010_business_store_offer_purchase_receipt_result_v2.sql` adds private public-key-only projection helper `economy_private.read_store_offer_purchase_receipt_result_v2(uuid, boolean)`.
+- `20260825110020_business_store_offer_atomic_settlement_v2.sql` adds service-owned `public.settle_business_store_offer_v2(uuid, uuid, text, text, integer, bigint, text)` with replay-before-current-state interpretation and fixed offer-first economic locking.
+- `20260825110030_business_store_offer_settlement_assertions_v2.sql` asserts the receipt schema, keys, RLS, ACLs, triggers, helper isolation, RPC privilege, and required settlement-authority tokens fail closed.
+- Private `economy_private.validate_store_offer_purchase_receipt_v2()` verifies the inserted receipt references the exact committed Buyer debit, Business credit, and canonical Inventory transaction. Private `economy_private.guard_store_offer_purchase_receipt_v2()` rejects receipt updates and deletions.
+
+### Store application and permanent verification surface
+
+- `backend/src/domains/store/contracts/storeOfferSettlementContracts.ts` owns bounded command/result parsing and public-key-only receipt invariants.
+- `backend/src/domains/store/infrastructure/supabaseStoreOfferSettlementRepository.ts` projects trusted server game/Buyer scope into the settlement RPC.
+- `backend/src/domains/store/application/settleBusinessStoreOffer.ts` exposes the Store application service and maps fail-closed repository outcomes.
+- `backend/src/domains/store/index.ts` exports only the new Store application, contract, and repository surfaces.
+- Permanent present scripts: `scripts/business-phase10-atomic-settlement-contract.mjs`, `scripts/business-phase10-atomic-settlement-types.mjs`, and `scripts/business-phase10-atomic-settlement-simulation.mjs`.
+- Permanent exact-head workflow present: `.github/workflows/business-store-atomic-settlement-v2.yml`.
+- Permanent real-database support and harnesses now exist at `scripts/business-phase10-atomic-settlement-database-support.mjs`, `scripts/business-phase10-atomic-settlement-database.mjs`, and `scripts/business-phase10-atomic-settlement-concurrency.mjs`. Workflow presence and local passes are not exact-head completion evidence.
+
+### Authority, precision, and atomicity decisions
+
+- Buyer Checking, Business cash, ledger debit/credit, and gross revenue must be exact two-decimal totals. A total with excess monetary precision or outside the canonical ledger range rejects before mutation.
+- Canonical Inventory average unit cost remains exact to four decimal places. Receipt COGS is `sourceUnitCost * quantity` at four-decimal precision, and gross margin is `grossRevenue - COGS` at four decimals. No silent cost-basis rounding is allowed.
+- `public.store_offer_purchase_receipts` has enabled and forced RLS. `anon` and `authenticated` have no table or settlement-RPC privilege. `service_role` may select immutable receipts and execute `public.settle_business_store_offer_v2(...)`, but cannot directly insert, update, delete, truncate, reference, trigger, or maintain the receipt table and cannot directly execute private result/trigger helpers.
+- The security-definer settlement function owns the validated receipt insert. The completed receipt's same-game ledger and Inventory evidence is checked before insert and is immutable afterward.
+- One transaction binds exact quote/offer/version validation, Store-listing holding, Buyer Checking, Business cash, Buyer Inventory, debit/credit, canonical Inventory posting, Business activity, receipt completion, quote consumption, and offer version advancement. Matching replay returns the immutable receipt before current mutable state is reinterpreted; conflicting reuse fails closed.
+
+### Current local evidence — not exact-head certification
+
+- Complete disposable PostgreSQL 17.6 reset from zero: **PASS twice**.
+- Static migration validator: **PASS 356/356**.
+- Rebuilt-database lint: **executed; no new Phase 10A.3 finding**, with inherited baseline findings retained rather than suppressed.
+- Independent real-database quote/settlement/replay probe: **PASS**. Exact state vector was Buyer Checking `100 -> 85`, Business cash `20 -> 35`, Store listing `10 -> 8`, Buyer Inventory `0 -> 2`, one receipt, two ledger entries, two ledger lines, one `PURCHASED` Inventory event, one Business activity, quote version 2 used, offer version `2 -> 3`, and matching completion timestamp. Fixture execution was wrapped in an outer transaction and rollback left zero durable fixture rows.
+- Permanent serial PostgreSQL harness: **PASS locally**. It atomically seeds a localhost-only disposable two-game fixture; compares complete rows across Store, legacy Store, money, Inventory, Business, identity, receipt, withdrawal, and idempotency tables; proves the expanded malformed/wrong-scope/lifecycle/custody/currency/funds/stock/precision failure matrix; proves the retained seeded purchase and economic replay state; validates exact two-line cost/provenance evidence; rejects receipt update/delete; proves receipt-first replay/conflict; and proves rollback after all seven internal posting stages.
+- Permanent concurrency PostgreSQL harness after an independent full rebuild: **PASS locally**. Held psql transactions and `pg_stat_activity` prove actual lock waits for matching idempotency, same-offer no-oversell, Buyer Checking, listing holding, Business cash overflow, purchase-first/withdrawal-first ordering, and concurrent two-game isolation. The workflow performs the same full rebuild between serial and concurrency suites rather than bypassing immutable receipt protection for cleanup.
+- Phase 10A.3 structural, typed, and deterministic simulation checks: **PASS locally**.
+- Retained Phase 7A, 8A, 9A, 10A.1, and 10A.2 checks: **PASS locally** after correcting a stale temporal fixture without weakening the authority contract.
+- Backend `typecheck:all`: **PASS**. Store tests: **14/14 PASS**. Inventory tests: **50/50 PASS**.
+- Retained Business economy, workforce, payroll, equipment, and manufacturing scripts plus migration, diff, YAML, interaction, and security checks: **PASS locally**.
+- Deterministic architecture inventory regenerated to **1,083 source files and 38 Store files**.
+
+### Unresolved completion work and exclusions
+
+- Commit one immutable implementation source, run the permanent exact-head workflow and all required retained jobs—including the now-green local serial and concurrency harnesses—against that exact SHA, resolve any real failure without weakening boundaries, then record the clean handoff SHA.
+- No authenticated Player Store route/UI or browser cutover is present. No automatic consumer/NPC demand convergence, equity/IPO, Marketplace/Contracts integration, merge, deployment, secret mutation, or live database mutation is present or authorized. The two resets and probes used only a disposable local database.
+
+### Next exact roadmap item
+
+Phase 10A.3 remains active until its exact implementation SHA, exact-head workflow jobs, and clean handoff are durably recorded. Its permanent serial and concurrency harnesses now exist and pass locally. After that separately evidenced boundary, **Phase 10A.4 — authenticated Player Store route/UI cutover and connected browser acceptance** is next. Phase 11 automatic-sales convergence, Phase 12 workspace UX, Phase 13 Admin supervision, and Phase 14A–14D remain closed until their own dependency-ordered checkpoints.
+
+---
+
+## 2026-08-25 — Phase 10A.3 EXACT-HEAD VERIFIED: atomic Business seller-offer settlement
+
+This entry supersedes the `PENDING` evidence fields in the preceding implementation-in-progress snapshot. The checkpoint status is `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`.
+
+### Exact source and workflow evidence
+
+- **Exact implementation and verification source:** `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`.
+- **Business Store Atomic Settlement V2 — PASS** (`32817713404`):
+  - `Replay complete database twice and lint` — `97709253285`, **success**;
+  - `Verify retained Player Terminal and Chromium` — `97709253398`, **success**;
+  - `Verify atomic settlement authority and retained Store phases` — `97709253437`, **success**;
+  - `Verify database settlement, rollback, races, and isolation` — `97709253468`, **success**;
+  - `Verify retained Business, Store, Inventory, Backend, and Edge runtime` — `97709253519`, **success**.
+- Every required job was terminal `success`. Conditional failure-diagnostic steps did not run because their jobs succeeded; no required job was queued, skipped, cancelled, neutral, timed out, or in progress at certification.
+- **Clean durable handoff:** this later documentation-only certification commit. Its immutable SHA is recorded in draft PR #667 and the Phase 10A.4 parent record; it does not replace `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2` as the tested implementation identity.
+- PR #667 remained draft, open, mergeable, unmerged, and without a Business Backend, Edge, or database staging/production release at certification. Integration PR #648 remained draft and unmerged.
+- Temporary repair, writer, controller, certifier, finalizer, and source-snapshot machinery has zero net presence in the parent-relative diff.
+- The global beta completion ledger was not edited in this tranche because active ARCH-100F PR #668 owns the same roadmap file. This checkpoint remains `IMPLEMENTED_NOT_MERGED`; Phase 10A.4 must re-audit that owner and reconcile Scope Intake without overwriting its work.
+
+### Exit result
+
+- Atomic Buyer debit, Business credit, canonical Inventory delivery, revenue/COGS/margin evidence, immutable receipt, quote consumption, and offer advancement: **met**.
+- Exact replay/conflict, seven-stage rollback, money/cost precision, receipt immutability, observed-lock races, no oversell, purchase/withdrawal ordering, retained seeded purchase/replay, and two-game isolation: **met**.
+- Exact-head retained Backend/Edge/Business/Store/Inventory/Player/Chromium matrix: **met**.
+- Browser roles remain unable to access receipt persistence or settlement RPC authority; internal UUIDs remain outside the public result contract: **met**.
+- Status: `IMPLEMENTED_NOT_MERGED`; not `VERIFIED_COMPLETE` because PR #667 is not merged into `main`.
+- No authenticated Player Store cutover, automatic consumer/NPC sales convergence, equity/IPO, merge, Business staging/production deployment, secret mutation, or live database mutation was included.
+
+### Next exact roadmap item
+
+**Phase 10A.4 — authenticated Player Store route/UI cutover and connected browser acceptance is OPEN.** It must begin from this clean documentation-only handoff on a separate stacked branch and draft PR. Phase 11 and later phases remain closed until 10A.4 is separately certified.
+
+---
+
+## 2026-08-25 — Phase 10A.4 verified starting state and bounded scope
+
+### Repository and owner audit
+
+- Fetched `origin/main` at `80f5eb8e24a364bc878de11acfdf196add878f10`; the Business stack merge base remains `dcb68958102f4ecbf07fe9e52d6eede4d5e692ff`, and the clean Phase 10A.3 handoff is 18 current-main commits behind.
+- Phase 10A.3 clean parent handoff: `6f9231b0030a7851bba5abe8519afa790071c32c`, pushed to `feat/business-store-atomic-settlement-v2` / draft PR #667.
+- PR #667 is open, draft, mergeable, unmerged, and clean at that exact handoff. No Business Backend, Edge, or database staging/production release is identified.
+- No existing branch or open PR owned `BUSINESS-V2-10A4`; the dedicated child branch `feat/business-player-store-cutover-v2` was created from the exact handoff without rebasing or replacing its parents.
+- Open PR #624 owns overlapping Player Terminal CSS/realtime/browser surfaces and is currently conflicting with `main`; exact-path edits must preserve that owner.
+- PR #626 closed without merge at `474370b4e96670c4a3e394ac41779ed87ce26d15`; its Business acceptance/capability changes are donor evidence only, not an active owner.
+- Open draft PR #668 owns ARCH-100F and the global beta roadmap file. This checkpoint must preserve that roadmap owner and cannot claim `VERIFIED_COMPLETE` while unmerged.
+- Future `ARCH-100I` owns Store context propagation. Phase 10A.4 consumes current authenticated scope derivation and does not absorb that refactor.
+
+### Bounded checkpoint
+
+- Controlling item: `BUSINESS-V2-10A4`.
+- Controlling scope: `docs/roadmaps/business-phase10-player-store-cutover-scope-v1.md`.
+- Parent implementation identity: `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`; parent clean handoff: `6f9231b0030a7851bba5abe8519afa790071c32c`.
+- Retained seeded routes remain separate. The default Business-offer route design adds explicit offer quote/purchase and Buyer-authorized receipt paths behind the same-origin Player BFF.
+- Player Store reads must aggregate multiple seeded/Business offers under one canonical product card while exposing only bounded public offer/seller/Business identity.
+- Browser intent is limited to public offer/quote, quantity, expected version, and idempotency intent. Every trusted economic and ownership value remains server derived.
+- Required evidence includes stable errors, rate limits/capabilities, committed Buyer and seller convergence, seeded compatibility, real database vectors, both withdrawal orderings, two authenticated browser contexts, two games, accessibility/responsive behavior, and the full retained exact-head matrix.
+
+### Scope-only boundary
+
+- No Phase 10A.4 runtime source, migration, implementation SHA, exact-head workflow result, merge, Business staging/production deployment, secret mutation, or live database mutation is claimed.
+- The scope-only branch must be pushed and opened as a separate draft PR over `feat/business-store-atomic-settlement-v2` before runtime implementation begins.
+- Phase 11 and later phases remain closed until Phase 10A.4 obtains its own exact-head certification and clean handoff.
+
+### Durable scope handoff
+
+- Exact scope commit: `75d2a3c0b594017bc38f78e2618926f78ca2754e`.
+- Stacked draft PR: #670, base `feat/business-store-atomic-settlement-v2`, head `feat/business-player-store-cutover-v2`.
+- The branch and draft PR were pushed/opened before runtime implementation. They remain open, draft, unmerged, and without a Business staging/production release.
+
+---
+
+## 2026-08-26 — Phase 10A.4A implementation freeze and canonical FX dependency insertion
+
+This entry supersedes only the stale scope-only state recorded above. It does not alter any certified Phase 10A.1–10A.3 source, workflow, or handoff identity.
+
+### Exact implementation candidate and status
+
+- Roadmap item: `BUSINESS-V2-10A4A`, under parent `BUSINESS-V2-10A4`.
+- Frozen implementation candidate: `88944e18520913ca9779c2706bd005f644c60050` on `feat/business-player-store-cutover-v2` / draft PR #670.
+- Parent Phase 10A.3 implementation remains `5a8ffeb59c857b99f5fbd88726cc9b985f7682a2`; its clean handoff remains `6f9231b0030a7851bba5abe8519afa790071c32c`. Neither identity is rewritten by this record.
+- The candidate adds authenticated Player Store catalog/offer/quote/purchase/receipt wiring, explicit seeded-versus-Business route separation, committed Buyer/seller projections, Player Terminal offer purchase flow, and permanent structural/connected acceptance machinery. It adds no new database migration.
+- Canonical status: `IMPLEMENTED_NOT_MERGED`. The candidate is not exact-head certified and is not `VERIFIED_COMPLETE`; final certification is blocked by the missing canonical FX and shared multi-currency funding authority.
+- Draft PR #670 remains open, draft, unmerged, undeployed, and without any secret or staging/production database mutation. This record freezes its runtime candidate; subsequent dependency work belongs on new bounded branches.
+
+### Current certification failures
+
+1. The connected readiness helper sends `Origin: http://127.0.0.1:...` while probing proxied `bootstrap-api`. That service intentionally accepts only configured HTTPS browser origins, so it returns `403` and the helper expects success. This is a probe-contract defect, not evidence that the Edge runtime failed to start. Final repair must send no browser `Origin` for the health probe and must not weaken production CORS.
+2. `player-terminal/tests/store-local-currency.mjs` still requires copy claiming an authoritative quote converts the final amount into a THD local wallet. The frozen candidate implements same-currency Store settlement only. The stale assertion must be replaced after canonical retail FX/funding semantics exist, not edited to bless an interim assumption.
+3. `docs/operations/contracts/player-cross-cutting-verification-authority-v1.json` is a mutable singleton still bound to PR #661. The current verifier therefore cannot provide immutable PR #670 authority evidence. Final convergence must use PR-bound authority files selected from trusted PR context and must fail closed locally without an explicit PR number.
+
+### Root-cause decision
+
+- The Store candidate cannot become the permanent checkout authority while exchange rates remain independently written pair rows, ECO is absent from the canonical registry, Banking cannot assign canonical accounts to a clearing party or reserve delayed funds, and Store/Marketplace/Stocks/Business apply incompatible currency assumptions.
+- Do not repair these root gaps inside PR #670. Preserve that branch as the Phase 10A.4A implementation freeze and insert the dependency stack before final certification.
+- The global beta completion roadmap remains untouched here because draft PR #668 owns that exact file. Its owner must reconcile Scope Intake independently without overwriting this Business-stack record.
+
+### Dependency-ordered owner stack
+
+| Item | Branch | Outcome before the next checkpoint |
+| --- | --- | --- |
+| `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` | `feat/canonical-fx-authority-v1` | ECO registry/numeraire, deterministic game-local 08:00 fixing, immutable current/history evidence, Story-shock convergence, and guarded legacy-rate cutover. |
+| `BUSINESS-V2-10A4B2` | `feat/banking-fx-clearing-v1` | Canonical account identities, balanced posting groups, holds, named clearing/reserve parties, capped liquidity, and standard/instant FX. |
+| `BUSINESS-V2-10A4C0` | `feat/multicurrency-funding-core-v1` | Immutable maximum-three-Checking-account funding quote and private atomic funding composer. |
+| `BUSINESS-V2-10A4C1` | `feat/multicurrency-store-funding-v1` | Seeded/NPC and Business Store settlement consume the shared funding authority. |
+| `BUSINESS-V2-10A4C2` | `feat/multicurrency-marketplace-funding-v1` | Marketplace preserves listing currency and stops competing treasury balance writes. |
+| `BUSINESS-V2-10A4C3` | `feat/multicurrency-stock-funding-v1` | Existing securities receive ECO listing currency without rewriting historical trades; new buys/sales settle in listing currency. |
+| `BUSINESS-V2-10A4C4` | `feat/business-multicurrency-treasury-v1` | Business-owned foreign Checking accounts, bounded treasury FX, and procurement funding. |
+| `BUSINESS-V2-10A4D` | `feat/business-player-store-fx-final-v2` | Converge the frozen candidate, repair the three secondary failures, and run final Store/FX/two-browser/two-game certification. |
+
+Each branch is a bounded draft PR against its immediate predecessor and must identify one exact implementation SHA before advancing. No merge, deployment, secret mutation, or staging/production database mutation is authorized.
+
+### Next exact roadmap item
+
+Begin `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001` from the frozen 10A.4A documentation handoff on `feat/canonical-fx-authority-v1`. Phase 11 remains closed until 10A.4D is exactly certified and handed off; Phases 12, 13, and 14A–14D remain dependency ordered after Phase 11.
+
+---
+
+## 2026-08-26 — Canonical FX authority scope established
+
+- Roadmap items: `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001`.
+- Owner branch: `feat/canonical-fx-authority-v1`, created from exact Phase 10A.4A documentation handoff `cb4041b68ecd322c87d2fb6bb08000da28807af3` without rebasing or changing the frozen candidate.
+- Controlling scope: `docs/roadmaps/canonical-fx-authority-scope-v1.md`.
+- Scope commit: `f499e828d57a6a146f528d89e714502807ab36b1`.
+- Status: `IN_PROGRESS` — scope authority only; no B1 migration, runtime source, implementation SHA, workflow result, merge, deployment, secret mutation, or staging/production database mutation is claimed by this record.
+- Exact boundary: ECO registry/numeraire, deterministic game-local 08:00 fixing, immutable current/history evidence, queue-only Story shocks, provisioning/bootstrap, and guarded legacy cutover. Banking accounts/holds/clearing/settlement and purchase funding remain closed for B2 and C0–C4.
+- Next exact action: create the immutable scope handoff, publish a bounded draft PR against `feat/business-player-store-cutover-v2`, then implement only B1 and certify one exact head before opening B2.
+
+---
+
+## 2026-08-26 — Canonical FX authority exact-head implementation handoff
+
+### Identity and status
+
+- Roadmap items: `BUSINESS-V2-10A4B1` / `BETA-FX-V1-001`.
+- Owner: `feat/canonical-fx-authority-v1` / stacked draft PR #671, based on exact Phase 10A.4A documentation handoff `cb4041b68ecd322c87d2fb6bb08000da28807af3`.
+- Controlling scope commit: `f499e828d57a6a146f528d89e714502807ab36b1`; immutable scope handoff: `23da0aa419438d2f9bc996df7f4f08c86959fd23`.
+- Exact implementation and verification source: `41bc2d978fe67cd06a8f2133f7310075492ecd99`.
+- Canonical status: `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`, because PR #671 remains draft, open, and unmerged and no production runtime evidence is claimed. This later documentation-only handoff does not replace the tested implementation identity.
+
+### Implemented authority
+
+- Forward migration `backend/supabase/migrations/20260825223806_canonical_fx_authority_v1.sql` extends the single registry with ECO, persists immutable policy/fixing/value/input/component/shock evidence, owns leased runtime state, queues Story shocks exactly once, freezes legacy pair writes after guarded cutover, and retains `convert_currency_amount` only as a deprecated compatibility reader.
+- `backend/src/domains/fx/**` provides fixed-point deterministic policy calculation, contracts, repository, leased fixing runner, orchestration HTTP boundary, and focused tests. `backend/supabase/functions/fx-orchestrator/index.ts` exposes the trusted scheduled worker root.
+- The RPC surface comprises generic and delegated Stock timezone reads; new-game/bootstrap initialization; due-game claim, input load, apply, and claim-failure paths; canonical rate/current/history/runtime reads; Story-shock authorization; an inert scheduler configurator; guarded legacy initialization; and compatibility conversion.
+- Daily publication is one game-local 08:00 fixing including weekends. It uses the latest complete ten-country set effective by the boundary, records exact input identities/digest and actual calculation time, does not replay paused dates, and leaves the prior fixing active with overdue evidence when inputs are incomplete.
+- Existing games cut over only from a complete pairwise-consistent legacy matrix. New games require ten macro snapshots, eleven currency values, a distinct bootstrap fixing, and valid runtime state before readiness. Prior rates and Story rows are not rewritten or reapplied.
+- The existing `game_settings.stock_market_window.timezone` is the only timezone source. Once FX is bootstrapped, timezone mutation is rejected to preserve the uniqueness of a game/local-date fixing while unrelated stock-window edits remain permitted.
+- `PUBLIC`, browser roles, and `service_role` were re-audited explicitly: immutable evidence is append-only, privileged mutation is service-only, reads are bounded, internal UUIDs are not exposed through browser contracts, and the service role does not retain direct evidence DML through inherited grants.
+
+### Verification evidence
+
+- Local deterministic FX suite: 39/39. Focused Story convergence: 16/16. Full Backend smoke suite: green.
+- Adjacent suites: Player World 17/17, World runtime 11/11, Player Banking 6/6, ledger 3/3, Stock calendar 38/38, Player market assets 74/74, and Player Store 20/20.
+- Backend typecheck and every one of 26 discovered Edge roots passed. Edge manifest/config/source parity passed 7/7. Exact workflow contract, authorization boundaries, migration audit, secret scan, architecture inventory/ratchets, high-priority route checks, asset and interaction checks, formatting, and `git diff --check` passed.
+- Two final disposable PostgreSQL 17 resets replayed every forward migration from zero. Rollback-only canonical-FX database acceptance passed after each final reset. Rebuilt-schema lint exited successfully while reporting 61 pre-existing repository findings, including 19 errors, and zero B1/FX findings; the repository-wide debt remains explicit.
+- Exact-head **Canonical FX Authority V1** run `32912008039` succeeded at `41bc2d978fe67cd06a8f2133f7310075492ecd99`: exact-head static authority job `98007902296`; FX and adjacent-domain compatibility job `98007902407`; disposable migration replay and lint job `98007902485`. The database job performed both zero-to-head replays, live acceptance, rebuilt-schema lint, and clean disposable-stack teardown.
+
+### Safety, blockers, and next item
+
+- The scheduler configurator was not invoked. No merge, deployment, scheduled job installation, credential/secret change, staging or production SQL, or live-environment mutation occurred.
+- Intentionally unresolved and excluded from B1: Banking-owned account identities, balanced grouped posting, holds, clearing/reserve accounts, capped facility capacity, customer quotes/orders/settlement, Player Banking FX, and all shared purchase funding.
+- Next exact item: create `feat/banking-fx-clearing-v1` from this documentation-only handoff, establish a controlling B2 scope record, and open its draft PR against `feat/canonical-fx-authority-v1` before runtime implementation.
+
+---
+
+## 2026-08-26 — Banking FX clearing scope established
+
+- Roadmap item: `BUSINESS-V2-10A4B2`.
+- Owner branch: `feat/banking-fx-clearing-v1`, created from exact B1 documentation handoff `5e427e8f5b39e5b77cac0c912873fe505493565d`; parent B1 implementation remains `41bc2d978fe67cd06a8f2133f7310075492ecd99` on draft PR #671.
+- Controlling scope: `docs/roadmaps/banking-fx-clearing-scope-v1.md`.
+- Scope commit: `ce50306400b3173a489e2413f0531cef58c863a6`.
+- Status: `IN_PROGRESS` — scope authority only; no B2 migration, runtime source, implementation SHA, workflow result, merge, deployment, scheduler installation, secret mutation, or staging/production database mutation is claimed by this record.
+- Transition decision: pre-B2 ledger economic identity and amounts remain immutable `legacy_v1` while deterministic account/transaction linkage metadata is backfilled; every post-cutover monetary write, including calls through legacy wrappers, must be account-linked, hold-aware, and balanced per currency as `balanced_v2`. A dedicated non-spendable compatibility contra preserves old domain behavior without consuming FX reserve authority or beginning C1-C4.
+- Exact boundary: Banking account identity, balanced grouped posting, holds, clearing/reserve/fee capacity, capped facility evidence, standard/instant Player FX, authoritative Banking reads/routes/UI, readiness, and cross-domain hold enforcement. Multi-account retail funding and Store/Marketplace/Stocks/Business currency convergence remain closed for C0-C4.
+- Key collision controls: an explicit superseding interface decision leaves `fxf_...` exclusively with B1 fixing keys and assigns B2 clearing evidence `fxc_...` or internal identity; #668 retains the global roadmap; PR #624 overlapping Player files are avoided until re-audited; broad `service_role` monetary DML is revoked explicitly rather than treated as safe through RLS alone.
+- Next exact action: create the immutable scope handoff, publish a bounded draft PR against `feat/canonical-fx-authority-v1`, then implement only B2 and certify one exact head before opening C0.
+
+---
+## 2026-08-27 — Banking FX clearing EXACT-HEAD VERIFIED: B2 certification recovery complete
+
+### Certified source and status
+
+- Roadmap item: `BUSINESS-V2-10A4B2`.
+- **Exact implementation and verification source:** `ce931f8320861117e64eba4403b84d6e7fe8da25`.
+- Permanent B2 certification workflow: `banking-fx-clearing-v1`, run `33045836351`.
+- Canonical checkpoint status: `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE` because PR #672 remains draft, open, unmerged, and undeployed.
+- Later documentation-only commits do not replace `ce931f8320861117e64eba4403b84d6e7fe8da25` as the tested implementation identity.
+- No merge, staging deployment, production deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation occurred during the B2 recovery/certification tranche.
+
+### Recovery defects closed
+
+1. Banking/FX game-owned tables are registered with the canonical resumable whole-game purge authority, and the database acceptance harness uses the actual `fx_settlement_receipts` authority.
+2. Business and Player monetary identity is resolved by `business_id` or `player_id`; a Business owner's Player identity is not treated as the Business's monetary identity.
+3. Retained Store settlement fixtures no longer overwrite `account_balances`. Test funding goes through canonical `record_business_ledger_entry_v2` and `record_player_ledger_entry` calls, preserving the B2 projection guard and balanced journal semantics.
+4. The permanent Banking/FX workflow now has separate source/static, disposable-PostgreSQL, and Chromium lanes. The broken self-mutating certification finalizer is not part of the permanent workflow.
+5. The previously failing connected Player Store Buyer-funding journey is green without weakening Banking or bypassing account holds/projection authority.
+
+### Durable B2 surface
+
+- Forward migrations: `20260826010811_banking_fx_purge_registry_v1.sql`, `20260826090000_banking_account_identity_v1.sql`, `20260826091000_banking_transaction_holds_v1.sql`, `20260826092000_fx_clearing_liquidity_v1.sql`, `20260826093000_player_banking_fx_v1.sql`, `20260826094000_player_banking_fx_commands_v1.sql`, `20260826095000_player_banking_fx_order_commands_v1.sql`, `20260826096000_player_banking_fx_settlement_v1.sql`, `20260826097000_player_banking_fx_worker_v1.sql`, `20260826098000_banking_fx_readiness_v1.sql`, `20260826100000_business_bank_identity_runtime_v1.sql`, `20260826101000_banking_staff_adjustment_compatibility_v1.sql`, and `20260826102000_banking_fx_postcutover_purge_registry_v1.sql`.
+- Canonical B2 records: `bank_accounts`, `bank_transactions`, `bank_account_holds`, `bank_account_hold_events`, `fx_liquidity_cap_snapshots`, `fx_liquidity_events`, `fx_quotes`, `fx_orders`, `fx_order_events`, `fx_settlement_receipts`, and private `fx_order_runtime_state`, while `ledger_entries` and `account_balances` remain the sole money journal/projection.
+- Service commands/read projections include the balanced Player/Business ledger gateways, canonical account/activity reads, quote/overview/history/order reads, standard submit/cancel, instant execution, and leased standard-order claim/settle/fail commands.
+- Player Banking FX routes remain exact-path parsed under `/players/me/banking/fx` for overview, history, orders, quotes, standard submission, instant execution, and standard cancellation.
+- Detailed files, RPCs, routes, migrations, browser/database evidence, and next-step boundaries are recorded in `docs/roadmaps/banking-fx-clearing-implementation-handoff-v1.md` and `docs/roadmaps/banking-fx-clearing-scope-v1.md`.
+
+### Permanent three-lane B2 gate on `ce931f83...`
+
+- **Source/static — PASS** (`98429498128`): exact-SHA guard, PR authority verification, Banking/FX tests, Deno/backend checks, migration validation, local Edge runtime contract, and `git diff --check`.
+- **Disposable PostgreSQL — PASS** (`98429498313`): disposable Supabase/PostgreSQL startup, zero-to-head database reset, Banking/FX database acceptance, rebuilt-database lint, and clean teardown.
+- **Chromium — PASS** (`98429498040`): exact-SHA guard, Player Terminal dependencies, Chromium installation, browser-only runtime fixture, and full Playwright browser verification.
+- Parent workflow run `33045836351`: **success**.
+
+### Complete inherited exact-head matrix
+
+All 30 pull-request-triggered workflow runs returned for `ce931f8320861117e64eba4403b84d6e7fe8da25` completed successfully. High-signal evidence includes:
+
+- Database Replay `33045836076` — **PASS**.
+- Business Player Store Cutover V2 `33045836240` — **PASS**, including connected authenticated Buyer/seller Store journey in two games and full Chromium.
+- Business Store Atomic Settlement V2 `33045836230` — **PASS**.
+- Business Store Seller Offers V2 `33045836311` — **PASS**.
+- Business Store Withdrawal Safety V2 `33045836342` — **PASS**.
+- Business Store Listing Inventory V2 `33045836231` — **PASS**.
+- Player Terminal Verify `33045836354` — **PASS**.
+- Backend Typecheck `33045836366` — **PASS**.
+- Repository Quality `33045836246` — **PASS**.
+- Beta Security Contract `33045836157` — **PASS**.
+- Supply Chain Security `33045836208` — **PASS**.
+- Business Banking Runtime `33045836219` — **PASS**.
+- Player Local Currency Authority `33045836277` — **PASS**.
+- Business Economy V2 `33045836303` — **PASS**.
+- Business Timed Manufacturing V2 `33045836323` — **PASS**.
+- Business Workforce Hiring V2 `33045836267` — **PASS**.
+- Business Workforce Payroll V2 `33045836126` — **PASS**.
+- Business Workforce Production Payroll V2 `33045836302` — **PASS**.
+- Marketplace Preconvergence `33045836116` — **PASS**.
+- Environment Neutral Browser `33045836347` — **PASS**.
+- Progression Runtime `33045836266` — **PASS**.
+- Runtime Interaction Wiring `33045836299` — **PASS**.
+- World Runtime `33045836348` — **PASS**.
+- Required Game Market Timezone `33045836180` — **PASS**.
+- Exchange Calendar Runtime `33045836279` — **PASS**.
+- Admin API Check `33045836109` — **PASS**.
+- Admin Game Lifecycle Controls `33045836310` — **PASS**.
+- Staging Readiness Preflight `33045836289` — **PASS**.
+
+The exact source exposed 60 completed check runs with no failure, cancellation, timeout, or pending/in-progress check at certification. Conditional diagnostics and unauthorized release/deployment steps remained skipped where not applicable.
+
+### B2 exit result
+
+- Canonical Player/Business/system bank-account identity: **met**.
+- Historical amount preservation and deterministic account/journal backfill: **met**.
+- Per-currency balanced grouped posting and compatibility-offset evidence: **met**.
+- Holds and posted/held/available balance enforcement: **met**.
+- FX clearing/reserve/fee accounts and bounded facility snapshots: **met**.
+- Standard delayed FX and instant FX with separate fee authority: **met**.
+- Player Banking public routes/read model/UI and browser-safe public keys: **met**.
+- Retained Store/Business/Marketplace/Banking compatibility at the B2 boundary: **met**.
+- Static, disposable-database, Chromium, connected Store, two-game, security, repository, backend/all Edge, and inherited exact-head gates: **met**.
+- Merge/deployment/live-environment completion: **not claimed**.
+
+### Next authorized step
+
+**`BUSINESS-V2-10A4C0` — shared multi-currency funding core is OPEN** on `feat/multicurrency-funding-core-v1`, stacked from the clean B2 documentation handoff. C0 may implement one immutable server-authoritative funding quote using at most three canonical Player Checking accounts and a private atomic funding composer that consumes B2 FX for foreign-currency legs. Store, Marketplace, Stocks, and Business-specific integration remain closed for C1-C4. Phase 11 remains closed until the full 10A.4 dependency chain reaches its own final certification.
+
+---
+
+## 2026-08-28 — Multi-Currency Store Funding C1 EXACT-HEAD VERIFIED
+
+### Identity and status
+
+- Roadmap item: `BUSINESS-V2-10A4C1`.
+- Owner: `feat/multicurrency-store-funding-v1` / stacked draft PR #674 over C0 draft PR #673.
+- Parent C0 implementation: `fd1511d716c1efd291cf6f45415a32a8d7550db4`; parent clean handoff: `0aec6cd3b97058a918ff60acdef0143cfcd97d06`.
+- **Exact C1 implementation and verification source:** `1cf6f413f10a761265cdec6076ceb9b2b3afcbf5`.
+- Canonical status: `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`; PR #674 remains draft, open, unmerged, and undeployed.
+- This later documentation-only record does not replace the exact implementation SHA.
+
+### Implemented boundary
+
+- Seeded/NPC Store bills settle in item currency to the named Store revenue Checking account.
+- Business seller-offer bills settle in offer currency to the seller Business's canonical active Checking account.
+- Buyers may allocate the exact Store bill across one to three unique canonical Player Checking accounts. Same-currency legs use rate `1`; foreign legs consume certified C0 retail funding and B1/B2 fixing, clearing, reserve, and facility authorities.
+- Store retains commercial, quote/receipt, stock, withdrawal, Inventory, acquisition-basis, COGS/margin, and Store-root-first lock authority. C0 retains funding quote/composer authority; B2 retains balanced Banking and FX clearing.
+- Store and C0 evidence is linked immutably. Payment, target credit, FX effects, Inventory delivery, receipts, quote consumption, and seller/system evidence commit atomically or roll back together.
+- No Store wallet, duplicate exchange-rate engine, Savings checkout, parallel balance table, or fabricated single-ledger-entry cross-currency receipt was introduced.
+
+### Exact-head evidence
+
+- **`multicurrency-store-funding-v1` — PASS** (`33114174603`): source/scope job `98664460581`; disposable zero-to-head replay-twice/database-acceptance/lint job `98664460167`.
+- **`Business Player Store Cutover V2` — PASS** (`33114174711`): connected two-browser rerun `98676659699`; database replay/lint `98676660883`; Player Chromium `98676661493`; serial/concurrency/two-game acceptance `98676700370`; retained authority/quality/security `98676700536`; Backend/all-Edge Store verification `98676705692`.
+- The first connected attempt's sanitized artifact showed two independent transient local-runtime `503` reads for Contracts and Messages that each recovered to `200`; every Store settlement and isolation assertion was already true. The unchanged exact SHA passed the strict console-clean journey on rerun. No code, economic invariant, or test expectation was weakened.
+- All 20 pull-request-triggered workflows returned for the implementation SHA completed successfully.
+- Durable evidence: `docs/roadmaps/multicurrency-store-funding-implementation-handoff-v1.md` and `docs/roadmaps/multicurrency-store-funding-scope-v1.md`.
+
+### Exit and next item
+
+- C1 exit criteria are met and the checkpoint is `IMPLEMENTED_NOT_MERGED`.
+- No merge, deployment, scheduler installation, secret mutation, staging/production SQL, or live database mutation occurred.
+- **`BUSINESS-V2-10A4C2` — Marketplace multi-currency funding is OPEN** only after the clean C1 documentation handoff. Stocks remain C3, Business treasury/procurement remains C4, final Store/FX convergence remains 10A.4D, and Phase 11 remains closed until the dependency chain is complete.
+
+## 2026-08-29 — BUSINESS-V2-10A4C2 exact implementation certification
+
+- Status: `IMPLEMENTED_NOT_MERGED`.
+- Exact implementation and verification source: `9b95009dd7e73ed70987a0a99716d3ee32f2662d`.
+- Draft PR: #675, open, draft, mergeable, unmerged, and undeployed at closeout.
+- Marketplace listing currency remains authoritative through quote, settlement, order, dispute, and refund.
+- One-to-three canonical Checking-account funding consumes C0 retail checkout FX, B1 fixing, and B2 Banking/clearing/liquidity authority.
+- Buyer funding, seller/fee/tax distribution, Inventory delivery, listing/reservation/order mutation, and immutable evidence commit atomically.
+- Funded refunds reverse original source-account and FX evidence without current-rate repricing.
+- Permanent C2 gate `33142563231`, Database Replay `33142563190`, Player Terminal `33142563193`, Banking FX `33142563236`, retained C1 `33142563169`, retained C0 `33143124382`, independent browser/database `33143316570`, and Store-listing rerun `33142563234` attempt 2 passed on the exact source.
+- The initial inherited Store-listing Chromium failure was superseded by a successful unchanged-source job rerun and is not accepted as final evidence.
+- No merge, deployment, scheduler, secret, staging/production SQL, or live-database operation occurred.
+- Next authorized work: C3 Stock Market multi-currency funding intake on a separate stacked draft branch after this clean documentation handoff.
+
+## 2026-08-31 — C3 controller reconciliation before C4 closeout
+
+- `BUSINESS-V2-10A4C3F` remains `IMPLEMENTED_NOT_MERGED` on `feat/multicurrency-stock-funding-v1` / draft PR #676.
+- The immutable C3 implementation identity is `058162d7b9688809e885d9e6fe77ed42978c7a03`; its clean documentation/controller head is `18fde31be5e1599c7d9a65d681b248fcb4756dc4`.
+- Detailed C3 migrations, routes, tests, workflow runs, exclusions, and source-of-truth rules remain in `docs/roadmaps/multicurrency-stock-funding-implementation-handoff-v1.md` and the current-checkpoint manifest. This reconciliation does not replace or recertify C3.
+
+## 2026-08-31 — BUSINESS-V2-10A4C4 exact implementation certification
+
+### Identity and status
+
+- Roadmap item/checkpoint: `BUSINESS-V2-10A4C4` / `BUSINESS-V2-10A4C4F`.
+- Owner: `feat/business-multicurrency-treasury-v1` / draft PR #678 over the C3F controller `18fde31be5e1599c7d9a65d681b248fcb4756dc4`.
+- **Exact implementation and verification source:** `46bfc611834dca4db3084d9dce8197c499d61fcd`.
+- Status: `IMPLEMENTED_NOT_MERGED`, never `VERIFIED_COMPLETE`; PR #678 remains draft, open, unmerged, and undeployed.
+- Implementation progression: scope reconciliation `93e51b0598f1a8fc5da3ea03336ce8735a5d0972`; initial implementation `1746273f3354bdc5bba704fcc0eeeb6f2d9ecf1e`; source/UI repair `08864acb513ae07fd79a63d7c3f72e981e901c4a`; quote-transition repair `1c78c7b9e00aebe91d3c27f93f628d9d5b1d0b85`; final manifest-bound settlement repair and exact implementation `46bfc611834dca4db3084d9dce8197c499d61fcd`.
+
+### Implemented boundary
+
+- C4A generalizes existing B2 FX and C0 funding evidence to exactly one Player or Business owner, backfills existing rows as Player-owned without changing economic evidence, and exposes one zero-value canonical Business Checking account per active currency.
+- C4B adds Business wrappers over unchanged B1/B2 standard and instant FX, preserving the 0.50% spread, next strictly later local 08:00 standard settlement, separate 2.00% instant fee, holds, clearing, liquidity, replay, cancellation, and owner-neutral worker behavior.
+- C4C puts Business one-to-three-account procurement funding behind the retained C0 authority and rejects non-Business, Savings, system, legacy, restricted, closed, duplicate, wrong-game, and wrong-owner sources.
+- C4D binds one commercial Business Store quote to one immutable funding quote and commits funding/FX, target credit, Store stock, Inventory/Warehouse delivery, weighted-average cost, receipt, and activity evidence atomically. Unbound legacy quotes return `410 business_store_procurement_payment_retired`.
+- C4E adds the locked Player Treasury and funded procurement controls with public keys, exact currency/precision evidence, spread/fee/fixing/rounding disclosures, expiry/conflict/cancellation, immutable receipts, accessibility, responsive layout, and refresh recovery.
+- C4F adds the durable `business-multicurrency-treasury-v1` three-lane workflow and exact-head source/database/concurrency/Chromium evidence.
+- The inherited Marketplace settlement UI is now bound to the server-advertised `marketplacePurchase` capability descriptor, which advertises the real quote and settlement operations rather than the retired purchase path.
+
+### Migrations, routes, and RPCs
+
+- Forward migrations: `20260831100000_business_multicurrency_owner_identity_v1.sql`, `20260831101000_business_treasury_fx_commands_v1.sql`, `20260831102000_business_procurement_funding_v1.sql`, and `20260831103000_business_multicurrency_assertions_v1.sql`.
+- No game-scoped table was added, so no C4 purge-registry migration was created.
+- Authenticated routes: Treasury read; account open; FX quote; standard order; instant order; order cancellation; funded Business Store quote; funded Business Store purchase under `/players/me/business/...`.
+- Principal public service-role-only RPCs: `list_player_business_bank_accounts_v1`, `ensure_business_banking_account_v1`, `create_business_fx_quote_v1`, `submit_business_standard_fx_order_v1`, `execute_business_instant_fx_v1`, `cancel_business_standard_fx_order_v1`, `list_business_fx_orders_v1`, `get_business_treasury_overview_v1`, `create_business_purchase_funding_quote_v1`, `create_business_store_quote_v2`, and `purchase_business_store_quote_v2`.
+- Implementation files are grouped under the Business/Business Banking and owner-neutral Banking FX domains, shared Player Business dispatch and both Player Edge roots, Player Terminal Treasury/procurement modules, four migrations, the permanent workflow, and the C4 contract/database/concurrency/browser evidence. The exact inventory is recorded in `docs/roadmaps/business-multicurrency-treasury-implementation-handoff-v1.md`.
+
+### Exact-head evidence
+
+- Permanent C4 run `33351825999`: source/authority/application job `99366568097` — pass; C0/C4 zero-to-head replay, rebuilt-schema lint, database, rollback, isolation, and concurrency job `99366567927` — pass; desktop/mobile Player Chromium and accessibility job `99366568058` — pass.
+- Connected Marketplace run `33351825985` — pass. Sanitized evidence proves listing create/activate/persist, funding quote apply/replay, settlement apply/replay, purchase persistence, dispute, cancellation, unauthenticated rejection, UUID privacy, and clean console/page state.
+- All 31 PR-triggered workflows returned for `46bfc611834dca4db3084d9dce8197c499d61fcd` completed successfully: Admin API, Backend, security, database replay, repository/supply-chain/timezone, Player/runtime/browser, Banking FX, C1-C3 funding, Business Store phases, Business Banking/economy/workforce/manufacturing, progression, world, and permanent C4 gates.
+- Superseded Marketplace attempts failed closed before transport because the connected session did not advertise the synthetic settlement endpoint key. The final repair maps that client operation to the one authoritative server capability and updates the operation manifest; no economic invariant, privacy rule, test expectation, production CORS boundary, or scheduler was weakened.
+
+### Safety, blocker, and next item
+
+- No PR was merged. Nothing was staged or deployed. No scheduler/cron, secret, staging/production SQL, or live data was changed. Database and connected evidence used disposable local CI services only.
+- `BETA-LIVE-MIGRATION-PARITY-001` remains a release/runtime-evidence blocker and prevents `VERIFIED_COMPLETE`; it does not block this repository implementation record.
+- The next exact item is `BUSINESS-V2-10A4D` on `feat/business-player-store-fx-final-v2`, created only from the separate clean C4 documentation/controller handoff.
+
+## 2026-08-31 — BUSINESS-V2-10A4D exact implementation certification
+
+### Identity and status
+
+- Roadmap item: `BUSINESS-V2-10A4D`.
+- Owner: `feat/business-player-store-fx-final-v2` / draft PR #679 over C4F controller `51ffd008ed84f6a9acd029c8941b3f9b40733735`.
+- **Exact implementation and verification source:** `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b`.
+- Status: `IMPLEMENTED_NOT_MERGED`, never `VERIFIED_COMPLETE`; PR #679 remains draft, open, unmerged, and undeployed.
+- Implementation progression: scope `efdb0f0bb630c3a3ad6978e72229e774783c61d2`; PR authority `55c0c46b9d8cc6d187a2b3851bc8e6cc97c45cb1`; initial implementation candidate `995306c64a57afbb9e7dabe29bf0b29eded152ec`; public-decimal repair `73e4457639973f0620bbd1bddb8d708eb9dd970b`; database fixed-scale evidence repair `7109d546df4d4b51210c155e615ae71fb24f63d1`; funded withdrawal-assertion repair and final exact source `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b`.
+
+### Implemented boundary
+
+- Both Player Edge roots now compose one `SupabasePlayerStoreFundingPublicRepository` for seeded/NPC and Business seller-offer quotes, settlements, and immutable receipt reads. Narrow catalog/history adapters remain read-only, and no live root composes the legacy Store purchase mutation.
+- Player checkout accepts one to three ordered unique Checking public keys, positive non-final target contributions, and one final null contribution. The server derives the final remainder after authoritative price, currency, precision, quantity, version, and seller evidence are fixed.
+- C0 retains funding authority and B1/B2 retain fixing, FX, holds, liquidity/reserve, balanced posting, clearing, replay, and conflict authority. D creates no wallet, balance, ledger, Store receipt, Inventory authority, or alternate composer.
+- Seeded and Business settlement preserves offer currency/version, seller proceeds, listing custody, Inventory delivery, public receipt identity, nested funding quote/receipt evidence, refresh recovery, and purchase-versus-withdrawal ordering.
+- Public monetary responses use canonical decimal strings without changing stored evidence. Connected database evidence accepts only PostgreSQL's harmless trailing zero padding beyond the currency minor unit and continues rejecting nonzero excess precision.
+- Player UI removes `LOCAL WALLET`, `LOCAL AVAILABLE BALANCE`, THD, and same-currency-only behavior while adding allocation, final-remainder, accepted fixing/spread/rounding, immutable receipt, expiry/conflict, and recovery states in the retained Player Terminal shell.
+
+### Migration, routes, and RPCs
+
+- Forward migration: `20260831103001_business_player_store_fx_final_v2.sql`. It adds bounded nullable offer bindings/guards to existing Store evidence and function-only convergence; it adds no table, RLS policy, direct monetary DML grant, C0/B2 composer, or purge registration.
+- Authenticated routes: `GET /players/me/store/items`; `POST /players/me/store/quotes`; `GET` and `POST /players/me/store/purchases`; `POST /players/me/store/offer-quotes`; `POST /players/me/store/offer-purchases`; `GET /players/me/store/receipts/{spr_...}`.
+- Principal service-only RPCs: `create_system_store_offer_funding_quote_v2`, redefined `settle_seeded_store_funding_v1`, `settle_system_store_offer_funding_v2`, `settle_business_store_offer_funding_v2`, `read_business_store_offer_funding_receipt_v1`, and `read_store_catalog_offer_groups_v2`.
+- Exact implementation groups, public contracts, routes, private helpers, workflow files, and evidence are recorded in `docs/roadmaps/business-player-store-fx-final-implementation-handoff-v2.md`.
+
+### Exact-head evidence
+
+- Permanent D run `33377788370`: connected two-browser/two-game Store job `99443203694`; source/authority/all-Edge/retained-contract job `99443203926`; zero-to-head replay-twice/database/concurrency/advisor job `99443204017`; desktop/mobile Chromium/accessibility job `99443204056` — all passed.
+- Retained Store cutover run `33377788283`: connected Buyer/seller two-game job `99443148484`, serial/concurrency/isolation job `99443148440`, public Store/Edge job `99443148210`, replay/lint job `99443148195`, Player Chromium job `99443148081`, and retained authority/quality/security job `99443148341` — all passed.
+- All 35 pull-request-triggered workflows returned for `e0bebfc3e774f2c7fa6e91d88b899862e7ca1d8b` completed successfully. The matrix covers Admin/Player/Backend, database replay, Store phases, Banking FX, C0-C4, Marketplace, Stocks, Business workforce/manufacturing/economy, security, architecture, repository, supply chain, timezone, and runtime/browser gates.
+- Superseded candidates failed closed on noncanonical public decimal strings, PostgreSQL fixed-scale zero padding in direct evidence, and a stale pre-funding withdrawal error name. The final repairs changed no stored economics, lock order, economic authority, privacy rule, or acceptance criterion.
+
+### Safety, blocker, and next item
+
+- No PR was merged. Nothing was staged or deployed. No scheduler/cron, secret, staging/production SQL, or live data changed. Database and connected evidence used disposable local/CI services only.
+- `BETA-LIVE-MIGRATION-PARITY-001` remains the release/runtime-evidence blocker and prevents `VERIFIED_COMPLETE`; it does not block this repository implementation record.
+- The next exact item is `BUSINESS-V2-11` on `refactor/business-store-sales-convergence-v2`, created only from the separate clean 10A.4D documentation/checkpoint controller. Phase 11 retires new simulated sales and Admin-authored settlement; derives new revenue, COGS, and tax only from Store receipts; introduces guarded versioned seven-day periods and exact-once leases; runs payroll before tax; carries unpaid tax as liability; and makes no scheduler change.
+
+## 2026-09-15 — BUSINESS-V2-12 exact implementation certification
+
+### Identity and status
+
+- Roadmap item: `BUSINESS-V2-12`.
+- Owner: `feat/player-business-workspace-v2` / draft PR #681 over merged Phase 11 baseline `9dc7906bb278b7eee9ceef6d3624fb088a6b5a97`.
+- **Exact implementation and verification source:** `76539c5cfcff612a322963e303e727e6edc7f7ed`.
+- Status: `IMPLEMENTED_NOT_MERGED`, never `VERIFIED_COMPLETE`; PR #681 remains draft, open, unmerged, and undeployed.
+- This later documentation-only handoff does not replace the exact implementation identity.
+
+### Surgical closeout repairs
+
+- Stock multicurrency concurrency fixtures now derive one deterministic candidate instant from their declared calendar/timezone and still validate it through the authoritative market-open predicate.
+- Player Stock sale controls use the authoritative listing currency, with an owned active Checking account in that currency, while BUY funding retains the existing FX authority.
+- Business connected acceptance distinguishes a server-blocked manufacturing intent from a ready mutation form instead of requiring a form when canonical readiness forbids production.
+- Connected Banking fixtures translate retired test-only seed provenance to the existing canonical allowlisted setup provenance without changing ledger authority.
+- World connected acceptance invokes the current BFF-safe Marketplace runner directly rather than through the obsolete generic adapter.
+- Crafting client capability aliases now map to the backend-generated manifest keys, with regression coverage for craft, cancel, claim, equip, effect-use, and salvage controls.
+- Marketplace gateway readiness uses the existing local-edge restart/readiness helper; settlement code and assertions were not rewritten or weakened.
+
+### Exact-head evidence
+
+- All 48 applicable pull-request-triggered workflows for `76539c5cfcff612a322963e303e727e6edc7f7ed` completed successfully. Three returned deployment-only workflows were expected skips: Economic Asset Core Staging Reconcile `34926342369`, Economic Asset Core Staging Release `34926341960`, and PR361 Staging Game Provisioning Repair `34926342288`.
+- Player Multiplayer and Load E2E run `34926342349`, job `104245107219`, passed. Its connected Market, Business, World, 30-Player load, 40-Player load, and final enforcement steps all executed.
+- The previously blocked connected gates passed: Stock multicurrency funding `34926342075` and Marketplace multicurrency funding `34926342397`.
+- The exact matrix also passed Player Terminal Verify `34926342282`, Database Replay `34926342301`, Backend Typecheck `34926342392`, Repository Quality `34926342059`, Supply Chain Security `34926342384`, Business/Store/Banking/FX/workforce/manufacturing gates, runtime/browser gates, World, Progression, Crafting, and Admin acceptance.
+- A superseded Player connected run encountered one transient background Story-deliveries `500`; a superseded Marketplace run encountered transient background `503` responses. Unchanged-source reruns passed after executing the required journeys. These were classified as local-runtime interruptions, not product fixes, and no test or invariant was weakened.
+- Local verification passed the full Player Terminal `npm run verify` gate before the final four-line capability mapping; the final source then passed capability-manifest, Crafting mutation, Player smoke, cross-cutting authority, JSON, and diff checks.
+
+### Safety, blocker, and next item
+
+- No PR was merged. Nothing was staged or deployed. No scheduler/cron, secret, staging/production SQL, or live data changed. Database and connected evidence used disposable local/CI services only.
+- `BETA-LIVE-MIGRATION-PARITY-001` remains a separate release/runtime blocker. It does not block the Phase 12 repository certification recorded here and does not authorize production repair from this branch.
+- **`BUSINESS-V2-13` is the next authorized checkpoint** after this clean documentation-only handoff. Phase 13 owns bounded Admin Business supervision; Phase 14 remains planned behind it. Neither phase is implemented by this closeout.
+
+---
+
+## 2026-09-16 — Phase 13A implementation candidate: read-only Admin Business directory/detail foundation
+
+### Repository and ancestry reconciliation
+
+- Existing owner branch: `feat/admin-business-supervision-v2`; existing draft PR: #682.
+- The owner branch had diverged from the final certified Phase 12 handoff. It was advanced by merge commit `1636ecc56c1b910fe8749b58822db2142783c7de` from Phase 12 documentation handoff `d6ddb52f38da1ad931ba56600b49786f11f11ac6`; no remote history rewrite or force-push was used.
+- The three overlaps were resolved to the certified Phase 12 versions of PR #681 authority and the Business/Market connected acceptance harnesses. The Phase 13 scope document remained the unique successor-owned change.
+- Phase 12 remains certified at exact implementation `76539c5cfcff612a322963e303e727e6edc7f7ed` with 48 applicable exact-head workflow successes and three expected deployment-only skips.
+
+### Phase 13A candidate
+
+- **Implementation candidate SHA:** `d66c9cd6e464ff0b3adcf0869f442d3d67a2166b`.
+- Publication was explicitly authorized by the user. The shell lacked GitHub push credentials, so the configured GitHub integration recreated the three local commits with new metadata while preserving their trees and ordered ancestry. Published merge `1636ecc56c1b910fe8749b58822db2142783c7de`, implementation `d66c9cd6e464ff0b3adcf0869f442d3d67a2166b`, and initial documentation `1d713ab88936c73207fd28d2ef3f61f046671577` have exactly the same Git trees as local `e464c4071e7425374f4bac482111602635d3369a`, `4005cf0b0ea7f7107dbc47fd88e3d63f7528ae92`, and `4cdb586ca73b5a1a1924ac4d816dcd4e96f8f9f7`, respectively. This documentation follow-up reconciles the candidate references; it changes no implementation.
+- Added separate read-only `GET /games/:gameId/businesses/:businessKey` detail handling over the existing Admin BFF, with a strict `biz_<32 hex>` key, same-game filtering, bounded not-found response, and public-key-only projection.
+- Extended the bounded directory/detail projection with server-derived operational-readiness and attention flags using canonical status/failure evidence only.
+- Replaced the Admin v2 Business compliance mutation client/controller/dialog with an asynchronous read-only detail drawer that owns loading, retryable error, cancellation, stale-response suppression, and teardown behavior.
+- Kept the existing legacy compliance RPC untouched but unexposed by the Phase 13 supervision surface. Phase 13A adds no mutation or intervention authority.
+- Added PR-bound path authority at `docs/operations/contracts/admin-business-supervision/pr-682.json`.
+
+### Local verification
+
+- Focused Admin v2 Business suite: **6/6 PASS**.
+- Full Admin v2 unit/API suite: **85/85 PASS** after expanding the local sparse checkout to the existing required API and Player asset paths.
+- Focused Admin Business and resource-permission Deno suites: **12/12 PASS**.
+- Deno format check and targeted Deno type checks for the changed Admin operation, tests, and security guard: **PASS**.
+- Backend TypeScript `tsc --noEmit`: **PASS**. The aggregate Edge-root typecheck could not finish locally because its uncached `esm.sh` dependency fetch was refused by the execution network; targeted changed-root Deno checks passed, and exact-head CI remains required.
+- JavaScript syntax, contract JSON parse, and `git diff --check`: **PASS**.
+
+### Boundary and next action
+
+- Status remains `IN_PROGRESS`; the candidate is not exact-head certified and is not Phase 13 completion.
+- No schema, migration, RPC, economic write, scheduler, cron, secret, staging/production SQL, deployment, or live-data change occurred.
+- Next exact item: inspect exact-head workflows for the published PR #682 handoff and repair only Phase 13A-owned failures. Phase 13B and Phase 14 remain closed until the 13A verification boundary is green.
+
+## 2026-09-17 — Phase 13 continuation and 13A verification repair
+
+- Product owner authorized the entire Phase 13 through certification on existing draft PR #682. No merge, manual deployment, live mutation, or Phase 14 work is authorized.
+- Re-fetched main and both Phase 12/13 owners. PR #682 remains open, draft, mergeable, and unmerged at `4b0158e56394d373942dbcdfcf913a7a2de893e5`; its stacked base remains `d6ddb52f38da1ad931ba56600b49786f11f11ac6`.
+- Seven failed workflows reduce to two causes: generated architecture-inventory drift and missing PR-bound retained-verification authority. All five authority failures explicitly report that the Player authority identifier is not bound to this pull request; they do not demonstrate five separate runtime regressions.
+- Added `docs/operations/contracts/player-cross-cutting/pr-682.json` using the existing strict verifier, exact base/PR/path bindings, retained critical checks, and unchanged production/secret denials. Added negative identity, base, and unreviewed-path regression coverage.
+- Extracted reusable mock/assertion support into `businessBankingTestSupport.ts`, retaining all nine operation tests while returning the original test module below the existing 500-line threshold. Refreshed deterministic architecture inventory; oversized-file count remains 100 and every ratchet maximum is unchanged.
+- Local evidence: focused Deno tests 9/9; retained authority tests; exact changed-path verification; architecture inventory and debt ratchet; format and diff checks. Exact-head CI remains required before the next implementation tranche.
+
+## 2026-09-17 — Full Phase 13 supervision implementation candidate
+
+- 13A repair source `435f04775f9a5fd229ada71afc9054f3cc90a10f` passed all 30 triggered workflows; the previously failed retained checks are green.
+- Implemented 13B–D as 22 bounded, selected-game canonical evidence sections. Shared private read helpers preserve exact prior Player calculation bodies; public Player wrappers still resolve ownership. Admin never supplies a Player identity.
+- Added one service-only Admin snapshot RPC, defense-in-depth owner/staff/role/capability checks, no-store existing transport, explicit DTO allowlists, decimal-text preservation, closed-business history, and a responsive keyboard-accessible read-only section selector.
+- 13E decision: no intervention. No table, write authority, scheduler, secret, dependency or live-environment change. Two forward-only read-function migrations were generated through the Supabase CLI and remain unapplied to live environments.
+- Added canonical-body/source/privacy contracts, projection tests, read-only transaction database acceptance, desktop/mobile browser acceptance, and exact-head workflow. Extended retained Admin Browser E2E to this stacked base rather than accepting its previous absence.
+- Focused Deno operation 9/9 and projection 3/3 tests, Admin API/controller tests, migration validation (420 unique migrations), source contract, and architecture ratchet pass locally. Local aggregate Edge typecheck is blocked by refused esm.sh download; dedicated CI typecheck is mandatory. Browser/database exact-head verification is pending, not counted as passed.
+- Next: publish the full-phase candidate on existing draft #682, resolve failures, and record one exact implementation identity only after all applicable gates are green. No Phase 14, merge, deployment or live SQL is authorized.
+
+## 2026-09-17 — Phase 13A–13F repository certification and closeout
+
+- Exact implementation and verification source: `949da9f91990eeeee2cd815541446a5b64130664`, existing draft PR #682 / `feat/admin-business-supervision-v2`, unchanged Phase 12 base `d6ddb52f38da1ad931ba56600b49786f11f11ac6`.
+- All 33 exact-source workflows and 68 applicable jobs passed. The two expected skipped jobs are manual staging evidence and a PR #657-only inventory write; no required Phase 13 gate was skipped. Main remains `9dc7906bb278b7eee9ceef6d3624fb088a6b5a97`.
+- Permanent Phase 13 run `35282299961`: source `105406775616`, database `105406775583`, browser `105406775177`, all successful. Database acceptance passed twice after fresh zero-to-head replay; all 16 desktop/mobile scenarios passed. Retained Store/Inventory/Banking/FX/payroll/equipment/manufacturing/tax and Player/Admin gates passed.
+- Verification repaired the suspended-staff fixture, closed-history handling around active-only readiness, retry focus after content replacement, an ambiguous Refresh test selector, exact capitalization text and all-version UUID filtering. Legacy attendance modal timing failed on older unchanged source then passed unchanged on retry and final head; no assertion, timeout or security boundary was weakened.
+- Local final source passed full root npm test with pinned Node/npm, 86 Admin V2 tests, 12 focused Deno tests, 7 retained authority tests, backend typecheck, 420-version migration validation, source/body-parity/privacy/precision contracts, secret scan, inventory and unchanged architecture ratchets. Exact-source Backend Typecheck and Admin API CI resolved the earlier local esm.sh download limitation.
+- Durable evidence: `docs/roadmaps/business-admin-supervision-implementation-handoff-v1.md` contains all workflow identities, dedicated jobs, browser artifact/digest, implementation files, migrations/RPCs, limitations, repairs and rollout ordering. The checkpoint retains Phase 12's evidence separately and advances latest certified implementation to Phase 13.
+- Status: `IMPLEMENTED_NOT_MERGED`, not `VERIFIED_COMPLETE`. No merge, staging/production deployment, live SQL/data change, scheduler/secret change or Phase 14 work. The separate release/runtime blocker remains `BETA-LIVE-MIGRATION-PARITY-001`.
+- Next dependency is `BUSINESS-V2-14A` financial reporting, awaiting separate owner direction. This documentation handoff records the exact tested implementation and does not become a replacement implementation identity.
+
+## 2026-09-18 — Phase 12/13 merge and Phase 14 start
+
+- Owner instruction supersedes the prior no-merge/no-Phase-14 hold. Release guard PR #683 merged first, then Phase 12 #681 as `b09905c066016ae1523d2f0a991e86f2f60c70db` and Phase 13 #682 as `4a9674ed9ca0565c828093fe100aa658ef4faaa6`.
+- Final Phase 13 source `6ba9b3d6e53eb00052c220bea2a04191c9fb913f` passed 51 workflows, 93 applicable checks and Vercel status. The 30/40-player load and Business/World journeys executed and passed. Expected deployment/preview/legacy-owner skips are recorded in `docs/operations/evidence/business-phase12-phase13-merge-2026-09-18.json`.
+- Main-target verification corrected the retired compliance action ledger, current News monitor permission heading/bootstrap, and disposable Edge startup ordering. No product or economic authority was changed by these repairs and no retained journey/load assertion was removed.
+- All three live deployment paths stayed gated; `release/production` remained unchanged. The live migration parity blocker remains separate.
+- Started `BUSINESS-V2-14A1` on `feat/business-financial-reporting-v2` from the exact Phase 13 merge. The bounded scope is immutable closed-period operating evidence with exact currency amounts and current-owner isolation. Complete statements require labor capitalization and period-end reconciliation before equity/IPO. See `business-financial-reporting-scope-v1.md`; publication and database verification follow on the new draft PR.
+
+## 2026-09-18 — Phase 14A1 verified starting checkpoint
+
+- Draft PR #684 / `feat/business-financial-reporting-v2`; exact implementation `c3647db988f2be8edd52b1656e640b388b2fc00f`, from merged Phase 13 main `4a9674ed9ca0565c828093fe100aa658ef4faaa6`. All 25 applicable workflows, 50 applicable checks and Vercel status passed. One staging-only workflow and six manual release/staging/preview checks skipped; no required reporting, connected journey, browser or load gate was skipped.
+- CLI-generated `20260918014630_business_financial_reporting_v1.sql` adds owner-scoped service-only `read_owned_business_financial_reports_v1(uuid,uuid)` and private scoped read/projection helpers. Reports contain at most 50 immutable closed periods, a truncation sentinel, exact decimal text, separate currencies and safe public fields. No economic write, clock initializer, table, route, UI, dependency or scheduler was added.
+- Permanent reporting run `35297504381`: source `105452976974`, database `105452976705`, both successful. Acceptance passed twice after fresh zero-to-head replay; advisors passed. Real Store and close replays, read-only behavior, owner/game/grant denial, precision/privacy and 51-period bounded history are verified.
+- Initial acceptance correctly caught a fixture that rewound completed sales into another period. The fixture now seeds overdue history once and advances 51 contiguous periods through canonical close commands. Canonical receipt-assignment protection and historical migrations remain unchanged.
+- Retained connected run `35297504137`, job `105453070102`, passed Business/World journeys, both 30/40-player load profiles and final enforcement. Store/Banking/FX, Admin supervision/browser, database replay/lint, backend typecheck and repository quality also passed. The checkpoint records every workflow ID and expected skip.
+- Phase 13 merged main also completed 26 successful post-merge workflows with three expected skips. All live release writers stayed idle; the production release branch remained at `59a82ef8580d7d571727e722424bc84cf064e8aa`. Retired integration PR #648 is superseded by merged main, and the checkpoint/roadmap now reflect that ownership.
+- Status: 14A1 `IMPLEMENTED_NOT_MERGED`; Phase 14A/full Phase 14 `IN_PROGRESS`. No staging/production deployment or live SQL occurred. Full income, balance-sheet and cash-flow statements are explicitly unavailable because labor capitalization and period-end evidence still require reconciliation. `BETA-LIVE-MIGRATION-PARITY-001` remains separate.
+- Next exact item: remainder of `BUSINESS-V2-14A`, reconciling labor capitalization and period-end asset/liability/cash-flow evidence before statements and authenticated Player/Admin adapters/views, then `14B`–`14D`. Documentation-only followups preserve the tested source identity above.
+
+## 2026-09-18 — Full Phase 14A repository certification
+
+- Owner: `feat/business-financial-reporting-v2`, draft PR #684 over Phase 13 merged main `4a9674ed9ca0565c828093fe100aa658ef4faaa6`. Exact implementation and verification identity: `aed8c3f6462d927cec3ebc55602854d48a460a9b`. The original 14A1 identity remains historical; this documentation handoff is separate.
+- Implemented immutable observations and reconciled closed-period income, balance and cash-flow statements; exclusive due-boundary accrual; manufacturing labor capitalization; canonical cash/loan/contribution/FX evidence; separate exact currencies; coverage/reconciliation failures; authenticated Player Finance and 25-section read-only Admin supervision. Five forward migrations end at `20260918035524_business_reporting_purge_convergence_v1.sql`; no applied migration was rewritten.
+- Purge repair reconciles the three new tables and child-first order, freezes 205 registry entries/452 FK edges/204 ordered tables, and advances final cursor to 205. It preserves exact request/token/environment/entitlement/zero-row authority, refuses advanced active cursors, and suppresses observer evidence only for canonical request-authorized deletes. Source parity plus retained actual purge/two-game acceptance passed.
+- All 50 applicable workflows, 90 checks and Vercel passed; one staging-only workflow and eight manual/historical jobs skipped as expected. Reporting run `35314969708`: source `105504658884`, database `105504658675`, browser `105504658743`; two fresh database replays/advisors and all six desktop/mobile cases passed. Browser artifact `10535280068`, SHA-256 `28dda04cc6ce22d990960097c036e79731ad8c597d987791f768e9bfda844c60`. Connected run `35314969894` / job `105504621156` passed Business/World, both 30/40-player load profiles and enforcement. Full run/job/skip identities live in `phase14a_certification` in the checkpoint.
+- Fixed Admin formatting/section-count expectations, canonical purge convergence, the browser package/Chromium mismatch and missing fixture runtime initialization. Reporting assertions and error checks were retained. Failed refresh retains immutable cached reports with a stale-data notice.
+- Evidence limits: rich closed-statement browser data is a fixture; canonical accounting is proved in disposable PostgreSQL, and the connected new-Business journey verifies authenticated composition with empty history. No live staging/production accounting is claimed. Local full root tests, focused Node/Deno tests, Backend TypeScript, architecture/migration/authority, secret and diff checks passed; CI covers the locally unavailable Edge dependency download.
+- Status: `BUSINESS-V2-14A` `IMPLEMENTED_NOT_MERGED`; full Phase 14 `IN_PROGRESS`. No merge, deployment, scheduler/secret change or live SQL. `BETA-LIVE-MIGRATION-PARITY-001` remains separate. Next exact checkpoint is `BUSINESS-V2-14B` common-equity invariants on its own draft after the green documentation handoff, followed by 14C and 14D.
+
+
+## 2026-09-18 — Phase 14B common-equity authority opened
+
+- Item `BUSINESS-V2-14B`: `IN_PROGRESS` on `feat/business-common-equity-v2`, from exact green Phase 14A documentation handoff `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`; reporting implementation remains certified at `aed8c3f6462d927cec3ebc55602854d48a460a9b`.
+- CLI-generated forward migration `20260918070248_business_common_equity_invariants_v1.sql` adds one-share/one-vote, receipt/position/outstanding reconciliation, serialized deferred checks, scope/conversion guards and command-only cap-table writes. No new table/FK, Market, money, Inventory or HTTP authority. Noncorporate rules and request-bound canonical purge remain intact.
+- Permanent `business-common-equity.yml` source/database gates execute real formation/replay, negative/role/immutability/isolation checks and a two-session authorized-share capacity race after each of two fresh replays; advisors and retained connected/economic/browser gates are required. Seven read-only PR branch filters admit the exact successor stack without changing action pins or deployment authorization.
+- Scope, rollback/rollout and evidence boundaries: `business-common-equity-scope-v1.md`. No merge, deployment or live SQL. Publication and exact-head verification are next; 14C starts only after this predecessor is green.
+
+## 2026-09-18 — Phase 14B connected fixture diagnosis
+
+- Exact candidate `1780f1a741c931596118a577ee72e9a62e54ad6a` passed 25 workflows, including common-equity source/database and two fresh replays, reporting, Admin and retained monetary regressions. Connected multiplayer run `35318225125` failed its commerce fixture lookup twice, after two-player login, Messaging, notifications and watchlist passed. Downstream journeys/load did not execute and are not certified.
+- Add strict request/response identity assertions at rendered Player creation and bounded boolean/length diagnostics at the failing Admin lookup. No credentials/UUIDs are logged, no product or data mutation changes, and no existing assertion is removed. This diagnoses the repeatable failure before a repair; 14C remains unopened.
+
+## 2026-09-18 — Phase 14B repository certification
+
+- Draft PR #685, exact certified source `197caa4034214e21b8033a3f4363dc07a13b5dcf`, base green 14A handoff `bcc53a5f6f4c3dcca1938e385e63239d59cdad7a`. All 28 workflows, 53 applicable jobs and Vercel passed; three manual staging/parity jobs skipped as intended. Checkpoint `phase14b_certification` retains every run/job identity.
+- Common-equity run `35320024755`: source `105520237288`, database `105520237526`; two fresh replays, real formation/replay, one-share/one-vote and receipt reconciliation, negative/role/immutability checks, two-session capacity race, game isolation and advisors passed.
+- Connected run `35320024704` / job `105520237048` passed creation identity checks, all retained economic/Business/World/Crafting journeys, 30/40-player load and final enforcement. Two prior Beta lookup failures are retained above; no root cause/product fix is claimed. Stronger request/response identity checks and safe diagnostics stay in permanent acceptance.
+- Status `IMPLEMENTED_NOT_MERGED`; full Phase 14 remains `IN_PROGRESS`. No merge, deployment, live SQL, scheduler or secret action. Next exact item after this documentation handoff is green: `BUSINESS-V2-14C` fixed-price primary IPO, then `14D` Market integration.
+
+## 2026-09-18 — Phase 14C candidate
+
+Opened draft PR #686 from exact green common-equity handoff `bab8393cd8f0d30a84be5ad36ad90f41f9cae75f`. Source, authorization, atomic issuance, Player review and recovery verification are in progress. This is not a certificate. Phase 14B remains the latest certified implementation.
+
+## 2026-09-18 — Phase 14C repository certification
+
+- Draft PR #686, exact source `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`: all 43 workflows, 84 jobs and Vercel passed; four manual/historical skips. `phase14c_certification` retains complete identities.
+- IPO run `35326213193` / source `105539748023`, database `105539747818`, browser `105539747974`: two fresh replays/advisors and all 12 desktop/mobile cases passed. Canonical formation/Store/close, immutable approved terms, held-funds rollback, issuance/Banking conservation, allocation race, operating mandates, role/scope denial and populated purge passed.
+- Connected `35326213393` / `105539888140` passed retained Business/World journeys, 30/40-player load, zero server errors and enforcement. Browser artifact `10539480034`, SHA-256 `533e6c58df3215401acec39aa54e51a24f31be1ec7ce82675d58f44efefde21b`. Evidence limits and forward rollout remain in the scope document.
+- Repairs preserve explicit mixed-facade delegation, canonical resolver ambiguity, observed purge fingerprints, valid paused-game fixtures and retained Deno formatting; no assertion/security boundary or architecture ceiling was weakened. Advisors retain three pre-existing duplicate-index warnings.
+- Status `IMPLEMENTED_NOT_MERGED`; full Phase 14 `IN_PROGRESS`. No merge, deployment, live SQL, scheduler or secret action. Next authorized item after green documentation handoff: `BUSINESS-V2-14D` Market-owned events, listing and common-share secondary trading.
+
+## 2026-09-18 — Phase 14D opened from green IPO handoff
+
+- Exact predecessor documentation `1b1af1d492cc0f9dfe55dfa0f6a326106be3f8ea` passed all 43 workflows, 84 jobs and Vercel; four expected manual/historical skips. The checkpoint retains all identities. C implementation remains `cf3fabf2444a2c85d71155fccfa1e5b371bc2c37`.
+- Opened `feat/business-financial-market-integration-v2` for `BUSINESS-V2-14D`; no existing open owner was found. Business quantity/custody authority, Market event consumption/listing, retained Banking settlement and public Portfolio currency separation are bounded by `business-financial-market-scope-v1.md`.
+- Status `IN_PROGRESS`; source/economic/browser certification pending. No merge, deployment, live SQL, scheduler or secret change. This is the final authorized Phase 14 implementation checkpoint.
+
+## 2026-09-18 — Phase 14D implementation candidate
+
+Draft PR #687 now carries Business event/read/transfer ports, finite common-share custody, Market-owned immutable consumption/listings and the existing Banking-backed secondary settlement adapters. Player Market, Portfolio and Dashboard use authoritative Business quantities and currency-specific valuations. Zero-share managers retain operating access. Local verification passed: 46 focused backend tests, 12 source/client/authority tests, Backend TypeScript, full Player verification, root test suite, architecture ratchets, migration identity and secret scan. Database replays, settlement races, populated purge fingerprint convergence and browser evidence remain pending; this is not a certificate.
+
+Phase 14D first-candidate evidence: `55d26fefddf44510d693205886c77b12d1b48c59`, Market run `35331471830`, source `105556556845` and browser `105556557095` passed. Database `105556557021` completed all pre-purge economic assertions, including both custody race sessions and all ten buy/sell failure injections, then correctly rejected stale purge fingerprints. The forward convergence migration uses replay-observed 207/456/206/207 facts and retains frozen purge bodies. Portfolio HTTP fixtures now read the canonical position port; Dashboard retains ECO summary cash and comparable national net worth. Local focused HTTP/Dashboard tests and currency/architecture contracts pass. The full local Backend smoke progressed through economic invariants but its later Game Sessions imports were blocked by unavailable esm.sh network; CI remains the full smoke gate. Certification is still pending.
+
+## 2026-09-18 — Phase 14D and full Phase 14 repository certification
+
+- Draft #687 exact implementation `dee709fcbe5bfdf23c66347447eeb70c1408dcd9` passed all 43 workflows, 86 applicable jobs and Vercel; 4 expected manual/historical skips. Full matrix is stored under `phase14d_certification`.
+- Market run `35332193613`: source `105558816165`, database `105558816130`, browser `105558815838`. Two fresh replays/advisors, real IPO/event/listing/secondary trades, finite cash/custody, ten rollback injections, replay/race, operator exit/reentry, precise financial evidence, closure, isolation and populated purge passed; 14 desktop/mobile cases passed. Artifact `10541437059`, `sha256:5eaa3ad3df1f27361b60677afd860770b2a36984c752720e3b41c4ee57ab0556`.
+- Connected `35332193485` / `105558939578` passed Business/World and both 30/40-player load profiles with final enforcement. Retained A/B/C and application/economic/security/repository gates passed.
+- All Phase 14 checkpoints are `IMPLEMENTED_NOT_MERGED`; no implementation checkpoint remains. Draft stack #684–#687 stays unmerged and undeployed. No live SQL, scheduler or secret action. Separate owner authorization, ordered integration and live parity/runtime evidence precede `VERIFIED_COMPLETE`.
+
+Final handoff follow-up: `796d343c101100a78fe0b2b45dcc517e82dd2ccf` passed 42 workflows; connected attempts `105564251269` and `105566575691` failed in different stages (state-control 500/503 with retired worker, then one server error under the 40-player load after every journey passed). The implementation certificate remains valid at `dee709fcbe5bfdf23c66347447eeb70c1408dcd9`, but final handoff certification is not claimed. One bounded acceptance diagnostic now preserves sanitized failed-request details in the existing error. No economic/application code, thresholds, request order, retries or assertion were changed.
+
+Acceptance follow-up `1004c28fef6576a5fde70df1f5ec360592c89f33` failed before gameplay: connected run `35336014337`, job `105570909136`, rejected a submitted and saved Player display name that did not match the fixture; the identifier matched. The rendered legacy form becomes visible before credential decoration and scheduled initial focus finish. The harness now waits for its existing credential and modal binding markers plus two animation frames before typing, and asserts entered name/identifier/access-code equality before submission using boolean-only diagnostics. Request and saved-identity assertions remain unchanged. This is fixture synchronization, not a demonstrated product fix or a waived gate; the full final matrix remains required.
+
+## 2026-09-19 — Owner-authorized Phase 14 repository integration
+
+- Reverified all four original handoffs, exact-head workflows/jobs, Vercel, empty review/inline-thread sets and unchanged main/release guards. Phase 14A #684 merged normally as `46cde60e80eb285733f01aa99dcba3c3ec0deedd`; original implementation and handoff identities are preserved.
+- Phase 14B #685 incorporates that main merge normally and retargets its exact-path authority to main, with negative wrong-base/PR/path tests. Application, migrations, economic behavior and existing gate requirements are unchanged. A fresh exact-head matrix precedes its normal merge; C/D follow in order. Full A–D repository implementation was already certified before this integration request.
+- No production deployment, live SQL, scheduler or secret change is authorized. `release/production` started at `59a82ef8580d7d571727e722424bc84cf064e8aa`. Separate live parity/runtime status remains `BLOCKED`.
+
+## 2026-09-19 — Phase 14 ordered merge paused on repeated Store failure
+
+- Phase 14A merged tree remains exactly certified handoff tree `959991ff100f1cd6fd958db13b31555f8e9874e9`. All premerge gates passed; post-merge main `46cde60e80eb285733f01aa99dcba3c3ec0deedd` finished with 24 successful workflows, two expected release-only skips and one failed Store workflow `35422140967`.
+- Initial connected job `105841659341` and unchanged-source retry `105843139764` failed browser-console cleanliness. The retry's sanitized artifact `10578575529` was downloaded and SHA-256 verified as `77dbc1b257185b09c285562a8daf8d471f3b579369b3cbd37f8bcbc2160c5153`. It records one HTTP 500 console error in Isolation Buyer, no page errors, and successful settlement/replay/two-game evidence. Diagnostics record a World-country HTTP 500 and retired-worker/CPU messages; this correlation is not a root-cause finding.
+- B candidate `b4b360a4058e687b895f2ba0b68c70100c91a8dc` passed connected Store `105842279867`, full connected/load `105842279641`, and common-equity source/database. Those different-source results are retained, not substituted for the failed main gate.
+- `BUSINESS-V2-14-MERGE-STORE-001` blocks further merges of #685/#686/#687. Preserve the failure and unchanged retry; diagnose and repair without weakening any test. No deployment, live SQL, scheduler/secret change or additional merge occurred. This documentation-only checkpoint does not become a newly tested application identity.
+
+## 2026-09-19 — Owner-authorized repair and full Phase 14 merge continuation
+
+- Owner explicitly authorized full Phase 14 integration and issue repair. #685 remains the active owner; unrelated #624/#668/#620 are untouched. A is already merged, B/C/D remain unmerged, and release/production is unchanged at `59a82ef8580d7d571727e722424bc84cf064e8aa`.
+- Pinned Supabase CLI v2.109.1 `apps/cli/src/shared/functions/serve.main.ts` and its Go bundled template serialize an unhandled retired-worker stack as an HTTP 500 JSON response. Saved A retry diagnostics show that exception in `player-api`; the authenticated Player session proxy previously forwarded it directly. This establishes the recovery gap, not the underlying platform retirement cause.
+- Added one server-side GET/HEAD retry after 150ms only for that exact bounded JSON/stack classification. It occurs after existing session, CSRF, trusted-IP and body validation, forwards the same scoped request, and preserves the exact final response. Mutations, ambiguous network failures, ordinary 500s, boot errors, 401/403/429 and oversized diagnostics are not retried. No resource limit, browser cleanliness check or economic assertion changed.
+- New recovery is in `player-web-session-api/retiredWorkerReadRecovery.ts`, composed only by its existing runtime. Permanent `player-bff-retry-classification.test.mjs` covers recovery/exhaustion, every mutation verb, negative classifications and security ordering. Fifty focused tests, reporting/common-equity source contracts and the unchanged architecture ratchet pass locally; generated inventory has 1,221 source files and unchanged debt maxima. Fresh exact-head connected/database/browser/security gates remain required before merge.
+
+## 2026-09-19 — Phase 14B repair verified and merged; Phase 14C integration
+
+- PR #685 merged normally as `c2d892cb4e39625c2b5cdd7de65c41149502d203` from exact head `5b058a23ac46e696fc9274c9df2409e9a37926d1`. Both trees are `68d8917e1a8b7a3f12b0d27b7622f119e62a30ba`. All 40 applicable workflows, 81 jobs and Vercel passed; six manual/staging/historical job skips were expected. No failed or pending gate remained at merge.
+- Store run `35433862505` passed all six jobs, including connected browser `105873110754`. Downloaded artifact `10581127502` SHA-256 `3360e709aa5dd1aada688020fa23356e4e0639b6debbf68338f29b4898669033` proves zero console/page errors, zero-delta replay, both game-isolation directions and cross-currency settlement. Full connected/load run `35433862631`, job `105873110825`, passed all journeys and 30/40-player loads with zero server errors; login/read/burst p95 values were 2011.83/2569.31/2953.2 ms. Original A failures remain historical, not relabeled as passes.
+- Existing PR #686 now incorporates merged B normally and targets main with exact-path authority and wrong-base regression. Certified IPO application and migrations remain unchanged; B's authenticated read-recovery repair is inherited. Regenerated inventory retains all architecture ceilings. Fresh exact-head C and B post-merge checks remain required before C merges, then D follows. No deployment, live SQL, scheduler or secret action.
+
+## 2026-09-19 — Phase 14C exact-main button evidence correction
+
+- Candidate `3eb6edddba094f264be804f7fc44149e09bfc407` failed main-only Button Action Coverage run `35434994134`, job `105876030399`: propose, vote and subscribe had no ledger entries. The permanent validator reproduced all three failures locally.
+- Existing `player-business-ipo.spec.mjs` exercises real proposal/vote/subscription components, request mapping, keyboard review, uncertain replay and committed-success recovery with bounded response fixtures. Register those actions as `local_browser` with explicit evidence limits, not live/connected evidence. Extend PR #686's exact allowlist only by the ledger path and require the button gate explicitly. No product, test assertion, release policy or architecture ceiling changes. Local ledger and authority checks pass; fresh published-head gates remain required.
+
+## 2026-09-19 — Phase 14C retained connected Market readiness repair
+
+- Exact head `f4c36fc2b5a381d9d999c2e3dbba50a69b13ac85` passed IPO source, two database replays and all 12 browser cases. Connected run `35435123176`, job `105876403141`, failed at Market asset selection before settlement or downstream load. Downloaded failure artifact `10582128961` verified SHA-256 `656edfa9d9a8e74d1b34e3b0d8a3ca34f01899153d0d4946870bd7549986bfdf`: zero console/page errors; no Banking FX response in the selection evidence. Gateway logs record its HTTP 200 while the failed harness was tearing down.
+- The harness waited for the route shell, but immediately enumerated account-backed tickets without awaiting optional Banking FX data. Add a bounded 30-second wait for fresh Market and Banking FX resource states and the first visible row. Keep strict listing-currency account/price checks and every settlement, replay, scope, privacy and console assertion. The permanent IPO client suite verifies missing/loading/stale/unavailable resources cannot permit enumeration and no valid asset still fails. No product change or load threshold relaxation. New exact-head gates are required.
+
+## 2026-09-19 — Phase 14C verified and merged; final Phase 14D integration
+
+- PR #686 merged normally as `338f7c6dc5021812116da34d720c3dbb39e84d7c` from head `3aca159d1d68ff554f96e998d9ffbfe74cd992db`. Both trees are `d8551245915a9dce7d81ab1d224eae1b29a48ae4`. All 51 applicable workflows, 94 jobs and Vercel passed; 11 manual/staging/historical jobs skipped as intended. No failed or pending gate remained. B's post-merge matrix also passed: 21 workflows and 39 jobs; five expected skipped workflows and 18 skipped jobs.
+- IPO run `35435691359` passed source `105877825693`, two database replays/advisors `105877825714` and 12 desktop/mobile cases `105877825558`. Browser artifact `10581343837`, digest `8f3ef2ce8abca675b13c289066e0fffdb600bf02fc9dc8b6e00e2fb223accb95`. Connected run `35435691418` / `105877825563` passed every journey, repaired Market selection, 30/40-player loads and final enforcement with zero server errors; login/read/burst p95 1749.29/2461.27/2605.44 ms. Artifact `10582670208`, digest `41218c940a997c0aa48d03dde2ebd5a2522f1cf03e8ebcc9e61a638ffedccd60`. Store run `35435691567` passed all six jobs. Failed prior attempts remain above.
+- Existing D owner #687 now incorporates merged C normally and targets main. D application/migrations and its earlier fixture synchronization/diagnostics remain unchanged; verified B/C repairs are inherited. Exact-main authority and negative-base tests are reconciled. Fresh exact-head D and C post-merge checks are required before the final normal merge. No deployment/live SQL/scheduler/secret change; release/production remains `59a82ef8580d7d571727e722424bc84cf064e8aa`.
+
+## 2026-09-19 — All Phase 14 feature PRs merged; documentation closure
+
+- Final feature PR #687 merged normally as `017a4732ce52c29b31f8fb3666e4662420b19188`, identical tree `643a757d2e3175572d5a5d5e63c59b1ba79ccc56` to exact verified head `7ca05777456e450a3c0daab7439d2050fa81d439`. All 47 applicable workflows, 90 jobs and Vercel passed; six expected manual/staging/historical job skips. All four A–D feature owners are merged, with no implementation checkpoint remaining.
+- Market run `35436595557` passed source `105880199574`, two database replays/advisors `105880199497`, and 14 desktop/mobile cases `105880199456`; artifact `10582486442`, digest `60635ca6d24ebb96ea19f1b4a672d36685b41fef208bcc2e0982838804ac8585`.
+- Connected run `35436595436` first failed job `105880199285` after every journey and 30-player load passed: one 40-player GET `/players/me` returned 503 at 3066ms, beyond the existing 3000ms recovery budget; twelve other 503 reads recovered. Verified failure artifact `10583205733`, digest `c7a0b0543f8344f044ef7f18b09f32c78adff68ba5b72be0f741dd21c0f45af3`. Platform retirement cause is not established. Exactly one unchanged-source retry, job `105881790145`, passed all journeys, both load profiles and enforcement with zero server errors. Login/read/burst p95: 1976.76/2448.43/3095.79 ms. Verified successful artifact `10582841967`, digest `a62e2c77dd72a43febea9a235fc69dc0c57a30fc4f509a32a5a94cdfb5b02105`; 210 baseline and 280 burst reads returned 200. No retry budget, threshold, concurrency or assertion changed.
+- Documentation-only #688 preserves full run/job identities, all prior failures and corrections, and reconciles the roadmap, checkpoint, execution plan and scope headers. Final-main checks must pass before this closure merges. Application, migrations, workflows, release guards and secrets are unchanged. Overall roadmap `BLOCKED` is only the separate live-parity/release boundary; no Phase 15 or live action is authorized.
+
+Final application-main verification completed: `017a4732ce52c29b31f8fb3666e4662420b19188` passed 22 applicable workflows and 40 jobs, including all Store source, database, connected and full-browser checks. Two release workflows and ten manual/release/event-inapplicable jobs skipped as expected; no failures or pending checks remain. The closure evidence retains the complete post-merge matrix. Release/production remains unchanged. Documentation-only #688 has exact twelve-path authority, ten changed documentation paths and eleven retained A–D critical jobs; local wrong-PR/base/runtime-path negatives, all ten permanent authority tests, secret scan and diff checks passed. Its own final CI and merge identity are recorded on #688 to avoid a self-referential source certificate.
+
+
+## 2026-09-20 — Phase 15A read-only reconciliation opened
+
+- Owner authorized the complete gated 15A–15F program. Re-fetched main `22dc9ce5023eb200a6608d5bb90a9ac30cb36c90`; PRs #684–#688 are merged. All seven exact-main workflows pass, but production publication and live parity jobs correctly skipped on push.
+- New bounded owner `fix/phase15-live-migration-parity-v1`; unrelated #620/#624/#668 remain untouched. Phase 14 source/merge evidence remains authoritative and is not relabeled as live certification.
+- Fresh read-only evidence: 435 unique repository migrations, staging 316 ledger entries, production 294. All original 70 frozen checksums match, and no migration existing at production application source `59a82ef8580d7d571727e722424bc84cf064e8aa` changed.
+- Existing parity enforcement fails closed: historical ledger checksums pass, post-cutoff identities drift, and eleven unapproved public routine differences remain. Additional application schema `economy_private` and scheduler/view metadata require comparison beyond the older two-schema exporter.
+- Extended the existing reconciliation directory with read-only capture and classification tools. No historical migration, retry budget, assertion, security boundary, deployment setting or release authorization gate changed. Clean fingerprint replay is pending CI; the local workspace lacks Docker/Postgres executables.
+- **15A gate BLOCKED.** No alias is yet marked equivalent, no corrective migration exists, no live SQL write/Edge deployment/scheduler mutation occurred. Evidence is under `docs/operations/evidence/phase15-live-parity/2026-09-20/`.
+
+
+## 2026-09-20 — Phase 15A canonical replay verified; live gate remains blocked
+
+- PR #689 candidate `6219b0605e632f1aec248b11028deb5164d18d03` passed two fresh 435-migration resets, matching complete application-schema/runtime-catalog fingerprints and database lint (run `35478763313`, job `105992641547`). Earlier candidate cancellation is preserved and is not claimed as a defect/fix. No hosted upgrade is certified.
+- Canonical comparison identifies 70 staging/74 production missing relations, plus one live-only relation and twelve live-only routines in each. Current historical aliases and data effects remain unapproved. The old ten renumbered live identities are no longer present; do not reuse that mapping without revalidation.
+- Read-only metadata proves production purge guards expect 213 foreign-key edges while the actual graph has 224. Staging guards match 224. This is a substantive fail-closed conflict, not formatting drift. Purge was not executed. Three scheduler command differences remain after project-reference normalization.
+- Nine source gates on this candidate failed because the PR-specific Player authority was absent. The exact PR-689 allowlist and negative regression coverage are added without changing the verifier, requirements or production prohibitions. Original failures remain in the evidence; new-head CI is required.
+- The local execution environment disconnected (`409 environment_offline`) before the downloaded canonical archive and detailed local comparisons could be committed. Verified artifact identifiers, fingerprints, comparison summary, full live metadata supplements and blocking evidence are retained in GitHub. Isolated live-shaped upgrade proof is still missing.
+- **15A BLOCKED; 15B–15F unopened.** No live mutation, migration rewrite, ledger manipulation, Edge promotion, scheduler change or production release. Authoritative blocked checkpoint: `docs/operations/evidence/phase15-live-parity/2026-09-20/BLOCKED.md`. Resume read-only proof work with an isolated test environment and reverify current remote state before proceeding.

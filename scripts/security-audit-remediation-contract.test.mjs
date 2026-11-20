@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readEdgeRuntimeSource as readFile } from "./helpers/edge-runtime-source.mjs";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -40,6 +40,7 @@ test("purchase codes use keyed versioned digests with atomic legacy upgrade", as
 test("Player browser runtime contains no opaque session token", async () => {
   const paths = [
     "frontend/src/core/api.js",
+  "frontend/src/core/api-session-state.js",
     "frontend/src/core/login.js",
     "player-terminal/host-runtime.js",
     "player-terminal/src/api/http-transport.js",
@@ -67,17 +68,19 @@ test("Player browser runtime contains no opaque session token", async () => {
 
 test("Player BFF seals the token in an HttpOnly CSRF-bound cookie", async () => {
   const helper = await read("backend/src/security/webPlayerSession.ts");
-  const [entrypoint, runtime] = await Promise.all([
+  const [entrypoint, trustedServe, runtime] = await Promise.all([
     read("backend/supabase/functions/player-web-session-api/index.ts"),
+    read("backend/supabase/functions/player-web-session-api/trustedClientIpServe.ts"),
     read("backend/supabase/functions/player-web-session-api/runtime.ts"),
   ]);
-  const edge = `${entrypoint}\n${runtime}`;
+  const edge = `${entrypoint}\n${trustedServe}\n${runtime}`;
   const proxy = await read("api/_player-bff-proxy.js");
   const config = await read("backend/supabase/config.toml");
   assert.match(helper, /AES-GCM/);
   assert.match(helper, /ECONOVARIA_PLAYER_SESSION_ENCRYPTION_KEY/);
   assert.match(helper, /WEB_PLAYER_SESSION_ABSOLUTE_SECONDS = 4 \* 60 \* 60/);
-  assert.match(entrypoint, /bindGatewayTrustedClientIp/);
+  assert.match(entrypoint, /import "\.\/trustedClientIpServe\.ts";/);
+  assert.match(trustedServe, /bindGatewayTrustedClientIp/);
   assert.match(edge, /requireAllowedOrigin\(request\)/);
   assert.match(edge, /requirePublishableRequest\(request\)/);
   assert.match(edge, /constantTimePlayerTextEqual\(suppliedCsrf/);

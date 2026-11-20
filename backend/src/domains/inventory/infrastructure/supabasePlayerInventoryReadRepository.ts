@@ -4,6 +4,7 @@ import {
   type PlayerInventoryRecord,
   type PlayerInventoryRepositoryResult,
 } from "../contracts/playerInventoryReadContracts.ts";
+import type { PlayerInventoryApplicationContext } from "../contracts/playerInventoryApplicationContext.ts";
 
 interface QueryError {
   readonly message: string;
@@ -80,15 +81,16 @@ export class SupabasePlayerInventoryReadRepository
   constructor(private readonly client: PlayerInventoryReadClient) {}
 
   async readInventory(input: {
-    readonly gameId: string;
-    readonly playerUuid: string;
+    readonly applicationContext: PlayerInventoryApplicationContext;
     readonly limit: number;
   }): Promise<PlayerInventoryRepositoryResult> {
+    const gameId = input.applicationContext.gameSessionId;
+    const playerUuid = input.applicationContext.actor.playerUuid;
     const holdingResponse = await this.client
       .from("inventory_holdings")
       .select(HOLDING_SELECT)
-      .eq("game_session_id", input.gameId)
-      .eq("player_id", input.playerUuid)
+      .eq("game_session_id", gameId)
+      .eq("player_id", playerUuid)
       .gt("quantity_owned", 0)
       .order("updated_at", { ascending: false })
       .order("id", { ascending: true })
@@ -100,8 +102,8 @@ export class SupabasePlayerInventoryReadRepository
     if (holdings.length > input.limit) throw readFailed();
     if (holdings.length === 0) {
       return {
-        gameId: input.gameId,
-        playerUuid: input.playerUuid,
+        gameId,
+        playerUuid,
         records: [],
       };
     }
@@ -112,7 +114,7 @@ export class SupabasePlayerInventoryReadRepository
     const gameItemResponse = await this.client
       .from("game_items")
       .select(GAME_ITEM_SELECT)
-      .eq("game_session_id", input.gameId)
+      .eq("game_session_id", gameId)
       .in("id", gameItemUuids)
       .order("canonical_key", { ascending: true })
       .order("id", { ascending: true })
@@ -132,7 +134,7 @@ export class SupabasePlayerInventoryReadRepository
         ? await this.client
           .from("store_items")
           .select(STORE_ITEM_SELECT)
-          .eq("game_session_id", input.gameId)
+          .eq("game_session_id", gameId)
           .in("id", storeItemUuids)
           .order("id", { ascending: true })
           .limit(storeItemUuids.length + 1)
@@ -149,19 +151,24 @@ export class SupabasePlayerInventoryReadRepository
       storeItemRows.map((row) => [requireUuid(row.id), row]),
     );
     const records = holdings.map((holding) =>
-      toInventoryRecord(input, holding, gameItemByUuid, storeItemByUuid)
+      toInventoryRecord(
+        input.applicationContext,
+        holding,
+        gameItemByUuid,
+        storeItemByUuid,
+      )
     );
 
     return {
-      gameId: input.gameId,
-      playerUuid: input.playerUuid,
+      gameId,
+      playerUuid,
       records,
     };
   }
 }
 
 function toInventoryRecord(
-  input: { readonly gameId: string; readonly playerUuid: string },
+  applicationContext: PlayerInventoryApplicationContext,
   holding: Record<string, unknown>,
   gameItemByUuid: ReadonlyMap<string, Record<string, unknown>>,
   storeItemByUuid: ReadonlyMap<string, Record<string, unknown>>,
@@ -177,9 +184,17 @@ function toInventoryRecord(
     : undefined;
 
   if (!item) throw metadataMissing();
-  if (gameId !== input.gameId || playerUuid !== input.playerUuid) throw readFailed();
-  if (requireUuid(item.game_session_id) !== input.gameId) throw metadataMissing();
-  if (storeItem && requireUuid(storeItem.game_session_id) !== input.gameId) {
+  if (
+    gameId !== applicationContext.gameSessionId ||
+    playerUuid !== applicationContext.actor.playerUuid
+  ) throw readFailed();
+  if (requireUuid(item.game_session_id) !== applicationContext.gameSessionId) {
+    throw metadataMissing();
+  }
+  if (
+    storeItem &&
+    requireUuid(storeItem.game_session_id) !== applicationContext.gameSessionId
+  ) {
     throw metadataMissing();
   }
   if (

@@ -1,0 +1,953 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-18T01:41:01.430Z",
+  "releaseGuard": {
+    "pr": 683,
+    "mergeSha": "0aeac221679da5fb4beac8f027f6697905537d5a"
+  },
+  "phase12": {
+    "pr": 681,
+    "mergeSha": "b09905c066016ae1523d2f0a991e86f2f60c70db",
+    "certifiedImplementation": "76539c5cfcff612a322963e303e727e6edc7f7ed"
+  },
+  "phase13": {
+    "pr": 682,
+    "certifiedImplementation": "949da9f91990eeeee2cd815541446a5b64130664",
+    "exactMergeCandidate": "6ba9b3d6e53eb00052c220bea2a04191c9fb913f",
+    "mergeSha": "4a9674ed9ca0565c828093fe100aa658ef4faaa6",
+    "treeSha": "29a12aa47838fd41318194066d7c7e45e4e9b829",
+    "mergeTreeMatchesCandidate": true,
+    "workflowRuns": [
+      {
+        "id": 35294831365,
+        "name": "PR361 Staging Game Provisioning Repair",
+        "status": "completed",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 35294831146,
+        "name": "Runtime Interaction Wiring",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831371,
+        "name": "Production Git Release",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831374,
+        "name": "Production Runtime Promotion Contract",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831213,
+        "name": "Admin V2 Production Cutover",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831347,
+        "name": "Admin V2 Attendance",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831112,
+        "name": "Exchange Calendar Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831407,
+        "name": "Button Action Coverage",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831178,
+        "name": "Environment Neutral Browser",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831373,
+        "name": "Edge Function Inventory",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831245,
+        "name": "Staging Readiness Preflight",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831344,
+        "name": "Repository Quality",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831169,
+        "name": "Admin V2 Loans",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831181,
+        "name": "Business Workforce Hiring V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831305,
+        "name": "Backend Typecheck",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831275,
+        "name": "Game Creation Provisioning",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831325,
+        "name": "Admin V2 News & Events",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831263,
+        "name": "Release Integrity",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831380,
+        "name": "Admin Bundle Contract Audit",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831230,
+        "name": "multicurrency-store-funding-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831355,
+        "name": "Required Game Market Timezone",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831148,
+        "name": "Admin V2 Messages",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831249,
+        "name": "Admin Scroll Integrity",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831255,
+        "name": "Admin API Check",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831342,
+        "name": "Database Replay",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831219,
+        "name": "Admin Shell Smoke",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831220,
+        "name": "Vercel Git Production Verification",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831303,
+        "name": "Business Workforce Payroll V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831318,
+        "name": "Business Timed Manufacturing V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831204,
+        "name": "Crafting Activation Connected V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831301,
+        "name": "Admin Browser E2E",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831327,
+        "name": "Business Banking Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831437,
+        "name": "Supply Chain Security",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831337,
+        "name": "Progression Runtime",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831330,
+        "name": "Admin Business Supervision",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831395,
+        "name": "multicurrency-marketplace-funding-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831273,
+        "name": "Business Economy V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831312,
+        "name": "Runtime Stabilization Onboarding",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831356,
+        "name": "Seed Executable Beta Pack",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831304,
+        "name": "business-player-store-fx-final-v2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831276,
+        "name": "business-multicurrency-treasury-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831261,
+        "name": "multicurrency-stock-funding-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831335,
+        "name": "Business Store Withdrawal Safety V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831274,
+        "name": "Player Terminal Verify",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831336,
+        "name": "Player Multiplayer and Load E2E",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831184,
+        "name": "Business Store Atomic Settlement V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831403,
+        "name": "banking-fx-clearing-v1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831319,
+        "name": "Business Store Seller Offers V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831206,
+        "name": "Business Store Listing Inventory V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831352,
+        "name": "business-store-sales-convergence-v2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294831244,
+        "name": "Business Player Store Cutover V2",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 35294828010,
+        "name": "PR #682",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "checks": [
+      {
+        "id": 105446661275,
+        "name": "Execute connected isolated-staging release and rollback",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 105446114788,
+        "name": "Business economy authority contract",
+        "conclusion": "success"
+      },
+      {
+        "id": 105446114539,
+        "name": "Backend typecheck",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445534223,
+        "name": "Inspect staging and production parity read-only",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 105445345674,
+        "name": "Attest staging and production inventory",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 105445288061,
+        "name": "CodeQL",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445243634,
+        "name": "Build, verify, and switch production Admin to V2",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 105445234195,
+        "name": "Publish parity-verified source to release/production",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 105445233714,
+        "name": "Enforce exact bounded live parity",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 105445233319,
+        "name": "Capture exact staging live parity evidence",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 105445233021,
+        "name": "Capture exact production live parity evidence",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 105445215633,
+        "name": "Verify bounded pack and repository contracts",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445215430,
+        "name": "Verify transactional import, replay, rollback, and isolation",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445215140,
+        "name": "business-store-sales-convergence-v2-source",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445215110,
+        "name": "business-store-sales-convergence-v2-player-admin",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445215099,
+        "name": "business-store-sales-convergence-v2-database",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445215034,
+        "name": "business-store-sales-convergence-v2-worker",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445214431,
+        "name": "business-player-store-fx-final-v2-source",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445214400,
+        "name": "business-player-store-fx-final-v2-connected",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445214388,
+        "name": "business-player-store-fx-final-v2-database",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445214257,
+        "name": "business-player-store-fx-final-v2-player-browser",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445212857,
+        "name": "Verify C3C Stock buy settlement source and retained C3A/C3B scope + C3D sell + C3E Player cutover",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445212696,
+        "name": "Verify C3C atomic Stock buy database and retained C3A/C3B authority + C3D sell + C3E cutover",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445209495,
+        "name": "Verify C4 database, replay, isolation, rollback, and concurrency",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445209485,
+        "name": "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445209321,
+        "name": "Verify C4 source, public contracts, and retained application boundaries",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445194908,
+        "name": "Verify Player Store cutover and retained authorities",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445194662,
+        "name": "Verify standalone Player Terminal and full Chromium suite",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445194641,
+        "name": "Replay complete database twice and lint at warning level",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445194617,
+        "name": "Verify serial settlement, ordering races, and two-game isolation",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445194616,
+        "name": "Verify connected Buyer and seller Store journey in two games",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445194437,
+        "name": "Verify public Store, seller projection, capabilities, rates, and Edge roots",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445180770,
+        "name": "verify-player-terminal-and-chromium",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445180679,
+        "name": "verify-store-seller-offers",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445180501,
+        "name": "verify-retained-business-banking",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445180470,
+        "name": "Replay complete database twice and lint",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445180414,
+        "name": "Verify atomic settlement authority and retained Store phases",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445180358,
+        "name": "Verify retained Player Terminal and Chromium",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445180325,
+        "name": "Verify database settlement, rollback, races, and isolation",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445180052,
+        "name": "Verify retained Business, Store, Inventory, Backend, and Edge runtime",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445179748,
+        "name": "Verify Store-listing authority",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445179668,
+        "name": "Verify retained Store, Inventory, and Business runtime",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445179632,
+        "name": "Verify retained Player Terminal and Chromium",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445169779,
+        "name": "Verify Banking FX database acceptance",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445169633,
+        "name": "Verify Banking FX Chromium acceptance",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445169548,
+        "name": "Certify Banking FX clearing source",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445167535,
+        "name": "Verify withdrawal authority",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445167407,
+        "name": "Verify retained Player Terminal and Chromium",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445167260,
+        "name": "Verify retained Store, Inventory, and Business runtime",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445166805,
+        "name": "verify",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445159703,
+        "name": "Vercel Preview Comments",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445152813,
+        "name": "Two-Player Arrival onboarding",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445152762,
+        "name": "Local custom-auth Edge Functions reachability",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445152573,
+        "name": "Runtime and request contracts",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445122342,
+        "name": "Repair isolated staging and verify new-game provisioning",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 105445121852,
+        "name": "Verify Vercel Git production deployment",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 105445121681,
+        "name": "Materialize Phase 4A architecture inventory",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 105445121462,
+        "name": "verify-and-attest",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121446,
+        "name": "Fail-closed staging evidence check",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 105445121421,
+        "name": "admin-business-supervision-database",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121361,
+        "name": "dependency-review",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121342,
+        "name": "admin-business-supervision-browser",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121322,
+        "name": "Verify multi-currency Marketplace funding source and scope",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121248,
+        "name": "admin-business-supervision-source",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121246,
+        "name": "Verify production promotion remains fail-closed",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121245,
+        "name": "button-action-coverage",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121223,
+        "name": "Verify connected multi-currency Marketplace funding browser journey",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121212,
+        "name": "Verify multi-currency Marketplace funding database",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121196,
+        "name": "Validate canonical inventory contract",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121145,
+        "name": "Verify timed manufacturing",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121143,
+        "name": "Validate tokenless production release contract",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121140,
+        "name": "Verify Admin V2 cutover contract",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121138,
+        "name": "apply-and-validate",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121137,
+        "name": "replay",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121136,
+        "name": "quality",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121092,
+        "name": "focused",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121038,
+        "name": "News & Events contract and browser smoke",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445121014,
+        "name": "Backend typecheck",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120992,
+        "name": "audit",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120974,
+        "name": "Two-browser Player journey, secure mutations, and 30-40 Player load",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120944,
+        "name": "Boot reviewed Player Edge entrypoints",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120929,
+        "name": "Rendered Admin browser and secure mutation journey",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120890,
+        "name": "Verify multi-currency Store funding database",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120887,
+        "name": "Validate Vercel Git verification contract",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120864,
+        "name": "verify",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120782,
+        "name": "Verify static release integrity",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120767,
+        "name": "Workforce and payroll authority contract",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120716,
+        "name": "Verify multi-currency Store funding source and scope",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120715,
+        "name": "admin-shell-smoke",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120677,
+        "name": "Validator tests",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120664,
+        "name": "Rendered viewport and drawer scrolling",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120653,
+        "name": "provision",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120627,
+        "name": "verify",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120481,
+        "name": "activate",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120468,
+        "name": "backend-typecheck",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120462,
+        "name": "Messages moderation contract and browser smoke",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120458,
+        "name": "admin-api-check",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120439,
+        "name": "Validate exchange calendar runtime",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120408,
+        "name": "verify",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120279,
+        "name": "trace-runtime-controls",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120192,
+        "name": "runtime-config-contract",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445120170,
+        "name": "verify",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445112851,
+        "name": "Analyze (actions)",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445112783,
+        "name": "Analyze (javascript-typescript)",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445112681,
+        "name": "Analyze (python)",
+        "conclusion": "success"
+      },
+      {
+        "id": 105445106720,
+        "name": "Supabase Preview",
+        "conclusion": "skipped"
+      }
+    ],
+    "externalStatus": "success",
+    "connectedLoad": {
+      "run": 35294831336,
+      "job": 105445120974,
+      "steps": [
+        {
+          "name": "Execute connected Business lifecycle",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Execute connected World lifecycle",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19
+        },
+        {
+          "name": "Execute 30 and 40 Player connected load profile",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20
+        },
+        {
+          "name": "Enforce connected Player results",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23
+        }
+      ]
+    }
+  },
+  "release": {
+    "authorized": false,
+    "releaseBranchBefore": "59a82ef8580d7d571727e722424bc84cf064e8aa",
+    "releaseBranchAfter": "59a82ef8580d7d571727e722424bc84cf064e8aa",
+    "edgeConvergence": {
+      "run": 35296183812,
+      "conclusion": "skipped"
+    },
+    "adminCutover": {
+      "run": 35296183889,
+      "jobs": [
+        {
+          "id": 105449074429,
+          "name": "Verify Admin V2 cutover contract",
+          "conclusion": "success"
+        },
+        {
+          "id": 105449137497,
+          "name": "Build, verify, and switch production Admin to V2",
+          "conclusion": "skipped"
+        }
+      ]
+    },
+    "gitRelease": {
+      "run": 35296183827,
+      "jobs": [
+        {
+          "id": 105449074296,
+          "name": "Validate tokenless production release contract",
+          "conclusion": "success"
+        },
+        {
+          "id": 105449150308,
+          "name": "Capture exact production live parity evidence",
+          "conclusion": "skipped"
+        },
+        {
+          "id": 105449150737,
+          "name": "Enforce exact bounded live parity",
+          "conclusion": "skipped"
+        },
+        {
+          "id": 105449150907,
+          "name": "Capture exact staging live parity evidence",
+          "conclusion": "skipped"
+        },
+        {
+          "id": 105449151311,
+          "name": "Publish parity-verified source to release/production",
+          "conclusion": "skipped"
+        }
+      ]
+    },
+    "runtimeBlocker": "BETA-LIVE-MIGRATION-PARITY-001"
+  }
+}

@@ -1,467 +1,22 @@
-import { normalizeAdminError } from "../core/error-envelope.js";
+import { createRosterImportRequest } from "./player-roster-import.js";
+import { createAdminMutationCoordinator } from "./admin-mutation-coordinator.js";
+import {
+  ADMIN_OVERVIEW_RESOURCE_KEYS, ADMIN_MARKET_RESOURCE_KEYS, ADMIN_MARKET_DETAIL_RESOURCE_KEYS,
+  DEFAULT_TIMEOUT_MS, STORE_CREATE_FIELDS, STORE_UPDATE_FIELDS, PLAYER_CREATE_FIELDS,
+  PLAYER_PROFILE_SETTING_FIELDS, PLAYER_CREDENTIAL_FIELDS, AdminTransportDiagnostic, normalizeTimeout,
+  requireGameToken, requireIdempotencyKey, storeCollectionPath, storeItemPath, playersCollectionPath,
+  playerSettingsPath, playerCredentialPath, marketResourceSpecs, marketDetailResourceSpecs,
+  overviewResourceSpecs, linkAbortSignal, serializeJsonBody, requestAdminJson, storeMutationBody,
+  playerMutationBody, validateStoreRead, validateStoreMutation, validatePlayersRead,
+  validatePlayerCreate, validatePlayerSettings, validatePlayerCredentials, MARKET_PANEL_VALIDATORS,
+  MARKET_DETAIL_VALIDATORS, asSafeRejection, settlePanel,
+} from "./admin-api-protocol.js";
+export {
+  ADMIN_API_BASE_PATH, ADMIN_OVERVIEW_RESOURCE_KEYS, ADMIN_MARKET_RESOURCE_KEYS,
+  ADMIN_MARKET_DETAIL_RESOURCE_KEYS,
+} from "./admin-api-protocol.js";
+import { GAME_LIFECYCLE_ACTIONS, normalizeGameLifecycleResult } from "./game-lifecycle-model.js";
 
-export const ADMIN_API_BASE_PATH = "/api/admin";
-export const ADMIN_OVERVIEW_RESOURCE_KEYS = Object.freeze([
-  "dashboard",
-  "games",
-  "notifications",
-  "store",
-]);
-export const ADMIN_MARKET_RESOURCE_KEYS = Object.freeze([
-  "assets",
-  "events",
-  "trades",
-]);
-export const ADMIN_MARKET_DETAIL_RESOURCE_KEYS = Object.freeze([
-  "profile",
-  "chart",
-  "financials",
-]);
-
-const DEFAULT_TIMEOUT_MS = 15_000;
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const OPAQUE_GAME_PATTERN = /^[a-z0-9][a-z0-9._~-]{15,127}$/i;
-const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$/;
-const STORE_CREATE_FIELDS = Object.freeze([
-  "itemKey",
-  "name",
-  "description",
-  "category",
-  "price",
-  "currencyCode",
-  "stockQuantity",
-  "status",
-  "visibility",
-  "sortOrder",
-]);
-const STORE_UPDATE_FIELDS = Object.freeze(STORE_CREATE_FIELDS.filter((field) => field !== "itemKey"));
-const PLAYER_CREATE_FIELDS = Object.freeze([
-  "displayName",
-  "rosterLabel",
-  "playerIdentifier",
-  "accessCode",
-]);
-const PLAYER_PROFILE_SETTING_FIELDS = Object.freeze([
-  "displayName",
-  "status",
-  "countryAssignment",
-  "adminNote",
-]);
-const PLAYER_CREDENTIAL_FIELDS = Object.freeze([
-  "playerIdentifier",
-  "accessCode",
-]);
-
-class AdminTransportDiagnostic extends Error {
-  constructor({
-    status = 0,
-    code = "REQUEST_FAILED",
-    requestId = "",
-    retryable = false,
-    retryAfterSeconds = null,
-    fieldErrors = {},
-  } = {}) {
-    super("Admin API request failed.");
-    this.name = "AdminTransportDiagnostic";
-    this.status = status;
-    this.code = code;
-    this.requestId = requestId;
-    this.retryable = retryable;
-    this.retryAfterSeconds = retryAfterSeconds;
-    this.fieldErrors = fieldErrors;
-  }
-}
-
-function normalizeTimeout(value, fallback = DEFAULT_TIMEOUT_MS) {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) && numeric >= 250 && numeric <= 120_000
-    ? Math.round(numeric)
-    : fallback;
-}
-
-function requireGameToken(value) {
-  const token = String(value || "").trim();
-  if (!UUID_PATTERN.test(token) && !OPAQUE_GAME_PATTERN.test(token)) {
-    throw new AdminTransportDiagnostic({ status: 400, code: "GAME_CONTEXT_REQUIRED" });
-  }
-  return encodeURIComponent(token);
-}
-
-function requireItemToken(value) {
-  const token = String(value || "").trim();
-  if (!UUID_PATTERN.test(token)) {
-    throw new AdminTransportDiagnostic({ status: 400, code: "INVALID_REQUEST" });
-  }
-  return encodeURIComponent(token);
-}
-
-function requirePlayerToken(value) {
-  const token = String(value || "").trim();
-  if (!UUID_PATTERN.test(token)) {
-    throw new AdminTransportDiagnostic({ status: 400, code: "INVALID_REQUEST" });
-  }
-  return encodeURIComponent(token);
-}
-
-function requireIdempotencyKey(value) {
-  const key = String(value || "").trim();
-  if (!IDEMPOTENCY_KEY_PATTERN.test(key)) {
-    throw new AdminTransportDiagnostic({ status: 400, code: "INVALID_REQUEST" });
-  }
-  return key;
-}
-
-function storeCollectionPath(gameId, { includeReadProjection = false } = {}) {
-  const path = `/games/${requireGameToken(gameId)}/store/items`;
-  return includeReadProjection ? `${path}?include=stock,prices,purchaseStats` : path;
-}
-
-function storeItemPath(gameId, itemId) {
-  return `${storeCollectionPath(gameId)}/${requireItemToken(itemId)}`;
-}
-
-function playersCollectionPath(gameId) {
-  return `/games/${requireGameToken(gameId)}/players`;
-}
-
-function playerPath(gameId, playerId) {
-  return `${playersCollectionPath(gameId)}/${requirePlayerToken(playerId)}`;
-}
-
-function playerSettingsPath(gameId, playerId) {
-  return `${playerPath(gameId, playerId)}/settings`;
-}
-
-function playerCredentialPath(gameId, playerId) {
-  return `${playerPath(gameId, playerId)}/access-code/reset`;
-}
-
-function marketBasePath(gameId) {
-  return `/games/${requireGameToken(gameId)}/market`;
-}
-
-function marketResourceSpecs(gameId) {
-  return Object.freeze({
-    assets: () => `${marketBasePath(gameId)}/assets?include=quotes`,
-    events: () => `${marketBasePath(gameId)}/events?status=active,recent`,
-    trades: () => `${marketBasePath(gameId)}/trades/recent?scope=all-players`,
-  });
-}
-
-function marketDetailResourceSpecs(gameId, resourceId) {
-  const assetPath = () => `${marketBasePath(gameId)}/assets/${requireItemToken(resourceId)}`;
-  return Object.freeze({
-    profile: () => `${assetPath()}/profile`,
-    chart: () => `${assetPath()}/chart`,
-    financials: () => `${assetPath()}/financials`,
-  });
-}
-
-function overviewResourceSpecs(gameId) {
-  return Object.freeze({
-    dashboard: () => `/games/${requireGameToken(gameId)}/dashboard`,
-    games: () => "/games",
-    notifications: () => "/notifications?scope=admin-console",
-    store: () => storeCollectionPath(gameId, { includeReadProjection: true }),
-  });
-}
-
-function canonicalResponseCode(value) {
-  const code = String(value || "REQUEST_FAILED").trim();
-  if (["staff_mfa_required", "aal2_required"].includes(code.toLowerCase())) {
-    return "MFA_REQUIRED";
-  }
-  return code;
-}
-
-function bodyErrorDiagnostic(payload, response) {
-  const bodyError = payload?.error && typeof payload.error === "object" ? payload.error : {};
-  return new AdminTransportDiagnostic({
-    status: Number(response.status || 0),
-    code: canonicalResponseCode(bodyError.code || payload?.code),
-    requestId: String(
-      response.headers?.get?.("x-request-id")
-        || bodyError.requestId
-        || payload?.requestId
-        || "",
-    ),
-    retryable: bodyError.retryable === true || payload?.retryable === true,
-    fieldErrors: bodyError.fieldErrors || payload?.fieldErrors || {},
-    retryAfterSeconds: (() => {
-      const value = Number(response.headers?.get?.("retry-after"));
-      return Number.isInteger(value) && value > 0 ? Math.min(value, 3600) : null;
-    })(),
-  });
-}
-
-function invalidResponse(response) {
-  return new AdminTransportDiagnostic({
-    status: Number(response?.status || 0),
-    code: "INVALID_RESPONSE",
-    requestId: response?.headers?.get?.("x-request-id") || "",
-    retryable: true,
-  });
-}
-
-async function parseJsonResponse(response) {
-  const text = await response.text();
-  let payload = null;
-  if (text.trim()) {
-    try {
-      payload = JSON.parse(text);
-    } catch (_error) {
-      throw new AdminTransportDiagnostic({
-        status: Number(response.status || 0),
-        code: response.ok ? "INVALID_RESPONSE" : "REQUEST_FAILED",
-        requestId: response.headers?.get?.("x-request-id") || "",
-        retryable: response.ok || Number(response.status || 0) >= 500,
-      });
-    }
-  }
-
-  if (!response.ok) throw bodyErrorDiagnostic(payload, response);
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    throw invalidResponse(response);
-  }
-  return payload;
-}
-
-function linkAbortSignal(sourceSignal, targetController) {
-  if (!sourceSignal) return () => {};
-  if (sourceSignal.aborted) {
-    targetController.abort(sourceSignal.reason);
-    return () => {};
-  }
-
-  const abort = () => targetController.abort(sourceSignal.reason);
-  sourceSignal.addEventListener("abort", abort, { once: true });
-  return () => sourceSignal.removeEventListener("abort", abort);
-}
-
-function abortError() {
-  if (typeof DOMException === "function") {
-    return new DOMException("The request was cancelled.", "AbortError");
-  }
-  const error = new Error("The request was cancelled.");
-  error.name = "AbortError";
-  return error;
-}
-
-function serializeJsonBody(body) {
-  if (body === undefined) return undefined;
-  try {
-    return JSON.stringify(body);
-  } catch (_error) {
-    throw new AdminTransportDiagnostic({ status: 400, code: "INVALID_REQUEST" });
-  }
-}
-
-async function requestAdminJson(fetchImpl, path, {
-  method = "GET",
-  body,
-  headers = {},
-  signal,
-  timeoutMs,
-  validate,
-}) {
-  if (!String(path || "").startsWith("/")) {
-    throw normalizeAdminError(new AdminTransportDiagnostic({ status: 400, code: "INVALID_REQUEST" }));
-  }
-
-  const controller = new AbortController();
-  const unlinkAbort = linkAbortSignal(signal, controller);
-  let timedOut = false;
-  const timeout = setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-  }, normalizeTimeout(timeoutMs));
-
-  try {
-    if (controller.signal.aborted) throw abortError();
-    const serializedBody = serializeJsonBody(body);
-    const response = await fetchImpl(`${ADMIN_API_BASE_PATH}${path}`, {
-      method: String(method || "GET").toUpperCase(),
-      headers: { Accept: "application/json", ...headers },
-      ...(serializedBody === undefined ? {} : { body: serializedBody }),
-      credentials: "include",
-      cache: "no-store",
-      redirect: "error",
-      referrerPolicy: "no-referrer",
-      signal: controller.signal,
-    });
-    const payload = await parseJsonResponse(response);
-    return typeof validate === "function" ? validate(payload, response) : payload;
-  } catch (error) {
-    if (error && typeof error === "object" && "userMessage" in error) throw error;
-    const isNetworkError = !timedOut
-      && !controller.signal.aborted
-      && !(error instanceof AdminTransportDiagnostic);
-    throw normalizeAdminError(error, {
-      timedOut,
-      networkError: isNetworkError,
-      code: !timedOut && controller.signal.aborted ? "REQUEST_ABORTED" : "",
-      fieldErrors: error?.fieldErrors,
-    });
-  } finally {
-    clearTimeout(timeout);
-    unlinkAbort();
-  }
-}
-
-function storeMutationBody(value, allowedFields) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new AdminTransportDiagnostic({ status: 422, code: "VALIDATION_FAILED" });
-  }
-  const body = {};
-  allowedFields.forEach((field) => {
-    if (Object.hasOwn(value, field) && value[field] !== undefined) {
-      body[field] = value[field];
-    }
-  });
-  if (Object.keys(body).length === 0) {
-    throw new AdminTransportDiagnostic({ status: 422, code: "VALIDATION_FAILED" });
-  }
-  return body;
-}
-
-function playerMutationBody(value, allowedFields) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new AdminTransportDiagnostic({ status: 422, code: "VALIDATION_FAILED" });
-  }
-  const body = {};
-  allowedFields.forEach((field) => {
-    if (Object.hasOwn(value, field) && value[field] !== undefined) {
-      body[field] = value[field];
-    }
-  });
-  if (Object.keys(body).length === 0) {
-    throw new AdminTransportDiagnostic({ status: 422, code: "VALIDATION_FAILED" });
-  }
-  return body;
-}
-
-function validateStoreRead(payload, response) {
-  const data = payload?.data;
-  if (
-    !data
-    || typeof data !== "object"
-    || Array.isArray(data)
-    || (!Array.isArray(data.storeItems) && !Array.isArray(data.items))
-  ) {
-    throw invalidResponse(response);
-  }
-  return payload;
-}
-
-function validateStoreMutation(payload, response) {
-  if (
-    payload?.ok !== true
-    || !payload.item
-    || typeof payload.item !== "object"
-    || Array.isArray(payload.item)
-  ) {
-    throw invalidResponse(response);
-  }
-  return payload;
-}
-
-function isRecord(value) {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
-}
-
-function validatePlayersRead(payload, response) {
-  const data = payload?.data;
-  if (!isRecord(data) || (!Array.isArray(data.players) && !Array.isArray(data.roster))) {
-    throw invalidResponse(response);
-  }
-  return payload;
-}
-
-function validatePlayerCreate(payload, response) {
-  if (payload?.ok !== true || !isRecord(payload.player) || !isRecord(payload.accessCode)) {
-    throw invalidResponse(response);
-  }
-  return payload;
-}
-
-function validatePlayerSettings(payload, response) {
-  if (!isRecord(payload?.data) || payload.data.saved !== true || !isRecord(payload.data.settings)) {
-    throw invalidResponse(response);
-  }
-  return payload;
-}
-
-function validatePlayerCredentials(payload, response) {
-  if (payload?.ok !== true || !isRecord(payload.player) || !isRecord(payload.accessCode)) {
-    throw invalidResponse(response);
-  }
-  return payload;
-}
-
-function validateMarketArray(payload, response, keys) {
-  const data = payload?.data;
-  if (!isRecord(data) || !keys.some((key) => Array.isArray(data[key]))) {
-    throw invalidResponse(response);
-  }
-  return payload;
-}
-
-function validateMarketObject(payload, response, keys) {
-  const data = payload?.data;
-  if (!isRecord(data) || !keys.some((key) => isRecord(data[key]))) {
-    throw invalidResponse(response);
-  }
-  return payload;
-}
-
-const MARKET_PANEL_VALIDATORS = Object.freeze({
-  assets: (payload, response) => validateMarketArray(
-    payload,
-    response,
-    ["assets", "marketplaceSecurities"],
-  ),
-  events: (payload, response) => validateMarketArray(
-    payload,
-    response,
-    ["events", "marketEvents", "news"],
-  ),
-  trades: (payload, response) => validateMarketArray(
-    payload,
-    response,
-    ["trades", "marketplaceTrades"],
-  ),
-});
-
-const MARKET_DETAIL_VALIDATORS = Object.freeze({
-  profile: (payload, response) => validateMarketObject(payload, response, ["asset", "profile"]),
-  chart: (payload, response) => validateMarketArray(payload, response, ["candles", "chart"]),
-  financials: (payload, response) => validateMarketObject(
-    payload,
-    response,
-    ["financials", "fundamentals"],
-  ),
-});
-
-function asSafeRejection(error) {
-  return Promise.reject(
-    error && typeof error === "object" && "userMessage" in error
-      ? error
-      : normalizeAdminError(error, { fieldErrors: error?.fieldErrors }),
-  );
-}
-
-async function settlePanel(fetchImpl, pathFactory, options) {
-  try {
-    const path = pathFactory();
-    const value = await requestAdminJson(fetchImpl, path, options);
-    return Object.freeze({ status: "fulfilled", value });
-  } catch (error) {
-    const reason = error && typeof error === "object" && "userMessage" in error
-      ? error
-      : normalizeAdminError(error);
-    return Object.freeze({ status: "rejected", reason });
-  }
-}
 
 /**
  * Creates the Admin v2 API adapter. The configured fetch is expected
@@ -482,7 +37,11 @@ export function createAdminApiClient({
   let activeMarketController = null;
   let activeMarketDetailRequestVersion = 0;
   let activeMarketDetailController = null;
-  const inFlightMutations = new Map();
+  const coordinateMutation = createAdminMutationCoordinator({
+    requireIdempotencyKey,
+    serializeJsonBody,
+    conflict: () => asSafeRejection(new AdminTransportDiagnostic({ status: 409, code: "CONFLICT" })),
+  });
 
   async function readOverview({ gameId, signal, timeoutMs: requestTimeoutMs } = {}) {
     activeRequestVersion += 1;
@@ -673,19 +232,7 @@ export function createAdminApiClient({
     signal,
     timeoutMs: requestTimeoutMs,
   }) {
-    const key = requireIdempotencyKey(idempotencyKey);
-    const fingerprint = serializeJsonBody({ method, path, body });
-    const existing = inFlightMutations.get(key);
-    if (existing) {
-      if (existing.fingerprint !== fingerprint) {
-        return asSafeRejection(
-          new AdminTransportDiagnostic({ status: 409, code: "CONFLICT" }),
-        );
-      }
-      return existing.promise;
-    }
-
-    const promise = requestAdminJson(fetchImpl, path, {
+    return coordinateMutation({ method, path, body, idempotencyKey }, (key) => requestAdminJson(fetchImpl, path, {
       method,
       body,
       headers: {
@@ -695,14 +242,7 @@ export function createAdminApiClient({
       signal,
       timeoutMs: normalizeTimeout(requestTimeoutMs, normalizeTimeout(timeoutMs)),
       validate: validateStoreMutation,
-    });
-    const entry = { fingerprint, promise };
-    inFlightMutations.set(key, entry);
-    const clear = () => {
-      if (inFlightMutations.get(key) === entry) inFlightMutations.delete(key);
-    };
-    promise.then(clear, clear);
-    return promise;
+    }));
   }
 
   function playerMutation({
@@ -714,19 +254,7 @@ export function createAdminApiClient({
     timeoutMs: requestTimeoutMs,
     validate,
   }) {
-    const key = requireIdempotencyKey(idempotencyKey);
-    const fingerprint = serializeJsonBody({ method, path, body });
-    const existing = inFlightMutations.get(key);
-    if (existing) {
-      if (existing.fingerprint !== fingerprint) {
-        return asSafeRejection(
-          new AdminTransportDiagnostic({ status: 409, code: "CONFLICT" }),
-        );
-      }
-      return existing.promise;
-    }
-
-    const promise = requestAdminJson(fetchImpl, path, {
+    return coordinateMutation({ method, path, body, idempotencyKey }, (key) => requestAdminJson(fetchImpl, path, {
       method,
       body,
       headers: {
@@ -736,14 +264,7 @@ export function createAdminApiClient({
       signal,
       timeoutMs: normalizeTimeout(requestTimeoutMs, normalizeTimeout(timeoutMs)),
       validate,
-    });
-    const entry = { fingerprint, promise };
-    inFlightMutations.set(key, entry);
-    const clear = () => {
-      if (inFlightMutations.get(key) === entry) inFlightMutations.delete(key);
-    };
-    promise.then(clear, clear);
-    return promise;
+    }));
   }
 
   function createStoreItem({
@@ -884,7 +405,35 @@ export function createAdminApiClient({
     }
   }
 
+  function readGameLifecycle({ gameId, signal } = {}) {
+    try {
+      return requestAdminJson(fetchImpl, `/games/${requireGameToken(gameId)}/lifecycle`, {
+        signal, timeoutMs,
+        validate: (payload) => normalizeGameLifecycleResult(payload),
+      });
+    } catch (error) { return asSafeRejection(error); }
+  }
+
+  function transitionGameLifecycle({ gameId, action, expectedVersion, idempotencyKey, signal } = {}) {
+    try {
+      if (!Object.hasOwn(GAME_LIFECYCLE_ACTIONS, action) || !Number.isSafeInteger(expectedVersion)
+        || expectedVersion < 1 || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(idempotencyKey || "")) {
+        throw new AdminTransportDiagnostic({ status: 400, code: "INVALID_REQUEST" });
+      }
+      const suffix = action === "revoke_sessions" ? "sessions/revoke" : `lifecycle/${action}`;
+      return playerMutation({
+        method: "POST",
+        path: `/games/${requireGameToken(gameId)}/${suffix}`,
+        body: { idempotencyKey, expectedVersion },
+        idempotencyKey, signal,
+        validate: (payload) => normalizeGameLifecycleResult(payload, action),
+      });
+    } catch (error) { return asSafeRejection(error); }
+  }
+
   return Object.freeze({
+    readGameLifecycle,
+    transitionGameLifecycle,
     readOverview,
     cancelOverviewRequest,
     readStore,
@@ -899,6 +448,7 @@ export function createAdminApiClient({
     updateStoreItem,
     archiveStoreItem,
     createPlayer,
+    importPlayerRoster: createRosterImportRequest({ mutate: playerMutation, collectionPath: playersCollectionPath }),
     updatePlayerSettings,
     updatePlayerCredentials,
     getRequestVersion: () => activeRequestVersion,

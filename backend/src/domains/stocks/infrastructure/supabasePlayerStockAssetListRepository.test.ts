@@ -16,10 +16,10 @@ const OTHER_PLAYER_UUID = "00000000-0000-4000-8000-000000000011";
 const ASSET_UUID = "00000000-0000-4000-8000-000000000101";
 const SECOND_ASSET_UUID = "00000000-0000-4000-8000-000000000102";
 
-Deno.test("player stock asset repository scopes assets, ticks, and watchlist projection", async () => {
+Deno.test("player stock asset repository scopes assets, ticks, watchlist, and listing currency", async () => {
   const client = new FakeClient([
     asset(),
-    asset({ id: SECOND_ASSET_UUID, ticker: "BETA", company_name: "Beta Energy" }),
+    asset({ id: SECOND_ASSET_UUID, ticker: "BETA", company_name: "Beta Energy", listing_currency_code: "NOR" }),
     asset({ game_session_id: OTHER_GAME_ID, ticker: "CROSS" }),
   ], [
     tick(),
@@ -41,6 +41,7 @@ Deno.test("player stock asset repository scopes assets, ticks, and watchlist pro
   assertEquals(result.gameId, GAME_ID);
   assertEquals(result.playerUuid, PLAYER_UUID);
   assertEquals(result.assets.map((value) => value.ticker), ["AURA", "BETA"]);
+  assertEquals(result.assets.map((value) => value.listingCurrencyCode), ["XAL", "NOR"]);
   assertEquals(result.latestTicks.map((value) => value.tickIndex), [1, 2]);
   assertEquals(result.watchlistedAssetUuids, [SECOND_ASSET_UUID]);
   assertEquals(client.fromCalls, [
@@ -225,6 +226,7 @@ function asset(overrides: Record<string, unknown> = {}) {
     company_name: "Aurora Aerospace Systems",
     sector_key: "AI_AEROSPACE",
     country_code: "SOLVEND",
+    listing_currency_code: "XAL",
     description: "Public company description",
     current_price: 105,
     previous_close: 100,

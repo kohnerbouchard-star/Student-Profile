@@ -2,6 +2,10 @@ import {
   enforcePlayerBrowserResponsePrivacy,
   sanitizePlayerBrowserPayload,
 } from "./playerBrowserResponsePrivacy.ts";
+import {
+  createPlayerPublicIdHash,
+  MAX_PENDING_PLAYER_PUBLIC_ID_HASHES,
+} from "./playerPublicIdHash.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
@@ -92,6 +96,102 @@ Deno.test("Player browser response privacy ignores non-JSON responses", async ()
   });
   const result = await enforcePlayerBrowserResponsePrivacy(response);
   assertEquals(await result.text(), GAME_ID);
+});
+
+Deno.test("Player public-ID hashing shares only identical unfinished work", async () => {
+  const gates = new Map<string, (digest: string) => void>();
+  const calls: string[] = [];
+  const hash = createPlayerPublicIdHash((value) => {
+    calls.push(value);
+    return new Promise((resolve) => gates.set(value, resolve));
+  });
+  const first = hash("game-one-id");
+  const duplicate = hash("game-one-id");
+  const other = hash("game-two-id");
+  assertEquals(calls, ["game-one-id", "game-two-id"]);
+  gates.get("game-two-id")!("second-digest");
+  gates.get("game-one-id")!("first-digest");
+  assertEquals(await Promise.all([first, duplicate, other]), [
+    "first-digest", "first-digest", "second-digest",
+  ]);
+  const later = hash("game-one-id");
+  assertEquals(calls.length, 3);
+  gates.get("game-one-id")!("recomputed-digest");
+  assertEquals(await later, "recomputed-digest");
+});
+
+Deno.test("Player public-ID hashing clears rejected work without hiding failure", async () => {
+  const failure = new Error("hash unavailable");
+  let reject: (reason: Error) => void = () => {};
+  let calls = 0;
+  const hash = createPlayerPublicIdHash(() => {
+    calls += 1;
+    return calls === 1
+      ? new Promise((_resolve, fail) => { reject = fail; })
+      : Promise.resolve("recovered");
+  });
+  const first = hash("id").catch((error) => error);
+  const duplicate = hash("id").catch((error) => error);
+  reject(failure);
+  assertEquals((await first) === failure, true);
+  assertEquals((await duplicate) === failure, true);
+  assertEquals(calls, 1);
+  assertEquals(await hash("id"), "recovered");
+  assertEquals(calls, 2);
+});
+
+Deno.test("Player public-ID hashing bounds pending entries without dropping work", async () => {
+  const releases: Array<() => void> = [];
+  let calls = 0;
+  const hash = createPlayerPublicIdHash((value) => {
+    calls += 1;
+    return new Promise((resolve) => releases.push(() => resolve(value)));
+  });
+  const pending = Array.from({ length: MAX_PENDING_PLAYER_PUBLIC_ID_HASHES },
+    (_, index) => hash(String(index)));
+  pending.push(hash("0"), hash("overflow"), hash("overflow"));
+  assertEquals(calls, MAX_PENDING_PLAYER_PUBLIC_ID_HASHES + 2);
+  for (const release of releases) release();
+  const values = await Promise.all(pending);
+  assertEquals(values.slice(-3), ["0", "overflow", "overflow"]);
+  const later = hash("0");
+  assertEquals(calls, MAX_PENDING_PLAYER_PUBLIC_ID_HASHES + 3);
+  releases.at(-1)!();
+  assertEquals(await later, "0");
+});
+
+Deno.test("Player privacy coalesces forty concurrent snapshots without changing aliases", async () => {
+  const source = {
+    gameId: GAME_ID,
+    records: Array.from({ length: 512 }, (_, index) => ({
+      id: `00000000-0000-4000-8000-${(index + 100).toString(16).padStart(12, "0")}`,
+      relation: `game:${GAME_ID}:public`,
+    })),
+  };
+  const expected = await sanitizePlayerBrowserPayload(source);
+  assertEquals((expected.value as { gameId: string }).gameId,
+    "pub_109639991d9a5b761e3dd2dd");
+  const originalDigest = crypto.subtle.digest;
+  let calls = 0;
+  crypto.subtle.digest = function (algorithm, data) {
+    calls += 1;
+    return originalDigest.call(this, algorithm, data);
+  };
+  try {
+    const results = await Promise.all(Array.from({ length: 40 }, () =>
+      sanitizePlayerBrowserPayload(source)));
+    assertEquals(calls, 513);
+    for (const result of results) {
+      assertEquals(result, expected);
+      assertEquals(UUID_PATTERN.test(JSON.stringify(result.value)), false);
+    }
+    assertEquals(source.gameId, GAME_ID);
+    assertEquals(source.records[0].id, "00000000-0000-4000-8000-000000000064");
+    await sanitizePlayerBrowserPayload(source);
+    assertEquals(calls, 1_026);
+  } finally {
+    crypto.subtle.digest = originalDigest;
+  }
 });
 
 function assertEquals(actual: unknown, expected: unknown): void {

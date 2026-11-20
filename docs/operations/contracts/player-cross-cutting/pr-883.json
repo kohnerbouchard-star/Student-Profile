@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.ref046-campaign-leases-pr-883.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 883,
+  "baseRef": "refactor/ref-046-owned-disposable",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": ["scripts/ref-046-campaign-acceptance.ts", "scripts/ref-046-disposable-qualification.mjs", ".github/workflows/ref-018-attendance-qualification.yml", "docs/operations/evidence/refactor-execution-v1/REF-046/recovery.md", "docs/operations/contracts/player-cross-cutting/pr-883.json", "scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "requiredFiles": ["docs/operations/contracts/player-cross-cutting/pr-883.json", "scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "requiredChecks": ["player-terminal-verify", "player-edge-trusted-ip-entrypoint-contract", "player-production-secret-provision-contract", "player-api-read-resilience", "Backend Typecheck", "Repository Quality", "World Runtime", "Admin API Check", "Certify Banking FX clearing source", "Verify Banking FX database acceptance", "Verify Banking FX Chromium acceptance", "Staff Attendance and ledger adjustment database/race qualification", "REF046 exclusive disposable qualification"],
+  "criticalJobChecks": ["Certify Banking FX clearing source", "Verify Banking FX database acceptance", "Verify Banking FX Chromium acceptance"],
+  "readOnlyPaths": ["scripts/verify-player-cross-cutting-authority.mjs", "scripts/player-cross-cutting-authority.test.mjs"],
+  "nonblankChangedLineLimit": 400,
+  "scopeRecord": "docs/operations/evidence/refactor-execution-v1/REF-046/recovery.md",
+  "authorizationNote": "User approved registered B after exact A acceptance at 2b393745f2ccea3d7666e742a423e8a35be7b2b1. Budgets: harness295, supervisor25, workflow15, authority40, recovery25; total400. Separate fresh phase resources, real RPC receipts and independently verified teardown. False completion must fail and stop for separate correction. Preserve PR620 pins. No runtime/SQL, package, credentials, merge, deployment or primary closeout."
+}

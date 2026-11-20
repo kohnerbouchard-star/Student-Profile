@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { PlayerApi } from "../src/api/player-api.js";
 import {
   installPlayerLogoutController,
   PLAYER_LOGOUT_COMPLETED_EVENT,
@@ -52,6 +54,7 @@ function createHarness({ fetchImpl, logoutAdvertised = true } = {}) {
     sessionExitDelayMs: 0
   };
   const terminal = {
+    prepareForSessionExitCalls: 0,
     getState() {
       return {
         data: {
@@ -60,6 +63,9 @@ function createHarness({ fetchImpl, logoutAdvertised = true } = {}) {
           }
         }
       };
+    },
+    prepareForSessionExit() {
+      this.prepareForSessionExitCalls += 1;
     }
   };
   const runtime = {
@@ -117,6 +123,14 @@ function assertLocalStateCleared(harness) {
 }
 
 {
+  const mainSource = await readFile(new URL("../src/main.js", import.meta.url), "utf8");
+  assert.ok(mainSource.includes("terminal.prepareForSessionExit = stopCoreTerminal;"));
+  assert.ok(mainSource.includes("let coreTerminalDestroyed = false;"));
+  assert.ok(mainSource.includes("stopCoreTerminal();"));
+  assert.ok(!mainSource.includes("terminal.prepareForSessionExit = terminal.destroy"));
+}
+
+{
   assert.equal(
     resolvePlayerLogoutUrl({}, { href: "https://example.test/player-terminal/index.html" }),
     "https://example.test/?mode=player&reason=logged-out"
@@ -143,6 +157,14 @@ function assertLocalStateCleared(harness) {
       });
     }
   });
+  harness.config.apiCall = async () => ({ ok: true });
+  const playerApi = new PlayerApi(harness.config);
+  let sessionAbortCount = 0;
+  const abortSessionRequests = playerApi.abortSessionRequests.bind(playerApi);
+  playerApi.abortSessionRequests = () => {
+    sessionAbortCount += 1;
+    abortSessionRequests();
+  };
   const controller = installPlayerLogoutController({
     terminal: harness.terminal,
     config: harness.config,
@@ -158,6 +180,8 @@ function assertLocalStateCleared(harness) {
     playerSessionId: "must-not-be-forwarded"
   });
 
+  assert.equal(harness.terminal.prepareForSessionExitCalls, 1, "session exit must stop only the core terminal before revocation");
+  assert.equal(sessionAbortCount, 2, "session exit must abort Player API work before revocation and before local session clearing");
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, `${SESSION_API}/logout`);
   assert.equal(calls[0].options.method, "POST");

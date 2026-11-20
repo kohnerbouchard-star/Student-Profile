@@ -4,6 +4,49 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-1007.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-981.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-982.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-980.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-979.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-978.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-977.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-976.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-973.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-974.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-975.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-972.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-969.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-971.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-968.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-965.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-964.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-967.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-966.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-970.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-963.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-962.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-961.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-958.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-957.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-955.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-954.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-938.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-952.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-951.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-945.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-949.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-944.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-943.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-948.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-942.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-947.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-940.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-927.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-936.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-939.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-941.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-924.json"
       - ".github/workflows/crafting-item-runtime.yml"
       - "admin/crafting-oversight-*.js"
       - "admin/css/crafting-oversight.css"
@@ -44,7 +87,7 @@ concurrency:
 
 jobs:
   permanent-runtime:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - name: Check out exact Crafting candidate

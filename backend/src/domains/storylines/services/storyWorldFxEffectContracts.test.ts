@@ -1,9 +1,5 @@
-import {
-  parseStoryEffect,
-} from "../contracts/storyEffectContracts.ts";
-import {
-  executeStoryEffect,
-} from "./storyEffectEngine.ts";
+import { parseStoryEffect } from "../contracts/storyEffectContracts.ts";
+import { executeStoryEffect } from "./storyEffectEngine.ts";
 import type {
   StoryEffectExecutionDependencies,
   StoryWriteResult,
@@ -31,6 +27,7 @@ Deno.test("Story World and FX effects parse as bounded game effects", () => {
     type: "currency_volatility",
     payload: {
       adjustmentsBasisPoints: {
+        ECO: 0,
         NRC: -250,
         YRC: -120,
         VAL: 0,
@@ -90,6 +87,7 @@ Deno.test("Story World and FX effects execute through purpose-built game ports",
       type: "currency_volatility",
       payload: {
         adjustmentsBasisPoints: {
+          ECO: 0,
           NRC: -250,
           VAL: 0,
           XAL: 180,
@@ -124,6 +122,44 @@ Deno.test("currency volatility rejects non-official or out-of-bound adjustments"
   });
 
   assertEquals(result.status, "failed");
+});
+
+Deno.test("currency volatility keeps ECO fixed while VAL may receive a shock", async () => {
+  const accepted = await executeStoryEffect({
+    gameSessionId: "00000000-0000-4000-8000-000000000001",
+    storylineEventId: "00000000-0000-4000-8000-000000000002",
+    effectIndex: 0,
+    now: "2026-08-12T04:00:00.000Z",
+    effect: parseStoryEffect({
+      type: "currency_volatility",
+      payload: {
+        adjustmentsBasisPoints: {
+          ECO: 0,
+          VAL: 175,
+        },
+      },
+    }),
+    dependencies: buildDependencies([]),
+  });
+  const rejected = await executeStoryEffect({
+    gameSessionId: "00000000-0000-4000-8000-000000000001",
+    storylineEventId: "00000000-0000-4000-8000-000000000003",
+    effectIndex: 0,
+    now: "2026-08-12T04:00:00.000Z",
+    effect: parseStoryEffect({
+      type: "currency_volatility",
+      payload: {
+        adjustmentsBasisPoints: {
+          ECO: 1,
+          VAL: 175,
+        },
+      },
+    }),
+    dependencies: buildDependencies([]),
+  });
+
+  assertEquals(accepted.status, "applied");
+  assertEquals(rejected.status, "failed");
 });
 
 function buildDependencies(writes: string[]): StoryEffectExecutionDependencies {

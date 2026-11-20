@@ -1,0 +1,95 @@
+name: Business Workforce Production Payroll V2
+
+on:
+  pull_request:
+    paths:
+      - "backend/supabase/migrations/20260822140*.sql"
+      - "backend/src/domains/business/contracts/playerBusinessContracts.ts"
+      - "backend/src/domains/business/application/workforce/businessWorkforceResultParser.ts"
+      - "backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts"
+      - "player-terminal/src/api/errors.js"
+      - "player-terminal/src/api/response-normalizer.js"
+      - "player-terminal/src/api/response-business-validator.js"
+      - "player-terminal/src/pages/business-page.js"
+      - "player-terminal/src/pages/business-procurement-view.js"
+      - "scripts/helpers/business-page-source.mjs"
+      - "player-terminal/tests/business-banking-surface.mjs"
+      - "player-terminal/tests/browser/player-terminal-skeletons.spec.mjs"
+      - "scripts/business-phase4c-*.mjs"
+      - "scripts/business-workforce-payroll-foundation-contract.mjs"
+      - "docs/operations/contracts/player-cross-cutting-verification-authority-v1.json"
+      - "docs/roadmaps/business-phase4c-production-labor-payroll-scope-v1.md"
+      - ".github/workflows/business-workforce-production-payroll-v2.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/supabase/migrations/20260822140*.sql"
+      - "backend/src/domains/business/contracts/playerBusinessContracts.ts"
+      - "backend/src/domains/business/application/workforce/businessWorkforceResultParser.ts"
+      - "backend/src/domains/business/infrastructure/supabasePlayerBusinessRepository.ts"
+      - "player-terminal/src/api/errors.js"
+      - "player-terminal/src/api/response-normalizer.js"
+      - "player-terminal/src/api/response-business-validator.js"
+      - "player-terminal/src/pages/business-page.js"
+      - "player-terminal/src/pages/business-procurement-view.js"
+      - "scripts/helpers/business-page-source.mjs"
+      - "player-terminal/tests/business-banking-surface.mjs"
+      - "scripts/business-phase4c-*.mjs"
+      - "scripts/business-workforce-payroll-foundation-contract.mjs"
+      - ".github/workflows/business-workforce-production-payroll-v2.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-payroll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.1
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            player-terminal/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.3
+      - run: npm install --global npm@10.9.8
+      - run: npm ci --ignore-scripts
+      - name: Verify production labor, payroll authority, Player recovery, and deterministic behavior
+        run: |
+          node scripts/business-phase4c-production-labor-contract.mjs
+          node scripts/business-phase4c-labor-reservation-simulation.mjs
+          node scripts/business-phase4c-payroll-settlement-contract.mjs
+          node scripts/business-phase4c-payroll-simulation.mjs
+          node scripts/business-phase4c-player-recovery-contract.mjs
+          node scripts/business-workforce-payroll-foundation-contract.mjs
+          node scripts/business-workforce-hiring-contract.mjs
+          node scripts/business-banking-runtime-contract.mjs
+          node scripts/validate-supabase-migrations.mjs
+          git diff --check
+      - name: Run repository quality suite
+        run: npm test
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci --ignore-scripts
+      - name: Verify all backend and Edge TypeScript
+        working-directory: backend
+        run: npm run typecheck:all
+      - name: Install Player Terminal dependencies
+        working-directory: player-terminal
+        run: npm ci --no-audit --no-fund
+      - name: Verify retained Player Business surface
+        working-directory: player-terminal
+        run: |
+          npm run check
+          node tests/business-banking-surface.mjs
+          npm run adapter
+          npm run capability-manifest-current
+          npm run runtime-integration

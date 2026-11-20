@@ -1,7 +1,6 @@
 /// <reference lib="dom" />
 
-import { handlePlayerCraftingRequest } from "../../crafting/api/playerCraftingHttpHandler.ts";
-import type { PlayerCraftingRoute } from "../../crafting/contracts/playerCraftingContracts.ts";
+import { handleCraftingBridgeRequest } from "../../crafting/server.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import {
   EdgeActivationError,
@@ -13,12 +12,13 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
+import { resolveActivePlayerSession } from "../../players/index.ts";
 import {
-  dispatchRateLimitedPlayerCraftingRequest,
-  type PlayerCraftingRateLimitEndpointKey,
-} from "../../../security/playerCraftingRateLimitDispatch.ts";
-import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
-import { resolvePlayerRequestScope } from "../../players/api/playerRequestScope.ts";
+  createPlayerRequestApplicationContext,
+  type PlayerRequestApplicationContext,
+  rejectClientSuppliedPlayerIdentity,
+  resolvePlayerRequestScope,
+} from "../../players/index.ts";
 import {
   type PlayerInventoryReadRepository,
   type PlayerInventoryReadResponseBody,
@@ -47,6 +47,7 @@ export async function handlePlayerInventoryReadRequest(
   request: Request,
   route: PlayerInventoryRoute,
   dependencies: PlayerInventoryReadHttpHandlerDependencies,
+  applicationContext?: PlayerRequestApplicationContext,
 ): Promise<Response> {
   if (route.kind === "crafting") {
     return handleCraftingBridgeRequest(request, route.route, dependencies);
@@ -82,23 +83,27 @@ export async function handlePlayerInventoryReadRequest(
 
     const client = dependencies.createServiceClient(envResult.value);
     const now = dependencies.now?.() ?? new Date();
-    const scope = await resolvePlayerRequestScope(request, {
-      hashSessionToken: dependencies.hashSessionToken ?? sha256Hex,
-      resolvePlayerSession: (tokenHash) =>
-        (dependencies.resolvePlayerSession ?? resolveActivePlayerSession)(
-          client,
-          tokenHash,
-        ),
-      now: () => now,
-    });
+    rejectClientSuppliedPlayerIdentity(request);
+    const resolvedApplicationContext = applicationContext ??
+      createPlayerRequestApplicationContext({
+        scope: await resolvePlayerRequestScope(request, {
+          hashSessionToken: dependencies.hashSessionToken ?? sha256Hex,
+          resolvePlayerSession: (tokenHash) =>
+            (dependencies.resolvePlayerSession ?? resolveActivePlayerSession)(
+              client,
+              tokenHash,
+            ),
+          now: () => now,
+        }),
+        requestId: crypto.randomUUID(),
+      });
 
     const repository = dependencies.createRepository
       ? dependencies.createRepository(client)
       : new SupabasePlayerInventoryReadRepository(client as never);
     const service = new PlayerInventoryReadService(repository);
     const body = await service.readInventory({
-      gameId: scope.gameId,
-      playerUuid: scope.playerUuid,
+      applicationContext: resolvedApplicationContext,
       effectiveAt: now.toISOString(),
     });
 
@@ -120,50 +125,6 @@ export async function handlePlayerInventoryReadRequest(
       message: "Player inventory could not be loaded.",
       retryable: false,
     });
-  }
-}
-
-function handleCraftingBridgeRequest(
-  request: Request,
-  route: PlayerCraftingRoute,
-  dependencies: PlayerInventoryReadHttpHandlerDependencies,
-): Promise<Response> {
-  const endpointKey = craftingEndpointKey(route);
-  return dispatchRateLimitedPlayerCraftingRequest(
-    request,
-    endpointKey,
-    () => handlePlayerCraftingRequest(request, route, {
-      createServiceClient: dependencies.createServiceClient,
-      readSupabaseEnv: dependencies.readSupabaseEnv,
-      hashSessionToken: dependencies.hashSessionToken,
-      resolvePlayerSession: dependencies.resolvePlayerSession,
-      now: dependencies.now,
-    }),
-    {
-      createServiceClient: dependencies.createServiceClient,
-      readEnvironment: dependencies.readSupabaseEnv,
-    },
-  );
-}
-
-function craftingEndpointKey(
-  route: PlayerCraftingRoute,
-): PlayerCraftingRateLimitEndpointKey {
-  switch (route.kind) {
-    case "read":
-    case "startJob":
-    case "malformed":
-      return "crafting";
-    case "cancelJob":
-      return "craftingJobCancel";
-    case "claimJob":
-      return "craftingJobClaim";
-    case "useItem":
-      return "itemEffectUse";
-    case "equip":
-      return "equipmentEquip";
-    case "salvage":
-      return "equipmentSalvage";
   }
 }
 

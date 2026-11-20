@@ -4,7 +4,7 @@ declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;
 };
 
-Deno.test("public Banking repository converges cash/checking aliases by currency without exposing IDs", async () => {
+Deno.test("public Banking repository reads account identities and hold-aware balances without exposing UUIDs", async () => {
   const client = new FakeClient();
   const repository = new SupabasePlayerBankingPublicRepository(client as never);
   const page = await repository.readPage({
@@ -14,28 +14,33 @@ Deno.test("public Banking repository converges cash/checking aliases by currency
     offset: 4,
   });
 
-  assertEquals(client.queries.length, 2);
-  assertEquals(client.queries[0].table, "account_balances");
-  assertEquals(
-    client.queries[0].selection,
-    "account_type,balance,currency_code",
-  );
-  assertEquals(client.queries[1].table, "ledger_entries");
-  assertEquals(
-    client.queries[1].selection,
-    "account_type,amount,currency_code,entry_type,source_domain,source_action,created_at",
-  );
-  assertEquals(client.queries[1].rangeValue, [4, 6]);
-  assertEquals(client.queries[1].orders, [
-    ["created_at", false],
-    ["id", false],
-  ]);
+  assertEquals(client.rpcCalls, [{
+    command: "list_player_bank_accounts_v1",
+    args: {
+      p_game_session_id: "00000000-0000-4000-8000-000000000001",
+      p_player_id: "00000000-0000-4000-8000-000000000002",
+    },
+  }, {
+    command: "list_player_bank_activity_v1",
+    args: {
+      p_game_session_id: "00000000-0000-4000-8000-000000000001",
+      p_player_id: "00000000-0000-4000-8000-000000000002",
+      p_limit: 2,
+      p_offset: 4,
+    },
+  }]);
   assertEquals(page.entries.length, 2);
   assertEquals(page.hasMore, true);
   assertEquals(page.balances, [
-    { accountType: "checking", balance: 1250, currencyCode: "ECO" },
-    { accountType: "checking", balance: 30, currencyCode: "THD" },
-    { accountType: "savings", balance: 100, currencyCode: "THD" },
+    account(
+      "bac_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "checking",
+      "ECO",
+      1250,
+      200,
+    ),
+    account("bac_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "checking", "THD", 30, 5),
+    account("bac_cccccccccccccccccccccccccccccccc", "savings", "THD", 100, 0),
   ]);
   assertEquals(page.entries.map((entry) => entry.accountType), [
     "checking",
@@ -48,62 +53,83 @@ Deno.test("public Banking repository converges cash/checking aliases by currency
 });
 
 class FakeClient {
-  readonly queries: FakeQuery[] = [];
+  readonly rpcCalls: { command: string; args: unknown }[] = [];
 
-  from(table: string) {
-    const query = new FakeQuery(table);
-    this.queries.push(query);
-    return query;
+  rpc(command: string, args: unknown) {
+    this.rpcCalls.push({ command, args });
+    return Promise.resolve({
+      data: command === "list_player_bank_activity_v1"
+        ? [
+          ledger("25", "ECO", "2026-07-19T04:00:00.000Z"),
+          ledger("-4", "LUM", "2026-07-19T03:59:00.000Z"),
+          ledger("1", "ECO", "2026-07-19T03:58:00.000Z"),
+        ]
+        : [
+          bankAccount(
+            "bac_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "checking",
+            "ECO",
+            "1250",
+            "200",
+            "1050",
+          ),
+          bankAccount(
+            "bac_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "checking",
+            "THD",
+            "30",
+            "5",
+            "25",
+          ),
+          bankAccount(
+            "bac_cccccccccccccccccccccccccccccccc",
+            "savings",
+            "THD",
+            "100",
+            "0",
+            "100",
+          ),
+        ],
+      error: null,
+    });
   }
 }
 
-class FakeQuery implements PromiseLike<any> {
-  selection = "";
-  readonly filters: unknown[] = [];
-  readonly orders: unknown[] = [];
-  rangeValue: [number, number] | null = null;
+function bankAccount(
+  accountKey: string,
+  accountKind: string,
+  currencyCode: string,
+  postedAmount: string,
+  heldAmount: string,
+  availableAmount: string,
+) {
+  return {
+    account_key: accountKey,
+    account_kind: accountKind,
+    currency_code: currencyCode,
+    posted_amount: postedAmount,
+    held_amount: heldAmount,
+    available_amount: availableAmount,
+  };
+}
 
-  constructor(readonly table: string) {}
-
-  select(selection: string) {
-    this.selection = selection;
-    return this;
-  }
-
-  eq(column: string, value: unknown) {
-    this.filters.push([column, value]);
-    return this;
-  }
-
-  order(column: string, options: { ascending: boolean }) {
-    this.orders.push([column, options.ascending]);
-    return this;
-  }
-
-  range(from: number, to: number) {
-    this.rangeValue = [from, to];
-    return this;
-  }
-
-  then<TResult1 = any, TResult2 = never>(
-    onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
-  ): PromiseLike<TResult1 | TResult2> {
-    const data = this.table === "account_balances"
-      ? [
-        { account_type: "checking", balance: "1200", currency_code: "ECO" },
-        { account_type: "checking", balance: "50", currency_code: "ECO" },
-        { account_type: "checking", balance: "25", currency_code: "THD" },
-        { account_type: "checking", balance: "5", currency_code: "THD" },
-        { account_type: "savings", balance: "100", currency_code: "THD" },
-      ]
-      : [
-        ledger("25", "ECO", "2026-07-19T04:00:00.000Z"),
-        ledger("-4", "LUM", "2026-07-19T03:59:00.000Z"),
-        ledger("1", "ECO", "2026-07-19T03:58:00.000Z"),
-      ];
-    return Promise.resolve({ data, error: null }).then(onfulfilled, onrejected);
-  }
+function account(
+  accountKey: string,
+  accountKind: string,
+  currencyCode: string,
+  postedAmount: number,
+  heldAmount: number,
+) {
+  return {
+    accountKey,
+    accountKind,
+    accountType: accountKind,
+    balance: postedAmount,
+    currencyCode,
+    postedAmount,
+    heldAmount,
+    availableAmount: postedAmount - heldAmount,
+  };
 }
 
 function ledger(amount: string, currencyCode: string, createdAt: string) {

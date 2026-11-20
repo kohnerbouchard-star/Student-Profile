@@ -2,6 +2,22 @@ import { ApiRequestError } from "./errors.js";
 
 const ROUTES = Object.freeze({
   business: () => ({ method: "GET", path: "/players/me/business" }),
+  businessStockroom: () => ({
+    method: "GET",
+    path: "/players/me/business/stockroom",
+  }),
+  businessRecipes: () => ({
+    method: "GET",
+    path: "/players/me/business/recipes",
+  }),
+  businessEquipment: () => ({
+    method: "GET",
+    path: "/players/me/business/equipment",
+  }),
+  businessWorkforce: () => ({
+    method: "GET",
+    path: "/players/me/business/workforce/candidates",
+  }),
   businessCreate: ({ payload }) => ({
     method: "POST",
     path: "/players/me/businesses",
@@ -10,8 +26,33 @@ const ROUTES = Object.freeze({
       entityType: payload.entityType || "sole_proprietorship",
       industryCode: required(payload.industryCode, "industryCode", "businessCreate"),
       capitalization: number(payload.capitalization, "capitalization", "businessCreate"),
-      acquireBusinessKey: optional(payload.acquireBusinessKey),
       idempotencyKey: key(payload, "businessCreate"),
+    },
+  }),
+  businessFormationPropose: ({ payload }) => ({
+    method: "POST",
+    path: "/players/me/business/formations",
+    payload: {
+      legalName: required(payload.legalName, "legalName", "businessFormationPropose"),
+      entityType: required(payload.entityType, "entityType", "businessFormationPropose"),
+      industryCode: required(payload.industryCode, "industryCode", "businessFormationPropose"),
+      owners: formationOwners(payload.owners),
+      idempotencyKey: key(payload, "businessFormationPropose"),
+    },
+  }),
+  businessFormationRespond: ({ params, payload }) => ({
+    method: "POST",
+    path: `/players/me/business/formations/${encodeURIComponent(required(params.formationId || payload.formationKey, "formationKey", "businessFormationRespond"))}/respond`,
+    payload: {
+      decision: required(payload.decision, "decision", "businessFormationRespond"),
+      idempotencyKey: key(payload, "businessFormationRespond"),
+    },
+  }),
+  businessFormationActivate: ({ params, payload }) => ({
+    method: "POST",
+    path: `/players/me/business/formations/${encodeURIComponent(required(params.formationId || payload.formationKey, "formationKey", "businessFormationActivate"))}/activate`,
+    payload: {
+      idempotencyKey: key(payload, "businessFormationActivate"),
     },
   }),
   businessProductCreate: ({ payload }) => ({
@@ -25,19 +66,8 @@ const ROUTES = Object.freeze({
       unitInputCost: number(payload.unitInputCost ?? 0, "unitInputCost", "businessProductCreate"),
       unitLaborCost: number(payload.unitLaborCost ?? 0, "unitLaborCost", "businessProductCreate"),
       capacityUnits: number(payload.capacityUnits ?? 100, "capacityUnits", "businessProductCreate"),
-      baseDemandUnits: number(payload.baseDemandUnits ?? 20, "baseDemandUnits", "businessProductCreate"),
       qualityScore: number(payload.qualityScore ?? 50, "qualityScore", "businessProductCreate"),
       idempotencyKey: key(payload, "businessProductCreate"),
-    },
-  }),
-  businessInputPurchase: ({ payload }) => ({
-    method: "POST",
-    path: "/players/me/business/inputs/purchases",
-    payload: {
-      businessKey: required(payload.businessKey, "businessKey", "businessInputPurchase"),
-      productKey: required(payload.productKey || payload.productId, "productKey", "businessInputPurchase"),
-      quantity: number(payload.quantity, "quantity", "businessInputPurchase"),
-      idempotencyKey: key(payload, "businessInputPurchase"),
     },
   }),
   businessProduction: ({ payload }) => ({
@@ -49,6 +79,27 @@ const ROUTES = Object.freeze({
       quantity: number(payload.quantity, "quantity", "businessProduction"),
       priority: payload.priority || "standard",
       idempotencyKey: key(payload, "businessProduction"),
+    },
+  }),
+  businessManufacturingJobs: ({ params, payload }) => ({
+    method: "GET",
+    path: `/players/me/businesses/${encodeURIComponent(required(params.businessId || payload.businessId || payload.businessKey, "businessId", "businessManufacturingJobs"))}/manufacturing/jobs`,
+  }),
+  businessManufacturingStart: ({ params, payload }) => ({
+    method: "POST",
+    path: `/players/me/businesses/${encodeURIComponent(required(params.businessId || payload.businessId || payload.businessKey, "businessId", "businessManufacturingStart"))}/manufacturing/jobs`,
+    payload: {
+      productKey: required(payload.productKey || payload.productId, "productKey", "businessManufacturingStart"),
+      quantity: number(payload.quantity, "quantity", "businessManufacturingStart"),
+      priority: payload.priority || "standard",
+      idempotencyKey: key(payload, "businessManufacturingStart"),
+    },
+  }),
+  businessManufacturingCancel: ({ params, payload }) => ({
+    method: "POST",
+    path: `/players/me/businesses/${encodeURIComponent(required(params.businessId || payload.businessId || payload.businessKey, "businessId", "businessManufacturingCancel"))}/manufacturing/jobs/${encodeURIComponent(required(params.jobId || payload.jobId || payload.jobKey, "jobId", "businessManufacturingCancel"))}/cancel`,
+    payload: {
+      idempotencyKey: key(payload, "businessManufacturingCancel"),
     },
   }),
   businessPrice: ({ params, payload }) => ({
@@ -63,19 +114,67 @@ const ROUTES = Object.freeze({
       idempotencyKey: key(payload, "businessPrice"),
     },
   }),
-  businessHire: ({ payload }) => ({
+  businessCandidateHire: ({ params, payload }) => ({
     method: "POST",
-    path: "/players/me/business/employees/hire",
+    path: `/players/me/business/workforce/candidates/${encodeURIComponent(required(params.candidateId || payload.candidateKey, "candidateKey", "businessCandidateHire"))}/hire`,
     payload: {
-      businessKey: required(payload.businessKey, "businessKey", "businessHire"),
-      employeePlayerIdentifier: optional(payload.employeePlayerIdentifier),
-      role: required(payload.role || payload.roleName, "role", "businessHire"),
-      contractType: payload.contractType || "cycle",
-      wagePerCycle: number(payload.wagePerCycle, "wagePerCycle", "businessHire"),
-      productivityIndex: number(payload.productivityIndex ?? 1, "productivityIndex", "businessHire"),
-      idempotencyKey: key(payload, "businessHire"),
+      businessKey: required(payload.businessKey, "businessKey", "businessCandidateHire"),
+      idempotencyKey: key(payload, "businessCandidateHire"),
     },
   }),
+  businessEquipmentInstall: ({ payload }) => ({
+    method: "POST",
+    path: "/players/me/business/equipment/install",
+    payload: {
+      equipmentKey: required(payload.equipmentKey, "equipmentKey", "businessEquipmentInstall"),
+      idempotencyKey: key(payload, "businessEquipmentInstall"),
+    },
+  }),
+  businessStoreOfferCreate: ({ payload }) => ({
+    method: "POST",
+    path: "/players/me/business/store/offers",
+    payload: {
+      itemKey: required(payload.itemKey, "itemKey", "businessStoreOfferCreate"),
+      unitPrice: number(payload.unitPrice, "unitPrice", "businessStoreOfferCreate"),
+      idempotencyKey: key(payload, "businessStoreOfferCreate"),
+    },
+  }),
+  businessStoreOfferStock: ({ payload }) => ({
+    method: "POST",
+    path: `/players/me/business/store/offers/${encodeURIComponent(required(payload.offerKey, "offerKey", "businessStoreOfferStock"))}/stock`,
+    payload: {
+      quantity: number(payload.quantity, "quantity", "businessStoreOfferStock"),
+      expectedOfferVersion: number(payload.expectedOfferVersion, "expectedOfferVersion", "businessStoreOfferStock"),
+      idempotencyKey: key(payload, "businessStoreOfferStock"),
+    },
+  }),
+  businessStoreOfferPublish: ({ payload }) => ({
+    method: "POST",
+    path: `/players/me/business/store/offers/${encodeURIComponent(required(payload.offerKey, "offerKey", "businessStoreOfferPublish"))}/publish`,
+    payload: {
+      expectedOfferVersion: number(payload.expectedOfferVersion, "expectedOfferVersion", "businessStoreOfferPublish"),
+      idempotencyKey: key(payload, "businessStoreOfferPublish"),
+    },
+  }),
+  businessStoreWithdrawal: ({ payload }) => {
+    const mode = required(payload.mode, "mode", "businessStoreWithdrawal").toLowerCase();
+    if (mode !== "full" && mode !== "reduce") {
+      throw new ApiRequestError("mode is invalid for businessStoreWithdrawal.", {
+        body: { code: "player_route_context_invalid", field: "mode", endpointKey: "businessStoreWithdrawal" },
+      });
+    }
+    return {
+      method: "POST",
+      path: "/players/me/business/store/withdrawals",
+      payload: {
+        offerKey: required(payload.offerKey, "offerKey", "businessStoreWithdrawal"),
+        mode,
+        ...(mode === "reduce" ? { quantity: number(payload.quantity, "quantity", "businessStoreWithdrawal") } : {}),
+        expectedOfferVersion: number(payload.expectedOfferVersion, "expectedOfferVersion", "businessStoreWithdrawal"),
+        idempotencyKey: key(payload, "businessStoreWithdrawal"),
+      },
+    };
+  },
   businessTerminate: ({ params, payload }) => ({
     method: "POST",
     path: `/players/me/business/employees/${encodeURIComponent(required(params.employeeId || payload.employeeKey, "employeeKey", "businessTerminate"))}/terminate`,
@@ -170,4 +269,23 @@ function number(value, field, endpointKey) {
 }
 function key(payload, endpointKey) {
   return required(payload.idempotencyKey, "idempotencyKey", endpointKey);
+}
+function formationOwners(value) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 16) {
+    throw new ApiRequestError("owners are invalid for businessFormationPropose.", {
+      body: { code: "player_route_formation_owners_invalid", endpointKey: "businessFormationPropose" },
+    });
+  }
+  return value.map((owner, index) => {
+    if (!owner || typeof owner !== "object" || Array.isArray(owner)) {
+      throw new ApiRequestError(`owners[${index}] is invalid for businessFormationPropose.`, {
+        body: { code: "player_route_formation_owner_invalid", endpointKey: "businessFormationPropose" },
+      });
+    }
+    return {
+      playerIdentifier: required(owner.playerIdentifier, `owners[${index}].playerIdentifier`, "businessFormationPropose"),
+      ownershipBasisPoints: number(owner.ownershipBasisPoints, `owners[${index}].ownershipBasisPoints`, "businessFormationPropose"),
+      capitalContribution: number(owner.capitalContribution ?? 0, `owners[${index}].capitalContribution`, "businessFormationPropose"),
+    };
+  });
 }

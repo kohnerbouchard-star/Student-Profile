@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readBrowserSource as readFile } from "./lib/browser-module-source.mjs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -67,7 +67,7 @@ test("public account creation and authenticated game creation remain separate", 
 
   const gameHandler = loginSource.slice(
     loginSource.indexOf("async function handleAdminCreateGame"),
-    loginSource.indexOf("async function resetAdminLogin")
+    loginSource.indexOf("\n  }", loginSource.indexOf("async function handleAdminCreateGame")) + 4
   );
   assert.match(gameHandler, /licenseCode: text\("adminNewLicenseCode"\)/);
   assert.match(gameHandler, /sessionName: text\("adminNewGameName"\)/);

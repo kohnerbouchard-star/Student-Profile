@@ -36,6 +36,48 @@ Deno.test("market decimal comparisons and clamps preserve bounds", () => {
   assertEquals(clampMarketDecimal("-1", "0", "10"), "0");
 });
 
+Deno.test("retained decimal half ties round away from zero at six fractional digits", () => {
+  for (const sign of ["", "-"]) {
+    assertEquals(formatMarketDecimal(parseMarketDecimal(`${sign}0.0000004`)), "0");
+    assertEquals(formatMarketDecimal(parseMarketDecimal(`${sign}0.0000005`)), `${sign}0.000001`);
+    assertEquals(formatMarketDecimal(parseMarketDecimal(`${sign}1.9999995`)), `${sign}2`);
+    assertEquals(multiplyMarketDecimals(`${sign}0.000001`, "0.5"), `${sign}0.000001`);
+    assertEquals(divideMarketDecimals(`${sign}0.000001`, "2"), `${sign}0.000001`);
+    assertEquals(divideMarketDecimals("0.000001", `${sign}2`), `${sign}0.000001`);
+  }
+  assertEquals(multiplyMarketDecimals("0.000001", "0.499999"), "0");
+  assertEquals(multiplyMarketDecimals("0.000001", "0.500001"), "0.000001");
+});
+
+Deno.test("retained decimal parser rejects malformed strings and nonfinite numbers exactly", () => {
+  for (const value of ["", "01", "1e3", ".5", "1.", "NaN", "Infinity"]) {
+    assertDecimalError(() => parseMarketDecimal(value), `Invalid market decimal: ${value}`);
+  }
+  for (const value of [NaN, Infinity, -Infinity]) {
+    assertDecimalError(() => parseMarketDecimal(value), "Market decimal number must be finite.");
+  }
+  // Whitespace trimming is existing parser behavior, not a stricter input-policy decision.
+  assertEquals(formatMarketDecimal(parseMarketDecimal(" 1.25 ")), "1.25");
+});
+
+Deno.test("retained decimal division and clamp errors include rounded-zero denominators", () => {
+  for (const denominator of ["0", "0.0000004", "-0.0000004"]) {
+    assertDecimalError(() => divideMarketDecimals("1", denominator), "Market decimal division by zero.");
+  }
+  assertDecimalError(() => clampMarketDecimal("1", "2", "0"), "Market decimal minimum exceeds maximum.");
+});
+
+function assertDecimalError(run: () => unknown, expected: string): void {
+  try {
+    run();
+  } catch (error) {
+    if (!(error instanceof Error)) throw error;
+    assertEquals(error.message, expected);
+    return;
+  }
+  throw new Error(`Expected error: ${expected}`);
+}
+
 function assertEquals(actual: unknown, expected: unknown): void {
   if (actual !== expected) {
     throw new Error(`Expected ${String(expected)}, received ${String(actual)}.`);

@@ -61,12 +61,13 @@ async function mountBankingFixture(page) {
         },
       ],
     };
-    const fixture = document.querySelector(".player-terminal-app-root .player-terminal-page-host");
-    if (!(fixture instanceof HTMLElement)) {
-      throw new Error("Player page host was not available for the Banking browser fixture.");
-    }
+    document.querySelector("#playerBankingBrowserFixture")?.remove();
+    const fixture = document.createElement("div");
+    fixture.id = "playerBankingBrowserFixture";
+    fixture.className = "player-terminal-overview player-terminal-page-host";
     fixture.setAttribute("data-testid", "banking-browser-fixture");
     fixture.innerHTML = renderBankingPage(data);
+    document.body.append(fixture);
   });
   return page.getByTestId("banking-browser-fixture");
 }

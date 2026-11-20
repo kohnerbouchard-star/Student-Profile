@@ -1,7 +1,11 @@
-import {
-  AdminMutationError,
-  type AdminMutationRpcClient,
-} from "../../../platform/supabase/adminMutation.ts";
+import { AdminMutationError } from "../../../platform/supabase/adminMutation.ts";
+import type {
+  GameJoinCodeRotationCommand,
+  GameSessionMutationPersistenceResult,
+  GameSessionMutationRepository,
+  GameSettingsMutationCommand,
+} from "../contracts/gameSessionMutationRepository.ts";
+import type { GameSessionsStaffApplicationContext } from "../contracts/gameSessionsStaffApplicationContext.ts";
 import {
   buildGameSettingsMutationPatches,
   resetGameSettingsGroup,
@@ -16,28 +20,28 @@ const GAME_ID = "00000000-0000-4000-8000-000000000101";
 const STAFF_ID = "00000000-0000-4000-8000-000000000201";
 const UPDATED_AT = "2026-08-05T02:45:00.000Z";
 
-Deno.test("settings mutation derives validated snake-case patches and calls one RPC", async () => {
-  const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
-  const client = fakeClient(calls, {
-    data: [{
-      response_status: 200,
-      response_body: {
-        settings: settingsRow(),
-        difficultyPolicy: {
-          difficulty_preset: "custom",
-          source: "custom",
-          price_modifier: 2,
-          income_modifier: 0.5,
-        },
+Deno.test("settings mutation preserves context and identity while deriving validated patches", async () => {
+  const repository = new FakeMutationRepository({
+    status: 200,
+    replayed: false,
+    body: {
+      settings: settingsRow(),
+      difficultyPolicy: {
+        difficulty_preset: "custom",
+        source: "custom",
+        price_modifier: 2,
+        income_modifier: 0.5,
       },
-      was_replayed: false,
-    }],
-    error: null,
+    },
   });
+  const applicationContext = context();
+  const mutation = {
+    idempotencyKey: "settings-command-001",
+    requestId: "mutation-request-settings-001",
+  };
 
-  const result = await updateGameSettings(client, {
-    gameSessionId: GAME_ID,
-    staffUserId: STAFF_ID,
+  const result = await updateGameSettings(repository, {
+    applicationContext,
     requestBody: {
       settings: {
         difficultyPreset: "Hard",
@@ -48,49 +52,29 @@ Deno.test("settings mutation derives validated snake-case patches and calls one 
         customLabel: "Challenge",
       },
     },
-    mutation: {
-      idempotencyKey: "settings-command-001",
-      requestId: "request-settings-001",
-    },
+    mutation,
   });
 
-  assertEquals(calls.length, 1);
-  assertEquals(calls[0], {
-    name: "admin_update_game_settings_v1",
-    args: {
-      p_game_session_id: GAME_ID,
-      p_staff_user_id: STAFF_ID,
-      p_game_settings_patch: {
-        difficulty_preset: "hard",
-        attendance_window: { timezone: "Asia/Seoul" },
-        stock_market_window: { timezone: "Asia/Seoul", opensAt: "09:00" },
-      },
-      p_difficulty_policy_patch: {
-        price_modifier: 2,
-        income_modifier: 0.5,
-        difficulty_preset: "custom",
-        source: "custom",
-        custom_label: "Challenge",
-        difficulty_policy_profile_id: null,
-      },
-      p_request_payload: {
-        gameSettingsPatch: {
-          difficulty_preset: "hard",
-          attendance_window: { timezone: "Asia/Seoul" },
-          stock_market_window: { timezone: "Asia/Seoul", opensAt: "09:00" },
-        },
-        difficultyPolicyPatch: {
-          price_modifier: 2,
-          income_modifier: 0.5,
-          difficulty_preset: "custom",
-          source: "custom",
-          custom_label: "Challenge",
-          difficulty_policy_profile_id: null,
-        },
-      },
-      p_idempotency_key: "settings-command-001",
-      p_request_id: "request-settings-001",
-    },
+  assertEquals(repository.settingsInputs.length, 1);
+  const command = repository.settingsInputs[0];
+  assertSame(command?.applicationContext, applicationContext);
+  assertSame(command?.mutation, mutation);
+  assertEquals(command?.gameSettingsPatch, {
+    difficulty_preset: "hard",
+    attendance_window: { timezone: "Asia/Seoul" },
+    stock_market_window: { timezone: "Asia/Seoul", opensAt: "09:00" },
+  });
+  assertEquals(command?.difficultyPolicyPatch, {
+    price_modifier: 2,
+    income_modifier: 0.5,
+    difficulty_preset: "custom",
+    source: "custom",
+    custom_label: "Challenge",
+    difficulty_policy_profile_id: null,
+  });
+  assertEquals(command?.requestPayload, {
+    gameSettingsPatch: command?.gameSettingsPatch,
+    difficultyPolicyPatch: command?.difficultyPolicyPatch,
   });
   assertEquals(result, {
     status: 200,
@@ -110,19 +94,29 @@ Deno.test("settings mutation derives validated snake-case patches and calls one 
       income_modifier: 0.5,
     },
   });
+  const serialized = JSON.stringify(result);
+  assertEquals(serialized.includes(STAFF_ID), false);
+  assertEquals(serialized.includes(applicationContext.requestId), false);
+  assertEquals(serialized.includes(mutation.requestId), false);
 });
 
-Deno.test("settings validation rejects invalid timezone before privileged RPC", () => {
-  let called = false;
+Deno.test("settings validation rejects invalid timezone before the repository", () => {
+  const repository = new FakeMutationRepository(null);
+  let failure: AdminMutationError | null = null;
   try {
-    buildGameSettingsMutationPatches({
-      stockMarketWindow: { timezone: "not/a-timezone" },
+    updateGameSettings(repository, {
+      applicationContext: context(),
+      requestBody: {
+        stockMarketWindow: { timezone: "not/a-timezone" },
+      },
+      mutation: mutation(),
     });
   } catch (error) {
-    called = error instanceof AdminMutationError &&
-      error.code === "invalid_stock_market_timezone" && error.status === 400;
+    failure = error instanceof AdminMutationError ? error : null;
   }
-  assertEquals(called, true);
+  assertEquals(failure?.code, "invalid_stock_market_timezone");
+  assertEquals(failure?.status, 400);
+  assertEquals(repository.settingsInputs, []);
 });
 
 Deno.test("settings mutation flattens the double-wrapped v606 terminal envelope without dropping sibling settings", () => {
@@ -156,32 +150,23 @@ Deno.test("settings mutation flattens the double-wrapped v606 terminal envelope 
 });
 
 Deno.test("settings mutation returns the stored result for an exact replay", async () => {
-  const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
-  const result = await updateGameSettings(
-    fakeClient(calls, {
-      data: [{
-        response_status: 200,
-        response_body: {
-          settings: settingsRow(),
-          difficultyPolicy: {
-            difficulty_preset: "hard",
-            source: "preset",
-          },
-        },
-        was_replayed: true,
-      }],
-      error: null,
-    }),
-    {
-      gameSessionId: GAME_ID,
-      staffUserId: STAFF_ID,
-      requestBody: { difficultyPreset: "hard" },
-      mutation: {
-        idempotencyKey: "settings-replay-command-001",
-        requestId: "request-settings-replay-001",
+  const repository = new FakeMutationRepository({
+    status: 200,
+    replayed: true,
+    body: {
+      settings: settingsRow(),
+      difficultyPolicy: {
+        difficulty_preset: "hard",
+        source: "preset",
       },
     },
-  );
+  });
+
+  const result = await updateGameSettings(repository, {
+    applicationContext: context(),
+    requestBody: { difficultyPreset: "hard" },
+    mutation: mutation("settings-replay-command-001"),
+  });
 
   assertEquals(result.replayed, true);
   assertEquals(result.status, 200);
@@ -190,29 +175,26 @@ Deno.test("settings mutation returns the stored result for an exact replay", asy
     difficulty_preset: "hard",
     source: "preset",
   });
-  assertEquals(calls.length, 1);
   assertEquals(
-    calls[0]?.args.p_idempotency_key,
+    repository.settingsInputs[0]?.mutation.idempotencyKey,
     "settings-replay-command-001",
   );
 });
 
-Deno.test("settings mutation maps same-key divergent-payload conflict to 409", async () => {
-  const client = fakeClient([], {
-    data: null,
-    error: { message: "ADMIN_MUTATION_IDEMPOTENCY_CONFLICT" },
-  });
+Deno.test("settings mutation propagates same-key divergent-payload conflicts", async () => {
+  const repository = new FakeMutationRepository(null);
+  repository.error = new AdminMutationError(
+    "idempotency_key_conflict",
+    "That Idempotency-Key was already used for a different request.",
+    409,
+  );
   let failure: AdminMutationError | null = null;
 
   try {
-    await updateGameSettings(client, {
-      gameSessionId: GAME_ID,
-      staffUserId: STAFF_ID,
+    await updateGameSettings(repository, {
+      applicationContext: context(),
       requestBody: { difficultyPreset: "easy" },
-      mutation: {
-        idempotencyKey: "settings-replay-command-001",
-        requestId: "request-settings-replay-002",
-      },
+      mutation: mutation("settings-replay-command-001"),
     });
   } catch (error) {
     failure = error instanceof AdminMutationError ? error : null;
@@ -222,93 +204,118 @@ Deno.test("settings mutation maps same-key divergent-payload conflict to 409", a
   assertEquals(failure?.code, "idempotency_key_conflict");
 });
 
-Deno.test("settings database failure cannot become a success response", async () => {
-  const client = fakeClient([], {
-    data: null,
-    error: { message: "private database detail" },
-  });
+Deno.test("settings persistence failure cannot become a success response", async () => {
+  const repository = new FakeMutationRepository(null);
+  repository.error = new AdminMutationError(
+    "game_settings_failed",
+    "Game settings request failed.",
+    500,
+  );
   let failure: AdminMutationError | null = null;
   try {
-    await updateGameSettings(client, {
-      gameSessionId: GAME_ID,
-      staffUserId: STAFF_ID,
+    await updateGameSettings(repository, {
+      applicationContext: context(),
       requestBody: { difficultyPreset: "standard" },
-      mutation: {
-        idempotencyKey: "settings-command-002",
-        requestId: "settings-command-002",
-      },
+      mutation: mutation("settings-command-002"),
     });
   } catch (error) {
     failure = error instanceof AdminMutationError ? error : null;
   }
   assertEquals(failure?.status, 500);
   assertEquals(failure?.code, "game_settings_failed");
-  assertEquals(failure?.message.includes("private database detail"), false);
+  assertEquals(failure?.message, "Game settings request failed.");
 });
 
-Deno.test("settings group reset uses the same atomic idempotent settings RPC", async () => {
-  const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
-  const client = fakeClient(calls, {
-    data: [{
-      response_status: 200,
-      response_body: {
-        settings: { ...settingsRow(), stock_market_window: {} },
-        difficultyPolicy: null,
-      },
-      was_replayed: false,
-    }],
-    error: null,
+Deno.test("settings group reset uses the same repository seam and exact context", async () => {
+  const repository = new FakeMutationRepository({
+    status: 200,
+    replayed: false,
+    body: {
+      settings: { ...settingsRow(), stock_market_window: {} },
+      difficultyPolicy: null,
+    },
   });
+  const applicationContext = context();
+  const identity = mutation("settings-reset-command-001");
 
-  const result = await resetGameSettingsGroup(client, {
-    gameSessionId: GAME_ID,
-    staffUserId: STAFF_ID,
+  const result = await resetGameSettingsGroup(repository, {
+    applicationContext,
     group: "stock-market",
-    mutation: {
-      idempotencyKey: "settings-reset-command-001",
-      requestId: "request-settings-reset-001",
-    },
+    mutation: identity,
   });
 
-  assertEquals(calls[0], {
-    name: "admin_update_game_settings_v1",
-    args: {
-      p_game_session_id: GAME_ID,
-      p_staff_user_id: STAFF_ID,
-      p_game_settings_patch: { stock_market_window: {} },
-      p_difficulty_policy_patch: {},
-      p_request_payload: {
-        resetGroup: "stock-market",
-        gameSettingsPatch: { stock_market_window: {} },
-        difficultyPolicyPatch: {},
-      },
-      p_idempotency_key: "settings-reset-command-001",
-      p_request_id: "request-settings-reset-001",
-    },
+  const command = repository.settingsInputs[0];
+  assertSame(command?.applicationContext, applicationContext);
+  assertSame(command?.mutation, identity);
+  assertEquals(command?.gameSettingsPatch, { stock_market_window: {} });
+  assertEquals(command?.difficultyPolicyPatch, {});
+  assertEquals(command?.requestPayload, {
+    resetGroup: "stock-market",
+    gameSettingsPatch: { stock_market_window: {} },
+    difficultyPolicyPatch: {},
   });
   assertEquals(result.group, "stock-market");
   assertEquals(result.settings.stockMarketWindow, {});
 });
 
-Deno.test("settings group reset rejects groups without an authoritative profile", async () => {
-  const client = fakeClient([], { data: null, error: null });
+Deno.test("settings group reset rejects unconfigured groups before the repository", async () => {
+  const repository = new FakeMutationRepository(null);
   let failure: AdminMutationError | null = null;
   try {
-    await resetGameSettingsGroup(client, {
-      gameSessionId: GAME_ID,
-      staffUserId: STAFF_ID,
+    await resetGameSettingsGroup(repository, {
+      applicationContext: context(),
       group: "taxes",
-      mutation: {
-        idempotencyKey: "settings-reset-command-002",
-        requestId: "settings-reset-command-002",
-      },
+      mutation: mutation("settings-reset-command-002"),
     });
   } catch (error) {
     failure = error instanceof AdminMutationError ? error : null;
   }
   assertEquals(failure?.status, 409);
   assertEquals(failure?.code, "settings_group_reset_not_configured");
+  assertEquals(repository.settingsInputs, []);
 });
+
+Deno.test("settings mutation rejects malformed persistence output", async () => {
+  const repository = new FakeMutationRepository({
+    status: 200,
+    replayed: false,
+    body: { settings: { difficulty_preset: "hard" } },
+  });
+  let failure: AdminMutationError | null = null;
+  try {
+    await updateGameSettings(repository, {
+      applicationContext: context(),
+      requestBody: { difficultyPreset: "hard" },
+      mutation: mutation(),
+    });
+  } catch (error) {
+    failure = error instanceof AdminMutationError ? error : null;
+  }
+  assertEquals(failure?.code, "game_settings_failed");
+  assertEquals(failure?.status, 500);
+});
+
+class FakeMutationRepository implements GameSessionMutationRepository {
+  readonly settingsInputs: GameSettingsMutationCommand[] = [];
+  error: Error | null = null;
+
+  constructor(
+    private readonly value: GameSessionMutationPersistenceResult | null,
+  ) {}
+
+  rotateGameJoinCode(
+    _command: GameJoinCodeRotationCommand,
+  ): Promise<never> {
+    return Promise.reject(new Error("Unexpected join-code rotation."));
+  }
+
+  updateGameSettings(command: GameSettingsMutationCommand) {
+    this.settingsInputs.push(command);
+    if (this.error) return Promise.reject(this.error);
+    if (!this.value) return Promise.reject(new Error("missing fixture"));
+    return Promise.resolve(this.value);
+  }
+}
 
 function settingsRow(): Record<string, unknown> {
   return {
@@ -321,25 +328,21 @@ function settingsRow(): Record<string, unknown> {
   };
 }
 
-function fakeClient(
-  calls: Array<{ name: string; args: Record<string, unknown> }>,
-  response: {
-    readonly data: unknown;
-    readonly error:
-      | { readonly message?: string; readonly code?: string }
-      | null;
-  },
-): AdminMutationRpcClient {
+function context(): GameSessionsStaffApplicationContext {
+  return Object.freeze({
+    gameSessionId: GAME_ID,
+    actor: Object.freeze({ kind: "staff" as const, staffUserId: STAFF_ID }),
+    role: "game_admin" as const,
+    permissions: Object.freeze(["game.update"]),
+    requestId: "server-request-settings-001",
+    assuranceLevel: "aal2" as const,
+  });
+}
+
+function mutation(idempotencyKey = "settings-command-001") {
   return {
-    rpc<T>(name: string, args: Record<string, unknown>) {
-      calls.push({ name, args });
-      return Promise.resolve(
-        response as {
-          readonly data: T | null;
-          readonly error: typeof response.error;
-        },
-      );
-    },
+    idempotencyKey,
+    requestId: `mutation-request-${idempotencyKey}`,
   };
 }
 
@@ -351,4 +354,8 @@ function assertEquals(actual: unknown, expected: unknown): void {
       }`,
     );
   }
+}
+
+function assertSame(actual: unknown, expected: unknown): void {
+  if (actual !== expected) throw new Error("Expected identical references.");
 }

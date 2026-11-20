@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "authorityId": "econovaria.story-after-tick-default-pr-910.v1",
+  "purpose": "authorize-cross-cutting-player-verification",
+  "pullRequestNumber": 910,
+  "baseRef": "main",
+  "scopeLock": "exact-path-allowlist",
+  "productionDeploymentAllowed": false,
+  "productionMutationAllowed": false,
+  "secretValuesAllowed": false,
+  "allowedPaths": [
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
+    "backend/src/domains/storylines/server/stockTickStorylineRunner.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "docs/operations/contracts/player-cross-cutting/pr-910.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredFiles": [
+    "backend/src/domains/stocks/api/stockMarketRunnerHttpHandler.ts",
+    "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
+    "backend/src/domains/storylines/server/stockTickStorylineRunner.ts",
+    "docs/architecture/inventories/econovaria-architecture-inventory-v2.json",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "docs/operations/contracts/player-cross-cutting/pr-910.json",
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "requiredChecks": [
+    "player-terminal-verify",
+    "player-edge-trusted-ip-entrypoint-contract",
+    "player-production-secret-provision-contract",
+    "player-api-read-resilience",
+    "Story Replay Safety",
+    "REF-018 and REF-022 Staff Mutation Qualification",
+    "multicurrency-store-funding-v1",
+    "multicurrency-marketplace-funding-v1",
+    "multicurrency-stock-funding-v1",
+    "business-multicurrency-treasury-v1",
+    "business-player-store-fx-final-v2",
+    "business-store-sales-convergence-v2",
+    "Business Timed Manufacturing V2",
+    "Backend Typecheck",
+    "Repository Quality",
+    "Required Game Market Timezone",
+    "Runtime Interaction Wiring",
+    "REF-009 Contract Reward Qualification",
+    "Player Multiplayer and Load E2E"
+  ],
+  "criticalJobChecks": [
+    "Story Replay Safety",
+    "REF-018 and REF-022 Staff Mutation Qualification",
+    "multicurrency-store-funding-v1",
+    "multicurrency-marketplace-funding-v1",
+    "multicurrency-stock-funding-v1",
+    "business-multicurrency-treasury-v1",
+    "business-player-store-fx-final-v2",
+    "business-store-sales-convergence-v2",
+    "Business Timed Manufacturing V2",
+    "Backend Typecheck",
+    "Repository Quality",
+    "REF-009 Contract Reward Qualification",
+    "Player Multiplayer and Load E2E"
+  ],
+  "readOnlyPaths": [
+    "scripts/verify-player-cross-cutting-authority.mjs",
+    "scripts/player-cross-cutting-authority.test.mjs"
+  ],
+  "authorizationNote": "User authorized necessary bounded repairs and safe sequential merges of PR908, PR909 and PR910 after all applicable qualification passes. PR910 is bound to actual main a57fd5c0c60eef86c09171f01d715b30c5deaf49, tree cbe82f535cf66c01068ed5a7b7748eb14098eaaf, identical to qualified PR909 head 79c2dd27195706739f552754ed8b6c96f4ec5da7. Reviewed Story source remains ac516f37a00c80a7a53f12ee0471a07e9c689c2d. Preserve predecessor diagnostics and authority records, existing required/critical checks, immutable evidence, dependency verification, release holds and both read-only verifier files. Renew exact final-head main-target CI and disposable database/load qualification and pass the predecessor post-merge gate before merge. No production deployment, live hosted database mutation, security or permission change, dependency-hash change, secrets or unrelated scope expansion is authorized. Existing PR888 is unchanged."
+}

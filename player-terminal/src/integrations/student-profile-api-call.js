@@ -1,12 +1,19 @@
+import { explicitSessionCurrency, dashboardCurrency, bindSessionCurrency, bindBankingCurrency } from "./student-profile-currency-projection.js";
 import { resolvePlayerBackendRequest } from "../api/backend-routes.js";
 import { hasMarketplaceBackendRoute, resolveMarketplaceBackendRequest } from "../api/marketplace-backend-routes.js";
 import { ApiConnectionPendingError, ApiRequestError } from "../api/errors.js";
 import { mergeTerminalRead, normalizeTerminalBootstrap } from "../api/read-model.js";
+import { normalizeApiResponse } from "../api/response-normalizer.js";
 import { attachPortfolioHoldings } from "../api/portfolio-market-holdings.js";
 import { createEmptyReadModels } from "../data/empty-read-models.js";
 import { normalizePlayerContracts } from "../features/contracts/contract-read-model.js";
 import { normalizePlayerInventory } from "../features/inventory/inventory-read-model.js";
 import { normalizePlayerMarketplace } from "../features/marketplace/marketplace-read-model.js";
+import {
+  normalizeBankingFxHistory,
+  normalizeBankingFxOrders,
+  normalizeBankingFxOverview,
+} from "../features/banking/banking-fx-read-model.js";
 import { validateStudentProfileCapabilityManifest } from "./student-profile-capability-manifest.js";
 
 const CLIENT_OWNERSHIP_FIELDS = new Set([
@@ -30,138 +37,6 @@ function normalizedCredential(value) {
 
 function isPublishableKey(value) {
   return /^sb_publishable_/i.test(normalizedCredential(value));
-}
-
-function currencyCode(value) {
-  const normalized = String(value || "").trim().toUpperCase();
-  return /^[A-Z0-9]{3,16}$/.test(normalized) ? normalized : "";
-}
-
-function explicitSessionCurrency(rawSession) {
-  const player = rawSession?.player && typeof rawSession.player === "object"
-    ? rawSession.player
-    : {};
-  const country = player.country && typeof player.country === "object"
-    ? player.country
-    : {};
-  for (const value of [
-    rawSession?.countryCurrencyCode,
-    rawSession?.localCurrencyCode,
-    player.countryCurrencyCode,
-    player.localCurrencyCode,
-    player.currencyCode,
-    country.currencyCode,
-  ]) {
-    const code = currencyCode(value);
-    if (code) return code;
-  }
-  const checkingCurrencies = [...new Set(
-    (Array.isArray(rawSession?.balances) ? rawSession.balances : [])
-      .filter((row) => String(row?.accountType || "").trim().toLowerCase() === "checking")
-      .map((row) => currencyCode(row?.currencyCode))
-      .filter(Boolean),
-  )];
-  return checkingCurrencies.length === 1 ? checkingCurrencies[0] : "";
-}
-
-function dashboardCurrency(rawDashboard) {
-  return currencyCode(
-    rawDashboard?.me?.netWorthValuation?.currencyCode ||
-    rawDashboard?.me?.cash?.primaryCurrencyCode,
-  );
-}
-
-function bindSessionCurrency(snapshot, code) {
-  const resolved = currencyCode(code);
-  return {
-    ...snapshot,
-    session: {
-      ...snapshot.session,
-      currencyCode: resolved,
-      currencyName: resolved || "Unavailable",
-      currencyResolved: Boolean(resolved),
-    },
-  };
-}
-
-function accountBalanceForCurrency(balances, accountType, preferredCurrencyCode) {
-  const type = String(accountType || "").trim().toLowerCase();
-  const preferred = currencyCode(preferredCurrencyCode);
-  const rows = (Array.isArray(balances) ? balances : []).filter((row) =>
-    String(row?.accountType || "").trim().toLowerCase() === type
-  );
-  if (preferred) {
-    return rows.find((row) => currencyCode(row?.currencyCode) === preferred) || null;
-  }
-  return rows.length === 1 ? rows[0] : null;
-}
-
-function bindBankingCurrency(snapshot, raw) {
-  const preferredCurrencyCode = snapshot.session?.currencyResolved === true
-    ? currencyCode(snapshot.session.currencyCode)
-    : "";
-  const balances = Array.isArray(raw?.currentBalances) ? raw.currentBalances : [];
-  const checking = accountBalanceForCurrency(
-    balances,
-    "checking",
-    preferredCurrencyCode,
-  );
-  const savings = accountBalanceForCurrency(
-    balances,
-    "savings",
-    preferredCurrencyCode,
-  );
-  const checkingBalance = checking ? Number(checking.balance) : null;
-  const savingsBalance = savings ? Number(savings.balance) : null;
-  const checkingAmount = Number.isFinite(checkingBalance) ? checkingBalance : null;
-  const savingsAmount = Number.isFinite(savingsBalance) ? savingsBalance : null;
-  return {
-    ...snapshot,
-    banking: {
-      ...snapshot.banking,
-      checking: checking
-        ? {
-          configured: true,
-          accountId: "CHECKING",
-          balance: checkingAmount,
-          available: checkingAmount,
-          pending: 0,
-          currencyCode: currencyCode(checking.currencyCode),
-        }
-        : {
-          configured: false,
-          accountId: "CHECKING",
-          balance: null,
-          available: null,
-          pending: 0,
-          currencyCode: preferredCurrencyCode,
-        },
-      savings: savings
-        ? {
-          configured: true,
-          accountId: "SAVINGS",
-          balance: savingsAmount,
-          available: savingsAmount,
-          interestRate: snapshot.banking?.savings?.interestRate ?? null,
-          interestEarned: snapshot.banking?.savings?.interestEarned ?? null,
-          currencyCode: currencyCode(savings.currencyCode),
-        }
-        : {
-          configured: false,
-          accountId: "NOT CONFIGURED",
-          balance: null,
-          available: null,
-          interestRate: null,
-          interestEarned: null,
-          currencyCode: preferredCurrencyCode,
-        },
-    },
-    dashboard: {
-      ...snapshot.dashboard,
-      liquidBalance: checkingAmount,
-      savingsBalance: savingsAmount,
-    },
-  };
 }
 
 function deviceId(config) {
@@ -319,6 +194,7 @@ export function createStudentProfileApiCall({ request } = {}) {
   let capabilityManifest = null;
   let snapshot = createEmptyReadModels();
   let sessionFingerprint = "";
+  let marketReadVersion = 0;
 
   async function loadCapabilityManifest(context) {
     const route = resolvePlayerBackendRequest({ endpointKey: "capabilities", method: "GET", path: "/capabilities", payload: undefined, params: {}, session: context.session });
@@ -351,12 +227,20 @@ export function createStudentProfileApiCall({ request } = {}) {
       throw new ApiConnectionPendingError({ endpointKey: context.endpointKey, method: context.method, path: context.path, payload: context.payload });
     }
 
+    const marketVersion = context.endpointKey === "market" ? ++marketReadVersion : null;
     const raw = await request({
       endpointKey: context.endpointKey, method: backendRequest.method, path: backendRequest.path,
       payload: backendRequest.payload, headers: headersFor({ ...context, method: backendRequest.method }), signal: context.signal,
       requestId: context.requestId, idempotencyKey: context.idempotencyKey
     });
 
+    // A retired directory page must not poison the adapter's shared snapshot,
+    // even if a custom transport finishes after its AbortSignal was cancelled.
+    if (["market", "marketAsset"].includes(context.endpointKey)
+      && (context.signal?.aborted || currentFingerprint !== sessionFingerprint
+        || (context.endpointKey === "market" && marketVersion !== marketReadVersion))) {
+      throw new ApiRequestError("The market read was superseded.", { code: "REQUEST_SUPERSEDED", endpointKey: context.endpointKey });
+    }
     if (context.endpointKey === "session") {
       rawSession = raw;
       capabilityManifest = await loadCapabilityManifest(context);
@@ -396,8 +280,25 @@ export function createStudentProfileApiCall({ request } = {}) {
       snapshot = { ...snapshot, marketplace: normalizePlayerMarketplace(raw) };
       return snapshot.marketplace;
     }
+    if (context.endpointKey === "bankingFx") {
+      snapshot = { ...snapshot, bankingFx: normalizeBankingFxOverview(raw) };
+      return snapshot.bankingFx;
+    }
+    if (context.endpointKey === "bankingFxHistory") {
+      return normalizeBankingFxHistory(raw);
+    }
+    if (context.endpointKey === "bankingFxOrders") {
+      return normalizeBankingFxOrders(raw);
+    }
     if (READ_MODEL_KEYS.has(context.endpointKey)) {
-      snapshot = mergeTerminalRead(snapshot, context.endpointKey, raw);
+      const readResponse = context.endpointKey === "store"
+        ? normalizeApiResponse("store", raw, {
+          config: context.config || {},
+          path: context.path,
+          requestId: context.requestId,
+        })
+        : raw;
+      snapshot = mergeTerminalRead(snapshot, context.endpointKey, readResponse);
       if (context.endpointKey === "countries" && snapshot.session?.currencyCode) {
         snapshot = bindSessionCurrency(snapshot, snapshot.session.currencyCode);
       }
@@ -409,6 +310,13 @@ export function createStudentProfileApiCall({ request } = {}) {
           ...snapshot,
           portfolio: attachPortfolioHoldings(snapshot.portfolio, raw),
         };
+      }
+      // Keep the accumulated directory internal. Wire projections stay bounded
+      // to this page/detail, so response sanitization cannot truncate later pages.
+      if (context.endpointKey === "market" || context.endpointKey === "marketAsset") {
+        const ids = new Set(context.endpointKey === "marketAsset"
+          ? [raw?.asset?.assetId] : (Array.isArray(raw?.assets) ? raw.assets : []).map((asset) => asset.assetId));
+        return { ...snapshot.market, assets: snapshot.market.assets.filter((asset) => ids.has(asset.id)) };
       }
       return endpointProjection(snapshot, context.endpointKey);
     }

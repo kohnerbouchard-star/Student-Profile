@@ -11,14 +11,20 @@ import {
   readSupabaseEnv,
   type SupabaseEnv,
 } from "../../../platform/supabase/edgeStaffSession.ts";
-import { resolveActivePlayerSession } from "../../players/api/playerSessionHttpHelpers.ts";
-import { resolvePlayerRequestScope } from "../../players/api/playerRequestScope.ts";
+import { resolveActivePlayerSession } from "../../players/index.ts";
+import {
+  createPlayerRequestApplicationContext,
+  type PlayerRequestApplicationContext,
+  rejectClientSuppliedPlayerIdentity,
+  resolvePlayerRequestScope,
+} from "../../players/index.ts";
 import {
   PlayerInventoryRedemptionError,
   type PlayerInventoryRedemptionRepository,
   type PlayerInventoryRedemptionRoute,
 } from "../contracts/playerInventoryRedemptionContracts.ts";
 import { SupabasePlayerInventoryRedemptionRepository } from "../infrastructure/supabasePlayerInventoryRedemptionRepository.ts";
+import { PlayerInventoryRedemptionService } from "../services/playerInventoryRedemptionService.ts";
 import {
   parsePlayerInventoryRedemptionCommand,
   parsePlayerInventoryRedemptionRead,
@@ -42,6 +48,7 @@ export async function handlePlayerInventoryRedemptionRequest(
   request: Request,
   route: PlayerInventoryRedemptionRoute,
   dependencies: PlayerInventoryRedemptionHttpHandlerDependencies,
+  applicationContext?: PlayerRequestApplicationContext,
 ): Promise<Response> {
   if (route.kind === "malformed") {
     return errorResponse(
@@ -78,23 +85,28 @@ export async function handlePlayerInventoryRedemptionRequest(
     }
     const client = dependencies.createServiceClient(envResult.value);
     const now = dependencies.now?.() ?? new Date();
-    const scope = await resolvePlayerRequestScope(request, {
-      hashSessionToken: dependencies.hashSessionToken ?? sha256Hex,
-      resolvePlayerSession: (tokenHash) =>
-        (dependencies.resolvePlayerSession ?? resolveActivePlayerSession)(
-          client,
-          tokenHash,
-        ),
-      now: () => now,
-    });
+    rejectClientSuppliedPlayerIdentity(request);
+    const context = applicationContext ??
+      createPlayerRequestApplicationContext({
+        scope: await resolvePlayerRequestScope(request, {
+          hashSessionToken: dependencies.hashSessionToken ?? sha256Hex,
+          resolvePlayerSession: (tokenHash) =>
+            (dependencies.resolvePlayerSession ?? resolveActivePlayerSession)(
+              client,
+              tokenHash,
+            ),
+          now: () => now,
+        }),
+        requestId: crypto.randomUUID(),
+      });
     const repository = dependencies.createRepository
       ? dependencies.createRepository(client)
       : new SupabasePlayerInventoryRedemptionRepository(client as never);
+    const service = new PlayerInventoryRedemptionService(repository);
 
     if (route.kind === "request") {
-      const result = await repository.request({
-        gameId: scope.gameId,
-        playerUuid: scope.playerUuid,
+      const result = await service.requestRedemption({
+        applicationContext: context,
         itemId: route.itemId,
         command: parsed as Awaited<
           ReturnType<typeof parsePlayerInventoryRedemptionCommand>
@@ -111,9 +123,8 @@ export async function handlePlayerInventoryRedemptionRequest(
     const query = parsed as ReturnType<
       typeof parsePlayerInventoryRedemptionRead
     >;
-    const rows = await repository.read({
-      gameId: scope.gameId,
-      playerUuid: scope.playerUuid,
+    const rows = await service.readRedemptions({
+      applicationContext: context,
       ...query,
       requestId: route.kind === "item" ? route.requestId : null,
     });

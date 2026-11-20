@@ -1,57 +1,40 @@
-# Backend Access Boundary V1
+# Backend shared access primitives
 
-This folder defines the first backend-only access boundary around Supabase Auth,
-teacher-owned games, server-issued player sessions, and V1 permission checks.
-It does not add feature routes, frontend wiring, seed data, RLS policies, or live
-Supabase queries.
+This folder retains shared identity contracts and access primitives. It is not a
+public package API or a complete route authorization system. The backend package
+is private; actual request boundaries are composed by their owning domains and
+server entrypoints.
 
-## Staff identity
+## Retained staff authority
 
-Staff requests start with a verified Supabase Auth user from a server runtime.
-`staffAccess.resolveStaffIdentity` maps `SupabaseAuthUser.id` to
-`staff_users.supabase_auth_user_id`. In V1, `staff_users` means teacher users
-only. Staff can access a game only when `game_sessions.owner_staff_user_id`
-matches the resolved `staff_users.id`.
+`staffAccess.ts` resolves a verified Supabase Auth user to a staff identity using
+an injected repository. Its game-access primitive checks the teacher-owned game
+session. `domains/licensing/api/activationRouteHandler.ts` imports this module and
+resolves staff identity before invoking staff licensing activation. These live
+primitives and their shared `types.ts` contracts must remain.
 
-## Player identity
+## Current Player authority
 
-Player requests start with a server-issued player session token. The plaintext
-token is treated as a secret, normalized only for transport whitespace, hashed by
-an injected backend hasher, then looked up through `session_token_hash`.
-`playerAccess.resolvePlayerIdentityFromSessionToken` accepts exactly one
-`player_sessions` row, and requires:
+Player request authentication and scope handling live in
+`domains/players/api/playerRequestScope.ts` and
+`domains/players/api/playerSessionHttpHelpers.ts`. The unconsumed V1
+`playerAccess.ts` primitive was retired after checking its exports and entrypoints;
+no live session or ownership checks were removed. Current server environment
+composition uses `platform/supabase/edgeStaffSession.ts`; the unused Node-only
+`config/env.ts` reader is retired, not used as proof of live key validation.
 
-- `status = "active"`
-- `expires_at` later than the backend clock
-- no `revoked_at` value
+## Retired disconnected scaffolding
 
-The resolved identity supplies the authoritative `gameSessionId` and `playerId`.
-Frontend-provided `game_session_id` or `player_id` values are routing hints only
-and must be checked against this identity before use.
+The unused `gameAccess.ts`, `requestIdentity.ts` and `permissions.ts` V1 scaffolds
+were removed after a tracked-tree source, documentation, script and build scan
+found no executable consumers. Their older README recommendations were not an
+active authorization implementation. No live route, current Staff creation flow, session
+repository, shared identity type or authorization policy was removed.
 
-## Game access
+## Server-only credentials
 
-`gameAccess` contains helpers for the two V1 access paths:
-
-- staff access to teacher-owned game sessions
-- player access to the one game and player resolved from their session
-
-Use `rejectCrossGameAccess` for any request that includes a game id from the
-URL, payload, or query string. Shared game data is scoped by `game_session_id`;
-student-private data must also be scoped by `player_id`.
-
-## Permissions
-
-`permissions` provides intentionally small V1 helpers such as `canManageGame`,
-`canManagePlayers`, `canReadOwnPlayerProfile`, `canWriteLedgerEntry`,
-`canReadLedger`, and `canWriteAuditLog`. These helpers are not a full RBAC
-system. Route and use-case code should first resolve identity and game access,
-then use permissions as the final action check.
-
-## Supabase client boundary
-
-`../supabase/serverClient.ts` is server-only scaffolding. It accepts a Supabase
-client factory instead of importing `@supabase/supabase-js` directly because this
-checkout does not yet include backend package dependencies. The service role key
-belongs only in backend/server runtimes and must never be exposed to frontend
-code.
+Current entrypoints compose their server clients, including
+`backend/supabase/functions/classroom-api/classroomClients.ts`. The disconnected
+generic `supabase/serverClient.ts` and `supabase/staffRepository.ts` scaffolds
+are retired. Service-role credentials belong only in server runtimes and must
+never be exposed to browser code. This repository has backend package dependencies.

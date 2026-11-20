@@ -1,0 +1,69 @@
+{
+  "approvedRoutineDefinitionDrift": [
+    {
+      "signature": "public.get_game_data_purge_delete_order_digest_v1()",
+      "stagingSha256": "26e45121ae4432fe08de65964db7b381f7b721dde11a1f74025e8a9598e52c6f",
+      "productionSha256": "79bccbc3d24d4f275401691437f5796973f8e6696bd06347e3eaac333a10c0f7"
+    },
+    {
+      "signature": "public.get_game_data_purge_fk_graph_digest_v1()",
+      "stagingSha256": "4e3cbe985814f9f80aa82d4408691011d3910dd26a14ea21954de87dc69350c7",
+      "productionSha256": "f12b40bf50debabd553241c4751dd9b9f11627edb06f65ba3886b9ff7160e74c"
+    },
+    {
+      "signature": "public.get_game_data_purge_preflight_v1(p_request_id uuid)",
+      "stagingSha256": "18abfb0bb97f77096d3f33e514da78e2469e63c766887a95703f5498e28e3374",
+      "productionSha256": "a96eed2310120dd9f3ab7d9d4e6602fe688e595acc538f07efafbe505a32bcd8"
+    },
+    {
+      "signature": "public.get_game_data_purge_registry_digest_v1()",
+      "stagingSha256": "2e38618e1b7607566dc35f678d97e0af0cca9f16f89619c65e041384fe3e46e1",
+      "productionSha256": "6ad899f5e5e91427499e431474a39029aeaf28454090e433b0631ec3530990cb"
+    },
+    {
+      "signature": "public.get_game_data_purge_review_v2(p_request_id uuid)",
+      "stagingSha256": "d6d5a2f7efcfb0d6a5be30a2fd8304f02cb7a93ef76b3c83810b126623bee78a",
+      "productionSha256": "f035eb3b5e66215bb4ea7b95d84de823922864e0c10c7f033ede5832aef8f9c3"
+    },
+    {
+      "signature": "public.get_platform_storage_health_v1()",
+      "stagingSha256": "b0b8301bc907f423d2b05205d6533a74816d52eefe08123afdbbc10f998c9e14",
+      "productionSha256": "36ebaec342c8a04e2b3b8be8bb97f92d02927f5e9722592327b39c16650a0fbb"
+    },
+    {
+      "signature": "public.initialize_meridian_competing_models_v1(p_game_session_id uuid)",
+      "stagingSha256": "f778c74dc9739ff8d2f041f0e6239bb0cac0fd98eae653a37172c6e4b69268e9",
+      "productionSha256": "6e2e2acd82fcc36cef8c781446426c3d13f38ffaafe63380b134d55d0d4c1028"
+    },
+    {
+      "signature": "public.initialize_meridian_fortune_during_war_v1(p_game_session_id uuid)",
+      "stagingSha256": "c412244512f1fda162370e95fbff8e9ed41d6649beb3708f543522c60a9f41e6",
+      "productionSha256": "c7ca039f3a4e074e7fc38553a9e5726609c34858b5607f8767573ea509a11400"
+    },
+    {
+      "signature": "public.initialize_meridian_local_friend_relationships_v1(p_game_session_id uuid)",
+      "stagingSha256": "2f07b589bf5a22b82a428ec486f11924178d82015300f71542050891da1fdad0",
+      "productionSha256": "58690dd366d05b7d3ea09fdaef929ff49fae20074eda9eb3857b4925345ec0d9"
+    },
+    {
+      "signature": "public.initialize_meridian_outbreak_of_war_v1(p_game_session_id uuid)",
+      "stagingSha256": "e7508b07044d8aa636ef970c2822695f17dd46bc76f0d3a773244acc286f1116",
+      "productionSha256": "9b66e3d9c35591cbc72f51e0f9ceda50dd3af0707a34c5fc4bfdea4200d409b9"
+    },
+    {
+      "signature": "public.initialize_meridian_question_of_belonging_v1(p_game_session_id uuid)",
+      "stagingSha256": "2edeef9983c4d0936e250d0e5b383c77557d71cecbc0efd1c0c60bcd3df08dba",
+      "productionSha256": "09ca41f03d9716e30984376f148e766f00a21bfb8e12a6b492c317af855353a8"
+    },
+    {
+      "signature": "public.initialize_meridian_reckoning_v1(p_game_session_id uuid)",
+      "stagingSha256": "84113e38cabead6d86f014cbb7418fbf5925d7351ec195ad21805f25dc618de1",
+      "productionSha256": "b8c202407af389b66b2841d23fdd9f4dcec825b56592fe19fe83e438c0e51a42"
+    },
+    {
+      "signature": "public.issue_game_data_purge_confirmation_v2(p_game_session_id uuid, p_actor_staff_user_id uuid)",
+      "stagingSha256": "752b8653d49e8b1e9e9883efd65b53b1ee0dab82337cadab9008dc0be23a17c6",
+      "productionSha256": "b8086d96ce9abd60d32e44011872c5ece89ebb98ca09c909e4fd300144bc53a0"
+    }
+  ]
+}

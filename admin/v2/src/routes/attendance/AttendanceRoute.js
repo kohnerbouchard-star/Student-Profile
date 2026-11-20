@@ -1,6 +1,6 @@
+import { scannerPanel } from "./AttendanceScannerPanel.js";
 import {
   AdminConfirmDialog,
-  AdminDataTable,
   AdminEmptyState,
   AdminErrorState,
   AdminField,
@@ -11,29 +11,11 @@ import {
 import { createElement } from "../../components/dom.js";
 import { ADMIN_DATA_STATES } from "../../core/data-state.js";
 import { AttendanceSkeleton } from "./AttendanceSkeleton.js";
+import { selectedPlayerCard, summary, titleCase } from "./AttendanceReadPanels.js";
+
+import { attendanceRoster } from "./AttendanceRoster.js";
 
 const CORRECTION_OPTIONS = ["present", "late", "absent", "excused"];
-
-function titleCase(value) {
-  const text = String(value || "").trim();
-  return text ? text.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "—";
-}
-
-function displayTime(value, timezone) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  try {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: timezone || "Asia/Seoul",
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-    }).format(date);
-  } catch (_error) {
-    return "—";
-  }
-}
 
 function button({ label, icon = null, quiet = false, disabled = false, disabledReason = "", tone = null, onClick, action }) {
   const element = createElement("button", {
@@ -62,171 +44,6 @@ function button({ label, icon = null, quiet = false, disabled = false, disabledR
   });
 }
 
-function metric(label, value, detail) {
-  return createElement("article", {
-    className: "admin-attendance-route__metric",
-    children: [
-      createElement("span", { text: label }),
-      createElement("output", { text: Number(value || 0).toLocaleString("en-US") }),
-      createElement("small", { text: detail }),
-    ],
-  });
-}
-
-function summary(model) {
-  return createElement("section", {
-    className: "admin-attendance-route__summary",
-    attrs: { "aria-label": "Attendance summary" },
-    children: [
-      metric("Present", model.summary.presentCount, "Checked in on time"),
-      metric("Late", model.summary.lateCount, "Checked in after cutoff"),
-      metric("Absent", model.summary.absentCount, "Recorded absent"),
-      metric("Excused", model.summary.excusedCount, "Recorded excused"),
-      metric("Missing", model.summary.missingCount, `Roster ${model.summary.activePlayerCount}`),
-    ],
-  });
-}
-
-function scannerPanel({ model, scanner, onScan }) {
-  const input = createElement("input", {
-    className: "admin-attendance-route__scanner-input",
-    attrs: {
-      id: "adminAttendanceScannerInput",
-      name: "attendanceScan",
-      type: "text",
-      autocomplete: "off",
-      autocapitalize: "none",
-      spellcheck: "false",
-      placeholder: "Scan RFID / player code",
-      disabled: !scanner.accepting || model.lock.locked,
-      "aria-describedby": "adminAttendanceScannerStatus",
-    },
-  });
-  const submit = createElement("button", {
-    className: "admin-button",
-    attrs: { type: "submit", disabled: !scanner.accepting || model.lock.locked },
-    children: [AdminIcon({ name: "attendance", size: 17 }), scanner.status === "submitting" ? "Checking…" : "Check In"],
-  });
-  const status = createElement("div", {
-    className: "admin-attendance-route__scanner-status",
-    dataset: { scannerStatus: scanner.status },
-    attrs: { id: "adminAttendanceScannerStatus", role: "status", "aria-live": "polite" },
-    children: [
-      createElement("strong", { text: scanner.message }),
-      scanner.detail ? createElement("span", { text: scanner.detail }) : null,
-    ],
-  });
-  const form = createElement("form", {
-    className: "admin-attendance-route__scanner-form",
-    children: [
-      createElement("label", { attrs: { for: input.id }, text: "RFID / scanner input" }),
-      createElement("div", { className: "admin-attendance-route__scanner-controls", children: [input, submit] }),
-    ],
-  });
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const value = input.value.trim();
-    if (!value) return;
-    input.value = "";
-    submit.disabled = true;
-    input.disabled = true;
-    try {
-      await onScan(value);
-    } finally {
-      if (input.isConnected) input.disabled = !scanner.accepting || model.lock.locked;
-      if (submit.isConnected) submit.disabled = !scanner.accepting || model.lock.locked;
-    }
-  });
-
-  if (scanner.accepting && !model.lock.locked) {
-    queueMicrotask(() => input.isConnected && input.focus({ preventScroll: true }));
-  }
-
-  return createElement("section", {
-    className: "admin-attendance-route__scanner",
-    attrs: { "aria-label": "Attendance scanner" },
-    children: [
-      createElement("div", {
-        className: "admin-attendance-route__section-heading",
-        children: [
-          createElement("div", { children: [
-            createElement("h2", { text: "Scanner" }),
-            createElement("p", { text: model.lock.locked ? "This attendance day is locked." : "Scan or enter an existing player credential. Enter submits from the keyboard." }),
-          ] }),
-          createElement("span", { className: "admin-attendance-route__date", text: `${model.attendanceDate} · ${model.timezone}` }),
-        ],
-      }),
-      form,
-      status,
-    ],
-  });
-}
-
-function rosterTable(model) {
-  return AdminDataTable({
-    caption: `Attendance roster for ${model.attendanceDate}`,
-    rowKey: (row) => row.rowKey,
-    rows: model.rows,
-    columns: [
-      {
-        key: "displayName",
-        label: "Player",
-        rowHeader: true,
-        render: (_value, row) => createElement("div", {
-          className: "admin-attendance-route__player",
-          children: [
-            createElement("strong", { text: row.displayName }),
-            row.rosterLabel ? createElement("small", { text: row.rosterLabel }) : null,
-          ],
-        }),
-      },
-      {
-        key: "attendanceStatus",
-        label: "Status",
-        render: (value) => createElement("span", {
-          className: "admin-attendance-route__status",
-          dataset: { status: value },
-          text: titleCase(value),
-        }),
-      },
-      { key: "clockedInAt", label: "Check-in", sortValue: (row) => Date.parse(row.clockedInAt || "") || 0, render: (value) => displayTime(value, model.timezone) },
-      { key: "source", label: "Source", render: (value) => titleCase(value) },
-      { key: "note", label: "Note", render: (value) => value || "—" },
-    ],
-    emptyState: AdminEmptyState({
-      title: "No attendance roster yet",
-      message: "There are no active players or attendance records for this game today.",
-      compact: true,
-    }),
-  }).element;
-}
-
-function selectedPlayerCard(row) {
-  if (!row) {
-    return createElement("div", {
-      className: "admin-attendance-route__selected-player",
-      dataset: { selected: "false" },
-      children: [
-        AdminIcon({ name: "players", size: 20 }),
-        createElement("div", { children: [
-          createElement("strong", { text: "No player selected" }),
-          createElement("span", { text: "Choose a player before preparing a correction, note, or reward adjustment." }),
-        ] }),
-      ],
-    });
-  }
-  return createElement("div", {
-    className: "admin-attendance-route__selected-player",
-    dataset: { selected: "true" },
-    children: [
-      AdminIcon({ name: "players", size: 20 }),
-      createElement("div", { children: [
-        createElement("strong", { text: row.displayName }),
-        createElement("span", { text: [row.rosterLabel, titleCase(row.attendanceStatus)].filter(Boolean).join(" · ") }),
-      ] }),
-    ],
-  });
-}
 
 function playerActions({ model, onCorrect, onSaveNote, onAdjustReward }) {
   const player = AdminField({
@@ -487,11 +304,7 @@ function resolvedContent({ model, scanner, onScan, onCorrect, onSaveNote, onAdju
     }));
   } else {
     root.append(
-      createElement("section", {
-        className: "admin-attendance-route__roster",
-        attrs: { "aria-label": "Attendance roster" },
-        children: [rosterTable(model)],
-      }),
+      attendanceRoster(model),
       playerActions({ model, onCorrect, onSaveNote, onAdjustReward }),
     );
   }

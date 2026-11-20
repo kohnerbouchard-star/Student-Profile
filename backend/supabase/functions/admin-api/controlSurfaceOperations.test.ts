@@ -66,11 +66,6 @@ Deno.test("returns explicit disabled responses for unsupported visible controls"
       "player_messaging_not_configured",
     ],
     [
-      "/games/game-id/players/imports/csv",
-      "POST",
-      "roster_csv_import_not_configured",
-    ],
-    [
       "/games/game-id/market/events/event-id/pause",
       "POST",
       "marketplace_read_only",

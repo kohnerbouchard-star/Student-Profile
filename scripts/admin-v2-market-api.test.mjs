@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import "./admin-v2-market-route.test.mjs";
 
 import {
   ADMIN_MARKET_DETAIL_RESOURCE_KEYS,

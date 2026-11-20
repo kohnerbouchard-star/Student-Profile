@@ -22,4 +22,5 @@ function ensureWorldStylesheet() {
 }
 
 await ensureWorldStylesheet();
+await import("./world-runtime-presentation.js");
 await import("./world-runtime-console.js");

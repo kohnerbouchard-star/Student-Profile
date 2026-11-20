@@ -4,180 +4,27 @@ import {
   enforceStaffRequestRateLimit,
   normalizedStaffAction,
 } from "../../security/staffRequestRateLimit.ts";
+import type {
+  EdgeStaffSessionFailure,
+  SupabaseEnv,
+  EdgeStaffSessionDependencies,
+  EdgeStaffSessionResolution,
+  EdgeSupabaseClient,
+} from "./edgeStaffSessionContracts.ts";
+export type {
+  SupabaseEnv,
+  EdgeSupabaseAuthUser,
+  EdgeSupabaseClient,
+  EdgeStaffSessionStaff,
+  EdgeStaffSessionFailure,
+  EdgeStaffSessionResolution,
+} from "./edgeStaffSessionContracts.ts";
 
 declare const Deno: {
   readonly env: {
     get(name: string): string | undefined;
   };
 };
-
-export interface SupabaseEnv {
-  readonly supabaseUrl: string;
-  readonly supabaseAnonKey: string;
-  readonly supabaseServiceRoleKey: string;
-}
-
-interface EdgeSupabaseQueryError {
-  readonly message: string;
-  readonly code?: string;
-  readonly details?: string | null;
-  readonly hint?: string | null;
-}
-
-interface EdgeSupabaseQueryResponse<T = unknown> {
-  readonly data: T | null;
-  readonly error: EdgeSupabaseQueryError | null;
-  readonly count?: number | null;
-  readonly status?: number;
-  readonly statusText?: string;
-}
-
-export interface EdgeSupabaseAuthUser {
-  readonly id: string;
-  readonly email?: string | null;
-  readonly email_confirmed_at?: string | null;
-  readonly app_metadata?: Record<string, unknown>;
-  readonly user_metadata?: Record<string, unknown>;
-}
-
-interface EdgeSupabaseAuthResponse {
-  readonly data: {
-    readonly user: EdgeSupabaseAuthUser | null;
-  };
-  readonly error: EdgeSupabaseQueryError | null;
-}
-
-interface EdgeSupabaseAuthAdminResponse {
-  readonly data: {
-    readonly user: EdgeSupabaseAuthUser | null;
-  };
-  readonly error: EdgeSupabaseQueryError | null;
-}
-
-interface EdgeSupabaseAuthAdminClient {
-  createUser(input: {
-    readonly email: string;
-    readonly password: string;
-    readonly email_confirm: boolean;
-    readonly app_metadata?: Record<string, unknown>;
-    readonly user_metadata?: Record<string, unknown>;
-  }): PromiseLike<EdgeSupabaseAuthAdminResponse>;
-  deleteUser(userId: string): PromiseLike<{
-    readonly data: unknown;
-    readonly error: EdgeSupabaseQueryError | null;
-  }>;
-  updateUserById(
-    userId: string,
-    input: {
-      readonly ban_duration?: string;
-      readonly app_metadata?: Record<string, unknown>;
-      readonly user_metadata?: Record<string, unknown>;
-    },
-  ): PromiseLike<EdgeSupabaseAuthAdminResponse>;
-}
-
-interface EdgeSupabaseAuthClient {
-  readonly admin: EdgeSupabaseAuthAdminClient;
-  getUser(accessToken: string): PromiseLike<EdgeSupabaseAuthResponse>;
-}
-
-type EdgeSupabaseRow = Record<string, string>;
-
-interface EdgeSupabaseSelectBuilder<Row = EdgeSupabaseRow> {
-  maybeSingle(): PromiseLike<EdgeSupabaseQueryResponse<Row | null>>;
-  single(): PromiseLike<EdgeSupabaseQueryResponse<Row>>;
-}
-
-interface EdgeSupabaseFilterBuilder<Row = EdgeSupabaseRow>
-  extends
-    EdgeSupabaseSelectBuilder<Row>,
-    PromiseLike<EdgeSupabaseQueryResponse<unknown[]>> {
-  eq(column: string, value: unknown): EdgeSupabaseFilterBuilder<Row>;
-  in(
-    column: string,
-    values: readonly unknown[],
-  ): EdgeSupabaseFilterBuilder<Row>;
-  limit(count: number): EdgeSupabaseFilterBuilder<Row>;
-  order(
-    column: string,
-    options?: { readonly ascending?: boolean; readonly nullsFirst?: boolean },
-  ): EdgeSupabaseFilterBuilder<Row>;
-}
-
-interface EdgeSupabaseInsertBuilder<Row = EdgeSupabaseRow> {
-  select(columns: string): EdgeSupabaseSelectBuilder<Row>;
-}
-
-interface EdgeSupabaseUpdateBuilder<Row = EdgeSupabaseRow>
-  extends PromiseLike<EdgeSupabaseQueryResponse<unknown[]>> {
-  eq(column: string, value: unknown): EdgeSupabaseUpdateBuilder<Row>;
-  is(column: string, value: unknown): EdgeSupabaseUpdateBuilder<Row>;
-  select(columns: string): EdgeSupabaseSelectBuilder<Row>;
-}
-
-interface EdgeSupabaseUpsertBuilder<Row = EdgeSupabaseRow> {
-  select(columns: string): EdgeSupabaseSelectBuilder<Row>;
-}
-
-interface EdgeSupabaseDeleteBuilder<Row = EdgeSupabaseRow>
-  extends PromiseLike<EdgeSupabaseQueryResponse<unknown[]>> {
-  eq(column: string, value: unknown): EdgeSupabaseDeleteBuilder<Row>;
-}
-
-interface EdgeSupabaseQueryBuilder<Row = EdgeSupabaseRow> {
-  select(columns: string): EdgeSupabaseFilterBuilder<Row>;
-  insert(values: unknown): EdgeSupabaseInsertBuilder<Row>;
-  update(values: unknown): EdgeSupabaseUpdateBuilder<Row>;
-  upsert(
-    values: unknown,
-    options?: { readonly onConflict?: string },
-  ): EdgeSupabaseUpsertBuilder<Row>;
-  delete(): EdgeSupabaseDeleteBuilder<Row>;
-}
-
-export interface EdgeSupabaseClient {
-  readonly auth: EdgeSupabaseAuthClient;
-  from(tableName: string): EdgeSupabaseQueryBuilder;
-  rpc<Data = unknown>(
-    functionName: string,
-    args?: unknown,
-  ): PromiseLike<EdgeSupabaseQueryResponse<Data>>;
-}
-
-export interface EdgeStaffSessionStaff {
-  readonly id: string;
-  readonly supabase_auth_user_id: string;
-  readonly email: string;
-  readonly display_name: string;
-  readonly status: "active" | "onboarding";
-  readonly role: "game_admin" | "security_operator";
-  readonly permission_version: number;
-  readonly security_version: number;
-  readonly mfa_required: boolean;
-}
-
-interface EdgeStaffSessionDependencies {
-  readonly createAuthClient: (env: SupabaseEnv) => EdgeSupabaseClient;
-  readonly createServiceClient: (env: SupabaseEnv) => EdgeSupabaseClient;
-}
-
-export type EdgeStaffSessionFailure = {
-  readonly ok: false;
-  readonly status: number;
-  readonly error: EdgeErrorBody["error"];
-  readonly retryAfterSeconds?: number;
-  readonly resetAt?: string;
-};
-
-export type EdgeStaffSessionResolution =
-  | {
-    readonly ok: true;
-    readonly authUser: EdgeSupabaseAuthUser;
-    readonly staff: EdgeStaffSessionStaff;
-    readonly serviceClient: EdgeSupabaseClient;
-    readonly assuranceLevel: "aal1" | "aal2" | "unknown";
-  }
-  | EdgeStaffSessionFailure;
 
 interface ResolveStaffSessionOptions {
   readonly missingMessage: string;
@@ -191,6 +38,8 @@ interface ResolveStaffSessionOptions {
   readonly allowedStatuses?: readonly ("active" | "onboarding")[];
   readonly allowLegacyMetadata?: boolean;
   readonly skipUniversalRateLimit?: boolean;
+  readonly recoveryGrantDigest?: string;
+  readonly claimRecovery?: boolean;
 }
 
 const DEFAULT_STAFF_LOOKUP_ERROR: EdgeErrorBody["error"] = {
@@ -225,6 +74,18 @@ export async function resolveStaffSessionForRequest(
   }
 
   const serviceClient = dependencies.createServiceClient(env);
+  if (options.claimRecovery) {
+    if (!isSystemRecoveryProject(env.supabaseUrl) || !options.recoveryGrantDigest) {
+      return authorizationFailure(403, "recovery_unavailable", "Recovery is unavailable.");
+    }
+    const claim = await serviceClient.rpc("system_recovery_claim_v1", {
+      p_user: authUser.id, p_session: recoverySessionId(accessToken, authUser.id), p_digest: options.recoveryGrantDigest,
+    });
+    if (claim.error || !claim.data) return authorizationFailure(403, "recovery_unavailable", "Recovery is unavailable.");
+  }
+  if (!await systemRecoveryAccessAllowed(env.supabaseUrl, serviceClient, authUser.id, accessToken, options.recoveryGrantDigest)) {
+    return authorizationFailure(403, "staff_recovery_restricted", "This session cannot access the application during account recovery.");
+  }
   const staffResponse = await serviceClient
     .from("staff_users")
     .select(
@@ -544,4 +405,45 @@ function authorizationFailure(
     status,
     error: { code, message, retryable },
   };
+}
+
+// The provider has already validated this bearer through getUser. This additional
+// deployment-bound lookup rejects revoked sessions and restricted application access.
+// A browser-supplied recovery header never authorizes ordinary Staff routes.
+export async function systemRecoveryAccessAllowed(
+  supabaseUrl: string,
+  service: Pick<EdgeSupabaseClient, "rpc">,
+  userId: string,
+  accessToken: string,
+  recoveryGrantDigest?: string,
+): Promise<boolean> {
+  if (!isSystemRecoveryProject(supabaseUrl.replace(/\/+$/u, ""))) return true;
+  try {
+    const sessionId = recoverySessionId(accessToken, userId);
+    if (!sessionId) return false;
+    const result = await service.rpc<boolean>("system_recovery_access_v1", {
+      p_user: userId, p_session: sessionId, p_digest: recoveryGrantDigest ?? null,
+    });
+    return !result.error && result.data === true;
+  } catch { return false; }
+}
+
+export function recoverySessionId(accessToken: string, userId: string): string | null {
+  try {
+    const encoded=accessToken.split(".")[1];
+    const claims=JSON.parse(atob(encoded.replace(/-/gu,"+").replace(/_/gu,"/")));
+    return claims.sub===userId && typeof claims.session_id==="string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(claims.session_id)
+      ? claims.session_id : null;
+  } catch { return null; }
+}
+
+export async function recoveryGrantDigest(value: unknown): Promise<string | null> {
+  if (typeof value!=="string" || !/^[A-Za-z0-9_-]{43}$/u.test(value)) return null;
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("");
+}
+
+export function isSystemRecoveryProject(url: string): boolean {
+  return ["https://eecvbssdvarfcykcfrny.supabase.co", "https://cgiukdjwicykrmtkhudh.supabase.co"].includes(url);
 }

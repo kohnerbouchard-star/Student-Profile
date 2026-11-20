@@ -1,3 +1,5 @@
+import "./supabasePlayerStoryContextCharacterizationQueries.test.ts";
+import "./supabasePlayerStoryContextCharacterizationProjection.test.ts";
 import { SupabasePlayerStoryContextRepository } from "./supabasePlayerStoryContextRepository.ts";
 import {
   PlayerStoryContextRepositoryError,
@@ -309,24 +311,28 @@ function baseTables(): FakeTables {
         player_id: "player-1",
         game_session_id: "game-1",
         account_type: "checking",
+        currency_code: "ECO",
         balance: "1000",
       },
       {
         player_id: "player-1",
         game_session_id: "game-1",
         account_type: "checking",
+        currency_code: "ECO",
         balance: 250,
       },
       {
         player_id: "player-1",
         game_session_id: "game-1",
         account_type: "escrow",
+        currency_code: "ECO",
         balance: 999,
       },
       {
         player_id: "player-2",
         game_session_id: "game-1",
         account_type: "checking",
+        currency_code: "ECO",
         balance: 500,
       },
     ],
