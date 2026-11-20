@@ -1,5 +1,7 @@
 import { readPlayerMessageInbox } from "../application/readPlayerMessageInbox.ts";
+import { readPlayerMessageThread } from "../application/readPlayerMessageThread.ts";
 import { createSupabasePlayerMessageInboxReadRepository } from "../infrastructure/supabasePlayerMessageInboxReadRepository.ts";
+import { createSupabasePlayerMessageThreadReadRepository } from "../infrastructure/supabasePlayerMessageThreadReadRepository.ts";
 import { sha256Hex } from "../../../platform/supabase/edgeCrypto.ts";
 import { EdgeActivationError, jsonError } from "../../../platform/supabase/edgeResponse.ts";
 import {
@@ -14,7 +16,6 @@ import {
 } from "../../players/index.ts";
 import type { PlayerMessagingRoute } from "./playerMessagingRoutePaths.ts";
 import type {
-  RawThread,
   SendRow,
   ReadRow,
 } from "./playerMessagingResponseProjection.ts";
@@ -110,12 +111,10 @@ async function handleRead(
   if (!readRequest.ok) return readRequest.response;
 
   if (route.kind === "thread") {
-    const response = await client.rpc<RawThread>("read_player_message_thread_v1", {
-      p_game_session_id: scope.gameId,
-      p_player_id: scope.playerUuid,
-      p_thread_public_id: route.threadId,
-      p_message_limit: readRequest.limits.messageLimit,
-    });
+    const response = await readPlayerMessageThread(scope, {
+      threadId: route.threadId,
+      messageLimit: readRequest.limits.messageLimit,
+    }, createSupabasePlayerMessageThreadReadRepository(client));
     if (response.error) return mapRpcError(response.error);
     return privateJsonResponse(200, {
       ok: true,

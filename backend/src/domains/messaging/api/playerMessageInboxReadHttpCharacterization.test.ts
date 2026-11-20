@@ -248,38 +248,109 @@ for (
   });
 }
 
-Deno.test("Inbox extraction preserves exact-thread read RPC and private result", async () => {
-  const fixture = dependencies({
-    id: THREAD,
-    type: "player",
-    title: "Thread",
-    status: "active",
-    participantCount: 2,
-    unreadCount: 0,
-    updatedAt: NOW.toISOString(),
-    retentionUntil: "2027-07-20T04:00:00.000Z",
-    messages: [],
+const threadRoute = { kind: "thread", threadId: THREAD } as const;
+const threadFixture = {
+  id: THREAD,
+  type: "player",
+  title: "Thread",
+  status: "active",
+  participantCount: 2,
+  unreadCount: 0,
+  updatedAt: NOW.toISOString(),
+  retentionUntil: "2027-07-20T04:00:00.000Z",
+  messages: [],
+  privateField: PLAYER,
+};
+const threadRequest = (suffix = "", token: string | null = "player-token") =>
+  request("list", `/threads/${THREAD}${suffix}`, { token });
+
+for (const [suffix, messageLimit] of [["", 100], ["?messageLimit=25", 25], ["?messageLimit=1", 1]] as const) {
+  Deno.test(`Exact-thread read preserves authenticated scope and private projection at limit ${messageLimit}`, async () => {
+    const fixture = dependencies(threadFixture);
+    const response = await handlePlayerMessagingRequest(threadRequest(suffix), threadRoute, fixture.value);
+    equal(fixture.trace, ["env", "client", "now", "hash:player-token", "session:hashed-token", "rpc"]);
+    equal(fixture.calls, [{
+      name: "read_player_message_thread_v1",
+      args: {
+        p_game_session_id: GAME,
+        p_player_id: PLAYER,
+        p_thread_public_id: THREAD,
+        p_message_limit: messageLimit,
+      },
+    }]);
+    equal(response.status, 200);
+    equal(response.headers.get("cache-control"), "private, no-store");
+    equal(response.headers.get("pragma"), "no-cache");
+    equal(response.headers.get("vary"), "authorization, x-player-session-token");
+    equal(await response.json(), {
+      ok: true,
+      data: { thread: {
+        id: THREAD,
+        type: "Player thread",
+        threadType: "player",
+        title: "Thread",
+        contractKey: "",
+        status: "Online",
+        rawStatus: "active",
+        allowPlayerReplies: false,
+        members: "2 participants",
+        participantCount: 2,
+        unread: 0,
+        preview: "No messages yet.",
+        time: NOW.toISOString(),
+        updatedAt: NOW.toISOString(),
+        retentionUntil: threadFixture.retentionUntil,
+        initials: "T",
+        tone: "green",
+        messages: [],
+      } },
+    });
   });
-  const response = await handlePlayerMessagingRequest(
-    new Request(
-      `https://example.test/players/me/messages/threads/${THREAD}?messageLimit=25`,
-      { headers: { "x-player-session-token": "player-token" } },
-    ),
-    { kind: "thread", threadId: THREAD },
-    fixture.value,
-  );
-  equal(response.status, 200);
-  equal((await response.json()).data.thread.id, THREAD);
-  equal(fixture.calls, [{
-    name: "read_player_message_thread_v1",
-    args: {
-      p_game_session_id: GAME,
-      p_player_id: PLAYER,
-      p_thread_public_id: THREAD,
-      p_message_limit: 25,
-    },
-  }]);
+}
+
+for (const suffix of ["?messageLimit=101", "?messageLimit=0", "?messageLimit=1&messageLimit=2", "?q=not-allowed"]) {
+  Deno.test(`Exact-thread parser rejects ${suffix} without reading persistence`, async () => {
+    const fixture = dependencies(threadFixture);
+    const response = await handlePlayerMessagingRequest(threadRequest(suffix), threadRoute, fixture.value);
+    equal(response.status, 400);
+    equal((await response.json()).error.code, "invalid_player_message_request");
+    equal(fixture.calls, []);
+  });
+}
+
+Deno.test("Exact-thread read denies missing or mismatched session before persistence", async () => {
+  const missing = dependencies(threadFixture);
+  equal((await handlePlayerMessagingRequest(threadRequest("", null), threadRoute, missing.value)).status, 401);
+  equal(missing.calls, []);
+  const mismatch = active();
+  mismatch.player.id = OTHER;
+  const wrongPlayer = dependencies(threadFixture, null, mismatch);
+  equal((await handlePlayerMessagingRequest(threadRequest(), threadRoute, wrongPlayer.value)).status, 401);
+  equal(wrongPlayer.calls, []);
+  const clientScope = dependencies(threadFixture);
+  const spoofed = await handlePlayerMessagingRequest(threadRequest("?gameId=untrusted"), threadRoute, clientScope.value);
+  equal(spoofed.status, 401);
+  equal((await spoofed.json()).error.code, "invalid_player_session_scope");
+  equal(clientScope.calls, []);
 });
+
+for (const [data, error, status, code] of [
+  [null, null, 500, "player_messaging_failed"],
+  [{ ...threadFixture, id: PLAYER }, null, 500, "player_messaging_failed"],
+  [null, { message: "PLAYER_MESSAGES_SCOPE_FORBIDDEN" }, 404, "player_message_thread_not_found"],
+  [null, { code: "42883", message: "private persistence details" }, 503, "player_messaging_schema_not_applied"],
+] as const) {
+  Deno.test(`Exact-thread read retains one attempt and safe ${status} / ${code} projection`, async () => {
+    const fixture = dependencies(data, error);
+    const response = await handlePlayerMessagingRequest(threadRequest(), threadRoute, fixture.value);
+    equal(response.status, status);
+    const body = await response.text();
+    equal(JSON.parse(body).error.code, code);
+    equal(body.includes("private persistence details"), false);
+    equal(body.includes(PLAYER), false);
+    equal(fixture.calls.length, 1);
+  });
+}
 
 Deno.test("Inbox read preserves thrown RPC failure and exactly one attempt", async () => {
   const fixture = dependencies(EMPTY);
