@@ -145,3 +145,51 @@ test("receipt group names are escaped and empty payment history has no fabricate
   f.lifecycle.payments.items = [];
   assert.doesNotMatch(render(f), /data-player-loan-payment-history=/);
 });
+
+test('forecast navigation binds exact facility and current product metadata only', () => {
+  const f = loansFixture(); const id = f.activeLoans[0].id;
+  let html = render(f);
+  assert.match(html, new RegExp(`data-loan-forecast-link="${id}" aria-controls="loan-forecast-${id}"`));
+  assert.ok(html.includes(`Working capital · ${id}`));
+  f.lifecycle.facilities.items[0].currentProduct.name = '<img src=x>';
+  html = render(f); assert.ok(html.includes(`&lt;img src=x&gt; · ${id}`)); assert.doesNotMatch(html, /<img src=x>/);
+  f.lifecycle.facilities.items = [];
+  html = render(f); assert.ok(html.includes(`<strong>${id}</strong>`));
+  f.repaymentForecast.facilities = [];
+  assert.doesNotMatch(render(f), /data-loan-forecast-link/);
+  f.repaymentForecast = null;
+  assert.doesNotMatch(render(f), /data-loan-forecast-link/);
+});
+
+test('forecast local navigation opens and focuses only exact current available disclosure without writes or rerenders', async () => {
+  const { createPlayerTerminalActions } = await import('../src/core/player-terminal-actions.js');
+  const f = loansFixture(), id = f.activeLoans[0].id;
+  let state = { route: 'loans', status: 'ready', modal: null, ui: { notificationsOpen: true }, data: { loans: normalize(f) } };
+  let focused = 0, scrolled = 0;
+  const destination = { open: false, querySelector: () => ({ focus: () => focused++, scrollIntoView: () => scrolled++ }) };
+  const button = { dataset: { loanForecastLink: id }, disabled: false };
+  const target = { closest: (selector) => selector === '[data-loan-forecast-link]' ? button : null, matches: () => false };
+  let destinations = [destination];
+  const forbidden = () => { throw Error('Unexpected write or shell rerender'); };
+  const { handleClick } = createPlayerTerminalActions({ store: { getState: () => state, setState: forbidden }, mount: { querySelectorAll: (selector) => {
+    assert.equal(selector, `[data-loan-forecast="${id}"]`); return destinations;
+  } }, config: {}, lifecycle: { executeEndpoint: forbidden }, updateUi: forbidden, restoreFocus: forbidden });
+  const click = () => handleClick({ target, preventDefault() {} });
+  await click(); assert.equal(destination.open, true); assert.equal(focused, 1); assert.equal(scrolled, 1);
+  for (const patch of [{ route: 'news' }, { status: 'loading' }, { modal: {} }]) {
+    const before = state; state = { ...state, ...patch }; await click(); state = before;
+  }
+  button.disabled = true; await click(); button.disabled = false;
+  destinations = []; await click(); destinations = [destination, destination]; await click(); destinations = [destination];
+  const active = state.data.loans.activeLoans;
+  state.data.loans.activeLoans = [active[0], active[0]]; await click();
+  state.data.loans.activeLoans = []; await click(); state.data.loans.activeLoans = active;
+  destinations = [{ querySelector: () => null }]; await click(); destinations = [destination];
+  const facilities = state.data.loans.repaymentForecast.facilities;
+  for (const rows of [null, {}, [null], [facilities[0], facilities[0]]]) {
+    state.data.loans.repaymentForecast.facilities = rows; await click();
+  }
+  state.data.loans.repaymentForecast.facilities = facilities;
+  state.data.loans.repaymentForecast.facilities[0].state = 'unavailable'; await click();
+  assert.equal(focused, 1); assert.equal(scrolled, 1);
+});

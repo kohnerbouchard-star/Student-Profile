@@ -113,3 +113,18 @@ test("facility receipts open by keyboard, retain reversals, and clear after unav
   await expect(receipts).toHaveCount(1);
   expect(await page.evaluate(() => loansTest.repayments)).toEqual([]);
 });
+
+test('active facility opens its own recorded repayment plan by keyboard without submitting payment', async ({ page }) => {
+  const id = await page.evaluate(() => loansTest.models.loans.activeLoans[0].id);
+  const amount = page.locator(`[data-loan-id="${id}"] input[name="amount"]`);
+  await page.locator('.player-terminal-active-loans details').filter({ has: amount }).locator('summary').click();
+  await amount.fill('1.23');
+  const shortcut = page.locator(`[data-loan-forecast-link="${id}"]`);
+  await shortcut.focus(); await page.keyboard.press('Enter');
+  const plan = page.locator(`[data-loan-forecast="${id}"]`);
+  await expect(plan).toHaveAttribute('open', '');
+  await expect(plan.locator('summary')).toBeFocused();
+  await expect(plan.locator('summary')).toContainText(`Working capital · ${id}`);
+  await expect(amount).toHaveValue('1.23');
+  expect(await page.evaluate(() => loansTest.repayments)).toEqual([]);
+});
