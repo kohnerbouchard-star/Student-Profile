@@ -1,8 +1,8 @@
+import { createBusinessBankingRowProjection } from "./businessBankingRowProjection.ts";
 import { handleRetiredBusinessSettlement } from "./businessSettlementRetirementDispatch.ts";
 import { readLoanSupervision } from "./businessBankingLoanSupervision.ts";
 import {
   projectBusinessSupervision,
-  safeBusinessValue,
 } from "./businessSupervisionProjection.ts";
 
 interface OperationResult {
@@ -27,6 +27,9 @@ type ServiceClient = {
 };
 
 type Row = Record<string, unknown>;
+
+const { projectBusinessRows, projectBusinessRow, projectLoanApplicationRows } =
+  createBusinessBankingRowProjection(publicKey);
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -281,77 +284,6 @@ export async function handleBusinessBankingAdminOperation(
   }
 }
 
-function projectBusinessRows(value: unknown): Row[] {
-  if (value === null || value === undefined) return [];
-  if (!Array.isArray(value)) {
-    throw new Error("BUSINESS_SUPERVISION_RESPONSE_INVALID");
-  }
-  return value.filter((row): row is Row =>
-    Boolean(row && typeof row === "object" && !Array.isArray(row))
-  ).map(projectBusinessRow);
-}
-
-function projectBusinessRow(row: Row): Row {
-  const status = typeof row.status === "string"
-    ? row.status.trim().toLowerCase()
-    : "";
-  const failureCount = Number(row.failure_count);
-  const attentionFlags: string[] = [];
-  if (status && status !== "active") attentionFlags.push(`status:${status}`);
-  if (Number.isSafeInteger(failureCount) && failureCount > 0) {
-    attentionFlags.push("recorded-failures");
-  }
-  const operationalReadiness = row.closed_at || status === "closed"
-    ? "closed"
-    : status === "active" && attentionFlags.length === 0
-    ? "unknown"
-    : status
-    ? "attention"
-    : "unknown";
-
-  return Object.fromEntries(
-    Object.entries({
-      public_key: publicKey(row.public_key, "biz"),
-      legal_name: row.legal_name,
-      entity_type: row.entity_type,
-      industry_code: row.industry_code,
-      country_code: row.country_code,
-      currency_code: row.currency_code,
-      status: row.status,
-      capitalization: row.capitalization,
-      reputation_score: row.reputation_score,
-      failure_count: row.failure_count,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-      closed_at: row.closed_at,
-      operational_readiness: operationalReadiness,
-      attention_flags: attentionFlags,
-    }).map((
-      [key, value],
-    ) => [key, key === "attention_flags" ? value : safeBusinessValue(value)]),
-  );
-}
-
-function projectLoanApplicationRows(value: unknown): Row[] {
-  if (value === null || value === undefined) return [];
-  if (!Array.isArray(value)) {
-    throw new Error("LOAN_APPLICATION_SUPERVISION_RESPONSE_INVALID");
-  }
-  return value.filter((row): row is Row =>
-    Boolean(row && typeof row === "object" && !Array.isArray(row))
-  ).map((row) => ({
-    public_key: publicKey(row.public_key, "lna"),
-    amount: row.amount,
-    purpose: row.purpose,
-    credit_score: row.credit_score,
-    projected_payment: row.projected_payment,
-    affordability_ratio: row.affordability_ratio,
-    status: row.status,
-    reviewed_at: row.reviewed_at,
-    review_reason: row.review_reason,
-    created_at: row.created_at,
-  }));
-}
 
 async function rpc(
   service: ServiceClient,
