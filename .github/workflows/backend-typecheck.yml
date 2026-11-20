@@ -127,6 +127,12 @@ jobs:
           src/domains/game-dashboard/infrastructure/dashboardRepositoryProjection.test.ts
           src/domains/game-dashboard/infrastructure/dashboardRepositoryValuation.test.ts
 
+      - name: Verify Player Messaging thread read compatibility
+        run: >-
+          deno test --config supabase/functions/deno.json
+          --lock=supabase/functions/deno.lock --frozen --deny-net
+          src/domains/messaging/api/playerMessagingHttpHandler.test.ts
+
       - name: Run backend typecheck
         shell: bash
         run: |
