@@ -89,6 +89,27 @@ export function createPlayerTerminalActions({
       return;
     }
 
+    // Open the existing authoritative plan without rerendering payment drafts.
+    const forecastLink = event.target.closest('[data-loan-forecast-link]');
+    if (forecastLink) {
+      event.preventDefault();
+      const id = forecastLink.dataset.loanForecastLink;
+      if (stateAtClick.route !== 'loans' || stateAtClick.status !== 'ready' || stateAtClick.modal || forecastLink.disabled || !/^lon_[0-9a-f]{32}$/u.test(id || '')) return;
+      const loans = stateAtClick.data?.loans;
+      if (!Array.isArray(loans?.activeLoans) || loans.activeLoans.filter((row) => row?.id === id).length !== 1) return;
+      const rows = Array.isArray(loans.repaymentForecast?.facilities) ? loans.repaymentForecast.facilities.filter((row) => row?.id === id) : [];
+      if (rows.length !== 1 || rows[0].state !== 'available') return;
+      const destinations = mount.querySelectorAll(`[data-loan-forecast="${id}"]`);
+      if (destinations.length !== 1) return;
+      const destination = destinations[0];
+      const summary = destination.querySelector('summary');
+      if (!summary) return;
+      destination.open = true;
+      summary.focus({ preventScroll: true });
+      summary.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+      return;
+    }
+
     if (stateAtClick.ui.notificationsOpen && !event.target.closest('[data-player-notification-drawer], [data-player-local-action="toggle-notifications"]')) {
       restoreFocus();
       updateUi({ notificationsOpen: false });
