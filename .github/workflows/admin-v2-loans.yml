@@ -7,6 +7,7 @@ on:
       - "admin/v2/src/app.js"
       - "admin/v2/src/core/navigation-registry.js"
       - "backend/supabase/functions/admin-api/businessBankingOperations.ts"
+      - "backend/supabase/functions/admin-api/businessBankingRowProjection.ts"
       - "backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts"
       - "backend/supabase/functions/admin-api/businessBankingOperations.test.ts"
       - "scripts/admin-v2-loans-api.test.mjs"
@@ -19,6 +20,7 @@ on:
     paths:
       - "admin/v2/src/routes/loans/**"
       - "backend/supabase/functions/admin-api/businessBankingOperations.ts"
+      - "backend/supabase/functions/admin-api/businessBankingRowProjection.ts"
       - "backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts"
       - "backend/supabase/functions/admin-api/businessBankingOperations.test.ts"
       - "scripts/admin-v2-loans-api.test.mjs"

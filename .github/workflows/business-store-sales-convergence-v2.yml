@@ -33,6 +33,7 @@ on:
       - backend/supabase/config.toml
       - backend/supabase/edge-function-manifest.json
       - backend/supabase/functions/admin-api/businessBankingOperations*
+      - "backend/supabase/functions/admin-api/businessBankingRowProjection.ts"
       - backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts
       - backend/supabase/functions/admin-api/businessSettlementRetirementDispatch*
       - backend/supabase/functions/admin-api/index.ts
@@ -89,6 +90,7 @@ on:
       - backend/supabase/config.toml
       - backend/supabase/edge-function-manifest.json
       - backend/supabase/functions/admin-api/businessBankingOperations*
+      - "backend/supabase/functions/admin-api/businessBankingRowProjection.ts"
       - backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts
       - backend/supabase/functions/admin-api/businessSettlementRetirementDispatch*
       - backend/supabase/functions/admin-api/index.ts
