@@ -8,7 +8,7 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1639,
+    "sourceFiles": 1661,
     "edgeEntrypoints": 28,
     "handlerFiles": 61,
     "persistenceOutsideInfrastructure": 83,
@@ -211,7 +211,7 @@
         "infrastructure",
         "realtime"
       ],
-      "sourceFiles": 31,
+      "sourceFiles": 32,
       "publicBoundaryFiles": []
     },
     {
@@ -280,7 +280,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 28,
+      "sourceFiles": 30,
       "publicBoundaryFiles": []
     },
     {
@@ -1675,7 +1675,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/banking/BankingController.js",
+        "file": "admin/v2/src/routes/banking/BankingReadModel.js",
         "markers": [
           "fallback"
         ]

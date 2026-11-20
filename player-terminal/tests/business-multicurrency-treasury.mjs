@@ -1,3 +1,4 @@
+import { assertProcurementReceiptMatchesQuote } from "../src/features/business-treasury/business-procurement-receipt-match.js";
 import assert from "node:assert/strict";
 
 import { resolvePlayerBackendRequest } from "../src/api/backend-routes.js";
@@ -678,3 +679,32 @@ assert.equal(
 );
 
 console.log("Business C4 Treasury, exact funding DTO, server-derived remainder, Phase 12 deferred dependencies, capability, state, and precision contracts passed.");
+
+// The flow normalizes the response before binding it to the reviewed quote.
+// Keep identity checks and exact funding amounts independent of DOM/commands.
+assert.equal(assertProcurementReceiptMatchesQuote(procurementReceipt, procurementQuote), undefined);
+const receiptBefore = structuredClone(procurementReceipt);
+const quoteBefore = structuredClone(procurementQuote);
+for (const field of ["businessKey", "quoteKey", "itemKey", "quantity"]) {
+  assert.throws(() => assertProcurementReceiptMatchesQuote({
+    ...procurementReceipt,
+    [field]: field === "quantity" ? procurementReceipt.quantity + 1 : "different",
+  }, procurementQuote), (error) => error.code === "INVALID_RESPONSE" && error.endpointKey === "businessStorePurchase");
+}
+for (const field of ["quoteKey", "targetAccountKey"]) {
+  assert.throws(() => assertProcurementReceiptMatchesQuote({
+    ...procurementReceipt,
+    fundingReceipt: { ...procurementReceipt.fundingReceipt, [field]: "different" },
+  }, procurementQuote), (error) => error.code === "INVALID_RESPONSE");
+}
+for (const precision of [0, 3, 18]) {
+  const amount = precision ? `9007199254740993.${"0".repeat(precision - 1)}1` : "9007199254740993";
+  const different = precision ? `9007199254740993.${"0".repeat(precision - 1)}2` : "9007199254740994";
+  const quote = { ...procurementQuote, fundingQuote: { ...procurementQuote.fundingQuote, targetAmount: { amount, precision } } };
+  const receipt = { ...procurementReceipt, fundingReceipt: { ...procurementReceipt.fundingReceipt, targetAmount: { amount, precision } } };
+  assert.equal(assertProcurementReceiptMatchesQuote(receipt, quote), undefined);
+  assert.throws(() => assertProcurementReceiptMatchesQuote({ ...receipt, fundingReceipt: { ...receipt.fundingReceipt, targetAmount: { amount: different, precision } } }, quote), (error) => error.code === "INVALID_RESPONSE");
+}
+assert.deepEqual(procurementReceipt, receiptBefore);
+assert.deepEqual(procurementQuote, quoteBefore);
+console.log("Procurement receipt binding: every identity mismatch and exact 0/3/18-place amount preserved without mutation.");

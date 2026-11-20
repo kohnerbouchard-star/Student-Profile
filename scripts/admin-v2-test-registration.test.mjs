@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const registeredTests = [
+  "scripts/admin-v2-mutation-coordinator.test.mjs",
+  "scripts/admin-inventory-review-dialog.test.mjs",
   "scripts/admin-v2-test-registration.test.mjs",
   "scripts/admin-v2-world-management.test.mjs",
   "scripts/admin-v2-inventory-contract.test.mjs",
@@ -10,6 +12,11 @@ const registeredTests = [
 ];
 // Its runtime extraction is a separate lane; select test-only changes when it lands.
 const workflowPaths = [
+  "scripts/admin-v2-attendance-route.test.mjs",
+  "scripts/fixtures/admin-attendance-route-harness.mjs",
+  "scripts/fixtures/admin-attendance-function-hashes.json",
+
+  "scripts/fixtures/admin-inventory-route-harness.mjs",
   ...registeredTests,
   "scripts/admin-v2-marketplace-read-model.test.mjs",
   "package.json",

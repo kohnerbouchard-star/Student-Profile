@@ -1,3 +1,4 @@
+import { reconcileDashboardMarketStatus } from "./helpers/dashboard-timezone-layout.mjs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -667,6 +668,13 @@ if (usesPublicMarketStatePort) {
   }
 }
 
+const dashboardPanelProjectionSource = await read(
+  "backend/src/domains/game-dashboard/infrastructure/dashboardPanelProjection.ts",
+).catch((error) => {
+  if (error.code === "ENOENT") return "";
+  throw error;
+});
+
 await patch(
   "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
   (source) => {
@@ -699,14 +707,7 @@ await patch(
       );
     }
 
-    if (!expected.includes("gameSession.status === \"active\" && marketOpen")) {
-      expected = replaceRegexRequired(
-        expected,
-        /        marketStatus: gameSession\.status === "active"[\s\S]*?          : "closed",/,
-        `        marketStatus: gameSession.status === "active" && marketOpen\n          ? "open"\n          : "closed",`,
-        "dashboard market status",
-      );
-    }
+    expected = reconcileDashboardMarketStatus(expected, dashboardPanelProjectionSource);
 
     return expected;
   },

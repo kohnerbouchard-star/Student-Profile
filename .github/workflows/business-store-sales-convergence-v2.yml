@@ -33,6 +33,7 @@ on:
       - backend/supabase/config.toml
       - backend/supabase/edge-function-manifest.json
       - backend/supabase/functions/admin-api/businessBankingOperations*
+      - "backend/supabase/functions/admin-api/businessBankingRowProjection.ts"
       - backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts
       - backend/supabase/functions/admin-api/businessSettlementRetirementDispatch*
       - backend/supabase/functions/admin-api/index.ts
@@ -61,6 +62,8 @@ on:
       - player-terminal/src/data/empty-read-models.js
       - player-terminal/src/data/preview-data.js
       - player-terminal/src/pages/business-page.js
+      - player-terminal/src/pages/business-procurement-view.js
+      - scripts/helpers/business-page-source.mjs
       - player-terminal/tests/business-banking-surface.mjs
       - scripts/admin-v2-business-api.test.mjs
       - scripts/admin-v2-loans-api.test.mjs
@@ -87,6 +90,7 @@ on:
       - backend/supabase/config.toml
       - backend/supabase/edge-function-manifest.json
       - backend/supabase/functions/admin-api/businessBankingOperations*
+      - "backend/supabase/functions/admin-api/businessBankingRowProjection.ts"
       - backend/supabase/functions/admin-api/businessBankingLoanSupervision.ts
       - backend/supabase/functions/admin-api/businessSettlementRetirementDispatch*
       - backend/supabase/functions/admin-api/index.ts
@@ -115,6 +119,8 @@ on:
       - player-terminal/src/data/empty-read-models.js
       - player-terminal/src/data/preview-data.js
       - player-terminal/src/pages/business-page.js
+      - player-terminal/src/pages/business-procurement-view.js
+      - scripts/helpers/business-page-source.mjs
       - player-terminal/tests/business-banking-surface.mjs
       - scripts/admin-v2-business-api.test.mjs
       - scripts/admin-v2-loans-api.test.mjs

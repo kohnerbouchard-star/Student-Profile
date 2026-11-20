@@ -44,6 +44,7 @@ on:
       - "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts"
       - "backend/src/domains/game-realtime/gamePublicRealtimeEvents.ts"
       - "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts"
+      - "backend/src/domains/game-dashboard/infrastructure/dashboardPanelProjection.ts"
       - "backend/src/domains/game-dashboard/infrastructure/dashboardReadRows.ts"
       - "backend/src/domains/game-dashboard/infrastructure/dashboardReadProjection.ts"
       - "backend/src/domains/players/api/playerSessionBootstrapCurrencyHttpHandler.test.ts"
@@ -59,6 +60,7 @@ on:
       - "backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql"
       - "backend/supabase/migrations/20260811072424_admin_v2_teacher_safety_v1.sql"
       - "player-terminal/src/integrations/student-profile-api-call.js"
+      - "player-terminal/src/integrations/student-profile-currency-projection.js"
       - "player-terminal/src/pages/store-page.js"
       - "player-terminal/tests/browser-safe-session-bootstrap.mjs"
       - "player-terminal/tests/store-local-currency.mjs"
@@ -91,6 +93,7 @@ on:
       - "backend/src/domains/game-dashboard/contracts/playerGameDashboardContracts.ts"
       - "backend/src/domains/game-realtime/gamePublicRealtimeEvents.ts"
       - "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts"
+      - "backend/src/domains/game-dashboard/infrastructure/dashboardPanelProjection.ts"
       - "backend/src/domains/game-dashboard/infrastructure/dashboardReadRows.ts"
       - "backend/src/domains/game-dashboard/infrastructure/dashboardReadProjection.ts"
       - "backend/src/domains/players/api/playerSessionBootstrapCurrencyHttpHandler.test.ts"
@@ -106,6 +109,7 @@ on:
       - "backend/supabase/migrations/20260806070000_canonicalize_player_checking_wallet_v1.sql"
       - "backend/supabase/migrations/20260811072424_admin_v2_teacher_safety_v1.sql"
       - "player-terminal/src/integrations/student-profile-api-call.js"
+      - "player-terminal/src/integrations/student-profile-currency-projection.js"
       - "player-terminal/src/pages/store-page.js"
       - "player-terminal/tests/browser-safe-session-bootstrap.mjs"
       - "player-terminal/tests/store-local-currency.mjs"
@@ -183,6 +187,7 @@ jobs:
           node --check admin/v2/src/routes/contracts/ContractForm.js
           node --check admin/v2/src/routes/store/StoreController.js
           node --check player-terminal/src/integrations/student-profile-api-call.js
+          node --check player-terminal/src/integrations/student-profile-currency-projection.js
           node --check player-terminal/tools/connected-banking-loans-bff-adapter.mjs
 
       - name: Check focused TypeScript formatting and types

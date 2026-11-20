@@ -293,3 +293,30 @@ for (const mode of ["business_offer", "system_offer"]) test(`${mode}: lost commi
   await expect.poll(() => page.evaluate(() => storeFixture.terminal.getState().data.store.items.flatMap((item) => item.offers).find((offer) => offer.offerKey === storeFixture.selectedOffer).availableQuantity)).toBe(before - 1);
   await expect(page.locator("[data-player-store-review]")).toHaveCount(0);
 });
+
+for (const mode of ["business_offer", "system_offer"]) test(`${mode}: repeated failed-refresh retry keeps receipt and cannot resend settlement`, async ({ page }) => {
+  await fixture(page, mode); await review(page);
+  await page.evaluate(() => { storeFixture.failRefresh = true; });
+  await page.locator("[data-player-store-confirm]").click();
+  await expect(page.locator("[data-player-store-refresh-retry]")).toBeEnabled();
+  const receipt = await page.locator('[aria-labelledby="storePurchaseModalTitle"] .player-terminal-connector-meta').first().textContent();
+  await hold(page, "store");
+  await page.locator("[data-player-store-refresh-retry]").evaluate((button) => { button.click(); button.click(); });
+  await started(page); await release(page);
+  await expect(page.locator("[data-player-store-refresh-retry]")).toBeEnabled();
+  expect(await page.locator('[aria-labelledby="storePurchaseModalTitle"] .player-terminal-connector-meta').first().textContent()).toBe(receipt);
+  // A stale delegated control must not turn an already committed receipt back
+  // into a command or an editable quote, even if an extension retains one.
+  await page.evaluate(() => {
+    const modal = document.querySelector('[aria-labelledby="storePurchaseModalTitle"]');
+    for (const attribute of ["data-player-store-confirm", "data-player-store-edit"]) {
+      const button = document.createElement("button"); button.setAttribute(attribute, "");
+      modal.append(button); button.click(); button.remove();
+    }
+    storeFixture.failRefresh = false;
+  });
+  await page.locator("[data-player-store-refresh-retry]").click();
+  await expect(page.locator("[data-player-store-refresh-retry]")).toHaveCount(0);
+  expect(await page.locator('[aria-labelledby="storePurchaseModalTitle"] .player-terminal-connector-meta').first().textContent()).toBe(receipt);
+  expect(await page.evaluate((key) => storeFixture.calls.filter(call => call.key === key).length, purchaseKey(mode))).toBe(1);
+});

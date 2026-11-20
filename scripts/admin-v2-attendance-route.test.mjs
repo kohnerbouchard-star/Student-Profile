@@ -19,9 +19,13 @@ test("Attendance retains its sole public route export", async () => {
 
 test("Attendance read-panel extraction preserves every complete function and correction option", () => {
   // Recorded before extraction from unchanged main b77c9610.
+  // TEACHER-ATTENDANCE-ROSTER-FILTER-001 updates resolvedContent to use the
+  // filter panel, and rosterTable to optionally return its existing controller.
+  // Scanner panel relocation retains its original function hash unchanged.
+  // All remaining function identities are retained.
   const expected = JSON.parse(readFileSync("scripts/fixtures/admin-attendance-function-hashes.json", "utf8"));
   const directory = "admin/v2/src/routes/attendance", actual = {}; let combined = "";
-  for (const file of readdirSync(directory).filter((name) => /^Attendance(?:Route|ReadPanels)\.js$/.test(name))) {
+  for (const file of readdirSync(directory).filter((name) => /^Attendance(?:Route|ReadPanels|ScannerPanel)\.js$/.test(name))) {
     const source = readFileSync(`${directory}/${file}`, "utf8"); combined += source;
     for (const match of source.matchAll(/^(?:export )?function (\w+)\(/gm)) {
       const end = match.index + source.slice(match.index).match(/^}$/m).index + 1;
@@ -178,4 +182,59 @@ test("Attendance unlocking retains pending state, result message and original ca
   assert.deepEqual(calls, [[false, "Synthetic unlock"]]); assert.equal(h.confirmations[0].opens.length, 0);
   assert.equal(h.button("unlock-day").disabled, false);
   assert.equal(h.nodes.find((node) => node.className === "admin-attendance-route__action-status").textContent, "Unable to unlock");
+});
+
+for (const status of ["ready", "refreshing", "stale"]) {
+  test(`Attendance roster filters the ${status} projection without altering actions or totals`, async () => {
+    const h = ready({ status }); const before = structuredClone(h.model);
+    const search = h.fields.get("attendance-roster-search"), filter = h.fields.get("attendance-roster-status");
+    assert.equal(search.options.label, "Find a player");
+    assert.equal(search.options.autocomplete, "off");
+    assert.deepEqual(filter.options.options.map((item) => item.value), ["all", "present", "late", "absent", "excused", "missing"]);
+    search.value = "  SAMPLE "; await search.control.dispatch("input");
+    assert.deepEqual(h.tables.at(-1).rows.map((row) => row.rowKey), ["attendance-player-2"]);
+    filter.value = "present"; await filter.control.dispatch("change");
+    const content = h.nodes.findLast((node) => node.children?.[0]?.kind === "empty" && node.children[0].options.title === "No matching players");
+    assert.ok(content);
+    const zeroAnnouncement = h.nodes.find((node) => node.attrs?.role === "status" && /No matching players/.test(node.textContent));
+    assert.ok(zeroAnnouncement);
+    assert.equal(h.tables.length, 1, "Filtering must retain the same sortable table");
+    assert.equal(h.fields.get("attendance-player").value, "");
+    assert.deepEqual(h.fields.get("attendance-player").options.options.map((item) => item.value), ["", "attendance-player-1", "attendance-player-2"]);
+    assert.deepEqual(h.model, before);
+    await h.button("clear-roster-filters").dispatch("click");
+    assert.equal(search.value, ""); assert.equal(filter.value, "all"); assert.equal(search.focused, 1);
+    assert.equal(zeroAnnouncement.textContent, "");
+    assert.strictEqual(h.tables.at(-1).rows, h.model.rows);
+    assert.equal(h.button("clear-roster-filters").disabled, true);
+    assert.ok(h.nodes.some((node) => /2 of 2 loaded roster entries/.test(node.textContent)));
+    h.route.destroy();
+  });
+}
+
+test("Attendance roster filter keeps duplicate names and separates missing from absent", async () => {
+  const { filterAttendanceRoster } = await import("../admin/v2/src/routes/attendance/AttendanceRoster.js");
+  const rows = Object.freeze([
+    Object.freeze({ rowKey: "1", displayName: "가상 학생", rosterLabel: "A-01", attendanceStatus: "missing", note: "secret" }),
+    Object.freeze({ rowKey: "2", displayName: "가상 학생", rosterLabel: "A-02", attendanceStatus: "absent" }),
+    Object.freeze({ rowKey: "3", displayName: "Other", rosterLabel: "B-01", attendanceStatus: "late" }),
+  ]);
+  assert.deepEqual(filterAttendanceRoster(rows, "가상"), rows.slice(0, 2));
+  assert.deepEqual(filterAttendanceRoster(rows, "가상"), rows.slice(0, 2));
+  assert.deepEqual(filterAttendanceRoster(rows, "a-02"), [rows[1]]);
+  assert.deepEqual(filterAttendanceRoster(rows, "", "missing"), [rows[0]]);
+  assert.deepEqual(filterAttendanceRoster(rows, "", "absent"), [rows[1]]);
+  assert.deepEqual(filterAttendanceRoster(rows, "", "late"), [rows[2]]);
+  assert.deepEqual(filterAttendanceRoster(rows, "secret"), []);
+  assert.strictEqual(filterAttendanceRoster(rows, "", "unknown"), rows);
+  assert.deepEqual(filterAttendanceRoster(rows, "<script>"), []);
+});
+
+test("Attendance roster filters reset for a fresh rendered snapshot", async () => {
+  const h = ready(); h.fields.get("attendance-roster-search").value = "no match";
+  await h.fields.get("attendance-roster-search").control.dispatch("input"); h.route.destroy();
+  const next = ready();
+  assert.equal(next.fields.get("attendance-roster-search").value, "");
+  assert.equal(next.fields.get("attendance-roster-status").value, "all");
+  assert.strictEqual(next.tables[0].rows, next.model.rows);
 });

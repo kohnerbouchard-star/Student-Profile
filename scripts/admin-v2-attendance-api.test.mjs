@@ -332,16 +332,18 @@ test("Attendance controller fails closed on permission denial and owns empty/sta
 test("Attendance scanner source preserves legacy timing, keyboard focus, and responsive desktop/tablet/mobile behavior", async () => {
   const controllerSource = await readFile(new URL("../admin/v2/src/routes/attendance/AttendanceController.js", import.meta.url), "utf8");
   const routeSource = await readFile(new URL("../admin/v2/src/routes/attendance/AttendanceRoute.js", import.meta.url), "utf8");
+  const scannerSource = await readFile(new URL("../admin/v2/src/routes/attendance/AttendanceScannerPanel.js", import.meta.url), "utf8");
+  assert.match(routeSource, /import \{ scannerPanel \} from "\.\/AttendanceScannerPanel\.js"/);
   const cssSource = await readFile(new URL("../admin/v2/styles/routes/attendance.css", import.meta.url), "utf8");
 
   assert.match(controllerSource, /SUCCESS_RESET_MS\s*=\s*1_200/);
   assert.match(controllerSource, /ERROR_RESET_MS\s*=\s*2_000/);
   assert.match(controllerSource, /SCANNER_REARM_MS\s*=\s*250/);
-  assert.match(routeSource, /form\.addEventListener\("submit"/);
-  assert.match(routeSource, /input\.focus\(\{ preventScroll: true \}\)/);
-  assert.match(routeSource, /autocomplete:\s*"off"/);
-  assert.match(routeSource, /Scan RFID \/ player code/);
-  assert.doesNotMatch(routeSource, /check.?out/i);
+  assert.match(scannerSource, /form\.addEventListener\("submit"/);
+  assert.match(scannerSource, /input\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(scannerSource, /autocomplete:\s*"off"/);
+  assert.match(scannerSource, /Scan RFID \/ player code/);
+  assert.doesNotMatch(routeSource + scannerSource, /check.?out/i);
   assert.match(cssSource, /@media \(max-width: 1100px\)/);
   assert.match(cssSource, /@media \(max-width: 760px\)/);
   assert.match(cssSource, /overflow-wrap:\s*anywhere/);

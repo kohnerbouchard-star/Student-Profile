@@ -47,6 +47,7 @@ on:
       - player-terminal/src/api/portfolio-read-model.js
       - player-terminal/src/api/resource-plan.js
       - player-terminal/src/api/response-store-validator.js
+      - player-terminal/src/api/response-business-validator.js
       - player-terminal/src/components/modal.js
       - player-terminal/src/data/preview-data.js
       - player-terminal/src/features/inventory/inventory-action-flow.js
@@ -105,6 +106,7 @@ on:
       - player-terminal/src/api/portfolio-read-model.js
       - player-terminal/src/api/resource-plan.js
       - player-terminal/src/api/response-store-validator.js
+      - player-terminal/src/api/response-business-validator.js
       - player-terminal/src/components/modal.js
       - player-terminal/src/data/preview-data.js
       - player-terminal/src/features/store/**

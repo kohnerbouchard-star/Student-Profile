@@ -1,485 +1,665 @@
 {
-  "base": "03adc6891995fe1d780fe34629b1daf14470ea39",
-  "sourceHead": "29ec53107695efb0dbf94bfd291a91a66c0f0210",
-  "derivation": "Complete eleven-path PR1009 scope including reviewed Roster source pin: path/branch/event-filter derivation:30 workflow families,64 active job tuples,4 guarded skips. No matrices; closed-only Branch Hygiene excluded; CodeQL external. No workflow or gate changes.",
+  "base": "b9265aecd9b59099b6973d27eec9580ffc806c38",
+  "sourceHead": "99d6edc4dc747e380be8c6ac15995a50d3616250",
+  "derivation": "Current main-target pull_request opened/synchronize/reopened filters evaluated against all 11 changed paths including actual-number metadata and integrated source pins. 38 workflow families, 78 active job tuples, 4 condition-guarded skips; no matrices. CodeQL external. No workflow, check, condition, command, permission or runtime guard changed. SourceHead identifies reviewed source, not final hosted qualification. Actual-main integration preserves merged #1007/#1008/#1010 and the additive Store test command. Own eleven-path scope remains unchanged after inventory regeneration and final repin. Inherited Crafting filter addition names only pr-1007.json; no change to PR1011 applicability. Both runtime roles must bind the published metadata-complete integration.",
   "pairs": [
     {
       "workflow": ".github/workflows/admin-browser-e2e.yml",
       "workflowName": "Admin Browser E2E",
       "job": "rendered-admin",
       "checkName": "Rendered Admin browser and secure mutation journey",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/admin-business-supervision.yml",
       "workflowName": "Admin Business Supervision",
       "job": "source",
       "checkName": "admin-business-supervision-source",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/admin-business-supervision.yml",
       "workflowName": "Admin Business Supervision",
       "job": "database",
       "checkName": "admin-business-supervision-database",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/admin-business-supervision.yml",
       "workflowName": "Admin Business Supervision",
       "job": "browser",
       "checkName": "admin-business-supervision-browser",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
-      "workflow": ".github/workflows/backend-typecheck.yml",
-      "workflowName": "Backend Typecheck",
-      "job": "backend-typecheck",
-      "checkName": "backend-typecheck",
-      "condition": ""
+      "workflow": ".github/workflows/banking-fx-clearing-v1.yml",
+      "workflowName": "banking-fx-clearing-v1",
+      "job": "certify",
+      "checkName": "Certify Banking FX clearing source",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/banking-fx-clearing-v1.yml",
+      "workflowName": "banking-fx-clearing-v1",
+      "job": "database-acceptance",
+      "checkName": "Verify Banking FX database acceptance",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/banking-fx-clearing-v1.yml",
+      "workflowName": "banking-fx-clearing-v1",
+      "job": "chromium-acceptance",
+      "checkName": "Verify Banking FX Chromium acceptance",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-banking-runtime.yml",
+      "workflowName": "Business Banking Runtime",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-economy-v2.yml",
       "workflowName": "Business Economy V2",
       "job": "authority-contract",
       "checkName": "Business economy authority contract",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-economy-v2.yml",
       "workflowName": "Business Economy V2",
       "job": "backend-typecheck",
       "checkName": "Backend typecheck",
-      "condition": ""
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-financial-market.yml",
+      "workflowName": "Business Financial Market",
+      "job": "source",
+      "checkName": "business-financial-market-source",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-financial-market.yml",
+      "workflowName": "Business Financial Market",
+      "job": "database",
+      "checkName": "business-financial-market-database",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-financial-market.yml",
+      "workflowName": "Business Financial Market",
+      "job": "browser",
+      "checkName": "business-financial-market-browser",
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-multicurrency-treasury-v1.yml",
       "workflowName": "business-multicurrency-treasury-v1",
       "job": "source-contract",
       "checkName": "Verify C4 source, public contracts, and retained application boundaries",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-multicurrency-treasury-v1.yml",
       "workflowName": "business-multicurrency-treasury-v1",
       "job": "disposable-database",
       "checkName": "Verify C4 database, replay, isolation, rollback, and concurrency",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-multicurrency-treasury-v1.yml",
       "workflowName": "business-multicurrency-treasury-v1",
       "job": "player-browser",
       "checkName": "Verify C4 Player exact-money, accessibility, desktop, and mobile Chromium",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
       "workflowName": "Business Player Store Cutover V2",
       "job": "verify-cutover-authority",
       "checkName": "Verify Player Store cutover and retained authorities",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
       "workflowName": "Business Player Store Cutover V2",
       "job": "verify-backend-store-runtime",
       "checkName": "Verify public Store, seller projection, capabilities, rates, and Edge roots",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
       "workflowName": "Business Player Store Cutover V2",
       "job": "verify-database-settlement",
       "checkName": "Verify serial settlement, ordering races, and two-game isolation",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
       "workflowName": "Business Player Store Cutover V2",
       "job": "verify-database-replay",
       "checkName": "Replay complete database twice and lint at warning level",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
       "workflowName": "Business Player Store Cutover V2",
       "job": "verify-player-terminal-and-chromium",
       "checkName": "Verify standalone Player Terminal and full Chromium suite",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-player-store-cutover-v2.yml",
       "workflowName": "Business Player Store Cutover V2",
       "job": "verify-connected-player-store",
       "checkName": "Verify connected Buyer and seller Store journey in two games",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-player-store-fx-final-v2.yml",
       "workflowName": "business-player-store-fx-final-v2",
       "job": "source-contract",
       "checkName": "business-player-store-fx-final-v2-source",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-player-store-fx-final-v2.yml",
       "workflowName": "business-player-store-fx-final-v2",
       "job": "disposable-database",
       "checkName": "business-player-store-fx-final-v2-database",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-player-store-fx-final-v2.yml",
       "workflowName": "business-player-store-fx-final-v2",
       "job": "player-browser",
       "checkName": "business-player-store-fx-final-v2-player-browser",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-player-store-fx-final-v2.yml",
       "workflowName": "business-player-store-fx-final-v2",
       "job": "connected-two-browser",
       "checkName": "business-player-store-fx-final-v2-connected",
-      "condition": ""
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-primary-ipo.yml",
+      "workflowName": "Business Primary IPO",
+      "job": "source",
+      "checkName": "business-primary-ipo-source",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-primary-ipo.yml",
+      "workflowName": "Business Primary IPO",
+      "job": "database",
+      "checkName": "business-primary-ipo-database",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/business-primary-ipo.yml",
+      "workflowName": "Business Primary IPO",
+      "job": "browser",
+      "checkName": "business-primary-ipo-browser",
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
       "workflowName": "Business Store Atomic Settlement V2",
       "job": "verify-settlement-authority",
       "checkName": "Verify atomic settlement authority and retained Store phases",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
       "workflowName": "Business Store Atomic Settlement V2",
       "job": "verify-database-settlement",
       "checkName": "Verify database settlement, rollback, races, and isolation",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
       "workflowName": "Business Store Atomic Settlement V2",
       "job": "verify-database-replay",
       "checkName": "Replay complete database twice and lint",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
       "workflowName": "Business Store Atomic Settlement V2",
       "job": "verify-retained-economic-runtime",
       "checkName": "Verify retained Business, Store, Inventory, Backend, and Edge runtime",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-atomic-settlement-v2.yml",
       "workflowName": "Business Store Atomic Settlement V2",
       "job": "verify-player-terminal-and-chromium",
       "checkName": "Verify retained Player Terminal and Chromium",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-listing-inventory-v2.yml",
       "workflowName": "Business Store Listing Inventory V2",
       "job": "verify-store-listing-authority",
       "checkName": "Verify Store-listing authority",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-listing-inventory-v2.yml",
       "workflowName": "Business Store Listing Inventory V2",
       "job": "verify-retained-economic-runtime",
       "checkName": "Verify retained Store, Inventory, and Business runtime",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-listing-inventory-v2.yml",
       "workflowName": "Business Store Listing Inventory V2",
       "job": "verify-player-terminal-and-chromium",
       "checkName": "Verify retained Player Terminal and Chromium",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-sales-convergence-v2.yml",
       "workflowName": "business-store-sales-convergence-v2",
       "job": "source-contract",
       "checkName": "business-store-sales-convergence-v2-source",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-sales-convergence-v2.yml",
       "workflowName": "business-store-sales-convergence-v2",
       "job": "disposable-database",
       "checkName": "business-store-sales-convergence-v2-database",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-sales-convergence-v2.yml",
       "workflowName": "business-store-sales-convergence-v2",
       "job": "worker-contract",
       "checkName": "business-store-sales-convergence-v2-worker",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-sales-convergence-v2.yml",
       "workflowName": "business-store-sales-convergence-v2",
       "job": "player-admin-contract",
       "checkName": "business-store-sales-convergence-v2-player-admin",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-seller-offers-v2.yml",
       "workflowName": "Business Store Seller Offers V2",
       "job": "verify-store-seller-offers",
       "checkName": "verify-store-seller-offers",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-seller-offers-v2.yml",
       "workflowName": "Business Store Seller Offers V2",
       "job": "verify-retained-business-banking",
       "checkName": "verify-retained-business-banking",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-seller-offers-v2.yml",
       "workflowName": "Business Store Seller Offers V2",
       "job": "verify-player-terminal-and-chromium",
       "checkName": "verify-player-terminal-and-chromium",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-withdrawal-safety-v2.yml",
       "workflowName": "Business Store Withdrawal Safety V2",
       "job": "verify-withdrawal-authority",
       "checkName": "Verify withdrawal authority",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-withdrawal-safety-v2.yml",
       "workflowName": "Business Store Withdrawal Safety V2",
       "job": "verify-retained-economic-runtime",
       "checkName": "Verify retained Store, Inventory, and Business runtime",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-store-withdrawal-safety-v2.yml",
       "workflowName": "Business Store Withdrawal Safety V2",
       "job": "verify-player-terminal-and-chromium",
       "checkName": "Verify retained Player Terminal and Chromium",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-timed-manufacturing-v2.yml",
       "workflowName": "Business Timed Manufacturing V2",
       "job": "verify-manufacturing",
       "checkName": "Verify timed manufacturing",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-timed-manufacturing-v2.yml",
       "workflowName": "Business Timed Manufacturing V2",
       "job": "player-edge-boot",
       "checkName": "Boot reviewed Player Edge entrypoints",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-workforce-payroll-v2.yml",
       "workflowName": "Business Workforce Payroll V2",
       "job": "authority-contract",
       "checkName": "Workforce and payroll authority contract",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/business-workforce-payroll-v2.yml",
       "workflowName": "Business Workforce Payroll V2",
       "job": "backend-typecheck",
       "checkName": "Backend typecheck",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
-      "workflow": ".github/workflows/configurable-stock-market-timezone-v1.yml",
-      "workflowName": "Required Game Market Timezone",
-      "job": "apply-and-validate",
-      "checkName": "apply-and-validate",
-      "condition": ""
+      "workflow": ".github/workflows/button-action-coverage.yml",
+      "workflowName": "Button Action Coverage",
+      "job": "button-action-coverage",
+      "checkName": "button-action-coverage",
+      "condition": "",
+      "matrix": null
     },
     {
-      "workflow": ".github/workflows/exchange-calendar-runtime-v1.yml",
-      "workflowName": "Exchange Calendar Runtime",
-      "job": "validate",
-      "checkName": "Validate exchange calendar runtime",
-      "condition": ""
+      "workflow": ".github/workflows/crafting-item-runtime.yml",
+      "workflowName": "Crafting Item Runtime",
+      "job": "permanent-runtime",
+      "checkName": "permanent-runtime",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/environment-neutral-browser.yml",
+      "workflowName": "Environment Neutral Browser",
+      "job": "runtime-config-contract",
+      "checkName": "runtime-config-contract",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/loans-lifecycle-read-v1.yml",
+      "workflowName": "Loans Lifecycle Read",
+      "job": "loans-lifecycle-read",
+      "checkName": "Loans Lifecycle Read",
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/multicurrency-marketplace-funding-v1.yml",
       "workflowName": "multicurrency-marketplace-funding-v1",
       "job": "source-contract",
       "checkName": "Verify multi-currency Marketplace funding source and scope",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/multicurrency-marketplace-funding-v1.yml",
       "workflowName": "multicurrency-marketplace-funding-v1",
       "job": "disposable-database",
       "checkName": "Verify multi-currency Marketplace funding database",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/multicurrency-marketplace-funding-v1.yml",
       "workflowName": "multicurrency-marketplace-funding-v1",
       "job": "connected-browser",
       "checkName": "Verify connected multi-currency Marketplace funding browser journey",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/multicurrency-stock-funding-v1.yml",
       "workflowName": "multicurrency-stock-funding-v1",
       "job": "source-contract",
       "checkName": "Verify C3C Stock buy settlement source and retained C3A/C3B scope + C3D sell + C3E Player cutover",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/multicurrency-stock-funding-v1.yml",
       "workflowName": "multicurrency-stock-funding-v1",
       "job": "disposable-database",
       "checkName": "Verify C3C atomic Stock buy database and retained C3A/C3B authority + C3D sell + C3E cutover",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/multicurrency-store-funding-v1.yml",
       "workflowName": "multicurrency-store-funding-v1",
       "job": "source-contract",
       "checkName": "Verify multi-currency Store funding source and scope",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/multicurrency-store-funding-v1.yml",
       "workflowName": "multicurrency-store-funding-v1",
       "job": "disposable-database",
       "checkName": "Verify multi-currency Store funding database",
-      "condition": ""
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/player-button-click-safety.yml",
+      "workflowName": "Player Button Click Safety",
+      "job": "player-button-click-safety",
+      "checkName": "player-button-click-safety",
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/player-multiplayer-load-e2e.yml",
+      "workflowName": "Player Multiplayer and Load E2E",
+      "job": "connected-player-runtime",
+      "checkName": "Two-browser Player journey, secure mutations, and 30-40 Player load",
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/player-terminal-verify.yml",
       "workflowName": "Player Terminal Verify",
       "job": "verify",
       "checkName": "verify",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/production-runtime-promotion-contract.yml",
       "workflowName": "Production Runtime Promotion Contract",
       "job": "verify",
       "checkName": "Verify production promotion remains fail-closed",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/ref-009-contract-reward-qualification.yml",
       "workflowName": "REF-009 Contract Reward Qualification",
       "job": "reward-qualification",
       "checkName": "Contract reward database/race qualification",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/ref-018-attendance-qualification.yml",
       "workflowName": "REF-018 and REF-022 Staff Mutation Qualification",
       "job": "attendance-qualification",
       "checkName": "Staff Attendance and ledger adjustment database/race qualification",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/ref-018-attendance-qualification.yml",
       "workflowName": "REF-018 and REF-022 Staff Mutation Qualification",
       "job": "campaign-qualification",
       "checkName": "REF046 exclusive disposable qualification",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/release-integrity.yml",
       "workflowName": "Release Integrity",
       "job": "static-integrity",
       "checkName": "Verify static release integrity",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/release-promote.yml",
       "workflowName": "Release Promote Exact Artifacts",
       "job": "contract-tests",
       "checkName": "Promotion contract tests",
-      "condition": "github.event_name == 'pull_request'"
+      "condition": "github.event_name == 'pull_request'",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/repository-quality.yml",
       "workflowName": "Repository Quality",
       "job": "quality",
       "checkName": "quality",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/roster-connected-e2e.yml",
       "workflowName": "Roster Connected E2E",
       "job": "paired-roster",
       "checkName": "Paired-source disposable roster integration (not hosted capacity)",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/runtime-interaction-wiring.yml",
       "workflowName": "Runtime Interaction Wiring",
       "job": "trace-runtime-controls",
       "checkName": "trace-runtime-controls",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/staging-readiness-preflight.yml",
       "workflowName": "Staging Readiness Preflight",
       "job": "validator-tests",
       "checkName": "Validator tests",
-      "condition": ""
+      "condition": "",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/supply-chain-security.yml",
       "workflowName": "Supply Chain Security",
       "job": "dependency-review",
       "checkName": "dependency-review",
-      "condition": "github.event_name == 'pull_request'"
+      "condition": "github.event_name == 'pull_request'",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/supply-chain-security.yml",
       "workflowName": "Supply Chain Security",
       "job": "verify-and-attest",
       "checkName": "verify-and-attest",
-      "condition": ""
+      "condition": "",
+      "matrix": null
+    },
+    {
+      "workflow": ".github/workflows/world-runtime.yml",
+      "workflowName": "World Runtime",
+      "job": "verify",
+      "checkName": "verify",
+      "condition": "",
+      "matrix": null
     }
   ],
-  "skipped": [
+  "guardedSkips": [
     {
       "workflow": ".github/workflows/business-workforce-payroll-v2.yml",
       "workflowName": "Business Workforce Payroll V2",
       "job": "materialize-inventory",
       "checkName": "Materialize Phase 4A architecture inventory",
-      "condition": "github.event_name == 'pull_request' && github.event.pull_request.number == 657"
+      "condition": "github.event_name == 'pull_request' && github.event.pull_request.number == 657",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/release-integrity.yml",
       "workflowName": "Release Integrity",
       "job": "live-parity",
       "checkName": "Inspect staging and production parity read-only",
-      "condition": "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'"
+      "condition": "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/release-promote.yml",
       "workflowName": "Release Promote Exact Artifacts",
       "job": "authorize-promotion",
       "checkName": "Verify and authorize unchanged artifacts",
-      "condition": "github.event_name == 'workflow_dispatch'"
+      "condition": "github.event_name == 'workflow_dispatch'",
+      "matrix": null
     },
     {
       "workflow": ".github/workflows/staging-readiness-preflight.yml",
       "workflowName": "Staging Readiness Preflight",
       "job": "staging-preflight",
       "checkName": "Fail-closed staging evidence check",
-      "condition": "github.event_name == 'workflow_dispatch'"
+      "condition": "github.event_name == 'workflow_dispatch'",
+      "matrix": null
     }
   ]
 }

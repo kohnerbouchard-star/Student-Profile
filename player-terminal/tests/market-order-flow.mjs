@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 import { renderMarketOrderDialog } from "../src/features/market/market-order-flow.js";
@@ -161,6 +162,11 @@ assert.ok(sellReceipt.includes(SETTLEMENT));
 assert.ok(!sellReceipt.includes(ASSET_UUID));
 
 const source = await readFile(new URL("../src/features/market/market-order-flow.js", import.meta.url), "utf8");
+const dialogView = await readFile(new URL("../src/features/market/market-order-dialog-view.js", import.meta.url), "utf8");
+// Pure extraction from main 10eaebfe: every rendered branch stays byte-identical.
+const rendererBody = dialogView.split("}) {\n")[1].trimEnd() + "\n";
+assert.equal(createHash("sha256").update(rendererBody).digest("hex"), "e6fde022bbae2ecba9793c9bc0b83256fb89592f6e59ec2a1b5672479c85e550");
+assert.ok(source.includes("return renderMarketOrderDialogView(transaction, {"));
 const marketPage = await readFile(new URL("../src/pages/market-page.js", import.meta.url), "utf8");
 const routeCore = await readFile(new URL("../src/api/backend-routes-core.js", import.meta.url), "utf8");
 const main = await readFile(new URL("../src/main.js", import.meta.url), "utf8");
@@ -197,15 +203,15 @@ assert.ok(source.includes("normalizeWritePayload"));
 assert.ok(source.includes("marketPositionForAsset"));
 assert.ok(source.includes('market?.status === "CLOSED"'));
 assert.ok(source.includes('String(destinationAccount.currencyCode || "").toUpperCase() !== listingCurrencyCode'));
-assert.ok(source.includes("Stock sale proceeds do not auto-convert."));
-assert.ok(!source.includes("any required Banking FX conversion"));
+assert.ok(dialogView.includes("Stock sale proceeds do not auto-convert."));
+assert.ok(!(source + dialogView).includes("any required Banking FX conversion"));
 assert.ok(marketPage.includes("listingCurrencyCheckingAccounts"));
 assert.ok(marketPage.includes("sellAccountOptions"));
 assert.ok(marketPage.includes("no sell-side FX"));
 assert.ok(marketPage.includes("Open an active ${escapeHtml(listingCurrencyCode)} Checking account before selling this asset."));
 assert.ok(!source.includes('orderType: "market"'));
-assert.ok(!source.includes("BACKEND INTEGRATION PENDING"));
-assert.ok(!source.includes("playerUuid") && !source.includes("recipientPlayerUuid"));
+assert.ok(!(source + dialogView).includes("BACKEND INTEGRATION PENDING"));
+assert.ok(!(source + dialogView).includes("playerUuid") && !(source + dialogView).includes("recipientPlayerUuid"));
 assert.ok(routeCore.includes('action === "create_buy_quote"'));
 assert.ok(routeCore.includes('action === "settle_buy_quote"'));
 assert.ok(routeCore.includes('action === "settle_sell"'));

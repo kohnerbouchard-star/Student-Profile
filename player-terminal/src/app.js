@@ -56,7 +56,7 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
       marketAssetId: "nova",
       marketSector: "All",
       storeCategory: "All",
-      contractTab: "Active",
+      contractTab: "",
       contractId: "ctr-101",
       inventoryCategory: "All",
       marketplaceCategory: "All",
