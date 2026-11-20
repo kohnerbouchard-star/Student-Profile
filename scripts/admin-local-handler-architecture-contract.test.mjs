@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readEdgeRuntimeSource as readFileSync } from "./helpers/edge-runtime-source.mjs";
 import test from "node:test";
+import { isAffectedMutation, isSettingsMutation } from "../backend/supabase/functions/admin-api/localGameMutationRoutes.ts";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -274,5 +275,31 @@ test("the Classroom proxy rejects every affected mutation family before fetch", 
       commonSource.includes(routeEvidence),
       `missing no-proxy route evidence for ${routeEvidence}`,
     );
+  }
+});
+
+test("local mutation route selection preserves method and suffix boundaries", () => {
+  for (const [method, suffix, affected, settings] of [
+    ["POST", "/players", true, false],
+    ["GET", "/players", false, false],
+    ["DELETE", "/players/player-example", true, false],
+    ["POST", "/attendance/scans", true, false],
+    ["POST", "/attendance/scan", true, false],
+    ["PATCH", "/attendance/scan", false, false],
+    ["POST", "/contracts/contract-example/publish", true, false],
+    ["PATCH", "/contracts/contract-example/publish", false, false],
+    ["POST", "/contracts/contract-example/duplicate", true, false],
+    ["PUT", "/store/items/item-example/status", true, false],
+    ["DELETE", "/store/items/item-example/status", false, false],
+    ["POST", "/store/items/item-example/restock", true, false],
+    ["PATCH", "/settings", true, true],
+    ["GET", "/settings", false, false],
+    ["PUT", "/settings/name", true, true],
+    ["POST", "/settings/name/reset", true, true],
+    ["PATCH", "/settings/name/reset", false, false],
+    ["POST", "/settings/extra/other", false, false],
+  ]) {
+    assert.equal(isAffectedMutation(method, suffix), affected, `${method} ${suffix}`);
+    assert.equal(isSettingsMutation(method, suffix), settings, `settings: ${method} ${suffix}`);
   }
 });
