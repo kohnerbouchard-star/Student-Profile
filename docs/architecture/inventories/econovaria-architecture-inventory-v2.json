@@ -8,13 +8,13 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1658,
+    "sourceFiles": 1661,
     "edgeEntrypoints": 28,
     "handlerFiles": 61,
-    "persistenceOutsideInfrastructure": 84,
+    "persistenceOutsideInfrastructure": 83,
     "crossDomainDeepImports": 70,
     "browserTransportShimFiles": 26,
-    "compatibilityMarkerFiles": 209,
+    "compatibilityMarkerFiles": 210,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 0,
     "capabilityStrings": 144
@@ -54,7 +54,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 19,
+      "sourceFiles": 22,
       "publicBoundaryFiles": []
     },
     {
@@ -518,10 +518,6 @@
   },
   "measuredDebt": {
     "persistenceOutsideInfrastructure": [
-      {
-        "file": "backend/src/domains/attendance/api/attendanceRewardPolicy.ts",
-        "layer": "api"
-      },
       {
         "file": "backend/src/domains/attendance/api/playerAttendanceClockInHttpHandler.ts",
         "layer": "api"
@@ -1942,7 +1938,7 @@
       {
         "file": "backend/src/domains/attendance/api/attendanceRewardPolicy.ts",
         "markers": [
-          "fallback"
+          "compatibility"
         ]
       },
       {
@@ -1962,6 +1958,12 @@
         "file": "backend/src/domains/attendance/application/recordAttendanceForAuthorizedStaff.ts",
         "markers": [
           "legacy"
+        ]
+      },
+      {
+        "file": "backend/src/domains/attendance/application/resolveAttendanceRewardPolicy.ts",
+        "markers": [
+          "fallback"
         ]
       },
       {
