@@ -277,14 +277,15 @@ function treasurySnapshot() {
   };
 }
 
-async function mountFixture(page) {
+async function mountFixture(page, { installedRoute = false } = {}) {
   await page.goto("/?preview=1#business");
   await expect(page.locator("#player-main-content .player-terminal-page")).toBeVisible();
-  await page.evaluate(async ({ keys, snapshot, responseMap }) => {
-    const [{ renderBusinessPage }, { previewData }, { installBusinessTreasuryFlow }] = await Promise.all([
+  await page.evaluate(async ({ keys, snapshot, responseMap, installedRoute }) => {
+    const [{ renderBusinessPage }, { previewData }, { installBusinessTreasuryFlow }, { renderPlayerRoute }] = await Promise.all([
       import("/src/pages/business-page.js"),
       import("/src/data/preview-data.js"),
       import("/src/features/business-treasury/business-treasury-flow.js"),
+      import("/src/core/route-renderer.js"),
     ]);
     const data = structuredClone(previewData);
     data.business.configured = true;
@@ -330,7 +331,11 @@ async function mountFixture(page) {
     const state = { route: "business", data };
     const calls = [];
     let refreshFailure = true;
-    const render = () => { fixture.innerHTML = renderBusinessPage(data); };
+    const render = () => {
+      fixture.innerHTML = installedRoute
+        ? renderPlayerRoute({ route: "business", data, ui: {}, config: {} })
+        : renderBusinessPage(data);
+    };
     const terminal = {
       getState: () => state,
       requestRender: render,
@@ -368,9 +373,53 @@ async function mountFixture(page) {
       },
       allowRefresh() { refreshFailure = false; },
     };
-  }, { keys, snapshot: treasurySnapshot(), responseMap: responses() });
+  }, { keys, snapshot: treasurySnapshot(), responseMap: responses(), installedRoute });
   return page.getByTestId("business-treasury-browser-fixture");
 }
+
+test("configured Business review discloses the exact Checking debits before purchase", async ({ page }) => {
+  const fixture = await mountFixture(page, { installedRoute: true });
+  const workspace = fixture.locator("[data-business-workspace-v2]");
+  const procurement = workspace.locator("#business-workspace-procurement");
+  const rows = procurement.locator("[data-business-procurement-allocation]");
+  const quantity = procurement.locator('input[name="quantity"]');
+  const review = procurement.getByRole("button", { name: "Review funded procurement quote" });
+  const quote = procurement.locator("[data-business-procurement-quote]");
+  const funding = quote.locator("[data-business-procurement-funding-line]");
+  const confirm = quote.getByRole("button", { name: "Confirm atomic procurement" });
+  const quoteRequests = async () => page.evaluate(() => globalThis.__businessTreasuryHarness.calls.map(
+    ({ endpointKey }) => endpointKey,
+  ));
+
+  async function reviewTwoAccounts() {
+    await rows.nth(0).locator('select[name="sourceAccountKey"]').selectOption(keys.eco);
+    await rows.nth(1).locator('select[name="sourceAccountKey"]').selectOption(keys.tok);
+    await rows.nth(0).locator('input[name="targetAmount"]').fill("50.00");
+    await quantity.fill("3");
+    await review.click();
+    await expect(funding).toHaveCount(2);
+    await expect(confirm).toBeEnabled();
+  }
+
+  await reviewTwoAccounts();
+  await expect(funding.nth(0)).toHaveText("Checking 1 · ECO ECO 50.00 debit → ECO 50.00 contribution · reference 1 · customer 1 · spread 0.00% · No FX rounding is required.");
+  await expect(funding.nth(1)).toHaveText("Checking 2 · TOK TOK 1.010101010101010102 debit → ECO 100.00 contribution · reference 100.000000000000000001 · customer 99.000000000000000001 · spread 1.00% · Source debit is ceiled once to TOK precision.");
+  const disclosure = quote.getByRole("group", { name: "Checking account contributions" });
+  await expect(disclosure).toBeVisible();
+  expect(await disclosure.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+  expect(await quoteRequests()).toEqual(["businessStoreQuote"]);
+  await quantity.fill("4");
+  await expect(quote).toContainText("FUNDED QUOTE INVALIDATED");
+  await expect(funding).toHaveCount(0);
+  await expect(confirm).toHaveCount(0);
+  expect(await quoteRequests()).toEqual(["businessStoreQuote"]);
+  await reviewTwoAccounts();
+  await confirm.click();
+  await expect(procurement.locator("[data-business-procurement-receipt]")).toContainText("IMMUTABLE PROCUREMENT RECEIPT");
+  await expect(funding).toHaveCount(0);
+  await expect(procurement.getByRole("button", { name: "Refresh committed result" })).toBeVisible();
+  expect(await quoteRequests()).toEqual(["businessStoreQuote", "businessStoreQuote", "businessStorePurchase"]);
+});
 
 async function accessibilityIssues(fixture) {
   return fixture.evaluate((root) => {
