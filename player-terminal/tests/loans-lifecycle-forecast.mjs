@@ -34,6 +34,27 @@ test("incomplete coverage hides total debt, and unknown application currency is 
   const html = render(fixture); assert.match(html, /Total debt unavailable/); assert.match(html, /More entries exist/);
   assert.doesNotMatch(html, /Requested amount: NRC/);
 });
+test("partial facility history cannot present a complete recorded-debt total", () => {
+  for (const hasMore of [true, null, false]) {
+    for (const empty of [false, true]) {
+      const fixture = loansFixture();
+      if (empty) fixture.lifecycle.facilities.items = [];
+      fixture.lifecycle.facilities.complete = false;
+      fixture.lifecycle.facilities.hasMore = hasMore;
+      assert.equal(fixture.lifecycle.recordedDebt.complete, true);
+      const html = render(fixture);
+      const debt = html.split("RECORDED DEBT")[1].split("</section>")[0];
+      const facilities = html.split("FACILITY HISTORY")[1].split("</section>")[0];
+      assert.match(debt, /Total debt unavailable/);
+      assert.doesNotMatch(debt, /No recorded debt|LUM 99\.99/);
+      assert.match(facilities, hasMore ? /Recent records only/ : /History is incomplete/);
+      assert.doesNotMatch(facilities, /No recorded entries|All recorded entries shown/);
+      if (empty) assert.match(facilities, /Records unavailable/);
+      else assert.match(facilities, /Recorded outstanding:/);
+      assert.match(html, /data-endpoint="loanRepay"/);
+    }
+  }
+});
 test("malformed money, duplicate keys, unsupported statuses and excessive records fail closed", () => {
   const variants = [
     (f) => { f.lifecycle.facilities.items[0].recordedOutstanding = 4.01; },
