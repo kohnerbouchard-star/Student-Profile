@@ -1,10 +1,34 @@
 import { expect, test } from "@playwright/test";
 
 async function activateByKeyboard(page, control) {
+  await expect(control).toBeVisible();
   await expect(control).toBeEnabled();
-  await control.focus();
-  await expect(control).toBeFocused();
-  await page.keyboard.press("Enter");
+  // Hold the same DOM node throughout the interaction. A locator could resolve
+  // to its replacement after a shell paint and hide the interrupted focus.
+  const target = await control.elementHandle();
+  try {
+    await target.focus();
+    const focused = await target.evaluate((button) => {
+      globalThis.shellKeyboardEvidence = null;
+      document.addEventListener("keydown", (event) => {
+        globalThis.shellKeyboardEvidence = {
+          key: event.key,
+          trusted: event.isTrusted,
+          onOriginalControl: event.target === button && document.activeElement === button && button.isConnected,
+        };
+      }, { capture: true, once: true });
+      return button.isConnected && button.tabIndex >= 0 && document.activeElement === button;
+    });
+    expect(focused, "The original control must still own focus and be in tab order").toBe(true);
+    await page.keyboard.press("Enter");
+    expect(await page.evaluate(() => globalThis.shellKeyboardEvidence)).toEqual({
+      key: "Enter",
+      trusted: true,
+      onOriginalControl: true,
+    });
+  } finally {
+    await target.dispose();
+  }
 }
 
 async function expectCurrentSection(page, group, section, route) {
@@ -14,6 +38,21 @@ async function expectCurrentSection(page, group, section, route) {
   const context = content.getByRole("navigation", { name: `${group} sections` });
   await expect(context).toBeVisible();
   await expect(context.getByRole("button", { name: section, exact: true })).toHaveAttribute("aria-current", "page");
+  // The hash and the next context nav can appear before the route read and
+  // queued focus frame finish. Start the next interaction only after both.
+  await expect.poll(() => page.evaluate(async (expectedRoute) => {
+    function currentMain() {
+      const state = globalThis.Econovaria?.playerTerminal?.getState();
+      if (state?.status !== "ready" || state.route !== expectedRoute || state.routeLoading[expectedRoute] !== false) return null;
+      const main = document.getElementById("player-main-content");
+      return main?.querySelector(`[data-page="${expectedRoute}"]`) ? main : null;
+    }
+    const main = currentMain();
+    if (!main) return false;
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+    return main === currentMain();
+  }, route), { message: `Wait for the installed ${section} route and shell paint` }).toBe(true);
 }
 
 for (const width of [860, 861]) {
@@ -46,7 +85,7 @@ for (const width of [860, 861]) {
     }))).toEqual({ width, compact });
 
     await activateByKeyboard(page, active.getByRole("button", { name: "Work", exact: true }));
-    await expect(page).toHaveURL(/#contracts$/u);
+    await expectCurrentSection(page, "Work", "Contracts", "contracts");
     const work = page.getByRole("main").getByRole("navigation", { name: "Work sections" });
     await activateByKeyboard(page, work.getByRole("button", { name: "Business", exact: true }));
     await expectCurrentSection(page, "Work", "Business", "business");
