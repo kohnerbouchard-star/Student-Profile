@@ -188,7 +188,7 @@ jobs:
 
       - name: Upload lifecycle diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: admin-game-lifecycle-${{ github.sha }}
           path: |
@@ -228,7 +228,7 @@ jobs:
         run: node scripts/admin-v2-game-lifecycle-browser-smoke.mjs
       - name: Upload native lifecycle diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: admin-v2-lifecycle-${{ github.event.pull_request.head.sha || github.sha }}
           path: /tmp/admin-v2-lifecycle-evidence/
