@@ -1,9 +1,7 @@
 import { createBusinessBankingRowProjection } from "./businessBankingRowProjection.ts";
 import { handleRetiredBusinessSettlement } from "./businessSettlementRetirementDispatch.ts";
 import { readLoanSupervision } from "./businessBankingLoanSupervision.ts";
-import {
-  projectBusinessSupervision,
-} from "./businessSupervisionProjection.ts";
+import { projectBusinessSupervision } from "./businessSupervisionProjection.ts";
 
 interface OperationResult {
   readonly handled: boolean;
@@ -283,7 +281,6 @@ export async function handleBusinessBankingAdminOperation(
     );
   }
 }
-
 
 async function rpc(
   service: ServiceClient,
