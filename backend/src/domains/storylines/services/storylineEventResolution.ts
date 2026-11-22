@@ -7,7 +7,6 @@ import type {
 } from "../contracts/storyEffectExecutionContracts.ts";
 import type {
   StoryEventExecutionClaimResult,
-  StoryEventExecutionRepository,
 } from "../contracts/storyEventExecutionContracts.ts";
 import type {
   RunDueStorylineEventsInput,
@@ -31,13 +30,9 @@ import { createStoryCutsceneNotificationForPlayers } from "./storyNotificationSe
 
 const STORY_EXECUTION_LEASE_SECONDS = 120;
 
-export type LeaseAwareRunInput = Omit<RunDueStorylineEventsInput, "executionRepository"> & {
-  readonly executionRepository: StoryEventExecutionRepository;
-};
-
 export async function resolveCandidate(
   candidate: StorylineEventCandidateRecord,
-  input: LeaseAwareRunInput,
+  input: RunDueStorylineEventsInput,
   storyFlags: PlayerStoryContext["storyFlags"],
 ): Promise<StorylineRunnerEventResult> {
   let activeLeaseToken: string | null = null;
@@ -178,7 +173,7 @@ export async function resolveCandidate(
 
 function claimExecution(
   candidate: StorylineEventCandidateRecord,
-  input: LeaseAwareRunInput,
+  input: RunDueStorylineEventsInput,
   executionPlan: JsonObject | null,
 ): Promise<StoryEventExecutionClaimResult> {
   return input.executionRepository.claim({
@@ -217,7 +212,7 @@ function claimTerminalResult(
 
 async function failLeaseBestEffort(
   candidate: StorylineEventCandidateRecord,
-  input: LeaseAwareRunInput,
+  input: RunDueStorylineEventsInput,
   leaseToken: string,
   error: unknown,
 ): Promise<void> {

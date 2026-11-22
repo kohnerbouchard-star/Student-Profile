@@ -8,13 +8,13 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1661,
+    "sourceFiles": 1660,
     "edgeEntrypoints": 28,
     "handlerFiles": 61,
     "persistenceOutsideInfrastructure": 84,
     "crossDomainDeepImports": 70,
     "browserTransportShimFiles": 26,
-    "compatibilityMarkerFiles": 210,
+    "compatibilityMarkerFiles": 208,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 0,
     "capabilityStrings": 144
@@ -391,7 +391,7 @@
         "services",
         "tests"
       ],
-      "sourceFiles": 114,
+      "sourceFiles": 113,
       "publicBoundaryFiles": [
         "backend/src/domains/storylines/index.ts"
       ]
@@ -2244,22 +2244,6 @@
         "file": "backend/src/domains/storylines/services/storyMeridianQuestionOfBelongingMigrationContract.test.ts",
         "markers": [
           "fallback"
-        ]
-      },
-      {
-        "file": "backend/src/domains/storylines/services/storylineRunner.test.previousResolution.cases.ts",
-        "markers": [
-          "fallback",
-          "legacy"
-        ]
-      },
-      {
-        "file": "backend/src/domains/storylines/services/storylineRunner.ts",
-        "markers": [
-          "legacy",
-          "legacy_compatibility",
-          "legacyclaimstate",
-          "legacyresolutionexecutionrepository"
         ]
       },
       {

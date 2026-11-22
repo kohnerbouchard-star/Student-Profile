@@ -20,8 +20,6 @@ import type {
   StoryNotificationRepository,
 } from "../contracts/storyNotificationContracts.ts";
 import type {
-  CreateStoryEventResolutionInput,
-  CreateStoryEventResolutionResult,
   GameSessionStorylineRecord,
   ListUnresolvedActiveStorylineEventsInput,
   StorylineEventCandidateRecord,
@@ -31,22 +29,15 @@ import type {
 export interface FakeStorylineRepositoryOptions {
   readonly candidates?: readonly StorylineEventCandidateRecord[];
   readonly storyFlags?: Record<string, JsonValue>;
-  readonly allowDirectResolution?: boolean;
 }
 
 export class FakeStorylineRepository implements StorylineRepository {
-  readonly resolutions: {
-    readonly storylineEventId: string;
-    readonly resultPayload: JsonObject;
-  }[] = [];
   private readonly candidates: readonly StorylineEventCandidateRecord[];
   private readonly storyFlags: Record<string, JsonValue>;
-  private readonly allowDirectResolution: boolean;
 
   constructor(options: FakeStorylineRepositoryOptions = {}) {
     this.candidates = options.candidates ?? [];
     this.storyFlags = options.storyFlags ?? {};
-    this.allowDirectResolution = options.allowDirectResolution ?? false;
   }
 
   listActiveGameSessionStorylines(): Promise<
@@ -61,25 +52,8 @@ export class FakeStorylineRepository implements StorylineRepository {
     return Promise.resolve(this.candidates);
   }
 
-  createStoryEventResolution(
-    input: CreateStoryEventResolutionInput,
-  ): Promise<CreateStoryEventResolutionResult> {
-    if (!this.allowDirectResolution) {
-      throw new Error("Canonical Story fixture must finalize through the execution repository.");
-    }
-
-    this.resolutions.push({
-      storylineEventId: input.storylineEventId,
-      resultPayload: input.resultPayload ?? {},
-    });
-
-    return Promise.resolve({
-      status: "inserted",
-      resolution: resolutionRecord(
-        input,
-        `resolution-${this.resolutions.length}`,
-      ),
-    });
+  createStoryEventResolution(): never {
+    throw new Error("Canonical Story fixture must finalize through the execution repository.");
   }
 
   createPlayerStoryImpact(
@@ -339,22 +313,6 @@ export function playerContext(
   };
 }
 
-export function resolutionRecord(
-  input: CreateStoryEventResolutionInput,
-  id: string,
-) {
-  return {
-    id,
-    gameSessionId: input.gameSessionId,
-    storylineEventId: input.storylineEventId,
-    resolvedAt: input.resolvedAt,
-    resolvedMarketTick: input.resolvedMarketTick ?? null,
-    status: input.status ?? "resolved",
-    resultPayload: input.resultPayload ?? {},
-    createdAt: input.resolvedAt,
-  };
-}
-
 export function notificationDeliveryRecord(
   id: string,
 ): StoryNotificationDeliveryRecord {
@@ -380,9 +338,8 @@ export function assertEquals(actual: unknown, expected: unknown): void {
   }
 }
 
-export function failingEffectRepository(allowDirectResolution = false) {
+export function failingEffectRepository() {
   return new FakeStorylineRepository({
-    allowDirectResolution,
     candidates: [
       storylineEventCandidate({
         id: "event-1",

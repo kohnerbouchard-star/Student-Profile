@@ -20,7 +20,7 @@ export interface RunDueStorylineEventsInput {
   readonly currentMarketTick: number;
   readonly playerContexts: readonly PlayerStoryContext[];
   readonly repository: StorylineRepository;
-  readonly executionRepository?: StoryEventExecutionRepository;
+  readonly executionRepository: StoryEventExecutionRepository;
   readonly effectDependencies: StoryEffectExecutionDependencies;
   readonly notificationRepository?: StoryNotificationPublisher | null;
 }
