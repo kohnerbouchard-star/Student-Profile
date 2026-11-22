@@ -68,12 +68,26 @@ assert.throws(() => normalizeWritePayload("travelQuote", { toLocationId: "bad", 
 assert.throws(() => normalizeWritePayload("travelExecute", { quoteId: "00000000-0000-4000-8000-000000000001" }));
 
 const preview = new PreviewTransport({ simulateWrites: true });
-const runtime = normalizeApiResponse("worldRuntime", await preview.request({ endpointKey: "worldRuntime", method: "GET" }), {
+const readPreviewWorld = (transport) => transport.request({ endpointKey: "worldRuntime", method: "GET" });
+const initialWorld = await readPreviewWorld(preview);
+const runtime = normalizeApiResponse("worldRuntime", initialWorld, {
   path: "/players/me/world-runtime", requestId: "world-read-1", config: {},
 });
 assert.equal(runtime.world.locations.length, 50);
 assert.equal(runtime.arrival.required, true);
 assert.doesNotMatch(JSON.stringify(runtime), /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
+
+// A preview has its own seed, and modifying a read result cannot change it.
+const pristineWorld = structuredClone(initialWorld);
+const readOnlyPreview = new PreviewTransport();
+assert.deepEqual(await readPreviewWorld(readOnlyPreview), pristineWorld);
+initialWorld.arrival.questionnaire.questions[0].options[0].label = "Changed by caller";
+initialWorld.world.routes[2].costMultiplierBasisPoints = 1;
+initialWorld.campaign.history.length = 0;
+assert.deepEqual(await readPreviewWorld(preview), pristineWorld);
+await assert.rejects(readOnlyPreview.request({
+  endpointKey: "arrivalClass", method: "POST", path: "/arrival-class", payload: { answers },
+}), { name: "ApiConnectionPendingError", endpointKey: "arrivalClass" });
 
 await preview.request({ endpointKey: "arrivalClass", method: "POST", payload: { answers } });
 const quoteResponse = await preview.request({
@@ -92,6 +106,8 @@ const completed = await preview.request({ endpointKey: "worldRuntime", method: "
 assert.equal(completed.arrival.assignment.classId, "analyst");
 assert.equal(completed.travel.state.currentLocationId, "loc_valerion_capital_v1");
 assert.equal(completed.residency.pendingCountryId, "valerion");
+assert.deepEqual(await readPreviewWorld(readOnlyPreview), pristineWorld);
+assert.deepEqual(await readPreviewWorld(new PreviewTransport({ simulateWrites: true })), pristineWorld);
 
 const html = renderWorldPage(completed, {
   state: "ready",
