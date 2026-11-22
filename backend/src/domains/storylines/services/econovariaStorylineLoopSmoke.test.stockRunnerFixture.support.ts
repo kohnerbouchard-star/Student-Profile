@@ -24,6 +24,7 @@ export function createStorylineHook(runtime: InMemoryEconovariaRuntime): (
       currentMarketTick: input.currentMarketTick,
       playerContexts,
       repository: runtime,
+      executionRepository: runtime.executionRepository,
       notificationRepository: runtime,
       effectDependencies: {
         ledger: runtime,

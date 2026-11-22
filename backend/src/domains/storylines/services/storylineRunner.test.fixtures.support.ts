@@ -20,8 +20,6 @@ import type {
   StoryNotificationRepository,
 } from "../contracts/storyNotificationContracts.ts";
 import type {
-  CreateStoryEventResolutionInput,
-  CreateStoryEventResolutionResult,
   GameSessionStorylineRecord,
   ListUnresolvedActiveStorylineEventsInput,
   StorylineEventCandidateRecord,
@@ -31,24 +29,15 @@ import type {
 export interface FakeStorylineRepositoryOptions {
   readonly candidates?: readonly StorylineEventCandidateRecord[];
   readonly storyFlags?: Record<string, JsonValue>;
-  readonly existingResolutionEventIds?: readonly string[];
 }
 
 export class FakeStorylineRepository implements StorylineRepository {
-  readonly resolutions: {
-    readonly storylineEventId: string;
-    readonly resultPayload: JsonObject;
-  }[] = [];
   private readonly candidates: readonly StorylineEventCandidateRecord[];
   private readonly storyFlags: Record<string, JsonValue>;
-  private readonly existingResolutionEventIds: Set<string>;
 
   constructor(options: FakeStorylineRepositoryOptions = {}) {
     this.candidates = options.candidates ?? [];
     this.storyFlags = options.storyFlags ?? {};
-    this.existingResolutionEventIds = new Set(
-      options.existingResolutionEventIds ?? [],
-    );
   }
 
   listActiveGameSessionStorylines(): Promise<
@@ -63,28 +52,8 @@ export class FakeStorylineRepository implements StorylineRepository {
     return Promise.resolve(this.candidates);
   }
 
-  createStoryEventResolution(
-    input: CreateStoryEventResolutionInput,
-  ): Promise<CreateStoryEventResolutionResult> {
-    if (this.existingResolutionEventIds.has(input.storylineEventId)) {
-      return Promise.resolve({
-        status: "existing",
-        resolution: resolutionRecord(input, "existing-resolution-1"),
-      });
-    }
-
-    this.resolutions.push({
-      storylineEventId: input.storylineEventId,
-      resultPayload: input.resultPayload ?? {},
-    });
-
-    return Promise.resolve({
-      status: "inserted",
-      resolution: resolutionRecord(
-        input,
-        `resolution-${this.resolutions.length}`,
-      ),
-    });
+  createStoryEventResolution(): never {
+    throw new Error("Canonical Story fixture must finalize through the execution repository.");
   }
 
   createPlayerStoryImpact(
@@ -344,22 +313,6 @@ export function playerContext(
   };
 }
 
-export function resolutionRecord(
-  input: CreateStoryEventResolutionInput,
-  id: string,
-) {
-  return {
-    id,
-    gameSessionId: input.gameSessionId,
-    storylineEventId: input.storylineEventId,
-    resolvedAt: input.resolvedAt,
-    resolvedMarketTick: input.resolvedMarketTick ?? null,
-    status: input.status ?? "resolved",
-    resultPayload: input.resultPayload ?? {},
-    createdAt: input.resolvedAt,
-  };
-}
-
 export function notificationDeliveryRecord(
   id: string,
 ): StoryNotificationDeliveryRecord {
@@ -383,4 +336,34 @@ export function assertEquals(actual: unknown, expected: unknown): void {
       }`,
     );
   }
+}
+
+export function failingEffectRepository() {
+  return new FakeStorylineRepository({
+    candidates: [
+      storylineEventCandidate({
+        id: "event-1",
+        eventKey: "failing-effect",
+        triggerType: "market_tick",
+        scheduledMarketTick: 1,
+        playerRules: [
+          {
+            ruleKey: "matching-rule",
+            condition: {
+              type: "player_current_country_is",
+              countryCode: "NORTHREACH",
+            },
+            effects: [
+              {
+                type: "cash_credit",
+                amount: 25,
+                label: "Aid",
+                reason: "Ledger fails in this test.",
+              },
+            ],
+          },
+        ],
+      }),
+    ],
+  });
 }

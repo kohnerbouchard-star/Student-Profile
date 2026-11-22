@@ -14,11 +14,8 @@ import type {
   StoryWriteResult,
 } from "../contracts/storyEffectExecutionContracts.ts";
 import type {
-  CreateStoryEventResolutionInput,
-  CreateStoryEventResolutionResult,
   GameSessionStorylineRecord,
   ListUnresolvedActiveStorylineEventsInput,
-  StoryEventResolutionRecord,
   StorylineEventCandidateRecord,
   StorylineRepository,
 } from "../contracts/storylineRepositoryContracts.ts";
@@ -32,6 +29,7 @@ import {
   demoMarketBriefingEvent,
   demoPolicyPressureEvent,
 } from "./econovariaStorylineLoopSmoke.test.eventFixtures.support.ts";
+import { StorylineExecutionFixture } from "./storylineExecutionFixture.test.support.ts";
 import { compareEventOrder } from "./econovariaStorylineLoopSmoke.test.assertions.support.ts";
 
 export class InMemoryEconovariaRuntime extends InMemoryNotificationStore
@@ -40,7 +38,7 @@ export class InMemoryEconovariaRuntime extends InMemoryNotificationStore
   private readonly activations: GameSessionStorylineRecord[] = [];
   private readonly events: StorylineEventCandidateRecord[] = [];
   private readonly players = new Map<string, PlayerStoryContext>();
-  private readonly resolutions: StoryEventResolutionRecord[] = [];
+  readonly executionRepository = new StorylineExecutionFixture();
   private readonly impacts: StoryPlayerImpactWriteInput[] = [];
   private readonly policies: StoryPolicyWriteInput[] = [];
   private readonly flags: {
@@ -177,7 +175,7 @@ export class InMemoryEconovariaRuntime extends InMemoryNotificationStore
     input: ListUnresolvedActiveStorylineEventsInput,
   ): Promise<readonly StorylineEventCandidateRecord[]> {
     const resolvedEventIds = new Set(
-      this.resolutions
+      this.executionRepository.finalized
         .filter((resolution) =>
           resolution.gameSessionId === input.gameSessionId
         )
@@ -194,37 +192,8 @@ export class InMemoryEconovariaRuntime extends InMemoryNotificationStore
     );
   }
 
-  createStoryEventResolution(
-    input: CreateStoryEventResolutionInput,
-  ): Promise<CreateStoryEventResolutionResult> {
-    const existing = this.resolutions.find((resolution) =>
-      resolution.gameSessionId === input.gameSessionId &&
-      resolution.storylineEventId === input.storylineEventId
-    );
-
-    if (existing) {
-      return Promise.resolve({
-        status: "existing",
-        resolution: existing,
-      });
-    }
-
-    const resolution: StoryEventResolutionRecord = {
-      id: `resolution-${this.resolutions.length + 1}`,
-      gameSessionId: input.gameSessionId,
-      storylineEventId: input.storylineEventId,
-      resolvedAt: input.resolvedAt,
-      resolvedMarketTick: input.resolvedMarketTick ?? null,
-      status: input.status ?? "resolved",
-      resultPayload: input.resultPayload ?? {},
-      createdAt: input.resolvedAt,
-    };
-    this.resolutions.push(resolution);
-
-    return Promise.resolve({
-      status: "inserted",
-      resolution,
-    });
+  createStoryEventResolution(): never {
+    throw new Error("Story loop must finalize through the execution repository.");
   }
 
   createPlayerStoryImpact(
@@ -377,7 +346,7 @@ export class InMemoryEconovariaRuntime extends InMemoryNotificationStore
   }
 
   resolutionEventKeys(): readonly string[] {
-    return this.resolutions.map((resolution) =>
+    return this.executionRepository.finalized.map((resolution) =>
       this.eventKeyById(resolution.storylineEventId)
     );
   }
@@ -418,7 +387,7 @@ export class InMemoryEconovariaRuntime extends InMemoryNotificationStore
 
   snapshotCounts(): Record<string, number> {
     return {
-      resolutions: this.resolutions.length,
+      resolutions: this.executionRepository.finalized.length,
       notifications: this.notifications.length,
       deliveries: this.deliveries.length,
       contracts: this.contracts.length,
