@@ -148,6 +148,37 @@ Deno.test("game public realtime publisher rejects private/session fields", async
   assertEquals(transport.messages, []);
 });
 
+Deno.test("public realtime checks channel before the first nested private field and never sends rejection", async () => {
+  const transport = new CapturingTransport();
+  const publisher = new GamePublicRealtimePublisher(transport);
+  const envelope = {
+    ...buildGamePublicRealtimeEnvelope({
+      gameSessionId: GAME_SESSION_ID,
+      eventType: "market_status_changed",
+      occurredAt: "2026-06-24T00:04:00.000Z",
+      payload: { marketStatus: "open", currentTick: 45 },
+    }),
+    payload: {
+      marketStatus: null,
+      metadata: [null, [{ "Player-SessIon_ID": "synthetic" }]],
+      [privateHashFieldName()]: "synthetic",
+    },
+  };
+  const error = (message: string) => ({
+    ok: false,
+    error: { code: "invalid_game_public_realtime_event", message, retryable: false },
+  });
+  assertEquals(
+    await publisher.publish({ ...envelope, channel: "game:other:public" } as never),
+    error("Public realtime channel must match the game session."),
+  );
+  assertEquals(
+    await publisher.publish(envelope as never),
+    error("Public realtime payload contains private field payload.metadata[1][0].Player-SessIon_ID."),
+  );
+  assertEquals(transport.messages, []);
+});
+
 Deno.test("game public realtime publisher rejects mismatched channel", () => {
   const envelope = {
     ...buildGamePublicRealtimeEnvelope({
