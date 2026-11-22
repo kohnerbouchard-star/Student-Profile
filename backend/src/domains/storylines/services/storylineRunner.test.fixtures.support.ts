@@ -31,7 +31,7 @@ import type {
 export interface FakeStorylineRepositoryOptions {
   readonly candidates?: readonly StorylineEventCandidateRecord[];
   readonly storyFlags?: Record<string, JsonValue>;
-  readonly existingResolutionEventIds?: readonly string[];
+  readonly allowDirectResolution?: boolean;
 }
 
 export class FakeStorylineRepository implements StorylineRepository {
@@ -41,14 +41,12 @@ export class FakeStorylineRepository implements StorylineRepository {
   }[] = [];
   private readonly candidates: readonly StorylineEventCandidateRecord[];
   private readonly storyFlags: Record<string, JsonValue>;
-  private readonly existingResolutionEventIds: Set<string>;
+  private readonly allowDirectResolution: boolean;
 
   constructor(options: FakeStorylineRepositoryOptions = {}) {
     this.candidates = options.candidates ?? [];
     this.storyFlags = options.storyFlags ?? {};
-    this.existingResolutionEventIds = new Set(
-      options.existingResolutionEventIds ?? [],
-    );
+    this.allowDirectResolution = options.allowDirectResolution ?? false;
   }
 
   listActiveGameSessionStorylines(): Promise<
@@ -66,11 +64,8 @@ export class FakeStorylineRepository implements StorylineRepository {
   createStoryEventResolution(
     input: CreateStoryEventResolutionInput,
   ): Promise<CreateStoryEventResolutionResult> {
-    if (this.existingResolutionEventIds.has(input.storylineEventId)) {
-      return Promise.resolve({
-        status: "existing",
-        resolution: resolutionRecord(input, "existing-resolution-1"),
-      });
+    if (!this.allowDirectResolution) {
+      throw new Error("Canonical Story fixture must finalize through the execution repository.");
     }
 
     this.resolutions.push({
@@ -383,4 +378,35 @@ export function assertEquals(actual: unknown, expected: unknown): void {
       }`,
     );
   }
+}
+
+export function failingEffectRepository(allowDirectResolution = false) {
+  return new FakeStorylineRepository({
+    allowDirectResolution,
+    candidates: [
+      storylineEventCandidate({
+        id: "event-1",
+        eventKey: "failing-effect",
+        triggerType: "market_tick",
+        scheduledMarketTick: 1,
+        playerRules: [
+          {
+            ruleKey: "matching-rule",
+            condition: {
+              type: "player_current_country_is",
+              countryCode: "NORTHREACH",
+            },
+            effects: [
+              {
+                type: "cash_credit",
+                amount: 25,
+                label: "Aid",
+                reason: "Ledger fails in this test.",
+              },
+            ],
+          },
+        ],
+      }),
+    ],
+  });
 }

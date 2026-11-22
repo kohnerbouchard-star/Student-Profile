@@ -1,3 +1,4 @@
+import { StorylineExecutionFixture } from "./storylineExecutionFixture.test.support.ts";
 import { runDueStorylineEvents } from "./storylineRunner.ts";
 import {
   assertEquals,
@@ -52,6 +53,7 @@ Deno.test("storyline runner passes contract writer dependencies to contract_unlo
     enableContracts: true,
   });
 
+  const executionRepository = new StorylineExecutionFixture();
   const result = await runDueStorylineEvents({
     gameSessionId: "game-1",
     now: "2026-06-25T12:10:00.000Z",
@@ -61,6 +63,7 @@ Deno.test("storyline runner passes contract writer dependencies to contract_unlo
       playerContext("player-2", "YRETHIA"),
     ],
     repository,
+    executionRepository,
     effectDependencies,
   });
 
@@ -93,7 +96,7 @@ Deno.test("storyline runner passes contract writer dependencies to contract_unlo
   assertEquals(effectDependencies.writes.contracts[0]?.status, "active");
 });
 
-Deno.test("storyline runner creates cutscene notification deliveries after inserted resolution", async () => {
+Deno.test("storyline runner creates cutscene notification deliveries and finalizes successful execution", async () => {
   const repository = new FakeStorylineRepository({
     candidates: [
       storylineEventCandidate({
@@ -108,6 +111,7 @@ Deno.test("storyline runner creates cutscene notification deliveries after inser
   const effectDependencies = createFakeEffectDependencies();
   const notificationRepository = new FakeStoryNotificationRepository();
 
+  const executionRepository = new StorylineExecutionFixture();
   const result = await runDueStorylineEvents({
     gameSessionId: "game-1",
     now: "2026-06-25T12:10:00.000Z",
@@ -118,6 +122,7 @@ Deno.test("storyline runner creates cutscene notification deliveries after inser
       playerContext("player-1", "NORTHREACH"),
     ],
     repository,
+    executionRepository,
     effectDependencies,
     notificationRepository,
   });
@@ -154,12 +159,14 @@ Deno.test("storyline runner works with reveal payload when notification dependen
   });
   const effectDependencies = createFakeEffectDependencies();
 
+  const executionRepository = new StorylineExecutionFixture();
   const result = await runDueStorylineEvents({
     gameSessionId: "game-1",
     now: "2026-06-25T12:10:00.000Z",
     currentMarketTick: 5,
     playerContexts: [playerContext("player-1", "NORTHREACH")],
     repository,
+    executionRepository,
     effectDependencies,
   });
 
@@ -169,7 +176,7 @@ Deno.test("storyline runner works with reveal payload when notification dependen
   assertEquals(result.notificationDeliveryCount, 0);
 });
 
-Deno.test("storyline runner reports notification creation failure safely", async () => {
+Deno.test("durable storyline runner retries notification failure without finalizing the first attempt", async () => {
   const repository = new FakeStorylineRepository({
     candidates: [
       storylineEventCandidate({
@@ -186,19 +193,42 @@ Deno.test("storyline runner reports notification creation failure safely", async
     failCreateNotification: true,
   });
 
-  const result = await runDueStorylineEvents({
+  const executionRepository = new StorylineExecutionFixture();
+  const input = {
     gameSessionId: "game-1",
     now: "2026-06-25T12:10:00.000Z",
     currentMarketTick: 5,
     playerContexts: [playerContext("player-1", "NORTHREACH")],
     repository,
+    executionRepository,
     effectDependencies,
     notificationRepository,
-  });
+  };
+  const result = await runDueStorylineEvents(input);
 
   assertEquals(result.failedCount, 1);
   assertEquals(result.resolvedCount, 0);
   assertEquals(result.notificationFailedCount, 1);
-  assertEquals(repository.resolutions.length, 1);
+  assertEquals(executionRepository.finalized.length, 0);
+  const failed = executionRepository.readClaim("game-1", "event-1");
+  assertEquals(failed?.status, "retryable_failed");
+  assertEquals(failed?.resolutionId, null);
   assertEquals(result.events[0]?.status, "failed");
+
+  const retryNotifications = new FakeStoryNotificationRepository();
+  const retry = await runDueStorylineEvents({
+    ...input,
+    now: "2026-06-25T12:30:00.000Z",
+    currentMarketTick: 8,
+    notificationRepository: retryNotifications,
+  });
+  assertEquals(retry.failedCount, 0);
+  assertEquals(retry.resolvedCount, 1);
+  assertEquals(retryNotifications.createdNotifications.length, 1);
+  assertEquals(executionRepository.finalized.length, 1);
+  const completed = executionRepository.readClaim("game-1", "event-1");
+  assertEquals(completed?.status, "completed");
+  assertEquals(completed?.effectiveAt, input.now);
+  assertEquals(completed?.effectiveMarketTick, input.currentMarketTick);
+  assertEquals(completed?.attemptCount, 2);
 });
