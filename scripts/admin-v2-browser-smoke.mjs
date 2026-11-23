@@ -2,14 +2,18 @@ import assert from "node:assert/strict";
 import { verifyAccountControls } from "./admin-account-controls-browser-check.mjs";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { chromium } from "playwright";
 import { verifyDepartingAdminModuleAborts } from "./admin-session-redirect-diagnostics.mjs";
+import { buildVercelDeployment } from "./build-vercel-runtime-config.mjs";
 
 import {
   ADMIN_V2_FIXTURE_ADMIN_ID,
+  ADMIN_V2_FIXTURE_CSRF,
   ADMIN_V2_FIXTURE_GAME_ID,
   ADMIN_V2_FIXTURE_OPAQUE_GAME_ID,
   ADMIN_V2_FIXTURE_LONG_ADMIN_NAME,
@@ -338,6 +342,8 @@ async function createScenarioRuntime(
     includeGame = true,
     includeFixtureQuery = true,
     hash = "overview",
+    entryPath = "/admin/v2.html",
+    configureContext,
   } = {},
 ) {
   const runId = randomUUID();
@@ -382,8 +388,14 @@ async function createScenarioRuntime(
   if (includeGame) query.set("game", selectedGameId);
   if (includeFixtureQuery) query.set("fixture", scenario);
   const suffix = query.size ? `?${query}` : "";
-  const url = `${fixture.origin}/admin/v2.html${suffix}${hash ? `#${hash}` : ""}`;
-  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15_000 });
+  const url = `${fixture.origin}${entryPath}${suffix}${hash ? `#${hash}` : ""}`;
+  try {
+    await configureContext?.(context, runId);
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15_000 });
+  } catch (error) {
+    await context.close();
+    throw error;
+  }
   return {
     context,
     page,
@@ -977,6 +989,96 @@ async function capture(page, filename) {
   return destination;
 }
 
+async function verifyBuiltDirectAttendanceScanner(browser) {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "econovaria-admin-scanner-browser-"));
+  let builtFixture, runtime;
+  try {
+    const outputRoot = path.join(temporaryRoot, "dist");
+    await buildVercelDeployment({
+      repoRoot: REPOSITORY_ROOT, outputRoot,
+      environment: {
+        ECONOVARIA_ENVIRONMENT: "staging",
+        ECONOVARIA_PROJECT_REF: "artifactfixture00001",
+        ECONOVARIA_SUPABASE_URL: "https://artifactfixture00001.supabase.co",
+        ECONOVARIA_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_artifact-fixture-only",
+      },
+    });
+    builtFixture = await startAdminV2FixtureServer({ repositoryRoot: outputRoot });
+    const scannerPath = `/functions/v1/web-session-api/proxy/games/${ADMIN_V2_FIXTURE_GAME_ID}/attendance/scan`;
+    const forbiddenScripts = new Set(["classroom-write-fallback.js", "create-action-adapter.js",
+      "scanner-auto-refresh.js", "scanner-reward-localization.js"]);
+    const paths = new Set(), writes = [], denied = [];
+    const card = "SYNTHETIC-BUILT-CARD";
+    runtime = await createScenarioRuntime(browser, builtFixture, "ready", DEFAULT_VIEWPORT, {
+      entryPath: "/admin/index.html", hash: "attendance", includeFixtureQuery: false,
+      async configureContext(context, runId) {
+        await context.route("**/*", async (route) => {
+          const request = route.request();
+          const url = new URL(request.url());
+          const method = request.method();
+          paths.add(url.pathname);
+          if (url.origin !== builtFixture.origin) {
+            denied.push("off-origin request");
+            return route.abort("blockedbyclient");
+          }
+          if (method === "GET" || method === "HEAD") return route.continue();
+          if (method !== "POST" || url.pathname !== scannerPath || url.search) {
+            denied.push("unexpected mutation");
+            return route.abort("blockedbyclient");
+          }
+          const headers = await request.allHeaders();
+          let body;
+          try { body = request.postDataJSON(); } catch { body = null; }
+          const bootstrapped = builtFixture.requestsFor(runId)
+            .some((entry) => entry.method === "GET" && entry.pathname === "/session/bootstrap");
+          const deviceTimezone = body?.deviceTimezone;
+          const valid = bootstrapped && Object.keys(body || {}).sort().join(",") === "deviceTimezone,playerId"
+            && body.playerId === card && typeof deviceTimezone === "string" && deviceTimezone.length > 0
+            && headers["x-econovaria-game-id"] === ADMIN_V2_FIXTURE_GAME_ID
+            && headers["x-econovaria-csrf-token"] === ADMIN_V2_FIXTURE_CSRF
+            && headers["x-econovaria-device-id"] === DEVICE_ID
+            && /^admin\.attendance\.scan\.[0-9a-f-]{36}\.1$/u.test(headers["idempotency-key"] || "")
+            && !headers.authorization
+            && (headers.cookie || "").split(/;\s*/u).includes(`admin-v2-run=${runId}`);
+          writes.push({ method, path: url.pathname, valid });
+          if (!valid || writes.length !== 1) {
+            denied.push("invalid or duplicate scan");
+            return route.abort("blockedbyclient");
+          }
+          return route.fulfill({ status: 200, json: { data: {
+            player: { displayName: "Synthetic Player" },
+            attendance: { status: "present", wasCreated: true },
+            reward: { amount: 4, currencyCode: "ECO" },
+          } } });
+        });
+      },
+    });
+    await waitForSessionGateRelease(runtime.page);
+    assert.equal(new URL(runtime.page.url()).pathname, "/admin/index.html");
+    assert.equal(await runtime.page.locator('meta[name="econovaria-admin-ui-version"]').getAttribute("content"), "2");
+    const scanner = runtime.page.getByRole("region", { name: "Attendance scanner", exact: true });
+    const input = scanner.getByLabel("RFID / scanner input", { exact: true });
+    await input.fill(card);
+    await input.press("Enter");
+    const status = scanner.getByRole("status");
+    await status.getByText("Synthetic Player checked in.", { exact: true }).waitFor({ state: "visible" });
+    assert.match(await status.innerText(), /present · Reward 4 ECO/);
+    await scanner.locator("#adminAttendanceScannerInput:not(:disabled)").waitFor({ state: "visible" });
+    assert.deepEqual(writes, [{ method: "POST", path: scannerPath, valid: true }]);
+    assert.deepEqual(denied, []);
+    for (const scriptPath of ["/admin/v2/src/main.js", "/admin/v2/src/routes/attendance/AttendanceScannerPanel.js"]) {
+      assert.ok(paths.has(scriptPath), `Did not load ${scriptPath} from built output`);
+    }
+    assert.deepEqual([...paths].filter((scriptPath) => forbiddenScripts.has(path.posix.basename(scriptPath))), []);
+    assertNoBearerRequests(builtFixture, runtime.runId, "built direct Attendance");
+    await assertNoRuntimeErrors(runtime, "built direct Attendance");
+  } finally {
+    await runtime?.close();
+    await builtFixture?.close();
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+}
+
 const fixture = await startAdminV2FixtureServer({ repositoryRoot: STATIC_ROOT });
 let browser;
 const evidence = [];
@@ -1407,6 +1509,12 @@ try {
     } finally {
       await runtime.close();
     }
+  }
+
+  // The retained historical-baseline run must not qualify today's artifact.
+  if (STATIC_ROOT === REPOSITORY_ROOT) {
+    await verifyBuiltDirectAttendanceScanner(browser);
+    checks.push({ scenario: "built-direct-attendance-scanner", viewport: "1280x720", status: "passed" });
   }
 
   const passedChecks = checks.filter((check) => check.status === "passed");
