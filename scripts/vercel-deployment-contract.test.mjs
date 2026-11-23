@@ -13,7 +13,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import vm from "node:vm";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { createAttendanceRouteHarness } from "./fixtures/admin-attendance-route-harness.mjs";
 
 import {
   BROWSER_ROOTS,
@@ -147,6 +148,109 @@ test("builds an isolated static deployment without swallowing Vercel functions",
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }
+});
+
+const LEGACY_SCANNER_ASSETS = Object.freeze([
+  "classroom-write-fallback.js",
+  "create-action-adapter.js",
+  "scanner-auto-refresh.js",
+  "scanner-reward-localization.js",
+]);
+
+async function traceBuiltAdminScripts(outputRoot, entryUrl, html) {
+  const sources = [...html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/giu)].map((match) => new URL(match[1], entryUrl));
+  const visited = new Set();
+  for (const script of sources) {
+    assert.equal(script.origin, entryUrl.origin, "the built shell only imports local scripts");
+    if (visited.has(script.pathname)) continue;
+    visited.add(script.pathname);
+    assert.ok(!LEGACY_SCANNER_ASSETS.includes(path.posix.basename(script.pathname)));
+    const source = await readFile(path.join(outputRoot, script.pathname), "utf8");
+    for (const asset of LEGACY_SCANNER_ASSETS) {
+      assert.ok(!source.includes(asset), `Legacy scanner reference in ${script.pathname}: ${asset}`);
+    }
+    const declarations = /^\s*(?:import|export)\s+(?:[^"';]*?\sfrom\s*)?["']([^"']+)["']/gmu;
+    const dynamicImports = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/gu;
+    for (const expression of [declarations, dynamicImports]) {
+      for (const [, specifier] of source.matchAll(expression)) sources.push(new URL(specifier, script));
+    }
+  }
+  return visited;
+}
+
+test("real Vercel artifact binds direct Admin HTML and scoped scanner POST to V2 only", async (t) => {
+  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "econovaria-built-admin-"));
+  t.after(() => rm(temporaryRoot, { recursive: true, force: true }));
+  const outputRoot = path.join(temporaryRoot, "dist");
+  await buildVercelDeployment({
+    repoRoot: repositoryRoot, outputRoot,
+    environment: {
+      ECONOVARIA_ENVIRONMENT: "staging",
+      ECONOVARIA_PROJECT_REF: "artifactfixture00001",
+      ECONOVARIA_SUPABASE_URL: "https://artifactfixture00001.supabase.co",
+      ECONOVARIA_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_artifact-fixture-only",
+    },
+  });
+  const gameId = "10000000-0000-4000-8000-000000000001";
+  const entryUrl = new URL(`https://artifact.invalid/admin/index.html?game=${gameId}#attendance`);
+  const raw = await readFile(path.join(repositoryRoot, "admin/index.html"), "utf8");
+  assert.match(raw, /classroom-write-fallback\.js/);
+  const built = await readFile(path.join(outputRoot, entryUrl.pathname), "utf8");
+  assert.equal(built, await readFile(path.join(outputRoot, "admin/v2.html"), "utf8"));
+  assert.match(built, /<meta name="econovaria-admin-ui-version" content="2"/);
+  for (const asset of LEGACY_SCANNER_ASSETS) {
+    assert.ok(!built.includes(asset));
+    assert.deepEqual(await readFile(path.join(outputRoot, "admin", asset)), await readFile(path.join(repositoryRoot, "admin", asset)));
+  }
+  const graph = await traceBuiltAdminScripts(outputRoot, entryUrl, built);
+  for (const name of ["main.js", "app.js", "app-controllers.js", "api/admin-bff-transport.js",
+    ...["AttendanceController.js", "AttendanceApi.js", "AttendanceRoute.js", "AttendanceScannerPanel.js"].map((file) => `routes/attendance/${file}`)]) {
+    assert.ok(graph.has(`/admin/v2/src/${name}`), `Built direct Admin graph includes ${name}`);
+  }
+
+  // Execute the artifact's controller, scanner panel, API and BFF transport
+  // with component doubles and a local synthetic Fetch; no browser or server.
+  const load = (file) => import(pathToFileURL(path.join(outputRoot, "admin/v2/src", file)).href);
+  const [{ createAttendanceApi }, { createAdminBffTransport }, dataStateModule, errorEnvelopeModule, readModelModule] =
+    await Promise.all(["routes/attendance/AttendanceApi.js", "api/admin-bff-transport.js",
+      "core/data-state.js", "core/error-envelope.js", "routes/attendance/AttendanceReadModel.js"].map(load));
+  const h = createAttendanceRouteHarness({ rootDirectory: outputRoot, dataStateModule, errorEnvelopeModule, readModelModule });
+  const requests = [];
+  const csrfToken = "B".repeat(43);
+  const uuid = "40000000-0000-4000-8000-000000000004";
+  const prefix = `${entryUrl.origin}/api/admin/games/${gameId}/attendance`;
+  const transport = createAdminBffTransport({
+    selectedGameId: gameId, session: { authenticated: true, csrfToken }, runtimeConfig: {},
+    locationLike: entryUrl, cryptoObject: { randomUUID: () => uuid },
+    fetchImpl: async (url, init) => {
+      requests.push({ url, init });
+      if (url === `${prefix}/today` && init.method === "GET") {
+        return Response.json({ data: { attendanceDate: "2026-08-07", timezone: "Asia/Seoul", attendanceRows: [] } });
+      }
+      assert.equal(url, `${prefix}/scan`);
+      assert.equal(init.method, "POST");
+      return Response.json({ data: { player: { displayName: "Synthetic Player" },
+        attendance: { status: "present", wasCreated: true }, reward: { amount: 4, currencyCode: "ECO" } } });
+    },
+  });
+  const controller = h.createAttendanceController({
+    api: createAttendanceApi({ fetchImpl: transport }), selectedGameId: gameId,
+    hasPermission: (key) => key === "attendance.manage", cryptoObject: { randomUUID: () => uuid },
+    onChange: () => controller.render(), setTimeoutImpl: () => Symbol(),
+  });
+  t.after(() => controller.destroy());
+  await controller.load();
+  h.nodes.findLast((node) => node.id === "adminAttendanceScannerInput").value = "SYNTHETIC-BUILT-CARD";
+  await h.nodes.findLast((node) => node.className === "admin-attendance-route__scanner-form").dispatch("submit");
+  assert.deepEqual(requests.map(({ url, init }) => [url, init.method]), [[`${prefix}/today`, "GET"], [`${prefix}/scan`, "POST"]]);
+  const write = requests[1].init;
+  assert.equal(write.headers.get("x-econovaria-game-id"), gameId);
+  assert.equal(write.headers.get("x-econovaria-csrf-token"), csrfToken);
+  assert.equal(write.headers.get("idempotency-key"), `admin.attendance.scan.${uuid}.1`);
+  assert.equal(write.headers.has("authorization"), false);
+  assert.equal(JSON.parse(write.body).playerId, "SYNTHETIC-BUILT-CARD");
+  assert.deepEqual(h.nodes.findLast((node) => node.id === "adminAttendanceScannerStatus").children.map(({ textContent }) => textContent),
+    ["Synthetic Player checked in.", "present · Reward 4 ECO"]);
 });
 
 test("rejects a placeholder in any protected authentication route before output", async () => {
