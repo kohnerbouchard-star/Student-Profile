@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { ADMIN_DATA_STATES } from "../../admin/v2/src/core/data-state.js";
+import * as dataState from "../../admin/v2/src/core/data-state.js";
+import * as errorEnvelope from "../../admin/v2/src/core/error-envelope.js";
+import * as readModel from "../../admin/v2/src/routes/attendance/AttendanceReadModel.js";
 
 // Execute the actual local module graph. Component doubles record markup and
 // callbacks; they do not certify browser focus, layout or server mutation gates.
@@ -58,7 +60,9 @@ export function createAttendanceRouteHarness() {
   const seams = new Map([
     [path.resolve(directory, "../../components/index.js"), components],
     [path.resolve(directory, "../../components/dom.js"), { createElement }],
-    [path.resolve(directory, "../../core/data-state.js"), { ADMIN_DATA_STATES }],
+    [path.resolve(directory, "../../core/data-state.js"), dataState],
+    [path.resolve(directory, "../../core/error-envelope.js"), errorEnvelope],
+    [path.resolve(directory, "AttendanceReadModel.js"), readModel],
   ]);
   function load(filename) {
     if (seams.has(filename)) return seams.get(filename);
@@ -68,11 +72,13 @@ export function createAttendanceRouteHarness() {
     const exports = [...source.matchAll(/export function (\w+)/g)].map((match) => match[1]);
     const executable = source.replace(/import\s+\{([\s\S]*?)\}\s+from\s+"([^"]+)";/g,
       (_match, names, specifier) => `const {${names}} = load(${JSON.stringify(path.resolve(path.dirname(filename), specifier))});`)
+      .replace(/^export \{ normalizeAttendanceReadModel \} from "\.\/AttendanceReadModel\.js";$/m, "")
       .replace(/export function /g, "function ");
     const loaded = new Function("load", `${executable}\nreturn { ${exports.join(", ")} };`)(load);
     modules.set(filename, loaded); return loaded;
   }
   return { AttendanceRoute: load(path.join(directory, "AttendanceRoute.js")).AttendanceRoute,
+    createAttendanceController: load(path.join(directory, "AttendanceController.js")).createAttendanceController,
     nodes, fields, tables, confirmations, frames,
     button(action) { return nodes.find((node) => node.dataset.attendanceAction === action); },
   };
