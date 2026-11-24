@@ -45,6 +45,29 @@ async function readJson(req) {
   return JSON.parse(Buffer.concat(chunks).toString());
 }
 
+function fixedFixtureReadPath({ pathname, search }) {
+  switch (pathname) {
+    case `${sessionPath}/proxy/session/bootstrap`:
+      return search === "" ? `${sessionPath}/proxy/session/bootstrap` : null;
+    case `${sessionPath}/proxy/games`:
+      return search === "" ? `${sessionPath}/proxy/games` : null;
+    case `${sessionPath}/proxy/notifications`:
+      return search === "?scope=admin-console" ? `${sessionPath}/proxy/notifications?scope=admin-console` : null;
+    case `${sessionPath}/proxy/games/${selectedGameId}/lifecycle`:
+      return search === "" ? `${sessionPath}/proxy/games/${selectedGameId}/lifecycle` : null;
+    case `${sessionPath}/proxy/games/${selectedGameId}/dashboard`:
+      return search === "" ? `${sessionPath}/proxy/games/${selectedGameId}/dashboard` : null;
+    case `${sessionPath}/proxy/games/${selectedGameId}/store/items`:
+      return search === "?include=stock,prices,purchaseStats"
+        ? `${sessionPath}/proxy/games/${selectedGameId}/store/items?include=stock,prices,purchaseStats`
+        : null;
+    case `${sessionPath}/proxy/games/${selectedGameId}/attendance/today`:
+      return search === "" ? `${sessionPath}/proxy/games/${selectedGameId}/attendance/today` : null;
+    default:
+      return null;
+  }
+}
+
 async function startUpstream(backendOrigin, requests) {
   const fixture = createAdminV2FixtureSession();
   const { user, csrfToken, assuranceLevel, mfaRequired, expiresAt, absoluteExpiresAt } = fixture;
@@ -93,10 +116,11 @@ async function startUpstream(backendOrigin, requests) {
           attendance: { status: "present", wasCreated: true },
           reward: { amount: 4, currencyCode: "ECO" },
         } });
-      } else if (url.pathname.startsWith(sessionPath + "/proxy/")
-          && req.method === "GET" && signed && hasSession
-          && !url.pathname.includes(decoy.id)) {
-        const result = await fetch(backendOrigin + url.pathname + url.search, { redirect: "error" });
+      } else if (req.method === "GET" && signed && hasSession && game === selectedGameId) {
+        // Request values only select a known fixture read; they never build its URL.
+        const fixturePath = fixedFixtureReadPath(url);
+        if (fixturePath === null) return json(res, 403, { code: "unexpected_fixture_request" });
+        const result = await fetch(backendOrigin + fixturePath, { redirect: "error" });
         res.writeHead(result.status, { "content-type": result.headers.get("content-type") ?? "application/json" });
         res.end(Buffer.from(await result.arrayBuffer()));
       } else {
@@ -190,6 +214,14 @@ async function verifyHttpJourney(requests) {
   const statusBody = await status.json();
   assert.deepEqual(statusBody.activeGameSessions.map((game) => game.id), [decoy.id, selectedGameId]);
   const scoped = { ...signedSession, "x-econovaria-game-id": selectedGameId };
+  for (const path of [
+    `/proxy/games/${selectedGameId}/dashboard?view=unknown`,
+    "/proxy/notifications?scope=other",
+    `/proxy/games/${selectedGameId}/players`,
+  ]) {
+    const denied = await fetch(base + path, { headers: scoped, redirect: "error" });
+    assert.equal(denied.status, 403, `The fixture must reject an undeclared read: ${path}`);
+  }
   const bootstrap = await fetch(base + "/proxy/session/bootstrap", { headers: scoped, redirect: "error" });
   assert.equal(bootstrap.status, 200);
   assert.equal((await bootstrap.json()).data.activeGame.id, selectedGameId);
