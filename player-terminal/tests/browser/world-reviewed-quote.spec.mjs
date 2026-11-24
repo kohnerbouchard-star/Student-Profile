@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("native World installer quote review and unchanged confirmation", async ({ page }) => {
+async function openWorldFixture(page) {
   // Isolated real installer/renderer fixture, not the complete application bootstrap.
   // Deliberately inert, static fixture: never sanitize or embed application HTML.
   // Keep the production stylesheet cascade, but omit every bootstrap script.
@@ -43,6 +43,10 @@ test("native World installer quote review and unchanged confirmation", async ({ 
   await page.route("http://127.0.0.1:4173/", route => route.fulfill({ contentType: "text/html", body: shell }));
   await page.goto("/");
   await expect(page.locator("script")).toHaveCount(0);
+}
+
+test("native World installer quote review and unchanged confirmation", async ({ page }) => {
+  await openWorldFixture(page);
   await page.evaluate(async () => {
     const { installWorldRuntimeFlow } = await import("/src/features/world/world-runtime-flow.js");
     const { renderWorldPage } = await import("/src/pages/world-page.js");
@@ -77,4 +81,93 @@ test("native World installer quote review and unchanged confirmation", async ({ 
   await expect.poll(()=>page.evaluate(()=>window.quoteFixtureCalls.filter(c=>c.key==="travelExecute").length)).toBe(1);
   expect(await page.evaluate(()=>window.quoteFixtureCalls.find(c=>c.key==="travelExecute").payload)).toEqual({quoteId:"trq_"+"1".repeat(32)});
   await page.evaluate(()=>window.quoteFixture.destroy());
+});
+
+test("native World residency reconciles a lost write by read without resubmitting", async ({ page }) => {
+  await openWorldFixture(page);
+  await page.evaluate(async () => {
+    const { installWorldRuntimeFlow } = await import("/src/features/world/world-runtime-flow.js");
+    const { renderPlayerRoute } = await import("/src/core/route-renderer.js");
+    const { PreviewTransport } = await import("/src/api/preview-transport.js");
+    const model = await new PreviewTransport({ simulateWrites: true }).request({ endpointKey: "worldRuntime", method: "GET" });
+    model.residency = {
+      currentCountryId: "eldoran", currencyCode: "ELD", eligibleCountryIds: ["valerion", "meridian"],
+      pendingCountryId: null, revision: 3,
+    };
+    const session = { playerId: "fixture-player", playerSessionId: "fixture-session", gameSessionId: "fixture-game" };
+    const capabilities = { routes: { world: true }, actions: { residencyRequest: true } };
+    const state = {
+      status: "ready", route: "world",
+      data: { worldRuntime: model, session, capabilities, resourceStatus: { worldRuntime: { state: "ready" } } },
+    };
+    const mount = document.createElement("main");
+    document.body.replaceChildren(mount);
+    window.residencyFixtureCalls = [];
+    let reads = 0;
+    const config = {
+      authenticated: true, csrfToken: "C".repeat(43), gameSessionId: session.gameSessionId,
+      requestTimeoutMs: 5000, writeCooldownMs: 0, capabilities, allowedImageHosts: [],
+      async apiCall({ endpointKey, method, payload }) {
+        const call = { endpointKey, method };
+        if (payload != null) call.payload = payload;
+        window.residencyFixtureCalls.push(call);
+        if (endpointKey === "residencyRequest" && method === "POST") {
+          throw Object.assign(new Error("Synthetic residency response lost"), { code: "NETWORK_ERROR", status: 0 });
+        }
+        if (endpointKey === "worldRuntime" && method === "GET") {
+          reads += 1;
+          if (reads === 1) return model;
+          if (reads === 2) return { ...model, residency: { ...model.residency, revision: 4, pendingCountryId: "valerion" } };
+        }
+        throw new Error(`Unexpected fixture request: ${method} ${endpointKey}`);
+      },
+    };
+    const render = () => {
+      mount.innerHTML = renderPlayerRoute({ route: "world", data: state.data, ui: {}, config });
+    };
+    window.residencyFixture = installWorldRuntimeFlow({
+      mount, config, terminal: { getState: () => state, subscribe: () => () => {}, requestRender: render, refresh: async () => {} },
+    });
+    render();
+  });
+  try {
+    const residency = page.getByRole("region", { name: "Eldoran", exact: true });
+    const destination = residency.getByRole("combobox", { name: "Eligible destination" });
+    const submit = residency.getByRole("button", { name: "Request residency review", exact: true });
+    const reconcile = residency.getByRole("button", { name: "Refresh residency", exact: true });
+    const uncertainty = residency.getByText(/Residency request outcome unconfirmed/);
+    const revision = residency.locator('input[name="expectedRevision"]');
+    const calls = () => page.evaluate(() => window.residencyFixtureCalls);
+    const post = { endpointKey: "residencyRequest", method: "POST", payload: { countryId: "valerion", expectedRevision: 3 } };
+    const get = { endpointKey: "worldRuntime", method: "GET" };
+
+    await expect(submit).toBeEnabled();
+    await expect(revision).toHaveValue("3");
+    await destination.selectOption("valerion");
+    await submit.click();
+    await expect(uncertainty).toBeVisible();
+    await expect(submit).toBeDisabled();
+    await expect(destination).toBeDisabled();
+    expect(await calls()).toEqual([post]);
+
+    await reconcile.click();
+    await expect(page.locator(".player-world-page-status")).toHaveText("World runtime refreshed.");
+    await expect(uncertainty).toBeVisible();
+    await expect(revision).toHaveValue("3");
+    await expect(submit).toBeDisabled();
+    await expect(destination).toBeDisabled();
+    expect(await calls()).toEqual([post, get]);
+
+    await reconcile.click();
+    await expect(residency.getByText("Pending: Valerion", { exact: true })).toBeVisible();
+    await expect(revision).toHaveValue("4");
+    await expect(uncertainty).toHaveCount(0);
+    await expect(reconcile).toHaveCount(0);
+    await expect(residency.getByText(/request was confirmed|committed for review/i)).toHaveCount(0);
+    await expect(submit).toBeDisabled();
+    await expect(destination).toBeDisabled();
+    expect(await calls()).toEqual([post, get, get]);
+  } finally {
+    await page.evaluate(() => window.residencyFixture.destroy());
+  }
 });
