@@ -1,19 +1,31 @@
 import { escapeHtml, formatCurrency } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
-import { isResourceUnavailable } from "../api/resource-status.js";
+import { isResourceReady, isResourceUnavailable } from "../api/resource-status.js";
 import { resolveStoreItemMedia } from "../features/store/store-artwork.js";
 import {
   storeCheckingAccounts,
   storeFundingAvailability,
 } from "../features/store/store-funding-intent.js";
 
-function ownedQuantity(inventoryItems, itemId) {
-  const holding = (Array.isArray(inventoryItems) ? inventoryItems : []).find((item) =>
-    String(item?.storeItemId || item?.itemKey || "") === String(itemId || "")
-  );
-  const quantity = Number(holding?.quantity ?? holding?.quantityOwned ?? 0);
-  return Number.isFinite(quantity) ? quantity : 0;
+function inventoryOwnershipKey(holding) {
+  const key = holding?.storeItemId || holding?.itemKey;
+  return typeof key === "string" && /^[a-z0-9][a-z0-9._-]{0,159}$/u.test(key) ? key : null;
+}
+
+function ownedQuantity(data, item) {
+  const itemKeys = [item.storeItemKey || item.id, item.canonicalItemKey].filter(Boolean).map(String);
+  const inventoryItems = data.inventory?.items;
+  // Statusless render fixtures can still use their supplied Inventory snapshot.
+  if (!Array.isArray(inventoryItems) || data.inventory.ownershipReadUnverified || !itemKeys.length
+    || (data.resourceStatus != null && !isResourceReady(data, "inventory"))) return null;
+  const holdings = inventoryItems.filter((holding) => itemKeys.includes(inventoryOwnershipKey(holding)));
+  // An unattributable row prevents an authoritative absence claim.
+  if (!holdings.length) return inventoryItems.every(inventoryOwnershipKey) ? 0 : null;
+  if (holdings.length !== 1 || holdings[0].ownershipQuantityUnverified) return null;
+  const raw = holdings[0].quantity ?? holdings[0].quantityOwned;
+  const quantity = typeof raw === "string" && /^\d+$/.test(raw.trim()) ? Number(raw) : raw;
+  return Number.isSafeInteger(quantity) && quantity >= 0 ? quantity : null;
 }
 
 function sellerKindLabel(kind) {
@@ -43,11 +55,11 @@ function renderStoreOffer(item, offer, data) {
   </div>`;
 }
 
-function renderStoreItem(item, inventoryItems, data) {
+function renderStoreItem(item, data) {
   const offers = Array.isArray(item.offers) ? item.offers : [];
   const purchasableOffers = offers.filter((offer) => offer.status === "active" && Number(offer.availableQuantity) > 0 && offer.purchasable === true);
   const soldOut = offers.length ? purchasableOffers.length === 0 : item.stock <= 0;
-  const owned = ownedQuantity(inventoryItems, item.storeItemKey || item.id);
+  const owned = ownedQuantity(data, item);
   const currencyCode = String(item.currencyCode || "").trim().toUpperCase() || "—";
   const offerCurrencies = new Set(purchasableOffers.map((offer) => String(offer.currencyCode || "").trim().toUpperCase()));
   const comparableCurrency = offerCurrencies.size === 1 ? [...offerCurrencies][0] : "";
@@ -66,7 +78,7 @@ function renderStoreItem(item, inventoryItems, data) {
       : `From ${formatCurrency(bestPrice, comparableCurrency || currencyCode)}`;
   return `<article class="player-terminal-store-card${soldOut ? " is-sold-out" : ""}">
     <div class="player-terminal-store-image"><img src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt)}" width="160" height="160" loading="lazy" decoding="async" data-store-item-media="true" data-store-item-media-state="${escapeHtml(media.kind)}" /><span>${escapeHtml(item.category)}</span></div>
-    <div class="player-terminal-store-copy"><small>TOTAL STOCK ${escapeHtml(item.totalAvailableQuantity ?? item.stock)} · ${escapeHtml(item.sellerCount ?? (soldOut ? 0 : 1))} SELLER${Number(item.sellerCount ?? 1) === 1 ? "" : "S"} · OWNED ${escapeHtml(owned)}</small><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p></div>
+    <div class="player-terminal-store-copy"><small>TOTAL STOCK ${escapeHtml(item.totalAvailableQuantity ?? item.stock)} · ${escapeHtml(item.sellerCount ?? (soldOut ? 0 : 1))} SELLER${Number(item.sellerCount ?? 1) === 1 ? "" : "S"} · OWNED ${escapeHtml(owned ?? "UNAVAILABLE")}</small><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p></div>
     <div class="player-terminal-store-summary"><span><small>${escapeHtml(summaryLabel)}</small><strong>${escapeHtml(summaryValue)}</strong></span><small>${escapeHtml(offerCount)} OFFER${offerCount === 1 ? "" : "S"}</small></div>
     ${offers.length
       ? `<div class="player-terminal-store-offer-list" role="list" aria-label="Offers for ${escapeHtml(item.name)}">${offers.map((offer) => renderStoreOffer(item, offer, data)).join("")}</div>`
@@ -94,7 +106,7 @@ export function renderStorePage(data, ui) {
       <label class="player-terminal-search-field">${icon("eye")}<input type="search" placeholder="Search store" data-player-store-search /></label>
     </div>
 
-    <div class="player-terminal-catalog-grid">${items.length ? items.map((item) => renderStoreItem(item, data.inventory.items, data)).join("") : renderEmptyState({ title: "No store items available", detail: "Choose another category or wait for the administrator to publish inventory.", iconName: "store" })}</div>
+    <div class="player-terminal-catalog-grid">${items.length ? items.map((item) => renderStoreItem(item, data)).join("") : renderEmptyState({ title: "No store items available", detail: "Choose another category or wait for the administrator to publish inventory.", iconName: "store" })}</div>
 
   </section>`;
 }
