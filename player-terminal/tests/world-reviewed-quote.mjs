@@ -4,6 +4,7 @@ import { installWorldRuntimeFlow } from "../src/features/world/world-runtime-flo
 import { getWorldRouteViewState } from "../src/features/world/world-route-view-state.js";
 import { reviewTravelQuote } from "../src/features/world/travel-quote-review.js";
 import { renderWorldPage } from "../src/pages/world-page.js";
+import { renderPlayerRoute } from "../src/core/route-renderer.js";
 import { PreviewTransport } from "../src/api/preview-transport.js";
 const tick = () => new Promise(setImmediate);
 const quote = () => ({ publicQuoteId: "trq_" + "1".repeat(32), fromLocationId: "loc_start", toLocationId: "loc_finish", currencyCode: "ELD", totalCostMinor: 0, totalDurationMinutes: 12, routeStateRevision: 7, status: "created", expiresAt: new Date(Date.now()+120000).toISOString(), legs: [{ publicRouteId: "rte_test", fromLocationId: "loc_start", toLocationId: "loc_finish", mode: "land", costMinor: 0, durationMinutes: 12, routeRevision: 3 }] });
@@ -18,22 +19,28 @@ class Element extends EventTarget {
   setAttribute() {} removeAttribute() {} contains(node) { return node?.owner === this; }
   querySelector() { return null; } querySelectorAll() { return []; }
 }
-async function fixture(t) {
+const residencyRow = (revision = 3, pendingCountryId = null) => ({
+  currentCountryId: "eldoran", currencyCode: "ELD", eligibleCountryIds: ["valerion", "meridian"], pendingCountryId, revision
+});
+async function fixture(t, { residency = false } = {}) {
   const runtime = await model();
+  if (residency) runtime.residency = residencyRow();
   const keys = ["HTMLElement","FormData","addEventListener","removeEventListener","setInterval","clearInterval","setTimeout"];
   const saved = keys.map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]), events = new EventTarget();
   const realTimeout = globalThis.setTimeout;
   Object.assign(globalThis,{HTMLElement:Element,FormData:class { constructor(form){this.form=form;} get(key){return this.form.values[key]??null;} },addEventListener:events.addEventListener.bind(events),removeEventListener:events.removeEventListener.bind(events),setInterval:()=>0,clearInterval:()=>{},setTimeout:(fn,ms,...args)=>{const timer=realTimeout(fn,ms,...args);timer.unref?.();return timer;}});
-  const mount = new Element(), calls = [], holds = [], readHolds = [];
-  const capabilities = {routes:{world:true},actions:{travelQuote:true,travelExecute:true}};
-  let state = {status:"ready",route:"world",data:{worldRuntime:runtime,capabilities}}, subscriber;
+  const mount = new Element(), calls = [], holds = [], readHolds = [], sessionRefreshHolds = [];
+  const capabilities = {routes:{world:true},actions:{travelQuote:true,travelExecute:true,residencyRequest:true}};
+  let state = {status:"ready",route:"world",data:{worldRuntime:runtime,capabilities,session:{playerId:"fixture-player",gameSessionId:"fixture-one"},resourceStatus:{worldRuntime:{state:"ready"}}}}, subscriber;
   const config = { authenticated:true,csrfToken:"A".repeat(43),gameSessionId:"fixture-one",requestTimeoutMs:5000,writeCooldownMs:0,capabilities,allowedImageHosts:[],apiCall:async context=>{
     calls.push(context);
     if (context.method === "GET") return readHolds.length ? await readHolds.shift() : runtime;
     const hold = holds.shift(); if(hold) return await hold;
     return context.endpointKey === "travelQuote" ? {quote:quote()} : {journey:{publicJourneyId:"trj_"+"2".repeat(32),status:"in_transit"}};
   }};
-  const terminal = {getState:()=>state,subscribe(fn){subscriber=fn;return()=>{subscriber=null;};},requestRender(){mount.html=renderWorldPage(runtime,{...getWorldRouteViewState(),capabilities});},async refresh(){}};
+  const terminal = {getState:()=>state,subscribe(fn){subscriber=fn;return()=>{subscriber=null;};},requestRender(){mount.html=residency
+    ? renderPlayerRoute({route:"world",data:state.data,ui:{},config})
+    : renderWorldPage(runtime,{...getWorldRouteViewState(),capabilities});},async refresh(){return sessionRefreshHolds.shift()?.();}};
   const flow = installWorldRuntimeFlow({mount,terminal,config});
   t.after(()=>{flow.destroy();for(const [key,value] of saved) value?Object.defineProperty(globalThis,key,value):delete globalThis[key];});
   function submit(operation,values={}) {
@@ -42,7 +49,18 @@ async function fixture(t) {
     const event = new Event("submit",{cancelable:true});Object.defineProperty(event,"target",{value:form});mount.dispatchEvent(event);return form;
   }
   async function until(predicate) {for(let i=0;i<100;i++){if(predicate())return;await tick();}assert.fail("World installer did not settle");}
-  return {flow,mount,config,runtime,calls,holds,readHolds,submit,until,capabilities,setRoute(route){state={...state,route};subscriber?.(state);},changeSession(){config.csrfToken="B".repeat(43);config.gameSessionId="fixture-two";subscriber?.(state);}};
+  return {
+    flow,mount,config,runtime,calls,holds,readHolds,sessionRefreshHolds,submit,until,capabilities,
+    currentRouteHtml:()=>renderPlayerRoute({route:"world",data:state.data,ui:{},config}),
+    setRoute(route){state={...state,route};subscriber?.(state);},
+    setModel(worldRuntime, resourceState="ready"){state={...state,data:{...state.data,worldRuntime,resourceStatus:{worldRuntime:{state:resourceState}}}};subscriber?.(state);},
+    changePlayer(){state={...state,data:{...state.data,session:{...state.data.session,playerId:"fixture-another"}}};subscriber?.(state);},
+    changeSession(){config.csrfToken="B".repeat(43);config.gameSessionId="fixture-two";subscriber?.(state);},
+    refreshResidency(){
+      const action = new Element(); action.owner=mount; action.dataset.worldAction="residency-refresh";action.closest=()=>action;
+      const event=new Event("click");Object.defineProperty(event,"target",{value:action});mount.dispatchEvent(event);
+    },
+  };
 }
 
 test("actual World installer creates, reviews and executes only the owned quote with unchanged payload", async t=>{
@@ -151,4 +169,182 @@ test("existing preview onboarding travel contract retains the authoritative quot
  assert.doesNotMatch(html,/disabled>Confirm travel/);
  const {journey}=await transport.request({endpointKey:"travelExecute",method:"POST",payload:{quoteId:reviewed.publicQuoteId}});
  assert.equal(journey.status,"in_transit");
+});
+
+const residencyAttempt = {countryId:"valerion",expectedRevision:"3"};
+const residencyError = (message = "Response lost") => Object.assign(new Error(message), {code:"NETWORK_ERROR",status:0});
+const residencyPosts = f => f.calls.filter(c=>c.endpointKey==="residencyRequest");
+const residencyForm = f => f.mount.html?.match(/<form data-world-form="residencyRequest"[\s\S]*?<\/form>/u)?.[0] || "";
+
+test("confirmed residency survives failed refresh, stale authority, and away/back without a replacement POST", async t => {
+  const f=await fixture(t,{residency:true});
+  f.holds.push(Promise.resolve({ok:true,residency:residencyRow(4,"valerion")}));
+  f.readHolds.push(Promise.reject(residencyError()));
+  f.submit("residencyRequest",residencyAttempt);
+  await f.until(()=>/Valerion/.test(residencyForm(f)) && f.calls.some(c=>c.method==="GET"));
+  assert.match(residencyForm(f),/Pending: Valerion/);
+  assert.match(residencyForm(f),/value="4"/);
+  assert.match(residencyForm(f),/disabled>Request residency review/);
+  f.setRoute("dashboard");f.setRoute("world");f.setModel({...f.runtime,residency:residencyRow()});
+  f.submit("residencyRequest",{countryId:"meridian",expectedRevision:"3"});
+  await tick();
+  assert.equal(residencyPosts(f).length,1);
+  assert.match(residencyForm(f),/Pending: Valerion/);
+  assert.match(f.mount.html,/Settlement currency<\/dt><dd>ELD/);
+  assert.match(f.mount.html,/Current location/);
+  f.readHolds.push(Promise.resolve({...f.runtime,residency:residencyRow(5)}));
+  f.refreshResidency();await f.until(()=>residencyForm(f).includes('value="5"'));
+  f.setModel({...f.runtime,residency:residencyRow(4,"valerion")});await tick();
+  assert.match(residencyForm(f),/value="5"/);
+  assert.doesNotMatch(residencyForm(f),/disabled>Request residency review/);
+});
+
+test("lost residency response requires an explicit authoritative GET and never automatically resends", async t => {
+  const f=await fixture(t,{residency:true});
+  f.holds.push(Promise.reject(residencyError()));
+  f.submit("residencyRequest",residencyAttempt);
+  await f.until(()=>/Residency request outcome unconfirmed/.test(f.mount.html));
+  assert.match(residencyForm(f),/disabled>Request residency review/);
+  assert.match(f.mount.html,/data-world-action="residency-refresh"/);
+  assert.equal(f.calls.filter(c=>c.method==="GET").length,0);
+  f.refreshResidency();await f.until(()=>f.calls.filter(c=>c.method==="GET").length===1);await tick();
+  assert.match(f.mount.html,/Residency request outcome unconfirmed/);
+  f.submit("residencyRequest",residencyAttempt);await tick();
+  assert.equal(residencyPosts(f).length,1);
+  f.readHolds.push(Promise.resolve({...f.runtime,residency:residencyRow(4,"valerion")}));
+  f.refreshResidency();await f.until(()=>/Pending: Valerion/.test(residencyForm(f)));
+  assert.doesNotMatch(f.mount.html,/Residency request outcome unconfirmed|request committed for review/i);
+  assert.match(residencyForm(f),/disabled>Request residency review/);
+});
+
+test("malformed success and same-revision conflicting snapshots stay unresolved", async t => {
+  const f=await fixture(t,{residency:true});
+  f.holds.push(Promise.resolve({ok:true,residency:residencyRow(4,"meridian")}));
+  f.submit("residencyRequest",residencyAttempt);
+  await f.until(()=>/Residency request outcome unconfirmed/.test(f.mount.html));
+  assert.doesNotMatch(f.mount.html,/request committed for review/i);
+  f.setModel({...f.runtime,residency:{...residencyRow(),updatedAt:new Date().toISOString()}});
+  f.refreshResidency();await tick();
+  assert.match(f.mount.html,/Residency request outcome unconfirmed/);
+});
+
+test("residency lock starts before the POST settles and rejects stale or unrelated scope", async t => {
+  const f=await fixture(t,{residency:true});
+  for(const payload of [ {countryId:"meridian",expectedRevision:"2"}, {countryId:"eldoran",expectedRevision:"3"}, {countryId:"unknown",expectedRevision:"3"} ]) f.submit("residencyRequest",payload);
+  await tick();assert.equal(residencyPosts(f).length,0);
+  let resolve;f.holds.push(new Promise(r=>{resolve=r;}));
+  f.submit("residencyRequest",residencyAttempt);
+  f.submit("residencyRequest",{countryId:"meridian",expectedRevision:"3"});
+  await f.until(()=>residencyPosts(f).length===1);
+  assert.match(residencyForm(f),/disabled>Request residency review/);
+  f.changePlayer();
+  f.setModel({...f.runtime,residency:residencyRow(1)});
+  resolve({ok:true,residency:residencyRow(4,"valerion")});
+  await f.until(()=>residencyForm(f).includes('value="1"'));
+  assert.doesNotMatch(f.mount.html,/Pending: Valerion|Residency request committed/);
+  assert.equal(residencyPosts(f).length,1);
+});
+
+
+test("equal contradictory residency does not replace the confirmed pending receipt", async t => {
+  const f=await fixture(t,{residency:true});
+  f.holds.push(Promise.resolve({ok:true,residency:residencyRow(4,"valerion")}));
+  f.readHolds.push(Promise.resolve({...f.runtime,residency:residencyRow(4)}));
+  f.submit("residencyRequest",residencyAttempt);
+  await f.until(()=>f.calls.some(c=>c.method==="GET"));await tick();
+  assert.match(residencyForm(f),/Pending: Valerion/);
+  assert.match(residencyForm(f),/disabled>Request residency review/);
+  f.changePlayer();
+  assert.doesNotMatch(f.currentRouteHtml(),/Pending: Valerion|residency request was confirmed|committed for review/i);
+});
+
+test("only an explicit post-loss read can fence the superseded revision without claiming historical outcome", async t => {
+  const f=await fixture(t,{residency:true});
+  let settle;
+  f.holds.push(new Promise((_,reject)=>{settle=()=>reject(residencyError());}));
+  f.submit("residencyRequest",residencyAttempt);
+  await f.until(()=>residencyPosts(f).length===1);
+  let releaseOlderRead;
+  f.readHolds.push(new Promise(resolve=>{releaseOlderRead=resolve;}));
+  const preLossRead=f.flow.refresh();
+  await f.until(()=>f.calls.filter(c=>c.method==="GET").length===1);
+  settle();
+  await f.until(()=>/Residency request outcome unconfirmed/.test(f.mount.html));
+  const replacement={...f.runtime,residency:residencyRow(5)};
+  releaseOlderRead(replacement);await preLossRead;await tick();
+  assert.match(f.mount.html,/Residency request outcome unconfirmed/);
+  f.readHolds.push(Promise.resolve(replacement));
+  f.refreshResidency();
+  await f.until(()=>!/Residency request outcome unconfirmed/.test(f.mount.html));
+  assert.match(residencyForm(f),/value="5"/);
+  assert.doesNotMatch(residencyForm(f),/disabled>Request residency review/);
+  assert.doesNotMatch(f.mount.html,/request committed for review|request (?:approved|rejected)/i);
+  assert.equal(residencyPosts(f).length,1);
+});
+
+
+test("unusable refresh or stale terminal resource keeps the last residency read-only", async t => {
+  const f=await fixture(t,{residency:true});
+  f.setModel({...f.runtime});
+  await f.until(()=>residencyForm(f).includes('value="3"'));
+  f.readHolds.push(Promise.resolve({...f.runtime,residency:null}));
+  f.refreshResidency();
+  await f.until(()=>/Current residency is unavailable/.test(f.mount.html));
+  f.setModel({...f.runtime,residency:residencyRow(6)},"unavailable");await tick();
+  assert.match(residencyForm(f),/value="3"/);
+  assert.match(residencyForm(f),/disabled>Request residency review/);
+  f.submit("residencyRequest",residencyAttempt);await tick();
+  assert.equal(residencyPosts(f).length,0);
+  f.readHolds.push(Promise.resolve({...f.runtime,residency:residencyRow(4)}));
+  f.refreshResidency();
+  await f.until(()=>residencyForm(f).includes('value="4"'));
+  assert.doesNotMatch(residencyForm(f),/disabled>Request residency review/);
+});
+
+
+test("a same-revision contradictory GET that settles first is not overwritten by POST success", async t => {
+  const f=await fixture(t,{residency:true});
+  let finish;f.holds.push(new Promise(resolve=>{finish=resolve;}));
+  f.submit("residencyRequest",residencyAttempt);
+  await f.until(()=>residencyPosts(f).length===1);
+  f.readHolds.push(Promise.resolve({...f.runtime,residency:residencyRow(4)}));
+  await f.flow.refresh();await tick();
+  finish({ok:true,residency:residencyRow(4,"valerion")});
+  await f.until(()=>/Residency snapshots disagree/.test(f.mount.html));
+  assert.doesNotMatch(f.mount.html,/Pending: Valerion|committed for review/);
+  assert.match(residencyForm(f),/value="4"/);
+  assert.match(residencyForm(f),/disabled>Request residency review/);
+});
+
+test("same-revision eligibility disagreement locks the form but reorder alone does not", async t => {
+  const f=await fixture(t,{residency:true});
+  f.readHolds.push(Promise.resolve({...f.runtime,residency:{...residencyRow(),eligibleCountryIds:["meridian","valerion"]}}));
+  await f.flow.refresh();await tick();
+  assert.doesNotMatch(f.mount.html,/Residency snapshots disagree/);
+  f.setModel({...f.runtime,residency:{...residencyRow(),eligibleCountryIds:["meridian"]}});await tick();
+  assert.match(f.mount.html,/Residency snapshots disagree/);
+  assert.match(residencyForm(f),/disabled>Request residency review/);
+  f.submit("residencyRequest",residencyAttempt);
+  await tick();assert.equal(residencyPosts(f).length,0);
+});
+
+test("failed session refresh after a confirmed POST cannot downgrade its receipt", async t => {
+  const f=await fixture(t,{residency:true});
+  f.holds.push(Promise.resolve({ok:true,residency:residencyRow(4,"valerion")}));
+  f.readHolds.push(Promise.reject(Object.assign(new Error("Expired"),{status:401,code:"UNAUTHENTICATED"})));
+  f.sessionRefreshHolds.push(async()=>{throw residencyError("Session refresh unavailable");});
+  f.submit("residencyRequest",residencyAttempt);
+  await f.until(()=>f.calls.some(c=>c.method==="GET"));await tick();
+  assert.match(residencyForm(f),/Pending: Valerion/);
+  assert.doesNotMatch(f.mount.html,/Residency request outcome unconfirmed/);
+  assert.match(residencyForm(f),/disabled>Request residency review/);
+});
+
+test("an explicit failure envelope cannot become a confirmed request even with a plausible row", async t => {
+  const f=await fixture(t,{residency:true});
+  f.holds.push(Promise.resolve({ok:false,residency:residencyRow(4,"valerion")}));
+  f.submit("residencyRequest",residencyAttempt);
+  await f.until(()=>/Residency request outcome unconfirmed/.test(f.mount.html));
+  assert.doesNotMatch(f.mount.html,/Pending: Valerion|committed for review/);
+  assert.equal(f.calls.filter(c=>c.method==="GET").length,0);
 });
