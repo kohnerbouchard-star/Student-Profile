@@ -58,7 +58,7 @@ export function NewsEventsRoute({
   const frame = AdminPageFrame({
     eyebrow: "World",
     title: "News & Event Monitor",
-    description: "Read campaign events and publication status, inspect upcoming checkpoints, and recover failed publication effects. Content authoring remains outside this read-only monitor.",
+    description: "Read campaign events and publication status, inspect stored checkpoints, and recover failed publication effects. Content authoring remains outside this read-only monitor.",
     actions: refreshButton(onRefresh, status === ADMIN_DATA_STATES.REFRESHING),
     content,
   });

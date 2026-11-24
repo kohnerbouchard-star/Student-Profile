@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
+import { normalizeNewsEventsReadModel } from "../admin/v2/src/routes/news-events/NewsEventsController.js";
 import { createNewsEventsHarness, newsEventsModel } from "./fixtures/admin-news-events-route-harness.mjs";
 
 function ready({ model = newsEventsModel(), status = "ready", ...options } = {}) {
@@ -16,8 +17,8 @@ test("News & Events public module retains only the original route export", async
   assert.deepEqual(Object.keys(await import("../admin/v2/src/routes/news-events/NewsEventsRoute.js")), ["NewsEventsRoute"]);
 });
 
-test("News & Events extraction retains all original function bodies and UUID text guard", () => {
-  // Digests captured from unchanged main b77c9610 before extraction.
+test("News & Events retained function digests and UUID text guard", () => {
+  // Original extraction digests are retained except for the intentional checkpoint visibility change.
   const expected = JSON.parse(readFileSync("scripts/fixtures/admin-news-events-function-hashes.json", "utf8"));
   const directory = "admin/v2/src/routes/news-events", actual = {}; let combined = "";
   for (const file of readdirSync(directory).filter((name) => /^NewsEvents(?:Route|Timeline|Detail|Panels|ViewHelpers)\.js$/.test(name))) {
@@ -75,11 +76,79 @@ test("News & Events panel/column ordering and descending authoritative timeline 
 });
 
 test("News & Events empty data preserves schedule/timeline absence without invented entries", () => {
-  const model = newsEventsModel(); model.events = []; model.news = []; model.campaigns = [];
+  const model = newsEventsModel(); model.events = []; model.news = []; model.checkpoints = [];
   const h = ready({ model, status: "empty" }); const panels = h.frames[0].options.content.children;
-  assert.equal(panels[2].children.at(-1).options.title, "No upcoming campaign checkpoint exposed");
+  assert.equal(panels[2].children.at(-1).options.title, "No campaign checkpoint exposed");
   assert.equal(panels[3].children.at(-1).options.title, "No authoritative news or events yet");
   assert.deepEqual(h.tables[0].rows, []);
+});
+
+const CHECKPOINT_AT = "2026-11-11T01:00:00.000Z";
+const CHECKPOINT_TIME = Date.parse(CHECKPOINT_AT);
+const activeCheckpoint = { status: "active", current_phase: "shortage", scheduled_at: CHECKPOINT_AT };
+
+function monitorSnapshot({ due, now = CHECKPOINT_TIME, campaigns = [activeCheckpoint], history = [], effects = [], campaignFailed = false } = {}) {
+  const fulfilled = (data) => ({ status: "fulfilled", value: { data } });
+  return normalizeNewsEventsReadModel({ panels: {
+    campaign: campaignFailed ? { status: "rejected", reason: new Error("Campaign unavailable") } : fulfilled({ campaigns, scheduler: { due } }),
+    history: fulfilled({ history }),
+    effects: fulfilled({ effects }),
+  } }, now).model;
+}
+
+for (const [offset, due] of [[-1, 0], [0, 1], [1, 1]]) {
+  test(`News & Events mounts the stored active checkpoint at schedule boundary ${offset} ms`, () => {
+    const model = monitorSnapshot({ due, now: CHECKPOINT_TIME + offset });
+    const h = ready({ model, status: model.isEmpty ? "empty" : "ready" });
+    const times = h.nodes.filter((node) => node.tag === "time");
+    assert.deepEqual(times.map((node) => node.attrs.datetime), [CHECKPOINT_AT]);
+    assert.equal(h.route.element.dataset.newsEventsState, "ready");
+    const schedule = h.frames[0].options.content.children[2];
+    assert.equal(schedule.children.at(-1).children.length, 1);
+    assert.equal(schedule.children.at(-1).children[0].children[0].children[1].textContent, "Active");
+    assert.equal(h.nodes.find((node) => node.dataset.newsEventsDue === "count")?.textContent, String(due));
+    assert.equal(model.summary.upcomingCount, offset < 0 ? 1 : 0);
+    assert.deepEqual(h.tables[0].rows, []);
+  });
+}
+
+test("News & Events mounted scheduler separates a bounded count from rows and authoritative outcome history", () => {
+  const campaigns = [
+    activeCheckpoint,
+    { ...activeCheckpoint, current_phase: "adaptation", scheduled_at: "2026-11-12T01:00:00.000Z" },
+    ...["paused", "emergency_disabled", "completed"].map((status) => ({ ...activeCheckpoint, status })),
+    { ...activeCheckpoint, scheduled_at: null },
+  ];
+  const model = monitorSnapshot({
+    due: 1, campaigns,
+    history: [{ event_key: "shortage.executed", to_phase: "shortage", occurred_at: CHECKPOINT_AT }],
+    effects: [{ effect_kind: "publish_news", status: "failed", payload: { newsDefinitionId: "news.shortage" }, created_at: CHECKPOINT_AT }],
+  });
+  const h = ready({ model });
+  const checkpointRows = h.nodes.find((node) => node.className === "admin-news-events__schedule-list").children;
+  assert.deepEqual(checkpointRows.map((row) => row.children[0].children[1].textContent), ["Active", "Active", "Paused", "Emergency disabled", "Completed"]);
+  assert.equal(h.nodes.find((node) => node.dataset.newsEventsDue === "count")?.textContent, "1");
+  assert.deepEqual(h.tables[0].rows.map(({ kind, lifecycle }) => [kind, lifecycle]).sort(), [["event", "past"], ["news", "failed"]]);
+  assert.equal(model.summary.failedCount, 1);
+});
+
+test("News & Events shows missing or invalid scheduler counts as unknown, never explicit zero", () => {
+  for (const value of [undefined, null, false, "0", -1, 0.5, Number.NaN, 2]) {
+    const h = ready({ model: monitorSnapshot({ due: value }) });
+    assert.equal(h.nodes.find((node) => node.dataset.newsEventsDue === "count")?.textContent, "Not available");
+  }
+  const stale = ready({ model: monitorSnapshot({ due: 1 }), status: "stale" });
+  assert.equal(stale.frames[0].options.content.kind, "stale");
+  assert.match(stale.frames[0].options.content.options.message, /most recently resolved/);
+  assert.equal(stale.nodes.find((node) => node.dataset.newsEventsDue === "count")?.textContent, "1");
+  const zero = ready({ model: monitorSnapshot({ due: 0 }) });
+  assert.equal(zero.nodes.find((node) => node.dataset.newsEventsDue === "count")?.textContent, "0");
+  for (const options of [{ campaignFailed: true }, { campaigns: {} }]) {
+    const h = ready({ model: monitorSnapshot({ ...options, due: 0 }) });
+    assert.equal(h.nodes.find((node) => node.dataset.newsEventsDue === "count")?.textContent, "Not available");
+    assert.equal(h.frames[0].options.content.children[2].children[0].options.title, "Campaign schedule status is unavailable");
+    assert.deepEqual(h.tables[0].rows, []);
+  }
 });
 
 test("News & Events initial filter normalization is silent and scope options deduplicate", () => {
