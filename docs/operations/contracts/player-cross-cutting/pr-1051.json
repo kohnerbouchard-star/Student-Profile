@@ -10,6 +10,7 @@
   "secretValuesAllowed": false,
   "allowedPaths": [
     "docs/operations/contracts/player-cross-cutting/pr-1051.json",
+    "player-terminal/css/player-terminal-communications-v2.css",
     "player-terminal/package.json",
     "player-terminal/src/app.js",
     "player-terminal/src/features/notifications/notification-inbox-flow.js",
@@ -17,12 +18,14 @@
     "player-terminal/tests/browser/player-notification-pagination.spec.mjs",
     "player-terminal/tests/notification-inbox-flow.mjs",
     "player-terminal/tests/notification-inbox-installed.mjs",
+    "scripts/business-banking-player-state-controls-browser-acceptance-v2.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/roster-connected/sources.json",
     "scripts/verify-player-cross-cutting-authority.mjs"
   ],
   "requiredFiles": [
     "docs/operations/contracts/player-cross-cutting/pr-1051.json",
+    "player-terminal/css/player-terminal-communications-v2.css",
     "player-terminal/package.json",
     "player-terminal/src/app.js",
     "player-terminal/src/features/notifications/notification-inbox-flow.js",
@@ -30,6 +33,7 @@
     "player-terminal/tests/browser/player-notification-pagination.spec.mjs",
     "player-terminal/tests/notification-inbox-flow.mjs",
     "player-terminal/tests/notification-inbox-installed.mjs",
+    "scripts/business-banking-player-state-controls-browser-acceptance-v2.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "scripts/roster-connected/sources.json",
     "scripts/verify-player-cross-cutting-authority.mjs"
@@ -94,7 +98,8 @@
     "trace-runtime-controls",
     "Validator tests",
     "dependency-review",
-    "verify-and-attest"
+    "verify-and-attest",
+    "Business Banking Runtime"
   ],
   "criticalJobChecks": [
     "Rendered Admin browser and secure mutation journey",

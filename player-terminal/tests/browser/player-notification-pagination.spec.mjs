@@ -19,10 +19,33 @@ async function mount(page, { read = true, write = true, expectedRows = 20 } = {}
         <link rel="stylesheet" href="/css/player-terminal-recovery-base.css">
         <link rel="stylesheet" href="/css/player-terminal-recovery-core.css">
         <link rel="stylesheet" href="/css/player-terminal-recovery-ux.css">
+        <link rel="stylesheet" href="/css/player-terminal-recovery-polish.css">
+        <link rel="stylesheet" href="/css/player-terminal-recovery-normalization.css">
         <link rel="stylesheet" href="/css/player-terminal-tokens.css">
         <link rel="stylesheet" href="/css/player-terminal-foundation.css">
+        <link rel="stylesheet" href="/css/player-terminal-recovery-shell-compat.css">
+        <link rel="stylesheet" href="/css/routes/player-terminal-shared-layout.css">
+        <link rel="stylesheet" href="/css/routes/player-terminal-shared-cards.css">
         <link rel="stylesheet" href="/css/routes/player-terminal-shared-lists.css">
+        <link rel="stylesheet" href="/css/routes/player-terminal-shared-states.css">
+        <link rel="stylesheet" href="/css/routes/player-terminal-shared-details.css">
+        <link rel="stylesheet" href="/css/routes/player-terminal-shared-responsive.css">
+        <link rel="stylesheet" href="/css/routes/player-terminal-shared-overlays.css">
+        <link rel="stylesheet" href="/css/player-terminal-recovery-route-compat.css">
+        <link rel="stylesheet" href="/css/routes/player-terminal-dashboard.css">
+        <link rel="stylesheet" href="/css/player-terminal-skeletons.css">
+        <link rel="stylesheet" href="/css/player-terminal-skeleton-geometry.css">
+        <link rel="stylesheet" href="/css/player-terminal-recovery.css">
+        <link rel="stylesheet" href="/css/player-story-cutscene.css">
+        <link rel="stylesheet" href="/css/player-world-runtime.css">
+        <link rel="stylesheet" href="/css/player-terminal-interior-v2.css">
+        <link rel="stylesheet" href="/css/player-terminal-finance-v2.css">
         <link rel="stylesheet" href="/css/player-terminal-communications-v2.css">
+        <link rel="stylesheet" href="/css/player-terminal-economy-items-v2.css">
+        <link rel="stylesheet" href="/css/player-terminal-operations-v2.css">
+        <link rel="stylesheet" href="/css/player-terminal-business-v2.css">
+        <link rel="stylesheet" href="/css/player-terminal-world-v2.css">
+        <link rel="stylesheet" href="/css/business-phase12-touch-targets.css">
       </head><body><div id="fixture"></div></body></html>`,
     });
   });
@@ -128,6 +151,13 @@ async function mount(page, { read = true, write = true, expectedRows = 20 } = {}
   return drawer;
 }
 
+async function expectReachableDrawer(drawer) {
+  await expect.poll(() => drawer.evaluate((host) => ({
+    scrolls: host.scrollHeight > host.clientHeight && getComputedStyle(host).overflowY === "auto",
+    fitsViewport: host.getBoundingClientRect().bottom <= window.innerHeight + 1,
+  }))).toEqual({ scrolls: true, fitsViewport: true });
+}
+
 test.afterEach(async ({ page }) => {
   await page.evaluate(() => {
     const fixture = window.notificationPagination;
@@ -159,6 +189,7 @@ test("Player alert pages survive a timed poll and shell paint; mark read sends a
   const drawer = await mount(page);
   const notices = drawer.locator("[data-player-notification-id]");
   const more = drawer.getByRole("button", { name: "Load more", exact: true });
+  await expectReachableDrawer(drawer);
   const reads = () => page.evaluate(() => window.notificationPagination.reads);
   // Prove the real 15-second interval is active before loading older pages.
   await page.clock.runFor(15_000);
@@ -214,6 +245,7 @@ test("an incomplete 50-alert receipt retains all 60 loaded notices through a fai
   const drawer = await mount(page);
   const notices = drawer.locator("[data-player-notification-id]");
   const more = drawer.getByRole("button", { name: "Load more", exact: true });
+  await expectReachableDrawer(drawer);
   await more.click();
   await expect(notices).toHaveCount(40);
   await more.click();
