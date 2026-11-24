@@ -1,6 +1,8 @@
 import { AdminConfirmDialog, AdminField } from "../../components/index.js";
 import { createElement } from "../../components/dom.js";
 
+const RETENTION_HELP = "This sets the default expiry for new Player-created conversations in this game. It does not change existing expiry dates or the expiry used for teacher-created conversations. Expiry limits Player access; it does not by itself delete messages.";
+
 export function normalizeMessagesPolicy(result) {
   const policy = result?.data?.policy;
   if (!policy || typeof policy.playerThreadsEnabled !== "boolean"
@@ -21,10 +23,10 @@ export function createMessagesPolicyPanel({ api, gameId, hasPermission }) {
   let request = null;
   const enabled = AdminField({ name: "playerThreadsEnabled", label: "Player-created conversations", type: "select",
     options: [{ value: "true", label: "Allowed" }, { value: "false", label: "Disabled" }], disabled: true });
-  const days = AdminField({ name: "defaultRetentionDays", label: "Default retention days", type: "number", required: true, disabled: true });
+  const days = AdminField({ name: "defaultRetentionDays", label: "Default retention for new Player conversations (days)", type: "number", required: true, disabled: true });
   days.control.min = "1"; days.control.max = "730"; days.control.step = "1";
   const status = createElement("p", { attrs: { role: "status", "aria-live": "polite" }, text: "Load the current game policy before editing." });
-  const limits = createElement("p", { text: "Attachments remain disabled. Retention controls the default for new conversations; this does not delete existing conversations." });
+  const limits = createElement("p", { text: `Attachments remain disabled. ${RETENTION_HELP}` });
   const loadButton = createElement("button", { className: "admin-button admin-button--quiet", attrs: { type: "button" }, text: "Load policy" });
   const saveButton = createElement("button", { className: "admin-button", attrs: { type: "submit", disabled: true }, text: "Review policy changes" });
   const form = createElement("form", { children: [enabled.element, days.element, limits, status, loadButton, saveButton] });
@@ -44,7 +46,7 @@ export function createMessagesPolicyPanel({ api, gameId, hasPermission }) {
     enabled.control.value = String(policy.playerThreadsEnabled);
     days.control.value = String(policy.defaultRetentionDays);
     loaded = true;
-    limits.textContent = `Player-created conversations support at most ${policy.maxParticipants} participants. Attachments remain disabled. Retention controls the default for new conversations; this does not delete existing conversations.`;
+    limits.textContent = `Player-created conversations support at most ${policy.maxParticipants} participants. Attachments remain disabled. ${RETENTION_HELP}`;
   }
   async function load() {
     if (!permitted() || busy) return;
@@ -71,8 +73,8 @@ export function createMessagesPolicyPanel({ api, gameId, hasPermission }) {
     days.setError("");
     const policy = { playerThreadsEnabled: enabled.getValue() === "true", defaultRetentionDays: retention };
     confirmation = AdminConfirmDialog({ title: "Update messaging policy?",
-      message: `Player-created conversations: ${policy.playerThreadsEnabled ? "allowed" : "disabled"}. Default retention: ${retention} days.`,
-      detail: "This updates the selected game's policy for everyone. Attachments stay disabled; existing conversations are not deleted.",
+      message: `Player-created conversations: ${policy.playerThreadsEnabled ? "allowed" : "disabled"}. Default retention for new Player-created conversations: ${retention} days.`,
+      detail: "This updates the selected game's policy. Existing expiry dates and teacher-created conversation expiry are unchanged. Attachments stay disabled.",
       confirmLabel: "Save policy", failureMessage: "The policy could not be saved. Close this review and reload the current policy before trying again.",
       async onConfirm() {
         if (!permitted() || busy) return false;
