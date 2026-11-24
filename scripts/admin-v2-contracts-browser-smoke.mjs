@@ -32,6 +32,10 @@ const CONTRACT_ID = "60000000-0000-4000-8000-000000000006";
 const SECOND_CONTRACT_ID = "61000000-0000-4000-8000-000000000007";
 const THIRD_CONTRACT_ID = "62000000-0000-4000-8000-000000000008";
 const PROGRESS_ID = "63000000-0000-4000-8000-000000000009";
+const AUDIENCE_COUNTRIES = Object.freeze(Array.from({ length: 25 }, (_, index) => `COUNTRY_${String(index + 1).padStart(2, "0")}`));
+const AUDIENCE_PUBLISH_AT = "2026-11-01T06:30:12.345Z";
+const AUDIENCE_DUE_AT = "2026-11-01T06:42:23.456Z";
+const AUDIENCE_EXPIRES_AT = "2026-11-01T06:55:34.567Z";
 const PRIVATE_UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
 const RAW_DIAGNOSTIC = "SELECT * FROM private.player_contract_progress using service_role";
 const VIEWPORTS = Object.freeze([
@@ -75,6 +79,20 @@ function contractRecord(overrides = {}) {
 function contractsFor(mode) {
   if (mode === "empty") return [];
   if (mode === "draft") return [contractRecord({ status: "draft", publishedAt: null, deadlineAt: null, expiresAt: null })];
+  if (mode === "audience-draft" || mode === "audience-scheduled") {
+    const scheduled = mode === "audience-scheduled";
+    return [contractRecord({
+      status: scheduled ? "scheduled" : "draft",
+      publishedAt: scheduled ? AUDIENCE_PUBLISH_AT : null,
+      deadlineAt: scheduled ? AUDIENCE_DUE_AT : null,
+      expiresAt: scheduled ? AUDIENCE_EXPIRES_AT : null,
+      visibility: "targeted",
+      targetingPayload: {
+        allPlayers: false,
+        countryCodes: scheduled ? [AUDIENCE_COUNTRIES[0], ...AUDIENCE_COUNTRIES] : AUDIENCE_COUNTRIES,
+      },
+    })];
+  }
   if (mode === "one") return [contractRecord()];
   return [
     contractRecord(),
@@ -503,6 +521,56 @@ try {
       return { datelessCreate: true, datelessEdit: true, noBroadSettingsGrant: true };
     } finally { await runtime.close(); }
   });
+
+  for (const status of ["draft", "scheduled"]) {
+    await runCheck(`title-only-edit-preserves-country-audience-${status}`, async () => {
+      const before = requestEvidence.length;
+      const scheduled = status === "scheduled";
+      const runtime = await createRuntime(browser, fixture, {
+        mode: `audience-${status}`, timeZone: "America/New_York", browserTimeZone: "Asia/Seoul",
+      });
+      try {
+        const page = runtime.page;
+        await waitForState(page, "ready");
+        await page.locator('[data-contracts-action="edit"]').click();
+        const form = page.locator(".admin-contract-form");
+        await form.getByText("All contract times use America/New_York, the selected game timezone.", { exact: true }).first().waitFor();
+        const storedCodes = scheduled ? [AUDIENCE_COUNTRIES[0], ...AUDIENCE_COUNTRIES] : AUDIENCE_COUNTRIES;
+        assert.equal(await form.getByLabel("Target country codes").inputValue(), storedCodes.join(", "));
+        assert.equal(await form.getByLabel("Lifecycle state").inputValue(), status);
+        if (scheduled) {
+          assert.equal(await form.getByLabel("Scheduled publish time").inputValue(), "2026-11-01T01:30");
+          assert.equal(await form.getByLabel("Due time").inputValue(), "2026-11-01T01:42");
+          assert.equal(await form.getByLabel("Expiration time").inputValue(), "2026-11-01T01:55");
+        }
+        const title = `Renamed ${status} country contract`;
+        const patchUrl = `${fixture.origin}/functions/v1/web-session-api/proxy/games/${ADMIN_V2_FIXTURE_GAME_ID}/contracts/${CONTRACT_ID}`;
+        await form.getByLabel("Title").fill(title);
+        const [response] = await Promise.all([
+          page.waitForResponse((candidate) => candidate.request().method() === "PATCH" && candidate.url() === patchUrl),
+          page.locator(".admin-contracts-create-dialog").getByRole("button", { name: "Save changes", exact: true }).click(),
+        ]);
+        assert.equal(response.status(), 200);
+        await form.waitFor({ state: "detached" });
+        const writes = requestEvidence.slice(before).filter(({ method }) => method !== "GET" && method !== "HEAD");
+        assert.equal(writes.length, 1, "title edit must submit one write");
+        const [write] = writes;
+        assert.equal(write.method, "PATCH");
+        assert.equal(write.pathname, new URL(patchUrl).pathname);
+        assert.equal(write.gameId, ADMIN_V2_FIXTURE_GAME_ID);
+        assert.equal(write.csrf, ADMIN_V2_FIXTURE_CSRF);
+        assert.equal(write.authorization, "");
+        assert.match(write.idempotencyKey, /^admin\.contracts\.update\./);
+        assert.equal(write.body.title, title);
+        assert.equal(write.body.status, status);
+        assert.equal(write.body.visibility, "targeted");
+        assert.deepEqual(write.body.targetingPayload, { allPlayers: false, countryCodes: AUDIENCE_COUNTRIES });
+        assert.deepEqual([write.body.scheduledAt, write.body.deadlineAt, write.body.expiresAt],
+          scheduled ? [AUDIENCE_PUBLISH_AT, AUDIENCE_DUE_AT, AUDIENCE_EXPIRES_AT] : [undefined, undefined, undefined]);
+        return { targetCountryCount: AUDIENCE_COUNTRIES.length, titleOnly: true, storedDatesPreserved: true };
+      } finally { await runtime.close(); }
+    });
+  }
 
   for (const mode of ["create", "edit"]) {
     await runCheck(`new-overlap-time-blocked-${mode}`, async () => {

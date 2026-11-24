@@ -371,6 +371,64 @@ test("an unrelated contract edit preserves cash destination and unrepresented me
   assert.deepEqual(payload.targetingPayload.countryCodes, ["NORTHREACH"]);
 });
 
+test("title-only edits preserve all country targets and exact stored instants in a repeated hour", async (t) => {
+  const expectedCodes = Array.from({ length: 25 }, (_, index) => `COUNTRY_${String(index + 1).padStart(2, "0")}`);
+  const countryCodes = [expectedCodes[0], expectedCodes[0], ...expectedCodes.slice(1)];
+  const instant = "2026-11-01T06:30:12.345Z";
+  for (const status of ["draft", "scheduled"]) {
+    const original = contract({
+      status, publishedAt: status === "scheduled" ? instant : null,
+      deadlineAt: instant, expiresAt: instant, targetingPayload: { countryCodes },
+    });
+    const { model, form, initialDates } = editForm(t, original, { title: "Renamed lesson" }, "edit", "America/New_York");
+    assert.equal(model.targetingEditable, true);
+    assert.equal(model.targeting, countryCodes.slice(0, 24).map((code) => code.toUpperCase()).join(", "), "display remains capped");
+    assert.equal(form.fields.countryCodes.control.getAttribute("value"), model.targetCountryCodes.join(", "));
+    for (const [name, value] of Object.entries(initialDates)) form.fields[name].setValue(value);
+    assert.equal(initialDates.deadlineAt, "2026-11-01T01:30");
+    const payload = await normalizeFormPayload(form);
+    assert.equal(payload.title, "Renamed lesson");
+    assert.equal(payload.status, status);
+    assert.equal(payload.visibility, "targeted");
+    assert.deepEqual(payload.targetingPayload.countryCodes, expectedCodes);
+    assert.equal(payload.deadlineAt, instant);
+    assert.equal(payload.expiresAt, instant);
+    assert.equal(payload.publishedAt, status === "scheduled" ? instant : undefined);
+    form.fields.countryCodes.setValue(expectedCodes[24]);
+    assert.deepEqual((await normalizeFormPayload(form)).targetingPayload.countryCodes, [expectedCodes[24]], "an intentional audience change still works");
+  }
+});
+
+test("stored country audiences the editor cannot round-trip are read-only", async (t) => {
+  let writes = 0;
+  const controller = createContractsController({
+    api: Object.fromEntries([
+      "readContracts", "readContractDetail", "createContract", "updateContract", "publishContract",
+      "archiveContract", "duplicateContract", "reviewProgress", "issueRewards",
+    ].map((method) => [method, async () => { writes += 1; return {}; }])),
+    selectedGameId: GAME_ID, hasPermission: () => true,
+  });
+  t.after(() => controller.destroy());
+  for (const [visibility, countryCodes] of [
+    ["targeted", ["NORTHREACH", "northreach"]],
+    ["targeted", ["NORTHREACH", "YRETHIA,NRC"]],
+    ["targeted", ["NORTHREACH", "NRC\n"]],
+    ["targeted", ["NORTHREACH", PLAYER_ID]],
+    ["targeted", "NORTHREACH"],
+    ["targeted", null],
+    ["hidden", ["NORTHREACH"]],
+    ["public", ["NORTHREACH"]],
+  ]) {
+    const { contracts: [model] } = normalizeContractsReadModel([contract({
+      status: "draft", visibility, targetingPayload: { countryCodes },
+    })]);
+    assert.equal(model.targetingEditable, false);
+    assert.deepEqual(model.targetCountryCodes, []);
+    assert.equal((await controller.updateContract(model, { title: "Unrelated edit" })).ok, false);
+  }
+  assert.equal(writes, 0);
+});
+
 test("changing cash amount retains savings and original currency", async (t) => {
   const { form } = editForm(t, contract({
     status: "draft", targetingPayload: { countryCodes: ["NORTHREACH"] },

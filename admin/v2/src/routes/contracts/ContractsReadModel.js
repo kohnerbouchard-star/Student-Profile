@@ -2,6 +2,7 @@ import { createAdminErrorEnvelope } from "../../core/error-envelope.js";
 import { normalizeContractTimeZone } from "../../core/contract-time-zone.js";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const COUNTRY_CODE_PATTERN = /^[A-Z0-9_-]{2,24}$/;
 const UUID_IN_TEXT_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
 const CONTRACT_STATUSES = new Set(["draft", "scheduled", "active", "paused", "completed", "expired", "archived"]);
 const PROGRESS_STATUSES = new Set(["available", "in_progress", "submitted", "completed", "failed", "expired", "dismissed"]);
@@ -135,6 +136,13 @@ function normalizeContract(row, index) {
   const rawTargeting = isRecord(row.targetingPayload || row.targeting_payload)
     ? (row.targetingPayload || row.targeting_payload)
     : {};
+  const storedCountryCodes = rawTargeting.countryCodes;
+  // The summary is display-only. A PATCH replaces targeting, so the editor
+  // needs every stored code and must not canonicalize a legacy audience.
+  const countryCodes = storedCountryCodes === undefined ? [] : storedCountryCodes;
+  const countryCodesEditable = Array.isArray(countryCodes)
+    && countryCodes.every((code) => typeof code === "string" && code === code.trim() && COUNTRY_CODE_PATTERN.test(code))
+    && (countryCodes.length === 0 || visibility === "targeted");
   return Object.freeze({
     resourceId,
     rowKey: contractKey || `contract-${index + 1}`,
@@ -149,11 +157,10 @@ function normalizeContract(row, index) {
     completionMode,
     sourceLabel: sourceType === "teacher" ? "Teacher-created" : sourceType === "system" ? "System/template" : "Story event",
     targeting: targetingSummary(rawTargeting),
-    targetCountryCodes: Object.freeze(
-      safeStringArray(rawTargeting.countryCodes).map((value) => value.toUpperCase()),
-    ),
+    targetCountryCodes: Object.freeze(countryCodesEditable ? [...countryCodes] : []),
     // Targeting capability must use raw presence, not display text that strips UUIDs.
-    targetingEditable: (!Array.isArray(rawTargeting.playerIds) || rawTargeting.playerIds.length === 0)
+    targetingEditable: countryCodesEditable
+      && (!Array.isArray(rawTargeting.playerIds) || rawTargeting.playerIds.length === 0)
       && (!Array.isArray(rawTargeting.rosterLabels) || rawTargeting.rosterLabels.length === 0)
       && (!Array.isArray(rawTargeting.storyFlagConditions) || rawTargeting.storyFlagConditions.length === 0),
     requirementsText: safeText(
