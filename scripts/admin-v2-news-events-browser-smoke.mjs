@@ -25,6 +25,7 @@ const RESULT_PATH = path.join(EVIDENCE_DIRECTORY, "admin-v2-news-events-browser-
 const SESSION_STORAGE_KEY = "econovaria.admin.auth.v1";
 const DEVICE_STORAGE_KEY = "econovaria.device.v1";
 const DEVICE_ID = "a0000000-0000-4000-8000-00000000000a";
+const DUE_CHECKPOINT = "2026-08-08T03:00:00.000Z";
 const FAILED_EFFECT_ID = "cec_0123456789abcdef0123456789abcdef";
 const PRIVATE_UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
 const VIEWPORTS = Object.freeze([
@@ -97,7 +98,10 @@ function newsEffect(status, id, index = 0, overrides = {}) {
 
 function dataForScenario(scenario) {
   if (scenario === "empty") {
-    return { campaigns: [], history: [], effects: [] };
+    return { campaigns: [], scheduler: { due: 0 }, history: [], effects: [] };
+  }
+  if (scenario === "due") {
+    return { campaigns: [campaign({ scheduled_at: DUE_CHECKPOINT })], scheduler: { due: 1 }, history: [], effects: [] };
   }
   const history = scenario === "many"
     ? Array.from({ length: 28 }, (_, index) => historyEvent(index))
@@ -120,7 +124,7 @@ function dataForScenario(scenario) {
       effects.push(newsEffect(index % 3 === 0 ? "pending" : "completed", `cec_${(index + 100).toString(16).padStart(32, "0")}`, index + 4));
     }
   }
-  return { campaigns: [campaign()], history, effects };
+  return { campaigns: [campaign()], scheduler: { due: 0 }, history, effects };
 }
 
 function jsonRoute(route, status, body, headers = {}) {
@@ -167,7 +171,7 @@ async function installWorldContract(page, scenario, mutationCalls) {
     assert.equal(request.method(), "GET");
     const data = dataForScenario(scenario);
     if (pathname === prefix) {
-      return jsonRoute(route, 200, envelope({ campaigns: data.campaigns, scheduler: {} }));
+      return jsonRoute(route, 200, envelope({ campaigns: data.campaigns, scheduler: data.scheduler }));
     }
     if (pathname === `${prefix}/history`) {
       assert.equal(url.searchParams.get("limit"), "250");
@@ -313,6 +317,24 @@ async function emptyScenario(browser, fixture) {
   }
 }
 
+async function dueCheckpointScenario(browser, fixture) {
+  const runtime = await createRuntime(browser, fixture, "due", VIEWPORTS.at(-1));
+  try {
+    await waitForState(runtime.page, "ready");
+    const schedule = runtime.page.getByRole("region", { name: "Campaign checkpoints" });
+    assert.match(await schedule.getByRole("status").innerText(), /Checkpoints due among campaigns shown .*: 1\./);
+    assert.equal(await schedule.locator("time").getAttribute("datetime"), DUE_CHECKPOINT);
+    assert.deepEqual(await schedule.locator("li [data-status]").allTextContents(), ["Active"]);
+    assert.match(await runtime.page.locator("body").innerText(), /No authoritative news or events yet/);
+    assert.deepEqual(runtime.mutationCalls, []);
+    await assertNoHorizontalOverflow(runtime.page, "due checkpoint");
+    await assertNoPrivateIds(runtime.page, "due checkpoint");
+    assert.deepEqual(runtime.browserErrors, [], "due checkpoint emitted browser errors");
+  } finally {
+    await runtime.context.close();
+  }
+}
+
 async function staleScenario(browser, fixture) {
   const runtime = await createRuntime(browser, fixture, "stale");
   try {
@@ -354,6 +376,8 @@ try {
   checks.push("filters-detail-recovery");
   await emptyScenario(browser, fixture);
   checks.push("empty");
+  await dueCheckpointScenario(browser, fixture);
+  checks.push("stored-due-checkpoint-without-outcomes");
   await staleScenario(browser, fixture);
   checks.push("stale");
   await failedScenario(browser, fixture);

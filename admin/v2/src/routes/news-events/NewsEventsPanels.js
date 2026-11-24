@@ -1,6 +1,6 @@
 import { AdminEmptyState, AdminErrorState, AdminIcon } from "../../components/index.js";
 import { createElement } from "../../components/dom.js";
-import { formatTime, number, statusBadge, titleCase } from "./NewsEventsViewHelpers.js";
+import { formatTime, number, titleCase } from "./NewsEventsViewHelpers.js";
 import { timeline } from "./NewsEventsTimeline.js";
 
 function metric(key, label, value, detail) {
@@ -24,7 +24,7 @@ function summary(model) {
       metric("events", "World events", values.eventCount, "Executed campaign events"),
       metric("news", "News publications", values.newsPublicationCount, "Campaign publish-news effects"),
       metric("active", "Publishing now", values.activeCount, "Effects being processed"),
-      metric("upcoming", "Upcoming", values.upcomingCount, "Pending publications or scheduled checkpoints"),
+      metric("upcoming", "Upcoming", values.upcomingCount, "Pending publications or future checkpoint times"),
       metric("failed", "Needs attention", values.failedCount, "Failed news publication effects"),
     ],
   });
@@ -40,7 +40,7 @@ function contractNotice() {
         children: [
           createElement("strong", { text: "Read-only publication monitor" }),
           createElement("p", {
-            text: "This page monitors campaign events, publication status, upcoming checkpoints, and failed-publication recovery. News authoring and arbitrary event scheduling are not available from this surface.",
+            text: "This page monitors campaign events, publication status, stored checkpoints, and failed-publication recovery. News authoring and arbitrary event scheduling are not available from this surface.",
           }),
         ],
       }),
@@ -48,26 +48,52 @@ function contractNotice() {
   });
 }
 
+function schedulerDue(model) {
+  return createElement("p", {
+    attrs: { role: "status" },
+    children: [
+      "Checkpoints due among campaigns shown (last successful campaign read): ",
+      createElement("strong", {
+        dataset: { newsEventsDue: "count" },
+        text: model.dueCount == null ? "Not available" : number(model.dueCount),
+      }),
+      ". This count does not identify individual checkpoints or confirm execution or publication.",
+    ],
+  });
+}
+
 function scheduledPanel(model) {
-  const scheduled = (model?.campaigns || []).filter((campaign) => campaign.temporalStatus === "upcoming");
-  if (!scheduled.length) {
+  if (model.panels?.campaign?.status !== "ready") return null;
+  const checkpoints = model.checkpoints || [];
+  if (!checkpoints.length) {
     return AdminEmptyState({
-      title: "No upcoming campaign checkpoint exposed",
-      message: "The current campaign contract does not report a future scheduled checkpoint for this game.",
+      title: "No campaign checkpoint exposed",
+      message: "The returned campaigns do not report a stored checkpoint time for this game.",
       compact: true,
     });
   }
+  const stateStyles = { active: "active", paused: "paused", emergency_disabled: "paused", completed: "past" };
+  const stateLabels = { active: "Active", paused: "Paused", emergency_disabled: "Emergency disabled", completed: "Completed" };
   return createElement("ol", {
     className: "admin-news-events__schedule-list",
-    children: scheduled.map((campaign) => createElement("li", {
+    children: checkpoints.map((campaign) => createElement("li", {
       children: [
         createElement("div", {
           children: [
             createElement("strong", { text: `${titleCase(campaign.phase)} phase` }),
-            statusBadge("upcoming"),
+            createElement("span", {
+              className: "admin-news-events__status",
+              dataset: { status: stateStyles[campaign.status] },
+              text: stateLabels[campaign.status],
+            }),
           ],
         }),
-        createElement("p", { text: `Next campaign checkpoint: ${formatTime(campaign.scheduledAt)}` }),
+        createElement("p", {
+          children: [
+            "Stored campaign checkpoint: ",
+            createElement("time", { attrs: { datetime: campaign.scheduledAt }, text: formatTime(campaign.scheduledAt) }),
+          ],
+        }),
         createElement("small", {
           text: campaign.eventSequence == null
             ? "Event sequence not exposed"
@@ -118,11 +144,12 @@ export function resolvedContent(model, filters, onFiltersChange, onRefresh, onRe
               createElement("div", {
                 children: [
                   createElement("span", { text: "Timing" }),
-                  createElement("h2", { attrs: { id: "admin-news-events-schedule" }, text: "Upcoming checkpoint" }),
+                  createElement("h2", { attrs: { id: "admin-news-events-schedule" }, text: "Campaign checkpoints" }),
                 ],
               }),
             ],
           }),
+          schedulerDue(model),
           scheduledPanel(model),
         ],
       }),

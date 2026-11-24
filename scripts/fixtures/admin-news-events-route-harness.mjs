@@ -67,7 +67,7 @@ export function newsEventsModel() {
   return {
     summary: { eventCount: 1, newsPublicationCount: 3, activeCount: 1, upcomingCount: 1, failedCount: 1 },
     panels: { history: { status: "ready" }, effects: { status: "ready" }, campaign: { status: "ready" } },
-    campaigns: [{ temporalStatus: "upcoming", phase: "shortage", scheduledAt: "2026-11-11T01:00:00Z", eventSequence: 14 }],
+    checkpoints: [{ status: "active", temporalStatus: "upcoming", phase: "shortage", scheduledAt: "2026-11-11T01:00:00Z", eventSequence: 14 }],
     events: [{ rowKey: "event-1", eventKey: "logistics_disruption", reason: "가상 물류 소식", fromPhase: "rivalry", toPhase: "shortage", lifecycle: "past", occurredAt: "2026-11-10T01:00:00Z", sequence: 14, actorType: "system", triggerKey: "synthetic.trigger" }],
     news: [
       { rowKey: "news-1", newsDefinitionId: "news.failed", audience: "all_players", lifecycle: "failed", createdAt: "2026-11-10T04:00:00Z", lastErrorCode: "delivery_failed", attemptCount: 3 },

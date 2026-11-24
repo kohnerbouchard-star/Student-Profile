@@ -74,9 +74,9 @@ function safeError(error) {
   return isAdminErrorEnvelope(error) ? error : normalizeAdminError(error);
 }
 
-function panelStatus(result, key) {
+function panelStatus(result, key, hasRows) {
   const value = panel(result, key);
-  if (value?.status === "fulfilled") return Object.freeze({ status: "ready", error: null });
+  if (hasRows) return Object.freeze({ status: "ready", error: null });
   return Object.freeze({
     status: "failed",
     error: safeError(value?.reason || createAdminErrorEnvelope({ code: "INVALID_RESPONSE", retryable: true })),
@@ -178,7 +178,8 @@ function firstPanelFailure(result) {
 }
 
 export function normalizeNewsEventsReadModel(result, now = Date.now()) {
-  const campaignRows = panelData(result, "campaign")?.campaigns;
+  const campaignData = panelData(result, "campaign");
+  const campaignRows = campaignData?.campaigns;
   const historyRows = panelData(result, "history")?.history;
   const effectRows = panelData(result, "effects")?.effects;
   const fulfilledCount = [campaignRows, historyRows, effectRows].filter(Array.isArray).length;
@@ -189,12 +190,12 @@ export function normalizeNewsEventsReadModel(result, now = Date.now()) {
     }));
   }
 
-  const campaigns = (campaignRows || []).slice(0, 20)
+  const campaigns = (Array.isArray(campaignRows) ? campaignRows : []).slice(0, 20)
     .map((row, index) => normalizeCampaign(row, index, now)).filter(Boolean);
-  const events = (historyRows || []).slice(0, 250)
+  const events = (Array.isArray(historyRows) ? historyRows : []).slice(0, 250)
     .map(normalizeHistoryEvent).filter(Boolean);
   const resourceIds = new Map();
-  const news = (effectRows || []).slice(0, 250).map((row, index) => {
+  const news = (Array.isArray(effectRows) ? effectRows : []).slice(0, 250).map((row, index) => {
     const normalized = normalizeNewsEffect(row, index);
     const resourceId = effectResourceId(row);
     if (normalized && resourceId) resourceIds.set(normalized.rowKey, resourceId);
@@ -205,10 +206,20 @@ export function normalizeNewsEventsReadModel(result, now = Date.now()) {
     .sort((left, right) => left.localeCompare(right));
   const audiences = [...new Set(news.map((item) => item.audience).filter((value) => value !== "unknown"))]
     .sort((left, right) => left.localeCompare(right));
-  const scheduled = campaigns.filter((item) => item.temporalStatus === "upcoming");
+  const checkpoints = campaigns.filter((item) => item.scheduledAt && item.status !== "unknown");
+  // The endpoint counts only the returned campaigns using the server's read time.
+  // Validate the count without using this browser's clock to assign it to rows.
+  const reportedDue = campaignData?.scheduler?.due;
+  const activeCheckpointCount = checkpoints.filter((item) => item.status === "active").length;
+  const dueCount = Array.isArray(campaignRows) && Number.isSafeInteger(reportedDue) &&
+      reportedDue >= 0 && reportedDue <= activeCheckpointCount
+    ? reportedDue
+    : null;
 
   const model = deepFreeze({
     campaigns,
+    checkpoints,
+    dueCount,
     events,
     news,
     categories,
@@ -217,15 +228,15 @@ export function normalizeNewsEventsReadModel(result, now = Date.now()) {
       eventCount: events.length,
       newsPublicationCount: news.length,
       activeCount: news.filter((item) => item.lifecycle === "active").length,
-      upcomingCount: news.filter((item) => item.lifecycle === "upcoming").length + scheduled.length,
+      upcomingCount: news.filter((item) => item.lifecycle === "upcoming").length + checkpoints.filter((item) => item.temporalStatus === "upcoming").length,
       failedCount: news.filter((item) => item.lifecycle === "failed").length,
     },
     panels: {
-      campaign: panelStatus(result, "campaign"),
-      history: panelStatus(result, "history"),
-      effects: panelStatus(result, "effects"),
+      campaign: panelStatus(result, "campaign", Array.isArray(campaignRows)),
+      history: panelStatus(result, "history", Array.isArray(historyRows)),
+      effects: panelStatus(result, "effects", Array.isArray(effectRows)),
     },
-    isEmpty: events.length === 0 && news.length === 0 && scheduled.length === 0,
+    isEmpty: events.length === 0 && news.length === 0 && checkpoints.length === 0,
   });
   return Object.freeze({ model, resourceIds });
 }
