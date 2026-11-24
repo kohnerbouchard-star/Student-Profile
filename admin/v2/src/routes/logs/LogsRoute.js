@@ -246,7 +246,6 @@ function logTable(model) {
         key: "timestamp",
         label: "Timestamp",
         rowHeader: true,
-        width: "12.5rem",
         render: (value) => createElement("time", {
           text: formatTimestamp(value),
           attrs: value ? { datetime: value } : {},
@@ -271,7 +270,7 @@ function logTable(model) {
   }).element;
 }
 
-function pagination(model, onPageChange) {
+function pagination(model, onPageChange, refreshing) {
   const { page, totalPages, hasPreviousPage, hasNextPage } = model.pagination;
   return createElement("nav", {
     className: "admin-logs-route__pagination",
@@ -284,14 +283,14 @@ function pagination(model, onPageChange) {
             label: "Previous",
             icon: "chevronLeft",
             quiet: true,
-            disabled: !hasPreviousPage,
+            disabled: refreshing || !hasPreviousPage,
             onClick() { onPageChange?.(Math.max(1, page - 1)); },
           }),
           logsButton({
             label: "Next",
             icon: "chevronRight",
             quiet: true,
-            disabled: !hasNextPage,
+            disabled: refreshing || !hasNextPage,
             onClick() { onPageChange?.(Math.min(totalPages, page + 1)); },
           }),
         ],
@@ -329,7 +328,7 @@ function resolvedContent(model, filters, callbacks) {
               message: "The authoritative audit read returned no events for the selected game and filters.",
             })
             : logTable(model),
-          pagination(model, callbacks.onPageChange),
+          pagination(model, callbacks.onPageChange, callbacks.refreshing),
         ],
       }),
     ],
@@ -340,7 +339,7 @@ function safeErrorMessage(error) {
   return safeText(error?.userMessage, "The audit log could not be loaded safely. Try again.", 360);
 }
 
-export function LogsRoute({ state, filters, onRefresh, onApplyFilters, onClearFilters, onPageChange } = {}) {
+export function LogsRoute({ state, filters, showUnresolvedFilters, onRefresh, onApplyFilters, onClearFilters, onPageChange } = {}) {
   const root = createElement("section", {
     className: "admin-logs-route",
     dataset: { adminV2State: state?.status || ADMIN_DATA_STATES.INITIAL_LOADING },
@@ -358,7 +357,10 @@ export function LogsRoute({ state, filters, onRefresh, onApplyFilters, onClearFi
       retry: state.error?.retryable ? { label: "Retry logs", onClick: onRefresh } : null,
     });
   } else {
-    const resolved = resolvedContent(state.data, filters, { onApplyFilters, onClearFilters, onPageChange });
+    const resolved = resolvedContent(state.data, filters, {
+      onApplyFilters, onClearFilters, onPageChange,
+      refreshing: state.status === ADMIN_DATA_STATES.REFRESHING,
+    });
     if (state.status === ADMIN_DATA_STATES.STALE) {
       content = AdminStaleState({
         message: "Showing the last safe audit page because the latest refresh failed.",
@@ -380,6 +382,25 @@ export function LogsRoute({ state, filters, onRefresh, onApplyFilters, onClearFi
     } else {
       content = resolved;
     }
+  }
+
+  if (showUnresolvedFilters && !state?.hasResolved) {
+    content = createElement("div", {
+      className: "admin-logs-route__resolved",
+      children: [
+        createElement("section", {
+          className: "admin-logs-route__panel",
+          children: [filterPanel(filters, onApplyFilters, onClearFilters)],
+        }),
+        state?.status === ADMIN_DATA_STATES.INITIAL_LOADING
+          ? createElement("p", {
+            attrs: { role: "status" },
+            text: "Loading audit results for the requested filters and page…",
+          })
+          : null,
+        content,
+      ],
+    });
   }
 
   const refreshButton = logsButton({

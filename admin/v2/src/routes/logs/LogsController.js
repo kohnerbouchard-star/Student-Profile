@@ -1,4 +1,5 @@
 import {
+  ADMIN_DATA_STATES,
   beginAdminDataLoad,
   createAdminDataState,
   rejectAdminDataLoad,
@@ -187,10 +188,15 @@ function safeError(error) {
   return isAdminErrorEnvelope(error) ? error : normalizeAdminError(error);
 }
 
+function isLogsAccessError(error) {
+  return ["SESSION_REQUIRED", "PERMISSION_DENIED", "MFA_REQUIRED"].includes(error?.code);
+}
+
 export function createLogsController({ api, selectedGameId, hasPermission = () => false, onChange = () => {} } = {}) {
   if (typeof api?.readLogs !== "function") throw new TypeError("Logs API readLogs is unavailable.");
   let state = createAdminDataState();
   let filters = normalizeLogsQuery({ page: 1, pageSize: 50 });
+  let showUnresolvedFilters = false;
   let requestVersion = 0;
   let destroyed = false;
   let currentView = null;
@@ -199,63 +205,101 @@ export function createLogsController({ api, selectedGameId, hasPermission = () =
     if (!destroyed) onChange(state);
   }
 
+  function rejectRead(error, version) {
+    state = rejectAdminDataLoad(isLogsAccessError(error) ? createAdminDataState() : state, error, { requestVersion: version });
+  }
+
+  function denyRead(version) {
+    rejectRead(createAdminErrorEnvelope({ code: "PERMISSION_DENIED" }), version);
+  }
+
   async function load(nextFilters = null) {
-    if (destroyed || !hasPermission("audit.read")) return state;
-    if (nextFilters) filters = normalizeLogsQuery({ ...filters, ...nextFilters });
+    if (destroyed) return state;
+    if (!hasPermission("audit.read")) {
+      if (state.hasResolved) {
+        const version = ++requestVersion;
+        api.cancelLogsRequest?.();
+        denyRead(version);
+        publish();
+      }
+      return state;
+    }
+    const query = nextFilters ? normalizeLogsQuery({ ...filters, ...nextFilters }) : filters;
+    const changed = Object.keys(query).some((key) => query[key] !== filters[key]);
+    filters = query;
+    if (changed) showUnresolvedFilters = true;
+    const version = ++requestVersion;
     api.cancelLogsRequest?.();
-    requestVersion += 1;
-    const version = requestVersion;
-    state = beginAdminDataLoad(state, { requestVersion: version });
+    // Retained data belongs only to the same normalized query and page.
+    state = beginAdminDataLoad(changed ? createAdminDataState() : state, { requestVersion: version });
     publish();
+    if (destroyed || version !== requestVersion) return state;
+    if (!hasPermission("audit.read")) {
+      denyRead(version);
+      publish();
+      return state;
+    }
 
     try {
-      const result = await api.readLogs({ gameId: selectedGameId, filters });
+      const result = await api.readLogs({ gameId: selectedGameId, filters: query });
       if (destroyed || version !== requestVersion || result?.current === false) return state;
-      const model = normalizeLogsReadModel(result);
-      filters = normalizeLogsQuery({ ...filters, page: model.pagination.page, pageSize: model.pagination.pageSize });
-      state = resolveAdminDataLoad(state, model, {
-        empty: model.isEmpty,
-        requestVersion: version,
-      });
+      if (!hasPermission("audit.read")) {
+        denyRead(version);
+      } else {
+        const model = normalizeLogsReadModel(result);
+        filters = normalizeLogsQuery({ ...query, page: model.pagination.page, pageSize: model.pagination.pageSize });
+        state = resolveAdminDataLoad(state, model, { empty: model.isEmpty, requestVersion: version });
+      }
     } catch (error) {
       if (destroyed || version !== requestVersion) return state;
-      state = rejectAdminDataLoad(state, safeError(error), { requestVersion: version });
+      if (!hasPermission("audit.read")) denyRead(version);
+      else rejectRead(safeError(error), version);
     }
     publish();
     return state;
   }
 
   function applyFilters(nextFilters = {}) {
-    filters = normalizeLogsQuery({ ...filters, ...nextFilters, page: 1 });
-    return load();
+    return load({ ...nextFilters, page: 1 });
   }
 
   function clearFilters() {
-    filters = normalizeLogsQuery({ page: 1, pageSize: filters.pageSize });
-    return load();
+    return load(normalizeLogsQuery({ page: 1, pageSize: filters.pageSize }));
   }
 
   function setPage(page) {
-    filters = normalizeLogsQuery({ ...filters, page });
-    return load();
+    const pagination = state.data?.pagination;
+    if (destroyed || !pagination || state.status === ADMIN_DATA_STATES.REFRESHING) return state;
+    const previous = pagination.hasPreviousPage && page === pagination.page - 1;
+    const next = pagination.hasNextPage && page === pagination.page + 1 && page <= pagination.totalPages;
+    if ((!previous && !next) || normalizeLogsQuery({ page }).page !== page || page < 1) return state;
+    return load({ page });
   }
 
   function render() {
     currentView?.destroy?.();
-    currentView = LogsRoute({
-      state,
+    if (!destroyed && !hasPermission("audit.read")) denyRead(requestVersion);
+    const viewState = state;
+    const view = LogsRoute({
+      state: viewState,
       filters,
-      onRefresh: load,
-      onApplyFilters: applyFilters,
-      onClearFilters: clearFilters,
-      onPageChange: setPage,
+      showUnresolvedFilters: showUnresolvedFilters && !isLogsAccessError(viewState.error),
+      onRefresh: () => view === currentView && load(),
+      onApplyFilters: (nextFilters) => view === currentView && applyFilters(nextFilters),
+      onClearFilters: () => view === currentView && clearFilters(),
+      onPageChange: (page) => view === currentView && viewState === state && setPage(page),
     });
-    return currentView;
+    currentView = view;
+    return view;
   }
 
   function deactivate() {
     api.cancelLogsRequest?.();
     requestVersion += 1;
+    if ([ADMIN_DATA_STATES.INITIAL_LOADING, ADMIN_DATA_STATES.REFRESHING].includes(state.status)) {
+      // The mounted Admin route starts an unresolved read on re-entry only at version zero.
+      state = createAdminDataState();
+    }
     currentView?.destroy?.();
     currentView = null;
   }

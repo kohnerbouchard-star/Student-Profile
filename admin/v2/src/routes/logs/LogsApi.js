@@ -102,7 +102,24 @@ function validLogsPayload(payload, response) {
   return payload;
 }
 
+async function accessFailure(response, status) {
+  // Access denial remains authoritative even if the body cannot be read.
+  let payload = null;
+  try { payload = JSON.parse(await response.text()); } catch { /* Status alone is sufficient. */ }
+  const mfaRequired = [payload?.error?.code, payload?.code]
+    .some((code) => typeof code === "string" && code.trim().toUpperCase() === "MFA_REQUIRED");
+  const requestId = [response.headers?.get?.("x-request-id"), payload?.error?.requestId, payload?.requestId]
+    .find((value) => typeof value === "string" && value);
+  return normalizeAdminError({
+    status,
+    code: mfaRequired ? "MFA_REQUIRED" : status === 401 ? "SESSION_REQUIRED" : "PERMISSION_DENIED",
+    requestId,
+  });
+}
+
 async function parseResponse(response) {
+  const status = Number(response?.status || 0);
+  if (status === 401 || status === 403) throw await accessFailure(response, status);
   const raw = await response.text();
   let payload = null;
   if (raw.trim()) {
