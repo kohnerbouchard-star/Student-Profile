@@ -246,7 +246,6 @@ function logTable(model) {
         key: "timestamp",
         label: "Timestamp",
         rowHeader: true,
-        width: "12.5rem",
         render: (value) => createElement("time", {
           text: formatTimestamp(value),
           attrs: value ? { datetime: value } : {},
