@@ -37,6 +37,32 @@ test("policy projection fails closed and discards unknown fields", () => {
 test("policy cannot load without moderation permission", async () => {
   const h = panel({ hasPermission: () => false }); await h.view.load(); assert.equal(h.calls.length, 0); h.view.destroy();
 });
+test("retention copy identifies future Player conversations and distinguishes expiry from deletion", async () => {
+  const h = panel();
+  const help = () => h.form.children.find((node) => node.textContent.includes("Attachments remain disabled")).textContent;
+  const checkHelp = () => {
+    assert.match(help(), /default expiry for new Player-created conversations in this game/);
+    assert.match(help(), /existing expiry dates or the expiry used for teacher-created conversations/);
+    assert.match(help(), /Expiry limits Player access; it does not by itself delete messages/);
+  };
+  assert.equal(h.fields.get("defaultRetentionDays").options.label, "Default retention for new Player conversations (days)");
+  checkHelp();
+  await h.view.load();
+  checkHelp();
+  draft(h);
+  const submitting = h.form.dispatch("submit");
+  const review = h.confirmations[0];
+  assert.match(review.options.message, /Default retention for new Player-created conversations: 30 days/);
+  assert.match(review.options.detail, /selected game/);
+  assert.match(review.options.detail, /Existing expiry dates and teacher-created conversation expiry are unchanged/);
+  assert.equal(await review.options.onConfirm(), true);
+  checkHelp();
+  assert.equal(h.nodes.find((node) => node.attrs.role === "status").textContent, "Messaging policy saved.");
+  review.settle(true);
+  await submitting;
+  assert.equal(h.calls.length, 2);
+  h.view.destroy();
+});
 test("policy requires loaded authoritative settings, valid days and explicit confirmation", async () => {
   const h = panel(); await h.form.dispatch("submit"); assert.equal(h.confirmations.length, 0);
   await h.view.load(); draft(h, ""); await h.form.dispatch("submit"); assert.equal(h.confirmations.length, 0);
