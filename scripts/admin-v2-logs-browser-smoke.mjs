@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { chromium } from "playwright";
 
@@ -25,8 +25,6 @@ const LOG_PATH = `/games/${ADMIN_V2_FIXTURE_GAME_ID}/logs`;
 const PRIVATE_UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 const INTERNAL_OPAQUE_PATTERN = /ownership-record-opaque-123456/i;
 const SECRET_PATTERN = /service[_-]?role|supabase_service_role_key|access[_-]?token|refresh[_-]?token|bearer\s|authorization\s*:|select\s+\*\s+from|backend\/.*:\d+|\beyJ[A-Za-z0-9_-]{10,}\.|\bsk-(?:proj-)?[A-Za-z0-9_-]{8,}|postgres(?:ql)?:\/\/|-----BEGIN .*PRIVATE KEY-----/i;
-
-mkdirSync(EVIDENCE_DIR, { recursive: true });
 
 function auditRows({ many = false, korean = true } = {}) {
   const base = [
@@ -156,6 +154,7 @@ async function openLogs(browser, fixture, {
   await installSession(context, permissions);
   const logRequests = [];
   let readCount = 0;
+  let changedFilterFailed = false;
 
   if (!permissions.includes("audit.read")) {
     await context.route("**/functions/v1/web-session-api/proxy/session/bootstrap", async (route) => {
@@ -180,7 +179,10 @@ async function openLogs(browser, fixture, {
     const request = route.request();
     const url = new URL(request.url());
     logRequests.push({ method: request.method(), url: request.url(), headers: request.headers() });
-    if (mode === "failed" || mode === "stale" && readCount > 1) {
+    const failChangedFilter = mode === "changed-filter" && !changedFilterFailed
+      && url.searchParams.get("search") === "attendance";
+    if (mode === "failed" || mode === "stale" && readCount > 1 || failChangedFilter) {
+      if (failChangedFilter) changedFilterFailed = true;
       await route.fulfill({
         status: 503,
         contentType: "application/json",
@@ -252,93 +254,151 @@ async function assertNoDocumentOverflow(page, label) {
   assert.ok(metrics.body <= metrics.viewport + 1, `${label} body overflow: ${JSON.stringify(metrics)}`);
 }
 
-const results = [];
-const fixture = await startAdminV2FixtureServer({ repositoryRoot: ROOT });
-const browser = await chromium.launch({ headless: true });
-try {
-  {
-    const runtime = await openLogs(browser, fixture);
+export async function verifyChangedLogsFilterRecovery(browser, fixture) {
+  const runtime = await openLogs(browser, fixture, { rows: auditRows({ many: true }), mode: "changed-filter" });
+  try {
     await waitForState(runtime.page, "ready");
-    await runtime.page.getByRole("heading", { level: 1, name: "Logs", exact: true }).waitFor({ state: "visible" });
-    assert.equal(await runtime.page.locator(".admin-logs-route .admin-data-table__row").count(), 3);
-    assert.match(await runtime.page.locator("body").innerText(), /교실 상점 가격 정책 검토 완료/);
-    assert.match(await runtime.page.locator("body").innerText(), /Read-only operational record/);
-    assert.equal(runtime.logRequests.every((request) => request.method === "GET"), true);
-    assert.equal(runtime.logRequests.every((request) => !request.headers.authorization), true);
-    assert.equal(runtime.logRequests.every((request) => !request.headers["idempotency-key"]), true);
-    await assertNoLeakage(runtime.page, "ready");
+    const logs = runtime.page.locator(".admin-logs-route");
+    const rows = logs.locator(".admin-data-table__row");
+    const summary = logs.getByRole("region", { name: "Audit log summary" });
+    const pagination = logs.getByRole("navigation", { name: "Audit log pagination" });
+    const filter = logs.getByRole("form", { name: "Audit log filters" });
+    const search = filter.getByLabel("Search action text");
+    const actor = filter.getByLabel("Actor type");
+    const pageSize = filter.getByLabel("Rows per page");
+    assert.equal(await rows.count(), 50);
+    assert.equal(await summary.locator("output").first().textContent(), "200");
+    assert.match(await pagination.innerText(), /Page 1 of 4/);
+
+    await search.fill("attendance");
+    await actor.selectOption("player");
+    await pageSize.selectOption("25");
+    await filter.getByRole("button", { name: "Apply filters", exact: true }).click();
+    await waitForState(runtime.page, "failed");
+    await logs.getByText("Audit logs are unavailable", { exact: true }).waitFor({ state: "visible" });
+    assert.equal(await rows.count(), 0);
+    assert.equal(await summary.count(), 0);
+    assert.equal(await pagination.count(), 0);
+    assert.equal(await search.inputValue(), "attendance");
+    assert.equal(await actor.inputValue(), "player");
+    assert.equal(await pageSize.inputValue(), "25");
+    await assertNoLeakage(runtime.page, "changed-filter-failed");
+
+    await logs.getByRole("button", { name: "Retry logs", exact: true }).click();
+    await waitForState(runtime.page, "ready");
+    assert.equal(await rows.count(), 1);
+    assert.match(await rows.first().innerText(), /attendance\.scan\.recorded/);
+    assert.equal(await summary.locator("output").first().textContent(), "1");
+    assert.match(await pagination.innerText(), /Page 1 of 1/);
+    const narrowed = runtime.logRequests
+      .map(({ method, url }) => ({ method, query: Object.fromEntries(new URL(url).searchParams) }))
+      .filter(({ query }) => query.search === "attendance");
+    const query = { page: "1", pageSize: "25", search: "attendance", actorType: "player" };
+    assert.deepEqual(narrowed, [{ method: "GET", query }, { method: "GET", query }]);
     assert.deepEqual(runtime.errors, []);
-    await runtime.page.screenshot({ path: path.join(EVIDENCE_DIR, "logs-ready-1280x720.png"), animations: "disabled" });
-    results.push({ scenario: "ready", passed: true });
+    await assertNoLeakage(runtime.page, "changed-filter-recovered");
+    return { scenario: "changed-filter-failure-and-retry", passed: true };
+  } finally {
     await runtime.context.close();
   }
-
-  {
-    const runtime = await openLogs(browser, fixture, { rows: [] });
-    await waitForState(runtime.page, "empty");
-    assert.match(await runtime.page.locator("body").innerText(), /No audit events are available/);
-    await assertNoLeakage(runtime.page, "empty");
-    results.push({ scenario: "empty", passed: true });
-    await runtime.context.close();
-  }
-
-  {
-    const runtime = await openLogs(browser, fixture, { rows: auditRows({ many: true }), mode: "many" });
-    await waitForState(runtime.page, "ready");
-    assert.equal(await runtime.page.locator(".admin-logs-route .admin-data-table__row").count(), 50);
-    await runtime.page.getByLabel("Search action text").fill("attendance");
-    await runtime.page.getByRole("button", { name: "Apply filters" }).click();
-    await waitForState(runtime.page, "ready");
-    assert.ok(runtime.logRequests.some((request) => new URL(request.url).searchParams.get("search") === "attendance"));
-    const count = await runtime.page.locator(".admin-logs-route .admin-data-table__row").count();
-    assert.ok(count > 0 && count < 50);
-    await assertNoLeakage(runtime.page, "filtering");
-    results.push({ scenario: "filtering-large-volume", passed: true });
-    await runtime.context.close();
-  }
-
-  {
-    const runtime = await openLogs(browser, fixture, { mode: "stale" });
-    await waitForState(runtime.page, "ready");
-    await runtime.page.getByRole("button", { name: "Refresh" }).click();
-    await waitForState(runtime.page, "stale");
-    assert.match(await runtime.page.locator("body").innerText(), /Showing the last safe audit page/);
-    assert.equal(await runtime.page.locator(".admin-logs-route .admin-data-table__row").count(), 3);
-    await assertNoLeakage(runtime.page, "stale");
-    results.push({ scenario: "stale-safe-error", passed: true });
-    await runtime.context.close();
-  }
-
-  {
-    const permissions = ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => permission !== "audit.read");
-    const runtime = await openLogs(browser, fixture, { permissions });
-    await runtime.page.getByText("Logs access restricted", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
-    assert.equal(runtime.getReadCount(), 0);
-    assert.equal(await runtime.page.locator(".admin-logs-route").count(), 0);
-    results.push({ scenario: "permission-denied", passed: true });
-    await runtime.context.close();
-  }
-
-  for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }]) {
-    const runtime = await openLogs(browser, fixture, { viewport, rows: auditRows({ many: true }), mode: "many" });
-    await waitForState(runtime.page, "ready");
-    await assertNoDocumentOverflow(runtime.page, `mobile-${viewport.width}`);
-    const scroll = runtime.page.locator(".admin-logs-route .admin-data-table__scroll");
-    assert.equal(await scroll.getAttribute("tabindex"), "0");
-    await scroll.focus();
-    assert.equal(await scroll.evaluate((element) => document.activeElement === element), true);
-    await assertNoLeakage(runtime.page, `mobile-${viewport.width}`);
-    await runtime.page.screenshot({
-      path: path.join(EVIDENCE_DIR, `logs-mobile-${viewport.width}x${viewport.height}.png`),
-      animations: "disabled",
-    });
-    results.push({ scenario: `mobile-${viewport.width}x${viewport.height}`, passed: true });
-    await runtime.context.close();
-  }
-} finally {
-  await browser.close();
-  await fixture.close();
 }
 
-writeFileSync(RESULT_PATH, `${JSON.stringify({ passed: true, results }, null, 2)}\n`);
-console.log(`Admin V2 Logs browser smoke passed (${results.length} scenarios).`);
+async function runStandaloneLogsSmoke() {
+  mkdirSync(EVIDENCE_DIR, { recursive: true });
+  const results = [];
+  const fixture = await startAdminV2FixtureServer({ repositoryRoot: ROOT });
+  const browser = await chromium.launch({ headless: true });
+  try {
+    {
+      const runtime = await openLogs(browser, fixture);
+      await waitForState(runtime.page, "ready");
+      await runtime.page.getByRole("heading", { level: 1, name: "Logs", exact: true }).waitFor({ state: "visible" });
+      assert.equal(await runtime.page.locator(".admin-logs-route .admin-data-table__row").count(), 3);
+      assert.match(await runtime.page.locator("body").innerText(), /교실 상점 가격 정책 검토 완료/);
+      assert.match(await runtime.page.locator("body").innerText(), /Read-only operational record/);
+      assert.equal(runtime.logRequests.every((request) => request.method === "GET"), true);
+      assert.equal(runtime.logRequests.every((request) => !request.headers.authorization), true);
+      assert.equal(runtime.logRequests.every((request) => !request.headers["idempotency-key"]), true);
+      await assertNoLeakage(runtime.page, "ready");
+      assert.deepEqual(runtime.errors, []);
+      await runtime.page.screenshot({ path: path.join(EVIDENCE_DIR, "logs-ready-1280x720.png"), animations: "disabled" });
+      results.push({ scenario: "ready", passed: true });
+      await runtime.context.close();
+    }
+
+    {
+      const runtime = await openLogs(browser, fixture, { rows: [] });
+      await waitForState(runtime.page, "empty");
+      assert.match(await runtime.page.locator("body").innerText(), /No audit events are available/);
+      await assertNoLeakage(runtime.page, "empty");
+      results.push({ scenario: "empty", passed: true });
+      await runtime.context.close();
+    }
+
+    {
+      const runtime = await openLogs(browser, fixture, { rows: auditRows({ many: true }), mode: "many" });
+      await waitForState(runtime.page, "ready");
+      assert.equal(await runtime.page.locator(".admin-logs-route .admin-data-table__row").count(), 50);
+      await runtime.page.getByLabel("Search action text").fill("attendance");
+      await runtime.page.getByRole("button", { name: "Apply filters" }).click();
+      await waitForState(runtime.page, "ready");
+      assert.ok(runtime.logRequests.some((request) => new URL(request.url).searchParams.get("search") === "attendance"));
+      const count = await runtime.page.locator(".admin-logs-route .admin-data-table__row").count();
+      assert.ok(count > 0 && count < 50);
+      await assertNoLeakage(runtime.page, "filtering");
+      results.push({ scenario: "filtering-large-volume", passed: true });
+      await runtime.context.close();
+    }
+
+    {
+      const runtime = await openLogs(browser, fixture, { mode: "stale" });
+      await waitForState(runtime.page, "ready");
+      await runtime.page.getByRole("button", { name: "Refresh" }).click();
+      await waitForState(runtime.page, "stale");
+      assert.match(await runtime.page.locator("body").innerText(), /Showing the last safe audit page/);
+      assert.equal(await runtime.page.locator(".admin-logs-route .admin-data-table__row").count(), 3);
+      await assertNoLeakage(runtime.page, "stale");
+      results.push({ scenario: "stale-safe-error", passed: true });
+      await runtime.context.close();
+    }
+
+    results.push(await verifyChangedLogsFilterRecovery(browser, fixture));
+
+    {
+      const permissions = ADMIN_V2_FIXTURE_PERMISSIONS.filter((permission) => permission !== "audit.read");
+      const runtime = await openLogs(browser, fixture, { permissions });
+      await runtime.page.getByText("Logs access restricted", { exact: true }).waitFor({ state: "visible", timeout: 10_000 });
+      assert.equal(runtime.getReadCount(), 0);
+      assert.equal(await runtime.page.locator(".admin-logs-route").count(), 0);
+      results.push({ scenario: "permission-denied", passed: true });
+      await runtime.context.close();
+    }
+
+    for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }]) {
+      const runtime = await openLogs(browser, fixture, { viewport, rows: auditRows({ many: true }), mode: "many" });
+      await waitForState(runtime.page, "ready");
+      await assertNoDocumentOverflow(runtime.page, `mobile-${viewport.width}`);
+      const scroll = runtime.page.locator(".admin-logs-route .admin-data-table__scroll");
+      assert.equal(await scroll.getAttribute("tabindex"), "0");
+      await scroll.focus();
+      assert.equal(await scroll.evaluate((element) => document.activeElement === element), true);
+      await assertNoLeakage(runtime.page, `mobile-${viewport.width}`);
+      await runtime.page.screenshot({
+        path: path.join(EVIDENCE_DIR, `logs-mobile-${viewport.width}x${viewport.height}.png`),
+        animations: "disabled",
+      });
+      results.push({ scenario: `mobile-${viewport.width}x${viewport.height}`, passed: true });
+      await runtime.context.close();
+    }
+  } finally {
+    await browser.close();
+    await fixture.close();
+  }
+
+  writeFileSync(RESULT_PATH, `${JSON.stringify({ passed: true, results }, null, 2)}\n`);
+  console.log(`Admin V2 Logs browser smoke passed (${results.length} scenarios).`);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  await runStandaloneLogsSmoke();
+}

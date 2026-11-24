@@ -1515,6 +1515,9 @@ try {
   if (STATIC_ROOT === REPOSITORY_ROOT) {
     await verifyBuiltDirectAttendanceScanner(browser);
     checks.push({ scenario: "built-direct-attendance-scanner", viewport: "1280x720", status: "passed" });
+    const { verifyChangedLogsFilterRecovery } = await import("./admin-v2-logs-browser-smoke.mjs");
+    const logs = await verifyChangedLogsFilterRecovery(browser, fixture);
+    checks.push({ scenario: `logs-${logs.scenario}`, viewport: "1280x720", status: "passed" });
   }
 
   const passedChecks = checks.filter((check) => check.status === "passed");
