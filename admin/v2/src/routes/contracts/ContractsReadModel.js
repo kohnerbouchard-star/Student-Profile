@@ -138,7 +138,7 @@ function normalizeContract(row, index) {
     : {};
   const storedCountryCodes = rawTargeting.countryCodes;
   // The summary is display-only. A PATCH replaces targeting, so the editor
-  // needs every stored code and must not canonicalize a legacy audience.
+  // needs every stored code and must not silently rewrite audience codes.
   const countryCodes = storedCountryCodes === undefined ? [] : storedCountryCodes;
   const countryCodesEditable = Array.isArray(countryCodes)
     && countryCodes.every((code) => typeof code === "string" && code === code.trim() && COUNTRY_CODE_PATTERN.test(code))
