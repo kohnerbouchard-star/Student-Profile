@@ -63,6 +63,24 @@ python3 -m http.server 4173 --bind 127.0.0.1
 This static server does not provide a connected authenticated session. Open
 `http://127.0.0.1:4173/` only for layout inspection.
 
+For connected development using the disposable local Supabase stack, run:
+
+```zsh
+npm run dev:local
+```
+
+Sign in from `http://127.0.0.1:4173/` and select a game to open Admin V2.
+Direct entry at `http://127.0.0.1:4173/admin/` also serves Admin V2. The
+selected game stays in the `?game=...` query. This local entry does not change
+the connected staging launcher below.
+
+With the repository's Playwright Chromium installed and port 4173 free, run
+`npm run test:admin-v2:local-launcher-browser` to exercise sign-in and game
+selection through this launcher, then make one synthetic Attendance scan and
+verify its reward, with loopback-only fixtures. Add
+`-- --http-only` to check the HTTP path when Chromium is unavailable; that mode
+does not exercise the browser. Neither mode starts Supabase or uses a database.
+
 For connected Admin and Player login against staging, use the repository-owned
 local gateway. Supply the public staging publishable key through your local
 environment; do not commit it into the repository.
