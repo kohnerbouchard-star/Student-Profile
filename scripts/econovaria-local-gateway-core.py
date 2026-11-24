@@ -405,6 +405,12 @@ class EconovariaGatewayHandler(SimpleHTTPRequestHandler):
     def _is_static_request(self) -> bool:
         return not is_proxy_path(self.path)
 
+    def translate_path(self, path: str) -> str:
+        if self.server.admin_v2_entry and urlsplit(path).path in {"/admin/", "/admin/index.html"}:
+            # Keep the browser URL (including its selected game) and same-directory asset base.
+            return super().translate_path("/admin/v2.html")
+        return super().translate_path(path)
+
     def send_head(self):
         if self._is_static_request():
             remove_static_conditionals(self.headers)
@@ -568,6 +574,7 @@ class EconovariaGatewayServer(ThreadingHTTPServer):
         upstream_url: str,
         publishable_key: str,
         request_timeout: float,
+        admin_v2_entry: bool = False,
     ):
         super().__init__(server_address, handler_class)
         parsed = urlsplit(upstream_url)
@@ -578,6 +585,7 @@ class EconovariaGatewayServer(ThreadingHTTPServer):
         self.upstream = parsed
         self.publishable_key = publishable_key
         self.request_timeout = request_timeout
+        self.admin_v2_entry = admin_v2_entry
         self.browser_origin = f"http://127.0.0.1:{server_address[1]}"
 
 
@@ -586,6 +594,10 @@ def parse_args() -> argparse.Namespace:
         description="Serve Econovaria with publishable-only Supabase browser identity."
     )
     parser.add_argument("--local-supabase", action="store_true")
+    parser.add_argument(
+        "--admin-v2-entry", action="store_true",
+        help="Serve Admin V2 at the normal Admin entry on the local Supabase gateway.",
+    )
     parser.add_argument("--project-ref")
     parser.add_argument("--publishable-key")
     parser.add_argument("--port", type=int, default=4173)
@@ -598,6 +610,9 @@ def main() -> int:
     args = parse_args()
     if not 1 <= args.port <= 65535:
         raise SystemExit("--port must be between 1 and 65535")
+
+    if args.admin_v2_entry and not args.local_supabase:
+        raise SystemExit("--admin-v2-entry requires --local-supabase")
 
     root = Path(args.root).expanduser().resolve()
     if not (root / "index.html").is_file():
@@ -650,6 +665,7 @@ def main() -> int:
             upstream_url=supabase_url,
             publishable_key=publishable_key,
             request_timeout=configured_timeout(),
+            admin_v2_entry=args.admin_v2_entry,
         )
     except OSError as error:
         if error.errno == errno.EADDRINUSE:
