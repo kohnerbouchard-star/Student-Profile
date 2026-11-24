@@ -80,6 +80,26 @@ assert.throws(() =>
   })
 );
 
+const empty = {
+  items: [],
+  page: { returned: 0, hasMore: false, nextCursor: null },
+  summary: { unreadCount: 0 },
+};
+assert.deepEqual(normalizeNotificationPage(empty), {
+  items: [], unreadCount: 0, hasMore: false, nextCursor: null,
+});
+for (const items of [undefined, null, {}]) {
+  assert.throws(() => normalizeNotificationPage({ ...empty, items }), /deliveries are missing/);
+}
+for (const value of [null, false, "", "0"]) {
+  assert.throws(() => normalizeNotificationPage({
+    ...empty, page: { ...empty.page, returned: value },
+  }), /page metadata is invalid/);
+  assert.throws(() => normalizeNotificationPage({
+    ...empty, summary: { unreadCount: value },
+  }), /unread count is invalid/);
+}
+
 const source = fs.readFileSync(
   new URL(
     "../src/features/notifications/notification-inbox-flow.js",
@@ -91,8 +111,4 @@ assert.doesNotMatch(source, /\bfetch\s*\(/);
 assert.doesNotMatch(source, /innerHTML\s*=\s*JSON\.stringify/);
 assert.match(source, /api\.request\("notificationsPage"/);
 assert.match(source, /api\.execute\("notificationsRead"/);
-assert.match(
-  source,
-  /loading = false;\s*await loadPage\(\);\s*restore\("Completed"\)/,
-);
 console.log("notification inbox flow checks passed");

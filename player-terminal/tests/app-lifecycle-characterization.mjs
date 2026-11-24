@@ -107,6 +107,31 @@ test("session-ready event adopts a valid session through the public host boundar
   assert.equal(f.terminal.getState().status, "ready"); assert.equal(f.config.csrfToken, "D".repeat(43));
 });
 
+test("post-render subscribers observe direct shell replacements and unsubscribe", async (t) => {
+  const f = fixture(t, { connected: false });
+  await until(() => f.terminal.getState().status === "waiting");
+  const states = [];
+  const unsubscribe = f.terminal.subscribeShellRender(() => states.push({
+    status: f.terminal.getState().status, html: f.mount.innerHTML,
+  }));
+  f.mount.innerHTML = "unpainted";
+  f.terminal.requestRender();
+  assert.equal(states.length, 1);
+  assert.equal(states[0].status, "waiting");
+  assert.match(states[0].html, /AWAITING EXISTING PLAYER SESSION/);
+  await f.terminal.connectSession(handoff());
+  await f.ready();
+  const beforeDirect = states.length;
+  f.mount.innerHTML = "unpainted";
+  f.terminal.requestRender();
+  assert.equal(states.length, beforeDirect + 1);
+  assert.equal(states.at(-1).status, "ready");
+  assert.match(states.at(-1).html, /data-player-notification-drawer/);
+  unsubscribe();
+  f.terminal.requestRender();
+  assert.equal(states.length, beforeDirect + 1);
+});
+
 for (const legacy of [false, true]) {
   test(`resource refresh normalizes keys and merges data/status (${legacy ? "null" : "default"} freshness)`, async (t) => {
     const f = fixture(t, { legacy }); await f.ready();
