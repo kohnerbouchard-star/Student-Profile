@@ -3,6 +3,8 @@ import { test } from "node:test";
 import { createPlayerTerminal } from "../src/app.js";
 import { abortPlayerApiSessionRequests } from "../src/api/player-api.js";
 import { previewData } from "../src/data/preview-data.js";
+import { renderStorePage } from "../src/pages/store-page.js";
+import { normalizeInventoryRead } from "../src/api/store-inventory-read-model.js";
 
 // Exercise the public terminal with real API, session handoff, store, coordinator
 // and renderers. Only the DOM/event boundary and read transport are synthetic.
@@ -33,14 +35,14 @@ async function until(predicate) {
   for (let i = 0; i < 100; i++) { if (predicate()) return; await tick(); }
   assert.fail("Terminal lifecycle did not settle within 100 event-loop turns");
 }
-function fixture(t, { connected = true, freshness, legacy = false, config: overrides = {} } = {}) {
+function fixture(t, { connected = true, freshness, legacy = false, route = "inventory", readValue = (_context, value) => value, config: overrides = {} } = {}) {
   const keys = ["HTMLElement", "HTMLButtonElement", "document", "location", "addEventListener", "removeEventListener", "dispatchEvent", "CustomEvent", "requestAnimationFrame", "cancelAnimationFrame", "setInterval", "clearInterval", "ECONOVARIA_PLAYER_SESSION", "Econovaria"];
   const saved = new Map(keys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   const events = new EventTarget(), frames = new Map(), holds = new Map(), allHolds = new Set(), calls = [], invalid = [], required = [], host = [];
   let frameId = 0, version = 0, destroyed = false;
   Object.assign(globalThis, {
     HTMLElement: Element, HTMLButtonElement: Element, document: { title: "", activeElement: null, createElement: () => new Element() },
-    location: { hash: "#inventory", search: "", hostname: "localhost" },
+    location: { hash: `#${route}`, search: "", hostname: "localhost" },
     addEventListener: events.addEventListener.bind(events), removeEventListener: events.removeEventListener.bind(events), dispatchEvent: events.dispatchEvent.bind(events),
     CustomEvent: class extends Event { constructor(name, options) { super(name); this.detail = options.detail; } },
     requestAnimationFrame(callback) { frames.set(++frameId, callback); return frameId; }, cancelAnimationFrame(id) { frames.delete(id); },
@@ -48,7 +50,7 @@ function fixture(t, { connected = true, freshness, legacy = false, config: overr
   });
   const config = {
     usePreviewData: false, authenticated: connected, csrfToken: connected ? "C".repeat(43) : "", gameSessionId: connected ? "fixture-game" : "",
-    requestTimeoutMs: 5000, writeCooldownMs: 0, allowedImageHosts: [], capabilities: { routes: { inventory: true }, actions: { marketWatchlist: true } },
+    requestTimeoutMs: 5000, writeCooldownMs: 0, allowedImageHosts: [], capabilities: { routes: { [route]: true }, actions: { marketWatchlist: true } },
     resourceFreshnessMs: { inventory: 60000 }, sessionReadyEvent: "fixture:ready", sessionRequiredEvent: "fixture:required", sessionInvalidEvent: "fixture:invalid",
     onSessionInvalid: (detail) => invalid.push(detail), onSessionRequired: (detail) => required.push(detail),
     apiCall: async (context) => {
@@ -57,7 +59,7 @@ function fixture(t, { connected = true, freshness, legacy = false, config: overr
       if (value && !Array.isArray(value)) value.marker = version;
       const hold = holds.get(context.endpointKey)?.shift();
       if (hold) { hold.started.resolve(); await hold.promise; if (hold.error) throw hold.error; }
-      return context.method === "POST" ? { ok: true } : value;
+      return context.method === "POST" ? { ok: true } : readValue(context, value);
     }, ...overrides,
   };
   for (const name of [config.sessionRequiredEvent, config.sessionInvalidEvent]) events.addEventListener(name, (event) => host.push({ name, detail: event.detail }));
@@ -72,7 +74,7 @@ function fixture(t, { connected = true, freshness, legacy = false, config: overr
   return { terminal, config, mount, calls, invalid, required, host, frames, events, destroy,
     version(next) { version = next; },
     hold(key, error) { const hold = { ...deferred(), started: deferred(), error }; allHolds.add(hold); const queue = holds.get(key) || []; queue.push(hold); holds.set(key, queue); return hold; },
-    ready: () => until(() => terminal.getState().status === "ready" && terminal.getState().routeLoading.inventory === false),
+    ready: () => until(() => terminal.getState().status === "ready" && terminal.getState().routeLoading[route] === false),
   };
 }
 const handoff = (gameSessionId = "next-game") => ({ authenticated: true, csrfToken: "D".repeat(43), gameSessionId });
@@ -322,4 +324,124 @@ test("logout restores completed mutation controls whose cleanup effect is still 
   clickLogout(f); await tick(); assertRestored(click); assert.equal(f.frames.size, 0);
   await f.terminal.connectSession(handoff()); await f.ready();
   assert.equal(f.terminal.getState().status, "ready");
+});
+
+test("mounted Store distinguishes cold and warm Inventory errors, confirmed zero and recovery", async (t) => {
+  let owned = null;
+  const f = fixture(t, {
+    route: "store",
+    readValue({ endpointKey }, value) {
+      if (endpointKey !== "inventory") return value;
+      if (owned === null) throw Object.assign(new Error("Inventory unavailable"), { status: 429 });
+      return { ...value, items: owned ? [{ ...value.items[0], quantity: owned }] : [] };
+    },
+  });
+  await f.ready();
+  const model = () => f.terminal.getState().data;
+  const ownedText = () => f.mount.innerHTML.match(/TOTAL STOCK 13 · 3 SELLERS · OWNED ([^<]+)/)?.[1];
+  const offers = () => f.mount.innerHTML.match(/<button[^>]*data-player-purchase="market-lens".*?<\/button>/g);
+
+  assert.equal(model().resourceStatus.inventory.state, "unavailable");
+  assert.deepEqual(model().inventory.items, []);
+  assert.equal(ownedText(), "UNAVAILABLE");
+  const initialOffers = offers();
+  assert.equal(initialOffers?.length, 3);
+  assert.ok(initialOffers.every((html) => /aria-label="Purchase Market Lens/.test(html) && !/\sdisabled[\s>]/.test(html)));
+
+  owned = 0;
+  await f.terminal.refreshResources(["inventory"]);
+  assert.equal(model().resourceStatus.inventory.state, "ready");
+  assert.equal(ownedText(), "0");
+
+  owned = 3;
+  await f.terminal.refreshResources(["inventory"]);
+  const confirmed = model().inventory;
+  assert.equal(ownedText(), "3");
+
+  owned = null;
+  await f.terminal.refreshResources(["inventory"]);
+  assert.strictEqual(model().inventory, confirmed);
+  assert.equal(model().resourceStatus.inventory.state, "unavailable");
+  assert.equal(ownedText(), "UNAVAILABLE");
+
+  owned = 4;
+  await f.terminal.refreshResources(["inventory"]);
+  assert.equal(ownedText(), "4");
+  assert.deepEqual(offers(), initialOffers);
+
+  owned = null;
+  await f.terminal.connectSession(handoff("another-store-game"));
+  assert.equal(model().resourceStatus.inventory.state, "unavailable");
+  assert.deepEqual(model().inventory.items, []);
+  assert.equal(ownedText(), "UNAVAILABLE");
+  assert.deepEqual(offers(), initialOffers);
+  assert.equal(f.calls.filter(({ key }) => key === "inventory").length, 6);
+  assert.ok(f.calls.every(({ method }) => method === "GET"));
+});
+
+test("mounted Store with unsupported Inventory stays browsable without an owned number or a request", async (t) => {
+  const f = fixture(t, {
+    route: "store",
+    readValue({ endpointKey }, value) {
+      return endpointKey === "session"
+        ? { ...value, capabilityEndpointKeys: ["dashboard", "store", "bankingFx"] }
+        : value;
+    },
+  });
+  await f.ready();
+  assert.equal(f.terminal.getState().data.resourceStatus.inventory.code, "CAPABILITY_UNAVAILABLE");
+  assert.doesNotMatch(f.mount.innerHTML, /TOTAL STOCK 13 · 3 SELLERS · OWNED 0/);
+  assert.match(f.mount.innerHTML, /TOTAL STOCK 13 · 3 SELLERS · OWNED UNAVAILABLE/);
+  assert.ok(f.calls.every(({ key }) => key !== "inventory"));
+});
+
+test("Store retains statusless preview and does not render unknown or malformed holdings as a zero", () => {
+  assert.match(renderStorePage(previewData, {}), /TOTAL STOCK 13 · 3 SELLERS · OWNED 1/);
+  for (const data of [
+    { ...previewData, resourceStatus: {} },
+    { ...previewData, resourceStatus: { inventory: { state: "loading" } } },
+    { ...previewData, inventory: {}, resourceStatus: { inventory: { state: "ready" } } },
+    { ...previewData, inventory: { items: [{ storeItemId: "market-lens", quantity: "" }] }, resourceStatus: { inventory: { state: "ready" } } },
+  ]) {
+    assert.match(renderStorePage(data, {}), /TOTAL STOCK 13 · 3 SELLERS · OWNED UNAVAILABLE/);
+  }
+});
+
+test("mounted Store uses canonical Inventory keys without turning a normalized default into owned zero", async (t) => {
+  const publicKey = "market-lens-canonical";
+  let amount = undefined;
+  const f = fixture(t, {
+    route: "store",
+    readValue({ endpointKey }, value) {
+      if (endpointKey === "store") return { ...value, items: value.items.map((item) =>
+        item.id === "market-lens" ? { ...item, canonicalItemKey: publicKey } : item) };
+      if (endpointKey !== "inventory") return value;
+      if (amount === "missing collection") return normalizeInventoryRead({});
+      if (amount === "missing key") return normalizeInventoryRead({ items: [{ quantityOwned: 4 }] });
+      return normalizeInventoryRead({ items: [{ id: publicKey, storeItemId: publicKey, quantityOwned: amount }] });
+    },
+  });
+  await f.ready();
+  const owned = () => f.mount.innerHTML.match(/TOTAL STOCK 13 · 3 SELLERS · OWNED ([^<]+)/)?.[1];
+  const buttons = () => f.mount.innerHTML.match(/<button[^>]*data-player-purchase="market-lens".*?<\/button>/g);
+  const originalButtons = buttons();
+  assert.equal(f.terminal.getState().data.resourceStatus.inventory.state, "ready");
+  assert.equal(f.terminal.getState().data.inventory.items[0].quantity, 0);
+  assert.equal(owned(), "UNAVAILABLE");
+  amount = 0;
+  await f.terminal.refreshResources(["inventory"]);
+  assert.equal(owned(), "0");
+  amount = 6;
+  await f.terminal.refreshResources(["inventory"]);
+  assert.equal(owned(), "6");
+  amount = "missing collection";
+  await f.terminal.refreshResources(["inventory"]);
+  assert.deepEqual(f.terminal.getState().data.inventory.items, []);
+  assert.equal(owned(), "UNAVAILABLE");
+  amount = "missing key";
+  await f.terminal.refreshResources(["inventory"]);
+  assert.equal(owned(), "UNAVAILABLE");
+  assert.equal(originalButtons.length, 3);
+  assert.deepEqual(buttons(), originalButtons);
+  assert.ok(f.calls.every(({ method }) => method === "GET"));
 });
