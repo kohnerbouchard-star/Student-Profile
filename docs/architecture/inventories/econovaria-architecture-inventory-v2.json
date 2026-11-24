@@ -8,13 +8,13 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1661,
+    "sourceFiles": 1651,
     "edgeEntrypoints": 28,
     "handlerFiles": 61,
     "persistenceOutsideInfrastructure": 84,
     "crossDomainDeepImports": 70,
     "browserTransportShimFiles": 26,
-    "compatibilityMarkerFiles": 209,
+    "compatibilityMarkerFiles": 207,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 0,
     "capabilityStrings": 144
@@ -2522,18 +2522,6 @@
         "file": "backend/supabase/functions/admin-api/worldRuntimeValidation.ts",
         "markers": [
           "fallback"
-        ]
-      },
-      {
-        "file": "backend/supabase/functions/player-web-session-api/staging-compat-entrypoint-v2.ts",
-        "markers": [
-          "compatibilitytarget"
-        ]
-      },
-      {
-        "file": "backend/supabase/functions/player-web-session-api/staging-compat-entrypoint.ts",
-        "markers": [
-          "compatibilitytarget"
         ]
       },
       {

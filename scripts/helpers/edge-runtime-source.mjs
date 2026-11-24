@@ -85,18 +85,6 @@ const extractedModules = {
     "backend/supabase/functions/stripe-license-webhook/stripeCheckoutValidation.ts",
     "backend/supabase/functions/stripe-license-webhook/stripeWebhookContracts.ts"
   ],
-  "backend/supabase/functions/player-web-session-api/staging-compat-entrypoint.ts": [
-    "backend/supabase/functions/player-web-session-api/stagingCompatHttp.ts",
-    "backend/supabase/functions/player-web-session-api/stagingCompatContracts.ts",
-    "backend/supabase/functions/player-web-session-api/stagingCompatUpstream.ts",
-    "backend/supabase/functions/player-web-session-api/stagingCompatSession.ts"
-  ],
-  "backend/supabase/functions/player-web-session-api/staging-compat-entrypoint-v2.ts": [
-    "backend/supabase/functions/player-web-session-api/stagingCompatV2Http.ts",
-    "backend/supabase/functions/player-web-session-api/stagingCompatV2Contracts.ts",
-    "backend/supabase/functions/player-web-session-api/stagingCompatV2Upstream.ts",
-    "backend/supabase/functions/player-web-session-api/stagingCompatV2Session.ts"
-  ],
   "backend/supabase/functions/license-payment-webhook/index.ts": [
     "backend/supabase/functions/license-payment-webhook/paymentWebhookValidation.ts",
     "backend/supabase/functions/license-payment-webhook/paymentWebhookContracts.ts"

@@ -33,6 +33,23 @@ test("REF005: debt can decrease without admitting a replacement site", (t) => {
   const f = fixture(t); f.write(bridge, "export const read = () => [];"); assert.deepEqual(f.scan().failures, []);
   f.write("backend/src/new.ts", original.get(bridge)); assert.match(f.scan().failures.join("\n"), /Unregistered seam/);
 });
+test("retired Player staging entrypoints and their private helpers cannot return", () => {
+  const repository = fileURLToPath(new URL("../../", import.meta.url));
+  const retired = /staging-compat-entrypoint(?:-v2)?|stagingCompat(?:V2)?(?:Http|Contracts|Session|Upstream)/u;
+  for (const [file, source] of readSources(repository)) {
+    assert.doesNotMatch(file, retired, `retired Player staging path: ${file}`);
+    if (sourceKind(file) === "runtime") {
+      assert.doesNotMatch(source, retired, `retired Player staging reference: ${file}`);
+    }
+  }
+  for (const file of [
+    "backend/supabase/config.toml",
+    "backend/supabase/edge-function-manifest.json",
+    "scripts/helpers/edge-runtime-source.mjs",
+  ]) {
+    assert.doesNotMatch(fs.readFileSync(path.join(repository, file), "utf8"), retired, `retired Player staging selector: ${file}`);
+  }
+});
 for (const [name, file, source] of [
   ["new proxy caller", "backend/src/new.ts", "proxyClassroom(req, ctx, '/new');"],
   ["new same-file proxy family", bridge, "proxyClassroom(req, ctx, '/new');"],
