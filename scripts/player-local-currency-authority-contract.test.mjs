@@ -301,7 +301,16 @@ assert.match(playerCurrencyProjection, /return rows\.length === 1 \? rows\[0\] :
 assert.match(playerCurrencyProjection, /function bindBankingCurrency\(/);
 assert.match(playerCurrencyProjection, /currencyResolved: Boolean\(resolved\)/);
 assert.match(playerApiIntegration, /snapshot = bindSessionCurrency\(snapshot, dashboardCurrency\(raw\)\)/);
-assert.match(playerApiIntegration, /snapshot = bindBankingCurrency\(snapshot, raw\)/);
+assert.match(
+  playerApiIntegration,
+  /snapshot = mergeTerminalRead\(snapshot, context\.endpointKey, readResponse\);[\s\S]*?if \(context\.endpointKey === "banking"\) \{\s*snapshot = bindBankingCurrency\(snapshot\)/u,
+  "The browser must bind Banking currency after normalizing the ledger snapshot.",
+);
+assert.match(
+  playerCurrencyProjection,
+  /const balances = snapshot\.banking\?\.balances;/u,
+  "Currency binding must use the normalized Banking balances without projecting the raw response again.",
+);
 
 assert.match(checkingMigration, /checking_row\.balance \+ cash_row\.balance/);
 assert.match(checkingMigration, /delete from public\.account_balances as cash_row/);

@@ -7,6 +7,7 @@ import {
 import { handlePlayerBankingFxRequest } from "./playerBankingFxHttpHandler.ts";
 import { encodePlayerBankingFxCursor } from "./playerBankingFxRequestParser.ts";
 import { readPlayerBankingFxRoutePath } from "./playerBankingFxRoutePaths.ts";
+import "./playerBankingFxOverviewHoldBoundary.test.ts";
 
 declare const Deno: {
   test(name: string, run: () => void | Promise<void>): void;

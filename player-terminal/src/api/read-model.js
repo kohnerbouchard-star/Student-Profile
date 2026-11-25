@@ -1,4 +1,5 @@
 import { normalizeMarket, normalizeMarketRead, normalizeMarketAssetRead } from "./market-read-model.js";
+import { projectBankingBalanceAmounts } from "./banking-balance-values.js";
 import { normalizeBankingRead } from "./banking-read-model.js";
 import { normalizeStore, normalizeInventory, normalizeInventoryRead } from "./store-inventory-read-model.js";
 import { normalizeContracts } from "./contracts-read-model.js";
@@ -94,7 +95,7 @@ function emptyTerminalData() {
     },
     inventory: { capacity: null, capacityUsed: null, capacityMax: null, categories: ["All"], items: [] },
     banking: {
-      checking: { accountId: "CHECKING", balance: 0, available: 0, pending: 0 },
+      checking: { accountId: "CHECKING", balance: null, available: null, pending: null },
       savings: { configured: false, accountId: "NOT CONFIGURED", balance: null, available: null, interestRate: null, interestEarned: null },
       creditConfigured: false,
       transfersConfigured: false,
@@ -249,8 +250,21 @@ function applyDashboardSnapshot(data, rawDashboard) {
   const primaryCurrency = text(cash.primaryCurrencyCode, data.session.currencyCode);
   const checkingBalances = list(cash.balances).filter((entry) => text(entry.accountType).toLowerCase() === "checking");
   const primaryBalance = checkingBalances.find((entry) => text(entry.currencyCode).toUpperCase() === primaryCurrency.toUpperCase()) || {};
-  const available = number(primaryBalance.balance, number(cash.totalBalance));
-  data.banking.checking = { accountId: text(primaryBalance.accountType, "CHECKING").toUpperCase(), balance: available, available, pending: 0 };
+  const currentChecking = object(data.banking.checking);
+  const sameCurrencyLedger = Object.hasOwn(currentChecking, "configured") &&
+    currentChecking.currencyCode === primaryCurrency.toUpperCase();
+  if (!sameCurrencyLedger) {
+    const amounts = projectBankingBalanceAmounts(primaryBalance, { deriveMissing: false });
+    data.banking = {
+      ...data.banking,
+      checking: {
+        accountId: text(primaryBalance.accountType, "CHECKING").toUpperCase(),
+        ...amounts,
+        pending: amounts.heldAmount,
+        currencyCode: primaryCurrency.toUpperCase()
+      }
+    };
+  }
   data.session.currencyCode = primaryCurrency;
   data.session.currencyName = primaryCurrency;
   data.session.countryId = text(object(snapshot.me).countryCode).toLowerCase();

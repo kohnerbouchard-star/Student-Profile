@@ -1,3 +1,4 @@
+import { bankAvailability } from "../api/banking-balance-values.js";
 import { formatCurrency, serializeForm } from "./format.js";
 import { marketplaceDraftInventory, marketplaceListableItems } from "../features/marketplace/marketplace-read-model.js";
 
@@ -90,6 +91,7 @@ export function createPlayerTerminalForms({ store, mount, showToast, executeEndp
     form.classList.add("was-validated");
     const endpointKey = form.dataset.endpoint;
     const state = store.getState();
+    const available = bankAvailability(state.data.banking?.checking, state.data.session.currencyCode);
     [...form.elements].forEach((control) => control?.setCustomValidity?.(""));
 
     if (endpointKey === "savingsTransfer") {
@@ -97,13 +99,14 @@ export function createPlayerTerminalForms({ store, mount, showToast, executeEndp
       const to = form.elements.namedItem("toAccount");
       const amount = form.elements.namedItem("amount");
       if (from?.value && from.value === to?.value) to.setCustomValidity("Choose a different destination account.");
-      const available = from?.value === "savings" ? Number(state.data.banking.savings.available ?? state.data.banking.savings.balance) : Number(state.data.banking.checking.available);
-      if (Number(amount?.value) > available) amount?.setCustomValidity("The transfer exceeds the available balance in the source account.");
+      const savingsAvailable = bankAvailability(state.data.banking?.savings, state.data.session.currencyCode);
+      const sourceAvailable = from?.value === "savings" ? savingsAvailable : available;
+      if (sourceAvailable !== null && Number(amount?.value) > sourceAvailable) amount?.setCustomValidity("The transfer exceeds the available balance in the source account.");
     }
 
     if (endpointKey === "bankTransfer") {
       const amount = form.elements.namedItem("amount");
-      if (Number(amount?.value) > Number(state.data.banking.checking.available)) amount?.setCustomValidity("The transfer exceeds your available checking balance.");
+      if (available !== null && Number(amount?.value) > available) amount?.setCustomValidity("The transfer exceeds your available checking balance.");
     }
 
     if (endpointKey === "marketOrder") {
@@ -116,7 +119,7 @@ export function createPlayerTerminalForms({ store, mount, showToast, executeEndp
       if (orderType === "limit" && !(Number(limitField?.value) > 0)) limitField?.setCustomValidity("Enter a limit price for a limit order.");
       if (asset) {
         const price = orderType === "limit" && Number(limitField?.value) > 0 ? Number(limitField.value) : Number(asset.price);
-        if (side === "buy" && quantity * price * 1.0025 > Number(state.data.banking.checking.available)) quantityField?.setCustomValidity("The estimated order total exceeds your available cash.");
+        if (side === "buy" && available !== null && quantity * price * 1.0025 > available) quantityField?.setCustomValidity("The estimated order total exceeds your available cash.");
         if (side === "sell" && quantity > Number(asset.owned || 0)) quantityField?.setCustomValidity(`You currently own ${Number(asset.owned || 0)} shares.`);
       }
     }
@@ -126,7 +129,7 @@ export function createPlayerTerminalForms({ store, mount, showToast, executeEndp
       const quantityField = form.elements.namedItem("quantity");
       const quantity = Number(quantityField?.value) || 0;
       if (listing && quantity > Number(listing.quantity)) quantityField?.setCustomValidity("The requested quantity exceeds the available listing quantity.");
-      if (listing && quantity * listing.unitPrice * (1 + Number(state.data.marketplace.feeRate || 0) / 100) > Number(state.data.banking.checking.available)) quantityField?.setCustomValidity("The estimated purchase total exceeds your available cash.");
+      if (listing && available !== null && quantity * listing.unitPrice * (1 + Number(state.data.marketplace.feeRate || 0) / 100) > available) quantityField?.setCustomValidity("The estimated purchase total exceeds your available cash.");
     }
 
     if (endpointKey === "marketplaceListing") {

@@ -197,9 +197,12 @@ configuredData.banking.savings = {
   available: 200,
   interestRate: 1.5,
   interestEarned: 3,
-  currencyCode: "LUM"
+  currencyCode: "ECO"
 };
-configuredData.banking.balances.push({ accountType: "savings", balance: 200, currencyCode: "LUM" });
+configuredData.banking.balances.push(
+  { accountType: "savings", balance: 200, availableAmount: 200, currencyCode: "ECO" },
+  { accountType: "savings", balance: 200, currencyCode: "LUM" },
+);
 configuredData.banking.creditConfigured = true;
 configuredData.banking.creditScore = 720;
 configuredData.banking.transferLimit = 500;

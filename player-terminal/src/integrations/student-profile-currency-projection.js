@@ -62,11 +62,13 @@ function accountBalanceForCurrency(balances, accountType, preferredCurrencyCode)
   return rows.length === 1 ? rows[0] : null;
 }
 
-export function bindBankingCurrency(snapshot, raw) {
+export function bindBankingCurrency(snapshot) {
   const preferredCurrencyCode = snapshot.session?.currencyResolved === true
     ? currencyCode(snapshot.session.currencyCode)
     : "";
-  const balances = Array.isArray(raw?.currentBalances) ? raw.currentBalances : [];
+  // The ledger has already reconciled posted, held and available amounts.
+  // Resolve currency/account without recalculating or overriding that snapshot.
+  const balances = snapshot.banking?.balances;
   const checking = accountBalanceForCurrency(
     balances,
     "checking",
@@ -77,10 +79,8 @@ export function bindBankingCurrency(snapshot, raw) {
     "savings",
     preferredCurrencyCode,
   );
-  const checkingBalance = checking ? Number(checking.postedAmount ?? checking.balance) : null;
-  const savingsBalance = savings ? Number(savings.postedAmount ?? savings.balance) : null;
-  const checkingAmount = Number.isFinite(checkingBalance) ? checkingBalance : null;
-  const savingsAmount = Number.isFinite(savingsBalance) ? savingsBalance : null;
+  const checkingAmount = checking?.postedAmount ?? null;
+  const savingsAmount = savings?.postedAmount ?? null;
   return {
     ...snapshot,
     banking: {
@@ -91,10 +91,10 @@ export function bindBankingCurrency(snapshot, raw) {
           accountId: String(checking.accountKey || "CHECKING"),
           balance: checkingAmount,
           postedAmount: checkingAmount,
-          heldAmount: Number(checking.heldAmount ?? checking.held ?? 0),
-          available: Number(checking.availableAmount ?? checking.available ?? checkingAmount),
-          availableAmount: Number(checking.availableAmount ?? checking.available ?? checkingAmount),
-          pending: Number(checking.heldAmount ?? checking.held ?? 0),
+          heldAmount: checking.heldAmount,
+          available: checking.availableAmount,
+          availableAmount: checking.availableAmount,
+          pending: checking.heldAmount,
           currencyCode: currencyCode(checking.currencyCode),
         }
         : {
@@ -102,7 +102,7 @@ export function bindBankingCurrency(snapshot, raw) {
           accountId: "CHECKING",
           balance: null,
           available: null,
-          pending: 0,
+          pending: null,
           currencyCode: preferredCurrencyCode,
         },
       savings: savings
@@ -111,9 +111,9 @@ export function bindBankingCurrency(snapshot, raw) {
           accountId: String(savings.accountKey || "SAVINGS"),
           balance: savingsAmount,
           postedAmount: savingsAmount,
-          heldAmount: Number(savings.heldAmount ?? savings.held ?? 0),
-          available: Number(savings.availableAmount ?? savings.available ?? savingsAmount),
-          availableAmount: Number(savings.availableAmount ?? savings.available ?? savingsAmount),
+          heldAmount: savings.heldAmount,
+          available: savings.availableAmount,
+          availableAmount: savings.availableAmount,
           interestRate: snapshot.banking?.savings?.interestRate ?? null,
           interestEarned: snapshot.banking?.savings?.interestEarned ?? null,
           currencyCode: currencyCode(savings.currencyCode),

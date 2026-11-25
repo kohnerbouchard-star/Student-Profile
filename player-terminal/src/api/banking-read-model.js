@@ -1,3 +1,4 @@
+import { projectBankingBalanceAmounts } from "./banking-balance-values.js";
 import { list, object, text, number, shortDate } from "./read-model-values.js";
 
 function transactionDescription(entry) {
@@ -10,20 +11,20 @@ function transactionDescription(entry) {
 export function normalizeBankingRead(response, currentBanking, currencyCode) {
   const body = object(response);
   const current = object(currentBanking);
-  const balances = list(body.currentBalances);
-  const accountKind = (item) => text(item?.accountKind || item?.accountType).toLowerCase();
-  const postedAmount = (item) => number(item?.postedAmount ?? item?.balance);
-  const heldAmount = (item) => Math.max(0, number(item?.heldAmount ?? item?.held));
-  const availableAmount = (item) => number(
-    item?.availableAmount ?? item?.available,
-    postedAmount(item) - heldAmount(item),
-  );
+  const balances = list(body.currentBalances).map((value) => {
+    const balance = object(value);
+    const accountKind = text(balance.accountKind || balance.accountType).toLowerCase();
+    return {
+      accountKey: text(balance.accountKey), accountKind, accountType: accountKind,
+      ...projectBankingBalanceAmounts(balance),
+      currencyCode: text(balance.currencyCode).toUpperCase()
+    };
+  });
   const localCurrency = text(currencyCode).toUpperCase();
   const localAccount = (kind) => balances.find((item) =>
-    localCurrency && accountKind(item) === kind && text(item.currencyCode).toUpperCase() === localCurrency);
+    localCurrency && item.accountKind === kind && item.currencyCode === localCurrency);
   const checking = localAccount("checking");
   const savings = localAccount("savings");
-  const checkingBalance = checking ? postedAmount(checking) : null;
   const page = object(body.pagination);
   const incoming = list(body.ledgerEntries).map((entry) => {
     const amount = number(entry.amount);
@@ -46,39 +47,29 @@ export function normalizeBankingRead(response, currentBanking, currencyCode) {
   const staleTimestamp = Date.parse(staleAt);
   return {
     ...current,
-    balances: balances.map((balance) => ({
-      accountKey: text(balance.accountKey),
-      accountKind: accountKind(balance),
-      accountType: accountKind(balance),
-      postedAmount: postedAmount(balance),
-      heldAmount: heldAmount(balance),
-      availableAmount: availableAmount(balance),
-      balance: postedAmount(balance),
-      available: availableAmount(balance),
-      currencyCode: text(balance.currencyCode).toUpperCase()
-    })),
+    balances,
     checking: {
       configured: Boolean(checking),
-      accountId: checking ? text(checking.accountKey || checking.accountType, "CHECKING") : "NOT CONFIGURED",
-      balance: checkingBalance,
-      postedAmount: checkingBalance,
-      heldAmount: checking ? heldAmount(checking) : null,
-      available: checking ? availableAmount(checking) : null,
-      availableAmount: checking ? availableAmount(checking) : null,
-      pending: checking ? heldAmount(checking) : null,
+      accountId: checking ? (checking.accountKey || "CHECKING") : "NOT CONFIGURED",
+      balance: checking?.postedAmount ?? null,
+      postedAmount: checking?.postedAmount ?? null,
+      heldAmount: checking?.heldAmount ?? null,
+      available: checking?.availableAmount ?? null,
+      availableAmount: checking?.availableAmount ?? null,
+      pending: checking?.heldAmount ?? null,
       currencyCode: localCurrency
     },
     savings: savings ? {
       configured: true,
-      accountId: text(savings.accountKey || savings.accountType, "SAVINGS"),
-      balance: postedAmount(savings),
-      postedAmount: postedAmount(savings),
-      heldAmount: heldAmount(savings),
-      available: availableAmount(savings),
-      availableAmount: availableAmount(savings),
+      accountId: savings.accountKey || "SAVINGS",
+      balance: savings.postedAmount,
+      postedAmount: savings.postedAmount,
+      heldAmount: savings.heldAmount,
+      available: savings.availableAmount,
+      availableAmount: savings.availableAmount,
       interestRate: null,
       interestEarned: null,
-      currencyCode: text(savings.currencyCode).toUpperCase()
+      currencyCode: savings.currencyCode
     } : {
       configured: false,
       accountId: "NOT CONFIGURED",

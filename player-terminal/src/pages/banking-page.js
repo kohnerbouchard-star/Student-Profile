@@ -1,3 +1,4 @@
+import { projectBankingBalanceAmounts } from "../api/banking-balance-values.js";
 import { escapeHtml, formatCurrency } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderEmptyState, renderStatusPill } from "../components/ui.js";
@@ -71,22 +72,12 @@ function decimalStep(minorUnit) {
 
 function canonicalBalance(balance) {
   const accountType = publicAccountType(balance.accountKind || balance.accountType);
-  const postedAmount = balance.postedAmount ?? balance.balance;
-  const heldAmount = balance.heldAmount ?? balance.held ?? 0;
-  const availableAmount = balance.availableAmount ?? balance.available ??
-    (hasNumericValue(postedAmount) && hasNumericValue(heldAmount)
-      ? Number(postedAmount) - Number(heldAmount)
-      : null);
   return {
     ...balance,
     accountType,
     accountKind: accountType,
     accountKey: String(balance.accountKey || balance.accountId || "").trim(),
-    postedAmount,
-    heldAmount,
-    availableAmount,
-    balance: postedAmount,
-    available: availableAmount,
+    ...projectBankingBalanceAmounts(balance),
     currencyCode: String(balance.currencyCode || "ECO").trim().toUpperCase() || "ECO",
   };
 }
@@ -108,8 +99,7 @@ function renderTransaction(transaction, fallbackCurrencyCode) {
   </article>`;
 }
 
-function renderBalanceCard(rawBalance, bank) {
-  const balance = canonicalBalance(rawBalance);
+function renderBalanceCard(balance, bank) {
   const accountLabel = balance.accountType.replace(/[_-]+/g, " ").toUpperCase();
   const isSavings = balance.accountType === "savings";
   const detail = isSavings && bank.savings?.configured !== false
@@ -273,13 +263,16 @@ function renderFxPanel(data, checkingBalances) {
   </section>`;
 }
 
+function localAccountConfigured(account, currencyCode) {
+  if (account?.currencyCode && account.currencyCode !== currencyCode) return false;
+  return account?.configured === true || (account?.configured === undefined && hasNumericValue(account?.balance));
+}
+
 export function renderBankingPage(data) {
   const bank = data.banking;
   const currencyCode = data.session.currencyCode;
-  const checkingConfigured = bank.checking?.configured !== false &&
-    hasNumericValue(bank.checking?.balance);
-  const savingsConfigured = bank.savings?.configured !== false &&
-    hasNumericValue(bank.savings?.balance);
+  const checkingConfigured = localAccountConfigured(bank.checking, currencyCode);
+  const savingsConfigured = localAccountConfigured(bank.savings, currencyCode);
   const creditConfigured = bank.creditConfigured === true &&
     hasNumericValue(bank.creditScore);
   const bankTransferConfigured = checkingConfigured && isEndpointEnabled(data.capabilities, "bankTransfer");
@@ -302,11 +295,9 @@ export function renderBankingPage(data) {
   const ledgerBalances = Array.isArray(bank.balances) && bank.balances.length
     ? bank.balances.map(canonicalBalance)
     : [canonicalBalance({
+      ...bank.checking,
       accountType: "checking",
       accountKey: bank.checking?.accountId,
-      postedAmount: bank.checking?.postedAmount ?? bank.checking?.balance,
-      heldAmount: bank.checking?.heldAmount ?? bank.checking?.pending ?? 0,
-      availableAmount: bank.checking?.availableAmount ?? bank.checking?.available,
       currencyCode: bank.checking?.currencyCode || currencyCode,
     })];
   const balances = ledgerBalances;

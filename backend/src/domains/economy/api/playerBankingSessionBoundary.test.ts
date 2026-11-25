@@ -4,7 +4,7 @@ import { handlePlayerBankingPublicRequest } from "./playerBankingPublicHttpHandl
 declare const Deno: { test(name: string, run: () => void | Promise<void>): void };
 const GAME = "00000000-0000-4000-8000-000000000001", PLAYER = "00000000-0000-4000-8000-000000000002";
 const STAMP = "2026-10-01T00:00:00.000Z";
-type Options = { absent?: string; failure?: string; revoked?: boolean; expired?: boolean; inactive?: boolean; empty?: boolean; nullAccounts?: boolean };
+type Options = { absent?: string; failure?: string; revoked?: boolean; expired?: boolean; inactive?: boolean; empty?: boolean; nullAccounts?: boolean; accounts?: readonly Record<string, unknown>[] };
 function equal(actual: unknown, expected: unknown) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);
 }
@@ -31,7 +31,7 @@ async function fixture(options: Options, run: (f: any) => Promise<void>) {
     rpc(name: string, args: unknown) {
       calls.push({ name, args }); events.push(name);
       if (!["list_player_bank_accounts_v1", "list_player_bank_activity_v1"].includes(name)) throw new Error(`Unexpected RPC ${name}`);
-      const data = name === "list_player_bank_accounts_v1" ? options.nullAccounts ? null : options.empty ? [] : [{ account_key: "bac_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", account_kind: "checking", currency_code: "ECO", posted_amount: "100.2500", held_amount: "0.0100" }] : options.empty ? null : entries;
+      const data = name === "list_player_bank_accounts_v1" ? options.nullAccounts ? null : options.empty ? [] : options.accounts ?? [{ account_key: "bac_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", account_kind: "checking", currency_code: "ECO", posted_amount: "100.2500", held_amount: "0.0100" }] : options.empty ? null : entries;
       return Promise.resolve({ data, error: options.failure === name ? { message: "private SQL diagnostic" } : null });
     },
   };
@@ -85,4 +85,31 @@ Deno.test("Player Banking unsupported method never reads persistence", () => fix
 for (const failure of ["player_sessions", "game_sessions", "players"]) Deno.test(`Player Banking session lookup ${failure} error never reads money`, () => fixture({ failure }, async f => {
   const response = await f.send(), body = await response.json(); equal(response.status, 500); equal(f.calls, []);
   if (JSON.stringify(body).includes("private SQL")) throw new Error("Diagnostic leaked");
+}));
+
+for (const [label, amounts, expected] of [
+  ["explicit zero availability", { posted_amount: "15.34", held_amount: "15.34", available_amount: "0" }, [15.34, 15.34, 0]],
+  ["explicit zero hold", { posted_amount: "15.34", held_amount: "0", available_amount: "15.34" }, [15.34, 0, 15.34]],
+  ["known hold without availability", { posted_amount: "15.34", held_amount: "3" }, [15.34, 3, 12.34]],
+  ["signed balances", { posted_amount: "-2.25", held_amount: "0", available_amount: "-2.25" }, [-2.25, 0, -2.25]],
+  ["posted only", { balance: "15.34" }, null],
+  ["explicit availability without hold", { posted_amount: "15.34", available_amount: "12.34" }, null],
+  ["blank hold", { posted_amount: "15.34", held_amount: " " }, null],
+  ["negative hold", { posted_amount: "15.34", held_amount: "-3", available_amount: "12.34" }, null],
+  ["hex hold", { posted_amount: "15.34", held_amount: "0x0" }, null],
+  ["blank availability", { posted_amount: "15.34", held_amount: "3", available_amount: " " }, null],
+] as const) Deno.test(`Player Banking real read requires hold evidence: ${label}`, () => fixture({
+  accounts: [{ account_key: "bac_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", account_kind: "checking", currency_code: "ECO", ...amounts }],
+}, async (f) => {
+  const response = await f.send(), body = await response.json();
+  equal(f.calls.map((call: { name: string }) => call.name), ["list_player_bank_accounts_v1", "list_player_bank_activity_v1"]);
+  if (expected === null) {
+    equal(response.status, 500);
+    equal(body.error.code, "player_banking_read_failed");
+    equal(body.error.retryable, false);
+    equal(Object.hasOwn(body, "currentBalances"), false);
+  } else {
+    equal(response.status, 200);
+    equal(body.currentBalances.map((row: any) => [row.postedAmount, row.heldAmount, row.availableAmount]), [expected]);
+  }
 }));
