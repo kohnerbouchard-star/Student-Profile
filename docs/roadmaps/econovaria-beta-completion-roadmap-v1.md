@@ -875,3 +875,28 @@ no blocking findings. Backend checks lack Deno and browser checks lack Chromium;
 no database qualification, merge, deployment or full task completion claimed.
 See `docs/operations/evidence/player-market-summary-v1/scope.md` for acceptance,
 ownership, toolchain limitations and remaining gates.
+
+### 2026-11-25 — Marketplace draft availability
+
+`PLAYER-MARKETPLACE-DRAFT-INVENTORY-001` is `IMPLEMENTED_NOT_MERGED`,
+owned by [draft PR #1052](https://github.com/kohnerbouchard-star/Student-Profile/pull/1052)
+on `fix/player-marketplace-draft-inventory`, with donor `540a05b7`
+reconciled to main `938a3dbd`. Draft controls require a current Inventory
+read and an explicit positive whole-number available count. Missing or
+unverified stock does not fall back to owned quantity. The same eligibility
+and quantity check runs on submit using the public item key. Existing
+listing management and order history remain unchanged. This is a Player
+Marketplace UI change only: the existing Inventory GET and Marketplace
+draft POST are unchanged, with no migration, RPC, backend, dependency,
+production or release change.
+
+The mounted form suite and full Player verification passed locally.
+A native Marketplace desktop/mobile regression is registered for the
+unavailable, unverified and verified stock states, including no write
+when the quantity exceeds availability. The pinned browser package is
+not cached locally, and exact-head hosted results are still required.
+Repository-wide local checks reached unrelated metadata-operator tests
+but could not complete without the locked Supabase SDK; the hosted
+repository-wide check remains required. No staging or live claim.
+Next: qualify this exact draft and its connected Marketplace checks
+before merging. Market and Player News follow as a separate tranche.
