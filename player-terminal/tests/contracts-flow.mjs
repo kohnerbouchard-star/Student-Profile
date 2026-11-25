@@ -53,7 +53,7 @@ const contracts = [
   contract("active-contract", 102),
   contract("submitted-contract", 103),
   contract("revision-contract", 104),
-  contract("approved-contract", 105),
+  contract("approved-contract", 105, { rewardPayload: { cash: { amount: 50 } } }),
   contract("rejected-contract", 106),
   contract("completed-contract", 107),
   contract("expired-contract", 108, { deadlineAt: "2026-07-17T12:00:00.000Z", expiresAt: "2026-07-17T12:00:00.000Z" }),
@@ -104,7 +104,7 @@ assert.ok(!revisionHtml.includes('name="submissionUrl" type="url" placeholder="h
 assert.ok(revisionHtml.includes('name="note" rows="5" required'));
 
 const approvedHtml = renderContractsPage(data, { contractTab: "Approved", contractId: "approved-contract" });
-assert.ok(approvedHtml.includes("Reward issuance is pending backend confirmation"));
+assert.ok(approvedHtml.includes("Awaiting confirmation. The record does not yet confirm a reward outcome."));
 const rejectedHtml = renderContractsPage(data, { contractTab: "Rejected", contractId: "rejected-contract" });
 assert.ok(rejectedHtml.includes("The evidence does not match the objective."));
 const expiredHtml = renderContractsPage(data, { contractTab: "Expired", contractId: "expired-contract" });

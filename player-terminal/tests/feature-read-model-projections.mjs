@@ -209,8 +209,14 @@ test("Contracts lifecycle aliases preserve progress and timeline semantics", () 
   ]) {
     const item = read("contracts", { contracts: [{ contractId: "c" }], progress: [{ contractId: "c", status }] }).contracts.items[0];
     assert.deepEqual([item.status, item.progress], [expected, percent]);
-    assert.deepEqual(item.timeline.map((step) => step.complete), [true, expected !== "Available", ["Submitted", "Completed"].includes(expected), expected === "Completed"]);
+    assert.deepEqual(item.timeline.map((step) => step.complete), [true, expected !== "Available", ["Submitted", "Completed"].includes(expected), false]);
+    assert.equal(item.timeline.at(-1).time, "Not confirmed");
   }
+  const marked = read("contracts", { contracts: [{ contractId: "c" }], progress: [
+    { contractId: "c", status: "completed", rewardIssuedAt: "2026-01-02T03:04:00Z" },
+  ] }).contracts.items[0];
+  assert.equal(marked.timeline.at(-1).complete, true);
+  assert.match(marked.timeline.at(-1).time, /^Processing recorded/u);
 });
 
 test("Contracts preserve reward precedence, requirement shapes and submission metadata", () => {
