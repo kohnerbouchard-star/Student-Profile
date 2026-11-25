@@ -120,6 +120,7 @@ test("actual shell application loop separates bundle/suffix logs and fails on su
         const script = `set -euo pipefail
 repo_root="$PWD"
 container="unused-stub-target"
+PHASE15_WORK_DIR="$FIXTURE"
 plan_path="$FIXTURE/plan.json"
 applied_path="$FIXTURE/applied"
 suffix_applied_path="$FIXTURE/suffix-applied"
