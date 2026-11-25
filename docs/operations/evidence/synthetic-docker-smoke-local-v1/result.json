@@ -1,0 +1,17 @@
+{
+  "status": "LOCAL_SOURCE_AND_NATIVE_SQL_PASS_DOCKER_PENDING",
+  "baseCommit": "cf27f96f6a4e396ff92afd78609a10764c2a2683",
+  "nodeVersion": "22.23.1",
+  "localTestsPassed": 57,
+  "localTestsSkipped": 0,
+  "localCommandPlanTests": "PASS",
+  "localNativePostgresSchemaDumpRestoreGuard": "PASS",
+  "actualLocalDockerExecution": "NOT_RUN_DOCKER_UNAVAILABLE",
+  "naturalPullRequestDockerCI": "PENDING_NOT_PUBLISHED",
+  "existingReplayPRFilters": "UNCHANGED",
+  "liveShapedHold": "UNCHANGED",
+  "protectedStagingBindingAndAuthority": "UNCHANGED",
+  "hostedBackendConnections": false,
+  "hostedWrites": false,
+  "fullStagingQualification": false
+}

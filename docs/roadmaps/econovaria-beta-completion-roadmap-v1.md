@@ -926,3 +926,30 @@ Roster roles to one public carrier. Preserve #1055's ordered 127 required / 76
 critical identities, verifier assertions and false production permissions. No
 workflow-filter, historical SQL or fixture/diagnostic behavior change. Source
 checks require fresh exact-head qualification; draft remains unmerged.
+
+### REF-032 / OPS-STAGE-001 — local pre-migration stage diagnostics (2026-11-25)
+
+`IMPLEMENTED_NOT_MERGED`, LOCAL_ONLY at held base `e6bf130c63`. Run 45700466251's
+pre-migration cause remains UNKNOWN; old P0001 evidence is not reused. Adds fixed
+enum stages, preserves primary failure through cleanup errors and projects fixed
+ledger error classes without private stderr/rows/captures. Direct Bash and actual
+shell synthetic reproduction prove a failed Docker inventory can be masked in a
+for-loop substitution; assigning inventory separately now fails closed. This
+local defect is not asserted as the historical cause. Existing authorization,
+source/project/network/socket guards and historical SQL remain intact. No hosted
+connection, publish, dispatch, merge or deployment. See
+`docs/operations/evidence/staging-premigration-stages-local-v1/review.md`.
+Next: parent review and independent source qualification before any new rehearsal.
+
+### REF-032 / OPS-STAGE-001 — local synthetic Docker PR smoke (2026-11-25)
+
+`IMPLEMENTED_NOT_MERGED`, LOCAL_ONLY on exact diagnostics candidate `cf27f96f6a`.
+Adds one same-repository PR-only step to existing Database Replay, with unchanged
+filters/permissions/live-shaped hold and unchanged protected staging authority.
+A unique empty synthetic stack must start, lose network egress, dump/restore only
+two tiny synthetic schemas/ledger and reject its own deterministic guard. No
+hosted inputs or actual migration history is used. Local command-plan contracts
+and native PostgreSQL dump/restore/guard run; actual Docker is unavailable locally
+and remains pending natural PR CI. No push, merge, dispatch or provider change.
+See `docs/operations/evidence/synthetic-docker-smoke-local-v1/review.md`.
+Next: parent review of checksum-verified local delivery; no full staging claim.

@@ -66,6 +66,7 @@ jobs:
           gh run download "$REPLAY_RUN" --name "phase15-clean-replay-$GITHUB_SHA" --dir "$RUNNER_TEMP/u1/canonical"
           docker pull "$IMAGE"
           node --test \
+            scripts/operations/live-migration-reconciliation/rehearsal-stage-diagnostic.test.mjs \
             scripts/operations/live-migration-reconciliation/sanitize-rehearsal-failure.test.mjs \
             scripts/operations/live-migration-reconciliation/disposable-purge-control-fixture.test.mjs \
             scripts/operations/live-migration-reconciliation/captured-staging-purge-fixture.test.mjs \
@@ -126,7 +127,7 @@ jobs:
             ledger_digest="$(sha256sum "$PHASE15_CAPTURE_DIR/ledger.json" | cut -d' ' -f1)"
             jq --arg schema "$schema_digest" --arg ledger "$ledger_digest" '{
               sourceCommit, environment, status, exitCode, executionMode,
-              failedMigration, failedVersion, failureStage, failureSqlstate,
+              errorClass, failedMigration, failedVersion, failureStage, failureSqlstate,
               appliedMigrationCount, certifiedMigrationCount,
               canonicalApplicationSchemaMatched, runtimeCatalogComparisonExit,
               sourceRowsCopied, rawSchemaDumpRetained,
