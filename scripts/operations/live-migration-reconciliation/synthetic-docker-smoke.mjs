@@ -33,6 +33,8 @@ export function classifySyntheticFailure(error){
  if(error?.code==='ENOENT')exitKind='command-missing';
  else if(error?.code==='ETIMEDOUT')exitKind='command-timeout';
  else if(/connection to server on socket .* failed:\s+No such file or directory/.test(stderr))exitKind='socket-unavailable';
+ else if(/connection to server on socket .* failed:\s+Permission denied/.test(stderr))exitKind='socket-permission';
+ else if(/connection to server on socket .* failed:\s+Connection refused/.test(stderr))exitKind='socket-refused';
  else if(/(?:Peer|password) authentication failed/.test(stderr))exitKind='authentication';
  return {exitKind,exitCode:Number.isInteger(error?.status)&&error.status>=0&&error.status<=255?error.status:null,sqlState};
 }
@@ -42,9 +44,16 @@ export function validateConnectionContext(text){
  for(const key of Object.keys(value))assert.equal(typeof value[key],'boolean');
  return value;
 }
+// Read-only discriminator: fixed local Unix sockets only; never selects a target.
+export const SOCKET_PROBE_SCRIPT="for d in /var/run/postgresql /tmp; do if test -S \"$d/.s.PGSQL.5432\"; then printf '1 '; else printf '0 '; fi; pg_isready -h \"$d\" -p 5432 -U postgres -d postgres -t 2 >/dev/null 2>&1; printf '%s\\n' \"$?\"; done";
+export function validateSocketProbe(text){
+ assert.match(text,/^[01] [0123]\n[01] [0123]$/);
+ const rows=text.split('\n').map(row=>row.split(' ').map(Number));
+ return {requestedSocketPresent:rows[0][0]===1,requestedReadiness:rows[0][1],alternateSocketPresent:rows[1][0]===1,alternateReadiness:rows[1][1]};
+}
 const defaultRun=(command,args,input,timeout=30000)=>execFileSync(command,args,{input,timeout,maxBuffer:1024*1024,encoding:'utf8',stdio:[input===undefined?'ignore':'pipe','pipe','pipe']}).trim();
 export function runSyntheticDockerSmoke({env=process.env,event=JSON.parse(readFileSync(env.GITHUB_EVENT_PATH,'utf8')),run=defaultRun,root=process.cwd()}={}){
- let stage='synthetic-input-preflight',work,cli,attempted=false,result,connectionContext;
+ let stage='synthetic-input-preflight',work,cli,attempted=false,result,connectionContext,socketProbe;
  try{
   const sha=run('git',['rev-parse','HEAD']);assertSyntheticContext(env,event,sha);
   assert.equal(JSON.parse(run('docker',['context','inspect']))[0].Endpoints.docker.Host,'unix:///var/run/docker.sock');
@@ -64,8 +73,10 @@ export function runSyntheticDockerSmoke({env=process.env,event=JSON.parse(readFi
   metadata=JSON.parse(run('docker',['inspect',id]))[0];assert.equal(assertSyntheticContainer(metadata,project,started,true),id);
   const sql=text=>{
    const current=JSON.parse(run('docker',['inspect',id]))[0];assert.equal(assertSyntheticContainer(current,project,started,true),id);
-   return run('docker',['exec','-e','PGHOSTADDR=','-e','PGSERVICE=','-e','PGSERVICEFILE=/dev/null','-i',id,'psql','-h','/var/run/postgresql','-p','5432','-U','postgres','-d','postgres','-XqAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=sqlstate'],`set statement_timeout='10s';set lock_timeout='2s';\n${text}`);
+   return run('docker',['exec','-e','LC_ALL=C','-e','PGCONNECT_TIMEOUT=3','-e','PGHOSTADDR=','-e','PGSERVICE=','-e','PGSERVICEFILE=/dev/null','-i',id,'psql','-h','/var/run/postgresql','-p','5432','-U','postgres','-d','postgres','-XqAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=sqlstate'],`set statement_timeout='10s';set lock_timeout='2s';\n${text}`);
   };
+  stage='synthetic-socket-transport';
+  socketProbe=validateSocketProbe(run('docker',['exec','-e','LC_ALL=C','-e','PGCONNECT_TIMEOUT=3','-e','PGHOSTADDR=','-e','PGSERVICE=','-e','PGSERVICEFILE=/dev/null',id,'sh','-c',SOCKET_PROBE_SCRIPT],undefined,10000));
   stage='synthetic-socket-context';connectionContext=validateConnectionContext(sql(CONNECTION_CONTEXT));
   assert(connectionContext.unixSocket&&connectionContext.roleMatches&&connectionContext.databaseMatches);
   stage='synthetic-schema-create';sql(SYNTHETIC_SCHEMA);
@@ -83,7 +94,7 @@ export function runSyntheticDockerSmoke({env=process.env,event=JSON.parse(readFi
   assert.equal(sql('select count(*) from synthetic_probe.item'),'0');assert.equal(sql('select count(*) from synthetic_ledger.migrations'),'1');
   assert.equal(run('git',['rev-parse','HEAD']),sha);
   result={status:'PASS',stage:'synthetic-guard',sourceCommit:sha,syntheticOnly:true,guardRejected:true,fullStagingQualification:false};
- }catch(error){result={status:'FAILED',stage,...classifySyntheticFailure(error),...(connectionContext?{connectionContext}:{}),syntheticOnly:true,fullStagingQualification:false};}
+ }catch(error){result={status:'FAILED',stage,...classifySyntheticFailure(error),...(connectionContext?{connectionContext}:{}),...(socketProbe?{socketProbe}:{}),syntheticOnly:true,fullStagingQualification:false};}
  finally{
   if(attempted){try{run(cli,['stop','--workdir',work,'--no-backup'],undefined,60000);}catch{if(result?.status==='PASS')result={status:'FAILED',stage:'synthetic-cleanup',syntheticOnly:true,fullStagingQualification:false};}}
   if(work){try{rmSync(work,{recursive:true,force:true});}catch{if(result?.status==='PASS')result={status:'FAILED',stage:'synthetic-cleanup',syntheticOnly:true,fullStagingQualification:false};}}

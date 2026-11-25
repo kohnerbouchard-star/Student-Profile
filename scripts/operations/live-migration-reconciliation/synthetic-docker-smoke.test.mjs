@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {mkdtempSync,rmSync,readFileSync,readdirSync} from 'node:fs';import {tmpdir} from 'node:os';import path from 'node:path';
-import {assertSyntheticContext,assertSyntheticContainer,runSyntheticDockerSmoke,SYNTHETIC_GUARD,classifySyntheticFailure,CONNECTION_CONTEXT,validateConnectionContext} from './synthetic-docker-smoke.mjs';
+import {mkdtempSync,rmSync,readFileSync,readdirSync,writeFileSync} from 'node:fs';import {tmpdir} from 'node:os';import path from 'node:path';
+import {assertSyntheticContext,assertSyntheticContainer,runSyntheticDockerSmoke,SYNTHETIC_GUARD,classifySyntheticFailure,CONNECTION_CONTEXT,validateConnectionContext,SOCKET_PROBE_SCRIPT,validateSocketProbe} from './synthetic-docker-smoke.mjs';
 const sha='a'.repeat(40);
 function context(temp){return {env:{GITHUB_ACTIONS:'true',GITHUB_WORKFLOW:'Database Replay',GITHUB_JOB:'replay',GITHUB_EVENT_NAME:'pull_request',GITHUB_REPOSITORY:'kohnerbouchard-star/Student-Profile',REF032_SYNTHETIC_DOCKER_SMOKE:'1',RUNNER_TEMP:temp},event:{pull_request:{base:{ref:'main'},head:{sha,repo:{full_name:'kohnerbouchard-star/Student-Profile'}}}}};}
 function stub(fail){
@@ -20,6 +20,7 @@ function stub(fail){
   if(args[0]==='network'){if(fail==='disconnect')throw new Error('PRIVATE_NETWORK');if(fail!=='retained-network')metadata.NetworkSettings.Networks={};return '';}
   if(args[0]==='stop'){if(['cleanup','restore-cleanup','create-cleanup'].includes(fail))throw new Error('PRIVATE_CLEANUP');return '';}
   if(args.includes('pg_dump')){if(fail==='dump')throw Object.assign(new Error('PRIVATE'),{status:1,stderr:'PRIVATE'});if(fail==='dump-boundary')return 'INSERT INTO private values(1);';return '-- synthetic schema-only dump\ncreate schema synthetic_probe;create schema synthetic_ledger;';}
+  if(args[0]==='exec'&&args.includes(SOCKET_PROBE_SCRIPT)){if(fail==='transport')return 'PRIVATE';return '1 0\n0 2';}
   if(args[0]==='exec'){
    assert(args.includes('/var/run/postgresql'));assert.equal(Object.keys(metadata.NetworkSettings.Networks).length,0);
    if(input.includes(CONNECTION_CONTEXT)){if(fail==='socket')throw Object.assign(new Error('PRIVATE'),{status:2,stderr:'connection to server on socket PRIVATE failed: No such file or directory'});return JSON.stringify({unixSocket:true,roleMatches:true,databaseMatches:true,requestedDirectoryConfigured:true});}
@@ -112,4 +113,23 @@ test('real local missing-socket attempt stays bounded even with empty client dia
  try{let error;try{execFileSync(path.join(process.env.REF032_PG_BIN,'psql'),['-h',dir,'-p','57663','-U','postgres','-d','postgres','-XqAt','-c','select 1'],{timeout:3000,encoding:'utf8',env:{PATH:process.env.PATH,LC_ALL:'C'},stdio:['ignore','pipe','pipe']});}catch(e){error=e;}
  assert(error);const result=classifySyntheticFailure(error);assert(['socket-unavailable','command'].includes(result.exitKind));assert.equal(result.exitCode,2);assert(!JSON.stringify(result).includes(dir));
  }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('socket discriminator accepts only fixed boolean/readiness projection',()=>{
+ assert.deepEqual(validateSocketProbe('1 0\n0 2'),{requestedSocketPresent:true,requestedReadiness:0,alternateSocketPresent:false,alternateReadiness:2});
+ for(const text of ['PRIVATE','1 0\n0 2\nPRIVATE','1 99\n0 2','1 0\n0 -1'])assert.throws(()=>validateSocketProbe(text));
+ assert(!SOCKET_PROBE_SCRIPT.includes('localhost'));assert(!SOCKET_PROBE_SCRIPT.includes('127.0.0.1'));assert(!SOCKET_PROBE_SCRIPT.includes('chmod'));
+ const temp=mkdtempSync(path.join(tmpdir(),'synthetic-transport-'));try{const s=stub('socket');const result=runSyntheticDockerSmoke({...context(temp),run:s.run});assert.equal(result.stage,'synthetic-socket-context');assert.equal(result.socketProbe.requestedReadiness,0);assert(!s.calls.some(c=>c.input?.includes('create schema')));assert(!JSON.stringify(result).includes('PRIVATE'));}finally{rmSync(temp,{recursive:true,force:true});}
+});
+
+test('C-locale libpq socket errno and authentication forms are bounded',()=>{
+ for(const [message,kind] of [['No such file or directory','socket-unavailable'],['Permission denied','socket-permission'],['Connection refused','socket-refused'],['FATAL:  Peer authentication failed for user "PRIVATE"','authentication']]){
+ const error={status:2,stderr:'psql: error: connection to server on socket "PRIVATE" failed: '+message+'\nPRIVATE'};assert.equal(classifySyntheticFailure(error).exitKind,kind);assert(!JSON.stringify(classifySyntheticFailure(error)).includes('PRIVATE'));}
+});
+
+test('actual POSIX shell probe emits only the strict projection',async()=>{
+ const {execFileSync}=await import('node:child_process');const temp=mkdtempSync(path.join(tmpdir(),'synthetic-readiness-command-'));
+ try{writeFileSync(path.join(temp,'pg_isready'),'#!/bin/sh\ncase "$*" in *"-h /var/run/postgresql "*) exit 2;; *"-h /tmp "*) exit 1;; *) exit 99;; esac\n',{mode:0o700});
+ const text=execFileSync('/bin/sh',['-c',SOCKET_PROBE_SCRIPT],{env:{PATH:temp},encoding:'utf8',timeout:1000}).trim();const value=validateSocketProbe(text);assert.equal(value.requestedReadiness,2);assert.equal(value.alternateReadiness,1);
+ }finally{rmSync(temp,{recursive:true,force:true});}
 });
