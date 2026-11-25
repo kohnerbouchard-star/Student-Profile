@@ -151,3 +151,42 @@ Roster runtime projection, source classifications, verifier, modes, overlays,
 workflow coverage and all gates remain unchanged. An initial stale-pin/scope
 failure is not a waiver; qualify the final exact head. Supabase Preview must
 remain skipped on the resulting PR. No production readiness follows from CI.
+
+## Actual draft and supplemental mounted qualification
+
+Draft PR [#1055](https://github.com/kohnerbouchard-star/Student-Profile/pull/1055)
+uses the existing owner branch against main. Initial public source
+`a290082e972b5061b1ed9a376f614b58c17465f0` has exact tree
+`5f921b4e6feee2a0c398f00897d7752cb0db6085`, equal to local audited
+`1473f1b45d`. CLI push failed for missing credentials and did not execute;
+the connected GitHub tree/commit API published the identical reviewed bytes.
+Local integrated donor history is retained under
+`refs/checkpoints/t027-local-integrated-20261125`; the clean worktree was aligned
+to the public source only after whole-tree equality. No other worker was edited.
+
+Actual-number authority `docs/operations/contracts/player-cross-cutting/pr-1055.json`
+locks 29 exact paths (the 27 final changed paths plus the read-only verifier and
+its regression test). All requirements from the current main PR1044 manifest
+are retained, with matching workflow/job identities added: 127 required /
+76 critical. Derivation inspects actual pull-request path filters and job guards;
+44 workflows match this diff. Main-only or explicit-dispatch release jobs remain
+intended guarded skips. No workflow/verifier/test policy was changed.
+
+Using the Loan History lane's already-installed temporary
+`@sparticuz/chromium@158.0.0`, all 48 selected native browser cases passed:
+24 desktop and 24 Pixel 7 mobile, including all ten new availability cases.
+The suites mount the real Player terminal and exercise read/render, freshness,
+FX intent/error handling and transfer forms with mocked API responses. Original
+assertions and project viewports were retained. Temporary config uses HTTP port
+42727 and disables video because ffmpeg is unavailable; failure screenshots and
+traces remain enabled. No repository dependency or lockfile changed. Log:
+`/tmp/t027-20261125-browser-fallback.log`; config:
+`/tmp/t027-20261125-playwright-fallback.config.mjs`; results:
+`/tmp/t027-20261125-browser-fallback-results`.
+
+This supplements, and does not replace, required pinned Chromium 147 GitHub CI.
+The earlier missing-binary failures remain historical attempts. Aggregate frozen
+SDK checks and connected authentication/database acceptance remain unverified.
+Exact PR1055 path verification and strict Roster projection must pass after the
+final pin-only publication; public source checkpoint/pin SHA is recorded by the
+pin commit and returned to the parent. No merge or deployment is authorized.
