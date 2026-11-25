@@ -900,3 +900,23 @@ but could not complete without the locked Supabase SDK; the hosted
 repository-wide check remains required. No staging or live claim.
 Next: qualify this exact draft and its connected Marketplace checks
 before merging. Market and Player News follow as a separate tranche.
+
+### 2026-11-25 — Player Market and News read accuracy (T047 follow-up)
+
+`PLAYER-MARKET-READ-EVIDENCE-002` is `IMPLEMENTED_NOT_MERGED` on the
+existing Market read-evidence branch, combining the Market donor
+`d232a6b353` and its Player News ancestor `51e278ab` with actual main
+`73ee21a9846442e85e3e5f2f650229423f2c5404`. Market renders dated recorded
+prices only; an unavailable or non-open reported Dashboard state cannot
+start a new Stock review. The server still authorizes all orders. News
+keeps published topics visible without presenting stale or unverified
+Market and Country references as current linked data. No new routes, RPCs,
+migrations, deployment changes or hosted writes.
+
+Retained the incoming mounted Store tests alongside the Market and News
+regressions; regenerated architecture inventory. Full Player verification,
+source-size and architecture checks passed locally. Native browser and
+exact-head GitHub qualification are still required. #1052 is already merged
+as `244b5020` (superseding the operational state above); this tranche does
+not change Marketplace behavior. Next: qualify this candidate before any
+merge; do not claim T047 or beta release verification.

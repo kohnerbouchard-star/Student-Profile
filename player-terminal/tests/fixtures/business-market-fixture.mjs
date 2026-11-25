@@ -14,10 +14,11 @@ export function businessMarketData() {
   let data=structuredClone(previewData);
   data=mergeTerminalRead(data,'market',{assets:[listedBusiness()],tickIndex:1});
   data.market.status='OPEN';data.market.nextClose='17:00';
+  data.dashboard.reportedMarketStatus='OPEN';
   data.portfolio=attachPortfolioHoldings(data.portfolio,{holdings:[{ticker:TICKER,companyName:'Northreach Fabrication',countryCode:'NORTHREACH',sector:'manufacturing',currencyCode:'NRC',quantity:20,averageCost:2.5,currentPrice:2.5,marketValue:50,costBasis:50,unrealizedPnl:0,realizedPnl:0}]});
   data.bankingFx={balances:[{accountKey:ACCOUNT,accountKind:'checking',currencyCode:'NRC',availableAmount:'100'}]};
   data.businessIpos=null;data.business={configured:false};
-  data.resourceStatus={bankingFx:{state:'ready'},banking:{state:'ready'},market:{state:'ready'},portfolio:{state:'ready'},news:{state:'ready'},businessIpos:{state:'unavailable'}};
+  data.resourceStatus={dashboard:{state:'ready'},bankingFx:{state:'ready'},banking:{state:'ready'},market:{state:'ready'},portfolio:{state:'ready'},news:{state:'ready'},businessIpos:{state:'unavailable'}};
   data.capabilities={routes:{market:true,portfolio:true},endpointKeys:{marketOrder:true,marketAsset:true,portfolio:true},actions:{marketOrder:true}};
   return data;
 }

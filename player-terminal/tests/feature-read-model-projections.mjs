@@ -39,19 +39,25 @@ test("Market bootstrap joins holdings, news and sector order without mutating th
   assert.equal(data.market.selectedAssetId, "a");
   assert.deepEqual(data.market.sectors, ["All", "Tech", "All"]);
   assert.deepEqual([asset.owned, asset.averageCost, asset.risk, asset.outlook, asset.countryId], [3, 4, "High", "Positive", "ab"]);
-  assert.deepEqual(asset.history, [10, 12]);
+  assert.deepEqual(asset.history, []);
+  assert.equal(asset.historyStatus, "unavailable");
   assert.deepEqual(asset.newsIds, ["n"]);
   assert.deepEqual(data.dashboard.marketPulse, [{ symbol: "A", price: 12, change: 2 }, { symbol: "—", price: 5, change: -1 }]);
   assert.deepEqual({ me, market }, before);
 });
 
-test("Market reads preserve local details, selected ID and history tail while replacing the asset list", () => {
+test("Market directory reads retain observed history unchanged while replacing quote and list fields", () => {
   const data = boot({}, { stocks: [{ assetId: "a", currentPrice: 1 }, { assetId: "b", currentPrice: 2 }] });
-  Object.assign(data.market.assets[1], { history: [1, 2, 3, 4], watchlisted: true, owned: 7, averageCost: 6, pe: 8, yield: 9, newsIds: ["old"], description: "Existing" });
+  const history = [1, 2, 3, 4].map((price, tickIndex) => ({
+    price, tickIndex, createdAt: new Date(Date.UTC(2026, 6, 18, 5, tickIndex)).toISOString(),
+  }));
+  Object.assign(data.market.assets[1], { history, historyStatus: "loaded", listingCurrencyCode: "ECO", watchlisted: true, owned: 7, averageCost: 6, pe: 8, yield: 9, newsIds: ["old"], description: "Existing" });
   data.market.selectedAssetId = "b";
   const pagination = { cursor: "opaque" };
-  const next = read("market", { assets: [{ assetId: "b", currentPrice: 12, sector: "Tech" }], pagination, tickIndex: "4" }, data);
-  assert.deepEqual(next.market.assets[0].history, [1, 2, 3, 12]);
+  const next = read("market", { assets: [{ assetId: "b", currentPrice: 12, sector: "Tech", listingCurrencyCode: "ECO" }], pagination, tickIndex: "4" }, data);
+  assert.deepEqual(next.market.assets[0].history, history);
+  assert.equal(next.market.assets[0].historyStatus, "last-loaded");
+  assert.equal(next.market.assets[0].price, 12);
   assert.deepEqual([next.market.assets[0].watchlisted, next.market.assets[0].owned, next.market.assets[0].averageCost, next.market.assets[0].pe, next.market.assets[0].yield], [true, 7, 6, 8, 9]);
   assert.deepEqual(next.market.assets[0].newsIds, ["old"]);
   assert.equal(next.market.assets[0].description, "Existing");
@@ -59,19 +65,20 @@ test("Market reads preserve local details, selected ID and history tail while re
   assert.equal(next.market.selectedAssetId, "b");
   assert.equal(next.market.tickIndex, 4);
   siblings(data, next, ["market", "dashboard"]);
-  assert.deepEqual(data.market.assets[1].history, [1, 2, 3, 4]);
+  assert.deepEqual(data.market.assets[1].history, history);
   const removed = read("market", { assets: [{ assetId: "c", isWatchlisted: false }] }, next);
   assert.equal(removed.market.selectedAssetId, "c");
   assert.equal(read("market", {}, removed).market.selectedAssetId, "");
 });
 
-test("Market detail uses finite server history, retains sibling assets and refuses unknown IDs", () => {
+test("Market detail does not coerce malformed history to zero, and retains sibling assets and selection", () => {
   const data = boot({}, { stocks: [{ assetId: "a", currentPrice: 5 }, { assetId: "b" }] });
   data.market.tickIndex = 9;
   const missing = read("marketAsset", { asset: { assetId: "missing" } }, data);
   assert.strictEqual(missing.market, data.market);
   const next = read("marketAsset", { asset: { assetId: "a", currentPrice: 7, commonEquity: {} }, history: [{ price: "4" }, { price: "bad" }, { price: null }] }, data);
-  assert.deepEqual(next.market.assets[0].history, [4, 0]);
+  assert.deepEqual(next.market.assets[0].history, []);
+  assert.equal(next.market.assets[0].historyStatus, "unavailable");
   assert.equal(next.market.assets[0].pe, 0);
   assert.equal(next.market.assets[0].yield, 0);
   assert.equal(next.market.tickIndex, 9);
@@ -265,4 +272,35 @@ test("Malformed inner entries retain failures instead of silently dropping sourc
     ["portfolio", { holdings: [null] }], ["banking", { ledgerEntries: [null] }]]) {
     assert.throws(() => read(key, body), TypeError, key);
   }
+});
+
+test("Market records UTC observations; empty detail never invents history or edits the last recorded price", () => {
+  const market = { stocks: [{ assetId: "a", ticker: "A", currentPrice: 12, previousClose: 10, listingCurrencyCode: "ECO" }] };
+  const initial = boot({}, market);
+  assert.deepEqual(initial.market.assets[0].history, []);
+  const asset = { ...market.stocks[0], currentPrice: 99 };
+  const observations = [
+    { createdAt: "2026-07-18T05:41:00.000Z", price: 10, tickIndex: 20 },
+    { createdAt: "2026-07-18T06:04:00.000Z", price: 12, tickIndex: 21 },
+  ];
+  const recorded = read("marketAsset", { asset, history: observations, tickIndex: 21 }, initial);
+  assert.deepEqual(recorded.market.assets[0].history, observations);
+  assert.notStrictEqual(recorded.market.assets[0].history, observations);
+  assert.equal(recorded.market.assets[0].historyStatus, "loaded");
+  assert.equal(recorded.market.tickIndex, 21);
+  const empty = read("marketAsset", { asset: { ...asset, currentPrice: 101 }, history: [], tickIndex: 25 }, recorded);
+  assert.deepEqual(empty.market.assets[0].history, observations);
+  assert.ok(Object.isFrozen(empty.market.assets[0].history));
+  assert.ok(empty.market.assets[0].history.every(Object.isFrozen));
+  assert.equal(empty.market.assets[0].historyStatus, "last-loaded");
+  assert.equal(empty.market.assets[0].price, 101);
+  assert.equal(empty.market.tickIndex, 25);
+  const stale = read("marketAsset", {
+    asset, history: observations.slice(0, 1), tickIndex: 20,
+  }, recorded);
+  assert.deepEqual(stale.market.assets[0].history, observations);
+  assert.equal(stale.market.assets[0].historyStatus, "last-loaded");
+  assert.equal(stale.market.tickIndex, 20); // Existing trade-facing tick remains independent of chart history.
+  const changedCurrency = read("market", { assets: [{ ...asset, listingCurrencyCode: "NRT" }] }, empty);
+  assert.deepEqual(changedCurrency.market.assets[0].history, []);
 });

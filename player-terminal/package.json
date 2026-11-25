@@ -44,7 +44,7 @@
     "recovery": "node tests/player-recovery-states.mjs",
     "skeletons": "node tests/skeleton-registry.mjs",
     "dom-safety": "node tests/dom-safety.mjs",
-    "local-controls": "node tests/local-controls-flow.mjs",
+    "local-controls": "node tests/local-controls-flow.mjs && node --test tests/market-price-history.mjs",
     "css:foundation": "node tests/player-terminal-css-foundation.mjs",
     "map-protection": "node tests/player-terminal-map-protection.mjs",
     "route-refresh": "node tests/player-terminal-route-refresh.mjs",

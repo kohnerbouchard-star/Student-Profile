@@ -1,26 +1,24 @@
 import { businessShareListing } from "../features/market/business-share-view.js";
+import { normalizeMarketObservations } from "../features/market/price-history.js";
 import { list, object, text, number } from "./read-model-values.js";
 
-function marketHistory(historyPoints, existing, previousClose, currentPrice) {
-  const history = list(historyPoints)
-    .map((point) => Number(object(point).price))
-    .filter(Number.isFinite);
-  if (history.length) return history;
-
-  const existingHistory = list(existing?.history)
-    .map(Number)
-    .filter(Number.isFinite);
-  if (existingHistory.length > 2) {
-    return [...existingHistory.slice(0, -1), currentPrice];
+function marketHistory(points, existing, listingCurrencyCode) {
+  const incoming = normalizeMarketObservations(points);
+  const cached = listingCurrencyCode && existing.listingCurrencyCode === listingCurrencyCode
+    ? normalizeMarketObservations(existing.history)
+    : [];
+  if (incoming.length && (!cached.length || incoming.at(-1).tickIndex >= cached.at(-1).tickIndex)) {
+    return { history: incoming, historyStatus: "loaded" };
   }
-  return [previousClose, currentPrice];
+  if (cached.length) return { history: cached, historyStatus: "last-loaded" };
+  return { history: incoming, historyStatus: "unavailable" };
 }
 
 function normalizeMarketAsset(stock, options = {}) {
   const existing = object(options.existing);
   const holding = object(options.holding);
   const currentPrice = number(stock.currentPrice);
-  const previousClose = number(stock.previousClose, currentPrice);
+  const listingCurrencyCode = text(stock.listingCurrencyCode);
   const change = number(stock.changePct);
   const currentVolatility = number(stock.currentVolatility);
   const longRunVolatility = number(stock.longRunVolatility);
@@ -30,7 +28,7 @@ function normalizeMarketAsset(stock, options = {}) {
     name: text(stock.companyName, text(stock.ticker, "Unknown asset")),
     type: "Stock",
     sector: text(stock.sector, "Other"),
-    listingCurrencyCode: text(stock.listingCurrencyCode),
+    listingCurrencyCode,
     commonEquity: businessShareListing(stock.commonEquity),
     countryId: text(stock.countryCode).toLowerCase(),
     price: currentPrice,
@@ -49,7 +47,7 @@ function normalizeMarketAsset(stock, options = {}) {
       : existing.watchlisted === true,
     owned: number(holding.quantity, number(existing.owned)),
     averageCost: number(holding.averageCost, number(existing.averageCost)),
-    history: marketHistory(options.history, existing, previousClose, currentPrice),
+    ...marketHistory(options.history, existing, listingCurrencyCode),
     newsIds: list(options.newsIds).length ? list(options.newsIds) : list(existing.newsIds),
     description: text(stock.description, text(existing.description))
   };

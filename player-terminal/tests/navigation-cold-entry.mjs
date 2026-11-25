@@ -133,3 +133,45 @@ for (const coordinated of [false, true]) test(`filtered read cache and coalescin
   assert.equal((await api.request("messageSearch", { payload: { cursor, query: "first" } })).query, "first");
   assert.equal(calls.length, 2);
 });
+
+test("News ready Market does not present an unreported shell-default closure", () => {
+  const data = normalizeTerminalBootstrap({}, { gameSession: {}, me: {}, public: {} });
+  const ready = { market: { state: "ready" }, dashboard: { state: "ready" } };
+  const market = { ...data.market, assets: [{ id: "target", symbol: "TST", change: 0 }] };
+  const news = { categories: ["All"], items: [{ ...previewData.news.items[0], countryIds: [], assetIds: [], assetSymbols: ["TST"] }] };
+  assert.equal(data.market.status, "CLOSED"); // Preserve the general shell default for other routes.
+  assert.equal(data.dashboard.reportedMarketStatus, undefined);
+  const html = renderNewsPage({ ...data, news, market, resourceStatus: ready }, {});
+  assert.match(html, /MARKET STATUS<\/small><strong>Unavailable<\/strong><span>No market status reported/);
+  assert.match(html, /data-player-market-link="target"/);
+  assert.match(html, /<b>0\.00%<\/b>/);
+  const preview = renderNewsPage({ ...data, news, market, resourceStatus: ready }, {}, { usePreviewData: true });
+  assert.match(preview, /MARKET STATUS<\/small><strong>CLOSED/);
+});
+
+test("News uses 'None listed' only for a section with no declared reference", () => {
+  const resourceStatus = { market: { state: "unavailable" }, countries: { state: "unavailable" } };
+  const story = { ...previewData.news.items[0], countryIds: [], assetIds: [] };
+  const render = (overrides) => renderNewsPage({
+    ...previewData,
+    resourceStatus,
+    news: { categories: ["All"], items: [{ ...story, ...overrides }] },
+  }, {});
+  assert.equal(render({}).match(/>None listed</g)?.length, 2);
+  const known = render({ countryIds: ["SÖ <b>"], assetSymbols: ["<img unsafe>"] });
+  assert.match(known, /Country reference · Country details unavailable/);
+  assert.match(known, /Asset reference · Market details unavailable/);
+  assert.doesNotMatch(known, /None listed|<img unsafe>|SÖ/);
+});
+
+test("News bounded context does not link a matched quoted asset to a disabled Market route", () => {
+  const data = {
+    ...previewData,
+    resourceStatus: { market: { state: "ready" }, countries: { state: "ready" } },
+    capabilities: { routes: { market: false } },
+  };
+  const html = renderNewsPage(data, {});
+  assert.match(html, /Asset reference · Market link not enabled/);
+  assert.doesNotMatch(html, /data-player-market-link=/);
+  assert.match(html, /data-player-country="solvend"/);
+});

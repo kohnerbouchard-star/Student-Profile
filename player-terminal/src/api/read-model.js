@@ -265,6 +265,7 @@ function applyDashboardSnapshot(data, rawDashboard) {
     impact: item.summary,
     tone: item.tone
   }));
+  const reportedMarketStatus = text(object(snapshot.gameSession).marketStatus).toUpperCase();
   data.dashboard = {
     ...data.dashboard,
     netWorth: optionalNumber(object(snapshot.me).netWorth),
@@ -276,7 +277,8 @@ function applyDashboardSnapshot(data, rawDashboard) {
     contractsActive: Array.isArray(object(object(snapshot.me).contracts).progress) ? activeContracts.length : null,
     contractsDueSoon: Array.isArray(object(object(snapshot.me).contracts).progress) ? activeContracts.filter((contract) => contract.urgency === "high").length : null,
     unreadNotifications: data.notifications.length,
-    marketStatus: text(object(snapshot.gameSession).marketStatus, "closed").toUpperCase(),
+    marketStatus: reportedMarketStatus || "CLOSED",
+    ...(["OPEN", "CLOSED"].includes(reportedMarketStatus) ? { reportedMarketStatus } : {}),
     marketPulse,
     worldEvents
   };

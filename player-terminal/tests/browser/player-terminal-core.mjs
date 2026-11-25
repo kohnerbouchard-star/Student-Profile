@@ -180,7 +180,7 @@ test("C3E immediate Stock ticket replaces the retired limit-order interface", as
   await expect(page.getByText("C3 QUOTE + SETTLEMENT", { exact: true })).toBeVisible();
 });
 
-test("market search, chart ranges, and Banking export are operational", async ({ page }, testInfo) => {
+test("market search and Banking export work; undated Market fixtures do not produce a price graph", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.includes("mobile"), "Local control workflow is proved once in desktop Chromium.");
   await openTerminal(page, "market");
 
@@ -196,11 +196,10 @@ test("market search, chart ranges, and Banking export are operational", async ({
   await search.fill("");
   expect(await page.locator(".player-terminal-asset-row:visible").count()).toBeGreaterThan(0);
 
-  const oneDay = page.locator('[data-player-local-action="chart-range"][data-range="1D"]');
-  await oneDay.click();
-  await expect(oneDay).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("[data-player-market-chart-range-label]")).toHaveText("1D SERIES");
-  await expect(page.locator(".player-terminal-chart-line")).toHaveAttribute("d", /^M/);
+  const market = page.locator('[data-page="market"]');
+  await expect(market.getByText("History unavailable", { exact: true })).toBeVisible();
+  await expect(market.locator(".player-terminal-chart-line")).toHaveCount(0);
+  await expect(market.locator('[data-player-local-action="chart-range"]')).toHaveCount(0);
 
   await openTerminal(page, "banking");
   const exportButton = page.locator('[data-player-local-action="download-transactions"]');
