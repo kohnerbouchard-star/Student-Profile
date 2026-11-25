@@ -110,7 +110,7 @@ requireTokens(resourcePlan, "manufacturing refresh boundary", [
 requireTokens(businessPage, "connected manufacturing workspace", [
   'data-endpoint="businessManufacturingStart"',
   'data-endpoint="businessManufacturingCancel"',
-  "manufacturingJobsPanel",
+  "data-business-manufacturing-jobs",
 ]);
 forbidTokens(businessPage, "retired workspace instant production", [
   'data-endpoint="businessProduction"',

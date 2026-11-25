@@ -31,7 +31,7 @@ const clientCapabilities = fs.readFileSync(
   "utf8",
 );
 const businessPage = [
-  fs.readFileSync("player-terminal/src/pages/business-page.js", "utf8"),
+  fs.readFileSync("player-terminal/src/pages/business-workspace-sections.js", "utf8"),
   fs.readFileSync("player-terminal/src/pages/business-workforce-market.js", "utf8"),
 ].join("\n");
 

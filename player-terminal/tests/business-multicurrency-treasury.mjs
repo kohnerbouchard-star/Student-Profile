@@ -19,8 +19,9 @@ import {
 } from "../src/features/business-treasury/business-treasury-read-model.js";
 import {
   formatBusinessRatePercent,
-  renderBusinessPage,
 } from "../src/pages/business-page.js";
+
+const renderBusinessPage = (data) => renderPlayerRoute({ route: "business", data, ui: {}, config: {} });
 
 const key = Object.freeze({
   business: "biz_11111111111111111111111111111111",
@@ -557,6 +558,12 @@ assert.match(installedProcurementQuote(expiredProcurementData), /<button[^>]+dis
 const noPurchaseProcurementData = pageData();
 noPurchaseProcurementData.capabilities = missingBusinessPurchase;
 assert.match(installedProcurementQuote(noPurchaseProcurementData), /<button[^>]+disabled[^>]*>.*Confirm atomic procurement<\/button>/su);
+
+const unknownAmountData = structuredClone(pageData());
+unknownAmountData.businessTreasury.accounts[0].posted = { amount: null, currencyCode: "TOK", precision: 18 };
+const unknownAmountHtml = renderBusinessPage(unknownAmountData);
+assert.match(unknownAmountHtml, /<dt>POSTED<\/dt><dd>Unavailable<\/dd>/u);
+assert.doesNotMatch(unknownAmountHtml, /TOK NaN|TOK undefined|TOK null/u);
 
 const refreshing = renderBusinessPage(pageData("refreshing"));
 assert.match(refreshing, /data-business-treasury-state="refreshing"/u);

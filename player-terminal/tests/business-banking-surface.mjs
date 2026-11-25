@@ -5,7 +5,7 @@ import { PLAYER_ENDPOINTS } from "../src/api/endpoints.js";
 import { playerSafeErrorMessage } from "../src/api/errors.js";
 import { WRITE_INVALIDATIONS } from "../src/api/resource-plan.js";
 import { renderBankingPage } from "../src/pages/banking-page.js";
-import { renderBusinessPage } from "../src/pages/business-page.js";
+import { renderBusinessWorkspacePage as renderBusinessPage } from "../src/core/route-renderer.js";
 import { renderLoansPage } from "../src/pages/loans-page.js";
 import { normalizeApiResponse } from "../src/api/response-normalizer.js";
 
@@ -190,9 +190,11 @@ const data = {
   },
 };
 
+data.business.productionReadiness = [{ productKey, recipeKey: "utility-module", nextRunReady: true, maxRunnableUnits: 6 }];
 const markup = renderBusinessPage(data);
+assert.match(markup, /data-business-workspace-v2/);
+assert.doesNotMatch(markup, /data-endpoint="businessProductCreate"/);
 for (const endpoint of [
-  "businessProductCreate",
   "businessManufacturingStart",
   "businessPrice",
   "businessTerminate",
@@ -221,9 +223,8 @@ assert.match(markup, /data-endpoint="businessCandidateHire"/);
 assert.ok(WRITE_INVALIDATIONS.businessCandidateHire?.includes("business"), "missing businessCandidateHire Business invalidation");
 assert.match(markup, /data-business-workforce-utilization/);
 assert.match(markup, /payroll:1/);
-assert.match(markup, /25% utilization/);
-assert.match(markup, /360 minutes available/);
-assert.match(markup, new RegExp(`data-workforce-employee-id="${employeeKey}"`));
+assert.match(markup, /Wages due/);
+assert.match(markup, /FINITE LABOR/);
 assert.match(markup, new RegExp(`data-candidate-id="${candidateKey}"`));
 assert.match(markup, new RegExp(`name="candidateKey" type="hidden" value="${candidateKey}"`));
 assert.match(markup, /<form[^>]*data-endpoint="businessCandidateHire"[^>]*>[\s\S]*?<button[^>]*type="submit"/u);
@@ -231,8 +232,8 @@ assert.match(markup, new RegExp(`name="businessKey" type="hidden" value="${busin
 assert.match(markup, new RegExp(`data-employee-id="${employeeKey}"`));
 assert.doesNotMatch(markup, /name="wagePerCycle"|name="productivityIndex"|name="roleName"|name="unitLaborCost"/u);
 assert.doesNotMatch(markup, /name="baseDemandUnits"|Company value|Cycle revenue|operating margin/u);
-assert.match(markup, /Recent Store sales/);
-assert.match(markup, /Committed seller receipts/);
+assert.match(markup, /COMMITTED SALES/);
+assert.match(markup, /Business Checking only when a buyer completes a Store purchase/);
 assert.match(markup, /name="expectedVersion" type="hidden" value="2"/);
 assert.doesNotMatch(markup, /playerUuid|gameSessionId|ownerPlayerId/);
 assert.doesNotMatch(markup, /businessInputPurchase|Purchase production inputs|Purchase inputs/);

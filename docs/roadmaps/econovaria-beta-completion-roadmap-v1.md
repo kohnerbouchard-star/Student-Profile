@@ -900,3 +900,26 @@ but could not complete without the locked Supabase SDK; the hosted
 repository-wide check remains required. No staging or live claim.
 Next: qualify this exact draft and its connected Marketplace checks
 before merging. Market and Player News follow as a separate tranche.
+
+### 2026-11-25 — Player Business installed-route qualification
+
+`PLAYER-BUSINESS-INSTALLED-ROUTE-001`: `IMPLEMENTED_NOT_MERGED`; local owner
+`refactor/player-business-installed-route`, implementation `1d7ff7b948`, based on fetched main `73ee21a984`;
+no PR/push/merge. Treasury browser/unit coverage now targets the configured
+workspace route. The installed workspace consumes the preserved exact Treasury
+panel and committed Procurement recovery disclosure; unreachable configured-page
+and Procurement rendering was removed, retaining formation and shared leaves.
+Static source qualification follows the actual route closure with broken-link
+negative controls. Banking and #1054 are unchanged. No migration, route/RPC,
+backend policy, hosted database or deployment change.
+
+Root tests, Player verification, backend TypeScript, affected Business contracts,
+source-size/inventory, secret and whitespace checks pass locally. Pinned browser
+execution is blocked by locked Chromium HTTP 403 and the absent system Chromium
+binary. Supplemental Chromium158 passed all 12 desktop/mobile cases; the
+fixture uses the real app-root tokens. Full Edge checking and backend smoke
+remain blocked by the unchanged SDK network import.
+No live-backend or overall backlog completion claim. See [scope and evidence](../operations/evidence/player-business-installed-route-v1/scope.md).
+Next: confirm this candidate's desktop/mobile Treasury scenarios with pinned
+Chromium and finish remaining backend/Edge checks before normal review and CI; preserve separate
+Banking ownership and reserve hosted database work for the live database chat.

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readInstalledBusinessPageSource } from "./helpers/business-page-source.mjs";
 
 import fs from "node:fs";
 import { readEdgeRuntimeSource, assertExtractedModulesReachable } from "./helpers/edge-runtime-source.mjs";
@@ -497,8 +498,8 @@ requireTokens(source.resourcePlan, "purchase convergence", [
   "storeOfferPurchase",
   "storeOfferQuote",
 ]);
-requireTokens(source.businessPage, "seller Sales/Finance/Activity UI", [
-  "STORE SALES · FINANCE · ACTIVITY",
+requireTokens(readInstalledBusinessPageSource(), "seller Sales/Finance/Activity UI", [
+  "COMMITTED SALES",
   "data-business-store-sales",
   "data-business-store-sale-receipt",
   "recentGrossRevenue",
