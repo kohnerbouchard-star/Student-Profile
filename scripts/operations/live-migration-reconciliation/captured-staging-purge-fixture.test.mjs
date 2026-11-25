@@ -1,7 +1,9 @@
+import path from 'node:path';
+import {tmpdir} from 'node:os';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync } from 'node:fs';
-import { assertCapturedStagingFixture } from './run-captured-staging-purge-fixture.mjs';
+import { readFileSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs';
+import { assertCapturedStagingFixture, runCapturedStagingFixture } from './run-captured-staging-purge-fixture.mjs';
 const now=Date.parse('2026-11-25T12:00:00Z');
 function fixture(){return {
  env:{REF032_RECONSTRUCT_PURGE_FIXTURE:'repository-only-v1',GITHUB_ACTIONS:'true',GITHUB_REPOSITORY:'kohnerbouchard-star/Student-Profile',GITHUB_WORKFLOW:'Econovaria Staging Schema Rehearsal',GITHUB_JOB:'rehearse',GITHUB_EVENT_NAME:'workflow_dispatch',GITHUB_REF:'refs/heads/main',GITHUB_RUN_ATTEMPT:'1',GITHUB_SHA:'a'.repeat(40),PHASE15_ENVIRONMENT:'staging',PHASE15_EXPECTED_PROJECT_REF:'eecvbssdvarfcykcfrny',REF032_FIXTURE_CONTAINER_NOT_BEFORE:String(now-10000),RUNNER_TEMP:'/tmp/qualified',PHASE15_CAPTURE_DIR:'/tmp/qualified/u1/raw',PHASE15_WORK_DIR:'/tmp/qualified/u1/work'},
@@ -26,4 +28,23 @@ test('fixture execution pins Docker ID/socket; native test prefix is literal',()
  assert(workflow.indexOf('REF032_RECONSTRUCT_PURGE_FIXTURE')>workflow.indexOf('Restore and rehearse locally without hosted credentials'));
  const upload=workflow.slice(workflow.indexOf('Retain only bounded qualification results'));
  assert(upload.includes('/u1/sanitized/result.json'));assert(!/path:.*(?:private|raw|rehearsal.log)/.test(upload));
+});
+
+test('fixture authority failure stays before SQL; SQL failure records only apply stage',()=>{
+ const dir=mkdtempSync(path.join(tmpdir(),'fixture-stage-'));
+ try {
+  mkdirSync(path.join(dir,'u1'));mkdirSync(path.join(dir,'u1/raw'));mkdirSync(path.join(dir,'u1/work'));
+  const f=fixture();f.env.RUNNER_TEMP=dir;f.env.PHASE15_CAPTURE_DIR=path.join(dir,'u1/raw');f.env.PHASE15_WORK_DIR=path.join(dir,'u1/work');
+  f.env.REF032_FIXTURE_CONTAINER_NOT_BEFORE=String(Date.now()-10000);f.container.Created=new Date(Date.now()-5000).toISOString();
+  let executions=0;
+  const run=(command,args)=>{
+   if(command==='git')return f.env.GITHUB_SHA;
+   if(args[0]==='context')return JSON.stringify([f.context]);
+   if(args[0]==='inspect')return JSON.stringify([f.container]);
+   executions++;throw new Error('SYNTHETIC_PRIVATE_SQL_ERROR');
+  };
+  const invalid={...f.env,GITHUB_WORKFLOW:'wrong'};assert.throws(()=>runCapturedStagingFixture(invalid,run));assert.equal(executions,0);
+  assert.throws(()=>runCapturedStagingFixture(f.env,run),/SYNTHETIC_PRIVATE_SQL_ERROR/);assert.equal(executions,1);
+  assert.equal(readFileSync(path.join(dir,'u1/work/current-stage.txt'),'utf8').trim(),'purge-fixture-apply');
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });

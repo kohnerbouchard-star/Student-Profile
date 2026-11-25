@@ -3,6 +3,7 @@ import { readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { defaultRun } from '../../loan-review-transition-binding.mjs';
+import { writeLocalStage } from './rehearsal-stage-diagnostic.mjs';
 import { buildDisposablePurgeControlFixture, seedFile } from './build-disposable-purge-control-fixture.mjs';
 
 export function assertCapturedStagingFixture(env, actualSha, context, container, now = Date.now()) {
@@ -49,6 +50,7 @@ export function runCapturedStagingFixture(env = process.env, run = defaultRun) {
   // Re-attest the exact container immediately before executing over its Unix socket.
   const again=JSON.parse(run('docker',['inspect',id]))[0];
   assert.equal(assertCapturedStagingFixture(env,run('git',['rev-parse','HEAD']),context,again),id);
+  writeLocalStage(env.PHASE15_WORK_DIR,'purge-fixture-apply');
   run('docker',args,sql);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) runCapturedStagingFixture();
