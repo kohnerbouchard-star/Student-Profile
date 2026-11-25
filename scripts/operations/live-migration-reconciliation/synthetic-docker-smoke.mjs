@@ -24,9 +24,27 @@ export function assertSyntheticContainer(container,project,notBefore,isolated=fa
  if(isolated)assert.deepEqual(Object.keys(container.NetworkSettings.Networks),[],'Synthetic egress must be disconnected');
  return container.Id;
 }
+// Only fixed classifications leave this process; never serialize command errors.
+export function classifySyntheticFailure(error){
+ const stderr=String(error?.stderr??'');
+ const state=stderr.match(/(?:^|\n)(?:psql:[^\n]*?: )?ERROR:\s+([A-Z0-9]{5})(?:\s|$)/)?.[1];
+ const sqlState=['P0001','42501','42P01','42601','28P01','28000','3F000','57014','55P03'].includes(state)?state:null;
+ let exitKind=error?.code==='ERR_ASSERTION'?'assertion':error instanceof SyntaxError?'structured-output':'command';
+ if(error?.code==='ENOENT')exitKind='command-missing';
+ else if(error?.code==='ETIMEDOUT')exitKind='command-timeout';
+ else if(/connection to server on socket .* failed:\s+No such file or directory/.test(stderr))exitKind='socket-unavailable';
+ else if(/(?:Peer|password) authentication failed/.test(stderr))exitKind='authentication';
+ return {exitKind,exitCode:Number.isInteger(error?.status)&&error.status>=0&&error.status<=255?error.status:null,sqlState};
+}
+export const CONNECTION_CONTEXT="select json_build_object('unixSocket',inet_server_addr() is null,'roleMatches',current_user='postgres','databaseMatches',current_database()='postgres','requestedDirectoryConfigured','/var/run/postgresql'=any(string_to_array(current_setting('unix_socket_directories'),',')))";
+export function validateConnectionContext(text){
+ const value=JSON.parse(text);assert.deepEqual(Object.keys(value).sort(),['databaseMatches','requestedDirectoryConfigured','roleMatches','unixSocket']);
+ for(const key of Object.keys(value))assert.equal(typeof value[key],'boolean');
+ return value;
+}
 const defaultRun=(command,args,input,timeout=30000)=>execFileSync(command,args,{input,timeout,maxBuffer:1024*1024,encoding:'utf8',stdio:[input===undefined?'ignore':'pipe','pipe','pipe']}).trim();
 export function runSyntheticDockerSmoke({env=process.env,event=JSON.parse(readFileSync(env.GITHUB_EVENT_PATH,'utf8')),run=defaultRun,root=process.cwd()}={}){
- let stage='synthetic-input-preflight',work,cli,attempted=false,result;
+ let stage='synthetic-input-preflight',work,cli,attempted=false,result,connectionContext;
  try{
   const sha=run('git',['rev-parse','HEAD']);assertSyntheticContext(env,event,sha);
   assert.equal(JSON.parse(run('docker',['context','inspect']))[0].Endpoints.docker.Host,'unix:///var/run/docker.sock');
@@ -48,10 +66,13 @@ export function runSyntheticDockerSmoke({env=process.env,event=JSON.parse(readFi
    const current=JSON.parse(run('docker',['inspect',id]))[0];assert.equal(assertSyntheticContainer(current,project,started,true),id);
    return run('docker',['exec','-e','PGHOSTADDR=','-e','PGSERVICE=','-e','PGSERVICEFILE=/dev/null','-i',id,'psql','-h','/var/run/postgresql','-p','5432','-U','postgres','-d','postgres','-XqAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=sqlstate'],`set statement_timeout='10s';set lock_timeout='2s';\n${text}`);
   };
-  stage='synthetic-schema-capture';sql(SYNTHETIC_SCHEMA);
+  stage='synthetic-socket-context';connectionContext=validateConnectionContext(sql(CONNECTION_CONTEXT));
+  assert(connectionContext.unixSocket&&connectionContext.roleMatches&&connectionContext.databaseMatches);
+  stage='synthetic-schema-create';sql(SYNTHETIC_SCHEMA);
+  stage='synthetic-schema-dump';
   const dump=run('docker',['exec',id,'pg_dump','-h','/var/run/postgresql','-p','5432','-U','postgres','-d','postgres','--schema-only','--schema=synthetic_probe','--schema=synthetic_ledger','--no-publications','--no-subscriptions']);
-  assert(dump.length>0&&dump.length<262144);assert(!/^(COPY|INSERT INTO) /m.test(dump));
-  const ledger=JSON.parse(sql("select coalesce(json_agg(version order by version),'[]'::json) from synthetic_ledger.migrations"));assert.deepEqual(ledger,['synthetic-v1']);
+  stage='synthetic-dump-boundary';assert(dump.length>0&&dump.length<262144);assert(!/^(COPY|INSERT INTO) /m.test(dump));
+  stage='synthetic-ledger-read';const ledger=JSON.parse(sql("select coalesce(json_agg(version order by version),'[]'::json) from synthetic_ledger.migrations"));assert.deepEqual(ledger,['synthetic-v1']);
   stage='synthetic-schema-restore';sql('drop schema synthetic_probe cascade;drop schema synthetic_ledger cascade;');sql(dump);
   assert.equal(sql("select to_regclass('synthetic_probe.item') is not null and to_regclass('synthetic_ledger.migrations') is not null"),'t');
   assert.equal(sql('select count(*) from synthetic_ledger.migrations'),'0');
@@ -62,7 +83,7 @@ export function runSyntheticDockerSmoke({env=process.env,event=JSON.parse(readFi
   assert.equal(sql('select count(*) from synthetic_probe.item'),'0');assert.equal(sql('select count(*) from synthetic_ledger.migrations'),'1');
   assert.equal(run('git',['rev-parse','HEAD']),sha);
   result={status:'PASS',stage:'synthetic-guard',sourceCommit:sha,syntheticOnly:true,guardRejected:true,fullStagingQualification:false};
- }catch{result={status:'FAILED',stage,syntheticOnly:true,fullStagingQualification:false};}
+ }catch(error){result={status:'FAILED',stage,...classifySyntheticFailure(error),...(connectionContext?{connectionContext}:{}),syntheticOnly:true,fullStagingQualification:false};}
  finally{
   if(attempted){try{run(cli,['stop','--workdir',work,'--no-backup'],undefined,60000);}catch{if(result?.status==='PASS')result={status:'FAILED',stage:'synthetic-cleanup',syntheticOnly:true,fullStagingQualification:false};}}
   if(work){try{rmSync(work,{recursive:true,force:true});}catch{if(result?.status==='PASS')result={status:'FAILED',stage:'synthetic-cleanup',syntheticOnly:true,fullStagingQualification:false};}}

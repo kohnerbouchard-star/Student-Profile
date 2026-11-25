@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {mkdtempSync,rmSync,readFileSync,readdirSync} from 'node:fs';import {tmpdir} from 'node:os';import path from 'node:path';
-import {assertSyntheticContext,assertSyntheticContainer,runSyntheticDockerSmoke,SYNTHETIC_GUARD} from './synthetic-docker-smoke.mjs';
+import {assertSyntheticContext,assertSyntheticContainer,runSyntheticDockerSmoke,SYNTHETIC_GUARD,classifySyntheticFailure,CONNECTION_CONTEXT,validateConnectionContext} from './synthetic-docker-smoke.mjs';
 const sha='a'.repeat(40);
 function context(temp){return {env:{GITHUB_ACTIONS:'true',GITHUB_WORKFLOW:'Database Replay',GITHUB_JOB:'replay',GITHUB_EVENT_NAME:'pull_request',GITHUB_REPOSITORY:'kohnerbouchard-star/Student-Profile',REF032_SYNTHETIC_DOCKER_SMOKE:'1',RUNNER_TEMP:temp},event:{pull_request:{base:{ref:'main'},head:{sha,repo:{full_name:'kohnerbouchard-star/Student-Profile'}}}}};}
 function stub(fail){
@@ -18,11 +18,14 @@ function stub(fail){
   }
   if(args[0]==='inspect'){if(fail==='inventory')throw new Error('PRIVATE_INVENTORY');return JSON.stringify([metadata]);}
   if(args[0]==='network'){if(fail==='disconnect')throw new Error('PRIVATE_NETWORK');if(fail!=='retained-network')metadata.NetworkSettings.Networks={};return '';}
-  if(args[0]==='stop'){if(['cleanup','restore-cleanup'].includes(fail))throw new Error('PRIVATE_CLEANUP');return '';}
-  if(args.includes('pg_dump'))return '-- synthetic schema-only dump\ncreate schema synthetic_probe;create schema synthetic_ledger;';
+  if(args[0]==='stop'){if(['cleanup','restore-cleanup','create-cleanup'].includes(fail))throw new Error('PRIVATE_CLEANUP');return '';}
+  if(args.includes('pg_dump')){if(fail==='dump')throw Object.assign(new Error('PRIVATE'),{status:1,stderr:'PRIVATE'});if(fail==='dump-boundary')return 'INSERT INTO private values(1);';return '-- synthetic schema-only dump\ncreate schema synthetic_probe;create schema synthetic_ledger;';}
   if(args[0]==='exec'){
    assert(args.includes('/var/run/postgresql'));assert.equal(Object.keys(metadata.NetworkSettings.Networks).length,0);
+   if(input.includes(CONNECTION_CONTEXT)){if(fail==='socket')throw Object.assign(new Error('PRIVATE'),{status:2,stderr:'connection to server on socket PRIVATE failed: No such file or directory'});return JSON.stringify({unixSocket:true,roleMatches:true,databaseMatches:true,requestedDirectoryConfigured:true});}
+   if(input.includes('create schema')&&['create','create-cleanup'].includes(fail))throw Object.assign(new Error('PRIVATE'),{status:3,stderr:'ERROR: 42501\nPRIVATE'});
    if(input.includes('drop schema')){restored=true;if(['restore','restore-cleanup'].includes(fail))throw new Error('PRIVATE_RESTORE');}
+   if(input.includes('coalesce(json_agg')&&fail==='ledger')return 'PRIVATE';
    if(input.includes('coalesce(json_agg'))return '["synthetic-v1"]';
    if(input.includes('to_regclass')){assert(restored);return 't';}
    if(input.includes(SYNTHETIC_GUARD)){if(fail==='guard-success')return '';const e=new Error('PRIVATE_GUARD');e.status=1;e.stderr='ERROR: P0001\nPRIVATE_ROW_PAYLOAD';throw e;}
@@ -90,4 +93,23 @@ test('container identity, ownership, image, freshness and egress must all match'
  const good={Name:'/supabase_db_'+project,Id:'b'.repeat(64),Image:'sha256:'+'c'.repeat(64),State:{Running:true},Created:new Date(time).toISOString(),Config:{Image:'public.ecr.aws/supabase/postgres:17.6.1.147',Labels:{'com.supabase.cli.project':project}},HostConfig:{NetworkMode:'synthetic_network'},NetworkSettings:{Networks:{}}};
  assert.equal(assertSyntheticContainer(good,project,time,true),good.Id);
  for(const change of [c=>c.Name='/other',c=>c.Config.Labels['com.supabase.cli.project']='other',c=>c.Config.Image='untrusted/image',c=>c.HostConfig.NetworkMode='host',c=>c.HostConfig.NetworkMode='container:other',c=>c.NetworkSettings.Networks={bridge:{}},c=>c.Created=new Date(time-1).toISOString(),c=>c.Id='invalid']){const value=structuredClone(good);change(value);assert.throws(()=>assertSyntheticContainer(value,project,time,true));}
+});
+
+test('capture boundaries retain fixed primary stage and never expose command payloads',()=>{
+ const temp=mkdtempSync(path.join(tmpdir(),'synthetic-boundaries-'));
+ try{for(const [failure,stage,kind] of [['socket','synthetic-socket-context','socket-unavailable'],['create','synthetic-schema-create','command'],['create-cleanup','synthetic-schema-create','command'],['dump','synthetic-schema-dump','command'],['dump-boundary','synthetic-dump-boundary','assertion'],['ledger','synthetic-ledger-read','structured-output']]){
+ const s=stub(failure),result=runSyntheticDockerSmoke({...context(temp),run:s.run});assert.equal(result.status,'FAILED');assert.equal(result.stage,stage);assert.equal(result.exitKind,kind);assert(!JSON.stringify(result).includes('PRIVATE'));if(failure==='create')assert.equal(result.sqlState,'42501');
+ }}finally{rmSync(temp,{recursive:true,force:true});}
+});
+test('diagnostic projection is allowlisted and context is boolean-only',()=>{
+ for(const error of [new Error('PRIVATE'),Object.assign(new Error('PRIVATE'),{status:3,stderr:'ERROR: XX999\nPRIVATE'}),Object.assign(new Error('PRIVATE'),{code:'ETIMEDOUT',status:-1})]){const result=classifySyntheticFailure(error);assert(!JSON.stringify(result).includes('PRIVATE'));assert.equal(result.sqlState,null);}
+ assert.throws(()=>validateConnectionContext('{"unixSocket":"PRIVATE"}'));
+ assert.throws(()=>validateConnectionContext('{"unixSocket":true,"roleMatches":true,"databaseMatches":true,"requestedDirectoryConfigured":true,"payload":"PRIVATE"}'));
+});
+
+test('real local missing-socket attempt stays bounded even with empty client diagnostics',{skip:!process.env.REF032_PG_BIN&&'Portable client required'},async()=>{
+ const {execFileSync}=await import('node:child_process');const dir=mkdtempSync(path.join(tmpdir(),'synthetic-no-socket-'));
+ try{let error;try{execFileSync(path.join(process.env.REF032_PG_BIN,'psql'),['-h',dir,'-p','57663','-U','postgres','-d','postgres','-XqAt','-c','select 1'],{timeout:3000,encoding:'utf8',env:{PATH:process.env.PATH,LC_ALL:'C'},stdio:['ignore','pipe','pipe']});}catch(e){error=e;}
+ assert(error);const result=classifySyntheticFailure(error);assert(['socket-unavailable','command'].includes(result.exitKind));assert.equal(result.exitCode,2);assert(!JSON.stringify(result).includes(dir));
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });
