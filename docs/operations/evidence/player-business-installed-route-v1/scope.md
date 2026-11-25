@@ -79,3 +79,26 @@ Next: run the exact candidate's Treasury desktop/mobile Playwright suite with
 locked Chromium, finish required Edge/backend checks with locked SDK access,
 and obtain normal review/CI before considering merge. Pinned-browser failure
 is an execution-environment blocker, not a test waiver or completion credit.
+
+## Draft publication — 2026-11-25
+
+Draft PR: https://github.com/kohnerbouchard-star/Student-Profile/pull/1056.
+Git CLI push was unavailable because the workspace has no GitHub credentials.
+The connected GitHub app published commit `917d9d01f27dea0adde30e08e7ea41db2d7aa43b`,
+whose tree `8641dfaa1a61b1670bc5077f027505e84682ad07` exactly equals qualified
+local `bfb6112ab8`; the original local history is retained separately.
+
+Applicable PR database jobs use local disposable Supabase stacks and loopback
+URLs. Hosted production/staging mutation jobs require a main push or manual
+dispatch (the Phase15 staging convergence is additionally held by `false &&`).
+This branch changes no backend, migration, schema, deployment or workflow file.
+No deployment dispatch or merge is authorized. Exact PR1056 scope authority
+retains all mutation/secret denials and finite active workflow/job checks.
+Roster pins follow the published source including this authority, with its
+normal integrated-composite equality and complete mode tests unchanged.
+
+Native pinned CI and exact-head outcomes are recorded in the canonical roadmap
+as results arrive; this historical source record does not assert those gates
+have passed. Local supplemental artifacts were moved outside the checkout to
+`/tmp/business1056-local-artifacts` before exact-disk Roster verification;
+no runtime input exclusion or check was weakened.
