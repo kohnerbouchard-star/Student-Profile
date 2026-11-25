@@ -3,6 +3,7 @@ name: Progression Runtime
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-1054.json"
       - ".github/workflows/progression-runtime-v1.yml"
       - "backend/src/domains/progression/**"
       - "backend/supabase/functions/classroom-api/index.ts"

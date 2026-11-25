@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
-import { renderMarketOrderDialog } from "../src/features/market/market-order-flow.js";
+import { installMarketOrderFlow, renderMarketOrderDialog } from "../src/features/market/market-order-flow.js";
+
+import { renderMarketPage } from "../src/pages/market-page.js";
+import { reportedMarketStatus } from "../src/features/market/reported-market-status.js";
+import { ACCOUNT, TICKER, businessMarketData } from "./fixtures/business-market-fixture.mjs";
 
 const ASSET_UUID = "00000000-0000-4000-8000-000000000101";
 const QUOTE = "sbq_11111111111111111111111111111111";
@@ -201,7 +205,7 @@ assert.ok(source.includes("const listingCurrencyCode = listingCurrencyForAsset(t
 assert.ok(source.includes('terminal.refreshResources(["dashboard", "market", "portfolio", "banking", "bankingFx"])'));
 assert.ok(source.includes("normalizeWritePayload"));
 assert.ok(source.includes("marketPositionForAsset"));
-assert.ok(source.includes('market?.status === "CLOSED"'));
+assert.ok(source.includes('if (!marketOpenForReview(state.data)) return;'));
 assert.ok(source.includes('String(destinationAccount.currencyCode || "").toUpperCase() !== listingCurrencyCode'));
 assert.ok(dialogView.includes("Stock sale proceeds do not auto-convert."));
 assert.ok(!(source + dialogView).includes("any required Banking FX conversion"));
@@ -219,3 +223,88 @@ assert.ok(routeCore.includes("destinationAccountKey"));
 assert.ok(!routeCore.includes("stockAssetId:"));
 
 console.log("C3E Market flow passed: asset-scoped price/tick review including valid zero-tick assets, single-line funding refresh with valid DOM selection and explicit re-submit, immutable buy quote review, expiry, exact funding evidence, listing-currency-only sell destination review, public-key receipts, stale-review fail-closed behavior, and bounded refresh are wired to the connected route.");
+
+const config = {
+  usePreviewData: false, authenticated: true, csrfToken: "C".repeat(43), gameSessionId: "fixture-market",
+  requestTimeoutMs: 1000, writeCooldownMs: 0,
+};
+const marketState = businessMarketData();
+const handlers = new Map(), reviewReads = [], toasts = [];
+const names = ["HTMLElement", "HTMLButtonElement", "FormData"];
+const globals = new Map(names.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
+class FormMount {
+  addEventListener(name, fn) { handlers.set(name, fn); }
+  removeEventListener(name) { handlers.delete(name); }
+  querySelector() { return null; }
+}
+globalThis.HTMLElement = FormMount;
+globalThis.HTMLButtonElement = class {};
+globalThis.FormData = class {
+  constructor(form) { this.form = form; }
+  entries() { return Object.entries(this.form.values)[Symbol.iterator](); }
+};
+const flow = installMarketOrderFlow({
+  mount: new FormMount(),
+  terminal: { getState: () => ({ status: "ready", route: "market", data: marketState }), showToast: (...message) => toasts.push(message) },
+  config: {
+    ...config,
+    apiCall: async (request) => {
+      reviewReads.push(request);
+      throw Object.assign(new Error("End of fixture review"), { status: 429 });
+    },
+  },
+});
+const submit = (name, values) => {
+  const common = { ticker: TICKER, quantity: "1", expectedPrice: "2.5", expectedTickIndex: "1", ...values };
+  const button = { disabled: true };
+  const form = {
+    values: common,
+    dataset: { playerMarketOrderForm: name },
+    elements: { namedItem: (key) => common[key] === undefined ? null : { value: common[key] } },
+    querySelector: (key) => key === 'button[type="submit"]' ? button : null,
+  };
+  return { event: { target: { closest: () => form }, preventDefault() {}, stopImmediatePropagation() {} }, button };
+};
+try {
+  const buy = submit("buy-quote", { action: "create_buy_quote", sourceAccountKey1: ACCOUNT, targetAmount1: "2.5" });
+  const sell = submit("sell-review", { action: "settle_sell", destinationAccountKey: ACCOUNT });
+  marketState.market.status = "OPEN";
+  for (const dashboard of ["CLOSED", null]) {
+    marketState.dashboard.reportedMarketStatus = dashboard ?? "OPEN";
+    marketState.resourceStatus.dashboard.state = dashboard === null ? "unavailable" : "ready";
+    const html = renderMarketPage(marketState, {}, config);
+    assert.match(html, /type="submit" disabled[^>]*>[^\n]*Create exact quote/);
+    assert.match(html, /type="submit" disabled[^>]*>[^\n]*Review sale/);
+    handlers.get("input")(buy.event);
+    assert.equal(buy.button.disabled, true);
+    handlers.get("submit")(buy.event);
+    handlers.get("submit")(sell.event);
+    assert.equal(reviewReads.length, 0);
+    assert.match(toasts.at(-1)[0], dashboard === "CLOSED" ? /market is closed/ : /Market status unavailable/);
+  }
+
+  marketState.market.status = "CLOSED";
+  marketState.resourceStatus.dashboard.state = "ready";
+  marketState.dashboard.reportedMarketStatus = "OPEN";
+  handlers.get("input")(buy.event);
+  assert.equal(buy.button.disabled, false);
+  const html = renderMarketPage(marketState, {}, config);
+  assert.doesNotMatch(html, /type="submit" disabled[^>]*>[^\n]*(Create exact quote|Review sale)/);
+  for (const { event } of [buy, sell]) {
+    handlers.get("submit")(event);
+    await new Promise(setImmediate);
+  }
+  assert.deepEqual(reviewReads.map(({ endpointKey, method }) => [endpointKey, method]), [
+    ["marketAsset", "GET"], ["marketAsset", "GET"],
+  ]);
+
+  assert.equal(reportedMarketStatus({ market: { status: "OPEN" } }, { usePreviewData: true }), "OPEN");
+  assert.equal(reportedMarketStatus({ market: { status: "OPEN" } }, config), null);
+  assert.equal(reportedMarketStatus({ market: { status: "OPEN" }, resourceStatus: { dashboard: { state: "ready" } } }, config), null);
+} finally {
+  flow.destroy();
+  for (const [name, descriptor] of globals) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+    else delete globalThis[name];
+  }
+}

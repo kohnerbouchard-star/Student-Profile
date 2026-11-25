@@ -159,6 +159,18 @@ async function race(replay: boolean) {
     await sql(`select pg_cancel_backend(pid) from pg_stat_activity where application_name=${q(name)}`);
     await held;
     const results = await Promise.allSettled(pending);
+    const raceCheck = replay ? "sameReservationSingleSettlement" : "competingPurchaseSingleWinner";
+    // Retain both outcomes before assertions so a zero-winner failure is diagnosable.
+    checks[raceCheck] = {
+      pass: false, observedLockWaiters: 2, completedAt: new Date().toISOString(),
+      outcomes: results.map(result => result.status === "fulfilled"
+        ? { status: result.status, replayed: result.value.replayed === true }
+        : { status: result.status, error: String(result.reason) }),
+    };
+    (checks[raceCheck] as Record<string, unknown>).fx = await json(
+      `select jsonb_build_object('nextDueAt',next_due_at,'observedAt',clock_timestamp())::text
+        from private.fx_runtime_state where game_session_id=${q(f.game)}::uuid`,
+    ).catch(error => ({ diagnosticError: String(error) }));
     if (replay) {
       const values = results.map(r => { assert.equal(r.status, "fulfilled"); return (r as PromiseFulfilledResult<any>).value; });
       assert.equal(values.filter(v => v.replayed).length, 1);
@@ -175,7 +187,7 @@ async function race(replay: boolean) {
       await settle(f, result.reservationKey, winner ? f.rival : f.buyer);
       assertSettlement(f, quoted, await snapshot(f), winner ? f.rival : f.buyer);
     }
-    checks[replay ? "sameReservationSingleSettlement" : "competingPurchaseSingleWinner"] = { pass: true, observedLockWaiters: 2 };
+    checks[raceCheck] = { ...(checks[raceCheck] as Record<string, unknown>), pass: true };
   } finally {
     await sql(`select pg_cancel_backend(pid) from pg_stat_activity where application_name=${q(name)}`);
     await held;

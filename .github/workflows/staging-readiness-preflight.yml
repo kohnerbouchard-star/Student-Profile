@@ -3,6 +3,7 @@ name: Staging Readiness Preflight
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-1054.json"
       - ".github/workflows/staging-readiness-preflight.yml"
       - "docs/operations/**"
       - "scripts/deployment-readiness-preflight*"

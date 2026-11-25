@@ -1,3 +1,5 @@
+import { reportedMarketStatus } from "../features/market/reported-market-status.js";
+import { marketHistoryChart, normalizeMarketObservations, RECENT_MARKET_OBSERVATIONS } from "../features/market/price-history.js";
 import { nextMarketPage } from "../features/market/market-directory-model.js";
 import { renderBusinessShareFacts } from "../features/market/business-share-view.js";
 import { renderBusinessIpoPanel } from "../features/business-ipo/business-ipo-panel.js";
@@ -7,16 +9,27 @@ import { renderChange, renderEmptyState, renderStatusPill } from "../components/
 import { isResourceUnavailable } from "../api/resource-status.js";
 import { marketPositionForAsset } from "../api/portfolio-market-holdings.js";
 
-function chartPath(values, width = 720, height = 260, padding = 18) {
-  const safeValues = Array.isArray(values) && values.length ? values : [0, 0];
-  const min = Math.min(...safeValues);
-  const max = Math.max(...safeValues);
-  const range = max - min || 1;
-  return safeValues.map((value, index) => {
-    const x = padding + (index / Math.max(1, safeValues.length - 1)) * (width - padding * 2);
-    const y = height - padding - ((value - min) / range) * (height - padding * 2);
-    return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
-  }).join(" ");
+function renderMarketHistory(asset) {
+  const observations = normalizeMarketObservations(asset.history);
+  const chart = marketHistoryChart(observations);
+  const canFilter = observations.length > RECENT_MARKET_OBSERVATIONS;
+  const listingCurrency = asset.listingCurrencyCode || "";
+  const lastLoaded = asset.historyStatus === "last-loaded";
+  return `<div class="player-terminal-chart-toolbar">
+      <span>PRICE HISTORY</span>
+      ${canFilter ? `<button class="active" type="button" data-player-local-action="chart-range" data-range="all" aria-pressed="true">All observations</button><button type="button" data-player-local-action="chart-range" data-range="recent" aria-pressed="false">Last ${RECENT_MARKET_OBSERVATIONS} observations</button>` : ""}
+    </div>
+    <div class="player-terminal-chart-frame"${canFilter ? ` data-player-market-chart-history="${escapeHtml(JSON.stringify(observations))}"` : ""}>
+      ${chart ? `<svg viewBox="0 0 720 260" preserveAspectRatio="none" role="img" aria-label="Recorded price observations for ${escapeHtml(asset.name)}">
+        <defs><linearGradient id="marketArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".28"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
+        <g class="player-terminal-chart-grid"><path d="M18 52H702M18 104H702M18 156H702M18 208H702"/><path d="M155 18V242M292 18V242M429 18V242M566 18V242"/></g>
+        <path class="player-terminal-chart-area" d="${chart.area}"/>
+        <path class="player-terminal-chart-line" d="${chart.line}"/>
+        <circle data-player-market-chart-dot cx="${chart.dot?.x ?? 0}" cy="${chart.dot?.y ?? 0}" r="${chart.dot ? 4 : 0}" fill="currentColor"/>
+      </svg>` : renderEmptyState({ title: "History unavailable", detail: "No recorded price history is loaded for this asset.", iconName: "chart" })}
+    </div>
+    ${chart ? `<p><span data-player-market-chart-coverage role="status">${escapeHtml(chart.coverage)}</span> · ${lastLoaded ? "Last loaded history" : "Loaded history only"} · ${listingCurrency ? escapeHtml(listingCurrency) : "Listing currency not reported"}</p>
+      ${chart.count === 1 ? `<p>Recorded price: ${escapeHtml(listingCurrency ? formatCurrency(chart.latestPrice, listingCurrency) : formatNumber(chart.latestPrice, 4))}</p>` : ""}` : ""}`;
 }
 
 function listingCurrencyForAsset(asset, countries, defaultCurrency) {
@@ -38,17 +51,18 @@ function checkingAccountOptions(accounts, selectedKey = "") {
   return accounts.map((account) => `<option value="${escapeHtml(account.accountKey)}"${account.accountKey === selectedKey ? " selected" : ""}>${escapeHtml(account.currencyCode)} · ${escapeHtml(formatCurrency(account.availableAmount, account.currencyCode))} available</option>`).join("");
 }
 
-export function renderMarketPage(data, ui) {
+export function renderMarketPage(data, ui, config) {
   const market = data.market;
+  const sessionStatus = reportedMarketStatus(data, config);
+  const pill = renderStatusPill(sessionStatus || "Market status unavailable", sessionStatus === "OPEN" ? "green" : "amber");
+  const statusPill = `<span data-player-market-session-status="${sessionStatus || "unavailable"}">${pill}</span>`;
   if (!Array.isArray(market?.assets) || !market.assets.length) {
-    return `<section class="player-terminal-page player-terminal-market-page" data-page="market"><header class="player-terminal-page-heading"><div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets and prepare market orders.</p></div></header>${renderEmptyState({ title: "No assets are listed", detail: "The exchange directory will populate when tradable instruments become available.", iconName: "market" })}${renderBusinessIpoPanel(data)}</section>`;
+    return `<section class="player-terminal-page player-terminal-market-page" data-page="market"><header class="player-terminal-page-heading"><div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets and prepare market orders.</p></div><div class="player-terminal-heading-actions">${statusPill}</div></header>${renderEmptyState({ title: "No assets are listed", detail: "The exchange directory will populate when tradable instruments become available.", iconName: "market" })}${renderBusinessIpoPanel(data)}</section>`;
   }
   const selectedId = ui.marketAssetId || market.selectedAssetId;
   const selected = market.assets.find((asset) => asset.id === selectedId) || market.assets[0];
   const sector = ui.marketSector || "All";
   const assets = market.assets.filter((asset) => sector === "All" || asset.sector === sector);
-  const path = chartPath(selected.history);
-  const chartHistory = escapeHtml(JSON.stringify(Array.isArray(selected.history) ? selected.history : []));
   const sessionCurrencyCode = data.session.currencyCode;
   const selectedCountry = data.countries.find((country) => country.id === selected.countryId);
   const listingCurrencyCode = listingCurrencyForAsset(selected, data.countries, sessionCurrencyCode);
@@ -77,13 +91,13 @@ export function renderMarketPage(data, ui) {
   const accountSummary = checkingAccounts.length
     ? checkingAccounts.map((account) => `${account.currencyCode} ${formatCurrency(account.availableAmount, account.currencyCode)}`).join(" · ")
     : "Unavailable";
-  const buyDisabled = !checkingAccounts.length || market.status === "CLOSED";
-  const sellDisabled = !listingCurrencyCheckingAccounts.length || market.status === "CLOSED" || position.owned <= 0;
+  const buyDisabled = !checkingAccounts.length || sessionStatus !== "OPEN";
+  const sellDisabled = !listingCurrencyCheckingAccounts.length || sessionStatus !== "OPEN" || position.owned <= 0;
 
   return `<section class="player-terminal-page player-terminal-market-page" data-page="market">
     <header class="player-terminal-page-heading">
       <div><small>CELESTIAL EXCHANGE</small><h2>Market Terminal</h2><p>Research assets, fund immediate purchases from canonical Checking accounts, and route sale proceeds only to an active Checking account in the Stock listing currency.</p></div>
-      <div class="player-terminal-heading-actions"><button class="player-terminal-secondary-button" type="button" data-route="portfolio">${icon("portfolio")} Portfolio</button>${renderStatusPill(`${market.status} · ${market.nextClose}`, "green")}<button class="player-terminal-icon-button" type="button" data-player-action="refresh-data" aria-label="Refresh market data">${icon("refresh")}</button></div>
+      <div class="player-terminal-heading-actions"><button class="player-terminal-secondary-button" type="button" data-route="portfolio">${icon("portfolio")} Portfolio</button>${statusPill}<button class="player-terminal-icon-button" type="button" data-player-action="refresh-data" aria-label="Refresh market data">${icon("refresh")}</button></div>
     </header>
 
     <div class="player-terminal-market-summary">
@@ -114,15 +128,7 @@ export function renderMarketPage(data, ui) {
           <div><small>${escapeHtml(selected.type)} · ${escapeHtml(selected.sector)} · LISTED IN ${escapeHtml(listingCurrencyCode)}</small><h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.symbol)} · ${escapeHtml(selectedCountry?.name || "Celestial Exchange")}</p></div>
           <div class="player-terminal-selected-price"><strong>${escapeHtml(formatCurrency(selected.price, listingCurrencyCode))}</strong>${renderChange(selected.change)}<button class="player-terminal-watchlist-button${selected.watchlisted ? " is-active" : ""}" type="button" data-player-market-watchlist="${escapeHtml(selected.id)}" data-watchlisted="${String(selected.watchlisted)}">${icon("star")} ${selected.watchlisted ? "Watching" : "Watch"}</button></div>
         </header>
-        <div class="player-terminal-chart-toolbar"><button type="button" data-player-local-action="chart-range" data-range="1D" aria-pressed="false">1D</button><button class="active" type="button" data-player-local-action="chart-range" data-range="1M" aria-pressed="true">1M</button><button type="button" data-player-local-action="chart-range" data-range="3M" aria-pressed="false">3M</button><button type="button" data-player-local-action="chart-range" data-range="1Y" aria-pressed="false">1Y</button><button type="button" data-player-local-action="chart-range" data-range="ALL" aria-pressed="false">ALL</button><small data-player-market-chart-range-label>1M SERIES</small></div>
-        <div class="player-terminal-chart-frame" data-player-market-chart-history="${chartHistory}">
-          <svg viewBox="0 0 720 260" preserveAspectRatio="none" role="img" aria-label="Price chart for ${escapeHtml(selected.name)}">
-            <defs><linearGradient id="marketArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".28"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
-            <g class="player-terminal-chart-grid"><path d="M18 52H702M18 104H702M18 156H702M18 208H702"/><path d="M155 18V242M292 18V242M429 18V242M566 18V242"/></g>
-            <path class="player-terminal-chart-area" d="${path} L702,242 L18,242 Z"/>
-            <path class="player-terminal-chart-line" d="${path}"/>
-          </svg>
-        </div>
+        ${renderMarketHistory(selected)}
         <div class="player-terminal-asset-facts player-terminal-asset-facts-expanded">
           <span><small>OPEN</small><strong>${escapeHtml(formatCurrency(selected.open, listingCurrencyCode))}</strong></span>
           <span><small>DAY HIGH</small><strong>${escapeHtml(formatCurrency(selected.dayHigh, listingCurrencyCode))}</strong></span>
@@ -145,6 +151,7 @@ export function renderMarketPage(data, ui) {
 
       <section class="player-terminal-panel player-terminal-order-ticket">
         <header class="player-terminal-panel-header"><div><span>IMMEDIATE TRADING</span><strong>${escapeHtml(selected.symbol)} · ${escapeHtml(listingCurrencyCode)}</strong></div>${renderStatusPill("C3 QUOTE + SETTLEMENT", "cyan")}</header>
+        ${sessionStatus !== "OPEN" ? `<p class="player-terminal-inline-empty">${sessionStatus === "CLOSED" ? "The Stock market is closed." : "Market status unavailable. Refresh before starting a trade review."}</p>` : ""}
         <div class="player-terminal-order-estimate"><span>Authoritative funding</span><small>${bankingFxUnavailable ? "Canonical Banking FX account data is unavailable; trading is disabled." : "Only canonical Checking accounts are eligible. Foreign-currency accounts are converted through Banking FX; allocation amounts below are target amounts in the Stock listing currency."}</small></div>
 
         <form data-player-form="market-buy" data-player-market-order-form="buy-quote" data-endpoint="marketOrder">

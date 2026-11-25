@@ -900,3 +900,56 @@ but could not complete without the locked Supabase SDK; the hosted
 repository-wide check remains required. No staging or live claim.
 Next: qualify this exact draft and its connected Marketplace checks
 before merging. Market and Player News follow as a separate tranche.
+
+### 2026-11-25 — Player Market and News read accuracy (T047 follow-up)
+
+`PLAYER-MARKET-READ-EVIDENCE-002` is `IMPLEMENTED_NOT_MERGED` on the
+existing Market read-evidence branch, combining the Market donor
+`d232a6b353` and its Player News ancestor `51e278ab` with actual main
+`73ee21a9846442e85e3e5f2f650229423f2c5404`. Market renders dated recorded
+prices only; an unavailable or non-open reported Dashboard state cannot
+start a new Stock review. The server still authorizes all orders. News
+keeps published topics visible without presenting stale or unverified
+Market and Country references as current linked data. No new routes, RPCs,
+migrations, deployment changes or hosted writes.
+
+Retained the incoming mounted Store tests alongside the Market and News
+regressions; regenerated architecture inventory. Full Player verification,
+source-size and architecture checks passed locally. Native browser and
+exact-head GitHub qualification are still required. #1052 is already merged
+as `244b5020` (superseding the operational state above); this tranche does
+not change Marketplace behavior. Next: qualify this candidate before any
+merge; do not claim T047 or beta release verification.
+
+PR1054 qualification follow-up (2026-11-25): `PLAYER-MARKET-READ-EVIDENCE-002`
+remains `IMPLEMENTED_NOT_MERGED`, partial T047. Exact-scope actual-PR authority
+retains all PR1052 gate prefixes and appends active checks; PR-only path additions
+retain every guard. Diagnostic-only REF024 changes retain both race outcomes and
+FX timing before unchanged assertions. No application/backend/migration/RPC change.
+See [scope and boundary evidence](../operations/evidence/player-market-read-evidence-v2/scope.md).
+Full Player/root verification, 17 authority tests, core Backend TypeScript and
+frozen Marketplace harness Deno check pass. Six isolated PostgreSQL boundary
+probes confirm unchanged 08:00 freshness; full base/head application replay and
+historical zero-winner cause remain unproved. Chromium is blocked by CDN HTTP403;
+full Edge checks by locked SDK retrieval. Unrelated Business Financial Market
+fixture correction stays with its owner. Freeze/refresh both Roster carrier pins,
+then require fresh exact-head CI and review. No live write, merge, deployment or
+verified-complete claim.
+Qualification checkpoint: complete carrier `126aac00b70bf62982f5dbc6f799935243947549`
+(tree `7b983dc535038e89659fa6ca58a8a74e8c7a3f37`) is bound by both Roster roles
+in `c55b606033a3ce223e34835c5e8f84bd988ce067`. Strict actual-source suite passes
+131/131; both unchanged complete synthetic source modes pass 131/131 using
+required Node22. Node24 reporter incompatibility and dirty/generated-input
+attempts remain historical failures, not guard waivers. Generated local outputs
+were preserved separately. Exact authority accepts 59 changed/60 locked paths,
+114 required/71 critical identities; all 34 workflow changes are byte-exact
+PR-filter additions. Fresh published-head gates remain required.
+Public-source reconciliation: HTTPS Git publication is unavailable in this
+execution environment. Connected GitHub publication preserves the reviewed
+runtime/qualification content in carrier `bade74b1bc4fb54da0b5a13cd17009d912ac3009`,
+tree `ed94af6376ecc3771e52704498cf3c0b9550aa80`; both Roster roles now name that
+actual public carrier. The pin commit `9d342db5fb906b60a1f45a35cced6524c75f38d5`
+has tree `c42262d801e51284b0b7293224923003ef9f1bea`, identical to locally reviewed
+`c2b51eaa44`. Earlier carrier/pin SHAs above describe preserved local preparation.
+Backend smoke was separately attempted and reached the same locked SDK download
+block. No hosted final-head qualification, database replay or browser waiver.

@@ -3,6 +3,7 @@ name: banking-fx-clearing-v1
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-1054.json"
       - "docs/operations/contracts/player-cross-cutting/pr-933.json"
       - "docs/operations/contracts/player-cross-cutting/pr-981.json"
       - "docs/operations/contracts/player-cross-cutting/pr-982.json"

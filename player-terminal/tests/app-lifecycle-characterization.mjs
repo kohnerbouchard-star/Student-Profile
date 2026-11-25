@@ -3,6 +3,9 @@ import { test } from "node:test";
 import { createPlayerTerminal } from "../src/app.js";
 import { abortPlayerApiSessionRequests } from "../src/api/player-api.js";
 import { previewData } from "../src/data/preview-data.js";
+import { normalizeTerminalBootstrap } from "../src/api/read-model.js";
+import { createStudentProfileApiCall } from "../src/integrations/student-profile-api-call.js";
+import { TICKER, listedBusiness } from "./fixtures/business-market-fixture.mjs";
 import { renderStorePage } from "../src/pages/store-page.js";
 import { normalizeInventoryRead } from "../src/api/store-inventory-read-model.js";
 
@@ -50,7 +53,7 @@ function fixture(t, { connected = true, freshness, legacy = false, route = "inve
   });
   const config = {
     usePreviewData: false, authenticated: connected, csrfToken: connected ? "C".repeat(43) : "", gameSessionId: connected ? "fixture-game" : "",
-    requestTimeoutMs: 5000, writeCooldownMs: 0, allowedImageHosts: [], capabilities: { routes: { [route]: true }, actions: { marketWatchlist: true } },
+    requestTimeoutMs: 5000, writeCooldownMs: 0, allowedImageHosts: [], capabilities: { routes: { [route]: true, ...(route === "news" ? { market: true } : {}) }, actions: { marketWatchlist: true } },
     resourceFreshnessMs: { inventory: 60000 }, sessionReadyEvent: "fixture:ready", sessionRequiredEvent: "fixture:required", sessionInvalidEvent: "fixture:invalid",
     onSessionInvalid: (detail) => invalid.push(detail), onSessionRequired: (detail) => required.push(detail),
     apiCall: async (context) => {
@@ -349,6 +352,145 @@ test("logout restores completed mutation controls whose cleanup effect is still 
   clickLogout(f); await tick(); assertRestored(click); assert.equal(f.frames.size, 0);
   await f.terminal.connectSession(handoff()); await f.ready();
   assert.equal(f.terminal.getState().status, "ready");
+});
+
+test("mounted News retains declared topics while independently hiding failed Market and Countries context", async (t) => {
+  let marketAvailable = false;
+  let countriesAvailable = false;
+  let marketStatus = "open";
+  const f = fixture(t, {
+    route: "news",
+    readValue({ endpointKey }, value) {
+      if (endpointKey === "dashboard") {
+        return normalizeTerminalBootstrap({}, { gameSession: { marketStatus }, me: {}, public: {} }).dashboard;
+      }
+      if (endpointKey === "news") {
+        return {
+          ...value, items: [{
+            ...value.items[0], countryIds: ["eldoran", "outside"], assetIds: ["nova"],
+            assetSymbols: ["AURX", "OUTSIDE"],
+          }],
+        };
+      }
+      if ((endpointKey === "market" && !marketAvailable) || (endpointKey === "countries" && !countriesAvailable)) {
+        throw Object.assign(new Error("Optional context unavailable"), { status: 429 });
+      }
+      return value;
+    },
+  });
+  await f.ready();
+  const markup = () => f.mount.innerHTML;
+  const counts = () => f.calls.filter(({ key }) => key === "news").length;
+
+  assert.match(markup(), /Celestial shipping lanes stabilize/);
+  assert.match(markup(), /MARKET STATUS<\/small><strong>Unavailable/);
+  assert.match(markup(), /ELDORAN · Country details unavailable/);
+  assert.match(markup(), /AURX · Market details unavailable/);
+  assert.doesNotMatch(markup(), /data-player-market-link=|data-player-country=|None listed/);
+
+  marketAvailable = true;
+  await f.terminal.refreshResources(["market"]);
+  assert.match(markup(), /MARKET STATUS<\/small><strong>OPEN/);
+  assert.match(markup(), /Last reported by Dashboard/);
+  assert.match(markup(), /data-player-market-link="aurx"/);
+  assert.doesNotMatch(markup(), /data-player-market-link="nova"/);
+  assert.match(markup(), /OUTSIDE · Not in the loaded Market page/);
+  assert.match(markup(), /ELDORAN · Country details unavailable/);
+
+  countriesAvailable = true;
+  await f.terminal.refreshResources(["countries"]);
+  assert.match(markup(), /data-player-country="eldoran"/);
+  assert.match(markup(), /OUTSIDE · No matching country details loaded/);
+
+  marketAvailable = false;
+  await f.terminal.refreshResources(["market"]);
+  assert.ok(f.terminal.getState().data.market.assets.length > 0);
+  assert.match(markup(), /MARKET STATUS<\/small><strong>Unavailable/);
+  assert.match(markup(), /AURX · Market details unavailable/);
+  assert.doesNotMatch(markup(), /data-player-market-link=|-0\.61%/);
+  assert.match(markup(), /data-player-country="eldoran"/);
+
+  marketStatus = "closed";
+  marketAvailable = true;
+  await f.terminal.refreshResources(["dashboard", "market"]);
+  assert.match(markup(), /MARKET STATUS<\/small><strong>CLOSED/);
+  assert.match(markup(), /data-player-market-link="aurx"/);
+  assert.equal(counts(), 1);
+  assert.ok(f.calls.every(({ method }) => method === "GET"));
+});
+
+const marketManifest = {
+  ok: true, schemaVersion: 1, manifestVersion: "fixture-v1", service: "classroom-api",
+  capabilities: { routes: { dashboard: true, market: true }, actions: { marketOrder: true } },
+  endpoints: [
+    ["dashboard", "/players/me/game/dashboard", "GET"],
+    ["market", "/players/me/stocks/assets", "GET"],
+    ["marketAsset", "/players/me/stocks/assets/:ticker", "GET"],
+    ["marketOrder", "/players/me/stocks/orders", "POST"],
+  ].map(([key, pathTemplate, method]) => ({ key, operations: [{ method, pathTemplate }] })),
+};
+const marketFixtureSnapshot = (marketStatus) => ({
+  gameSession: { marketStatus }, me: { stocks: { holdings: [{ stockAssetId: TICKER, quantity: 4 }] } },
+  public: { market: { stocks: [listedBusiness()] } },
+});
+
+for (const first of ["market", "dashboard"]) test(`mounted Market status follows Dashboard after ${first} completes first`, async (t) => {
+  let active = "open", unavailable = false;
+  const holds = new Map();
+  const reads = [];
+  const adapter = createStudentProfileApiCall({ request: async (request) => {
+    reads.push(request);
+    const hold = holds.get(request.endpointKey);
+    if (hold) {
+      hold.started.resolve();
+      await hold.promise;
+    }
+    switch (request.endpointKey) {
+      case "session": return { playerId: "fixture-player", displayName: "Fixture Player", gameSessionId: "fixture-game", countryCurrencyCode: "NRC" };
+      case "capabilities": return marketManifest;
+      case "dashboard":
+        if (unavailable) throw Object.assign(new Error("Dashboard unavailable"), { status: 429 });
+        return marketFixtureSnapshot(active);
+      case "market": return { assets: [listedBusiness()], tickIndex: 1 };
+      default: throw Error(`Unexpected request ${request.endpointKey}`);
+    }
+  }});
+  const f = fixture(t, {
+    route: "market",
+    config: { apiCall: adapter, deviceId: "00000000-0000-4000-8000-000000000001" },
+  });
+  await f.ready();
+  const markup = () => f.mount.innerHTML;
+  assert.match(markup(), /OPEN/);
+
+  for (const expected of ["CLOSED", "OPEN"]) {
+    active = expected.toLowerCase();
+    for (const key of ["dashboard", "market"]) holds.set(key, { ...deferred(), started: deferred() });
+    const after = f.terminal.refreshResources(["dashboard", "market"]);
+    await Promise.all([...holds.values()].map((hold) => hold.started.promise));
+    holds.get(first).resolve();
+    await tick(); // The first adapter completes its projection before the second body replies.
+    holds.get(first === "market" ? "dashboard" : "market").resolve();
+    await after;
+    holds.clear();
+    assert.equal(f.terminal.getState().data.dashboard.reportedMarketStatus, expected);
+    if (first === "market") assert.notEqual(f.terminal.getState().data.market.status, expected);
+    assert.match(markup(), new RegExp(`data-player-market-session-status="${expected}"`));
+  }
+
+  active = "closed";
+  await f.terminal.refreshResources(["dashboard"]);
+  assert.match(markup(), /data-player-market-session-status="CLOSED"/);
+  assert.match(markup(), /The Stock market is closed/);
+
+  unavailable = true;
+  await f.terminal.refreshResources(["dashboard"]);
+  assert.match(markup(), /Market status unavailable/);
+  assert.doesNotMatch(markup(), /data-player-market-session-status="(?:OPEN|CLOSED)"/);
+  assert.equal(f.terminal.getState().data.dashboard.reportedMarketStatus, "CLOSED");
+  assert.equal(f.terminal.getState().data.market.assets.length, 1);
+  assert.deepEqual(reads.map((request) => request.endpointKey).sort(),
+    ["capabilities", "session", "market", "dashboard", "dashboard", "market", "dashboard", "market", "dashboard", "dashboard"].sort());
 });
 
 test("mounted Store distinguishes cold and warm Inventory errors, confirmed zero and recovery", async (t) => {

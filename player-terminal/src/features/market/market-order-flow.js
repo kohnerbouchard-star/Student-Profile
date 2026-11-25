@@ -1,3 +1,4 @@
+import { reportedMarketStatus } from "./reported-market-status.js";
 import { renderMarketOrderDialogView } from "./market-order-dialog-view.js";
 import { createMarketReceiptLifecycle } from "./market-receipt-lifecycle.js";
 import { assertBusinessShareQuantity, businessShareListing } from "./business-share-view.js";
@@ -157,7 +158,7 @@ function readBuyAllocations(form) {
   return allocations;
 }
 
-function updateBuySummary(terminal, form) {
+function updateBuySummary(terminal, form, config) {
   const asset = assetForForm(terminal, form);
   if (!asset) return;
   const code = listingCurrencyForAsset(terminal, asset);
@@ -173,7 +174,7 @@ function updateBuySummary(terminal, form) {
   const state = terminal.getState()?.data;
   const fundingValid = allocations.length >= 1 && allocations.length <= 3
     && allocations.every((row) => ACCOUNT_KEY.test(row.sourceAccountKey) && Number.isFinite(row.targetAmount) && row.targetAmount > 0);
-  if (submit) submit.disabled = !(state?.market?.status !== "CLOSED" && fundingValid && estimate > 0 && Math.abs(funded - estimate) < 0.00001);
+  if (submit) submit.disabled = !(reportedMarketStatus(state, config) === "OPEN" && fundingValid && estimate > 0 && Math.abs(funded - estimate) < 0.00001);
 }
 
 function updateSellSummary(terminal, form) {
@@ -246,11 +247,19 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     return true;
   }
 
+  function marketOpenForReview(data) {
+    const status = reportedMarketStatus(data, config);
+    if (status === "OPEN") return true;
+    if (status === "CLOSED") terminal.showToast?.("The Stock market is closed.", "red");
+    else terminal.showToast?.("Market status unavailable. Refresh before starting a trade review.", "amber");
+    return false;
+  }
+
   async function createBuyQuote(form) {
     if (pending || destroyed) return;
     const state = terminal.getState();
     if (!isRouteEnabled(state.data?.capabilities, "market") || !isEndpointEnabled(state.data?.capabilities, "marketOrder")) return;
-    if (state.data?.market?.status === "CLOSED") { terminal.showToast?.("The Stock market is closed.", "red"); return; }
+    if (!marketOpenForReview(state.data)) return;
     const asset = assetForForm(terminal, form);
     if (!asset) return;
     let payload;
@@ -304,7 +313,7 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
     if (pending || destroyed) return;
     const state = terminal.getState();
     if (!isRouteEnabled(state.data?.capabilities, "market") || !isEndpointEnabled(state.data?.capabilities, "marketOrder")) return;
-    if (state.data?.market?.status === "CLOSED") { terminal.showToast?.("The Stock market is closed.", "red"); return; }
+    if (!marketOpenForReview(state.data)) return;
     const asset = assetForForm(terminal, form);
     if (!asset) return;
     let payload;
@@ -385,7 +394,7 @@ export function installMarketOrderFlow({ mount, terminal, config }) {
   function handleInput(event) {
     const form = event.target.closest?.("[data-player-market-order-form]");
     if (!form) return;
-    if (form.dataset.playerMarketOrderForm === "buy-quote") updateBuySummary(terminal, form);
+    if (form.dataset.playerMarketOrderForm === "buy-quote") updateBuySummary(terminal, form, config);
     else updateSellSummary(terminal, form);
   }
 

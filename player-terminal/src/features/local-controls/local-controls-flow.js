@@ -1,38 +1,7 @@
-const MARKET_RANGE_POINTS = Object.freeze({
-  "1D": 24,
-  "1M": 30,
-  "3M": 90,
-  "1Y": 365,
-  ALL: Number.POSITIVE_INFINITY,
-});
+import { marketHistoryChart, normalizeMarketObservations } from "../market/price-history.js";
 
 function list(value) {
   return Array.isArray(value) ? value : [];
-}
-
-function normalizedRange(value) {
-  const range = String(value || "1M").trim().toUpperCase();
-  return Object.hasOwn(MARKET_RANGE_POINTS, range) ? range : "1M";
-}
-
-export function historyForMarketRange(history, range) {
-  const values = list(history).map(Number).filter(Number.isFinite);
-  if (!values.length) return [0, 0];
-  const limit = MARKET_RANGE_POINTS[normalizedRange(range)];
-  if (!Number.isFinite(limit) || values.length <= limit) return values;
-  return values.slice(-limit);
-}
-
-export function marketChartPath(values, width = 720, height = 260, padding = 18) {
-  const safeValues = list(values).length ? values : [0, 0];
-  const min = Math.min(...safeValues);
-  const max = Math.max(...safeValues);
-  const range = max - min || 1;
-  return safeValues.map((value, index) => {
-    const x = padding + (index / Math.max(1, safeValues.length - 1)) * (width - padding * 2);
-    const y = height - padding - ((value - min) / range) * (height - padding * 2);
-    return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
-  }).join(" ");
 }
 
 function csvCell(value) {
@@ -116,18 +85,25 @@ function updateMarketChart(mount, range) {
   } catch {
     history = [];
   }
-  const selectedRange = normalizedRange(range);
-  const path = marketChartPath(historyForMarketRange(history, selectedRange));
-  line.setAttribute("d", path);
-  area.setAttribute("d", `${path} L702,242 L18,242 Z`);
+  if (range !== "all" && range !== "recent") return false;
+  const chart = marketHistoryChart(normalizeMarketObservations(history), range);
+  if (!chart) return false;
+  line.setAttribute("d", chart.line);
+  area.setAttribute("d", chart.area);
+  const dot = frame.querySelector("[data-player-market-chart-dot]");
+  dot?.setAttribute("r", chart.dot ? "4" : "0");
+  if (chart.dot) {
+    dot?.setAttribute("cx", String(chart.dot.x));
+    dot?.setAttribute("cy", String(chart.dot.y));
+  }
 
   for (const button of mount.querySelectorAll('[data-player-local-action="chart-range"]')) {
-    const active = normalizedRange(button.dataset.range) === selectedRange;
+    const active = button.dataset.range === range;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   }
-  const label = mount.querySelector("[data-player-market-chart-range-label]");
-  if (label) label.textContent = `${selectedRange} SERIES`;
+  const coverage = mount.querySelector("[data-player-market-chart-coverage]");
+  if (coverage) coverage.textContent = chart.coverage;
   return true;
 }
 
