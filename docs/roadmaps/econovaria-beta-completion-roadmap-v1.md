@@ -918,3 +918,11 @@ rehearsal remains NOT_RUN. See
 `docs/operations/evidence/staging-rehearsal-controls-v1/scope.md`.
 Next: source-only draft review and normal exact-head checks, then separately
 approved fresh exact-main protected rehearsal; apply remains blocked.
+
+PR1058 qualification follow-up: the initial exact head failed normal PR-bound
+Player authority and pre-disposable Roster runtime-equivalence. Add only the
+actual PR1058 exact-path authority/regression and repin unchanged integrated
+Roster roles to one public carrier. Preserve #1055's ordered 127 required / 76
+critical identities, verifier assertions and false production permissions. No
+workflow-filter, historical SQL or fixture/diagnostic behavior change. Source
+checks require fresh exact-head qualification; draft remains unmerged.

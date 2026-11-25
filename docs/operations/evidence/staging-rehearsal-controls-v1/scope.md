@@ -119,3 +119,20 @@ still run. The existing protected manual rehearsal is the entry point for full
 restored-staging qualification after separate source review and a main merge.
 Do not dispatch from this draft. New main source requires fresh exact-source
 replay/rehearsal evidence; prior attestations cannot be reused blindly.
+
+## PR1058 source-authority and Roster pin follow-up
+
+Initial public head 8a1f7839 failed four natural source authority checks before
+Player verification and Roster runtime-equivalence before disposable activation.
+The normal PR1058 exact-path authority retains #1055's complete ordered 127
+required / 76 critical check identities and all false production/mutation/secret
+permissions. Its scope is the original source-only tranche plus its own manifest,
+regression test and Roster pins; the unchanged verifier is explicitly locked.
+No verifier assertion, workflow filter, source fixture, diagnostic guard or release
+hold is weakened. Existing integrated-composite Roster mode, exact API relation
+and seven overlays remain unchanged; both roles pin one public source carrier.
+The initial local authority/Roster run accepted the new authority but retained the
+expected stale-pin runtime failure. Final actual-path authority and strict Roster
+runtime-equivalence must be rerun after the pin-only correction; carrier identity
+is recorded in scripts/roster-connected/sources.json and the PR head. No claim of
+full corrected 15-suffix replay is added by this metadata correction.

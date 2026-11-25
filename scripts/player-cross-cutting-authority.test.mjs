@@ -300,3 +300,19 @@ test("Phase 15 controlled staging convergence binds PR 699 and keeps production 
   assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionDeploymentAllowed: true } }), /deny production deployment/u);
   assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, secretValuesAllowed: true } }), /deny secret-value handling/u);
 });
+
+test("PR1058 captured-staging source verification retains an exact nonproduction scope", async () => {
+  const manifestPath = authorityPathForPullRequest(1058);
+  const value = JSON.parse(await readFile(manifestPath, "utf8"));
+  const input = { manifest: value, changedPaths: value.allowedPaths, pullRequestNumber: 1058, baseRef: "main", manifestPath };
+  assert.equal(verifyAuthority(input).allowedPathCount, 17);
+  assert.deepEqual(value.requiredFiles, value.allowedPaths);
+  assert.equal(value.requiredChecks.length, 127);
+  assert.equal(value.criticalJobChecks.length, 76);
+  assert.equal(value.productionDeploymentAllowed, false);
+  assert.equal(value.productionMutationAllowed, false);
+  assert.equal(value.secretValuesAllowed, false);
+  assert.throws(() => verifyAuthority({ ...input, pullRequestNumber: 1055 }), /not bound/);
+  assert.throws(() => verifyAuthority({ ...input, baseRef: "release/production" }), /base ref/);
+  assert.throws(() => verifyAuthority({ ...input, changedPaths: [...value.allowedPaths, "backend/supabase/migrations/unreviewed.sql"] }), /does not allow/);
+});
