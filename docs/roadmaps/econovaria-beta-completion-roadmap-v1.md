@@ -879,7 +879,8 @@ ownership, toolchain limitations and remaining gates.
 ### 2026-11-25 — Marketplace draft availability
 
 `PLAYER-MARKETPLACE-DRAFT-INVENTORY-001` is `IMPLEMENTED_NOT_MERGED`,
-owned by `fix/player-marketplace-draft-inventory`, with donor `540a05b7`
+owned by [draft PR #1052](https://github.com/kohnerbouchard-star/Student-Profile/pull/1052)
+on `fix/player-marketplace-draft-inventory`, with donor `540a05b7`
 reconciled to main `938a3dbd`. Draft controls require a current Inventory
 read and an explicit positive whole-number available count. Missing or
 unverified stock does not fall back to owned quantity. The same eligibility
