@@ -51,6 +51,7 @@ export function validateSocketProbe(text){
  const rows=text.split('\n').map(row=>row.split(' ').map(Number));
  return {requestedSocketPresent:rows[0][0]===1,requestedReadiness:rows[0][1],alternateSocketPresent:rows[1][0]===1,alternateReadiness:rows[1][1]};
 }
+export const CLIENT_ENV=['env','-u','PGSERVICE','-u','PGHOSTADDR'];
 const defaultRun=(command,args,input,timeout=30000)=>execFileSync(command,args,{input,timeout,maxBuffer:1024*1024,encoding:'utf8',stdio:[input===undefined?'ignore':'pipe','pipe','pipe']}).trim();
 export function runSyntheticDockerSmoke({env=process.env,event=JSON.parse(readFileSync(env.GITHUB_EVENT_PATH,'utf8')),run=defaultRun,root=process.cwd()}={}){
  let stage='synthetic-input-preflight',work,cli,attempted=false,result,connectionContext,socketProbe;
@@ -73,15 +74,15 @@ export function runSyntheticDockerSmoke({env=process.env,event=JSON.parse(readFi
   metadata=JSON.parse(run('docker',['inspect',id]))[0];assert.equal(assertSyntheticContainer(metadata,project,started,true),id);
   const sql=text=>{
    const current=JSON.parse(run('docker',['inspect',id]))[0];assert.equal(assertSyntheticContainer(current,project,started,true),id);
-   return run('docker',['exec','-e','LC_ALL=C','-e','PGCONNECT_TIMEOUT=3','-e','PGHOSTADDR=','-e','PGSERVICE=','-e','PGSERVICEFILE=/dev/null','-i',id,'psql','-h','/var/run/postgresql','-p','5432','-U','postgres','-d','postgres','-XqAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=sqlstate'],`set statement_timeout='10s';set lock_timeout='2s';\n${text}`);
+   return run('docker',['exec','-e','LC_ALL=C','-e','PGCONNECT_TIMEOUT=3','-e','PGSERVICEFILE=/dev/null','-i',id,...CLIENT_ENV,'psql','-h','/var/run/postgresql','-p','5432','-U','postgres','-d','postgres','-XqAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=sqlstate'],`set statement_timeout='10s';set lock_timeout='2s';\n${text}`);
   };
   stage='synthetic-socket-transport';
-  socketProbe=validateSocketProbe(run('docker',['exec','-e','LC_ALL=C','-e','PGCONNECT_TIMEOUT=3','-e','PGHOSTADDR=','-e','PGSERVICE=','-e','PGSERVICEFILE=/dev/null',id,'sh','-c',SOCKET_PROBE_SCRIPT],undefined,10000));
+  socketProbe=validateSocketProbe(run('docker',['exec','-e','LC_ALL=C','-e','PGCONNECT_TIMEOUT=3','-e','PGSERVICEFILE=/dev/null',id,...CLIENT_ENV,'sh','-c',SOCKET_PROBE_SCRIPT],undefined,10000));
   stage='synthetic-socket-context';connectionContext=validateConnectionContext(sql(CONNECTION_CONTEXT));
   assert(connectionContext.unixSocket&&connectionContext.roleMatches&&connectionContext.databaseMatches);
   stage='synthetic-schema-create';sql(SYNTHETIC_SCHEMA);
   stage='synthetic-schema-dump';
-  const dump=run('docker',['exec',id,'pg_dump','-h','/var/run/postgresql','-p','5432','-U','postgres','-d','postgres','--schema-only','--schema=synthetic_probe','--schema=synthetic_ledger','--no-publications','--no-subscriptions']);
+  const dump=run('docker',['exec',id,...CLIENT_ENV,'pg_dump','-h','/var/run/postgresql','-p','5432','-U','postgres','-d','postgres','--schema-only','--schema=synthetic_probe','--schema=synthetic_ledger','--no-publications','--no-subscriptions']);
   stage='synthetic-dump-boundary';assert(dump.length>0&&dump.length<262144);assert(!/^(COPY|INSERT INTO) /m.test(dump));
   stage='synthetic-ledger-read';const ledger=JSON.parse(sql("select coalesce(json_agg(version order by version),'[]'::json) from synthetic_ledger.migrations"));assert.deepEqual(ledger,['synthetic-v1']);
   stage='synthetic-schema-restore';sql('drop schema synthetic_probe cascade;drop schema synthetic_ledger cascade;');sql(dump);

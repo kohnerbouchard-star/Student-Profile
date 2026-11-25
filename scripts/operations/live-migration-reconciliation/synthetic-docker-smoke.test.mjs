@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {mkdtempSync,rmSync,readFileSync,readdirSync,writeFileSync} from 'node:fs';import {tmpdir} from 'node:os';import path from 'node:path';
-import {assertSyntheticContext,assertSyntheticContainer,runSyntheticDockerSmoke,SYNTHETIC_GUARD,classifySyntheticFailure,CONNECTION_CONTEXT,validateConnectionContext,SOCKET_PROBE_SCRIPT,validateSocketProbe} from './synthetic-docker-smoke.mjs';
+import {assertSyntheticContext,assertSyntheticContainer,runSyntheticDockerSmoke,SYNTHETIC_GUARD,classifySyntheticFailure,CONNECTION_CONTEXT,validateConnectionContext,SOCKET_PROBE_SCRIPT,validateSocketProbe,CLIENT_ENV} from './synthetic-docker-smoke.mjs';
 const sha='a'.repeat(40);
 function context(temp){return {env:{GITHUB_ACTIONS:'true',GITHUB_WORKFLOW:'Database Replay',GITHUB_JOB:'replay',GITHUB_EVENT_NAME:'pull_request',GITHUB_REPOSITORY:'kohnerbouchard-star/Student-Profile',REF032_SYNTHETIC_DOCKER_SMOKE:'1',RUNNER_TEMP:temp},event:{pull_request:{base:{ref:'main'},head:{sha,repo:{full_name:'kohnerbouchard-star/Student-Profile'}}}}};}
 function stub(fail){
@@ -77,7 +77,16 @@ test('native synthetic schema dump/restore reaches its own guard (not Docker)',{
  let client;
  try{
   await pg.initialise();await pg.start();client=pg.getPgClient('postgres','127.0.0.1');await client.connect();await client.query(SYNTHETIC_SCHEMA);
-  const env={PATH:process.env.PATH,PGPASSWORD:'synthetic-only'};
+  const env={PATH:process.env.PATH,PGPASSWORD:'synthetic-only',LC_ALL:'C'};
+  // Real server control: environment service resolution happens before transport.
+  const psql=path.join(process.env.REF032_PG_BIN,'psql');
+  const queryArgs=['-h','127.0.0.1','-p',String(port),'-U','postgres','-d','postgres','-XqAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=sqlstate','-c','select 1'];
+  for(const extra of [{},{PGHOSTADDR:''},{PGSERVICEFILE:'/dev/null'}])assert.equal(execFileSync(psql,queryArgs,{env:{...env,...extra},encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim(),'1');
+  for(const extra of [{PGSERVICE:''},{PGSERVICE:'',PGSERVICEFILE:'/dev/null'}]){
+   assert.throws(()=>execFileSync(psql,queryArgs,{env:{...env,...extra},encoding:'utf8',stdio:['ignore','pipe','pipe']}),e=>e.status===2);
+   assert.equal(execFileSync('env',[...CLIENT_ENV.slice(1),psql,...queryArgs],{env:{...env,...extra},encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim(),'1');
+  }
+
   const dump=execFileSync(path.join(process.env.REF032_PG_BIN,'pg_dump'),['-h','127.0.0.1','-p',String(port),'-U','postgres','-d','postgres','--schema-only','--schema=synthetic_probe','--schema=synthetic_ledger','--no-publications','--no-subscriptions'],{env,encoding:'utf8',timeout:10000});
   assert(!/^(COPY|INSERT INTO) /m.test(dump));await client.query('drop schema synthetic_probe cascade;drop schema synthetic_ledger cascade');
   execFileSync(path.join(process.env.REF032_PG_BIN,'psql'),['-h','127.0.0.1','-p',String(port),'-U','postgres','-d','postgres','-Xq','-v','ON_ERROR_STOP=1'],{env,input:dump,encoding:'utf8',timeout:10000,stdio:['pipe','pipe','pipe']});
@@ -131,5 +140,22 @@ test('actual POSIX shell probe emits only the strict projection',async()=>{
  const {execFileSync}=await import('node:child_process');const temp=mkdtempSync(path.join(tmpdir(),'synthetic-readiness-command-'));
  try{writeFileSync(path.join(temp,'pg_isready'),'#!/bin/sh\ncase "$*" in *"-h /var/run/postgresql "*) exit 2;; *"-h /tmp "*) exit 1;; *) exit 99;; esac\n',{mode:0o700});
  const text=execFileSync('/bin/sh',['-c',SOCKET_PROBE_SCRIPT],{env:{PATH:temp},encoding:'utf8',timeout:1000}).trim();const value=validateSocketProbe(text);assert.equal(value.requestedReadiness,2);assert.equal(value.alternateReadiness,1);
+ }finally{rmSync(temp,{recursive:true,force:true});}
+});
+
+test('all synthetic libpq clients remove service and hostaddr rather than defining empty service',()=>{
+ const temp=mkdtempSync(path.join(tmpdir(),'synthetic-env-'));try{const s=stub();assert.equal(runSyntheticDockerSmoke({...context(temp),run:s.run}).status,'PASS');
+ for(const c of s.calls.filter(c=>c.args.includes('psql')||c.args.includes('pg_dump')||c.args.includes(SOCKET_PROBE_SCRIPT))){assert(!c.args.includes('PGSERVICE='));assert(!c.args.includes('PGHOSTADDR='));const start=c.args.indexOf('env');assert.deepEqual(c.args.slice(start,start+CLIENT_ENV.length),CLIENT_ENV);}
+ }finally{rmSync(temp,{recursive:true,force:true});}
+});
+
+test('real readiness matrix reproduces empty-service no-attempt before Unix transport',{skip:!process.env.REF032_PG_ISREADY&&'Native pg_isready required'},async()=>{
+ const {execFileSync}=await import('node:child_process');const temp=mkdtempSync(path.join(tmpdir(),'synthetic-service-matrix-'));
+ try{const args=['-h',temp,'-p','57669','-U','postgres','-d','postgres','-t','1'];const base={PATH:process.env.PATH,LC_ALL:'C'};
+ const status=(command,args,env)=>{try{execFileSync(command,args,{env,timeout:3000,stdio:['ignore','pipe','pipe']});return 0;}catch(e){return e.status;}};
+ for(const [extra,expected] of [[{},2],[{PGSERVICE:''},3],[{PGSERVICE:'',PGSERVICEFILE:'/dev/null'},3],[{PGHOSTADDR:''},2],[{PGSERVICEFILE:'/dev/null'},2]]){
+ assert.equal(status(process.env.REF032_PG_ISREADY,args,{...base,...extra}),expected);
+ assert.equal(status('env',[...CLIENT_ENV.slice(1),process.env.REF032_PG_ISREADY,...args],{...base,...extra}),2);
+ }
  }finally{rmSync(temp,{recursive:true,force:true});}
 });
