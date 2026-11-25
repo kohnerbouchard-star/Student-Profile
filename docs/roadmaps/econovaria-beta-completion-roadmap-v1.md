@@ -905,7 +905,9 @@ before merging. Market and Player News follow as a separate tranche.
 
 `PLAYER-BUSINESS-INSTALLED-ROUTE-001`: `IMPLEMENTED_NOT_MERGED`; local owner
 `refactor/player-business-installed-route`, implementation `1d7ff7b948`, based on fetched main `73ee21a984`;
-no PR/push/merge. Treasury browser/unit coverage now targets the configured
+draft [PR #1056](https://github.com/kohnerbouchard-star/Student-Profile/pull/1056),
+published source `0af16038627e87d76cc7ca14a4eba7f732885358`, tree
+`1bff19c9640e4ffee41debc1fc313bd45a4f2886`. No merge/deployment. Treasury browser/unit coverage now targets the configured
 workspace route. The installed workspace consumes the preserved exact Treasury
 panel and committed Procurement recovery disclosure; unreachable configured-page
 and Procurement rendering was removed, retaining formation and shared leaves.
