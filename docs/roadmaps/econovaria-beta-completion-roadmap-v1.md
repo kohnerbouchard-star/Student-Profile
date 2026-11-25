@@ -900,3 +900,29 @@ but could not complete without the locked Supabase SDK; the hosted
 repository-wide check remains required. No staging or live claim.
 Next: qualify this exact draft and its connected Marketplace checks
 before merging. Market and Player News follow as a separate tranche.
+
+### REF-032 / OPS-STAGE-001 — captured staging rehearsal controls (2026-11-25)
+
+`IMPLEMENTED_NOT_MERGED`, consolidated source-only owner
+`ops/staging-rehearsal-controls-20261125`, base `73ee21a9`. Reconstructs pinned
+repository purge registry/order fixtures only in the explicitly authorized,
+protected captured-staging disposable container; exact source/project, fresh local
+Docker identity, disconnected egress and Unix socket remain mandatory. Publishes
+only approved migration identities and allowlisted SQLSTATE diagnostics. Native
+PostgreSQL reproduces missing-registry P0001, proves exact 207/456/206 baseline
+controls and unchanged loan/graph migration success; exported-snapshot concurrency,
+exporter-loss and timeout tests also pass. Combined targeted/native/release-hold suite 45/45 on pinned Node 22.23.1, no skips. Read-only staging aggregate fingerprints match;
+no hosted rows copied. No historical migration, route, RPC, broad hold, apply
+control, hosted write, merge or dispatch change. Full corrected 15-suffix protected
+rehearsal remains NOT_RUN. See
+`docs/operations/evidence/staging-rehearsal-controls-v1/scope.md`.
+Next: source-only draft review and normal exact-head checks, then separately
+approved fresh exact-main protected rehearsal; apply remains blocked.
+
+PR1058 qualification follow-up: the initial exact head failed normal PR-bound
+Player authority and pre-disposable Roster runtime-equivalence. Add only the
+actual PR1058 exact-path authority/regression and repin unchanged integrated
+Roster roles to one public carrier. Preserve #1055's ordered 127 required / 76
+critical identities, verifier assertions and false production permissions. No
+workflow-filter, historical SQL or fixture/diagnostic behavior change. Source
+checks require fresh exact-head qualification; draft remains unmerged.

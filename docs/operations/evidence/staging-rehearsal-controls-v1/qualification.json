@@ -1,0 +1,26 @@
+{
+  "status": "LOCAL_TARGETED_PASS_NOT_RELEASE_CERTIFIED",
+  "baseMain": "73ee21a9846442e85e3e5f2f650229423f2c5404",
+  "canonicalReplayRun": 45570377295,
+  "canonicalArtifact": 15001463766,
+  "canonicalArchiveSha256": "7335b8366f8972384e5a0f30ad370c5ad4b93514cb2ca52ad54bea53edeff667",
+  "canonicalSchemaSha256": "772b1b8c90344007c7f44a0c69a5e8e2f72434064d07fa0bfb8828dc7c7bc55b",
+  "nativeServer": "17.12",
+  "snapshotClients": "17.6",
+  "reproducedSqlstate": "P0001",
+  "aggregateStagingControlFingerprintsMatched": true,
+  "full15SuffixStagingReplay": "NOT_RUN",
+  "actualDockerFixtureInvocation": "NOT_RUN",
+  "hostedWrites": false,
+  "hostedRowsCopied": false,
+  "releaseCertificate": false,
+  "tests": {
+    "passed": 45,
+    "skipped": 0
+  },
+  "nodeVersion": "22.23.1",
+  "migrationSourceValidation": "PASS",
+  "secretScan": "PASS",
+  "shellSyntax": "PASS",
+  "diffCheck": "PASS"
+}

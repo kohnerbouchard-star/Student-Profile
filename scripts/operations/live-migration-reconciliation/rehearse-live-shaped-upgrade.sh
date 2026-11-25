@@ -110,6 +110,7 @@ write_summary() {
   if test -s "$PHASE15_EVIDENCE_DIR/catalog-comparison-exit.txt"; then
     catalog_compare_exit="$(cat "$PHASE15_EVIDENCE_DIR/catalog-comparison-exit.txt")"
   fi
+  PHASE15_FAILURE_PATH="$failure_path" \
   PHASE15_EXIT_CODE="$exit_code" \
   PHASE15_STATUS="$status" \
   PHASE15_FAILED_MIGRATION="$failed_migration" \
@@ -131,6 +132,8 @@ write_summary() {
   node --input-type=module - <<'NODE' > "$PHASE15_EVIDENCE_DIR/summary.json"
 import { existsSync, readFileSync } from "node:fs";
 
+const failure = existsSync(process.env.PHASE15_FAILURE_PATH)
+  ? JSON.parse(readFileSync(process.env.PHASE15_FAILURE_PATH, "utf8")) : {};
 const applied = readFileSync(process.env.PHASE15_APPLIED_PATH, "utf8")
   .split("\n")
   .filter(Boolean);
@@ -165,6 +168,9 @@ process.stdout.write(`${JSON.stringify({
     certifiedMigrationCount: Number(process.env.PHASE15_SUFFIX_CERTIFIED_COUNT),
   },
   failedMigration: process.env.PHASE15_FAILED_MIGRATION || null,
+  failureStage: failure.failureStage ?? null,
+  failedVersion: failure.failedVersion ?? null,
+  failureSqlstate: failure.failureSqlstate ?? null,
   status: process.env.PHASE15_STATUS,
   exitCode: Number(process.env.PHASE15_EXIT_CODE),
   sourceDatabaseAccess: "schema-and-migration-ledger-read-only",
@@ -210,6 +216,7 @@ trap cleanup EXIT
 
 excluded="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
 startup_status=1
+fixture_container_not_before="$(date -u +%s%3N)"
 for attempt in 1 2 3; do
   set +e
   supabase start --workdir "$supabase_root" --exclude "$excluded"
@@ -266,6 +273,18 @@ drop schema if exists public cascade;
 SQL
 docker exec -i "$container" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 < "$dump_path"
 schema_restored=true
+
+# Only the protected captured-staging workflow may reconstruct synthetic controls.
+# Other rehearsal entry points retain their held behavior and cannot opt in implicitly.
+if test "${REF032_RECONSTRUCT_PURGE_FIXTURE:-}" = repository-only-v1; then
+  test "$PHASE15_ENVIRONMENT" = staging
+  test "$PHASE15_EXPECTED_PROJECT_REF" = eecvbssdvarfcykcfrny
+  test -n "${PHASE15_CAPTURE_DIR:-}"
+  test -z "${PHASE15_REMOTE_DATABASE_URL:-}"
+  (cd "$PHASE15_CAPTURE_DIR" && sha256sum --check --status SHA256SUMS)
+  REF032_FIXTURE_CONTAINER_NOT_BEFORE="$fixture_container_not_before" \
+    node "$repo_root/scripts/operations/live-migration-reconciliation/run-captured-staging-purge-fixture.mjs"
+fi
 
 # The hosted application schema dump deliberately excludes extension schemas. Recreate the
 # exact pg_cron prerequisite already installed in both hosted environments, but only inside
@@ -363,18 +382,16 @@ if test "${#all_pending[@]}" -gt 0; then
     test -s "$repo_root/backend/supabase/migrations/$migration"
     failed_migration="$migration"
     echo "Applying $migration"
-    if ! docker exec -i "$container" psql -U postgres -d postgres -X -q -v ON_ERROR_STOP=1 \
-      < "$repo_root/backend/supabase/migrations/$migration"; then
-      PHASE15_FAILED_MIGRATION="$migration" node --input-type=module - <<'NODE' > "$failure_path"
-process.stdout.write(`${JSON.stringify({
-  schemaVersion: 1,
-  environment: process.env.PHASE15_ENVIRONMENT,
-  failedMigration: process.env.PHASE15_FAILED_MIGRATION,
-  errorClass: "MIGRATION_APPLICATION_FAILED",
-}, null, 2)}\n`);
-NODE
+    private_error_path="$PHASE15_WORK_DIR/migration-error.private"
+    if ! docker exec -i "$container" psql -U postgres -d postgres -X -q \
+      -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate \
+      < "$repo_root/backend/supabase/migrations/$migration" 2> "$private_error_path"; then
+      node "$repo_root/scripts/operations/live-migration-reconciliation/sanitize-rehearsal-failure.mjs" \
+        "$plan_path" "$migration" "$private_error_path" "$failure_path"
+      rm -f "$private_error_path"
       exit 1
     fi
+    rm -f "$private_error_path"
     if [[ "${migration:0:14}" > "20260920082200" ]]; then
       printf '%s\n' "$migration" >> "$suffix_applied_path"
     else
