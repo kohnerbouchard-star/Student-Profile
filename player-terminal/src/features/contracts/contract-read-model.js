@@ -1,3 +1,4 @@
+import { contractRewardTimeline, readContractRewardState } from "./contract-reward-state.js";
 import { publicSubmittedAnswers, publicSubmittedStoryDecision, resolveContractInteraction } from "./contract-interaction-v2.js";
 
 const PUBLIC_CONTRACT_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
@@ -121,7 +122,7 @@ function progressPercent(status) {
   return 0;
 }
 
-function timeline(contract, progress, status) {
+function timeline(contract, progress, status, rewardState) {
   const accepted = !["Available", "Scheduled", "Expired"].includes(status);
   const submitted = ["Submitted", "Revision Required", "Approved", "Rejected", "Completed"].includes(status);
   const reviewed = ["Revision Required", "Approved", "Rejected", "Completed"].includes(status);
@@ -130,7 +131,7 @@ function timeline(contract, progress, status) {
     { label: "Accepted", time: accepted ? shortDate(progress.createdAt, "Recorded") : "Pending", complete: accepted },
     { label: "Submitted for review", time: progress.submittedAt ? shortDate(progress.submittedAt) : "Pending", complete: submitted },
     { label: "Reviewed", time: reviewed ? shortDate(progress.updatedAt, "Reviewed") : "Pending", complete: reviewed },
-    { label: "Reward issued", time: progress.rewardIssuedAt ? shortDate(progress.rewardIssuedAt) : "Pending", complete: Boolean(progress.rewardIssuedAt) }
+    contractRewardTimeline(rewardState)
   ];
 }
 
@@ -147,6 +148,7 @@ export function normalizePlayerContracts(response, { now = Date.now() } = {}) {
     const progress = progressByContract.get(id) || progressByContract.get(internalContractId(contract)) || {};
     const status = statusFrom(contract, progress, now);
     const reward = rewardFields(contract.rewardPayload);
+    const rewardState = readContractRewardState(contract.rewardPayload, progress, shortDate);
     const metadata = object(contract.metadata);
     const evidence = object(progress.evidencePayload);
     return [{
@@ -166,6 +168,7 @@ export function normalizePlayerContracts(response, { now = Date.now() } = {}) {
       urgency: urgency(contract, now),
       ...reward,
       rewardIssued: Boolean(progress.rewardIssuedAt),
+      rewardState,
       progress: progressPercent(status),
       objective: text(contract.description, text(contract.instructions)),
       instructions: text(contract.instructions),
@@ -180,7 +183,7 @@ export function normalizePlayerContracts(response, { now = Date.now() } = {}) {
         answers: publicSubmittedAnswers(evidence),
         storyDecision: publicSubmittedStoryDecision(evidence)
       } : null,
-      timeline: timeline(contract, progress, status)
+      timeline: timeline(contract, progress, status, rewardState)
     }];
   });
 

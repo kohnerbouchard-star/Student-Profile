@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { renderContractsPage } from "../src/pages/contracts-page.js";
 import { normalizePlayerContracts } from "../src/features/contracts/contract-read-model.js";
 
-const render = (status, evidencePayload, metadata = {}, extra = {}, contractKey = "review-example") => {
+const render = (status, evidencePayload, metadata = {}, extra = {}, contractKey = "review-example", rewardPayload) => {
   const contracts = normalizePlayerContracts({
-    contracts: [{ contractKey, title: "Reviewed mission", metadata }],
+    contracts: [{ contractKey, title: "Reviewed mission", metadata, rewardPayload }],
     progress: [{ contractKey, status, evidencePayload,
       submittedAt: "2026-11-17T12:00:00Z", resultPayload: { feedback: "Review guidance" }, ...extra }]
   });
@@ -32,7 +32,8 @@ assert.match(render("approved", {}, {}, { submittedAt: null }), /No submission c
 assert.doesNotMatch(render("active", {}), /RECORDED SUBMISSION/);
 assert.doesNotMatch(render("revision_requested", {}), /RECORDED SUBMISSION/);
 assert.match(render("revision_requested", {}), /data-player-form="contract-submit"/);
-assert.match(render("approved", {}), /Reward issuance is pending backend confirmation/);
+assert.match(render("approved", {}, {}, {}, "review-example", { cash: { amount: 50 } }), /Awaiting confirmation/);
+assert.match(render("approved", {}), /Reward status is not available/);
 console.log("Contracts reviewed-submission history checks passed.");
 
 for (const status of ["approved", "rejected", "completed"]) {

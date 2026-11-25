@@ -25,7 +25,7 @@
     "store-negative": "node tests/store-negative-state-matrix.mjs",
     "business-workspace": "node tests/business-workspace-resources.mjs",
     "business-workspace-boundary": "node tests/business-workspace-page-boundary.mjs && node tests/business-next-actions.mjs && node tests/business-production-loop.mjs && node --test tests/business-job-progress.mjs && node --test tests/business-offer-custody.mjs",
-    "contracts-flow": "node tests/contracts-flow.mjs",
+    "contracts-flow": "node tests/contracts-flow.mjs && node --test tests/contracts-reward-wording.mjs",
     "contracts-public": "node tests/contracts-public-list.mjs",
     "contracts-connected": "node tests/contracts-connected-acceptance.mjs",
     "contracts-submit": "node tests/contracts-connected-submission.mjs",

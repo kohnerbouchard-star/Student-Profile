@@ -1,3 +1,4 @@
+import { contractRewardTimeline, readContractRewardState } from "../features/contracts/contract-reward-state.js";
 import { list, object, text, number, shortDate } from "./read-model-values.js";
 
 function contractStatus(progress) {
@@ -24,6 +25,7 @@ export function normalizeContracts(snapshot) {
     const progress = progressByContract.get(contract.contractId);
     const status = contractStatus(progress);
     const reward = object(contract.rewardPayload);
+    const rewardState = readContractRewardState(contract.rewardPayload, progress, shortDate);
     const target = object(contract.targetingPayload);
     const metadata = object(contract.metadata);
     const countryCodes = list(target.countryCodes);
@@ -31,6 +33,7 @@ export function normalizeContracts(snapshot) {
     return {
       id: text(contract.contractId),
       status,
+      rewardState,
       title: text(contract.title, "Untitled contract"),
       issuer: text(metadata.issuer || contract.sourceType, "Econovaria"),
       location: countryCodes.length ? countryCodes.join(", ") : "All Nations",
@@ -50,7 +53,7 @@ export function normalizeContracts(snapshot) {
         { label: "Available", time: text(contract.publishedAt) ? shortDate(contract.publishedAt) : "Available now", complete: true },
         { label: "Accepted", time: status === "Available" ? "Pending" : "Recorded", complete: status !== "Available" },
         { label: "Submitted for review", time: progress?.submittedAt ? shortDate(progress.submittedAt) : "Pending", complete: ["Submitted", "Completed"].includes(status) },
-        { label: "Reward issued", time: progress?.rewardIssuedAt ? shortDate(progress.rewardIssuedAt) : "Pending", complete: status === "Completed" }
+        contractRewardTimeline(rewardState)
       ]
     };
   });
