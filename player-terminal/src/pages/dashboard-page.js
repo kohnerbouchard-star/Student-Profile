@@ -1,3 +1,4 @@
+import { bankAvailability } from "../api/banking-balance-values.js";
 import { escapeHtml, formatCurrency, formatPercent, toneFromChange } from "../core/format.js";
 import { icon } from "../components/icons.js";
 import { renderMetric, renderStatusPill } from "../components/ui.js";
@@ -55,7 +56,9 @@ export function renderDashboardPage(data, ui = {}, config = {}) {
   const allocation = portfolioUnavailable ? [] : (portfolio?.allocation || []);
   const allocationItems = allocation.length ? allocation.slice(0, 4) : config.usePreviewData ? [{ label: "Cash", percent: 34 }, { label: "Equities", percent: 56 }, { label: "Inventory", percent: 10 }] : [];
   const money = (value, resource = "dashboard") => label(resource) || (Number.isFinite(value) ? formatCurrency(value, currencyCode) : "Unavailable");
-  const availableChecking = money(banking.checking.available, "banking");
+  const checkingAvailability = bankAvailability(banking.checking, currencyCode);
+  const availableChecking = money(checkingAvailability, "banking");
+  const checkingUnavailable = bankingUnavailable || checkingAvailability === null;
   const netWorth = money(dashboard.netWorth);
   const dailyChange = label("dashboard") || (Number.isFinite(dashboard.dailyChange) ? `${formatPercent(dashboard.dailyChange)} today` : "Daily change unavailable");
   const activeCount = label("contracts") || String(contracts.items.filter((item) => item.status === "Active").length);
@@ -92,7 +95,7 @@ export function renderDashboardPage(data, ui = {}, config = {}) {
   return `<section class="player-terminal-page player-terminal-command-page player-terminal-dashboard-page" data-page="dashboard">
     <div class="player-terminal-page-heading player-terminal-command-heading"><div><small>PLAYER COMMAND CENTER</small><h2>Good morning, ${escapeHtml(String(session.displayName || "Player").trim().split(/\s+/)[0] || "Player")}</h2><p>Complete the next priority, monitor the economy, and keep your capital working.</p></div><div class="player-terminal-heading-actions">${renderStatusPill(label("dashboard") || dashboard.marketStatus, label("dashboard") ? "amber" : "green")}<button class="player-terminal-secondary-button" type="button" data-route="news">${icon("news")} World brief</button></div></div>
     ${renderAttentionStrip(attentionItems)}
-    <div class="player-terminal-command-metrics" aria-label="Player financial and activity summary">${renderMetric({ label: "Available checking", value: availableChecking, meta: bankingUnavailable ? "Balance not confirmed" : "Checking balance", tone: bankingUnavailable ? "amber" : "green", iconName: "wallet" })}${renderMetric({ label: "Net worth", value: netWorth, meta: dailyChange, tone: "cyan", iconName: "portfolio" })}${renderMetric({ label: "Active contracts", value: activeCount, meta: dueSoon, tone: "amber", iconName: "contracts" })}${renderMetric({ label: "Unread messages", value: unreadMessages, meta: messagesUnavailable ? "Communications unavailable" : "Player and official channels", tone: "purple", iconName: "messages" })}</div>
+    <div class="player-terminal-command-metrics" aria-label="Player financial and activity summary">${renderMetric({ label: "Available checking", value: availableChecking, meta: checkingUnavailable ? "Balance not confirmed" : "Checking balance", tone: checkingUnavailable ? "amber" : "green", iconName: "wallet" })}${renderMetric({ label: "Net worth", value: netWorth, meta: dailyChange, tone: "cyan", iconName: "portfolio" })}${renderMetric({ label: "Active contracts", value: activeCount, meta: dueSoon, tone: "amber", iconName: "contracts" })}${renderMetric({ label: "Unread messages", value: unreadMessages, meta: messagesUnavailable ? "Communications unavailable" : "Player and official channels", tone: "purple", iconName: "messages" })}</div>
     <div class="player-terminal-command-layout">
       <section class="player-terminal-panel player-terminal-priority-panel"><header class="player-terminal-panel-header"><div><span>NEXT ACTIONS</span><strong>Your core game loop</strong></div><small>Ordered by urgency</small></header><div class="player-terminal-next-actions">${[
         ...(arrival?.priority ? [arrival] : []),

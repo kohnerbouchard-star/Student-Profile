@@ -329,13 +329,17 @@ test("full dashboard merge retains the established nested mutation and stale cou
   const response = snapshot({ news: [{ id: "event", scope: "country", targetKey: "AB" }], stocks: [] });
   const next = mergeTerminalRead(data, "dashboard", response);
   assert.notStrictEqual(next, data);
-  for (const key of ["session", "banking", "progression", "countries"]) assert.strictEqual(next[key], data[key]);
+  for (const key of ["session", "progression", "countries"]) assert.strictEqual(next[key], data[key]);
+  assert.notStrictEqual(next.banking, data.banking);
   assert.equal(data.session.currencyCode, "ALT");
   assert.equal(data.session.currencyName, "ALT");
   assert.equal(data.session.countryId, "ab");
   assert.equal(data.session.countryName, "AB");
-  assert.notStrictEqual(data.banking.checking, oldChecking);
-  assert.deepEqual(data.banking.checking, { accountId: "CHECKING", balance: 77, available: 77, pending: 0 });
+  assert.strictEqual(data.banking.checking, oldChecking);
+  assert.deepEqual(next.banking.checking, {
+    accountId: "CHECKING", balance: null, postedAmount: null, heldAmount: null,
+    available: null, availableAmount: null, pending: null, currencyCode: "ALT"
+  });
   assert.equal(data.progression.playerName, "Changed Player");
   assert.notStrictEqual(next.dashboard, oldDashboard);
   assert.equal(oldDashboard.liquidBalance, null);

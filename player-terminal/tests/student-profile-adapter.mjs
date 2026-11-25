@@ -362,16 +362,22 @@ for (const [label, balances, expectedCode] of [
   assert.equal(result.currencyCode, expectedCode, label);
   assert.equal(result.currencyResolved, Boolean(expectedCode), label);
 }
-for (const [label, currentBalances, expectedBalance, configured] of [
-  ["missing account", [], null, false],
-  ["wrong currency", [{ accountType: "checking", currencyCode: "USD", balance: 9 }], null, false],
-  ["explicit zero", [{ accountType: "checking", currencyCode: "ELD", postedAmount: 0, balance: 9 }], 0, true],
-  ["missing amount", [{ accountType: "checking", currencyCode: "ELD" }], null, true],
+for (const [label, currentBalances, expectedBalance, expectedAvailability, configured] of [
+  ["missing account", [], null, null, false],
+  ["wrong currency", [{ accountType: "checking", currencyCode: "USD", balance: 9 }], null, null, false],
+  ["posted-only", [{ accountType: "checking", currencyCode: "ELD", balance: 9 }], 9, null, true],
+  ["explicit posted zero", [{ accountType: "checking", currencyCode: "ELD", postedAmount: 0, balance: 9 }], 0, null, true],
+  ["explicit available zero", [{ accountType: "checking", currencyCode: "ELD", balance: 9, availableAmount: 0 }], 9, 0, true],
+  ["proven hold", [{ accountType: "checking", currencyCode: "ELD", postedAmount: 12.75, heldAmount: 5.25 }], 12.75, 7.5, true],
+  ["invalid hold", [{ accountType: "checking", currencyCode: "ELD", postedAmount: 12.75, heldAmount: -1 }], 12.75, null, true],
+  ["missing amount", [{ accountType: "checking", currencyCode: "ELD" }], null, null, true],
 ]) {
   const adapter = createStudentProfileApiCall({ request: async ({ endpointKey }) => ({ session: rawSession, capabilities: capabilityManifest, banking: { currentBalances, transactions: [] } })[endpointKey] });
   await adapter(context("session", "GET", "/session"));
   const result = await adapter(context("banking", "GET", "/banking"));
   assert.equal(result.checking.balance, expectedBalance, label);
+  assert.equal(result.checking.available, expectedAvailability, label);
+  if (configured) assert.equal(result.checking.available, result.balances[0].availableAmount, label);
   assert.equal(result.checking.configured, configured, label);
   assert.equal(result.savings.balance, null, label);
 }

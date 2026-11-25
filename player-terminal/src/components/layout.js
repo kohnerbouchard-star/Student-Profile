@@ -1,3 +1,4 @@
+import { bankAvailability } from "../api/banking-balance-values.js";
 import { escapeHtml, formatCurrency } from "../core/format.js";
 import { icon } from "./icons.js";
 import { renderStatusPill } from "./ui.js";
@@ -101,10 +102,10 @@ function renderNotifications(data, open) {
 
 function renderTopbar(route, data, ui, config) {
   const meta = ROUTE_META[route] || ROUTE_META.dashboard;
-  const balance = data.banking?.checking?.available ?? data.dashboard?.liquidBalance ?? 0;
+  const balance = bankAvailability(data.banking?.checking, data.session.currencyCode);
   return `<header class="player-terminal-app-topbar">
     <div class="player-terminal-breadcrumb" aria-label="Current location"><span>${escapeHtml(meta.groupLabel)}</span><i>/</i><strong>${escapeHtml(meta.label)}</strong></div>
-    <div class="player-terminal-topbar-status"><span class="player-terminal-balance-chip"><small>Available</small><strong>${escapeHtml(formatCurrency(balance, data.session.currencyCode))}</strong></span>${renderStatusPill(config.usePreviewData ? "PREVIEW" : "CONNECTED", config.usePreviewData ? "purple" : "green")}<span class="player-terminal-system-clock" data-player-clock></span></div>
+    <div class="player-terminal-topbar-status"><span class="player-terminal-balance-chip"><small>Available</small><strong>${escapeHtml(balance === null ? "Unavailable" : formatCurrency(balance, data.session.currencyCode))}</strong></span>${renderStatusPill(config.usePreviewData ? "PREVIEW" : "CONNECTED", config.usePreviewData ? "purple" : "green")}<span class="player-terminal-system-clock" data-player-clock></span></div>
     <div class="player-terminal-top-actions">
       <button class="player-terminal-bell" type="button" data-player-local-action="toggle-notifications" aria-expanded="${String(ui.notificationsOpen)}" aria-label="${ui.notificationsOpen ? "Close" : "Open"} notifications">${icon("bell", "player-terminal-bell-icon")}<small style="right:0">${escapeHtml(data.notifications.length)}</small></button>
       <button class="player-terminal-user-button" type="button" data-route="profile" aria-label="Open player profile"><span class="player-terminal-avatar">${escapeHtml(data.session.initials)}</span><i></i></button>

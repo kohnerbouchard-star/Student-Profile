@@ -303,7 +303,7 @@ export function createStudentProfileApiCall({ request } = {}) {
         snapshot = bindSessionCurrency(snapshot, snapshot.session.currencyCode);
       }
       if (context.endpointKey === "banking") {
-        snapshot = bindBankingCurrency(snapshot, raw);
+        snapshot = bindBankingCurrency(snapshot);
       }
       if (context.endpointKey === "portfolio") {
         snapshot = {

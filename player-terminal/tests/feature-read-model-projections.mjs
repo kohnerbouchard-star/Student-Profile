@@ -96,7 +96,7 @@ test("Banking chooses the session currency and keeps posted, held and available 
     { accountKind: "savings", currencyCode: "ECO", postedAmount: "20", heldAmount: -3, availableAmount: "19" }
   ] }, data);
   assert.deepEqual([next.banking.checking.accountId, next.banking.checking.balance, next.banking.checking.pending, next.banking.checking.available], ["local", 10.75, 2.25, 8.5]);
-  assert.deepEqual([next.banking.savings.balance, next.banking.savings.heldAmount, next.banking.savings.available], [20, 0, 19]);
+  assert.deepEqual([next.banking.savings.balance, next.banking.savings.heldAmount, next.banking.savings.available], [20, null, 19], "A malformed hold is unknown, but must not erase explicit availability.");
   assert.deepEqual([next.dashboard.liquidBalance, next.dashboard.savingsBalance], [10.75, 20]);
   assert.equal(next.banking.balances.length, 3);
   assert.equal(next.banking.transfersConfigured, false);

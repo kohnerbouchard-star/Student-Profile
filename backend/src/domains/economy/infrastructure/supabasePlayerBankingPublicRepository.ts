@@ -139,9 +139,12 @@ export function parsePlayerBankAccounts(
       "active_holds",
       "activeHolds",
     );
-    const heldAmount = heldValue === undefined
-      ? 0
-      : money(heldValue, "held amount");
+    // Both public read DTOs require a numeric hold. Missing evidence is not
+    // the canonical RPC's explicit zero; reject the read instead of filling it.
+    const heldAmount = money(heldValue, "held amount");
+    if (heldAmount < 0) {
+      throw unavailable("Player Banking held amount is invalid.");
+    }
     const availableValue = first(
       row,
       "available_amount",
@@ -218,10 +221,17 @@ function requiredText(value: unknown, label: string): string {
 }
 
 function money(value: unknown, label: string): number {
-  const amount = typeof value === "number" || typeof value === "string"
-    ? Number(value)
+  const literal = typeof value === "string" ? value.trim() : "";
+  const decimal = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/u;
+  const amount = typeof value === "number"
+    ? value
+    : decimal.test(literal)
+    ? Number(literal)
     : Number.NaN;
-  if (!Number.isFinite(amount) || Math.abs(amount) > 1_000_000_000_000_000) {
+  if (
+    !Number.isFinite(amount) || Math.abs(amount) > 1_000_000_000_000_000 ||
+    (amount === 0 && /[1-9]/u.test(literal))
+  ) {
     throw unavailable(`Player Banking ${label} is invalid.`);
   }
   return amount;
