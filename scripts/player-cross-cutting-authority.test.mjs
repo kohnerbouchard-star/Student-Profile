@@ -300,3 +300,26 @@ test("Phase 15 controlled staging convergence binds PR 699 and keeps production 
   assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, productionDeploymentAllowed: true } }), /deny production deployment/u);
   assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, secretValuesAllowed: true } }), /deny secret-value handling/u);
 });
+
+test("Market and News PR 1054 binds exact scope and retains every PR 1052 gate", async () => {
+  const manifestPath = authorityPathForPullRequest(1054);
+  const value = JSON.parse(await readFile(manifestPath, "utf8"));
+  const previous = JSON.parse(await readFile(authorityPathForPullRequest(1052), "utf8"));
+  const input = { manifest: value, changedPaths: value.allowedPaths, pullRequestNumber: 1054, baseRef: "main", manifestPath };
+  assert.equal(verifyAuthority(input).changedPathCount, value.allowedPaths.length);
+  assert.deepEqual(value.requiredChecks.slice(0, previous.requiredChecks.length), previous.requiredChecks);
+  assert.deepEqual(value.criticalJobChecks.slice(0, previous.criticalJobChecks.length), previous.criticalJobChecks);
+  assert.deepEqual(value.requiredFiles, value.allowedPaths);
+  assert.ok(value.allowedPaths.every(path => !/[?*]/u.test(path)));
+  assert.throws(() => verifyAuthority({ ...input, pullRequestNumber: 1052 }), /not bound/u);
+  assert.throws(() => verifyAuthority({ ...input, baseRef: "release/production" }), /base ref/u);
+  for (const path of ["backend/supabase/functions/player-api/runtime.ts", "backend/supabase/migrations/unreviewed.sql", ".github/workflows/production-deploy.yml"]) {
+    assert.throws(() => verifyAuthority({ ...input, changedPaths: [...value.allowedPaths, path] }), /does not allow/u);
+  }
+  for (const field of ["productionDeploymentAllowed", "productionMutationAllowed", "secretValuesAllowed"]) {
+    assert.throws(() => verifyAuthority({ ...input, manifest: { ...value, [field]: true } }), /must deny/u);
+  }
+  for (const gate of ["Verify C3C atomic Stock buy database and retained C3A/C3B authority + C3D sell + C3E cutover", "Staff Attendance and ledger adjustment database/race qualification"]) {
+    assert.ok(value.criticalJobChecks.includes(gate));
+  }
+});

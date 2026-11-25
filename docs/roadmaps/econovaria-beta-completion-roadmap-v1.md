@@ -920,3 +920,27 @@ exact-head GitHub qualification are still required. #1052 is already merged
 as `244b5020` (superseding the operational state above); this tranche does
 not change Marketplace behavior. Next: qualify this candidate before any
 merge; do not claim T047 or beta release verification.
+
+PR1054 qualification follow-up (2026-11-25): `PLAYER-MARKET-READ-EVIDENCE-002`
+remains `IMPLEMENTED_NOT_MERGED`, partial T047. Exact-scope actual-PR authority
+retains all PR1052 gate prefixes and appends active checks; PR-only path additions
+retain every guard. Diagnostic-only REF024 changes retain both race outcomes and
+FX timing before unchanged assertions. No application/backend/migration/RPC change.
+See [scope and boundary evidence](../operations/evidence/player-market-read-evidence-v2/scope.md).
+Full Player/root verification, 17 authority tests, core Backend TypeScript and
+frozen Marketplace harness Deno check pass. Six isolated PostgreSQL boundary
+probes confirm unchanged 08:00 freshness; full base/head application replay and
+historical zero-winner cause remain unproved. Chromium is blocked by CDN HTTP403;
+full Edge checks by locked SDK retrieval. Unrelated Business Financial Market
+fixture correction stays with its owner. Freeze/refresh both Roster carrier pins,
+then require fresh exact-head CI and review. No live write, merge, deployment or
+verified-complete claim.
+Qualification checkpoint: complete carrier `126aac00b70bf62982f5dbc6f799935243947549`
+(tree `7b983dc535038e89659fa6ca58a8a74e8c7a3f37`) is bound by both Roster roles
+in `c55b606033a3ce223e34835c5e8f84bd988ce067`. Strict actual-source suite passes
+131/131; both unchanged complete synthetic source modes pass 131/131 using
+required Node22. Node24 reporter incompatibility and dirty/generated-input
+attempts remain historical failures, not guard waivers. Generated local outputs
+were preserved separately. Exact authority accepts 59 changed/60 locked paths,
+114 required/71 critical identities; all 34 workflow changes are byte-exact
+PR-filter additions. Fresh published-head gates remain required.
