@@ -944,3 +944,12 @@ attempts remain historical failures, not guard waivers. Generated local outputs
 were preserved separately. Exact authority accepts 59 changed/60 locked paths,
 114 required/71 critical identities; all 34 workflow changes are byte-exact
 PR-filter additions. Fresh published-head gates remain required.
+Public-source reconciliation: HTTPS Git publication is unavailable in this
+execution environment. Connected GitHub publication preserves the reviewed
+runtime/qualification content in carrier `bade74b1bc4fb54da0b5a13cd17009d912ac3009`,
+tree `ed94af6376ecc3771e52704498cf3c0b9550aa80`; both Roster roles now name that
+actual public carrier. The pin commit `9d342db5fb906b60a1f45a35cced6524c75f38d5`
+has tree `c42262d801e51284b0b7293224923003ef9f1bea`, identical to locally reviewed
+`c2b51eaa44`. Earlier carrier/pin SHAs above describe preserved local preparation.
+Backend smoke was separately attempted and reached the same locked SDK download
+block. No hosted final-head qualification, database replay or browser waiver.
