@@ -14,7 +14,8 @@
       "ops/econovaria-git-native-domain-activation-20260813": false,
       "ops/staging-runtime-identity-attribution-20261126": false,
       "ops/staging-runtime-catalog-fixture-20261126": false,
-      "chore/staging-suffix-disposable-ci-20261126": false
+      "chore/staging-suffix-disposable-ci-20261126": false,
+      "chore/staging-suffix-cli-rehearsal-20261126-registry": false
     }
   },
   "functions": {
