@@ -58,7 +58,14 @@ test "$IMAGE_ID" = "$(cat "$WORK/config.digest")"
 test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$IMAGE_ID")" = linux/amd64
 # Deno resolves and verifies the existing frozen lock; it never invokes a standalone bundler.
 STAGE=frozen-dependencies
-DENO_DIR="$WORK/deno" deno info --json --config backend/supabase/functions/campaign-orchestrator/deno.json --lock backend/supabase/functions/deno.lock --frozen backend/supabase/functions/campaign-orchestrator/index.ts >"$WORK/graph.json" 2>"$WORK/cache.private"
+if ! DENO_DIR="$WORK/deno" deno info --json --config backend/supabase/functions/campaign-orchestrator/deno.json --lock backend/supabase/functions/deno.lock --frozen backend/supabase/functions/campaign-orchestrator/index.ts >"$WORK/graph.json" 2>"$WORK/cache.private"; then
+  node - <<'NODE'
+const fs=require('fs'),s=fs.readFileSync(process.env.WORK+'/cache.private','utf8').toLowerCase();
+const kind=s.includes('unexpected argument')?'argument':s.includes('certificate')?'tls':s.includes('lockfile')||s.includes('integrity')?'frozen-integrity':s.includes('429')?'rate-limit':s.includes('404')?'module-not-found':s.includes('timed out')?'network-timeout':s.includes('error sending request')?'request-transport':'unclassified';
+console.log(JSON.stringify({status:'FAILED',stage:'frozen-dependencies',kind}));
+NODE
+  exit 1
+fi
 node scripts/campaign-served/vendor.mjs "$WORK/graph.json" backend/supabase/functions/deno.lock "$WORK/deps" >"$WORK/vendor.json"
 STAGE=disposable-start
 ./node_modules/.bin/supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta,mailpit >"$WORK/start.private" 2>&1
