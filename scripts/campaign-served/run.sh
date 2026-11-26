@@ -112,7 +112,10 @@ then
   node - <<'NODE'
 const fs=require('fs'),s=fs.readFileSync(process.env.WORK+'/runtime.private','utf8').toLowerCase();
 const kind=s.includes('unexpected argument')||s.includes('unrecognized')?'runtime-cli':s.includes('permission denied')?'filesystem-permission':s.includes('module not found')||s.includes('failed to load')?'module-loading':s.includes('read-only')?'readonly-filesystem':'runtime-unready';
-console.log(JSON.stringify({status:'FAILED',stage:'served-runtime',kind}));
+let diagnostic=fs.readFileSync(process.env.WORK+'/runtime.private','utf8');
+for(const line of fs.readFileSync(process.env.WORK+'/runtime.env','utf8').split('\n')){const i=line.indexOf('=');if(i>0){const value=line.slice(i+1);if(value.length>8)diagnostic=diagnostic.split(value).join('[local-fixture-value]');}}
+diagnostic=diagnostic.split('\n').filter(l=>/error|caused by|not found|failed|relative import|unsupported|specifier/i.test(l)).slice(-8).join('\n').slice(0,1800);
+console.log(JSON.stringify({status:'FAILED',stage:'served-runtime',kind,syntheticStartupDiagnostic:diagnostic}));
 NODE
   exit 1
 fi
