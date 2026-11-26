@@ -48,3 +48,10 @@ main-v1/scope.json freshCloudRuntimeQualification; REF018 PR889 client/PostgREST
 acceptance; PR884 job113696057116 real event/lease setup. The older PR889
 job41548821808 log endpoint returned404. No historical pass is reused as current
 qualification. Only this exact published head's natural CI can qualify the new test.
+
+Actual first runs failed before worker startup. The vendor helper originally
+hashed Deno's entire HTTP cache file rather than module content. Pinned Deno2.9.3
+libs/cache_dir/global/cache_file.rs documents its final metadata envelope. The
+correction accepts only valid URL-matched metadata and still requires the original
+content SHA256 to equal the unchanged lock. Malformed wrappers, wrong URLs and
+tampered content fail. No lock or upstream source identity is changed.

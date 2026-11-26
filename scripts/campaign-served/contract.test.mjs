@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
-import {vendor} from './vendor.mjs';
+import {vendor,lockedContent} from './vendor.mjs';
 const bytes=Buffer.from('export const synthetic = 1;');
 const hash=createHash('sha256').update(bytes).digest('hex');
 test('vendor validates frozen bytes and localizes remote runtime imports',async()=>{
@@ -28,4 +28,14 @@ test('source-only PR job and exact branch disable cannot deploy',async()=>{
  const run=await readFile('scripts/campaign-served/run.sh','utf8');
  assert.match(run,/--internal/);assert.match(run,/--pull never/);assert.match(run,/--frozen/);assert.doesNotMatch(run,/deno bundle|esbuild|--use-api/);
  assert.match(run,/--platform linux\/amd64/);assert.match(run,/127\.0\.0\.1:9091:9000/);
+});
+
+test('Deno cache envelope decoding preserves exact locked content',()=>{
+ const url='https://example.test/a.mjs';
+ const envelope=Buffer.concat([bytes,Buffer.from('\n// denoCacheMetadata='+JSON.stringify({url,headers:{'content-type':'application/javascript'},time:123}))]);
+ assert.deepEqual(lockedContent(envelope,url,hash),bytes);
+ assert.throws(()=>lockedContent(envelope,'https://example.test/other',hash));
+ const tampered=Buffer.concat([Buffer.from('changed'),envelope.subarray(bytes.length)]);
+ assert.throws(()=>lockedContent(tampered,url,hash));
+ assert.throws(()=>lockedContent(Buffer.concat([bytes,Buffer.from('\n// denoCacheMetadata=invalid')]),url,hash));
 });

@@ -5,6 +5,17 @@ import {pathToFileURL} from 'node:url';
 let diagnostic={kind:'unclassified'};
 const mark=(kind,specifier)=>{diagnostic={kind,moduleSha256:createHash('sha256').update(specifier).digest('hex')};};
 const sha=b=>createHash('sha256').update(b).digest('hex');
+// Deno2.9.3 libs/cache_dir/global/cache_file.rs: content followed by the
+// final newline metadata record. Verify original locked content, never envelope.
+export function lockedContent(raw,url,expected) {
+  if(sha(raw)===expected)return raw;
+  const split=raw.lastIndexOf(10),prefix=Buffer.from('\n// denoCacheMetadata=');
+  assert(split>=0 && raw.subarray(split,split+prefix.length).equals(prefix));
+  const metadata=JSON.parse(raw.subarray(split+prefix.length).toString('utf8'));
+  assert.equal(metadata.url,url);assert(metadata.headers&&typeof metadata.headers==='object'&&!Array.isArray(metadata.headers));
+  const content=raw.subarray(0,split);assert.equal(sha(content),expected);
+  return content;
+}
 export async function vendor(graph,lock,out,read=readFile) {
   const imports={'https://esm.sh/tslib@2.8.1/denonext/tslib.mjs':'file:///src/backend/supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs'},scopes={},records=[];
   const remote=graph.modules.filter(m=>/^https:/.test(m.specifier));
@@ -12,7 +23,7 @@ export async function vendor(graph,lock,out,read=readFile) {
   for(const m of remote) {
     mark(!m.local?'unavailable-source':'unpinned-module',m.specifier);
     assert(m.local && /^[a-f0-9]{64}$/.test(lock.remote[m.specifier]));
-    const bytes=await read(m.local);mark('source-integrity',m.specifier);assert.equal(sha(bytes),lock.remote[m.specifier]);
+    const raw=await read(m.local);mark('source-integrity',m.specifier);const bytes=lockedContent(raw,m.specifier,lock.remote[m.specifier]);
     const file=sha(bytes)+(m.specifier.includes('.json')?'.json':m.specifier.includes('.d.ts')?'.d.ts':'.ts');
     imports[m.specifier]='file:///deps/'+file;records.push({m,bytes,file,sha256:sha(bytes)});
   }
