@@ -6,6 +6,7 @@ trap 'echo "{\"status\":\"FAILED\",\"stage\":\"$STAGE\"}"' ERR
 cd "$(git rev-parse --show-toplevel)"
 test "${GITHUB_ACTIONS:-}" = true
 test "${GITHUB_EVENT_NAME:-}" = pull_request
+test "$(git rev-parse HEAD)" = "${CAMPAIGN_HEAD_SHA:?missing PR head}"
 test "$(node -p 'require("./package.json").devDependencies.supabase')" = 2.109.1
 test "$(./node_modules/.bin/supabase --version)" = 2.109.1
 test "$(docker context inspect --format '{{.Endpoints.docker.Host}}')" = unix:///var/run/docker.sock
@@ -14,18 +15,24 @@ test -z "$(docker ps -aq --filter label=com.supabase.cli.project=econovaria)"
 WORK="$(mktemp -d "$RUNNER_TEMP/campaign-served.XXXXXXXX")"
 export WORK
 RUNTIME_ID=''
+CONTROL_ID=''
 NETWORK_ID=''
+STACK_STARTED=0
+remove_owned_container() {
+  local id="$1"
+  docker container inspect "$id" >/dev/null 2>&1 || return 0
+  test "$(docker inspect --format '{{index .Config.Labels "campaign-ci-owner"}}' "$id")" = "$OWNER" || return 1
+  docker rm --force "$id" >/dev/null
+}
+OWNER="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
 cleanup() {
   result=$?
   trap - EXIT
-  if test -n "$RUNTIME_ID"; then
-    if docker container inspect "$RUNTIME_ID" >/dev/null 2>&1; then
-      test "$(docker inspect --format '{{index .Config.Labels "campaign-ci-owner"}}' "$RUNTIME_ID")" = "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" || exit 1
-      docker stop --time 5 "$RUNTIME_ID" >/dev/null || result=1
-      docker rm "$RUNTIME_ID" >/dev/null || result=1
-    fi
+  if test -n "$CONTROL_ID"; then remove_owned_container "$CONTROL_ID" || result=1; fi
+  if test -n "$RUNTIME_ID"; then remove_owned_container "$RUNTIME_ID" || result=1; fi
+  if test "$STACK_STARTED" = 1; then
+    ./node_modules/.bin/supabase stop --workdir backend --no-backup >"$WORK/stop.private" 2>&1 || result=1
   fi
-  ./node_modules/.bin/supabase stop --workdir backend --no-backup >"$WORK/stop.private" 2>&1 || result=1
   if test -n "$NETWORK_ID"; then docker network rm "$NETWORK_ID" >/dev/null || result=1; fi
   rm -rf "$WORK"
   exit "$result"
@@ -56,6 +63,100 @@ docker pull --platform linux/amd64 "ghcr.io/supabase/edge-runtime@$CHILD" >"$WOR
 IMAGE_ID="$(docker image inspect --format '{{.Id}}' "ghcr.io/supabase/edge-runtime@$CHILD")"
 test "$IMAGE_ID" = "$(cat "$WORK/config.digest")"
 test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$IMAGE_ID")" = linux/amd64
+# The official archive loader is the acceptance path. Exercise identical
+# commands on tiny no-network controls and record extractor exit separately.
+STAGE=native-controls
+CONTROL_SRC="$WORK/control-source"
+CONTROL_OUT="$WORK/control-output"
+mkdir -p "$CONTROL_SRC"/{no-import,local-import/fixture} "$CONTROL_OUT"
+cat >"$CONTROL_SRC/deno.json" <<'JSON'
+{
+  "imports": {
+    "https://campaign-fixture.invalid/value.ts": "./local-import/fixture/value.ts"
+  },
+  "scopes": {
+    "./local-import/fixture/value.ts": {
+      "https://campaign-fixture.invalid/leaf.ts": "./local-import/fixture/leaf.ts"
+    }
+  }
+}
+JSON
+cat >"$CONTROL_SRC/no-import/index.ts" <<'TS'
+Deno.serve(() => new Response("campaign-control-no-import"));
+TS
+cat >"$CONTROL_SRC/local-import/index.ts" <<'TS'
+import { value } from "https://campaign-fixture.invalid/value.ts";
+Deno.serve(() => new Response(value));
+TS
+cat >"$CONTROL_SRC/local-import/fixture/value.ts" <<'TS'
+import { leaf } from "https://campaign-fixture.invalid/leaf.ts";
+export const value = "campaign-control-" + leaf;
+TS
+cat >"$CONTROL_SRC/local-import/fixture/leaf.ts" <<'TS'
+export const leaf = "local-import";
+TS
+
+RUNTIME_DOCKER=(--pull never --platform linux/amd64 --user "$(id -u):$(id -g)" --cap-drop ALL
+  --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m
+  -e DENO_DIR=/tmp/deno)
+
+for control in no-import local-import; do
+  STAGE="native-control-bundle-$control"
+  docker run --rm "${RUNTIME_DOCKER[@]}" --network none --workdir /src \
+    -v "$CONTROL_SRC:/src:ro" -v "$CONTROL_OUT:/out:rw" "$IMAGE_ID" bundle \
+    --entrypoint "/src/$control/index.ts" --timeout 45 --output "/out/$control.eszip" \
+    >"$WORK/control-$control.bundle.private" 2>&1
+  test -s "$CONTROL_OUT/$control.eszip"
+
+  STAGE="native-control-unbundle-$control"
+  mkdir "$WORK/extracted-$control"
+  extractor_exit=0
+  timeout 20s docker run --rm "${RUNTIME_DOCKER[@]}" --network none \
+    -v "$CONTROL_OUT:/artifact:ro" -v "$WORK/extracted-$control:/out:rw" \
+    "$IMAGE_ID" unbundle --eszip "/artifact/$control.eszip" --output /out \
+    >"$WORK/control-$control.unbundle.private" 2>&1 || extractor_exit=$?
+  extractor_kind=returned
+  if grep -q 'panicked at' "$WORK/control-$control.unbundle.private"; then
+    extractor_kind=rust-panic
+  fi
+  printf '{"stage":"native-control-unbundle","control":"%s","exit":%d,"kind":"%s"}\n' \
+    "$control" "$extractor_exit" "$extractor_kind"
+
+  STAGE="native-control-serve-$control"
+  CONTROL_ID="$(docker create "${RUNTIME_DOCKER[@]}" --network none \
+    --label "campaign-ci-owner=$OWNER" -v "$CONTROL_OUT:/artifact:ro" \
+    "$IMAGE_ID" start --main-service "/artifact/$control.eszip" --port 9000)"
+  test "$(docker inspect --format '{{index .Config.Labels "campaign-ci-owner"}}' "$CONTROL_ID")" = "$OWNER"
+  test "$(docker inspect --format '{{.HostConfig.NetworkMode}}' "$CONTROL_ID")" = none
+  docker start "$CONTROL_ID" >/dev/null
+  control_ready=0
+  for attempt in {1..15}; do
+    if response="$(timeout 3s docker exec "$CONTROL_ID" /bin/bash -c \
+      'exec 3<>/dev/tcp/127.0.0.1/9000; printf "GET / HTTP/1.0\\r\\n\\r\\n" >&3; cat <&3' \
+      2>"$WORK/control-$control.http.private")" &&
+      [[ "$response" == HTTP/1.*' 200 '*$'\r\n\r\n'"campaign-control-$control" ]]; then
+      control_ready=1
+      break
+    fi
+    if test "$(docker inspect --format '{{.State.Running}}' "$CONTROL_ID")" = false; then break; fi
+    sleep 1
+  done
+  if test "$control_ready" != 1; then
+    docker logs "$CONTROL_ID" >"$WORK/control-$control.runtime.private" 2>&1 || true
+    node - "$control" <<'NODE'
+const fs = require('node:fs');
+const control = process.argv[2];
+const log = fs.readFileSync(process.env.WORK + '/control-' + control + '.runtime.private', 'utf8');
+const kind = /Module not found|failed to load/i.test(log) ? 'module-loading' : 'unexpected-http';
+console.log(JSON.stringify({status: 'FAILED', stage: 'native-control-serve', control, kind}));
+NODE
+    exit 1
+  fi
+  remove_owned_container "$CONTROL_ID"
+  CONTROL_ID=''
+  printf '{"status":"PASS","stage":"native-control-serve","control":"%s"}\n' "$control"
+done
+
 # Deno resolves and verifies the existing frozen lock; it never invokes a standalone bundler.
 STAGE=frozen-dependencies
 if ! DENO_DIR="$WORK/deno" deno info --json --config backend/supabase/functions/campaign-orchestrator/deno.json --lock backend/supabase/functions/deno.lock --frozen backend/supabase/functions/campaign-orchestrator/index.ts >"$WORK/graph.json" 2>"$WORK/cache.private"; then
@@ -77,7 +178,13 @@ READ_HASH="$(docker run --rm --pull never --network none --user "$(id -u):$(id -
 test "${READ_HASH%% *}" = "$SDK_HASH"
 echo '{"status":"PASS","stage":"vendor-readability","actualContainerUid":true}'
 STAGE=native-provider-package
-if ! docker run --rm --pull never --network none --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m -e DENO_DIR=/tmp/deno -v "$PWD:/src:ro" -v "$WORK/deps:/src/backend/supabase/functions/campaign-orchestrator/ci_vendor:ro" -v "$WORK/deps/runtime-deno.json:/src/backend/supabase/functions/campaign-orchestrator/deno.json:ro" -v "$WORK/bundle:/out:rw" "$IMAGE_ID" bundle --entrypoint /src/backend/supabase/functions/campaign-orchestrator/index.ts --static "/src/backend/supabase/functions/campaign-orchestrator/ci_vendor/**" --timeout 45 --output /out/campaign.eszip >"$WORK/bundle.private" 2>&1; then
+if ! docker run --rm "${RUNTIME_DOCKER[@]}" --network none --workdir /src/backend \
+  -v "$PWD:/src:ro" \
+  -v "$WORK/deps:/src/backend/supabase/functions/campaign-orchestrator/ci_vendor:ro" \
+  -v "$WORK/deps/runtime-deno.json:/src/backend/supabase/functions/campaign-orchestrator/deno.json:ro" \
+  -v "$WORK/bundle:/out:rw" "$IMAGE_ID" bundle \
+  --entrypoint /src/backend/supabase/functions/campaign-orchestrator/index.ts \
+  --timeout 45 --output /out/campaign.eszip >"$WORK/bundle.private" 2>&1; then
  node - <<'NODE'
 const fs=require('fs'),s=fs.readFileSync(process.env.WORK+'/bundle.private','utf8');
 console.log(JSON.stringify({status:'FAILED',stage:'native-provider-package',syntheticStartupDiagnostic:s.split('\n').filter(l=>/error|caused by|not found|failed|specifier/i.test(l)).slice(-8).join('\n').slice(0,1800)}));
@@ -85,25 +192,9 @@ NODE
  exit 1
 fi
 test -s "$WORK/bundle/campaign.eszip"
-STAGE=native-provider-vfs
-mkdir -p "$WORK/unpacked"
-if ! docker run --rm --pull never --network none --user "$(id -u):$(id -g)" --cap-drop ALL --read-only -v "$WORK/bundle:/artifact:ro" -v "$WORK/unpacked:/out:rw" "$IMAGE_ID" unbundle --eszip /artifact/campaign.eszip --output /out >"$WORK/unbundle.private" 2>&1; then
- node - <<'NODE'
-const fs=require('fs'),s=fs.readFileSync(process.env.WORK+'/unbundle.private','utf8');
-console.log(JSON.stringify({status:'FAILED',stage:'native-provider-vfs',diagnostic:s.split('\n').filter(l=>/panicked|error|failed|not found|assertion/i.test(l)).slice(-5).join('\n').slice(0,1200)}));
-NODE
- exit 1
-fi
-node - <<'NODE'
-const fs=require('fs'),crypto=require('crypto'),path=require('path');
-const expected=JSON.parse(fs.readFileSync('backend/supabase/functions/deno.lock')).remote['https://esm.sh/@supabase/supabase-js@2.108.2'];
-let count=0,match=false;
-function walk(p){for(const e of fs.readdirSync(p,{withFileTypes:true})){const f=path.join(p,e.name);if(e.isSymbolicLink())throw Error('ARCHIVE_SYMLINK');if(e.isDirectory())walk(f);else{count++;if(e.name===expected+'.ts'&&crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')===expected)match=true;}}}
-walk(process.env.WORK+'/unpacked');if(!match)throw Error('LOCKED_SDK_MISSING_FROM_VFS');
-console.log(JSON.stringify({status:'PASS',stage:'native-provider-vfs',lockedSdkReadback:true,fileCount:count}));
-NODE
 sha256sum "$WORK/bundle/campaign.eszip" | awk '{print "{\"status\":\"PASS\",\"stage\":\"native-provider-package\",\"artifactSha256\":\"" $1 "\"}"}'
 STAGE=disposable-start
+STACK_STARTED=1
 ./node_modules/.bin/supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta,mailpit >"$WORK/start.private" 2>&1
 STAGE=disposable-replay
 ./node_modules/.bin/supabase db reset --workdir backend --local >"$WORK/reset.private" 2>&1
@@ -128,8 +219,9 @@ if(env.API_URL!=='http://127.0.0.1:54321'||!(env.SERVICE_ROLE_KEY||env.SECRET_KE
 fs.writeFileSync(process.env.WORK+'/runtime.env','SUPABASE_URL=http://supabase_kong_econovaria:8000\nSUPABASE_SERVICE_ROLE_KEY='+(env.SERVICE_ROLE_KEY||env.SECRET_KEY)+'\n');
 NODE
 STAGE=served-runtime
-mkdir -p backend/supabase/functions/campaign-orchestrator/ci_vendor
-RUNTIME_ID="$(docker create --pull never --platform linux/amd64 --network "$NETWORK_ID" --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m --label "campaign-ci-owner=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -e DENO_DIR=/tmp/deno --env-file "$WORK/runtime.env" -v "$WORK/bundle:/artifact:ro" "$IMAGE_ID" start --main-service /artifact/campaign.eszip --port 9000)"
+RUNTIME_ID="$(docker create "${RUNTIME_DOCKER[@]}" --network "$NETWORK_ID" \
+  --label "campaign-ci-owner=$OWNER" --env-file "$WORK/runtime.env" \
+  -v "$WORK/bundle:/artifact:ro" "$IMAGE_ID" start --main-service /artifact/campaign.eszip --port 9000)"
 docker start "$RUNTIME_ID" >/dev/null
 export RUNTIME_CONTAINER_ID="$RUNTIME_ID"
 export DATABASE_CONTAINER_ID="$(docker inspect --format '{{.Id}}' supabase_db_econovaria)"
@@ -155,4 +247,4 @@ NODE
 fi
 STAGE=acceptance
 CAMPAIGN_DISPOSABLE=1 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres node scripts/campaign-served/acceptance.mjs
-node -e 'console.log(JSON.stringify({source:process.env.GITHUB_SHA,officialIndex:"'"$INDEX"'",amd64Child:"'"$CHILD"'",imageId:"'"$IMAGE_ID"'",hostedModified:false,providerBundleAttested:false}))'
+node -e 'console.log(JSON.stringify({source:process.env.CAMPAIGN_HEAD_SHA,officialIndex:"'"$INDEX"'",amd64Child:"'"$CHILD"'",imageId:"'"$IMAGE_ID"'",hostedModified:false,providerBundleAttested:false}))'

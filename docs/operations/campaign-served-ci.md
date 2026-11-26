@@ -73,23 +73,22 @@ path. Native provider packaging is distinct from the rejected standalone Deno/
 esbuild toolchain. A public artifact SHA256 is recorded only after packaging
 succeeds; it is not a deployed-platform digest or release certificate.
 
-The actual-UID readability and native offline package stages passed on run
-45759032646, but serving still lacked the localized SDK in runtime VFS. The next
-candidate explicitly includes verified vendor files using the provider's supported
-static pattern, then unbundles offline and requires the locked SDK body to read
-back with its original hash before database startup. This is VFS fixture packaging,
-not altered application source or a weakened dependency pin.
+Run 45760324494 passed frozen dependency integrity, actual-UID readability and
+offline native packaging. Edge Runtime's native extractor panicked before any
+worker or database started.
 
-The provider's native unbundle command exited101 on run45759710370, so native
-archive readback is NOT qualified. The fixture instead independently checks exact
-locked SDK source bytes and filename presence in the native artifact, then still
-requires that exact artifact to serve and pass all persisted v2 assertions. This
-byte-presence check is not represented as semantic archive extraction. The failed
-extractor remains a documented limitation; it is not a release/apply gate waiver.
+At v1.74.2, `bundle` records an entrypoint, a serialized workspace resolver and
+compiled module records in the eszip. `start` loads those records through the
+standalone resolver. In contrast, `unbundle` materializes filesystem paths
+through a separate extractor. Static assets are opaque records and do not
+satisfy module lookup. A raw byte search for one TypeScript source body was
+also insufficient to inspect compiled modules.
 
-The raw byte-presence probe was not valid semantic eszip inspection and did not
-establish module omission. It is replaced by native extraction again, now with
-service-relative import-map targets/scopes instead of absolute build-time file
-URLs. A source contract forbids absolute file URL localization targets. The
-extractor must succeed and recover the locked SDK before functional execution;
-no unsupported extractor outcome is treated as qualification.
+The job now reports extraction results only for two tiny synthetic controls.
+One has no dependencies. One loads a local module and its local dependency
+through service-relative imports and scopes. Both must serve their exact
+HTTP response from the native artifact in a network-none container. The
+Campaign artifact uses the same native bundle-and-start path without a static
+asset overlay. Its source and dependency lock remain the held main versions.
+The worker must return the expected HTTP boundary responses and pass every
+persisted v2 assertion before the job can report success.

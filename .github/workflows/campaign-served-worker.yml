@@ -32,4 +32,6 @@ jobs:
         run: node --test scripts/campaign-served/contract.test.mjs
       - name: Test unchanged Campaign worker with isolated disposable PostgREST
         shell: bash
+        env:
+          CAMPAIGN_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: bash scripts/campaign-served/run.sh

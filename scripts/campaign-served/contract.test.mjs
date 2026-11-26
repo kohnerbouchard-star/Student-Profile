@@ -27,7 +27,7 @@ test('source-only PR job and exact branch disable cannot deploy',async()=>{
  assert.equal(JSON.parse(await readFile('vercel.json')).git.deploymentEnabled['fix/campaign-served-worker-20261126'],false);
  const run=await readFile('scripts/campaign-served/run.sh','utf8');
  assert.match(run,/--internal/);assert.match(run,/--pull never/);assert.match(run,/--frozen/);assert.doesNotMatch(run,/deno bundle|esbuild|--use-api/);
- assert.match(run,/--platform linux\/amd64/);assert.match(run,/runtime-deno[.]json:/);assert.match(run,/--network none/);assert.match(run,/bundle --entrypoint/);assert.match(run,/--static/);assert.match(run,/LOCKED_SDK_MISSING_FROM_VFS/);assert.match(run,/--main-service \/artifact\/campaign[.]eszip/);assert.match(run,/--user/);assert.doesNotMatch(run,/ --import-map /);assert.doesNotMatch(run,/-p [0-9]/);assert.match(run,/RUNTIME_CONTAINER_ID/);
+ assert.match(run,/--platform linux\/amd64/);assert.match(run,/runtime-deno[.]json:/);assert.match(run,/--network none/);assert.match(run,/bundle\s+\\\s+--entrypoint/);assert.match(run,/for control in no-import local-import/);assert.match(run,/CAMPAIGN_HEAD_SHA/);assert.doesNotMatch(run,/--static|LOCKED_SDK_MISSING_FROM_VFS/);assert.match(run,/--main-service \/artifact\/campaign[.]eszip/);assert.match(run,/--user/);assert.doesNotMatch(run,/ --import-map /);assert.doesNotMatch(run,/-p [0-9]/);assert.match(run,/RUNTIME_CONTAINER_ID/);
 });
 
 test('Deno cache envelope decoding preserves exact locked content',()=>{
