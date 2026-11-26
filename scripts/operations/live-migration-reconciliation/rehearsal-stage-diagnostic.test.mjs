@@ -63,3 +63,24 @@ test('actual qualification export function fails at the first bounded export sta
   }
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+test('cleanup preserves the exact corrected catalog that the comparator used', () => {
+ const source=readFileSync(script,'utf8');
+ const cleanup=source.slice(source.indexOf('cleanup() {'),source.indexOf('\ntrap cleanup EXIT'));
+ const dir=mkdtempSync(path.join(tmpdir(),'fixture-cleanup-'));
+ try {
+  const post=path.join(dir,'post-catalog.json');
+  writeFileSync(post,'CORRECTED');
+  const harness=`set -euo pipefail
+runtime_fixture_compared=true
+dump_path=${JSON.stringify(path.join(dir,'synthetic-dump'))}
+local_started=false
+capture_local_snapshot() { printf OLD > ${JSON.stringify(post)}; }
+write_summary() { :; }
+${cleanup}
+cleanup
+`;
+  assert.equal(spawnSync('bash',['-c',harness]).status,0);
+  assert.equal(readFileSync(post,'utf8'),'CORRECTED');
+ } finally {rmSync(dir,{recursive:true,force:true});}
+});

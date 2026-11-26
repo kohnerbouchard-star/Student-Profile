@@ -66,11 +66,11 @@ test('application restore profile is canonical-to-hosted, not canonical-to-local
   const changed=structuredClone(hosted);changed.authorization[key]=[{synthetic:marker}];const pair=normalizeSupabaseApplicationRestorePair(local,changed);assert.notDeepEqual(pair.left,pair.right);
  }
 });
-function projectWithWorkflow(schemaComparison,catalogComparison) {
+function projectWithWorkflow(schemaComparison,catalogComparison,runtimeCatalogFixture) {
  const temp=mkdtempSync(path.join(tmpdir(),'protected-projection-'));const evidence=path.join(temp,'evidence'),capture=path.join(temp,'capture');mkdirSync(evidence);mkdirSync(capture);mkdirSync(path.join(temp,'u1','sanitized'),{recursive:true});
  try{
   writeFileSync(path.join(capture,'schema.sql'),marker);writeFileSync(path.join(capture,'ledger.json'),marker);
-  writeFileSync(path.join(evidence,'summary.json'),JSON.stringify({sourceCommit:'a'.repeat(40),environment:'staging',status:'PASS',exitCode:0,executionMode:'disposable',canonicalApplicationSchemaMatched:true,runtimeCatalogComparisonExit:2,sourceRowsCopied:false,rawSchemaDumpRetained:false,postBundleSuffix:{appliedMigrationCount:15,certifiedMigrationCount:16},secret:marker,releaseCertificate:true}));
+  writeFileSync(path.join(evidence,'summary.json'),JSON.stringify({sourceCommit:'a'.repeat(40),environment:'staging',status:'PASS',exitCode:0,executionMode:'disposable',canonicalApplicationSchemaMatched:true,runtimeCatalogComparisonExit:2,runtimeCatalogFixture,sourceRowsCopied:false,rawSchemaDumpRetained:false,postBundleSuffix:{appliedMigrationCount:15,certifiedMigrationCount:16},secret:marker,releaseCertificate:true}));
   if(schemaComparison!==undefined)writeFileSync(path.join(evidence,'schema-comparison.json'),JSON.stringify(schemaComparison));
   if(catalogComparison!==undefined)writeFileSync(path.join(evidence,'catalog-comparison.json'),JSON.stringify(catalogComparison));
   const workflow=readFileSync('.github/workflows/econovaria-staging-schema-rehearsal.yml','utf8');
@@ -89,5 +89,15 @@ test('actual protected jq-to-node projection publishes only fixed counts, never 
 test('actual protected projection rejects injected diagnostic fields/counts and missing evidence',()=>{
  for(const diagnostic of [undefined,{status:'available',categories:{[marker]:1}}, {status:'available',countCap:COUNT_CAP,countsAtCapAreLowerBounds:true,categories:Object.fromEntries(GROUPS[CATALOG].catalog.map(k=>['catalog.'+k,-1]))}]) {
   const result=projectWithWorkflow(undefined,diagnostic===undefined?undefined:{boundedDiagnostics:diagnostic});assert.notEqual(result.exactComparisonDiagnostics.runtimeCatalog.status,'available');assert.equal(result.releaseCertificate,false);assert.equal(result.runtimeCatalogComparisonExit,2);
+ }
+});
+test('protected projection accepts only the two bounded fixture fields', () => {
+ const accepted = {schedulerRowsAdded:6,bootstrapHistoryAdded:true};
+ const result=projectWithWorkflow(undefined,undefined,{...accepted,[marker]:marker});
+ assert.deepEqual(result.runtimeCatalogFixture,accepted);
+ assert.equal(result.runtimeCatalogComparisonExit,2);
+ for (const receipt of [{...accepted,schedulerRowsAdded:6.5},{...accepted,schedulerRowsAdded:'6'},
+   {...accepted,schedulerRowsAdded:7},{...accepted,bootstrapHistoryAdded:marker},marker]) {
+  assert.equal(projectWithWorkflow(undefined,undefined,receipt).runtimeCatalogFixture,null);
  }
 });

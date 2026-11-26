@@ -105,11 +105,13 @@ export function verifiedRuntimeIdentityProfile() {
   for (const name of UNVERIFIED_PROVIDERS.keys()) assert(clean.schemas.some(row => row.name === name));
 
   const extracted = [];
+  const schedulerCommands = new Map();
   for (const [path, sql] of sources) {
     if (!path.endsWith('.sql')) continue;
     for (const [, name, schedule, dollar, quoted] of sql.matchAll(
       /(?:perform|return) cron\.schedule\(\s*'([^']+)',\s*'([^']+)',\s*(?:\$cron\$([\s\S]*?)\$cron\$|'([^']+)')\s*\)/g,
     )) {
+      schedulerCommands.set(name, dollar ?? quoted);
       extracted.push({
         name, schedule, active: true, database: 'postgres', username: 'postgres',
         commandSha256: sha(dollar ?? quoted),
@@ -124,7 +126,7 @@ export function verifiedRuntimeIdentityProfile() {
     assert(extracted.some(record => equal(record, row)));
     assert(historical.every(snapshot => snapshot.cron.some(record => equal(record, row))));
   }
-  return { profile, sha256: sha(bytes) };
+  return { profile, sha256: sha(bytes), schedulerCommands };
 }
 
 function validate(input) {
