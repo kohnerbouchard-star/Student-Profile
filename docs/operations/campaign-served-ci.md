@@ -72,3 +72,10 @@ The worker test runs that exact eszip through the supported main-service artifac
 path. Native provider packaging is distinct from the rejected standalone Deno/
 esbuild toolchain. A public artifact SHA256 is recorded only after packaging
 succeeds; it is not a deployed-platform digest or release certificate.
+
+The actual-UID readability and native offline package stages passed on run
+45759032646, but serving still lacked the localized SDK in runtime VFS. The next
+candidate explicitly includes verified vendor files using the provider's supported
+static pattern, then unbundles offline and requires the locked SDK body to read
+back with its original hash before database startup. This is VFS fixture packaging,
+not altered application source or a weakened dependency pin.

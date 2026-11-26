@@ -77,7 +77,7 @@ READ_HASH="$(docker run --rm --pull never --network none --user "$(id -u):$(id -
 test "${READ_HASH%% *}" = "$SDK_HASH"
 echo '{"status":"PASS","stage":"vendor-readability","actualContainerUid":true}'
 STAGE=native-provider-package
-if ! docker run --rm --pull never --network none --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m -e DENO_DIR=/tmp/deno -v "$PWD:/src:ro" -v "$WORK/deps:/src/backend/supabase/functions/campaign-orchestrator/ci_vendor:ro" -v "$WORK/deps/runtime-deno.json:/src/backend/supabase/functions/campaign-orchestrator/deno.json:ro" -v "$WORK/bundle:/out:rw" "$IMAGE_ID" bundle --entrypoint /src/backend/supabase/functions/campaign-orchestrator/index.ts --output /out/campaign.eszip >"$WORK/bundle.private" 2>&1; then
+if ! docker run --rm --pull never --network none --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m -e DENO_DIR=/tmp/deno -v "$PWD:/src:ro" -v "$WORK/deps:/src/backend/supabase/functions/campaign-orchestrator/ci_vendor:ro" -v "$WORK/deps/runtime-deno.json:/src/backend/supabase/functions/campaign-orchestrator/deno.json:ro" -v "$WORK/bundle:/out:rw" "$IMAGE_ID" bundle --entrypoint /src/backend/supabase/functions/campaign-orchestrator/index.ts --static "/src/backend/supabase/functions/campaign-orchestrator/ci_vendor/**" --timeout 45 --output /out/campaign.eszip >"$WORK/bundle.private" 2>&1; then
  node - <<'NODE'
 const fs=require('fs'),s=fs.readFileSync(process.env.WORK+'/bundle.private','utf8');
 console.log(JSON.stringify({status:'FAILED',stage:'native-provider-package',syntheticStartupDiagnostic:s.split('\n').filter(l=>/error|caused by|not found|failed|specifier/i.test(l)).slice(-8).join('\n').slice(0,1800)}));
@@ -85,6 +85,17 @@ NODE
  exit 1
 fi
 test -s "$WORK/bundle/campaign.eszip"
+STAGE=native-provider-vfs
+mkdir -p "$WORK/unpacked"
+docker run --rm --pull never --network none --user "$(id -u):$(id -g)" --cap-drop ALL --read-only -v "$WORK/bundle:/artifact:ro" -v "$WORK/unpacked:/out:rw" "$IMAGE_ID" unbundle --eszip /artifact/campaign.eszip --output /out >"$WORK/unbundle.private" 2>&1
+node - <<'NODE'
+const fs=require('fs'),crypto=require('crypto'),path=require('path');
+const expected=JSON.parse(fs.readFileSync('backend/supabase/functions/deno.lock')).remote['https://esm.sh/@supabase/supabase-js@2.108.2'];
+let count=0,match=false;
+function walk(p){for(const e of fs.readdirSync(p,{withFileTypes:true})){const f=path.join(p,e.name);if(e.isSymbolicLink())throw Error('ARCHIVE_SYMLINK');if(e.isDirectory())walk(f);else{count++;if(e.name===expected+'.ts'&&crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')===expected)match=true;}}}
+walk(process.env.WORK+'/unpacked');if(!match)throw Error('LOCKED_SDK_MISSING_FROM_VFS');
+console.log(JSON.stringify({status:'PASS',stage:'native-provider-vfs',lockedSdkReadback:true,fileCount:count}));
+NODE
 sha256sum "$WORK/bundle/campaign.eszip" | awk '{print "{\"status\":\"PASS\",\"stage\":\"native-provider-package\",\"artifactSha256\":\"" $1 "\"}"}'
 STAGE=disposable-start
 ./node_modules/.bin/supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta,mailpit >"$WORK/start.private" 2>&1
