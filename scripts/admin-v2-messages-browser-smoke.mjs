@@ -107,7 +107,11 @@ function fixtureHtml() {
       };
     }
 
+    let policy = { playerThreadsEnabled: true, defaultRetentionDays: 365, maxParticipants: 2, attachmentsEnabled: false };
+    window.__policyWrites = [];
     const api = {
+      async readPolicy() { return { data: { policy } }; },
+      async updatePolicy(input) { window.__policyWrites.push(input.policy); policy = { ...policy, ...input.policy }; return { data: { policy } }; },
       async readMessages() {
         if (failReads) throw Object.assign(new Error("private backend trace service_role"), { status: 503 });
         return payload();
@@ -143,6 +147,7 @@ function fixtureHtml() {
       const view = controller.render();
       root.append(view.element);
     }
+    window.__messagesController = controller;
     window.__messagesFixtureReady = true;
   </script>
 </body>
@@ -232,6 +237,30 @@ async function verifyReadyViewport(browser, server, viewport) {
   assert.equal(renderedText.includes("never-render-this-token"), false, `${viewport.width}px rendered raw token`);
   assert.doesNotMatch(renderedText, /private backend trace|service_role/i);
   await assertNoHorizontalOverflow(page, `${viewport.width}x${viewport.height}`);
+
+  const policyPanel = page.locator(".admin-messages-route__policy");
+  const retentionScope = /default expiry for new Player-created conversations in this game/;
+  await policyPanel.locator("summary").click();
+  assert.match(await policyPanel.textContent(), retentionScope);
+  await page.getByRole("button", { name: "Load policy", exact: true }).click();
+  await policyPanel.getByText("Current game policy loaded.", { exact: true }).waitFor();
+  // AdminField includes its required indicator in the accessible label.
+  const retention = page.getByRole("spinbutton", { name: /^Default retention for new Player conversations \(days\)\s*Required$/i });
+  assert.equal(await retention.getAttribute("required"), "");
+  assert.match(await policyPanel.textContent(), retentionScope);
+  await retention.fill("30");
+  await page.getByLabel("Player-created conversations", { exact: true }).selectOption("false");
+  await page.getByRole("button", { name: "Review policy changes" }).click();
+  await page.getByText(/Default retention for new Player-created conversations: 30 days/).waitFor();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  assert.equal(await page.evaluate(() => window.__policyWrites.length), 0);
+  assert.equal(await retention.inputValue(), "30");
+  await page.getByRole("button", { name: "Review policy changes" }).click();
+  await page.getByRole("button", { name: "Save policy", exact: true }).click();
+  await page.getByText("Messaging policy saved.", { exact: true }).waitFor();
+  assert.match(await policyPanel.textContent(), retentionScope);
+  assert.deepEqual(await page.evaluate(() => window.__policyWrites), [{ playerThreadsEnabled: false, defaultRetentionDays: 30 }]);
+  await assertNoHorizontalOverflow(page, `${viewport.width}px policy`);
 
   const conversation = page.locator(".admin-messages-route__messages");
   await conversation.locator("summary").click();

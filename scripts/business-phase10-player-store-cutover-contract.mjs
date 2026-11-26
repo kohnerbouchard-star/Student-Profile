@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
-import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
+import { readEdgeRuntimeSource, assertExtractedModulesReachable } from "./helpers/edge-runtime-source.mjs";
 
 const files = {
   publicContracts:
@@ -45,10 +45,13 @@ const files = {
   readModel: "player-terminal/src/api/read-model.js",
   storeInventoryReadModel: "player-terminal/src/api/store-inventory-read-model.js",
   responseNormalizer: "player-terminal/src/api/response-normalizer.js",
+  responseBusinessValidator: "player-terminal/src/api/response-business-validator.js",
   responseStoreValidator: "player-terminal/src/api/response-store-validator.js",
   resourcePlan: "player-terminal/src/api/resource-plan.js",
   storePage: "player-terminal/src/pages/store-page.js",
   purchaseFlow: "player-terminal/src/features/store/store-purchase-flow.js",
+  fundingForm: "player-terminal/src/features/store/store-funding-form.js",
+  purchaseState: "player-terminal/src/features/store/store-purchase-state.js",
   purchaseContract:
     "player-terminal/src/features/store/store-purchase-contract.js",
   purchaseConvergence:
@@ -108,6 +111,7 @@ source.purchaseFlow = [
   source.purchaseFlow,
   source.purchaseContract,
   source.purchaseConvergence,
+  source.fundingForm,
 ].join("\n");
 source.rateLimits = [
   source.rateLimitDispatch,
@@ -428,10 +432,14 @@ requireTokens(source.responseNormalizer, "Player Store response privacy", [
   "validStoreOfferPurchasability",
   "offer.purchasable === true",
   "system_offer",
-  "storeSales",
-  "spr_",
-  "sof_",
   "UUID",
+]);
+requireTokens(source.responseNormalizer, "Business response validator import", [
+  'from "./response-business-validator.js"',
+  "validateBusinessRead(value, context)",
+]);
+requireTokens(source.responseBusinessValidator, "Player Store response privacy", [
+  "storeSales", "spr_", "sof_", "UUID",
 ]);
 requireTokens(source.storePage, "one-card multi-offer Store UI", [
   "sellerCount",
@@ -446,11 +454,23 @@ requireTokens(source.purchaseFlow, "exact selected-offer flow", [
   "expectedVersion",
   "offerKey",
   "alreadyCompleted",
-  'refreshState: warnings.length ? "pending" : "complete"',
+  'type: "refresh-finished"',
   "convergeCommittedStorePurchase",
   "retryCommittedRefresh",
   "data-player-store-refresh-retry",
   "transaction?.processing === true && !force",
+  'type: "settlement-started"',
+]);
+assertExtractedModulesReachable(files.purchaseFlow, [files.purchaseState, files.fundingForm], new Map([
+  [files.purchaseFlow, source.purchaseFlow], [files.purchaseState, source.purchaseState], [files.fundingForm, source.fundingForm],
+]));
+requireTokens(source.fundingForm, "Store funding form", [
+  "normalizeStoreFundingIntent(allocationDraft",
+  "Final ${targetCurrencyCode} remainder is derived by the server",
+  "event.stopImmediatePropagation()",
+]);
+requireTokens(source.purchaseState, "Store transaction state", [
+  'refreshState: event.warnings.length ? "pending" : "complete"',
   "processing: true",
 ]);
 requireTokens(source.capabilitiesUi, "retained capability aliases", [

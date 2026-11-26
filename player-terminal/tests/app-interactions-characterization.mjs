@@ -1,3 +1,5 @@
+import { normalizePlayerInventory } from "../src/features/inventory/inventory-read-model.js";
+import { marketplaceDraftInventory, marketplaceListableItems } from "../src/features/marketplace/marketplace-read-model.js";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createPlayerTerminal } from "../src/app.js";
@@ -55,14 +57,14 @@ function targetFor(dataset, selectors = []) {
   return target;
 }
 const tick = () => new Promise(setImmediate);
-async function until(predicate) { for (let i = 0; i < 100; i++) { if (predicate()) return; await tick(); } assert.fail("Terminal did not settle"); }
-async function fixture(t, { routes = {}, actions = {}, bankBalance, writeError } = {}) {
+async function until(predicate, wait = tick) { for (let i = 0; i < 100; i++) { if (predicate()) return; await wait(); } assert.fail("Terminal did not settle"); }
+async function fixture(t, { routes = {}, actions = {}, bankBalance, writeError, preview = false, route = "inventory", readValue = (_context, value) => value } = {}) {
   const keys = ["HTMLElement", "HTMLButtonElement", "document", "location", "CSS", "navigator", "localStorage", "FormData", "CustomEvent", "HashChangeEvent", "addEventListener", "removeEventListener", "dispatchEvent", "requestAnimationFrame", "cancelAnimationFrame", "setInterval", "clearInterval", "ECONOVARIA_PLAYER_SESSION", "Econovaria"];
   const saved = new Map(keys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   const events = new Element(), mount = new Element(), storage = new Map(), requests = [], calls = [], clipboard = [], frames = new Map(); let frameId = 0, clipboardFails = false;
   const globals = {
     HTMLElement: Element, HTMLButtonElement: Element, document: { title: "", activeElement: null, createElement: () => new Element() }, CSS: { escape: (value) => value },
-    location: { hash: "#inventory", search: "", hostname: "localhost" }, navigator: { clipboard: { async writeText(value) { if (clipboardFails) throw Error("clipboard unavailable"); clipboard.push(value); } } },
+    location: { hash: `#${route}`, search: "", hostname: "localhost" }, navigator: { clipboard: { async writeText(value) { if (clipboardFails) throw Error("clipboard unavailable"); clipboard.push(value); } } },
     localStorage: { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
     FormData: class { constructor(form) { this.form = form; } entries() { return this.form.elements.map((field) => [field.name, field.value])[Symbol.iterator](); } },
     CustomEvent: class { constructor(type, options = {}) { this.type = type; Object.assign(this, options); } }, HashChangeEvent: class { constructor(type) { this.type = type; } },
@@ -72,7 +74,7 @@ async function fixture(t, { routes = {}, actions = {}, bankBalance, writeError }
   };
   for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
   const config = {
-    usePreviewData: false, authenticated: true, csrfToken: "C".repeat(43), gameSessionId: "fixture-game", playerSessionId: "fixture-player", requestTimeoutMs: 5000, writeCooldownMs: 0, allowedImageHosts: [],
+    usePreviewData: preview, authenticated: true, csrfToken: "C".repeat(43), gameSessionId: "fixture-game", playerSessionId: "fixture-player", requestTimeoutMs: 5000, writeCooldownMs: 0, allowedImageHosts: [],
     capabilities: { routes: { ...Object.fromEntries(ROUTES.map((key) => [key, true])), ...routes }, actions: { ...Object.fromEntries(PLAYER_ACTION_CAPABILITIES.map((key) => [key, true])), ...actions } },
     sessionReadyEvent: "fixture:ready", sessionRequiredEvent: "fixture:required", sessionInvalidEvent: "fixture:invalid", logoutRequestedEvent: "fixture:logout",
     apiCall: async (context) => {
@@ -80,15 +82,16 @@ async function fixture(t, { routes = {}, actions = {}, bankBalance, writeError }
       if (context.method !== "GET" && writeError) throw writeError;
       const value = structuredClone(previewData[context.endpointKey]);
       if (context.endpointKey === "banking" && bankBalance !== undefined) value.checking.available = bankBalance;
-      return context.method === "GET" ? value : { ok: true };
+      return context.method === "GET" ? readValue(context, value) : { ok: true };
     },
   };
   mount.addEventListener("econovaria:player-api-request", (event) => requests.push(event.detail));
   const terminal = createPlayerTerminal({ mount, config }); let destroyed = false;
   const destroy = () => { if (!destroyed) { terminal.destroy(); destroyed = true; } };
   t.after(() => { destroy(); abortPlayerApiSessionRequests(config); for (const [key, descriptor] of saved) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; } });
-  await until(() => terminal.getState().status === "ready" && terminal.getState().routeLoading.inventory === false);
-  await terminal.refreshResources(["countries", "news", "market", "contracts", "marketplace", "banking", "inventory", "notifications"]);
+  const ready = () => terminal.getState().status === "ready" && terminal.getState().routeLoading[route] === false;
+  await until(ready, preview ? () => new Promise((resolve) => setTimeout(resolve, 10)) : tick);
+  if (route === "inventory") await terminal.refreshResources(["countries", "news", "market", "contracts", "marketplace", "banking", "inventory", "notifications"]);
   return { terminal, mount, config, storage, requests, calls, clipboard, frames, events, destroy, state: terminal.getState,
     click: (dataset, selectors) => mount.emit("click", targetFor(dataset, selectors)), submit: (form) => mount.emit("submit", form),
     clipboardFails(value) { clipboardFails = value; }, toast: () => mount.childNodes.at(-1)?.textContent };
@@ -172,12 +175,17 @@ for (const [name, endpoint, values, field, message, data] of [
   ["buy affordability", "marketOrder", { assetId: "nova", side: "buy", orderType: "market", quantity: "999999" }, "quantity", "The estimated order total exceeds your available cash."],
   ["sell holdings", "marketOrder", { assetId: "nova", side: "sell", orderType: "market", quantity: "999999" }, "quantity", /You currently own .* shares/],
   ["listing stock", "marketplacePurchase", { quantity: "13" }, "quantity", "The requested quantity exceeds the available listing quantity.", { listingId: "listing-1" }],
-  ["inventory stock", "marketplaceListing", { inventoryItemId: "inv-1", quantity: "999999" }, "quantity", /Only .* units are available/],
+  ["inventory stock", "marketplaceListing", { itemKey: "market-lens", quantity: "999999" }, "quantity", /Only .* units are available/],
   ["blank message", "messageSend", { body: "  " }, "body", "Enter a message before sending."],
   ["blank repayment source", "loanApply", { repaymentSource: "  " }, "repaymentSource", "Describe the expected repayment source."],
 ]) test(`form rejects ${name}, focuses the field, then input clears the error`, async (t) => {
-  const f = await fixture(t);
-  const formValues = endpoint === "marketplaceListing" ? { ...values, inventoryItemId: f.state().data.inventory.items[0].id } : values;
+  const f = await fixture(t, { readValue({ endpointKey }, value) {
+    if (endpoint === "marketplaceListing" && endpointKey === "inventory") {
+      return { ...value, items: [{ ...value.items[0], itemKey: "market-lens", quantityAvailable: 2 }] };
+    }
+    return value;
+  } });
+  const formValues = values;
   const formData = endpoint === "marketplacePurchase" ? { listingId: f.state().data.marketplace.listings[0].id } : data;
   const form = formFor(endpoint, formValues, formData), invalid = form.elements.namedItem(field);
   const event = await f.submit(form); assert.equal(event.prevented, true); assert.equal(form.classes.has("was-validated"), true); assert.equal(form.classes.has("has-validation-error"), true);
@@ -301,4 +309,127 @@ test("marketplace form rejects unaffordable quantity even when listing has suffi
   const f = await fixture(t, { bankBalance: 1 }), listing = f.state().data.marketplace.listings[0]; assert.ok(listing.quantity >= 1);
   const form = formFor("marketplacePurchase", { quantity: "1" }, { listingId: listing.id }); await f.submit(form);
   assert.equal(form.elements.namedItem("quantity").validationMessage, "The estimated purchase total exceeds your available cash."); assert.deepEqual(f.requests, []);
+});
+
+test("Marketplace draft stock requires explicit availability from the connected Inventory normalizer", () => {
+  const ready = { inventory: { state: "ready" } };
+  for (const count of [undefined, "not-a-number", true, "2", null, 1.5, -1, 0, 2]) {
+    const inventory = normalizePlayerInventory({
+      items: [{ itemKey: "market-lens", quantityOwned: 5, quantityReserved: 1, quantityAvailable: count }],
+    });
+    assert.deepEqual(marketplaceListableItems(marketplaceDraftInventory({ inventory, resourceStatus: ready })).map((item) => item.quantityAvailable),
+      count === 2 ? [2] : [], `wire count ${String(count)}`);
+    assert.equal(marketplaceDraftInventory({ inventory }), null);
+  }
+});
+
+test("installed Marketplace distinguishes unavailable and empty seller Inventory and recovers the draft form", async (t) => {
+  let available = "failed";
+  const f = await fixture(t, {
+    route: "marketplace",
+    readValue({ endpointKey }, value) {
+      if (endpointKey === "marketplace") {
+        return { ...value, myListings: [{ ...value.myListings[0], status: "draft", currencyCode: "ELD", version: 1 }] };
+      }
+      if (endpointKey !== "inventory") return value;
+      if (available === "failed") throw Object.assign(new Error("Inventory temporarily unavailable"), { status: 429 });
+      return {
+        ...value,
+        items: available === "empty" ? [] : [{ ...value.items[0], quantity: 5, itemKey: "market-lens", quantityAvailable: available }],
+      };
+    },
+  });
+  const markup = () => f.mount.innerHTML.match(/<form data-player-form="marketplace-listing"[\s\S]*?<\/form>/u)?.[0];
+  const disabled = () => assert.match(markup(), /<button[^>]*type="submit"[^>]*disabled[^>]*>/);
+  const assertExistingListings = () => {
+    assert.match(f.mount.innerHTML, /OPEN LISTINGS|Your listings/i);
+    assert.match(f.mount.innerHTML, /data-endpoint="marketplaceActivate"/);
+    assert.match(f.mount.innerHTML, /data-endpoint="marketplaceCancel"/);
+    assert.match(f.mount.innerHTML, /data-player-marketplace-order-history/);
+  };
+
+  assert.equal(f.state().data.resourceStatus.inventory.state, "unavailable");
+  assert.deepEqual(f.state().data.inventory.items, []);
+  assert.match(markup(), /Inventory unavailable/);
+  disabled();
+  assertExistingListings();
+
+  available = "empty";
+  await f.terminal.refreshResources(["inventory"]);
+  assert.equal(f.state().data.resourceStatus.inventory.state, "ready");
+  assert.match(markup(), /No eligible inventory items/);
+  disabled();
+
+  for (const invalid of [0, null, undefined, -1, 1.5]) {
+    available = invalid;
+    await f.terminal.refreshResources(["inventory"]);
+    assert.doesNotMatch(markup(), /Market Lens|5 available/);
+    assert.match(markup(), /No eligible inventory items/);
+    disabled();
+  }
+
+  available = 2;
+  await f.terminal.refreshResources(["inventory"]);
+  const retained = f.state().data.inventory;
+  assert.match(markup(), /Market Lens · 2 available/);
+  assert.doesNotMatch(markup(), /<button[^>]*type="submit"[^>]*disabled[^>]*>/);
+  const form = formFor("marketplaceListing", { itemKey: "market-lens", quantity: "3", unitPrice: "5", currencyCode: "ELD", condition: "Used" });
+  await f.submit(form);
+  assert.match(form.elements.namedItem("quantity").validationMessage, /Only 2 units/);
+  assert.deepEqual(f.requests, []);
+
+  available = "failed";
+  await f.terminal.refreshResources(["inventory"]);
+  assert.strictEqual(f.state().data.inventory, retained);
+  assert.match(markup(), /Inventory unavailable/);
+  assert.doesNotMatch(markup(), /Market Lens/);
+  disabled();
+  form.elements.namedItem("quantity").value = "1";
+  await f.submit(form);
+  assert.match(form.querySelector("[data-player-form-error]").textContent, /Inventory unavailable/);
+  assert.deepEqual(f.requests, []);
+  assertExistingListings();
+
+  available = 1;
+  await f.terminal.refreshResources(["inventory"]);
+  assert.match(markup(), /Market Lens · 1 available/);
+  await f.submit(formFor("marketplaceListing", { itemKey: "market-lens", quantity: "1", unitPrice: "5", currencyCode: "ELD", condition: "Used" }));
+  assert.equal(f.requests.length, 1);
+  assert.equal(f.requests[0].endpointKey, "marketplaceListing");
+  assert.equal(f.requests[0].payload.itemKey, "market-lens");
+  assert.equal(f.requests[0].payload.quantity, 1);
+
+  available = "failed";
+  await f.terminal.connectSession({ authenticated: true, csrfToken: "D".repeat(43), gameSessionId: "successor-fixture-game" });
+  assert.deepEqual(f.state().data.inventory.items, []);
+  assert.match(markup(), /Inventory unavailable/);
+  assert.doesNotMatch(markup(), /Market Lens/);
+  disabled();
+});
+
+test("configured Marketplace preview keeps its existing ready Inventory without inventing listable keys", async (t) => {
+  const f = await fixture(t, { route: "marketplace", preview: true });
+  assert.equal(f.state().data.resourceStatus.inventory.state, "ready");
+  assert.ok(f.state().data.inventory.items.length > 0);
+  const form = f.mount.innerHTML.match(/<form data-player-form="marketplace-listing"[\s\S]*?<\/form>/u)?.[0];
+  assert.match(form, /No eligible inventory items/);
+  assert.doesNotMatch(form, /Inventory unavailable/);
+  assert.match(form, /<button[^>]*type="submit"[^>]*disabled[^>]*>/);
+  assert.match(f.mount.innerHTML, /OPEN LISTINGS/);
+  assert.deepEqual(f.calls, []);
+});
+
+test("mounted Marketplace with unsupported optional Inventory can still show the catalog", async (t) => {
+  const f = await fixture(t, {
+    route: "marketplace",
+    readValue({ endpointKey }, value) {
+      return endpointKey === "session"
+        ? { ...value, capabilityEndpointKeys: ["dashboard", "marketplace", "bankingFx"] }
+        : value;
+    },
+  });
+  assert.equal(f.state().data.resourceStatus.inventory.code, "CAPABILITY_UNAVAILABLE");
+  assert.match(f.mount.innerHTML, /Inventory unavailable/);
+  assert.match(f.mount.innerHTML, /OPEN LISTINGS/);
+  assert.ok(f.calls.every(({ endpointKey }) => endpointKey !== "inventory"));
 });

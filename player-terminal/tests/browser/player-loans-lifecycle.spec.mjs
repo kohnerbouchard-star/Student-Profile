@@ -78,3 +78,53 @@ test("bound-account rejection remains an error and does not fabricate repaid deb
   expect(await page.evaluate(() => loansTest.terminal.getState().data.loans.activeLoans[0].balance)).toBe(4.01);
   await expect(form.locator('button[type="submit"]')).toBeEnabled();
 });
+
+test("facility-bound repayment account updates on refresh without sending a payment", async ({ page }) => {
+  const disclosure = page.locator('[data-player-loan-repayment-account]');
+  await page.locator('[data-endpoint="loanRepay"]').locator('..').locator('summary').click();
+  await expect(disclosure).toContainText("Repayment account unavailable");
+  for (const [account, label] of [["savings", "Savings account"], ["business", "Business operating account"], ["checking", "Checking account"]]) {
+    await page.evaluate(async (value) => { loansTest.models.loans.activeLoans[0].repaymentAccountType = value; await loansTest.terminal.refreshResources(["loans"]); }, account);
+    await expect(disclosure).toContainText(`facility-bound ${label} in NRC`);
+  }
+  await page.evaluate(async () => { delete loansTest.models.loans.activeLoans[0].repaymentAccountType; await loansTest.terminal.refreshResources(["loans"]); });
+  await expect(disclosure).toContainText("Repayment account unavailable");
+  expect(await page.evaluate(() => loansTest.repayments)).toEqual([]);
+});
+
+test("facility receipts open by keyboard, retain reversals, and clear after unavailable refresh", async ({ page }) => {
+  const receipts = page.locator('[data-player-loan-payment-history]');
+  await expect(receipts).toHaveCount(1);
+  await expect(receipts.locator('summary')).toContainText('Payments for Working capital');
+  await receipts.locator('summary').focus();
+  await page.keyboard.press('Enter');
+  await expect(receipts).toHaveAttribute('open', '');
+  await expect(receipts.getByText('Principal NRC 0.80', { exact: false })).toHaveCount(2);
+  await expect(receipts.getByText('Reversed payment; not counted toward installment payments.')).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(receipts).not.toHaveAttribute('open', '');
+  await receipts.locator('summary').click();
+  await expect(receipts).toHaveAttribute('open', '');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  await page.evaluate(async () => { loansTest.models.loans.lifecycle = { version: 1, state: 'unavailable' }; await loansTest.terminal.refreshResources(['loans']); });
+  await expect(receipts).toHaveCount(0);
+  await expect(page.getByText('Loan history unavailable', { exact: true })).toBeVisible();
+  await page.evaluate(async (loans) => { loansTest.models.loans = loans; await loansTest.terminal.refreshResources(['loans']); }, loansFixture());
+  await expect(receipts).toHaveCount(1);
+  expect(await page.evaluate(() => loansTest.repayments)).toEqual([]);
+});
+
+test('active facility opens its own recorded repayment plan by keyboard without submitting payment', async ({ page }) => {
+  const id = await page.evaluate(() => loansTest.models.loans.activeLoans[0].id);
+  const amount = page.locator(`[data-loan-id="${id}"] input[name="amount"]`);
+  await page.locator('.player-terminal-active-loans details').filter({ has: amount }).locator('summary').click();
+  await amount.fill('1.23');
+  const shortcut = page.locator(`[data-loan-forecast-link="${id}"]`);
+  await shortcut.focus(); await page.keyboard.press('Enter');
+  const plan = page.locator(`[data-loan-forecast="${id}"]`);
+  await expect(plan).toHaveAttribute('open', '');
+  await expect(plan.locator('summary')).toBeFocused();
+  await expect(plan.locator('summary')).toContainText(`Working capital · ${id}`);
+  await expect(amount).toHaveValue('1.23');
+  expect(await page.evaluate(() => loansTest.repayments)).toEqual([]);
+});

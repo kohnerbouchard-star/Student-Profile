@@ -111,9 +111,12 @@ assert.ok(
 );
 
 includesAll(source.bankingWorkflow, [
-  "AUTHORITY_PR_NUMBER: ${{ github.event.pull_request.number || 672 }}",
-  "AUTHORITY_BASE_REF: ${{ github.event.pull_request.base.ref || 'feat/canonical-fx-authority-v1' }}",
-  'git diff --name-only "origin/${AUTHORITY_BASE_REF}...HEAD"',
+  "AUTHORITY_PR_NUMBER: ${{ github.event.pull_request.number || steps.manual_pr.outputs.pr_number || 672 }}",
+  "AUTHORITY_BASE_REF: ${{ github.event.pull_request.base.ref || steps.manual_pr.outputs.base_ref || 'feat/canonical-fx-authority-v1' }}",
+  "MANUAL_BASE_SHA: ${{ steps.manual_pr.outputs.base_sha }}",
+  "run: node scripts/manual-pr-context.mjs",
+  "node --test scripts/manual-pr-context.test.mjs",
+  'git diff --name-only "${MANUAL_BASE_SHA:-origin/${AUTHORITY_BASE_REF}}...HEAD"',
   '--pr-number "${AUTHORITY_PR_NUMBER}"',
   '--base-ref "${AUTHORITY_BASE_REF}"',
 ], "stack-aware Banking workflow");

@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { exactDifferenceCounts } from "./catalog-diagnostic.mjs";
+
 const IGNORED_KEYS = new Set(["captured_at", "generated_at", "capturedAt", "generatedAt"]);
 const SUPABASE_HOSTED_PROFILE = "supabase-hosted-live-v1";
 const SUPABASE_APPLICATION_RESTORE_PROFILE = "supabase-application-restore-v1";
@@ -237,6 +239,7 @@ async function main() {
     profileValidation,
     left: { path: resolve(args.left), sha256: leftSha256 },
     right: { path: resolve(args.right), sha256: rightSha256 },
+    boundedDiagnostics: args.profile ? null : exactDifferenceCounts(rawLeft, rawRight),
     differenceCountShown: differences.length,
     differences,
   }, null, 2)}\n`);

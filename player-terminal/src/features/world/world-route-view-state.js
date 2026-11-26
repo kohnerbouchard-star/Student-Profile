@@ -1,6 +1,11 @@
 const DEFAULT_WORLD_ROUTE_VIEW = Object.freeze({
   model: null,
   quote: null,
+  departureRecovery: null,
+  residency: undefined,
+  residencyRecovery: null,
+  residencyMessage: "",
+  residencyIdentity: null,
   state: "idle",
   message: "",
   updatedAt: 0

@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-1019.json"
       - "docs/operations/contracts/player-cross-cutting/pr-981.json"
       - "docs/operations/contracts/player-cross-cutting/pr-982.json"
       - "docs/operations/contracts/player-cross-cutting/pr-980.json"
@@ -35,6 +36,7 @@ on:
       - "scripts/fixtures/admin-attendance-controller-function-hashes.json"
       - "scripts/admin-v2-world-read-model.test.mjs"
       - "scripts/admin-v2-marketplace-read-model.test.mjs"
+      - "docs/operations/contracts/player-cross-cutting/pr-938.json"
       - "scripts/admin-account-controls-dom-fixture.mjs"
       - "scripts/admin-account-controls.test.mjs"
       - "docs/operations/contracts/player-cross-cutting/pr-946.json"
@@ -44,6 +46,10 @@ on:
       - "docs/operations/contracts/player-cross-cutting/pr-949.json"
       - ".github/workflows/admin-v2-attendance.yml"
       - "admin/v2/**"
+      - "scripts/admin-v2-attendance-roster-browser.mjs"
+      - "scripts/admin-v2-attendance-route.test.mjs"
+      - "scripts/fixtures/admin-attendance-route-harness.mjs"
+      - "scripts/fixtures/admin-attendance-function-hashes.json"
       - "scripts/admin-v2-attendance-api.test.mjs"
       - "scripts/admin-v2-unit.test.mjs"
       - "scripts/admin-v2-store-api.test.mjs"
@@ -91,11 +97,19 @@ jobs:
           node --check admin/v2/src/routes/attendance/AttendanceApi.js
           node --check admin/v2/src/routes/attendance/AttendanceController.js
           node --check admin/v2/src/routes/attendance/AttendanceRoute.js
+          node --check admin/v2/src/routes/attendance/AttendanceRoster.js
+          node --check scripts/admin-v2-attendance-roster-browser.mjs
           node --check admin/v2/src/routes/attendance/AttendanceSkeleton.js
           node --check scripts/admin-v2-attendance-api.test.mjs
 
       - name: Run focused Attendance tests
         run: node --test scripts/admin-v2-attendance-api.test.mjs
+
+      - name: Install pinned Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify attendance roster filter interactions
+        run: node scripts/admin-v2-attendance-roster-browser.mjs
 
       - name: Run Admin V2 regressions
         run: npm run test:admin-v2
@@ -115,6 +129,8 @@ jobs:
             admin/v2/src/routes/attendance/AttendanceApi.js \
             admin/v2/src/routes/attendance/AttendanceController.js \
             admin/v2/src/routes/attendance/AttendanceRoute.js \
+            admin/v2/src/routes/attendance/AttendanceRoster.js \
+            scripts/admin-v2-attendance-roster-browser.mjs \
             admin/v2/src/routes/attendance/AttendanceSkeleton.js \
             admin/v2/styles/routes/attendance.css \
             scripts/admin-v2-attendance-api.test.mjs \

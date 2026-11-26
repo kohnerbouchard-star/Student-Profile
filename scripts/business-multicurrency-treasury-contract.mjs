@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { businessProcurementSource, installedBusinessPageSource, readInstalledBusinessPageSource } from "./helpers/business-page-source.mjs";
 import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 
 import assert from "node:assert/strict";
@@ -64,6 +65,13 @@ const files = Object.freeze({
 const source = Object.fromEntries(
   Object.entries(files).map(([key, path]) => [key, key === "backendCapabilityManifest" ? readEdgeRuntimeSource(path, "utf8") : readFileSync(path, "utf8")]),
 );
+const procurementPage = businessProcurementSource();
+const installedPage = readInstalledBusinessPageSource();
+// Negative controls ensure source closure cannot certify an uninstalled leaf.
+assert.throws(() => installedBusinessPageSource(source.page.replace('import { renderBusinessProcurementPanel }', 'import { unusedProcurementPanel }'), procurementPage));
+assert.throws(() => installedBusinessPageSource(source.page.replace('${renderBusinessProcurementPanel(data,', '${unusedProcurementPanel(data,'), procurementPage));
+assert.throws(() => installedBusinessPageSource(source.page, procurementPage.replace('export function renderBusinessProcurementPanel(', 'function renderBusinessProcurementPanel(')));
+assert.ok(installedBusinessPageSource(source.page, `${procurementPage}\n__leaf_negative_scan_probe__`).includes('__leaf_negative_scan_probe__'));
 const authority = JSON.parse(source.authority);
 
 function includesAll(text, values, label) {
@@ -416,11 +424,10 @@ includesAll(source.flowSupport, [
 includesAll(source.page, [
   "Canonical Checking accounts & FX",
   "Review exact quote",
-  "Review funded procurement quote",
-  "IMMUTABLE PROCUREMENT RECEIPT",
   "formatBusinessRatePercent",
 ], "C4 Player page");
-assert.ok(!source.page.includes("LOCAL WALLET"), "C4 UI must not represent a Business wallet.");
+includesAll(procurementPage, ["Review funded procurement quote", "IMMUTABLE PROCUREMENT RECEIPT"], "C4 installed procurement page");
+assert.ok(!installedPage.includes("LOCAL WALLET"), "C4 UI must not represent a Business wallet.");
 includesAll(source.style, ["player-terminal-business-treasury", "player-terminal-business-procurement"], "C4 Player styles");
 includesAll(source.browser, [
   "exact terms and recover committed refresh",

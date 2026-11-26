@@ -1,3 +1,4 @@
+import { craftingJobOutcome } from "../features/crafting/job-outcome.js";
 import { resourcesForRoute, SHELL_OPTIONAL_RESOURCES } from "../api/resource-plan.js";
 import { PLAYER_ENDPOINTS, resolveEndpoint } from "../api/endpoints.js";
 import { ApiConnectionPendingError, normalizeApiError } from "../api/errors.js";
@@ -282,6 +283,8 @@ export function createPlayerTerminalLifecycle({ api, store, config, freshness, m
     try {
       const operation = await api.execute(endpointKey, normalizedPayload, params);
       if (!current(lifecycle)) return null;
+      const jobOutcome = craftingJobOutcome(endpointKey, { ...normalizedPayload, ...params }, operation.result);
+      if (jobOutcome) store.setState(state => ({ ...state, ui: { ...state.ui, craftingJobOutcome: { session: state.data.session, outcome: jobOutcome } } }));
       restoreButton("Completed");
       const pending = operation.invalidatedResources.length
         ? api.refreshResources(operation.invalidatedResources)
@@ -304,8 +307,8 @@ export function createPlayerTerminalLifecycle({ api, store, config, freshness, m
       if (operation.invalidatedResources.length && !settlePublished(refresh)) return null;
       const refreshIncomplete = Object.keys(refresh.errors).length > 0;
       showToast(
-        refreshIncomplete ? "Action completed. Some information will refresh when the service is available." : "Action completed and current information refreshed.",
-        refreshIncomplete ? "amber" : "green"
+        jobOutcome ? `${jobOutcome.message}${refreshIncomplete ? " Some information could not refresh yet." : ""}` : refreshIncomplete ? "Action completed. Some information will refresh when the service is available." : "Action completed and current information refreshed.",
+        jobOutcome ? (refreshIncomplete ? "amber" : jobOutcome.tone) : refreshIncomplete ? "amber" : "green"
       );
       deferEffect(() => restoreButton(), 1200);
       return operation.result;

@@ -56,11 +56,11 @@ export function verifyPrimaryIpoPurge(game, other, additionalTables = []) {
       from public.game_sessions where id=${q(game.id)};
     commit;`);
   const preflight = jsonService(`public.get_game_data_purge_preflight_v1(${q(ids.request)})`);
-  assert.equal(preflight.registrySha256, '7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3');
-  assert.equal(preflight.fkGraphSha256, '0c932d6e620cec801b527e81f3e4d3e91bd8d70fd4fb45d6e1a72166ff0c7a82');
-  assert.equal(preflight.deleteOrderSha256, '19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897');
-  assert.deepEqual([preflight.registryTableCount,preflight.fkGraphEdgeCount,preflight.deleteOrderTableCount], [207,460,206]);
-  expectSqlError(`begin; update private.game_data_purge_requests set db_delete_cursor=207 where id=${q(ids.request)};
+  assert.equal(preflight.registrySha256, '37c2231abb9aff3c306dc7975c2968d549991fa9c2c9815cf8163c54db458bc6');
+  assert.equal(preflight.fkGraphSha256, '314a9ec50cca588ac091cad4ac42f68c77dbc81e9fb712cb960a7f714566cda3');
+  assert.equal(preflight.deleteOrderSha256, 'ad48814a47842407203f6b495b10bc7d1f7b1110cbf55506179456b461f678a3');
+  assert.deepEqual([preflight.registryTableCount,preflight.fkGraphEdgeCount,preflight.deleteOrderTableCount], [208,461,207]);
+  expectSqlError(`begin; update private.game_data_purge_requests set db_delete_cursor=208 where id=${q(ids.request)};
     set local role service_role; select public.finalize_game_data_purge_v1(${q(ids.request)}); commit;`, /GAME_PURGE_DATABASE_ROWS_REMAIN/);
   for (const call of [`public.execute_game_data_purge_db_batch_v2(${q(ids.request)},20)`, `public.finalize_game_data_purge_v1(${q(ids.request)})`]) {
     expectSqlError(`begin; set local role service_role;
@@ -72,11 +72,11 @@ export function verifyPrimaryIpoPurge(game, other, additionalTables = []) {
       end $claim$; reset role;
       alter table public.loan_applications add constraint ref025_unexpected_edge
       foreign key(game_session_id,player_id) references public.players(game_session_id,id);
-      update private.game_data_purge_requests set db_delete_cursor=207 where id=${q(ids.request)};
+      update private.game_data_purge_requests set db_delete_cursor=208 where id=${q(ids.request)};
       set local role service_role; select ${call}; commit;`, /GAME_PURGE_FK_GRAPH_DRIFT/);
   }
   let cursor = 0;
-  while (cursor < 207) {
+  while (cursor < 208) {
     const claims = runJson(`begin; set local role service_role;
       select coalesce(jsonb_agg(to_jsonb(c)),'[]'::jsonb)::text from public.claim_confirmed_game_data_purge_v1() c; commit;`);
     assert.equal(claims.length, 1); assert.equal(claims[0].request_id, ids.request); assert.equal(claims[0].stage, 'db');
@@ -90,5 +90,5 @@ export function verifyPrimaryIpoPurge(game, other, additionalTables = []) {
   const deleted = runJson(`select db_deleted_rows::text from private.game_data_purge_requests where id=${q(ids.request)};`);
   for (const table of tables) assert.equal(deleted[`public.${table}`], counts[table], table);
   assert.deepEqual(snapshot(other.id), before, 'canonical IPO purge must preserve the comparison game');
-  console.log('Phase 14C populated IPO purge: 207 registry / 460 FK / 206 ordered / 207 final cursor; immutable evidence removed with other-game isolation.');
+  console.log('Phase 14C populated IPO purge: 208 registry / 461 FK / 207 ordered / 208 final cursor; immutable evidence removed with other-game isolation.');
 }

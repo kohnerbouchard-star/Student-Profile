@@ -167,16 +167,16 @@ begin
  select * into c from public.claim_story_event_execution_v1(g,e,clock_timestamp(),99,'{}',120);
  if c.claim_outcome is distinct from 'acquired' then raise exception 'Unrelated blocked FX stopped non-FX plan'; end if;
  -- Preexisting high-attempt expired execution is fenced, not allowed to run once more.
- update public.story_event_execution_claims set attempt_count=8618,retry_epoch_start_attempt=0,
+ update public.story_event_execution_claims set attempt_count=8981,retry_epoch_start_attempt=0,
    lease_expires_at=clock_timestamp()-interval '1 second' where game_session_id=g and storyline_event_id=e;
  select * into r from public.claim_story_event_execution_v1(g,e,clock_timestamp(),99,'{}',120);
- if r.claim_outcome is distinct from 'busy' or r.attempt_count is distinct from 8618 then raise exception 'Expired 8618 claim retried'; end if;
+ if r.claim_outcome is distinct from 'busy' or r.attempt_count is distinct from 8981 then raise exception 'Expired 8981 claim retried'; end if;
  select * into saved from public.story_event_execution_claims where game_session_id=g and storyline_event_id=e;
  if saved.status is distinct from 'retryable_failed' or saved.lease_token is not null then raise exception 'Expired high attempt lease not fenced'; end if;
  -- Likewise an already failed legacy claim, with no existing hold metadata.
  update public.story_event_execution_claims set retry_hold_reason=null where id=saved.id;
  select * into r from public.claim_story_event_execution_v1(g,e,clock_timestamp(),99,'{}',120);
- if r.claim_outcome is distinct from 'busy' or r.attempt_count is distinct from 8618 then raise exception 'Failed 8618 claim retried'; end if;
+ if r.claim_outcome is distinct from 'busy' or r.attempt_count is distinct from 8981 then raise exception 'Failed 8981 claim retried'; end if;
  -- Dependency release fails until readiness; changing readiness never auto-releases.
  denied:=false;
  begin perform public.release_story_execution_retry_hold_v1(fx_game,e,'STORY_CURRENCY_VOLATILITY_FX_NOT_READY',1,1,owner_id,'Reviewed FX cutover recovery','retry-fixture-fx-release');
@@ -214,6 +214,82 @@ begin
   if has_function_privilege('anon',signature,'execute') or has_function_privilege('authenticated',signature,'execute')
      or not has_function_privilege('service_role',signature,'execute') then raise exception 'Unexpected RPC privilege: %',signature; end if;
  end loop;
+ if not has_table_privilege('service_role','public.story_execution_retry_release_audit','select')
+     or has_table_privilege('service_role','public.story_execution_retry_release_audit','insert,update,delete')
+     or has_table_privilege('anon','public.story_execution_retry_release_audit','select,insert,update,delete')
+     or has_table_privilege('authenticated','public.story_execution_retry_release_audit','select,insert,update,delete')
+ then raise exception 'Unexpected Story release audit privileges'; end if;
 end $permissions$;
+
+-- Disposable transaction only. Use the actual child-first batch RPC with two
+-- games' audit rows and a synthetic, explicitly armed DB-stage request.
+do $purge_audit$
+declare
+  target_game uuid := '73000000-0000-4000-8000-000000000010';
+  other_game uuid := '73000000-0000-4000-8000-000000000011';
+  staff_id uuid := '73000000-0000-4000-8000-000000000001';
+  code_id uuid := '73000000-0000-4000-8000-000000000080';
+  entitlement_id uuid := '73000000-0000-4000-8000-000000000081';
+  request_id uuid := '73000000-0000-4000-8000-000000000082';
+  fixture_arm_id uuid := '73000000-0000-4000-8000-000000000083';
+  audit_position integer;
+  result jsonb;
+  other_audit jsonb;
+begin
+  if exists (
+    select 1 from information_schema.columns as c
+    join information_schema.tables as t using (table_schema, table_name)
+    left join private.game_data_purge_table_registry as r using (table_schema, table_name)
+    where c.column_name = 'game_session_id'
+      and c.table_schema in ('public', 'private') and t.table_type = 'BASE TABLE'
+      and c.table_name not in ('game_sessions', 'game_data_purge_requests', 'game_data_purge_table_registry')
+      and r.table_name is null
+  ) then raise exception 'Story purge registry incomplete'; end if;
+
+  select position into strict audit_position
+  from private.game_data_purge_delete_order_v1
+  where table_schema = 'public' and table_name = 'story_execution_retry_release_audit';
+  if (select count(*) from private.game_data_purge_delete_order_v1
+      where table_schema = 'public' and table_name in ('story_event_execution_claims', 'story_event_resolutions')
+        and position > audit_position) <> 2 then
+    raise exception 'Story audit is not ordered before its ancestors';
+  end if;
+  select jsonb_agg(to_jsonb(a) order by a.id) into other_audit
+  from public.story_execution_retry_release_audit as a where a.game_session_id = other_game;
+  if jsonb_array_length(other_audit) is distinct from 2 then
+    raise exception 'Story purge comparison fixture missing';
+  end if;
+
+  insert into public.purchase_codes(id,code_hash,status,max_redemptions,redeemed_count,license_duration_days)
+  values(code_id,repeat('e',64),'exhausted',1,1,null);
+  insert into public.entitlements(id,purchase_code_id,staff_user_id,game_session_id,status,license_expires_at,expired_at)
+  values(entitlement_id,code_id,staff_id,target_game,'expired','2000-01-01','2000-01-02');
+  update private.game_data_purge_control
+  set environment_name = 'staging', r2_bucket_name = 'story-disposable',
+      arm_id = fixture_arm_id, armed_until = clock_timestamp() + interval '2 hours',
+      armed_by_staff_user_id = staff_id, armed_at = clock_timestamp(), disarmed_at = null
+  where singleton;
+  insert into private.game_data_purge_requests
+    (id, game_session_id, game_name_snapshot, entitlement_id, license_expires_at, status,
+     confirmation_hash, confirmation_issued_at, confirmation_not_before, confirmation_expires_at,
+     confirmed_by_staff_user_id, confirmed_at, purge_not_before, confirmed_arm_id,
+     r2_prefix, r2_deleted_at, db_delete_cursor)
+  values(request_id, target_game, 'Story A', entitlement_id, '2000-01-01', 'db_deleting',
+    repeat('c',64), clock_timestamp()-interval '2 minutes', clock_timestamp()-interval '1 minute',
+    clock_timestamp()+interval '30 minutes', staff_id, clock_timestamp()-interval '1 minute',
+    clock_timestamp()-interval '1 day', fixture_arm_id, 'staging/game_session=' || target_game || '/',
+    clock_timestamp()-interval '1 minute', audit_position-1);
+
+  set local role service_role;
+  select public.execute_game_data_purge_db_batch_v2(request_id, 1) into result;
+  reset role;
+  if (result->>'cursor')::integer is distinct from audit_position
+     or exists (select 1 from public.story_execution_retry_release_audit where game_session_id = target_game)
+     or not exists (select 1 from public.story_event_execution_claims where game_session_id = target_game)
+     or (select jsonb_agg(to_jsonb(a) order by a.id)
+         from public.story_execution_retry_release_audit as a where a.game_session_id = other_game)
+         is distinct from other_audit
+  then raise exception 'Story audit purge lost exact game scope or child-first ordering'; end if;
+end $purge_audit$;
 rollback;
 select 'STORY_RETRY_CONTAINMENT_DATABASE_ACCEPTANCE_PASSED';

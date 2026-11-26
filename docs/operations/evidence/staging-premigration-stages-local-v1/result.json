@@ -1,0 +1,21 @@
+{
+  "status": "LOCAL_DIAGNOSTIC_QUALIFICATION_PASS",
+  "baseCommit": "e6bf130c63e9940538dd46938f221f99b9ffba3f",
+  "historicalRun": 45700466251,
+  "historicalArtifact": 15063221117,
+  "historicalCause": "UNKNOWN",
+  "historicalSqlstate": null,
+  "directlyReproducedLocalDefect": "BASH_LOOP_SUBSTITUTION_MASKS_FAILED_NETWORK_INVENTORY",
+  "historicalDefectAttribution": false,
+  "nodeVersion": "22.23.1",
+  "testsPassed": 52,
+  "testsSkipped": 0,
+  "injectedPreMigrationBoundaries": 16,
+  "primarySurvivesSecondaryCleanupFailure": true,
+  "migrationDiagnosticPreservation": true,
+  "privateCanaryAbsentFromPublicSummary": true,
+  "fullCorrectedDockerRehearsal": "NOT_RUN",
+  "hostedConnections": false,
+  "hostedMutations": false,
+  "releaseCertificate": false
+}

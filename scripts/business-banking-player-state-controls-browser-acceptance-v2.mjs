@@ -170,16 +170,33 @@ async function replay(page, original) {
 async function openNotifications(page) {
   const toggle = page.locator('[data-player-local-action="toggle-notifications"]:visible').first();
   await toggle.waitFor({ state: "visible", timeout: 30_000 });
+  const newest = page.waitForResponse((response) => {
+    const { pathname, searchParams } = new URL(response.url());
+    return response.request().method() === "GET" && pathname.endsWith("/players/me/notifications") &&
+      searchParams.get("status") === "unread" && searchParams.get("limit") === "20" && !searchParams.has("cursor");
+  }, { timeout: 30_000 });
   await toggle.click();
+  const response = await newest;
+  const payload = await parseJson(response);
+  if (response.status() !== 200 || payload?.ok !== true || !Array.isArray(payload.items)) {
+    throw new Error("The newest unread notification page was not available.");
+  }
   const drawer = page.locator("[data-player-notification-drawer]:visible");
   await drawer.waitFor({ state: "visible", timeout: 30_000 });
-  return drawer;
+  const markRead = drawer.locator('[data-player-notification-mark-read][aria-disabled="false"]');
+  await markRead.waitFor({ state: "visible", timeout: 30_000 });
+  const unreadIds = new Set(payload.items.map((row) => row.deliveryId));
+  const visibleIds = new Set(await drawer.locator("[data-player-notification-id]").evaluateAll(
+    (rows) => rows.map((row) => row.dataset.playerNotificationId),
+  ));
+  if (visibleIds.size !== unreadIds.size || [...unreadIds].some((id) => !visibleIds.has(id))) {
+    throw new Error("The settled notification drawer does not match the newest unread page.");
+  }
+  return { markRead, unreadIds, visibleIds };
 }
 
 async function proveNotifications(page, fixture) {
-  const drawer = await openNotifications(page);
-  const markRead = drawer.locator('[data-player-action="notifications-read"]');
-  await markRead.waitFor({ state: "visible", timeout: 30_000 });
+  const { markRead, unreadIds } = await openNotifications(page);
   if (!(await markRead.isEnabled())) throw new Error("Recipient did not have a real unread notification after Messaging.");
   evidence.notifications.unreadObserved = true;
 
@@ -195,16 +212,18 @@ async function proveNotifications(page, fixture) {
   }
   const original = await capture(response);
   const body = JSON.parse(original.body || "{}");
-  if (!Array.isArray(body.deliveryIds) || body.deliveryIds.length < 1 || Object.keys(body).some((key) => key !== "deliveryIds")) {
+  if (!Array.isArray(body.deliveryIds) || body.deliveryIds.length < 1 || body.deliveryIds.length > 50 ||
+      !body.deliveryIds.every((id) => unreadIds.has(id)) || Object.keys(body).some((key) => key !== "deliveryIds")) {
     throw new Error(`Notification read mutation forwarded an unexpected body: ${redact(JSON.stringify(body))}`);
   }
   evidence.requestBoundaryValid = true;
   evidence.notifications.markedRead = true;
 
   await reloadReady(page);
-  const persistedDrawer = await openNotifications(page);
-  const persistedButton = persistedDrawer.locator('[data-player-action="notifications-read"]');
-  if (await persistedButton.count() && await persistedButton.isEnabled()) throw new Error("Notification read state did not persist after reload.");
+  const { unreadIds: persistedUnreadIds, visibleIds: persistedVisibleIds } = await openNotifications(page);
+  if (body.deliveryIds.some((id) => persistedUnreadIds.has(id) || persistedVisibleIds.has(id))) {
+    throw new Error("Notification read state did not persist after reload.");
+  }
   evidence.notifications.persisted = true;
 
   const replayResult = await replay(page, original);

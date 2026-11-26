@@ -1,8 +1,11 @@
 #!/usr/bin/env node
+import { readInstalledBusinessPageSource } from "./helpers/business-page-source.mjs";
 import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+
+const installedPage = readInstalledBusinessPageSource();
 
 const files = Object.freeze({
   handler: "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
@@ -97,7 +100,7 @@ for (const [name, value] of [
   ["Player capability resolver", source.browserCapabilities],
   ["Player capability validator", source.browserManifest],
   ["Player resource plan", source.resourcePlan],
-  ["Player Business page", source.businessPage],
+  ["Player Business page", installedPage],
   ["button action evidence", source.buttonCoverage],
 ]) {
   assert.doesNotMatch(value, /businessInputPurchase/u, `${name} must not advertise the retired action.`);
@@ -106,7 +109,7 @@ for (const [name, value] of [
   ["server capability manifest", source.capability],
   ["Player endpoint registry", source.endpoints],
   ["Player Business route helper", source.browserRoutes],
-  ["Player Business page", source.businessPage],
+  ["Player Business page", installedPage],
 ]) {
   assert.doesNotMatch(
     value,
@@ -115,7 +118,7 @@ for (const [name, value] of [
   );
 }
 assert.doesNotMatch(
-  source.businessPage,
+  installedPage,
   /data-player-form="business-input-purchase"|<strong>Purchase production inputs<\/strong>/u,
   "The retired Player control must not remain rendered.",
 );
@@ -137,7 +140,7 @@ const runtimeSources = [
   source.browserCapabilities,
   source.browserManifest,
   source.resourcePlan,
-  source.businessPage,
+  installedPage,
 ].join("\n");
 assert.doesNotMatch(runtimeSources, /purchase_business_input_v1/u);
 

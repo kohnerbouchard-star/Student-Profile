@@ -39,6 +39,10 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
   if (!(mount instanceof HTMLElement)) throw new TypeError("A valid player terminal mount element is required.");
 
   const api = new PlayerApi(config, { freshness, deferFreshnessSettlement: true });
+  const shellRenderListeners = new Set();
+  const notifyShellRendered = () => {
+    for (const listener of shellRenderListeners) listener();
+  };
   const store = createStore({
     status: "loading",
     route: readRoute(),
@@ -56,7 +60,7 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
       marketAssetId: "nova",
       marketSector: "All",
       storeCategory: "All",
-      contractTab: "Active",
+      contractTab: "",
       contractId: "ctr-101",
       inventoryCategory: "All",
       marketplaceCategory: "All",
@@ -158,6 +162,7 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
       mount.innerHTML = initialMarkup(state.status === "waiting" ? "AWAITING EXISTING PLAYER SESSION" : "INITIALIZING PLAYER TERMINAL");
       mount.setAttribute("aria-busy", "true");
       document.title = state.status === "waiting" ? "Connecting · Econovaria Player Terminal" : "Loading · Econovaria Player Terminal";
+      notifyShellRendered();
       return;
     }
 
@@ -165,6 +170,7 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
       mount.innerHTML = `<div class="player-terminal-overview player-terminal-error-shell">${renderConnectionError(state.error)}</div>`;
       mount.removeAttribute("aria-busy");
       document.title = "Connection problem · Econovaria Player Terminal";
+      notifyShellRendered();
       focusAfterRender(state);
       return;
     }
@@ -198,6 +204,7 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
     mount.removeAttribute("aria-busy");
     document.title = `${ROUTE_TITLES[state.route] || "Dashboard"} · Econovaria Player Terminal`;
     updateClock();
+    notifyShellRendered();
     focusAfterRender(state);
   }
 
@@ -354,6 +361,10 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
     connectSession,
     getState: store.getState,
     subscribe: store.subscribe,
+    subscribeShellRender(listener) {
+      shellRenderListeners.add(listener);
+      return () => shellRenderListeners.delete(listener);
+    },
     requestRender: render,
     openModal(modal, opener = null) {
       if (opener) rememberFocus(opener);
@@ -388,6 +399,7 @@ export function createPlayerTerminal({ mount, config, freshness = createResource
       globalThis.removeEventListener("online", handleOnline);
       globalThis.removeEventListener(config.sessionReadyEvent, handleSessionReady);
       unsubscribe();
+      shellRenderListeners.clear();
       mount.innerHTML = "";
     }
   };

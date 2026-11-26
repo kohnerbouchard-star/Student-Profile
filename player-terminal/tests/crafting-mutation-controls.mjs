@@ -203,3 +203,5 @@ assert.match(renderRecipe({ ...data.crafting.recipes[0], outputs: [null] }), /Un
 console.log('Crafting per-output disclosure preserves individual quantities and destinations; malformed/absent details are explicit.');
 
 assert.match(multiOutput, /<article><span>.*?<\/span><div><strong>3 × Copper sheets/);
+
+import "./crafting-job-outcomes.mjs";

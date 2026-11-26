@@ -44,6 +44,10 @@ const playerDashboardRepository = readBrowserSourceSync(
   "backend/src/domains/game-dashboard/infrastructure/supabasePlayerGameDashboardRepository.ts",
   "utf8",
 );
+const playerDashboardPanels = readBrowserSourceSync(
+  "backend/src/domains/game-dashboard/infrastructure/dashboardPanelProjection.ts",
+  "utf8",
+);
 const playerDashboardProjection = readBrowserSourceSync(
   "backend/src/domains/game-dashboard/infrastructure/dashboardReadProjection.ts",
   "utf8",
@@ -58,6 +62,10 @@ const staffLedgerHandler = readBrowserSourceSync(
 );
 const bankingRepository = readBrowserSourceSync(
   "backend/src/domains/economy/infrastructure/supabasePlayerBankingPublicRepository.ts",
+  "utf8",
+);
+const playerCurrencyProjection = readBrowserSourceSync(
+  "player-terminal/src/integrations/student-profile-currency-projection.js",
   "utf8",
 );
 const playerApiIntegration = readBrowserSourceSync(
@@ -230,26 +238,26 @@ assert.doesNotMatch(
 );
 
 assert.match(
-  playerDashboardRepository,
+  playerDashboardPanels,
   /const stockCash = toCashDto\(meCheckingBalances, "ECO"\)/,
   "Stock portfolio cash must remain in ECO rather than borrowing the player's local wallet total.",
 );
 assert.match(
-  playerDashboardRepository,
+  playerDashboardPanels,
   /const portfolio = summarizePortfolio\(stockCash, meHoldings\)/,
 );
 assert.match(
-  playerDashboardRepository,
+  playerDashboardPanels,
   /const excludedStockMarketValue = valuationCurrencyCode === "ECO"[\s\S]*?: portfolio\.holdingsMarketValue/,
   "Player net worth must mark unconverted ECO holdings as excluded from local-currency valuation.",
 );
 assert.match(
-  playerDashboardRepository,
+  playerDashboardPanels,
   /import \{[^}]*\btoLeaderboard\b[^}]*\} from "\.\/dashboardReadProjection\.ts"/,
   "Dashboard must import the reviewed leaderboard projection owner.",
 );
 assert.match(
-  playerDashboardRepository,
+  playerDashboardPanels,
   /const leaderboard = toLeaderboard\(\s*players,\s*countryByPlayerId,\s*financialBalances,\s*holdings,\s*stockByAssetId,\s*\)/,
   "Dashboard must use the reviewed currency-scoped leaderboard with authoritative rows.",
 );
@@ -286,12 +294,12 @@ assert.doesNotMatch(
   "Canonical Banking reads must not merge unlike account rows in the browser-facing repository.",
 );
 
-assert.match(playerApiIntegration, /function explicitSessionCurrency\(/);
-assert.match(playerApiIntegration, /function dashboardCurrency\(/);
-assert.match(playerApiIntegration, /function accountBalanceForCurrency\(/);
-assert.match(playerApiIntegration, /return rows\.length === 1 \? rows\[0\] : null/);
-assert.match(playerApiIntegration, /function bindBankingCurrency\(/);
-assert.match(playerApiIntegration, /currencyResolved: Boolean\(resolved\)/);
+assert.match(playerCurrencyProjection, /function explicitSessionCurrency\(/);
+assert.match(playerCurrencyProjection, /function dashboardCurrency\(/);
+assert.match(playerCurrencyProjection, /function accountBalanceForCurrency\(/);
+assert.match(playerCurrencyProjection, /return rows\.length === 1 \? rows\[0\] : null/);
+assert.match(playerCurrencyProjection, /function bindBankingCurrency\(/);
+assert.match(playerCurrencyProjection, /currencyResolved: Boolean\(resolved\)/);
 assert.match(playerApiIntegration, /snapshot = bindSessionCurrency\(snapshot, dashboardCurrency\(raw\)\)/);
 assert.match(playerApiIntegration, /snapshot = bindBankingCurrency\(snapshot, raw\)/);
 
@@ -337,3 +345,9 @@ assert.doesNotMatch(
 );
 
 console.log("Player local-currency authority contract passed: economic currency, Contract targeting, and canonical account identity all fail closed instead of inferring domain state from defaults, list order, or stale UI selection.");
+
+assert.match(playerApiIntegration, /import \{ explicitSessionCurrency, dashboardCurrency, bindSessionCurrency, bindBankingCurrency \} from "\.\/student-profile-currency-projection\.js"/);
+
+assert.match(playerDashboardRepository, /import \{ projectDashboardPanels \} from "\.\/dashboardPanelProjection\.ts"/);
+assert.match(playerDashboardRepository, /return projectDashboardPanels\(\{ input, gameSession, marketOpen, publicMarket, players, countryByPlayerId, financialBalances, holdings, orders, trades, storeListings, inventory, purchases, marketNews, playerContracts \}\)/);
+assert.doesNotMatch(playerDashboardPanels, /\.from\(|\.rpc\(|Promise\.all|this\.client/);

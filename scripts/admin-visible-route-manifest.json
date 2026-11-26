@@ -59,7 +59,7 @@
   "/games/:gameId/players/:playerId/ledger-adjustments": "implemented",
   "/games/:gameId/players/:playerId/messages": "explicitly_disabled",
   "/games/:gameId/players/:playerId/settings": "implemented",
-  "/games/:gameId/players/imports/csv": "explicitly_disabled",
+  "/games/:gameId/players/imports/csv": "implemented",
   "/games/:gameId/settings": "implemented",
   "/games/:gameId/settings/:group": "implemented",
   "/games/:gameId/settings/:group/reset": "implemented",

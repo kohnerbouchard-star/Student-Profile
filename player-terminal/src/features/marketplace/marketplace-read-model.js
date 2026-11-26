@@ -1,3 +1,5 @@
+import { isResourceReady } from "../../api/resource-status.js";
+
 const LISTING = /^lst_[0-9a-f]{32}$/;
 const RESERVATION = /^mpr_[0-9a-f]{32}$/;
 const ORDER = /^ord_[0-9a-f]{32}$/;
@@ -120,4 +122,17 @@ export function normalizePlayerMarketplace(response) {
     listings: Object.freeze(listings), myListings: Object.freeze(myListings), reservations: Object.freeze(reservations),
     orders: Object.freeze(orders), disputes: Object.freeze(disputes)
   });
+}
+
+// Connected route data always carries its read status. A failed optional
+// read may retain a model for other consumers, but cannot ground a new draft.
+export function marketplaceDraftInventory(data) {
+  const items = data?.inventory?.items;
+  if (!Array.isArray(items) || !isResourceReady(data, "inventory")) return null;
+  return items;
+}
+
+export function marketplaceListableItems(items) {
+  return (items || []).filter((item) => typeof item?.itemKey === "string" && item.itemKey.trim()
+    && !item.availabilityQuantityUnverified && Number.isSafeInteger(item.quantityAvailable) && item.quantityAvailable > 0);
 }

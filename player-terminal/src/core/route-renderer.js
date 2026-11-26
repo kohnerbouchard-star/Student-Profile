@@ -1,4 +1,5 @@
 import { PLAYER_NAV_GROUPS } from "../components/layout.js";
+import { residencyIdentity } from "../features/world/residency-recovery.js";
 import { getWorldRouteViewState } from "../features/world/world-route-view-state.js";
 import { renderDashboardPage } from "../pages/dashboard-page.js";
 import { renderNewsPage } from "../pages/news-page.js";
@@ -42,6 +43,7 @@ function fallbackWorldModel(data) {
 
 function renderWorldRoutePage(data) {
   const view = getWorldRouteViewState();
+  const residencyRetired = view.residencyIdentity !== null && view.residencyIdentity !== residencyIdentity(data?.session);
   const resourceReady = data?.resourceStatus?.worldRuntime?.state === "ready";
   const liveModel = resourceReady && data?.worldRuntime
     ? { ...data.worldRuntime, runtimeAvailable: true }
@@ -55,6 +57,9 @@ function renderWorldRoutePage(data) {
     state: unavailable ? "unavailable" : loading ? "loading" : "ready",
     message: view.message,
     quote: view.quote,
+    residency: residencyRetired ? null : view.residency,
+    residencyRecovery: residencyRetired ? null : view.residencyRecovery,
+    residencyMessage: residencyRetired ? "" : view.residencyMessage,
     offline: globalThis.navigator?.onLine === false,
     stale: Boolean(view.updatedAt && Date.now() - view.updatedAt > 60_000),
     capabilities: data?.capabilities || { routes: {}, actions: {} },

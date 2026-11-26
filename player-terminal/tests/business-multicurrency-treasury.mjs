@@ -1,3 +1,4 @@
+import { assertProcurementReceiptMatchesQuote } from "../src/features/business-treasury/business-procurement-receipt-match.js";
 import assert from "node:assert/strict";
 
 import { resolvePlayerBackendRequest } from "../src/api/backend-routes.js";
@@ -7,6 +8,7 @@ import { validInvalidationResources } from "../src/api/freshness.js";
 import { WRITE_INVALIDATIONS, dependentResourcesForRoute, resourcesForRoute } from "../src/api/resource-plan.js";
 import { previewData } from "../src/data/preview-data.js";
 import { resourcesVisibleOnRoute } from "../src/realtime/player-invalidation-controller.js";
+import { renderPlayerRoute } from "../src/core/route-renderer.js";
 import {
   normalizeBusinessProcurementQuote,
   normalizeBusinessProcurementReceipt,
@@ -529,6 +531,33 @@ assert.equal(
 assert.match(rendered, /ECO 50\.00/u);
 assert.doesNotMatch(rendered, /aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/u);
 
+function installedProcurementQuote(data) {
+  const html = renderPlayerRoute({ route: "business", data, ui: {}, config: {} });
+  assert.match(html, /data-business-workspace-v2/u);
+  return html.match(/<div[^>]* data-business-procurement-quote>.*?<\/div>(?=<article|<\/section>)/su)?.[0] || "";
+}
+
+const installedQuote = installedProcurementQuote(pageData());
+assert.match(installedQuote, /IMMUTABLE FUNDED QUOTE/u);
+assert.match(installedQuote, /TARGET BILL<\/dt><dd>ECO 150\.00/u);
+assert.match(installedQuote, /EXPIRES<\/dt><dd>/u);
+const installedFundingLines = [...installedQuote.matchAll(/<p data-business-procurement-funding-line>(.*?)<\/p>/gsu)]
+  .map((match) => match[1]);
+assert.equal(installedFundingLines.length, 2, "The configured route must itemize both Checking debits before confirmation.");
+assert.match(installedFundingLines[0], /Checking 1 · ECO<\/strong> ECO 50\.00 debit → ECO 50\.00 contribution · reference 1 · customer 1 · spread 0\.00% · No FX rounding is required\./u);
+assert.match(installedFundingLines[1], /Checking 2 · TOK<\/strong> TOK 1\.010101010101010102 debit → ECO 100\.00 contribution · reference 100\.000000000000000001 · customer 99\.000000000000000001 · spread 1\.00% · Source debit is ceiled once to TOK precision\./u);
+assert.ok(installedQuote.lastIndexOf("data-business-procurement-funding-line") < installedQuote.indexOf("Confirm atomic procurement"));
+for (const accountKey of [key.eco, key.tok]) assert.ok(!installedQuote.includes(accountKey));
+assert.match(installedQuote, /<button[^>]+type="submit"\s*>.*Confirm atomic procurement<\/button>/su);
+
+const expiredProcurementData = pageData();
+expiredProcurementData.businessTreasury.currentProcurementQuote = { ...procurementQuote, expiresAt: "2000-01-01T00:00:00Z" };
+assert.match(installedProcurementQuote(expiredProcurementData), /FUNDED QUOTE EXPIRED/u);
+assert.match(installedProcurementQuote(expiredProcurementData), /<button[^>]+disabled[^>]*>.*Confirm atomic procurement<\/button>/su);
+const noPurchaseProcurementData = pageData();
+noPurchaseProcurementData.capabilities = missingBusinessPurchase;
+assert.match(installedProcurementQuote(noPurchaseProcurementData), /<button[^>]+disabled[^>]*>.*Confirm atomic procurement<\/button>/su);
+
 const refreshing = renderBusinessPage(pageData("refreshing"));
 assert.match(refreshing, /data-business-treasury-state="refreshing"/u);
 assert.match(refreshing, /REFRESHING/u);
@@ -678,3 +707,32 @@ assert.equal(
 );
 
 console.log("Business C4 Treasury, exact funding DTO, server-derived remainder, Phase 12 deferred dependencies, capability, state, and precision contracts passed.");
+
+// The flow normalizes the response before binding it to the reviewed quote.
+// Keep identity checks and exact funding amounts independent of DOM/commands.
+assert.equal(assertProcurementReceiptMatchesQuote(procurementReceipt, procurementQuote), undefined);
+const receiptBefore = structuredClone(procurementReceipt);
+const quoteBefore = structuredClone(procurementQuote);
+for (const field of ["businessKey", "quoteKey", "itemKey", "quantity"]) {
+  assert.throws(() => assertProcurementReceiptMatchesQuote({
+    ...procurementReceipt,
+    [field]: field === "quantity" ? procurementReceipt.quantity + 1 : "different",
+  }, procurementQuote), (error) => error.code === "INVALID_RESPONSE" && error.endpointKey === "businessStorePurchase");
+}
+for (const field of ["quoteKey", "targetAccountKey"]) {
+  assert.throws(() => assertProcurementReceiptMatchesQuote({
+    ...procurementReceipt,
+    fundingReceipt: { ...procurementReceipt.fundingReceipt, [field]: "different" },
+  }, procurementQuote), (error) => error.code === "INVALID_RESPONSE");
+}
+for (const precision of [0, 3, 18]) {
+  const amount = precision ? `9007199254740993.${"0".repeat(precision - 1)}1` : "9007199254740993";
+  const different = precision ? `9007199254740993.${"0".repeat(precision - 1)}2` : "9007199254740994";
+  const quote = { ...procurementQuote, fundingQuote: { ...procurementQuote.fundingQuote, targetAmount: { amount, precision } } };
+  const receipt = { ...procurementReceipt, fundingReceipt: { ...procurementReceipt.fundingReceipt, targetAmount: { amount, precision } } };
+  assert.equal(assertProcurementReceiptMatchesQuote(receipt, quote), undefined);
+  assert.throws(() => assertProcurementReceiptMatchesQuote({ ...receipt, fundingReceipt: { ...receipt.fundingReceipt, targetAmount: { amount: different, precision } } }, quote), (error) => error.code === "INVALID_RESPONSE");
+}
+assert.deepEqual(procurementReceipt, receiptBefore);
+assert.deepEqual(procurementQuote, quoteBefore);
+console.log("Procurement receipt binding: every identity mismatch and exact 0/3/18-place amount preserved without mutation.");

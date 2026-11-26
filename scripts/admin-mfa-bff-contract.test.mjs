@@ -100,7 +100,7 @@ test("web-session BFF owns Staff MFA and exact Admin service authority", async (
 });
 
 test("browser API completes password sign-in through statically loaded memory-only MFA state", async () => {
-  const source = await read("frontend/src/core/api.js");
+  const source = `${await read("frontend/src/core/api-session-state.js")}\n${await read("frontend/src/core/api.js")}`;
 
   assert.match(source, /let inMemoryAdminCsrfToken = ""/);
   assert.match(source, /function loadAdminMfaModule\(\)/);

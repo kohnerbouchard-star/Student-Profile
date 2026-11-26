@@ -1,3 +1,4 @@
+import "./playerMarketplaceRequestInputs.test.ts";
 import { EdgeActivationError } from "../../../platform/supabase/edgeResponse.ts";
 import type {
   PlayerMarketplaceFundedOrderDto,

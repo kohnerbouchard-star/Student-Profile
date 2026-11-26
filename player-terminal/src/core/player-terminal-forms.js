@@ -1,4 +1,5 @@
 import { formatCurrency, serializeForm } from "./format.js";
+import { marketplaceDraftInventory, marketplaceListableItems } from "../features/marketplace/marketplace-read-model.js";
 
 // Keep validation, estimates and form dispatch together. Economic authority and
 // mutation lifetime remain in the existing API/lifecycle owners.
@@ -129,10 +130,26 @@ export function createPlayerTerminalForms({ store, mount, showToast, executeEndp
     }
 
     if (endpointKey === "marketplaceListing") {
-      const itemId = form.elements.namedItem("inventoryItemId")?.value;
-      const inventoryItem = state.data.inventory.items.find((item) => item.id === itemId);
+      const inventory = marketplaceDraftInventory(state.data);
+      const itemKey = form.elements.namedItem("itemKey");
       const quantityField = form.elements.namedItem("quantity");
-      if (inventoryItem && Number(quantityField?.value) > Number(inventoryItem.quantity)) quantityField?.setCustomValidity(`Only ${Number(inventoryItem.quantity)} units are available in inventory.`);
+      const matchingItem = itemKey && marketplaceListableItems(inventory)
+        .find((item) => item.itemKey === itemKey.value);
+      if (inventory === null || !matchingItem) {
+        const message = inventory === null
+          ? "Inventory unavailable. Refresh before creating a draft."
+          : "Choose an Inventory item with available units before creating a draft.";
+        form.classList.add("has-validation-error");
+        showFormError(form, message);
+        itemKey?.focus();
+        return;
+      }
+      const quantity = Number(quantityField?.value);
+      if (!Number.isSafeInteger(quantity) || quantity < 1) {
+        quantityField?.setCustomValidity("Enter a whole number of at least one unit.");
+      } else if (quantity > matchingItem.quantityAvailable) {
+        quantityField?.setCustomValidity(`Only ${matchingItem.quantityAvailable} units are available in inventory.`);
+      }
     }
 
     // Repayments use the facility's server-bound account and currency, not

@@ -1,8 +1,11 @@
 #!/usr/bin/env node
+import { readInstalledBusinessPageSource } from "./helpers/business-page-source.mjs";
 import { readEdgeRuntimeSource } from "./helpers/edge-runtime-source.mjs";
 
 import fs from "node:fs";
 import path from "node:path";
+
+const installedPage = readInstalledBusinessPageSource();
 
 const root = process.cwd();
 const files = {
@@ -14,6 +17,7 @@ const files = {
   handler: "backend/src/domains/business/api/playerBusinessHttpHandler.ts",
   capability: "backend/src/domains/players/contracts/playerCapabilityManifestContracts.ts",
   normalizer: "player-terminal/src/api/response-normalizer.js",
+  businessValidator: "player-terminal/src/api/response-business-validator.js",
   errors: "player-terminal/src/api/errors.js",
   page: "player-terminal/src/pages/business-page.js",
   surfaceTest: "player-terminal/tests/business-banking-surface.mjs",
@@ -59,11 +63,13 @@ for (const token of [
   'pathTemplate: "/players/me/business"',
   'routeCapabilities: ["business"]',
 ]) requireToken(source.capability, token, "existing Business capability manifest path");
+requireToken(source.normalizer, 'from "./response-business-validator.js"', "Business response validator import");
+requireToken(source.normalizer, "validateBusinessRead(value, context)", "Player Business validation dispatch");
 for (const token of [
   "validateBusinessWorkforceUtilization",
   "workforceUtilization",
   "utilizationBasisPoints > 10000",
-]) requireToken(source.normalizer, token, "Player response normalizer");
+]) requireToken(source.businessValidator, token, "Player Business response validator");
 for (const token of [
   "BUSINESS_LABOR_CAPACITY_UNAVAILABLE",
   "BUSINESS_LABOR_ROLE_COVERAGE_UNAVAILABLE",
@@ -74,11 +80,11 @@ for (const token of [
   "data-business-workforce-utilization",
   "The server reserves exact materials, labor, equipment, and completion time",
   "recurring Business payroll",
-]) requireToken(source.page, token, "Player Business UI");
-if (/name="unitLaborCost"/u.test(source.page)) {
+]) requireToken(installedPage, token, "Player Business UI");
+if (/name="unitLaborCost"/u.test(installedPage)) {
   throw new Error("Player Business UI still exposes Player-authored synthetic labor cost.");
 }
-if (/playerUuid|gameSessionId|ownerPlayerId/u.test(source.page)) {
+if (/playerUuid|gameSessionId|ownerPlayerId/u.test(installedPage)) {
   throw new Error("Player Business UI leaks internal ownership scope.");
 }
 for (const token of [

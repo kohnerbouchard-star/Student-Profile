@@ -3,6 +3,7 @@ name: Admin Bundle Contract Audit
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-933.json"
       - "admin/dist/admin-overview-terminal.js"
       - "backend/supabase/functions/admin-api/**"
       - "scripts/admin-bundle-contract-audit.mjs"

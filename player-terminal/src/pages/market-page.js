@@ -1,3 +1,4 @@
+import { nextMarketPage } from "../features/market/market-directory-model.js";
 import { renderBusinessShareFacts } from "../features/market/business-share-view.js";
 import { renderBusinessIpoPanel } from "../features/business-ipo/business-ipo-panel.js";
 import { escapeHtml, formatCompact, formatCurrency, formatNumber, formatPercent, toneFromChange } from "../core/format.js";
@@ -60,7 +61,8 @@ export function renderMarketPage(data, ui) {
   const relatedNews = newsUnavailable ? [] : data.news.items.filter((item) => selected.newsIds?.includes(item.id)).slice(0, 3);
   const marketVolume = market.assets.reduce((sum, asset) => sum + asset.volume, 0);
   const composite = market.assets.find((asset) => asset.id === "cel-index");
-  const compositeChange = Number(composite?.change) || 0;
+  const compositePrice = Number.isFinite(composite?.price) ? formatNumber(composite.price, 2) : "Unavailable";
+  const compositeChange = Number.isFinite(composite?.change) ? composite.change : null;
   const checkingAccounts = bankingFxUnavailable
     ? []
     : (Array.isArray(data.bankingFx?.balances) ? data.bankingFx.balances : [])
@@ -85,23 +87,25 @@ export function renderMarketPage(data, ui) {
     </header>
 
     <div class="player-terminal-market-summary">
-      <article><small>COMPOSITE INDEX</small><strong>${escapeHtml(formatNumber(composite?.price || 0, 2))}</strong><span class="${toneFromChange(compositeChange)}">${escapeHtml(formatPercent(compositeChange))}</span></article>
+      <article><small>COMPOSITE INDEX</small><strong>${escapeHtml(compositePrice)}</strong><span class="${compositeChange === null ? "" : toneFromChange(compositeChange)}">${escapeHtml(compositeChange === null ? "Change unavailable" : formatPercent(compositeChange))}</span></article>
       <article><small>YOUR POSITIONS</small><strong>${escapeHtml(String(Array.isArray(data.portfolio?.holdings) ? data.portfolio.holdings.filter(h => h.quantity > 0).length : market.assets.filter(a => a.owned > 0).length))}</strong><span>Values by currency in Portfolio</span></article>
       <article><small>CHECKING FUNDING</small><strong>${escapeHtml(checkingAccounts.length ? `${checkingAccounts.length} account${checkingAccounts.length === 1 ? "" : "s"}` : "Unavailable")}</strong><span>${escapeHtml(accountSummary)}</span></article>
-      <article><small>MARKET VOLUME</small><strong>${escapeHtml(formatCompact(marketVolume))}</strong><span>Across listed assets</span></article>
+      <article><small>LOADED VOLUME</small><strong>${escapeHtml(formatCompact(marketVolume))}</strong><span>Across loaded instruments</span></article>
     </div>
 
     <div class="player-terminal-market-layout">
       <section class="player-terminal-panel player-terminal-asset-browser">
         <header class="player-terminal-panel-header"><div><span>ASSET DIRECTORY</span><strong>${escapeHtml(assets.length)} instruments</strong></div><button class="player-terminal-icon-button" type="button" aria-label="Search assets" aria-expanded="false" aria-controls="playerMarketSearchPanel" data-player-local-action="market-search">${icon("eye")}</button></header>
         <div id="playerMarketSearchPanel" class="player-terminal-filter-row" data-player-market-search-panel hidden>
-          <label><span class="sr-only">Search listed assets</span><input type="search" data-player-market-search autocomplete="off" placeholder="Search symbol, company, or sector"></label>
+          <label><span class="sr-only">Search listed assets</span><input type="search" data-player-market-search autocomplete="off" placeholder="Search loaded instruments"></label>
           <small data-player-market-search-status>${escapeHtml(assets.length)} listed instruments</small>
         </div>
         <div class="player-terminal-filter-row">
           ${market.sectors.map((item) => `<button type="button" class="${item === sector ? "active" : ""}" data-player-market-sector="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("")}
         </div>
         <div class="player-terminal-asset-list">${assets.length ? assets.map((asset) => renderAssetRow(asset, selected.id, data.countries, sessionCurrencyCode)).join("") : renderEmptyState({ title: "No assets in this sector", detail: "Select another sector to continue browsing.", iconName: "market" })}<p class="player-terminal-inline-empty" data-player-market-search-empty hidden>No listed assets match this search.</p></div>
+        <p class="player-terminal-inline-empty" data-player-market-directory-status role="status" tabindex="-1">${escapeHtml(market.assets.length)} instruments loaded${nextMarketPage(market) ? ". More instruments are available." : "."} Search and sector filters apply to loaded instruments.</p>
+        ${nextMarketPage(market) ? '<button class="player-terminal-secondary-button" type="button" data-player-market-load-more>Load more instruments</button>' : ""}
       </section>
 
       <section class="player-terminal-panel player-terminal-chart-panel">

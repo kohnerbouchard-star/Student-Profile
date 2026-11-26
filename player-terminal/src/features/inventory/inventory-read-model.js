@@ -80,6 +80,11 @@ export function normalizePlayerInventory(response) {
       quantityOwned,
       quantityReserved,
       quantityAvailable,
+      // Preserve the display model, but do not let coerced or inferred counts
+      // authorize the Marketplace draft control.
+      ...(!(Number.isSafeInteger(item.quantityAvailable) && item.quantityAvailable >= 0)
+        ? { availabilityQuantityUnverified: true }
+        : {}),
       unitValue,
       value: totalOwnedValue,
       totalOwnedValue,

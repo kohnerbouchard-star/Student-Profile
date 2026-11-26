@@ -41,6 +41,8 @@ on:
       - "backend/supabase/functions/player-api/runtime.ts"
       - "backend/supabase/functions/classroom-api/index.ts"
       - "player-terminal/src/pages/business-page.js"
+      - "player-terminal/src/pages/business-procurement-view.js"
+      - "scripts/helpers/business-page-source.mjs"
       - "player-terminal/src/api/**"
       - "player-terminal/src/integrations/student-profile-capability-manifest.js"
       - "player-terminal/tests/business-banking-surface.mjs"

@@ -1,3 +1,5 @@
+import { createResidencyRecovery, residencyIdentity } from "./residency-recovery.js";
+import { reviewTravelQuote } from "./travel-quote-review.js";
 import { PlayerApi } from "../../api/player-api.js";
 import { isEndpointEnabled } from "../../api/capabilities.js";
 import { normalizeApiError } from "../../api/errors.js";
@@ -93,12 +95,51 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   let model = null;
   let terminalWorldSource = null;
   let quote = null;
+  let departureIntent = null;
+  const residency = createResidencyRecovery();
+  let residencyScope = "";
+  let residencyMessage = "";
+  let lastResidencySource = null;
+  let lastResidencyResourceState;
+  let retiredResidencySource = null;
   let state = "idle";
   let message = "";
   let updatedAt = 0;
   let destroyed = false;
   let renderScheduled = false;
   let requestVersion = 0;
+  let ownership = 0;
+  api.setSession(config);
+  let ownedSession = api.sessionVersion;
+  let ownsRoute = isWorldRoute(terminal.getState());
+  function reconcileOwnership() {
+    api.setSession(config);
+    const terminalState = terminal.getState();
+    const nextSession = api.sessionVersion, active = isWorldRoute(terminalState);
+    const scope = JSON.stringify([nextSession, residencyIdentity(terminalState?.data?.session)]);
+    if (scope !== residencyScope) {
+      residencyScope = scope;
+      retiredResidencySource = lastResidencySource;
+      residency.reset();
+      residencyMessage = "";
+    }
+    if (nextSession !== ownedSession) departureIntent = null;
+    if (nextSession !== ownedSession || active !== ownsRoute) {
+      ownership += 1;
+      requestVersion += 1;
+      quote = null;
+      model = null;
+      terminalWorldSource = null;
+      state = "idle";
+      message = "";
+      updatedAt = 0;
+      resetWorldRouteViewState();
+      ownedSession = nextSession;
+      ownsRoute = active;
+    }
+    return !destroyed && active;
+  }
+  const isCurrent = token => reconcileOwnership() && token === ownership;
 
   function currentCapabilities() {
     return terminal.getState()?.data?.capabilities || { routes: {}, actions: {} };
@@ -106,6 +147,13 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
 
   function syncTerminalWorldModel(terminalState) {
     const source = terminalState?.data?.worldRuntime;
+    const residencyResourceState = terminalState?.data?.resourceStatus?.worldRuntime?.state;
+    if (source !== lastResidencySource || residencyResourceState !== lastResidencyResourceState) {
+      lastResidencySource = source;
+      lastResidencyResourceState = residencyResourceState;
+      if (residencyResourceState && residencyResourceState !== "ready") residency.markUnavailable();
+      else if (source !== retiredResidencySource) residency.observe(source?.residency);
+    }
     if (!hasReadyWorldResource(terminalState) || !source || source === terminalWorldSource) return false;
     terminalWorldSource = source;
     model = liveWorldModel(source);
@@ -116,12 +164,17 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
 
   function render() {
     renderScheduled = false;
+    if (destroyed || !reconcileOwnership()) return;
     const terminalState = terminal.getState();
-    if (destroyed || !isWorldRoute(terminalState)) return;
     syncTerminalWorldModel(terminalState);
     setWorldRouteViewState({
       model,
       quote,
+      residency: residency.record,
+      residencyRecovery: residency.status,
+      residencyMessage,
+      residencyIdentity: residencyIdentity(terminalState?.data?.session),
+      departureRecovery: departureIntent ? { quote: departureIntent.quote, status: departureIntent.status, canRetry: departureIntent.status === "uncertain" && api.retainedWriteState("travelExecute", { quoteId: departureIntent.quote.publicQuoteId }) === "retryable" } : null,
       state: state === "loading" && !model ? "loading" : state === "unavailable" && !model ? "unavailable" : "ready",
       message,
       updatedAt,
@@ -135,24 +188,36 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
     queueMicrotask(render);
   }
 
-  async function load({ force = false, preserveMessage = false } = {}) {
-    if (destroyed || !isWorldRoute(terminal.getState())) return null;
+  async function load({ force = false, preserveMessage = false, reconcileResidency = false } = {}) {
+    if (!reconcileOwnership()) return null;
+    const token = ownership;
     const version = ++requestVersion;
+    const scope = residencyScope;
+    const unresolved = reconcileResidency && residency.status === "uncertain" ? residency.attempt : null;
+    const committedIntent = departureIntent?.status === "committed" ? departureIntent : null;
     api.setSession(config);
     state = "loading";
     if (!preserveMessage) message = "";
     scheduleRender();
     try {
       const next = await api.request("worldRuntime", { force });
-      if (destroyed || version !== requestVersion) return null;
+      if (!isCurrent(token) || version !== requestVersion) return null;
       model = liveWorldModel(next);
+      if (scope === residencyScope) residency.observe(next?.residency, unresolved);
+      if (committedIntent && departureIntent === committedIntent && committedIntent.status === "committed") {
+        departureIntent = null;
+        quote = null;
+        message = "Departure committed. World state refreshed.";
+        preserveMessage = true;
+      }
       state = "ready";
       updatedAt = Date.now();
       if (!preserveMessage) message = "World runtime refreshed.";
       scheduleRender();
       return model;
     } catch (error) {
-      if (destroyed || version !== requestVersion) return null;
+      if (!isCurrent(token) || version !== requestVersion) return null;
+      if (scope === residencyScope) residency.markUnavailable();
       const normalized = normalizeApiError(error);
       if (Number(normalized.status) === 401) {
         await terminal.refresh();
@@ -175,7 +240,13 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   }
 
   async function committedMutation(endpointKey, payload, params, form, successMessage) {
+    if (!reconcileOwnership()) return null;
+    const token = ownership;
+    const sessionVersion = api.sessionVersion;
+    const intent = endpointKey === "travelExecute" ? departureIntent : null;
     if (!isEndpointEnabled(currentCapabilities(), endpointKey)) {
+      if (intent && !intent.uncertain) departureIntent = null;
+      else if (intent) intent.status = "uncertain";
       const detail = "This World action is not enabled for the current game.";
       setFormStatus(form, detail, true);
       message = detail;
@@ -187,6 +258,11 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
     setFormStatus(form, "Submitting a replay-safe World action.");
     try {
       const operation = await api.execute(endpointKey, payload, params);
+      if (intent && sessionVersion === api.sessionVersion && departureIntent === intent) {
+        intent.status = "committed";
+        if (reconcileOwnership()) scheduleRender();
+      }
+      if (!isCurrent(token)) return null;
       const result = operation.result || {};
       if (endpointKey === "travelQuote") {
         quote = result.quote || null;
@@ -199,6 +275,7 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
       restore("Committed");
       message = successMessage;
       const refreshed = await load({ force: true, preserveMessage: true });
+      if (!isCurrent(token)) return null;
       if (!refreshed) {
         state = "ready";
         message = `${successMessage} Refresh failed; the committed result will reconcile when connectivity returns.`;
@@ -206,13 +283,22 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
       }
       return result;
     } catch (error) {
-      restore();
       const normalized = normalizeApiError(error);
+      if (intent && sessionVersion === api.sessionVersion && departureIntent === intent) {
+        const retryable = api.retainedWriteState("travelExecute", payload) === "retryable";
+        if (retryable) intent.status = "uncertain";
+        else if (intent.uncertain) intent.status = "blocked";
+        else departureIntent = null;
+        if (retryable) intent.uncertain = true;
+        if (reconcileOwnership()) scheduleRender();
+      }
+      if (!isCurrent(token)) return null;
+      restore();
       if (Number(normalized.status) === 401) {
         await terminal.refresh();
         return null;
       }
-      const detail = stateMessage(normalized);
+      const detail = departureIntent ? "The departure outcome is still unconfirmed. Review departure recovery below. " + stateMessage(normalized) : stateMessage(normalized);
       setFormStatus(form, detail, true);
       message = detail;
       scheduleRender();
@@ -220,7 +306,51 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
     }
   }
 
+  async function submitResidency(form) {
+    if (!isEndpointEnabled(currentCapabilities(), "residencyRequest")) {
+      setFormStatus(form, "This World action is not enabled for the current game.", true);
+      return;
+    }
+    const data = new FormData(form);
+    const attempt = residency.begin(data.get("countryId"), String(data.get("expectedRevision") ?? ""));
+    if (!attempt) {
+      setFormStatus(form, "Review the current residency state before submitting a request.", true);
+      return;
+    }
+    const scope = residencyScope;
+    residencyMessage = "";
+    scheduleRender();
+    try {
+      const operation = await api.execute("residencyRequest", { countryId: attempt.countryId, expectedRevision: attempt.expectedRevision });
+      const active = reconcileOwnership();
+      if (destroyed || scope !== residencyScope || residency.attempt !== attempt) return;
+      const result = operation.result;
+      const success = result?.ok === true || (config.usePreviewData === true && result?.ok === undefined);
+      const status = residency.complete(attempt, success ? result?.residency : null);
+      if (!active) return;
+      // Refresh errors cannot downgrade a validated POST confirmation.
+      if (status === "confirmed") await load({ force: true }).catch(scheduleRender);
+      else scheduleRender();
+    } catch (error) {
+      const active = reconcileOwnership();
+      if (destroyed || scope !== residencyScope || residency.attempt !== attempt || attempt.status !== "submitting") return;
+      const normalized = normalizeApiError(error);
+      const ambiguous = normalized.status >= 500 || normalized.status === 408
+        || ["OFFLINE", "NETWORK_ERROR", "REQUEST_TIMEOUT", "REQUEST_ABORTED", "INVALID_RESPONSE"].includes(normalized.code);
+      residency.fail(attempt, ambiguous);
+      if (!active) return;
+      if (normalized.status === 401) {
+        await terminal.refresh().catch(scheduleRender);
+        return;
+      }
+      residencyMessage = ambiguous ? "" : stateMessage(normalized);
+      if (residencyMessage) setFormStatus(form, residencyMessage, true);
+      scheduleRender();
+    }
+  }
+
   async function handleSubmit(event) {
+    if (!reconcileOwnership()) return;
     const form = event.target.closest?.("[data-world-form]");
     if (!form || !mount.contains(form)) return;
     event.preventDefault();
@@ -241,6 +371,10 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
       return;
     }
     if (operation === "travelQuote") {
+      if (departureIntent) {
+        message = "Resolve the existing departure before requesting a replacement quote.";
+        setFormStatus(form, message, true); scheduleRender(); return;
+      }
       const data = new FormData(form);
       await committedMutation("travelQuote", {
         toLocationId: data.get("toLocationId"),
@@ -250,7 +384,25 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
     }
     if (operation === "travelExecute") {
       const data = new FormData(form);
-      await committedMutation("travelExecute", { quoteId: data.get("quoteId") }, {}, form, "Travel departure committed.");
+      if (departureIntent) {
+        const original = departureIntent.quote.publicQuoteId;
+        if (data.get("quoteId") !== original || departureIntent.status !== "uncertain" || api.retainedWriteState("travelExecute", { quoteId: original }) !== "retryable") {
+          message = "The departure outcome is unconfirmed. Refresh World and seek administrator help if recovery is unavailable. Do not start another departure.";
+          setFormStatus(form, message, true); scheduleRender(); return;
+        }
+        departureIntent.status = "pending";
+        await committedMutation("travelExecute", { quoteId: original }, {}, form, "Travel departure recovered.");
+        return;
+      }
+      const review = reviewTravelQuote(quote, model);
+      if (!review.usable || data.get("quoteId") !== quote?.publicQuoteId) {
+        message = review.usable ? "This form does not match the reviewed quote. Get a new travel quote before confirming." : review.message;
+        setFormStatus(form, message, true);
+        scheduleRender();
+        return;
+      }
+      departureIntent = { quote, status: "pending", uncertain: false };
+      await committedMutation("travelExecute", { quoteId: quote.publicQuoteId }, {}, form, "Travel departure committed.");
       return;
     }
     if (operation === "travelComplete") {
@@ -258,20 +410,14 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
       await committedMutation("travelComplete", { journeyId }, { journeyId }, form, "Travel arrival committed.");
       return;
     }
-    if (operation === "residencyRequest") {
-      const data = new FormData(form);
-      await committedMutation("residencyRequest", {
-        countryId: data.get("countryId"),
-        expectedRevision: Number(data.get("expectedRevision")),
-      }, {}, form, "Residency request committed for review.");
-    }
+    if (operation === "residencyRequest") await submitResidency(form);
   }
 
   function handleClick(event) {
     const action = event.target.closest?.("[data-world-action]");
     if (!action || !mount.contains(action)) return;
-    if (action.dataset.worldAction === "retry" || action.dataset.worldAction === "refresh") {
-      void load({ force: true });
+    if (["retry", "refresh", "residency-refresh"].includes(action.dataset.worldAction)) {
+      void load({ force: true, reconcileResidency: true }).catch(scheduleRender);
     }
   }
 
@@ -283,7 +429,7 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   }
 
   const unsubscribe = terminal.subscribe((terminalState) => {
-    if (!isWorldRoute(terminalState)) return;
+    if (!reconcileOwnership()) return;
     if (!syncTerminalWorldModel(terminalState) && hasReadyCountriesResource(terminalState) && !model) {
       model = fallbackWorldModel(terminalState);
       state = "ready";
@@ -299,6 +445,7 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   globalThis.addEventListener("offline", handleConnectivity);
   const staleTimer = globalThis.setInterval(scheduleRender, STALE_AFTER_MS / 4);
 
+  reconcileOwnership();
   if (isWorldRoute(terminal.getState()) && !model && state === "idle") {
     const terminalState = terminal.getState();
     if (!syncTerminalWorldModel(terminalState)) {
@@ -314,10 +461,15 @@ export function installWorldRuntimeFlow({ mount, terminal, config }) {
   }
 
   return Object.freeze({
-    refresh: () => load({ force: true }),
-    getState: () => Object.freeze({ model, quote, state, message, updatedAt }),
+    refresh: () => load({ force: true, reconcileResidency: true }),
+    getState: () => Object.freeze({ model, quote, state, message, updatedAt, departureStatus: departureIntent?.status || null }),
     destroy() {
       destroyed = true;
+      ownership += 1;
+      departureIntent = null;
+      residency.reset();
+      quote = null;
+      model = null;
       requestVersion += 1;
       clearInterval(staleTimer);
       unsubscribe();

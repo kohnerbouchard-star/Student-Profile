@@ -153,13 +153,13 @@ The canonical source game is `data_purge_protected=true` and cannot enter this f
 The contract on current `main`, including `story_cash_adjustments` and `story_event_execution_claims`, is:
 
 ```text
-registry tables:       207
-registry SHA-256:       7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3
-foreign-key edges:     460
-FK graph SHA-256:       0c932d6e620cec801b527e81f3e4d3e91bd8d70fd4fb45d6e1a72166ff0c7a82
-direct delete tables:  206
-delete-order SHA-256:   19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897
-finalize cursor:        207
+registry tables:       208
+registry SHA-256:       37c2231abb9aff3c306dc7975c2968d549991fa9c2c9815cf8163c54db458bc6
+foreign-key edges:     461
+FK graph SHA-256:       314a9ec50cca588ac091cad4ac42f68c77dbc81e9fb712cb960a7f714566cda3
+direct delete tables:  207
+delete-order SHA-256:   ad48814a47842407203f6b495b10bc7d1f7b1110cbf55506179456b461f678a3
+finalize cursor:        208
 ```
 
 The hosted pre-convergence shape is 133 tables / 224 actual edges / 129 direct deletes; production's stale guard still expected 213 edges. It fails closed after the later Story and Business tables appear. The repository worker and canonical migration intentionally use the new current-main contract.

@@ -6,7 +6,7 @@ test('busy containment response parses and exits before any effect in verified d
  import assert from 'node:assert/strict';
  import {SupabaseStoryEventExecutionRepository} from './backend/src/domains/storylines/infrastructure/supabaseStoryEventExecutionRepository.ts';
  import {resolveCandidate} from './backend/src/domains/storylines/services/storylineEventResolution.ts';
- const row={claim_outcome:'busy',claim_id:'fixture',lease_token:null,lease_expires_at:null,effective_at:'2026-08-12T03:00:00Z',effective_market_tick:4,attempt_count:8618,execution_plan:{},resolution_id:null};
+ const row={claim_outcome:'busy',claim_id:'fixture',lease_token:null,lease_expires_at:null,effective_at:'2026-08-12T03:00:00Z',effective_market_tick:4,attempt_count:8981,execution_plan:{},resolution_id:null};
  const repository=new SupabaseStoryEventExecutionRepository({async rpc(){return {data:[row],error:null};}});
  const input={gameSessionId:'game',storylineEventId:'event',effectiveAt:row.effective_at,effectiveMarketTick:4,executionPlan:null};
  const claim=await repository.claim(input);

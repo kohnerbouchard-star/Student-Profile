@@ -163,3 +163,49 @@ constraints, trigger behavior and production SQL remain unchanged. A regression
 checks all six lifecycle-update sites, explicit paused denial coverage and both
 concurrency lifecycle states. 44 targeted tests pass locally; exact-head real
 PostgreSQL/concurrency CI must rerun. No live/staging action occurred.
+
+## Reconciliation with main on 2026-11-26
+
+The original draft head was `025b868f0b78761edd37105268a374fecb222540` and its
+[disposable Story run](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/44026115963)
+passed. Four database jobs rejected an unregistered game-scoped table.
+Three other jobs rejected the resulting foreign-key or prospective registry
+fingerprint. Disposable PostgreSQL reproduced both mismatched hashes from the
+old audit-table DDL. Applying the nonce migration by itself left all three
+purge fingerprints unchanged.
+
+The existing draft integrates main `b62f10ffda169fd6f884cc3a254c136fbd6b862d`.
+The unmerged Story migration registers its audit table and orders it ahead of
+its claim and resolution. The database batch, finalizer and purge worker agree
+on exactly 208 registered tables, 461 foreign keys, 207 ordered deletes and
+finalize cursor 208. The transition checks the previous table, order and FK
+hashes and both prior purge function definitions. It rejects active DB-stage
+purges and in-flight cursors. The prior worker API and request, game, token,
+authorization and physical zero-row checks retain their behavior. The worker
+source changes only seven fingerprint and cursor literals. The previous 16
+suffix entries and all applied SQL remain byte-identical. Story is item 17.
+
+The actual serial acceptance SQL passed on a disposable PostgreSQL 17 catalog
+reconstruction with the native claim, fail, release, finalize and purge batch
+functions. The held RPC returned before the effect writer could run. The
+batch removed the target game's audit rows and preserved its claim and all
+comparison-game audit rows. A bare baseline, in-flight cursor and changed
+function definition failed closed. The 98 focused source, runner, authority
+and release contract cases, Business source contracts and repository-wide
+tests passed. Full Docker replay and the final GitHub checks remain pending.
+
+The production preflight reported 464 ledger rows, with all 15 pending
+predecessors and the Story version absent. Two recently active claims each
+had 8,981 attempts. The existing worker claims before entering plan
+execution, and a held claim returns the established `busy` result. The
+observed impact POST conflict and success read pair remains a writer replay
+path for any admitted execution. The reviewed change limits admission.
+Fresh deployed worker identity and incident recovery remain to be witnessed.
+
+Production requires reviewed contiguous convergence and a coordinated purge
+worker release. The historical exact Story release pattern pins the
+migration, checks the ledger and commits DDL and ledger together. Its old
+source pins and trigger do not authorize this migration. No production
+workflow, release gate, migration apply or hosted database access is part of
+this repair. The separate protected staging evaluation remains tied to its
+original source and prior 16-entry plan.

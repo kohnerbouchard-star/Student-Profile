@@ -5,6 +5,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-933.json"
       - ".github/workflows/runtime-stabilization-onboarding.yml"
       - "backend/supabase/config.toml"
       - "backend/supabase/functions/**"

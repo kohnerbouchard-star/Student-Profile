@@ -185,6 +185,11 @@ export function normalizeInventory(snapshot) {
   };
 }
 
+function validOwnershipQuantity(value) {
+  const count = typeof value === "string" && /^\d+$/.test(value.trim()) ? Number(value) : value;
+  return Number.isSafeInteger(count) && count >= 0;
+}
+
 export function normalizeInventoryRead(response) {
   const body = object(response);
   const items = list(body.items).map((item) => ({
@@ -193,6 +198,9 @@ export function normalizeInventoryRead(response) {
     name: text(item.name, "Unnamed item"),
     category: text(item.category, "Other"),
     quantity: number(item.quantityOwned),
+    // Existing Inventory views keep their normalized quantity; Store must not
+    // present a normalization default as authoritative evidence of ownership.
+    ...(!validOwnershipQuantity(item.quantityOwned) ? { ownershipQuantityUnverified: true } : {}),
     quantityReserved: number(item.quantityReserved),
     quantityAvailable: number(item.quantityAvailable),
     value: number(item.totalOwnedValue),
@@ -205,6 +213,7 @@ export function normalizeInventoryRead(response) {
   }));
   const capacity = body.capacity && typeof body.capacity === "object" ? body.capacity : null;
   return {
+    ...(!Array.isArray(body.items) ? { ownershipReadUnverified: true } : {}),
     capacity,
     capacityUsed: capacity ? number(capacity.used) : null,
     capacityMax: capacity ? number(capacity.max) : null,

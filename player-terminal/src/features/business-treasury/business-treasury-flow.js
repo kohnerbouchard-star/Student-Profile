@@ -1,9 +1,10 @@
+import { assertProcurementReceiptMatchesQuote } from "./business-procurement-receipt-match.js";
 import { isEndpointEnabled, isRouteEnabled } from "../../api/capabilities.js";
 import { ApiRequestError } from "../../api/errors.js";
 import { PlayerApi } from "../../api/player-api.js";
 import { setButtonProcessing } from "../../core/dom.js";
 import { normalizeBusinessProcurementQuote, normalizeBusinessProcurementReceipt, normalizeBusinessTreasuryOpenResult, normalizeBusinessTreasuryOrderResult, normalizeBusinessTreasuryQuote, resolveBusinessProcurementFailure, resolveBusinessTreasuryFailure } from "./business-treasury-read-model.js";
-import { ORDER_KEY, amountsEqual, assertProcurementQuoteMatchesIntent, assertQuoteMatchesIntent, clearError, currentTreasury, dispatchInvalidSession, invalidateProcurementQuote, invalidateQuote, patchTreasury, procurementIntent, quoteIntent, refreshAndCheck, setBusy, showError, syncProcurementControls, syncQuoteControls } from "./business-treasury-flow-support.js";
+import { ORDER_KEY, assertProcurementQuoteMatchesIntent, assertQuoteMatchesIntent, clearError, currentTreasury, dispatchInvalidSession, invalidateProcurementQuote, invalidateQuote, patchTreasury, procurementIntent, quoteIntent, refreshAndCheck, setBusy, showError, syncProcurementControls, syncQuoteControls } from "./business-treasury-flow-support.js";
 
 export function installBusinessTreasuryFlow({ mount, terminal, config }) {
   if (!(mount instanceof HTMLElement)) return { destroy() {} };
@@ -294,24 +295,7 @@ export function installBusinessTreasuryFlow({ mount, terminal, config }) {
         clientSubmittedAt: new Date().toISOString(),
       });
       const receipt = normalizeBusinessProcurementReceipt(operation.result);
-      if (
-        receipt.businessKey !== quote.businessKey ||
-        receipt.quoteKey !== quote.quoteKey ||
-        receipt.itemKey !== quote.itemKey ||
-        receipt.quantity !== quote.quantity ||
-        receipt.fundingReceipt.quoteKey !== quote.fundingQuote.quoteKey ||
-        receipt.fundingReceipt.targetAccountKey !== quote.fundingTargetAccountKey ||
-        !amountsEqual(
-          receipt.fundingReceipt.targetAmount.amount,
-          quote.fundingQuote.targetAmount.amount,
-          quote.fundingQuote.targetAmount.precision,
-        )
-      ) {
-        throw new ApiRequestError("Business procurement returned a receipt for different terms.", {
-          code: "INVALID_RESPONSE",
-          endpointKey: "businessStorePurchase",
-        });
-      }
+      assertProcurementReceiptMatchesQuote(receipt, quote);
       const resources = operation.invalidatedResources?.length
         ? operation.invalidatedResources
         : ["business", "businessTreasury", "store", "inventory"];

@@ -8,13 +8,13 @@
   },
   "counts": {
     "domains": 30,
-    "sourceFiles": 1623,
+    "sourceFiles": 1662,
     "edgeEntrypoints": 28,
-    "handlerFiles": 60,
+    "handlerFiles": 61,
     "persistenceOutsideInfrastructure": 84,
-    "crossDomainDeepImports": 68,
+    "crossDomainDeepImports": 70,
     "browserTransportShimFiles": 26,
-    "compatibilityMarkerFiles": 208,
+    "compatibilityMarkerFiles": 209,
     "schedulerEntrypoints": 10,
     "oversizedSourceFiles": 0,
     "capabilityStrings": 144
@@ -211,13 +211,13 @@
         "infrastructure",
         "realtime"
       ],
-      "sourceFiles": 31,
+      "sourceFiles": 32,
       "publicBoundaryFiles": []
     },
     {
       "name": "game-realtime",
       "layers": [],
-      "sourceFiles": 4,
+      "sourceFiles": 5,
       "publicBoundaryFiles": [
         "backend/src/domains/game-realtime/index.ts"
       ]
@@ -280,7 +280,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 28,
+      "sourceFiles": 30,
       "publicBoundaryFiles": []
     },
     {
@@ -332,7 +332,7 @@
         "infrastructure",
         "tests"
       ],
-      "sourceFiles": 46,
+      "sourceFiles": 51,
       "publicBoundaryFiles": [
         "backend/src/domains/players/index.ts"
       ]
@@ -484,6 +484,7 @@
       "backend/src/domains/players/api/playerCapabilityManifestHttpHandler.ts",
       "backend/src/domains/players/api/playerLoginHttpHandler.ts",
       "backend/src/domains/players/api/playerRosterHttpHandler.ts",
+      "backend/src/domains/players/api/playerRosterImportHttpHandler.ts",
       "backend/src/domains/players/api/playerSessionBootstrapHttpHandler.ts",
       "backend/src/domains/players/api/playerSessionLogoutHttpHandler.ts",
       "backend/src/domains/progression/api/playerProgressionHttpHandler.ts",
@@ -1240,6 +1241,18 @@
         "target": "../../stocks/news.ts"
       },
       {
+        "consumer": "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/stockMarketRunnerHttpHandler.ts"
+      },
+      {
+        "consumer": "backend/src/domains/storylines/server/stockTickStorylineRunner.test.ts",
+        "ownerDomain": "storylines",
+        "importedDomain": "stocks",
+        "target": "../../stocks/api/stockMarketRunnerHttpHandler.test.fixtures.support.ts"
+      },
+      {
         "consumer": "backend/src/domains/storylines/services/econovariaStorylineLoopSmoke.test.eventFixtures.support.ts",
         "ownerDomain": "storylines",
         "importedDomain": "game-dashboard",
@@ -1666,7 +1679,7 @@
         ]
       },
       {
-        "file": "admin/v2/src/routes/banking/BankingController.js",
+        "file": "admin/v2/src/routes/banking/BankingReadModel.js",
         "markers": [
           "fallback"
         ]
@@ -1859,6 +1872,12 @@
       },
       {
         "file": "admin/v2/src/routes/settings/SettingsController.js",
+        "markers": [
+          "fallback"
+        ]
+      },
+      {
+        "file": "admin/v2/src/routes/settings/SettingsRoute.js",
         "markers": [
           "fallback"
         ]
@@ -3439,6 +3458,7 @@
           "admin/auth-session-manager.js",
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/messages/MessagesController.js",
+          "admin/v2/src/routes/messages/MessagesPolicyPanel.js",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminSecurityGuard.ts"
         ]
@@ -3490,6 +3510,9 @@
           "admin/v2/src/core/navigation-registry.js",
           "admin/v2/src/routes/overview/OverviewRoute.js",
           "admin/v2/src/routes/players/PlayersController.js",
+          "admin/v2/src/routes/players/RosterImportController.js",
+          "backend/src/domains/players/api/playerRosterImportHttpHandler.ts",
+          "backend/src/domains/players/application/importPlayerRoster.test.ts",
           "backend/supabase/functions/admin-api/adminLocalMutationRoutes.test.cases.ts",
           "backend/supabase/functions/admin-api/adminPermissions.ts",
           "backend/supabase/functions/admin-api/adminRequestApplicationContext.test.ts",

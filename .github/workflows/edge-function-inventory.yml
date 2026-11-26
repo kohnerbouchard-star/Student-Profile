@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-933.json"
       - ".github/workflows/edge-function-inventory.yml"
       - ".github/workflows/edge-function-inventory-converge.yml"
       - "backend/supabase/edge-function-manifest.json"

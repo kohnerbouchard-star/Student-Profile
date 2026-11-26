@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "apiRelation": "exact-equality",
+  "mode": "integrated-composite",
+  "backend": {
+    "sha": "54ea69c57f7c78b972a44d26e3cee0605480148f",
+    "tree": "a96d953b7ee8deb8b4cc556185f2a135992efb9c"
+  },
+  "frontend": {
+    "sha": "54ea69c57f7c78b972a44d26e3cee0605480148f",
+    "tree": "a96d953b7ee8deb8b4cc556185f2a135992efb9c"
+  },
+  "overlay": [
+    "admin/v2/src/api/admin-api-client.js",
+    "admin/v2/src/api/player-roster-import.js",
+    "admin/v2/src/routes/players/PlayersController.js",
+    "admin/v2/src/routes/players/PlayersRoute.js",
+    "admin/v2/src/routes/players/RosterCsvReview.js",
+    "admin/v2/src/routes/players/RosterImportController.js",
+    "admin/v2/src/routes/players/roster-csv.js"
+  ]
+}

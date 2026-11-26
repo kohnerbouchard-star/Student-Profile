@@ -166,6 +166,10 @@
   vertical-align: top;
 }
 
+.admin-logs-route .admin-data-table__table > thead > tr > .admin-data-table__heading:first-child {
+  --admin-table-column-size: 12.5rem;
+}
+
 .admin-logs-route .admin-data-table__cell {
   max-inline-size: 28rem;
   overflow-wrap: anywhere;

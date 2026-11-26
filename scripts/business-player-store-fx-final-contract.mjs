@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { assertExtractedModulesReachable } from "./helpers/edge-runtime-source.mjs";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { readEdgeRuntimeSource as readFileSync } from "./helpers/edge-runtime-source.mjs";
@@ -73,6 +74,12 @@ assert.ok(
 const source = Object.fromEntries(
   Object.entries(files).map(([key, path]) => [key, readFileSync(path, "utf8")]),
 );
+const fundingFormPath = "player-terminal/src/features/store/store-funding-form.js";
+const fundingForm = readFileSync(fundingFormPath, "utf8");
+assertExtractedModulesReachable(files.playerPurchaseFlow, [fundingFormPath], new Map([
+  [files.playerPurchaseFlow, source.playerPurchaseFlow], [fundingFormPath, fundingForm],
+]));
+source.playerPurchaseFlow = [source.playerPurchaseFlow, fundingForm].join("\n");
 const authority = JSON.parse(source.authority);
 const retainedC1QuoteSource = readFileSync(retainedC1QuoteMigration, "utf8");
 const criticalJobChecks = Object.freeze([
@@ -588,7 +595,10 @@ includesAll(source.workflow, [
   "npx supabase db lint --workdir backend --local --level warning",
   "npx supabase db advisors",
   "--fail-on error",
-  "git diff --check \"origin/${BASE_REF}...HEAD\"",
+  "MANUAL_BASE_SHA: ${{ steps.manual_pr.outputs.base_sha }}",
+  "run: node scripts/manual-pr-context.mjs",
+  "node --test scripts/manual-pr-context.test.mjs",
+  "git diff --check \"${MANUAL_BASE_SHA:-origin/${BASE_REF}}...HEAD\"",
   "auth_throttle_check_v2",
   "npm --prefix backend run typecheck",
   "playwright install --with-deps chromium",

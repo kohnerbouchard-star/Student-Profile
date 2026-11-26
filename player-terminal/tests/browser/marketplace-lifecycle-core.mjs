@@ -179,7 +179,13 @@ function marketplace() {
       }],
       myListings: [],
       reservations: [],
-      orders: [],
+      orders: [{
+        id: "ord_77777777777777777777777777777777", listingId: LISTING_ID,
+        itemId: "data-chip", itemName: "Recorded Data Chip", quantity: 1,
+        subtotal: 15, feeAmount: 0.38, taxAmount: 0.15, total: 15.53,
+        sellerProceeds: 15, currencyCode: "LUM", status: "completed",
+        role: "buyer", completedAt: NOW,
+      }],
       disputes: [],
       summary: { listingCount: 1, activeSellers: 1, volume: 30 },
     },
@@ -353,9 +359,10 @@ function response(route, body, status = 200) {
   });
 }
 
-async function installRoutes(page) {
+async function installRoutes(page, readInventory = (route) => response(route, inventory())) {
   let quotePosts = 0;
   let settlementPosts = 0;
+  let draftPosts = 0;
   let committed = false;
   await page.route("**/functions/v1/player-api/**", async (route) => {
     throw new Error(`Player browser bypassed the HttpOnly BFF: ${route.request().url()}`);
@@ -387,10 +394,14 @@ async function installRoutes(page) {
       return response(route, dashboard());
     }
     if (path === "/players/me/inventory" && request.method() === "GET") {
-      return response(route, inventory());
+      return readInventory(route);
     }
     if (path === "/players/me/banking/fx" && request.method() === "GET") {
       return response(route, bankingFx());
+    }
+    if (path === "/players/me/marketplace/listings" && request.method() === "POST") {
+      draftPosts += 1;
+      return response(route, { error: { code: "unexpected_draft", message: "Unexpected draft write" } }, 400);
     }
     if (path === "/players/me/marketplace/listings" && request.method() === "GET") {
       if (committed) {
@@ -438,6 +449,7 @@ async function installRoutes(page) {
   return {
     quotePosts: () => quotePosts,
     settlementPosts: () => settlementPosts,
+    draftPosts: () => draftPosts,
   };
 }
 
@@ -498,6 +510,23 @@ test("Marketplace purchase reviews exact funding before atomic settlement", asyn
   );
   await expect(page.evaluate(() => document.cookie)).resolves.not.toContain("econovaria_player_session");
 
+  const receipt = marketplacePage.locator("[data-player-marketplace-order]").first();
+  await receipt.locator("summary").click();
+  await expect(receipt.locator("dl")).toBeVisible();
+  await expect(receipt).toContainText("RECORDED BUYER TOTAL");
+  await expect(receipt).toContainText("LUM 15.53");
+  expect(await receipt.locator("dd").first().evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const box = element.getBoundingClientRect();
+    return [...range.getClientRects()].every((rect) => rect.right <= box.right + 1 && rect.left >= box.left - 1);
+  })).toBe(true);
+  await receipt.locator("summary").click();
+  await expect(receipt.locator("dl")).toBeHidden();
+  expect(harness.quotePosts()).toBe(0);
+  expect(harness.settlementPosts()).toBe(0);
+  expect(await page.evaluate(() => location.hash)).toBe("#marketplace");
+
   await quoteForm.getByRole("button", { name: /Review exact funding quote/i }).click();
   await expect.poll(harness.quotePosts).toBe(1);
   const settlementForm = marketplacePage.locator(
@@ -519,4 +548,50 @@ test("Marketplace purchase reviews exact funding before atomic settlement", asyn
   await expect(page.locator("body")).not.toContainText(
     /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/iu,
   );
+});
+
+test("Marketplace preserves existing listings and requires verified available stock for a draft", async ({ page }) => {
+  let stock = "unavailable";
+  await installSession(page);
+  const harness = await installRoutes(page, (route) => stock === "unavailable"
+    ? response(route, { error: { code: "inventory_unavailable", message: "Unavailable", retryable: false } }, 429)
+    : response(route, { ok: true, availability: "available", items: [{
+      id: "data-chip", storeItemId: "data-chip", itemKey: "data-chip", name: "Data Chip",
+      quantityOwned: 5, quantityReserved: 3, quantityAvailable: stock === "verified" ? 2 : "unknown",
+    }] }));
+
+  const marketplacePage = page.locator(".player-terminal-marketplace-page");
+  const draft = marketplacePage.locator(".player-terminal-marketplace-create");
+  const form = draft.locator("form");
+  const submit = form.getByRole("button", { name: "Create draft" });
+  const openDraft = async () => {
+    await expect(marketplacePage).toBeVisible();
+    await expect(marketplacePage.getByText("OPEN LISTINGS")).toBeVisible();
+    await expect(marketplacePage.getByText("YOUR LISTINGS", { exact: true }).first()).toBeVisible();
+    await draft.locator("summary").click();
+  };
+
+  await page.goto("/?api=1#marketplace");
+  await openDraft();
+  await expect(draft.getByRole("status")).toContainText("Inventory unavailable");
+  await expect(submit).toBeDisabled();
+  expect(harness.draftPosts()).toBe(0);
+
+  stock = "unverified";
+  await page.reload();
+  await openDraft();
+  await expect(form.locator('[name="itemKey"]')).toContainText("No eligible inventory items");
+  await expect(submit).toBeDisabled();
+  expect(harness.draftPosts()).toBe(0);
+
+  stock = "verified";
+  await page.reload();
+  await openDraft();
+  await expect(form.locator('[name="itemKey"]')).toContainText("Data Chip · 2 available");
+  await expect(submit).toBeEnabled();
+  await form.locator('[name="quantity"]').fill("3");
+  await form.locator('[name="unitPrice"]').fill("5");
+  await submit.click();
+  await expect(form.locator("[data-player-form-error]")).toContainText("Only 2 units are available");
+  expect(harness.draftPosts()).toBe(0);
 });

@@ -6,6 +6,7 @@ on:
       - main
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-933.json"
       - "docs/operations/contracts/player-cross-cutting/pr-981.json"
       - "docs/operations/contracts/player-cross-cutting/pr-982.json"
       - "docs/operations/contracts/player-cross-cutting/pr-980.json"
@@ -52,6 +53,8 @@ on:
       - admin/v2/src/core/contract-time-zone.js
       - index.html
       - scripts/apply-configurable-stock-market-timezone-v1.mjs
+      - scripts/helpers/dashboard-timezone-layout.mjs
+      - scripts/dashboard-timezone-layout.test.mjs
       - scripts/fix-required-timezone-rpc-fixture-v1.mjs
       - scripts/apply-shared-game-timezone-ui-v1.mjs
       - scripts/fix-shared-game-timezone-smoke-v1.mjs
@@ -93,6 +96,9 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.9.3
+
+      - name: Verify Dashboard timezone replay layouts
+        run: node --test scripts/dashboard-timezone-layout.test.mjs
 
       - name: Install backend dependencies
         working-directory: backend

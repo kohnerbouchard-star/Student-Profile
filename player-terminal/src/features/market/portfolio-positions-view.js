@@ -19,15 +19,16 @@ export function renderPortfolioPositions(data) {
       <div class="player-terminal-heading-actions">${renderStatusPill(stale ? "LAST LOADED POSITIONS" : "CURRENT POSITIONS", stale ? "amber" : "purple")}<button class="player-terminal-primary-button" type="button" data-route="market">${icon("market")} Open market</button></div></header>
     ${stale ? '<p class="player-terminal-form-error" role="status">Positions could not be refreshed. These are the last loaded amounts; refresh before making a trading decision.</p>' : ""}
     <div class="player-terminal-portfolio-metrics">${metrics}</div>
-    <section class="player-terminal-panel player-terminal-holdings-panel"><header class="player-terminal-panel-header"><div><span>ACTIVE POSITIONS</span><strong>${rows.length} holdings</strong></div><button class="player-terminal-icon-button" type="button" data-player-action="refresh-data" aria-label="Refresh portfolio">${icon("refresh")}</button></header>
+    <section class="player-terminal-panel player-terminal-holdings-panel"><header class="player-terminal-panel-header"><div><span>ACTIVE POSITIONS</span><strong>${rows.length} ${stale ? "last loaded holdings" : "holdings"}</strong></div><button class="player-terminal-icon-button" type="button" data-player-action="refresh-data" aria-label="Refresh portfolio">${icon("refresh")}</button></header>
       <p class="player-terminal-inline-empty">Amounts in different currencies are shown separately. This view covers investments; open Banking for cash accounts.</p>
       <div class="player-terminal-holdings-table"><div class="player-terminal-holdings-head"><span>ASSET</span><span>SHARES</span><span>VALUE</span><span>GAIN / LOSS</span><span>CURRENCY</span></div>
         ${rows.length ? rows.map(h => {
           const code = h.currencyCode || "UNKNOWN";
           const basis = h.costBasis ?? h.quantity*h.averageCost;
-          const pct = basis > 0 ? h.unrealizedPnl/basis*100 : 0;
-          return `<button type="button" data-player-market-link="${escapeHtml(h.ticker)}" aria-label="Open ${escapeHtml(h.ticker)} market details"><span class="player-terminal-holding-asset"><b>${escapeHtml(h.ticker)}</b><small>${escapeHtml(h.companyName || h.ticker)}</small></span><span data-label="Shares">${escapeHtml(formatNumber(h.quantity))}<small>avg ${escapeHtml(amount(h.averageCost,code))}</small></span><span data-label="Value">${escapeHtml(amount(h.marketValue,code))}</span><span data-label="Gain / loss" class="${toneFromChange(h.unrealizedPnl)}">${escapeHtml(amount(h.unrealizedPnl,code))}<small>${escapeHtml(formatPercent(pct))}</small></span><span data-label="Currency">${escapeHtml(code)}</span></button>`;
-        }).join("") : renderEmptyState({ title: "No active positions", detail: "Issued or purchased shares will appear here with their cost basis.", iconName: "market" })}
+          const pct = Number.isFinite(basis) && basis > 0 && Number.isFinite(h.unrealizedPnl)
+            ? h.unrealizedPnl/basis*100 : null;
+          return `<button type="button" data-player-market-link="${escapeHtml(h.ticker)}" aria-label="Open ${escapeHtml(h.ticker)} market details"><span class="player-terminal-holding-asset"><b>${escapeHtml(h.ticker)}</b><small>${escapeHtml(h.companyName || h.ticker)}</small></span><span data-label="Shares">${escapeHtml(formatNumber(h.quantity))}<small>avg ${escapeHtml(amount(h.averageCost,code))}</small></span><span data-label="Value">${escapeHtml(amount(h.marketValue,code))}</span><span data-label="Gain / loss" class="${toneFromChange(h.unrealizedPnl)}">${escapeHtml(amount(h.unrealizedPnl,code))}<small>${escapeHtml(!Number.isFinite(pct) ? "Return unavailable" : formatPercent(pct))}</small></span><span data-label="Currency">${escapeHtml(code)}</span></button>`;
+        }).join("") : renderEmptyState({ title: stale ? "Positions unavailable" : "No active positions", detail: stale ? "No positions are available from the last load. Refresh to confirm your current holdings." : "Issued or purchased shares will appear here with their cost basis.", iconName: "market" })}
       </div>
     </section>
   </section>`;

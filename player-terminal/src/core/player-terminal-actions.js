@@ -89,9 +89,45 @@ export function createPlayerTerminalActions({
       return;
     }
 
+    // Open the existing authoritative plan without rerendering payment drafts.
+    const forecastLink = event.target.closest('[data-loan-forecast-link]');
+    if (forecastLink) {
+      event.preventDefault();
+      const id = forecastLink.dataset.loanForecastLink;
+      if (stateAtClick.route !== 'loans' || stateAtClick.status !== 'ready' || stateAtClick.modal || forecastLink.disabled || !/^lon_[0-9a-f]{32}$/u.test(id || '')) return;
+      const loans = stateAtClick.data?.loans;
+      if (!Array.isArray(loans?.activeLoans) || loans.activeLoans.filter((row) => row?.id === id).length !== 1) return;
+      const rows = Array.isArray(loans.repaymentForecast?.facilities) ? loans.repaymentForecast.facilities.filter((row) => row?.id === id) : [];
+      if (rows.length !== 1 || rows[0].state !== 'available') return;
+      const destinations = mount.querySelectorAll(`[data-loan-forecast="${id}"]`);
+      if (destinations.length !== 1) return;
+      const destination = destinations[0];
+      const summary = destination.querySelector('summary');
+      if (!summary) return;
+      destination.open = true;
+      summary.focus({ preventScroll: true });
+      summary.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+      return;
+    }
+
     if (stateAtClick.ui.notificationsOpen && !event.target.closest('[data-player-notification-drawer], [data-player-local-action="toggle-notifications"]')) {
       restoreFocus();
       updateUi({ notificationsOpen: false });
+    }
+
+    // Workspace anchors are in-page navigation, not terminal route hashes.
+    const workspaceLink = event.target.closest("[data-business-workspace-link]");
+    if (workspaceLink) {
+      event.preventDefault();
+      const section = workspaceLink.dataset.businessWorkspaceLink;
+      const sections = ["overview", "products", "stockroom", "procurement", "production", "workforce", "equipment", "sales", "finance", "governance", "activity"];
+      if (stateAtClick.route !== "business" || stateAtClick.status !== "ready" || stateAtClick.modal || !sections.includes(section)) return;
+      const destination = mount.querySelector(`[data-business-workspace-section="${section}"]`);
+      if (!destination) return;
+      destination.setAttribute("tabindex", "-1");
+      destination.focus({ preventScroll: true });
+      destination.scrollIntoView({ block: "start", behavior: "auto" });
+      return;
     }
 
     const routeButton = event.target.closest("[data-route]");

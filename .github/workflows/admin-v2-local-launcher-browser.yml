@@ -1,0 +1,60 @@
+name: Admin V2 Local Launcher Browser
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/admin-v2-local-launcher-browser.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/admin-v2-local-launcher-browser.mjs'
+      - 'scripts/admin-v2-browser-fixture-server.mjs'
+      - 'scripts/econovaria-local-gateway.py'
+      - 'scripts/econovaria-local-gateway-core.py'
+      - 'scripts/local-auth-readiness.mjs'
+      - 'scripts/local-admin-v2-entry-contract.test.mjs'
+      - 'index.html'
+      - 'frontend/src/core/admin-game-selection.js'
+      - 'frontend/src/core/api*.js'
+      - 'frontend/src/core/login*.js'
+      - 'frontend/src/core/runtime-config.js'
+      - 'admin/v2.html'
+      - 'admin/session-gate.js'
+      - 'admin/auth-session-manager.js'
+      - 'admin/v2/src/main.js'
+      - 'admin/v2/src/app*.js'
+      - 'admin/v2/src/routes/overview/**'
+      - 'admin/v2/src/routes/attendance/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-v2-local-launcher-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic-local-launcher:
+    name: Verify Admin V2 through the local npm launcher
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact pull request head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Set up pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - name: Install locked browser tooling
+        run: |
+          npm install --global npm@10.9.8
+          npm ci --ignore-scripts
+          npx --no-install playwright install --with-deps chromium
+      - name: Verify gateway path and isolation
+        run: npm run test:local-staging-gateway
+      - name: Exercise synthetic sign-in and same-game Attendance scanner
+        run: npm run test:admin-v2:local-launcher-browser

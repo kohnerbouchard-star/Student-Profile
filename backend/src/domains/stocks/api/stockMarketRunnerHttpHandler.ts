@@ -48,7 +48,6 @@ import {
 import {
   SupabaseStockMarketNewsRepository,
 } from "../infrastructure/supabaseStockMarketNewsRepository.ts";
-import { createGameSessionContractWriter } from "../../contracts/index.ts";
 import {
   createStockTickStorylineRunner,
 } from "../../storylines/server/stockTickStorylineRunner.ts";
@@ -381,10 +380,7 @@ function buildStockMarketNewsShockId(
 function createDefaultStorylineRunnerAfterTick(
   client: EdgeSupabaseClient,
 ): StockMarketRunnerStorylineTickHook {
-  return createStockTickStorylineRunner(
-    client,
-    createGameSessionContractWriter,
-  );
+  return createStockTickStorylineRunner(client);
 }
 
 async function runStorylineEventsAfterStockTickBestEffort(args: {

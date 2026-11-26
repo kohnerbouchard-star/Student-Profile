@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import { resolvePlayerBackendRequest } from "../src/api/backend-routes.js";
 import { normalizeWritePayload } from "../src/api/payload-normalizer.js";
@@ -160,3 +161,41 @@ for (const privateField of ["gameSessionId", "playerId", "playerSessionId", "con
 }
 
 console.log("Contracts flow passed: public-key acceptance and submission, scope stripping, lifecycle states, rewards, and UUID privacy are valid.");
+
+await import("./contracts-review-history.mjs");
+
+// Explicit empty status filters must not silently jump to another populated tab.
+const onlyActive = { ...data, contracts: { ...model, items: model.items.filter(item => item.status === "Active") } };
+for (const tab of ["Available", "Submitted", "Completed"]) {
+  const ui = { contractTab: tab, contractId: "active-contract" };
+  const before = JSON.stringify({ onlyActive, ui });
+  const html = renderContractsPage(onlyActive, ui);
+  assert.ok(html.includes(`data-player-contract-tab="${tab}" aria-pressed="true"`));
+  assert.ok(html.includes("No contracts in this state."));
+  assert.ok(!html.includes('class="player-terminal-panel player-terminal-contract-detail"'));
+  assert.ok(!html.includes('data-player-form="contract-submit"'));
+  assert.equal(renderContractsPage(onlyActive, ui), html);
+  assert.equal(JSON.stringify({ onlyActive, ui }), before);
+}
+// Unknown/removed tab state still resolves to an existing populated tab.
+for (const contractTab of [undefined, "Unknown status"]) {
+  assert.ok(renderContractsPage(onlyActive, { contractTab }).includes('data-player-contract-tab="Active" aria-pressed="true"'));
+}
+const beforeRefresh = renderContractsPage(data, { contractTab: "Completed", contractId: "completed-contract" });
+assert.ok(beforeRefresh.includes("Contract completed"));
+const afterRefresh = renderContractsPage(onlyActive, { contractTab: "Completed", contractId: "completed-contract" });
+assert.ok(afterRefresh.includes("No contracts in this state."));
+assert.ok(!afterRefresh.includes("Contract completed"));
+const emptyHtml = renderContractsPage({ ...data, contracts: { ...model, items: [] } }, { contractTab: "Submitted" });
+assert.ok(emptyHtml.includes('data-player-contract-tab="Submitted" aria-pressed="true"'));
+assert.ok(emptyHtml.includes("No contracts in this state."));
+console.log("Contracts explicit empty-status navigation checks passed.");
+
+const appSource = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
+const initialContractTab = appSource.match(/contractTab: "([^"]*)"/)[1];
+assert.equal(initialContractTab, "", "The app must not preselect a status before the first read");
+const onlyAvailable = { ...data, contracts: { ...model, items: model.items.filter(item => item.status === "Available") } };
+assert.ok(renderContractsPage(onlyAvailable, { contractTab: initialContractTab }).includes('data-player-contract-tab="Available" aria-pressed="true"'));
+const explicitActive = renderContractsPage(onlyAvailable, { contractTab: "Active" });
+assert.ok(explicitActive.includes('data-player-contract-tab="Active" aria-pressed="true"'));
+assert.ok(explicitActive.includes("No contracts in this state."));

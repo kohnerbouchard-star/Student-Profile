@@ -2,6 +2,44 @@
 -- Holds never auto-release. The guarded release RPC requires an independently
 -- approved recovery decision and does not repair or bypass economic prerequisites.
 begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '120s';
+
+-- Hold the same control lock used by the purge worker before reordering its
+-- targets. The Story suffix follows the immutable loan graph convergence.
+do $story_purge_baseline$
+declare
+  registry record;
+  graph record;
+  delete_order record;
+begin
+  perform 1 from private.game_data_purge_control where singleton for update;
+  lock table private.game_data_purge_requests,
+    private.game_data_purge_table_registry,
+    private.game_data_purge_delete_order_v1 in share row exclusive mode;
+
+  if exists (
+    select 1 from private.game_data_purge_requests
+    where status not in ('completed', 'cancelled', 'failed')
+      and (db_delete_cursor <> 0 or status = 'db_deleting')
+  ) then
+    raise exception 'GAME_PURGE_CURSOR_RECONCILIATION_REQUIRED' using errcode = 'P0001';
+  end if;
+
+  select * into strict registry from public.get_game_data_purge_registry_digest_v1();
+  select * into strict graph from public.get_game_data_purge_fk_graph_digest_v1();
+  select * into strict delete_order from public.get_game_data_purge_delete_order_digest_v1();
+  if (registry.table_count, registry.registry_sha256) is distinct from
+       (207::bigint, '7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3'::text)
+     or (graph.edge_count, graph.fk_graph_sha256) is distinct from
+       (460::bigint, '0c932d6e620cec801b527e81f3e4d3e91bd8d70fd4fb45d6e1a72166ff0c7a82'::text)
+     or (delete_order.table_count, delete_order.order_sha256) is distinct from
+       (206::bigint, '19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897'::text)
+  then
+    raise exception 'STORY_RETRY_PURGE_BASELINE_DRIFT' using errcode = 'P0001';
+  end if;
+end;
+$story_purge_baseline$;
 alter table public.story_event_execution_claims
   add column retry_after_at timestamptz null,
   add column retry_hold_reason text null,
@@ -385,6 +423,88 @@ alter table public.story_execution_retry_release_audit enable row level security
 alter table public.story_execution_retry_release_audit force row level security;
 revoke all on table public.story_execution_retry_release_audit from public, anon, authenticated, service_role;
 grant select on table public.story_execution_retry_release_audit to service_role;
+
+-- Register the child once and rerank the existing certified order. The pinned
+-- graph changes only this child and the depths of its claim/resolution ancestors.
+create index story_retry_release_audit_claim_idx
+  on public.story_execution_retry_release_audit (claim_id);
+create index story_retry_release_audit_event_idx
+  on public.story_execution_retry_release_audit (storyline_event_id);
+create index story_retry_release_audit_actor_idx
+  on public.story_execution_retry_release_audit (actor_staff_user_id);
+
+insert into private.game_data_purge_table_registry (table_schema, table_name)
+values ('public', 'story_execution_retry_release_audit');
+
+-- Move the certified positions outside the final range to avoid transient
+-- primary-key collisions while computing the new child-first order.
+update private.game_data_purge_delete_order_v1
+set position = position + 207,
+    dependency_depth = case
+      when table_schema = 'public' and table_name = 'story_event_execution_claims' then 1
+      when table_schema = 'public' and table_name = 'story_event_resolutions' then 2
+      else dependency_depth
+    end;
+insert into private.game_data_purge_delete_order_v1
+  (position, table_schema, table_name, dependency_depth)
+values (414, 'public', 'story_execution_retry_release_audit', 0);
+with ranked as (
+  select table_schema, table_name,
+    row_number() over (order by dependency_depth,
+      table_schema collate "C", table_name collate "C")::integer as position
+  from private.game_data_purge_delete_order_v1
+)
+update private.game_data_purge_delete_order_v1 as target
+set position = ranked.position
+from ranked
+where target.table_schema = ranked.table_schema and target.table_name = ranked.table_name;
+
+-- Change only the exact reviewed function preimages and fingerprint/cursor
+-- literals. All request, game, token, expiry and zero-row checks are retained.
+do $story_purge_fingerprints$
+declare
+  registry record;
+  graph record;
+  delete_order record;
+  target record;
+  definition text;
+begin
+  select * into strict registry from public.get_game_data_purge_registry_digest_v1();
+  select * into strict graph from public.get_game_data_purge_fk_graph_digest_v1();
+  select * into strict delete_order from public.get_game_data_purge_delete_order_digest_v1();
+  if (registry.table_count, registry.registry_sha256) is distinct from
+       (208::bigint, '37c2231abb9aff3c306dc7975c2968d549991fa9c2c9815cf8163c54db458bc6'::text)
+     or (graph.edge_count, graph.fk_graph_sha256) is distinct from
+       (461::bigint, '314a9ec50cca588ac091cad4ac42f68c77dbc81e9fb712cb960a7f714566cda3'::text)
+     or (delete_order.table_count, delete_order.order_sha256) is distinct from
+       (207::bigint, 'ad48814a47842407203f6b495b10bc7d1f7b1110cbf55506179456b461f678a3'::text)
+  then
+    raise exception 'STORY_RETRY_PURGE_RESULT_DRIFT' using errcode = 'P0001';
+  end if;
+
+  for target in select * from (values
+    ('public.execute_game_data_purge_db_batch_v2(uuid,integer)', 'b52001a93064ad4609fd5f7e4b471250e731d4610c5302ef0bdb5e8af4dddcc8'),
+    ('public.finalize_game_data_purge_v1(uuid)', 'f3904e8d5df8fd96f5311a0299e4d8e2ba87715bfb4dd9177b9c53b03f220d2e')
+  ) as expected(signature, sha256)
+  loop
+    definition := pg_get_functiondef(target.signature::regprocedure);
+    if encode(sha256(convert_to(definition, 'UTF8')), 'hex') is distinct from target.sha256 then
+      raise exception 'STORY_RETRY_PURGE_DEFINITION_DRIFT' using errcode = 'P0001';
+    end if;
+    definition := replace(definition, '7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3',
+      registry.registry_sha256);
+    definition := replace(definition, '0c932d6e620cec801b527e81f3e4d3e91bd8d70fd4fb45d6e1a72166ff0c7a82',
+      graph.fk_graph_sha256);
+    definition := replace(definition, '19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897',
+      delete_order.order_sha256);
+    definition := regexp_replace(definition, '\m207\M', '208', 'g');
+    definition := regexp_replace(definition, '\m206\M', '207', 'g');
+    definition := regexp_replace(definition, '\m460\M', '461', 'g');
+    execute definition;
+  end loop;
+end;
+$story_purge_fingerprints$;
+
 
 create or replace function public.release_story_execution_retry_hold_v1(
   p_game_session_id uuid,

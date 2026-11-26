@@ -47,8 +47,8 @@ export function summary(model) {
   });
 }
 
-export function rosterTable(model) {
-  return AdminDataTable({
+export function rosterTable(model, { controller = false, emptyState } = {}) {
+  const table = AdminDataTable({
     caption: `Attendance roster for ${model.attendanceDate}`,
     rowKey: (row) => row.rowKey,
     rows: model.rows,
@@ -78,12 +78,13 @@ export function rosterTable(model) {
       { key: "source", label: "Source", render: (value) => titleCase(value) },
       { key: "note", label: "Note", render: (value) => value || "—" },
     ],
-    emptyState: AdminEmptyState({
+    emptyState: emptyState || AdminEmptyState({
       title: "No attendance roster yet",
       message: "There are no active players or attendance records for this game today.",
       compact: true,
     }),
-  }).element;
+  });
+  return controller ? table : table.element;
 }
 
 export function selectedPlayerCard(row) {

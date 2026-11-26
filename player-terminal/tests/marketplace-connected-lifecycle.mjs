@@ -265,4 +265,29 @@ assert.throws(() => resolveMarketplaceBackendRequest({
   },
 }));
 
+const history = html.match(/<section[^>]*data-player-marketplace-order-history[\s\S]*?<\/section>/u)?.[0];
+assert.ok(history);
+assert.match(history, /Purchase · Data Chip/u);
+assert.match(history, /RECORDED BUYER TOTAL/u);
+assert.match(history, /ITEM SUBTOTAL/u);
+assert.match(history, /MARKETPLACE FEE/u);
+assert.match(history, /TAX/u);
+assert.match(history, /2 LOADED/u);
+assert.match(history, /ord_3333<wbr>33333333/u);
+assert.doesNotMatch(history, /<form|data-endpoint|data-player-form/u);
+const renderHistory = (orders) => renderMarketplacePage({
+  session: { currencyCode: "LUM" }, inventory: { items: [] },
+  marketplace: { ...market, orders },
+}, {}).match(/<section[^>]*data-player-marketplace-order-history[\s\S]*?<\/section>/u)?.[0];
+const sellerHistory = renderHistory([{ ...market.orders[0], role: "seller", itemName: "<img src=x onerror=alert(1)>", status: "refunded", refundedAt: "2026-07-21T04:00:00.000Z", sellerProceeds: 12, currencyCode: "USD" }]);
+assert.match(sellerHistory, /Sale · &lt;img/u);
+assert.doesNotMatch(sellerHistory, /<img/u);
+assert.match(sellerHistory, /RECORDED SELLER PROCEEDS/u);
+assert.doesNotMatch(sellerHistory, /RECORDED BUYER TOTAL/u);
+assert.match(sellerHistory, /REFUNDED/u);
+assert.match(sellerHistory, /USD/u);
+assert.match(sellerHistory, /Original settled amounts/u);
+assert.match(renderHistory([]), /No recorded Marketplace orders/u);
+assert.match(renderHistory([{ ...market.orders[0], completedAt: "" }]), /Unavailable/u);
+
 console.log("Marketplace connected quote and settlement lifecycle passed");

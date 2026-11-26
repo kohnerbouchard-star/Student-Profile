@@ -30,8 +30,9 @@ test("Messages preserves its sole public route export", async () => {
   assert.deepEqual(Object.keys(await import("../admin/v2/src/routes/messages/MessagesRoute.js")), ["MessagesRoute"]);
 });
 
-test("Messages read-panel extraction preserves every complete original function", () => {
-  // Recorded before extraction from unchanged main b77c9610.
+test("Messages read-panel functions retain their reviewed source bindings", () => {
+  // Read functions retain the b77c9610 extraction baseline. MessagesRoute is
+  // updated only for the reviewed native policy-panel mount.
   const expected = JSON.parse(readFileSync("scripts/fixtures/admin-messages-function-hashes.json", "utf8"));
   const directory = "admin/v2/src/routes/messages", actual = {};
   for (const file of readdirSync(directory).filter((name) => /^Messages(?:Route|ReadPanels)\.js$/.test(name))) {

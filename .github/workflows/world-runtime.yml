@@ -3,6 +3,7 @@ name: World Runtime
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-933.json"
       - "docs/operations/contracts/player-cross-cutting/pr-981.json"
       - "docs/operations/contracts/player-cross-cutting/pr-982.json"
       - "docs/operations/contracts/player-cross-cutting/pr-980.json"
@@ -29,6 +30,7 @@ on:
       - "docs/operations/contracts/player-cross-cutting/pr-955.json"
       - "docs/operations/contracts/player-cross-cutting/pr-954.json"
       - "docs/operations/contracts/player-cross-cutting/pr-953.json"
+      - "docs/operations/contracts/player-cross-cutting/pr-938.json"
       - "docs/operations/contracts/player-cross-cutting/pr-952.json"
       - "docs/operations/contracts/player-cross-cutting/pr-951.json"
       - "docs/operations/contracts/player-cross-cutting/pr-945.json"
