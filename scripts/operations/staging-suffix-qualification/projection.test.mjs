@@ -11,7 +11,14 @@ test('actual immutable manufacturing projection preserves four decimals and cano
  const end=body.indexOf('$function$;',body.indexOf('as $function$',start)+14);
  if(start<0||end<0)throw Error('IMMUTABLE_MANUFACTURING_BOUNDARY_DRIFT');
  const definition=body.slice(start,end+11);
- await withSyntheticPostgres(async({sql})=>sql('postgres',projectionFixture+definition+projectionAssertions));
+ await withSyntheticPostgres(async({sql})=>{
+  sql('postgres',projectionFixture+definition);
+  const emitted=sql('postgres',"select pg_get_functiondef('economy_private.refresh_manufacturing_inventory_projection_v1(uuid,uuid,uuid,uuid)'::regprocedure);").trim();
+  // PostgreSQL emits no terminating semicolon: reproduces the CI assembly error.
+  assert(!emitted.endsWith(';'));
+  sql('postgres',emitted+projectionAssertions,true,'syntax error');
+  sql('postgres',emitted+'\n;\n'+projectionAssertions);
+ });
 });
 
 test('real PostgreSQL no-op dumps reproduce trimmed-footer false mismatch; deterministic dumps retain data and ACL differences',{skip:!process.env.STAGING_SUFFIX_SYNTHETIC_PG_BIN&&'NOT_RUN: verified native PG17 required'},async()=>{

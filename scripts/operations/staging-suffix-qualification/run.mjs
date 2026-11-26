@@ -159,7 +159,7 @@ export async function runQualification({env=process.env,root=process.cwd(),execu
   stage='manufacturing-projection-fixture';
   const definition=sql("select pg_get_functiondef('economy_private.refresh_manufacturing_inventory_projection_v1(uuid,uuid,uuid,uuid)'::regprocedure);");
   sql('create database qualification_manufacturing_fixture;');
-  sql(projectionFixture+definition+projectionAssertions,'postgres','qualification_manufacturing_fixture');
+  sql(projectionFixture+'\n'+definition+'\n;\n'+projectionAssertions,'postgres','qualification_manufacturing_fixture');
   assert.equal(local('git',['rev-parse','HEAD']),source);
   result={status:'PASS',sourceCommit:source,syntheticOnly:true,noOpControlsPassed:true,noOpEvidence,imageEvidence,canonicalPrefixCount:count,bootstrapChecked:true,bootstrapEvidence,appliedCount:15,purgeChecked:true,manufacturingCatalogAndClaimGuardChecked:true,manufacturingProjectionPrecisionChecked:true,all15Rollback:true,all15FaultAtomicity:true,injectedFaultPositions:15,committedRetryRejected:true,fullManufacturingLifecycle:false,releaseQualified:false,applyAuthorized:false};
  }catch(error){result={status:'FAILED',stage,...failureFacts(error),...(imageEvidence?{imageEvidence}:{}),...(bootstrapEvidence?{bootstrapEvidence}:{}),...(noOpEvidence?{noOpEvidence}:{}),syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}
