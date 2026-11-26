@@ -4,10 +4,13 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { loadBatch, PROJECT, sha256, validateReceipts } from '../staging-suffix-apply/control.mjs';
+import { loadBatch, PROJECT, sha256, validateReceiptEvidence } from '../staging-suffix-apply/control.mjs';
 import { readEvidenceJson, requireRecoveryArtifactBinding, verifyRecoveryEvidence, verifyRecoveryPublication } from './verify.mjs';
+import {
+  receiptDigestPattern, requireRepositoryOwner, requireStagingRepository,
+  STAGING_OWNER_ID, STAGING_REPOSITORY, STAGING_REPOSITORY_ID,
+} from './owner-approval.mjs';
 
-const repository = 'kohnerbouchard-star/Student-Profile';
 const productionProjectRef = 'cgiukdjwicykrmtkhudh';
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const shaPattern = /^[a-f0-9]{40}$/;
@@ -17,6 +20,7 @@ const controlFiles = [
   '.github/workflows/econovaria-staging-recovery-evidence.yml',
   '.github/workflows/econovaria-staging-suffix-apply.yml',
   'scripts/operations/staging-recovery-evidence/verify.mjs',
+  'scripts/operations/staging-recovery-evidence/owner-approval.mjs',
   'scripts/operations/staging-recovery-evidence/protected-transport.mjs',
   'scripts/operations/staging-suffix-apply/manual.mjs',
   'scripts/operations/staging-suffix-qualification/compiler.mjs',
@@ -34,31 +38,35 @@ function numericId(raw) {
 
 function dispatch({ mode, env, event, head }) {
   assert(['publish', 'preflight'].includes(mode));
-  assert.equal(env.GITHUB_REPOSITORY, repository);
+  assert.equal(env.GITHUB_REPOSITORY, STAGING_REPOSITORY);
+  assert.equal(env.GITHUB_REPOSITORY_ID, String(STAGING_REPOSITORY_ID));
+  assert.equal(env.GITHUB_ACTOR_ID, String(STAGING_OWNER_ID));
   assert.equal(env.GITHUB_EVENT_NAME, 'workflow_dispatch');
   assert.equal(env.GITHUB_REF, 'refs/heads/main');
   assert.equal(env.GITHUB_RUN_ATTEMPT, '1');
+  assert(['main', 'refs/heads/main'].includes(event.ref), 'Dispatch ref must be main');
+  requireStagingRepository(event.repository);
+  requireRepositoryOwner(event.sender);
   const inputs = event.inputs;
+  assert.equal(inputs.staging_project_ref, PROJECT);
+  assert.match(inputs.recovery_receipt_sha256, receiptDigestPattern);
   assert.equal(inputs[mode === 'publish' ? 'record_authorized' : 'verify_authorized'], 'true');
   assert.match(inputs.source_sha, shaPattern);
   assert.equal(inputs.source_sha, head);
   assert.equal(inputs.source_sha, env.GITHUB_SHA);
   return {
-    inputs, source: inputs.source_sha, repositoryId: numericId(env.GITHUB_REPOSITORY_ID),
-    runId: numericId(env.GITHUB_RUN_ID),
+    inputs, source: inputs.source_sha, repositoryId: STAGING_REPOSITORY_ID,
+    receiptDigest: inputs.recovery_receipt_sha256, runId: numericId(env.GITHUB_RUN_ID),
   };
 }
 
 function githubApi(route, binary = false) {
   // Suppress stderr and let the CLI print only a fixed failure label.
-  const data = execFileSync('gh', ['api', '--hostname', 'github.com', `repos/${repository}/${route}`], {
+  const endpoint = 'repos/' + STAGING_REPOSITORY + (route ? '/' + route : '');
+  const data = execFileSync('gh', ['api', '--hostname', 'github.com', endpoint], {
     stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000, maxBuffer: binary ? archiveLimit : 1024 * 1024,
   });
   return binary ? data : JSON.parse(data.toString('utf8'));
-}
-
-function reviewHistory(api, runId, repositoryId) {
-  return { runId, repositoryId, reviews: api(`actions/runs/${runId}/approvals`) };
 }
 
 function requireRepositoryRun(run, id, repositoryId) {
@@ -77,17 +85,20 @@ function readPinnedZip(api, artifact) {
 }
 
 export function verifyProtectedEvidence({ mode, env, event, head, api, qualification, controlDigest, now }) {
-  const { inputs, source, repositoryId, runId } = dispatch({ mode, env, event, head });
+  const { inputs, source, repositoryId, receiptDigest, runId } = dispatch({ mode, env, event, head });
+  const repository = api('');
+  requireStagingRepository(repository);
+  requireRepositoryOwner(repository.owner);
+  assert.equal(repository.default_branch, 'main');
   const currentMain = api('commits/main').sha;
   assert.equal(currentMain, source, 'Current-main identity drift');
-  const scope = { source, currentMain, repositoryId, stagingProjectRef: PROJECT, productionProjectRef };
+  const scope = { source, currentMain, repositoryId, receiptDigest, stagingProjectRef: PROJECT, productionProjectRef };
   const currentRun = api(`actions/runs/${runId}`);
-  const currentReview = reviewHistory(api, runId, repositoryId);
 
   if (mode === 'publish') {
     assert(typeof inputs.recovery_receipt === 'string');
     return verifyRecoveryPublication({
-      pins: { ...scope, producerRunId: runId }, run: currentRun, review: currentReview,
+      pins: { ...scope, producerRunId: runId }, run: currentRun,
       bytes: Buffer.from(inputs.recovery_receipt, 'utf8'),
     }, now);
   }
@@ -105,7 +116,6 @@ export function verifyProtectedEvidence({ mode, env, event, head, api, qualifica
   requireRecoveryArtifactBinding(recoverySource);
   const recovery = verifyRecoveryEvidence({
     ...recoverySource, bytes: readPinnedZip(api, recoveryArtifact),
-    producerReview: reviewHistory(api, pins.producerRunId, repositoryId), applyReview: currentReview,
   }, now);
 
   const replay = api(`actions/runs/${replayId}`);
@@ -124,9 +134,9 @@ export function verifyProtectedEvidence({ mode, env, event, head, api, qualifica
   const archiveBytes = readPinnedZip(api, artifact);
   const summary = readEvidenceJson(archiveBytes, 'result.json');
 
-  validateReceipts({
+  validateReceiptEvidence({
     source, currentMain, replay, rehearsal, artifact, result: { summary, archiveBytes }, recovery,
-    qualification, controlDigest, approvals: currentReview.reviews, now,
+    qualification, controlDigest, now,
   });
 
   // The reviewed all-caller fence and authoritative old-worker drain are a
@@ -163,7 +173,8 @@ async function main() {
     assert(env.RUNNER_TEMP);
     const directory = join(env.RUNNER_TEMP, 'staging-reviewed-recovery');
     await mkdir(directory, { mode: 0o700 });
-    await writeFile(join(directory, 'recovery.json'), JSON.stringify(result) + '\n', {
+    const receipt = Buffer.from(request.event.inputs.recovery_receipt, 'utf8');
+    await writeFile(join(directory, 'recovery.json'), receipt, {
       mode: 0o600, flag: 'wx',
     });
     console.log('STAGING_RECOVERY_RECEIPT_VERIFIED');

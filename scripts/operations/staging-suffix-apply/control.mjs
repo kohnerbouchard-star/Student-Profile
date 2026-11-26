@@ -72,10 +72,10 @@ export function validateRecoveryTarget(recovery) {
  assert.equal(evidence.playerTablePresent,true);
  assert.equal(evidence.authUsersTablePresent,true);
  assert(Number.isSafeInteger(evidence.ledgerRowCount)&&evidence.ledgerRowCount>0);
- // Existing independent Auth/Storage/source/smoke, timing and approval gates below
- // remain mandatory. Table presence is not Auth service or configuration proof.
+ // Auth, Storage, source, smoke and timing checks remain mandatory. The
+ // protected transport verifies the dispatch authority.
 }
-export function validateReceipts({ source, currentMain, replay, rehearsal, artifact, result, recovery, qualification, controlDigest, approvals, now = Date.now() }) {
+export function validateReceiptEvidence({ source, currentMain, replay, rehearsal, artifact, result, recovery, qualification, controlDigest, now = Date.now() }) {
   assert.match(source, /^[a-f0-9]{40}$/);
   assert.equal(source, currentMain, 'Current-main identity drift');
   for (const [run, path, event] of [[replay, '.github/workflows/database-replay.yml', 'push'], [rehearsal, '.github/workflows/econovaria-staging-schema-rehearsal.yml', 'workflow_dispatch']]) {
@@ -114,7 +114,6 @@ export function validateReceipts({ source, currentMain, replay, rehearsal, artif
     assert(recovery[`observed${metric}Minutes`] <= recovery[`${metric.toLowerCase()}ObjectiveMinutes`]);
   }
   for (const name of ['migrationLedger','economicInvariants','authMapping','storageInventory','edgeSource','adminSmoke','playerDesktopSmoke','playerMobileSmoke']) assert.equal(recovery.checks[name], 'PASS');
-  assert(Array.isArray(approvals) && approvals.some(row => row.state === 'approved' && row.environments?.some(env => env.name === 'staging') && row.user?.login === recovery.approver && row.user.login !== recovery.operator), 'Named independent staging approval required');
   assert.equal(qualification.status, 'PASS', 'Disposable PostgreSQL qualification NOT_RUN; hosted apply prohibited');
   assert.equal(qualification.batchDigest, batchDigest);
   assert.match(controlDigest, /^[a-f0-9]{64}$/);

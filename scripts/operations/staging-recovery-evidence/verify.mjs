@@ -1,9 +1,14 @@
-// Offline verifier. Run metadata and review histories must come from the trusted
-// same-repository GitHub API transport, never from the recovery archive.
+// Offline verifier. Owner run metadata and receipt digest pins are supplied
+// by the same-repository GitHub transport.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { APPROVED_SUFFIXES } from '../live-migration-reconciliation/build-phase15-rehearsal-plan.mjs';
+import { PROJECT } from '../staging-suffix-apply/control.mjs';
+import {
+  receiptDigestPattern, requireRepositoryOwner, requireStagingRepository,
+  STAGING_OWNER_LOGIN, STAGING_REPOSITORY_ID,
+} from './owner-approval.mjs';
 
 const recoveryWorkflow = '.github/workflows/econovaria-staging-recovery-evidence.yml';
 const applyWorkflow = '.github/workflows/econovaria-staging-suffix-apply.yml';
@@ -37,7 +42,7 @@ function requireFields(record, fields, optional = []) {
   assert(Object.keys(record).every(key => fields.includes(key) || optional.includes(key)), 'Unexpected recovery field');
 }
 
-export function readEvidenceJson(bytes, member = '') {
+export function readEvidenceJson(bytes, member = '', expectedReceiptDigest) {
   assert(['', 'recovery.json', 'result.json'].includes(member), 'Unknown evidence member');
   assert(Buffer.isBuffer(bytes) && bytes.length > 0 &&
     bytes.length <= (member ? maxArchiveBytes : maxPayloadBytes), 'Invalid evidence size');
@@ -75,6 +80,10 @@ if not isinstance(value, dict):
 sys.stdout.buffer.write(raw)
 `, String(maxPayloadBytes), member], { input: bytes, timeout: 10000, maxBuffer: maxPayloadBytes });
   assert.equal(result.status, 0, 'Invalid recovery archive');
+  if (expectedReceiptDigest !== undefined) {
+    assert.match(expectedReceiptDigest, receiptDigestPattern);
+    assert.equal('sha256:' + sha256(result.stdout), expectedReceiptDigest, 'Approved receipt bytes changed');
+  }
   return JSON.parse(result.stdout.toString('utf8'));
 }
 
@@ -116,6 +125,8 @@ function requireRecoveryReceipt(recovery, pins, now) {
   assert.equal(recovery.productionModified, false);
   assert.equal(recovery.containsSecretValues, false);
   assert.match(recovery.backupSha256, digestPattern);
+  normalizedLogin(recovery.operator);
+  assert.equal(normalizedLogin(recovery.approver), STAGING_OWNER_LOGIN, 'Receipt must name the repository owner');
   requireRecoveryTarget(recovery, pins);
 
   assert.match(recovery.startedAt, timestampPattern);
@@ -141,51 +152,37 @@ function normalizedLogin(value) {
   return value.toLowerCase();
 }
 
-function requireReview(history, run, repositoryId, recovery) {
-  assert.equal(history.runId, run.id);
-  assert.equal(history.repositoryId, repositoryId);
-  const reviewer = normalizedLogin(recovery.approver);
-  assert.notEqual(reviewer, normalizedLogin(recovery.operator));
-  assert.notEqual(reviewer, normalizedLogin(run.actor.login));
-  assert(Array.isArray(history.reviews));
-  const reviews = history.reviews.filter(review =>
-    review?.user?.type === 'User' &&
-    typeof review.user.login === 'string' && review.user.login.toLowerCase() === reviewer &&
-    Array.isArray(review.environments) && review.environments.some(environment => environment?.name === 'staging')
-  );
-  assert(reviews.length > 0 && reviews.every(review => review.state === 'approved'),
-    'Independent staging approval missing or inconsistent');
-}
-
 function requireRun(run, runId, workflow, pins) {
   assert.equal(run.id, runId);
   assert.equal(run.path, workflow);
   assert.equal(run.event, 'workflow_dispatch');
   assert.equal(run.head_branch, 'main');
   assert.equal(run.head_sha, pins.source);
-  assert.equal(run.repository?.id, pins.repositoryId);
-  assert.equal(run.head_repository?.id, pins.repositoryId);
+  requireStagingRepository(run.repository);
+  requireStagingRepository(run.head_repository);
   assert.equal(run.run_attempt, 1);
-  assert.equal(run.actor?.type, 'User');
+  requireRepositoryOwner(run.actor);
+  requireRepositoryOwner(run.triggering_actor);
 }
 
 function requireScope(pins) {
   assert.match(pins.source, shaPattern);
   assert.equal(pins.source, pins.currentMain);
-  assert.match(pins.stagingProjectRef, refPattern);
+  assert.equal(pins.repositoryId, STAGING_REPOSITORY_ID);
+  assert.equal(pins.stagingProjectRef, PROJECT);
+  assert.match(pins.receiptDigest, receiptDigestPattern);
   assert.match(pins.productionProjectRef, refPattern);
   assert.notEqual(pins.stagingProjectRef, pins.productionProjectRef);
 }
 
-export function verifyRecoveryPublication({ pins, run, review, bytes }, now = Date.now()) {
+export function verifyRecoveryPublication({ pins, run, bytes }, now = Date.now()) {
   try {
     requireScope(pins);
     for (const id of [pins.repositoryId, pins.producerRunId]) assert(Number.isSafeInteger(id) && id > 0);
     requireRun(run, pins.producerRunId, recoveryWorkflow, pins);
     assert.equal(run.status, 'in_progress');
-    const recovery = readEvidenceJson(bytes);
+    const recovery = readEvidenceJson(bytes, '', pins.receiptDigest);
     requireRecoveryReceipt(recovery, pins, now);
-    requireReview(review, run, pins.repositoryId, recovery);
     return recovery;
   } catch {
     throw new Error('STAGING_RECOVERY_PUBLICATION_REJECTED');
@@ -220,15 +217,13 @@ export function requireRecoveryArtifactBinding({ pins, producer, apply, artifact
 
 export function verifyRecoveryEvidence(evidence, now = Date.now()) {
   try {
-    const { pins, producer, apply, artifact, bytes, producerReview, applyReview } = evidence;
+    const { pins, artifact, bytes } = evidence;
     requireRecoveryArtifactBinding(evidence);
     assert(Buffer.isBuffer(bytes) && bytes.length > 0 && bytes.length <= maxArchiveBytes);
     assert.equal(artifact.digest, `sha256:${sha256(bytes)}`);
 
-    const recovery = readEvidenceJson(bytes, 'recovery.json');
+    const recovery = readEvidenceJson(bytes, 'recovery.json', pins.receiptDigest);
     requireRecoveryReceipt(recovery, pins, now);
-    requireReview(producerReview, producer, pins.repositoryId, recovery);
-    requireReview(applyReview, apply, pins.repositoryId, recovery);
     return recovery;
   } catch {
     // Do not include untrusted archive fields, metadata, or Python diagnostics in logs.

@@ -13,6 +13,15 @@ on:
         default: false
         required: true
         description: Request an apply after all staging gates pass
+      staging_project_ref:
+        type: string
+        required: true
+        default: eecvbssdvarfcykcfrny
+        description: Exact staging project being approved
+      recovery_receipt_sha256:
+        type: string
+        required: true
+        description: SHA-256 of the exact UTF-8 recovery receipt in sha256:<hex> form
       source_sha:
         required: true
         description: Exact current main release SHA
@@ -45,7 +54,7 @@ concurrency:
 
 jobs:
   apply-staging:
-    if: github.repository == 'kohnerbouchard-star/Student-Profile' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && inputs.verify_authorized == true
+    if: github.repository == 'kohnerbouchard-star/Student-Profile' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && github.actor_id == '287640607' && github.event.sender.id == 287640607 && inputs.verify_authorized == true
     environment: staging
     runs-on: ubuntu-24.04
     timeout-minutes: 25

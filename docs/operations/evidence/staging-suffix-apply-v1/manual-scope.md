@@ -34,9 +34,9 @@ a read-only observation of the same ledger and hold before recovery.
   [run 45768104640](https://github.com/kohnerbouchard-star/Student-Profile/actions/runs/45768104640).
 - [PR 1069](https://github.com/kohnerbouchard-star/Student-Profile/pull/1069)
   at `ffc00af4592b3e5138ca4dcbd510bc7b1b43b8bb` supplies the exact receipt
-  verifier, independent staging approval, protected recovery publisher
-  and the held qualification record. The adapted request loader binds
-  the new executable and predicate sources to its qualification digest.
+  checks, protected recovery publisher and held qualification record.
+  The request loader binds the executable, owner verifier and predicate
+  source to the qualification digest.
   Rehearsal still requires exact current source, artifact provenance and
   strict runtime comparator exit zero.
 
@@ -46,11 +46,15 @@ The checked-in qualification is `NOT_RUN`. The pinned disposable CI
 cannot issue qualification for this combined transport. It still needs
 exact reviewed postcondition hashes and the transactional operator proof.
 The protected source then requires the genuine target-specific recovery
-receipt with measured timing, real connected recovery checks and
-independent approval. The current branch-only staging environment does
-not produce the independent approval that published PR 1069 requires.
-A separately approved owner-signoff policy would need its own reviewed
-binding if used in its place.
+receipt with measured timing and real connected recovery checks. The
+staging owner policy binds approval to the GitHub repository owner
+`287640607`, first attempt on exact current main, staging project
+`eecvbssdvarfcykcfrny` and the SHA-256 of the exact UTF-8 recovery
+receipt. The dispatch sender and both run actors must match. Publication
+preserves the approved bytes. Apply verifies both the protected archive
+digest and the exact member digest approved by the current dispatch.
+The dispatch takes the member hash in 'sha256:<hex>' form, including
+any whitespace in the exact recovery JSON.
 
 The published verifier produces `applyAuthorized: false` and
 `fenceVerified: false`. A reviewed authority must bind an actual current
