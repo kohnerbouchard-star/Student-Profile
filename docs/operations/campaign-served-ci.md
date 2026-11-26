@@ -98,10 +98,12 @@ and served the Campaign artifact through its HTTP method and missing-token
 boundaries. Its first authorized v2 completion assertion failed after seeding.
 The log did not distinguish scheduler authorization from the worker result.
 
-The next candidate gives the CLI the job-owned internal bridge at first
-startup via its supported --network-id option. This removes the possibility
-of stale upstream socket/DNS state caused by moving running containers. The
-synthetic token must verify directly in SQL and through the local PostgREST
-gateway before invoking the worker. Bounded HTTP status, known error codes
-and effect counts localize any failure. Events follow the RPC's allowed
-arrival, opportunity, rivalry and shortage phases.
+Run 45762372692 passed both runtime controls and produced the same Campaign
+artifact digest. It stopped during CLI startup with the precreated internal
+bridge. This candidate uses the established PR889 local startup and replay.
+After moving the owned stack to the internal bridge, it checks isolation,
+restarts the two owned route containers to clear old upstream connections,
+and attests isolation again before starting the worker. The synthetic token
+must verify directly in SQL and through the local PostgREST gateway. Bounded
+HTTP status, known error codes and effect counts identify a failing boundary.
+Events follow the RPC's allowed arrival, opportunity, rivalry and shortage phases.

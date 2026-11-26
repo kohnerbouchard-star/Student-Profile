@@ -81,16 +81,28 @@ async function verifyThroughGateway() {
   const service = /^SUPABASE_SERVICE_ROLE_KEY=([^\s]+)$/.exec(privateEnv[1])?.[1];
   // The runtime file is written from local CLI status in the isolated job.
   if (!service || privateEnv.length !== 2) throw Error('LOCAL_SERVICE_KEY_UNAVAILABLE');
-  const response = await fetch(GATEWAY + '/rest/v1/rpc/verify_runtime_scheduler_token_v1', {
-    method: 'POST',
-    headers: {'content-type': 'application/json', apikey: service, authorization: 'Bearer ' + service},
-    body: JSON.stringify({p_scheduler_name: scheduler, p_token_sha256: tokenHash}),
-    redirect: 'error',
-    signal: AbortSignal.timeout(5000),
-  });
-  const result = await observeResponse(response);
-  assert.equal(result.status, 200);
-  assert.equal(result.body, true);
+  for (let attempt = 0; attempt < 8; attempt++) {
+    lastHttp = null;
+    const response = await fetch(GATEWAY + '/rest/v1/rpc/verify_runtime_scheduler_token_v1', {
+      method: 'POST',
+      headers: {'content-type': 'application/json', apikey: service, authorization: 'Bearer ' + service},
+      body: JSON.stringify({p_scheduler_name: scheduler, p_token_sha256: tokenHash}),
+      redirect: 'error',
+      signal: AbortSignal.timeout(3000),
+    }).catch(() => null);
+    if (response) {
+      lastHttp = {status: response.status};
+      if (response.status < 500 || attempt === 7) {
+        const result = await observeResponse(response);
+        assert.equal(result.status, 200);
+        assert.equal(result.body, true);
+        return;
+      }
+      await response.body?.cancel();
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  throw Error('LOCAL_GATEWAY_UNREADY');
 }
 const command=()=>json(`select row_to_json(r) from (select public_id,status,attempt_count,last_error_code,completed_at from public.campaign_effect_commands where game_session_id=${q(game)} order by created_at desc,public_id desc limit 1)r`);
 function event(name,definition,expectedPhase,nextPhase){

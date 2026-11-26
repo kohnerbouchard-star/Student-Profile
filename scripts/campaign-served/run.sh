@@ -33,7 +33,7 @@ cleanup() {
   if test -n "$CONTROL_ID"; then remove_owned_container "$CONTROL_ID" || result=1; fi
   if test -n "$RUNTIME_ID"; then remove_owned_container "$RUNTIME_ID" || result=1; fi
   if test "$STACK_STARTED" = 1; then
-    ./node_modules/.bin/supabase stop --workdir backend --network-id "$NETWORK_NAME" --no-backup >"$WORK/stop.private" 2>&1 || result=1
+    ./node_modules/.bin/supabase stop --workdir backend --no-backup >"$WORK/stop.private" 2>&1 || result=1
   fi
   if test -n "$NETWORK_ID" && docker network inspect "$NETWORK_ID" >/dev/null 2>&1; then
     if test "$(docker network inspect --format '{{index .Labels "campaign-ci-owner"}}' "$NETWORK_ID")" = "$OWNER"; then
@@ -201,40 +201,73 @@ NODE
 fi
 test -s "$WORK/bundle/campaign.eszip"
 sha256sum "$WORK/bundle/campaign.eszip" | awk '{print "{\"status\":\"PASS\",\"stage\":\"native-provider-package\",\"artifactSha256\":\"" $1 "\"}"}'
-# Give the CLI its owned internal bridge from the first container start.
-# Reconnecting an initialized gateway/database can leave stale upstream sockets.
+# Use the established PR889 CLI boot and replay. The worker starts only
+# after all CLI services have been moved to the job-owned internal bridge.
+STAGE=disposable-start
+STACK_STARTED=1
+if ! ./node_modules/.bin/supabase start --workdir backend \
+  --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta,mailpit \
+  >"$WORK/start.private" 2>&1; then
+  node - <<'NODE'
+const fs = require('node:fs');
+const log = fs.readFileSync(process.env.WORK + '/start.private', 'utf8');
+const kind = /unhealthy|health check/i.test(log) ? 'container-health' :
+  /port is already allocated|address already in use/i.test(log) ? 'port-in-use' :
+  /could not connect|connection refused/i.test(log) ? 'connection' :
+  /pull access denied|manifest unknown|failed to pull/i.test(log) ? 'image' : 'unclassified';
+console.log(JSON.stringify({status: 'FAILED', stage: 'disposable-start', kind}));
+NODE
+  exit 1
+fi
+STAGE=disposable-replay
+./node_modules/.bin/supabase db reset --workdir backend --local >"$WORK/reset.private" 2>&1
+./node_modules/.bin/supabase status --workdir backend -o env >"$WORK/local.env" 2>"$WORK/status.private"
 STAGE=network-isolation
 NETWORK_ID="$(docker network create --internal --label "campaign-ci-owner=$OWNER" "$NETWORK_NAME")"
 test "$(docker network inspect --format '{{.Internal}}' "$NETWORK_ID")" = true
 test "$(docker network inspect --format '{{index .Labels "campaign-ci-owner"}}' "$NETWORK_ID")" = "$OWNER"
 export NETWORK_ID
-STAGE=disposable-start
-STACK_STARTED=1
-./node_modules/.bin/supabase start --workdir backend --network-id "$NETWORK_NAME" \
-  --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta,mailpit \
-  >"$WORK/start.private" 2>&1
-STAGE=disposable-replay
-./node_modules/.bin/supabase db reset --workdir backend --network-id "$NETWORK_NAME" --local >"$WORK/reset.private" 2>&1
-./node_modules/.bin/supabase status --workdir backend --network-id "$NETWORK_NAME" -o env >"$WORK/local.env" 2>"$WORK/status.private"
-STAGE=disposable-network-attestation
 node - <<'NODE'
 const {execFileSync} = require('node:child_process');
 const fs = require('node:fs');
-const run = (...args) => execFileSync('docker', args, {encoding: 'utf8'}).trim();
+const run = (...args) => execFileSync('docker', args, {encoding: 'utf8', timeout: 30000}).trim();
 const ids = run('ps', '-aq', '--filter', 'label=com.supabase.cli.project=econovaria').split('\n').filter(Boolean);
-const stack = new Set();
+const stack = new Map();
 for (const id of ids) {
   const container = JSON.parse(run('inspect', id))[0];
-  const networks = Object.values(container.NetworkSettings.Networks);
+  const networks = Object.entries(container.NetworkSettings.Networks);
   if (container.Config.Labels['com.supabase.cli.project'] !== 'econovaria' ||
-      networks.length !== 1 || networks[0].NetworkID !== process.env.NETWORK_ID) {
-    throw Error('CLI_STACK_OUTSIDE_OWNED_NETWORK');
-  }
-  if (container.State.Running) stack.add(container.Name);
+      !container.State.Running || networks.length !== 1) throw Error('UNEXPECTED_CLI_STACK');
+  stack.set(container.Name, {container, network: networks[0]});
 }
 for (const component of ['db', 'kong', 'rest']) {
   if (!stack.has('/supabase_' + component + '_econovaria')) throw Error('MISSING_LOCAL_STACK');
 }
+for (const {container, network: [, attached]} of stack.values()) {
+  const args = ['network', 'connect'];
+  for (const alias of new Set([container.Name.slice(1), ...(attached.Aliases || [])])) {
+    args.push('--alias', alias);
+  }
+  run(...args, process.env.NETWORK_ID, container.Id);
+}
+for (const {container, network: [oldName]} of stack.values()) {
+  run('network', 'disconnect', oldName, container.Id);
+}
+function attest() {
+  for (const {container} of stack.values()) {
+    const current = JSON.parse(run('inspect', container.Id))[0];
+    const networks = Object.values(current.NetworkSettings.Networks);
+    if (current.Config.Labels['com.supabase.cli.project'] !== 'econovaria' ||
+        !current.State.Running || networks.length !== 1 ||
+        networks[0].NetworkID !== process.env.NETWORK_ID) throw Error('CLI_STACK_OUTSIDE_OWNED_NETWORK');
+  }
+}
+attest();
+// Clear upstream sockets and DNS state from the former bridge.
+for (const component of ['rest', 'kong']) {
+  run('restart', '--time', '5', stack.get('/supabase_' + component + '_econovaria').container.Id);
+}
+attest();
 const env=Object.fromEntries(fs.readFileSync(process.env.WORK+'/local.env','utf8').split('\n').filter(x=>x.includes('=')).map(x=>{const i=x.indexOf('=');return[x.slice(0,i),x.slice(i+1).replace(/^"|"$/g,'')]}));
 if(env.API_URL!=='http://127.0.0.1:54321'||!(env.SERVICE_ROLE_KEY||env.SECRET_KEY))throw Error('LOCAL_CREDENTIALS');
 fs.writeFileSync(process.env.WORK+'/runtime.env','SUPABASE_URL=http://supabase_kong_econovaria:8000\nSUPABASE_SERVICE_ROLE_KEY='+(env.SERVICE_ROLE_KEY||env.SECRET_KEY)+'\n');
