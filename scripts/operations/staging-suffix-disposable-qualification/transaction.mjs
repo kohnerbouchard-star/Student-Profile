@@ -24,9 +24,46 @@ function bodyAtBoundary(text, marker, addition) {
   return text.replace(marker, () => marker + addition);
 }
 
+const visibleSqlStates = new Set([
+  'P0001', '42501', '42P01', '42703', '42883', '42702', '23503', '23505',
+  '23514', '22023', '42601', '40001', '55P03', '57014',
+]);
+const visibleSqlGuards = new Set([
+  'CAMPAIGN_EVENT_REQUEST_INVALID', 'CAMPAIGN_PHASE_CONFLICT', 'CAMPAIGN_REVISION_CONFLICT',
+  'CAMPAIGN_FENCE_REQUIRED_ROUTINE_MISSING', 'CAMPAIGN_FENCE_OWNER_MISMATCH',
+  'CAMPAIGN_FENCE_GRANTOR_MISMATCH', 'CAMPAIGN_FENCE_TOKEN_IDENTITY_MISSING',
+  'CAMPAIGN_FENCE_LEGACY_GRANT_REMAINS', 'CAMPAIGN_FENCE_SMOKE_OR_DRAIN_REQUIRED',
+  'CAMPAIGN_FENCE_DRAIN_UNAVAILABLE', 'CAMPAIGN_FENCE_EPOCH_CHANGED',
+  'CAMPAIGN_FENCE_V2_ACKNOWLEDGEMENTS_MISSING', 'CAMPAIGN_FENCE_DRAIN_REQUIRED',
+]);
+
+function sqlHeader(error) {
+  // libpq verbose uses two spaces after the severity and one after SQLSTATE.
+  const match = /^(?:psql:(?:<stdin>|-):[0-9]+:[ \t]*)?(ERROR|FATAL):[ \t]+([0-9A-Z]{5}):[ \t]+([^\r\n]+)$/m
+    .exec(String(error?.stderr ?? ''));
+  return match && { severity: match[1], state: match[2], primary: match[3].trimEnd() };
+}
+
+export function sqlFailureFacts(error) {
+  const header = sqlHeader(error);
+  const state = header?.state ?? error?.sqlState;
+  const guard = header?.primary ?? error?.sqlGuard;
+  return {
+    ...(visibleSqlStates.has(state) ? { sqlState: state } : {}),
+    ...(visibleSqlGuards.has(guard) ? { sqlGuard: guard } : {}),
+  };
+}
+
 export function sqlError(operation, expected, sqlState = 'P0001') {
-  assert.throws(operation, error =>
-    error.status === 3 && String(error.stderr).includes('ERROR:  ' + sqlState + ':  ' + expected), expected);
+  try {
+    operation();
+  } catch (error) {
+    const header = sqlHeader(error);
+    if (error.status === 3 && header?.severity === 'ERROR' && header.state === sqlState &&
+        header.primary === expected) return;
+    throw Object.assign(Error('EXPECTED_SQL_REJECTION_MISMATCH'), sqlFailureFacts(error));
+  }
+  throw Error('EXPECTED_SQL_REJECTION_NOT_RAISED');
 }
 
 async function replayPrefix(root, sql) {
@@ -60,11 +97,12 @@ async function replayPrefix(root, sql) {
   assert.equal(pendingRows(JSON.parse(sql(ledgerRows))).length, 15);
 }
 
-function seedCampaign(sql) {
+function seedCampaign(sql, onStage) {
   // The same synthetic command enrollment as #1066's served acceptance.
   const q = sqlLiteral;
   const staff = randomUUID();
   const tokenHash = sha256(randomUUID());
+  onStage('campaign-seed-identity');
   sql('insert into private.runtime_scheduler_tokens(scheduler_name,token_sha256) values(' +
     [scheduler, tokenHash].map(q).join(',') + ');' +
     'insert into public.staff_users(id,supabase_auth_user_id,email,display_name) values(' +
@@ -90,10 +128,12 @@ function seedCampaign(sql) {
         q(JSON.stringify(effect)) + '::jsonb', q('2099-01-01'), q(staff), q('Synthetic disposable verification'),
         'clock_timestamp()'].join(',') + ');');
     const command = sql('select public_id from public.campaign_effect_commands where game_session_id=' + q(game) + ';');
-    assert.match(command, /^cec_[a-z0-9]+$/);
+    assert.match(command, /^cec_[a-z0-9]+$/, 'CAMPAIGN_FIXTURE_COMMAND_INVALID');
     return { game, command };
   };
+  onStage('campaign-enroll-outsider');
   const outside = seed('Campaign served CI', 'campaign-ci-', 'ci-ordinary');
+  onStage('campaign-enroll-smoke');
   const smoke = seed('Campaign fence synthetic smoke', 'campaign-fence-smoke-', 'ci-smoke');
   return { tokenHash, outside, smoke };
 }
@@ -121,12 +161,48 @@ function nonCampaignInterface(sql, operation) {
   ].join('\n'));
 }
 
+const drainCountKeys = [
+  'trackedTransactions', 'disabledActivity', 'unknownClients',
+  'unlabeledOwnVirtualXid', 'idleExtensionProcesses', 'preparedTransactions',
+];
+
+const drainActivityQuery = `select pg_stat_clear_snapshot();
+with boundary as materialized (select clock_timestamp() as observed),
+activity as materialized (
+  select a.state, a.xact_start, a.backend_type, boundary.observed,
+    exists (select 1 from pg_locks l where l.pid=a.pid and l.locktype='virtualxid'
+      and l.mode='ExclusiveLock' and l.granted and l.virtualxid=l.virtualtransaction) as own_virtual_xid
+  from pg_stat_activity a cross join boundary
+  where a.datname=current_database() and a.pid<>pg_backend_pid()
+)
+select json_build_object(
+  'trackedTransactions',count(*) filter(where xact_start<=observed),
+  'disabledActivity',count(*) filter(where state='disabled'),
+  'unknownClients',count(*) filter(where state is null and backend_type='client backend'),
+  'unlabeledOwnVirtualXid',count(*) filter(where state is null and own_virtual_xid),
+  'idleExtensionProcesses',count(*) filter(where state is null and backend_type<>'client backend'
+    and xact_start is null and not own_virtual_xid),
+  'preparedTransactions',(select count(*) from pg_prepared_xacts where database=current_database())
+) from activity;`
+
+export function campaignDrainFacts(error) {
+  if (error?.message !== 'DISPOSABLE_CAMPAIGN_DRAIN_TIMEOUT') return {};
+  const activity = error.drainActivity;
+  if (!activity || !drainCountKeys.every(key => Number.isSafeInteger(activity[key]) && activity[key] >= 0)) {
+    return { drainProbe: 'UNAVAILABLE' };
+  }
+  return { drainActivity: Object.fromEntries(drainCountKeys.map(key => [key, activity[key]])) };
+}
+
 async function drainCampaign(sql, epoch) {
   for (let attempt = 0; attempt < 24; attempt += 1) {
     if (campaignCall(sql, 'attest_drain', epoch) === 't') return;
     await new Promise(resolve => setTimeout(resolve, 500));
   }
-  throw Error('DISPOSABLE_CAMPAIGN_DRAIN_TIMEOUT');
+  const error = Error('DISPOSABLE_CAMPAIGN_DRAIN_TIMEOUT');
+  // This extra observation only diagnoses a timeout. It cannot authorize drain.
+  try { error.drainActivity = JSON.parse(sql(drainActivityQuery)); } catch {}
+  throw error;
 }
 
 function campaignCall(sql, operation, ...values) {
@@ -148,22 +224,27 @@ export async function qualifyTransaction({ root, sql, dump, install, onStage }) 
   const operation = { baselineSha256: sql(prefixDigest), writerEpoch: randomUUID(), admissionEpoch: randomUUID() };
   assert.match(operation.baselineSha256, /^[a-f0-9]{64}$/);
 
-  onStage('real-campaign-hold');
-  const campaign = seedCampaign(sql);
+  const campaign = seedCampaign(sql, onStage);
   const legacy = () => sql('select public.verify_runtime_scheduler_token_v1(' +
     [scheduler, campaign.tokenHash].map(sqlLiteral).join(',') + ');');
   const token = () => sql('select encode(sha256(convert_to(to_jsonb(t)::text,\'UTF8\')),\'hex\') ' +
     'from private.runtime_scheduler_tokens t where scheduler_name=' + sqlLiteral(scheduler) + ';');
   const outbox = id => sql('select row_to_json(r) from (select status,attempt_count,completed_at from ' +
     'public.campaign_effect_commands where public_id=' + sqlLiteral(id) + ') r;');
+  onStage('campaign-pre-hold-invariants');
   const outsideBefore = outbox(campaign.outside.command);
   const tokenBefore = token();
-  assert.equal(legacy(), 't');
+  assert.equal(legacy(), 't', 'CAMPAIGN_LEGACY_TOKEN_NOT_ACCEPTED_BEFORE_HOLD');
+  onStage('campaign-install-hold');
   sql(install);
+  onStage('campaign-post-hold-invariants');
   operation.campaignEpoch = sql('select epoch from staging_campaign.fence;');
-  assert.equal(legacy(), 'f');
+  assert.equal(legacy(), 'f', 'CAMPAIGN_LEGACY_TOKEN_ACCEPTED_DURING_HOLD');
+  onStage('campaign-reject-premature-resume');
   sqlError(() => campaignCall(sql, 'open_after_cutover', operation.campaignEpoch), 'CAMPAIGN_FENCE_SMOKE_OR_DRAIN_REQUIRED');
+  onStage('campaign-attest-drain');
   await drainCampaign(sql, operation.campaignEpoch);
+  onStage('non-campaign-fixture-interfaces');
   nonCampaignInterface(sql, operation);
 
   onStage('wrong-database');

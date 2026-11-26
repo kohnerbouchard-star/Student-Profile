@@ -5,13 +5,14 @@ import { createHash, randomBytes } from 'node:crypto';
 import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { qualifyTransaction } from './transaction.mjs';
+import { campaignDrainFacts, qualifyTransaction, sqlFailureFacts } from './transaction.mjs';
 import { STAGING_REPOSITORY, STAGING_REPOSITORY_ID } from '../staging-recovery-evidence/owner-approval.mjs';
 
 const source = 'f04d410fe6566e66920316ae0600f808fe4569f2';
+const campaignFailure = '6d542019071730ed2ec83b0fdfd1bda0fa3d0906';
 const failedCarrier = '24f87b530bcfcbd8587ec886fb4bd9df158e42aa';
 const fixture = 'c4b8f0c86d595e34d2b676f5e63288db52f05b91';
-const ref = 'refs/heads/chore/staging-suffix-cli-rehearsal-20261126-registry';
+const ref = 'refs/heads/chore/staging-suffix-campaign-rehearsal-20261126';
 const image = 'ghcr.io/supabase/postgres@sha256:80d7b27c3e8d77cfa7226eee9508671796da214781ff15a35b3670d7ad5ee453';
 const imageId = 'sha256:2d3ac69ad5c95d81458cc93a6cc6c31a98dfa00cd28f88a0a9358d315e1c357a';
 const socket = '/var/run/postgresql';
@@ -29,6 +30,7 @@ const allowedChanges = [
   '.github/workflows/staging-suffix-disposable-ci.yml',
   'docs/roadmaps/econovaria-beta-completion-roadmap-v1.md',
   'scripts/operations/staging-suffix-disposable-qualification/run-github.mjs',
+  'scripts/operations/staging-suffix-disposable-qualification/transaction.mjs',
   'vercel.json',
 ].sort();
 
@@ -67,10 +69,11 @@ function githubContext() {
   assert.equal(event.forced, false);
   assert.equal(event.before, '0'.repeat(40));
   assert.equal(process.env.GITHUB_SHA, head);
-  assert.equal(git('rev-parse', 'HEAD^'), failedCarrier);
-  assert.equal(git('rev-parse', 'HEAD^^'), fixture);
-  assert.equal(git('rev-parse', 'HEAD^^^'), source);
-  assert.deepEqual(git('diff', '--name-only', failedCarrier, head).split('\n').sort(), allowedChanges);
+  assert.equal(git('rev-parse', 'HEAD^'), campaignFailure);
+  assert.equal(git('rev-parse', 'HEAD^^'), failedCarrier);
+  assert.equal(git('rev-parse', 'HEAD^^^'), fixture);
+  assert.equal(git('rev-parse', 'HEAD^^^^'), source);
+  assert.deepEqual(git('diff', '--name-only', campaignFailure, head).split('\n').sort(), allowedChanges);
   assert.equal(git('status', '--porcelain', '--untracked-files=all'), '');
   assert.equal(JSON.parse(readFileSync(join(root, 'docs/operations/evidence/staging-suffix-apply-v1/qualification.json'))).status, 'NOT_RUN');
   return head;
@@ -96,6 +99,9 @@ const safeReasons = new Set([
   'CLI_CONTAINER_IDENTITY_MISMATCH', 'CLI_CONTAINER_NOT_RUNNING', 'CLI_UNEXPECTED_MOUNT',
   'CLI_NETWORK_NOT_DETACHED', 'MANAGED_PREREQUISITES_MISSING', 'SCHEDULER_NOT_FENCED',
   'MANAGED_SOCKET_UNAVAILABLE', 'CLI_CLEANUP_FAILED',
+  'CAMPAIGN_FIXTURE_COMMAND_INVALID', 'CAMPAIGN_LEGACY_TOKEN_NOT_ACCEPTED_BEFORE_HOLD',
+  'CAMPAIGN_LEGACY_TOKEN_ACCEPTED_DURING_HOLD', 'DISPOSABLE_CAMPAIGN_DRAIN_TIMEOUT',
+  'EXPECTED_SQL_REJECTION_MISMATCH', 'EXPECTED_SQL_REJECTION_NOT_RAISED',
 ]);
 
 function startupReason(error) {
@@ -256,11 +262,8 @@ try {
   await run();
 } catch (error) {
   // Use bounded stage and SQLSTATE labels, never a Docker command line or raw SQL.
-  const state = String(error.stderr ?? '').match(/(?:ERROR|FATAL):\s+([0-9A-Z]{5}):/)?.[1];
-  const sqlState = ['P0001','42501','42P01','42703','42883','42702','23514','22023','42601','55P03','57014'].includes(state)
-    ? state : undefined;
   const label = String(error.message).split('\n')[0];
-  console.error(JSON.stringify({ status: 'FAILED', stage, sqlState,
+  console.error(JSON.stringify({ status: 'FAILED', stage, ...sqlFailureFacts(error), ...campaignDrainFacts(error),
     reason: safeReasons.has(label) ? label : 'ASSERTION_OR_COMMAND', ...closed }));
   process.exitCode = 1;
 }
