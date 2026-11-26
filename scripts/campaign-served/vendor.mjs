@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {readFile,mkdir,writeFile,copyFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
-import {pathToFileURL} from 'node:url';
+import {pathToFileURL,fileURLToPath} from 'node:url';
+import path from 'node:path';
 let diagnostic={kind:'unclassified'};
 const mark=(kind,specifier)=>{diagnostic={kind,moduleSha256:createHash('sha256').update(specifier).digest('hex')};if(specifier.startsWith('https://esm.sh/')){const u=new URL(specifier);if(!u.username&&!u.password)diagnostic.publicModulePath=u.pathname;}};
 const sha=b=>createHash('sha256').update(b).digest('hex');
@@ -17,7 +18,7 @@ export function lockedContent(raw,url,expected) {
   return content;
 }
 export async function vendor(graph,lock,out,read=readFile) {
-  const imports={'https://esm.sh/tslib@2.8.1/denonext/tslib.mjs':'file:///src/backend/supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs'},scopes={},records=[];
+  const imports={'https://esm.sh/tslib@2.8.1/denonext/tslib.mjs':'../_shared/vendor/tslib-2.8.1/tslib.mjs'},scopes={},records=[];
   // Deno info also describes type-only dependencies. Traverse only executable
   // code edges from roots; every reachable remote still requires its locked hash.
   const modules=new Map(graph.modules.map(m=>[m.specifier,m])),seen=new Set();
@@ -33,9 +34,9 @@ export async function vendor(graph,lock,out,read=readFile) {
     assert(m.local && /^[a-f0-9]{64}$/.test(lock.remote[m.specifier]));
     const raw=await read(m.local);mark('source-integrity',m.specifier);const bytes=lockedContent(raw,m.specifier,lock.remote[m.specifier]);
     const file=sha(bytes)+(m.specifier.includes('.json')?'.json':m.specifier.includes('.d.ts')?'.d.ts':'.ts');
-    imports[m.specifier]='file:///src/backend/supabase/functions/campaign-orchestrator/ci_vendor/'+file;records.push({m,bytes,file,sha256:sha(bytes)});
+    imports[m.specifier]='./ci_vendor/'+file;records.push({m,bytes,file,sha256:sha(bytes)});
   }
-  const resolve=s=>{if(s.startsWith('file://'+process.cwd()+'/'))return 'file:///src/'+s.slice(('file://'+process.cwd()+'/').length);let n=s;for(let i=0;graph.redirects?.[n]&&i<10;i++)n=graph.redirects[n];return imports[n];};
+  const resolve=s=>{if(s.startsWith('file://'+process.cwd()+'/backend/')){const rel=path.relative(path.join(process.cwd(),'backend/supabase/functions/campaign-orchestrator'),fileURLToPath(s)).split(path.sep).join('/');return rel.startsWith('.')?rel:'./'+rel;}let n=s;for(let i=0;graph.redirects?.[n]&&i<10;i++)n=graph.redirects[n];return imports[n];};
   for(const [a,b] of Object.entries(graph.redirects||{})){assert(resolve(b));imports[a]=resolve(b);}
   for(const {m,file} of records) {
     const map={};
@@ -43,7 +44,7 @@ export async function vendor(graph,lock,out,read=readFile) {
       if(d.code?.specifier?.startsWith('node:'))continue;
       if(d.code) {mark('unmapped-dependency',d.code.specifier);assert(resolve(d.code.specifier),'Unmapped runtime dependency');map[d.specifier]=resolve(d.code.specifier);}
     }
-    scopes['file:///src/backend/supabase/functions/campaign-orchestrator/ci_vendor/'+file]=map;
+    scopes['./ci_vendor/'+file]=map;
   }
   await mkdir(out,{recursive:true});
   for(const r of records)await writeFile(out+'/'+r.file,r.bytes,{mode:0o600});

@@ -11,7 +11,7 @@ test('vendor validates frozen bytes and localizes remote runtime imports',async(
  const graph={roots:['https://example.test/a.mjs'],modules:[{specifier:'https://example.test/a.mjs',local:'synthetic',dependencies:[]}]};
  const result=await vendor(graph,{remote:{'https://example.test/a.mjs':hash}},out,async()=>bytes);
  assert.equal(result.moduleCount,1);assert.equal((await readFile(out+'/'+hash+'.ts')).toString(),bytes.toString());
- const map=JSON.parse(await readFile(out+'/import-map.json'));assert.equal(map.imports['https://example.test/a.mjs'],'file:///src/backend/supabase/functions/campaign-orchestrator/ci_vendor/'+hash+'.ts');
+ const map=JSON.parse(await readFile(out+'/import-map.json'));assert.equal(map.imports['https://example.test/a.mjs'],'./ci_vendor/'+hash+'.ts');
  }finally{await rm(out,{recursive:true,force:true});}
 });
 test('vendor rejects absent hashes, modified bytes and unresolved code dependency',async()=>{
@@ -27,7 +27,7 @@ test('source-only PR job and exact branch disable cannot deploy',async()=>{
  assert.equal(JSON.parse(await readFile('vercel.json')).git.deploymentEnabled['fix/campaign-served-worker-20261126'],false);
  const run=await readFile('scripts/campaign-served/run.sh','utf8');
  assert.match(run,/--internal/);assert.match(run,/--pull never/);assert.match(run,/--frozen/);assert.doesNotMatch(run,/deno bundle|esbuild|--use-api/);
- assert.match(run,/--platform linux\/amd64/);assert.match(run,/runtime-deno[.]json:/);assert.match(run,/--network none/);assert.match(run,/bundle --entrypoint/);assert.match(run,/--static/);assert.match(run,/LOCKED_SDK_BYTES_MISSING_FROM_ARTIFACT/);assert.match(run,/--main-service \/artifact\/campaign[.]eszip/);assert.match(run,/--user/);assert.doesNotMatch(run,/ --import-map /);assert.doesNotMatch(run,/-p [0-9]/);assert.match(run,/RUNTIME_CONTAINER_ID/);
+ assert.match(run,/--platform linux\/amd64/);assert.match(run,/runtime-deno[.]json:/);assert.match(run,/--network none/);assert.match(run,/bundle --entrypoint/);assert.match(run,/--static/);assert.match(run,/LOCKED_SDK_MISSING_FROM_VFS/);assert.match(run,/--main-service \/artifact\/campaign[.]eszip/);assert.match(run,/--user/);assert.doesNotMatch(run,/ --import-map /);assert.doesNotMatch(run,/-p [0-9]/);assert.match(run,/RUNTIME_CONTAINER_ID/);
 });
 
 test('Deno cache envelope decoding preserves exact locked content',()=>{
@@ -48,5 +48,14 @@ test('code closure ignores type-only graph nodes but never an unpinned runtime i
  assert.equal((await vendor(graph,{remote:{'https://example.test/a.mjs':hash}},out,async()=>bytes)).moduleCount,1);
  graph.modules[0].dependencies[0].code={specifier:'https://example.test/types.d.ts'};
  await assert.rejects(vendor(graph,{remote:{'https://example.test/a.mjs':hash}},out,async()=>bytes));
+ }finally{await rm(out,{recursive:true,force:true});}
+});
+
+test('provider localization targets remain relative to service config for eszip relocation',async()=>{
+ const out=await mkdtemp(tmpdir()+'/campaign-vendor-');try{
+ await vendor({roots:['https://example.test/a.mjs'],modules:[{specifier:'https://example.test/a.mjs',local:'a',dependencies:[]}]},{remote:{'https://example.test/a.mjs':hash}},out,async()=>bytes);
+ const m=JSON.parse(await readFile(out+'/import-map.json'));
+ assert(Object.values(m.imports).every(v=>!v.startsWith('file:')));
+ assert(Object.keys(m.scopes).every(k=>k.startsWith('./ci_vendor/')));
  }finally{await rm(out,{recursive:true,force:true});}
 });

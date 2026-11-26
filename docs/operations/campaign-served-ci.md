@@ -86,3 +86,10 @@ locked SDK source bytes and filename presence in the native artifact, then still
 requires that exact artifact to serve and pass all persisted v2 assertions. This
 byte-presence check is not represented as semantic archive extraction. The failed
 extractor remains a documented limitation; it is not a release/apply gate waiver.
+
+The raw byte-presence probe was not valid semantic eszip inspection and did not
+establish module omission. It is replaced by native extraction again, now with
+service-relative import-map targets/scopes instead of absolute build-time file
+URLs. A source contract forbids absolute file URL localization targets. The
+extractor must succeed and recover the locked SDK before functional execution;
+no unsupported extractor outcome is treated as qualification.
