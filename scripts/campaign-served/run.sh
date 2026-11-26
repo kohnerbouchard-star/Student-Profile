@@ -66,7 +66,10 @@ console.log(JSON.stringify({status:'FAILED',stage:'frozen-dependencies',kind}));
 NODE
   exit 1
 fi
-node scripts/campaign-served/vendor.mjs "$WORK/graph.json" backend/supabase/functions/deno.lock "$WORK/deps" >"$WORK/vendor.json"
+if ! node scripts/campaign-served/vendor.mjs "$WORK/graph.json" backend/supabase/functions/deno.lock "$WORK/deps" >"$WORK/vendor.json"; then
+  cat "$WORK/vendor.json"
+  exit 1
+fi
 STAGE=disposable-start
 ./node_modules/.bin/supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta,mailpit >"$WORK/start.private" 2>&1
 STAGE=disposable-replay
