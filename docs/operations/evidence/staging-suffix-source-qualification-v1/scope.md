@@ -219,3 +219,12 @@ all five required roles. Missing prerequisites fail before canonical SQL; no
 synthetic Auth/Storage replacements are created. Storage object-table presence
 and installed extension versions are separately observed, not Storage-byte or
 managed runtime qualification. Only public metadata booleans/versions are output.
+
+Corrected-image run45755536770 proved exact digest/config/platform/selector,
+network isolation, available extensions, actual required managed Auth/schema/roles
+and canonical449-prefix execution; storage.objects was absent and observed, not
+silently certified. It next failed at all15-rollback. New test-only psql migration
+markers, ordinal predicate labels and whitelisted SQLSTATE/guard/comparison fields
+distinguish which actual body/predicate failed versus snapshot inequality. No raw
+SQL/data/log is emitted. Immutable ledger source and historical SQL are unchanged;
+these psql markers are outside stored migration source and transaction semantics.

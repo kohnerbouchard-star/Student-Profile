@@ -53,7 +53,7 @@ export function renderAtomicBatch(rows, postconditions, mode = 'rollback') {
     assert.equal(stripOuterTransaction(row.source).body, row.body);
     const tag = `$suffix_${row.version}$`;
     assert(!row.source.includes(tag));
-    return `${row.body}\n${checks[index]}\ninsert into supabase_migrations.schema_migrations(version,name,statements) values (${literal(row.version)},${literal(row.name)},array[${tag}${row.source}${tag}]);\n`;
+    return `\\echo QUALIFICATION_MIGRATION_${row.version}\n${row.body}\n${checks[index]}\ninsert into supabase_migrations.schema_migrations(version,name,statements) values (${literal(row.version)},${literal(row.name)},array[${tag}${row.source}${tag}]);\n`;
   });
   return `\\set ON_ERROR_STOP on
 begin isolation level serializable;

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {context,container,IMAGE,IMAGE_ID,runQualification,commandAllowed,imageFacts,verifyBootstrap} from './run.mjs';
+import {context,container,IMAGE,IMAGE_ID,runQualification,commandAllowed,imageFacts,verifyBootstrap,failureFacts,lastMigrationVersion} from './run.mjs';
 import {loadBatch,renderAtomicBatch} from './compiler.mjs';
 import {predicates} from './postconditions.mjs';
 const wf=readFileSync(new URL('../../../.github/workflows/staging-suffix-source-qualification.yml',import.meta.url),'utf8');
@@ -102,4 +102,13 @@ test('bootstrap proof requires managed Auth/schema/role and available extension 
  const facts=Object.fromEntries(required.map(k=>[k,true]));facts.storageObjects=false;facts.installedExtensions={};verifyBootstrap(facts);
  for(const key of required)assert.throws(()=>verifyBootstrap({...facts,[key]:false}));
  assert(wf.includes("if: github.event_name == 'pull_request' &&"));
+});
+
+test('rollback diagnostics whitelist migration, SQLSTATE, predicate ordinal and comparison class, never raw data',()=>{
+ const version='20261004202506';
+ assert.equal(lastMigrationVersion('PRIVATE\nQUALIFICATION_MIGRATION_'+version+'\n'),version);
+ assert.equal(lastMigrationVersion('QUALIFICATION_MIGRATION_99999999999999'),undefined);
+ assert.deepEqual(failureFacts({status:3,stdout:'QUALIFICATION_MIGRATION_'+version,stderr:'ERROR:  P0001: SYNTHETIC_POSTCONDITION_'+version+'_2 PRIVATE_DATA'}),{reason:'INPUT_OR_COMMAND',commandExit:3,sqlState:'P0001',postcondition:{version,ordinal:2},lastMigrationVersion:version});
+ assert.equal(failureFacts({code:'ERR_ASSERTION',actual:'a'.repeat(64),expected:'b'.repeat(64)}).reason,'ROLLBACK_SNAPSHOT_MISMATCH');
+ assert(!JSON.stringify(failureFacts({stderr:'PRIVATE_DATA'})).includes('PRIVATE_DATA'));
 });

@@ -10,6 +10,7 @@ export function predicates(rows){
   if(index===8)sql+=requireSQL("(select count(*)=2 and bool_and(position('request.jwt.claims' in prosrc)>0 and prosecdef and has_function_privilege('service_role',oid,'EXECUTE') and not has_function_privilege('anon',oid,'EXECUTE') and not has_function_privilege('authenticated',oid,'EXECUTE')) from pg_proc where oid in ('public.sync_game_item_catalog_v2(uuid,jsonb)'::regprocedure,'public.validate_economic_asset_core_v2(uuid)'::regprocedure))");
   if(index===6)sql+=requireSQL('not exists(select from recovery_private.target)');
   if(index===12)sql+=requireSQL("(select format_type(atttypid,atttypmod)='numeric(16,4)' from pg_attribute where attrelid='public.business_inventory'::regclass and attname='unit_cost')")+requireSQL("(select count(*)=2 from pg_trigger where tgrelid='public.business_inventory'::regclass and tgname in ('assign_business_inventory_context_v2','project_business_inventory_v2') and tgenabled='O')")+`do $$ begin begin perform * from public.claim_due_business_manufacturing_jobs_v2(null,10,90); raise exception 'CLAIM_GUARD_MISSING'; exception when raise_exception then if sqlerrm <> 'BUSINESS_MANUFACTURING_COMPLETION_CLAIM_INVALID' then raise; end if; end; end $$;`;
+  let ordinal=0;sql=sql.replaceAll('SYNTHETIC_POSTCONDITION_FAILED',()=>`SYNTHETIC_POSTCONDITION_${row.version}_${++ordinal}`);
   assert(sql.length>0,`${row.filename}: missing predicate`);
   return[row.version,{reviewed:true,sql,sha256:sha256(sql)}];
  }));

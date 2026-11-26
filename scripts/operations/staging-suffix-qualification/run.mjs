@@ -5,7 +5,7 @@ import {readFileSync,readdirSync,mkdtempSync,mkdirSync,writeFileSync,rmSync} fro
 import path from 'node:path';
 import {randomBytes} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
-import {loadBatch,pendingRows,renderAtomicBatch,sha256} from './compiler.mjs';
+import {loadBatch,pendingRows,renderAtomicBatch,sha256,batch} from './compiler.mjs';
 import {stripOuterTransaction} from '../live-migration-reconciliation/build-phase15-forward-bundle.mjs';
 import {predicates,BASELINE_PROBE} from './postconditions.mjs';
 import {projectionFixture,projectionAssertions} from './manufacturing-fixture.mjs';
@@ -53,6 +53,22 @@ export const BOOTSTRAP_QUERY=`select json_build_object(
  'storageSchema',to_regnamespace('storage') is not null,'storageObjects',to_regclass('storage.objects') is not null,
  'roles',(select count(*)=5 from pg_roles where rolname in ('postgres','supabase_admin','service_role','anon','authenticated')),
  'installedExtensions',(select coalesce(json_object_agg(extname,extversion),'{}'::json) from pg_extension where extname in ('pg_cron','pg_net','pgcrypto','supabase_vault')));`;
+export function lastMigrationVersion(output){
+ const versions=[...String(output??'').matchAll(/^QUALIFICATION_MIGRATION_(\d{14})$/gm)].map(m=>m[1]).filter(v=>batch.some(r=>r.version===v));return versions.at(-1);
+}
+export function failureFacts(error){
+ const facts={reason:error?.blockedVariable?'EXTERNAL_AUTHORITY_FORBIDDEN':'INPUT_OR_COMMAND'};
+ if(error?.blockedVariable)facts.blockedVariable=error.blockedVariable;
+ if(error?.code==='ERR_ASSERTION')facts.reason=/^[a-f0-9]{64}$/.test(String(error.actual))&&/^[a-f0-9]{64}$/.test(String(error.expected))?'ROLLBACK_SNAPSHOT_MISMATCH':'ASSERTION_FAILED';
+ if(Number.isInteger(error?.status)&&error.status>=0&&error.status<=255)facts.commandExit=error.status;
+ const stderr=String(error?.stderr??'');const state=stderr.match(/(?:ERROR|FATAL):\s+([0-9A-Z]{5}):/);
+ if(state&&['P0001','42501','42P01','42703','42883','42702','23514','22023','42601','55P03','57014'].includes(state[1]))facts.sqlState=state[1];
+ const post=stderr.match(/SYNTHETIC_POSTCONDITION_(\d{14})_(\d{1,2})/);
+ if(post&&batch.some(r=>r.version===post[1]))facts.postcondition={version:post[1],ordinal:Number(post[2])};
+ for(const token of ['REF025_UNEXPECTED_PURGE_GRAPH','REF025_UNEXPECTED_PURGE_DEFINITION','SUFFIX_BASELINE_DRIFT','SUFFIX_LEDGER_CHANGED','SUFFIX_POST_LEDGER_MISMATCH','PLAYER_SESSIONS_PRESENT'])if(stderr.includes(token)){facts.guard=token;break;}
+ const version=lastMigrationVersion(error?.stdout);if(version)facts.lastMigrationVersion=version;
+ return facts;
+}
 export async function runQualification({env=process.env,root=process.cwd(),execute}={}){
  let work,imageEvidence,bootstrapEvidence,started=false,stage='context',result={status:'FAILED',syntheticOnly:true,releaseQualified:false,applyAuthorized:false};
  const implementation=execute??((cmd,args,input,timeout=30000,childEnv)=>execFileSync(cmd,args,{env:childEnv,input,encoding:'utf8',timeout,maxBuffer:64*1024*1024,stdio:[input===undefined?'ignore':'pipe','pipe','pipe']}).trim());
@@ -82,7 +98,7 @@ export async function runQualification({env=process.env,root=process.cwd(),execu
   const sql=(text,role='postgres',database='postgres')=>{
    assert(['postgres','qualification_manufacturing_fixture'].includes(database));
    assert.equal(container(inspect(id),project,pinned.Id,created),id);
-   return run('docker',['exec','-i',id,'env','-i','PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','PGSERVICEFILE=/dev/null','psql','-h','/var/run/postgresql','-p','5432','-U',role,'-d',database,'-XqAt','-v','ON_ERROR_STOP=1'],`set statement_timeout='120s';set lock_timeout='5s';\n${text}`,180000);
+   return run('docker',['exec','-i',id,'env','-i','PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','PGSERVICEFILE=/dev/null','psql','-h','/var/run/postgresql','-p','5432','-U',role,'-d',database,'-XqAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose'],`set statement_timeout='120s';set lock_timeout='5s';\n${text}`,180000);
   };
   stage='bootstrap-prerequisites';bootstrapEvidence=JSON.parse(sql(BOOTSTRAP_QUERY));verifyBootstrap(bootstrapEvidence);
   stage='disable-schedulers';sql("alter system set cron.launch_active_jobs=off;select pg_reload_conf();",'supabase_admin');
@@ -121,7 +137,7 @@ export async function runQualification({env=process.env,root=process.cwd(),execu
   sql(projectionFixture+definition+projectionAssertions,'postgres','qualification_manufacturing_fixture');
   assert.equal(local('git',['rev-parse','HEAD']),source);
   result={status:'PASS',sourceCommit:source,syntheticOnly:true,canonicalPrefixCount:count,bootstrapChecked:true,bootstrapEvidence,appliedCount:15,purgeChecked:true,manufacturingCatalogAndClaimGuardChecked:true,manufacturingProjectionPrecisionChecked:true,all15Rollback:true,all15FaultAtomicity:true,injectedFaultPositions:15,committedRetryRejected:true,fullManufacturingLifecycle:false,releaseQualified:false,applyAuthorized:false};
- }catch(error){result={status:'FAILED',stage,reason:error?.blockedVariable?'EXTERNAL_AUTHORITY_FORBIDDEN':'INPUT_OR_COMMAND',...(error?.blockedVariable?{blockedVariable:error.blockedVariable}:{}),...(imageEvidence?{imageEvidence}:{}),...(bootstrapEvidence?{bootstrapEvidence}:{}),syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}
+ }catch(error){result={status:'FAILED',stage,...failureFacts(error),...(imageEvidence?{imageEvidence}:{}),...(bootstrapEvidence?{bootstrapEvidence}:{}),syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}
  finally{if(started){try{raw('supabase',['stop','--workdir',work,'--no-backup'],undefined,60000,{PATH:env.PATH,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io',HOME:path.join(work,'home'),DOCKER_CONFIG:path.join(work,'docker'),DOCKER_HOST:'unix:///var/run/docker.sock'});}catch{result={status:'FAILED',stage:'cleanup',syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}}if(work)rmSync(work,{recursive:true,force:true});}
  return result;
 }
