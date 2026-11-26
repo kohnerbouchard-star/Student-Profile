@@ -5,6 +5,8 @@ import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
 import {randomBytes} from 'node:crypto';import path from 'node:path';import {pathToFileURL} from 'node:url';
 import { disposableRuntimeCatalogFixture, readDisposableRuntimeCatalogOutput } from './disposable-runtime-catalog-fixture.mjs';
 // Immutable amd64 config identity for the Supabase CLI 2.109.1 Postgres image.
+export const SYNTHETIC_IMAGE='ghcr.io/supabase/postgres@sha256:80d7b27c3e8d77cfa7226eee9508671796da214781ff15a35b3670d7ad5ee453';
+export const SYNTHETIC_IMAGE_TAG='ghcr.io/supabase/postgres:17.6.1.143';
 export const SYNTHETIC_IMAGE_ID='sha256:2d3ac69ad5c95d81458cc93a6cc6c31a98dfa00cd28f88a0a9358d315e1c357a';
 export const EXCLUDED='studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta';
 export const SYNTHETIC_SCHEMA="create schema synthetic_probe;create schema synthetic_ledger;create table synthetic_probe.item(id integer primary key);create table synthetic_ledger.migrations(version text primary key);insert into synthetic_ledger.migrations values('synthetic-v1');";
@@ -21,7 +23,7 @@ export function assertSyntheticContainer(container,project,notBefore,isolated=fa
  assert.match(project,/^ref032_synthetic_[a-f0-9]{16}$/);
  assert.equal(container.Name,`/supabase_db_${project}`);assert.equal(container.Config.Labels['com.supabase.cli.project'],project);
  assert(container.State.Running);assert.match(container.Id,/^[a-f0-9]{64}$/);assert.equal(container.Image,SYNTHETIC_IMAGE_ID);
- assert.match(container.Config.Image,/^(public\.ecr\.aws|ghcr\.io)\/supabase\/postgres:17\.6\.1\.143$/);
+ assert.equal(container.Config.Image,SYNTHETIC_IMAGE_TAG);
  assert(Date.parse(container.Created)>=notBefore&&Date.parse(container.Created)<=Date.now());
  assert(!['host','none'].includes(container.HostConfig.NetworkMode)&&!container.HostConfig.NetworkMode.startsWith('container:'));
  if(isolated)assert.deepEqual(Object.keys(container.NetworkSettings.Networks),[],'Synthetic egress must be disconnected');
@@ -62,9 +64,9 @@ export function validateSocketProbe(text){
  return {requestedSocketPresent:rows[0][0]===1,requestedReadiness:rows[0][1],alternateSocketPresent:rows[1][0]===1,alternateReadiness:rows[1][1]};
 }
 export const CLIENT_ENV=['env','-u','PGSERVICE','-u','PGHOSTADDR'];
-const defaultRun=(command,args,input,timeout=30000)=>execFileSync(command,args,{input,timeout,maxBuffer:1024*1024,encoding:'utf8',stdio:[input===undefined?'ignore':'pipe','pipe','pipe']}).trim();
+const defaultRun=(command,args,input,timeout=30000,env=process.env)=>execFileSync(command,args,{input,timeout,env,maxBuffer:1024*1024,encoding:'utf8',stdio:[input===undefined?'ignore':'pipe','pipe','pipe']}).trim();
 export function runSyntheticDockerSmoke({env=process.env,event=JSON.parse(readFileSync(env.GITHUB_EVENT_PATH,'utf8')),run=defaultRun,root=process.cwd()}={}){
- let stage='synthetic-input-preflight',work,cli,attempted=false,result,connectionContext,socketProbe;
+ let stage='synthetic-input-preflight',work,cli,attempted=false,result,connectionContext,socketProbe,imageContext;
  try{
   const sha=run('git',['rev-parse','HEAD']);assertSyntheticContext(env,event,sha);
   assert.equal(JSON.parse(run('docker',['context','inspect']))[0].Endpoints.docker.Host,'unix:///var/run/docker.sock');
@@ -73,11 +75,21 @@ export function runSyntheticDockerSmoke({env=process.env,event=JSON.parse(readFi
   work=mkdtempSync(path.join(env.RUNNER_TEMP,'ref032-synthetic-'));mkdirSync(path.join(work,'supabase/migrations'),{recursive:true});
   const config=readFileSync(path.join(root,'backend/supabase/config.toml'),'utf8').replace(/^project_id = .*$/m,`project_id = "${project}"`).replace(/^port = 54321$/m,'port = 57582').replace(/^port = 54322$/m,'port = 57580').replace(/^shadow_port = 54320$/m,'shadow_port = 57581');
   assert(config.includes('[db.seed]\nenabled = false\nsql_paths = []'));writeFileSync(path.join(work,'supabase/config.toml'),config,{mode:0o600});
+  stage='synthetic-image-acquisition';
+  run('docker',['pull','--platform','linux/amd64',SYNTHETIC_IMAGE],undefined,180000);
+  const pinned=JSON.parse(run('docker',['image','inspect',SYNTHETIC_IMAGE]))[0];
+  assert.equal(pinned.Id,SYNTHETIC_IMAGE_ID);
+  assert.equal(pinned.Architecture,'amd64');assert.equal(pinned.Os,'linux');
+  // Pin the CLI selector to the verified cached image in this ephemeral runner.
+  run('docker',['tag',SYNTHETIC_IMAGE,SYNTHETIC_IMAGE_TAG]);
   stage='synthetic-startup';const started=Date.now();attempted=true;
-  run(cli,['start','--workdir',work,'--exclude',EXCLUDED],undefined,180000);
-  stage='synthetic-isolation';
+  run(cli,['start','--workdir',work,'--exclude',EXCLUDED],undefined,180000,
+    {...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io'});
+  stage='synthetic-image-attestation';
   const name=`supabase_db_${project}`;
-  let metadata=JSON.parse(run('docker',['inspect',name]))[0];const id=assertSyntheticContainer(metadata,project,started);
+  let metadata=JSON.parse(run('docker',['inspect',name]))[0];
+  imageContext={selectorMatched:metadata.Config?.Image===SYNTHETIC_IMAGE_TAG,pinMatched:metadata.Image===SYNTHETIC_IMAGE_ID};
+  const id=assertSyntheticContainer(metadata,project,started);
   stage='synthetic-isolation';
   // Inventory failure throws before a loop can silently skip isolation.
   for(const network of Object.keys(metadata.NetworkSettings.Networks))run('docker',['network','disconnect',network,id]);
@@ -113,10 +125,10 @@ export function runSyntheticDockerSmoke({env=process.env,event=JSON.parse(readFi
     sql("set ref032.runtime_catalog_fixture = 'rollback-only-repository-v1';\n" + fixture), jobs,
   );
   assert.deepEqual(receipt, {schedulerRowsAdded: 6, bootstrapHistoryAdded: true});
-  assert.equal(sql("select not exists (select from cron.job) and to_regnamespace('supabase_migrations') is null"), 't');
+  assert.equal(sql("select not exists (select from cron.job) and not exists (select from cron.job_run_details) and to_regnamespace('supabase_migrations') is null"), 't');
   assert.equal(run('git',['rev-parse','HEAD']),sha);
-  result={status:'PASS',stage,imageId:SYNTHETIC_IMAGE_ID,pgCronVersion,runtimeCatalogFixtureRolledBack:true,sourceCommit:sha,syntheticOnly:true,guardRejected:true,fullStagingQualification:false};
- }catch(error){result={status:'FAILED',stage,...classifySyntheticFailure(error),...(connectionContext?{connectionContext}:{}),...(socketProbe?{socketProbe}:{}),syntheticOnly:true,fullStagingQualification:false};}
+  result={status:'PASS',stage,image:SYNTHETIC_IMAGE,imageId:SYNTHETIC_IMAGE_ID,pgCronVersion,runtimeCatalogFixtureRolledBack:true,sourceCommit:sha,syntheticOnly:true,guardRejected:true,fullStagingQualification:false};
+ }catch(error){result={status:'FAILED',stage,...classifySyntheticFailure(error),...(connectionContext?{connectionContext}:{}),...(socketProbe?{socketProbe}:{}),...(imageContext?{imageContext}:{}),syntheticOnly:true,fullStagingQualification:false};}
  finally{
   if(attempted){try{run(cli,['stop','--workdir',work,'--no-backup'],undefined,60000);}catch{if(result?.status==='PASS')result={status:'FAILED',stage:'synthetic-cleanup',syntheticOnly:true,fullStagingQualification:false};}}
   if(work){try{rmSync(work,{recursive:true,force:true});}catch{if(result?.status==='PASS')result={status:'FAILED',stage:'synthetic-cleanup',syntheticOnly:true,fullStagingQualification:false};}}
