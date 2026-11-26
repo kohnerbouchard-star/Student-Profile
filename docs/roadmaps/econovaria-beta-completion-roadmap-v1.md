@@ -983,3 +983,9 @@ before initial push. Contract proves all otherb62 config identical and productio
 true retained. Source draft publication and actual-number authority/carrier/both
 Roster pins are authorized; no merge, dispatch, deployment, hosted data or gate
 change. Public PR/head and qualification status are recorded in delivery evidence.
+
+REF-032 source qualification draft published as PR1064 after exact branch-only
+Vercel deployment exclusion. Actual per-PR authority and authority-inclusive
+coupled carrier are required at its final head; IDs, tests and natural CI evidence
+are in delivery. Adds only PR1064 source-trigger coverage to Database Replay;
+protected hosted job stays false. No merge/dispatch/deploy/hosted apply permitted.

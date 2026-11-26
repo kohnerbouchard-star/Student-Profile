@@ -159,3 +159,19 @@ with production environment. Custom Domain Activation push is main-only. Existin
 Supabase hosted jobs remain manual/main-only or explicitly false; none is enabled.
 Publish draft only, then actual-number authority and complete paired carrier pins;
 observe natural CI and verify GitHub deployment records remain absent.
+
+## Public draft1064 and exact-head authority
+
+Published draft https://github.com/kohnerbouchard-star/Student-Profile/pull/1064
+through GitHub Git-data connector after authenticated CLI transport was unavailable.
+The first published branch already contained the exact Vercel deny. Actual trusted
+PR1064 authority now locks this scope and preserves the donor check requirements.
+Both workflow event filters include exact authority/pins/config/evidence paths so
+final metadata-bearing heads receive fresh source-only checks. Database Replay
+adds only PR1064's source-authority trigger; its protected hosted job remains
+literal false. Supabase hosted jobs and Vercel production verification still
+require manual/main/production events that this source push/PR does not satisfy.
+New authority supersedes the earlier unallocated/unissued publication status;
+kept template is not itself trusted authority. Final complete authority-inclusive
+carrier and BOTH pins are coupled together, with exact IDs in delivery evidence.
+No main update, dispatch, deployment, real data, job pause or gate change occurred.
