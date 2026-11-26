@@ -27,7 +27,7 @@ test('source-only PR job and exact branch disable cannot deploy',async()=>{
  assert.equal(JSON.parse(await readFile('vercel.json')).git.deploymentEnabled['fix/campaign-served-worker-20261126'],false);
  const run=await readFile('scripts/campaign-served/run.sh','utf8');
  assert.match(run,/--internal/);assert.match(run,/--pull never/);assert.match(run,/--frozen/);assert.doesNotMatch(run,/deno bundle|esbuild|--use-api/);
- assert.match(run,/--platform linux\/amd64/);assert.match(run,/127\.0\.0\.1:9091:9000/);
+ assert.match(run,/--platform linux\/amd64/);assert.doesNotMatch(run,/-p [0-9]/);assert.match(run,/RUNTIME_CONTAINER_ID/);
 });
 
 test('Deno cache envelope decoding preserves exact locked content',()=>{

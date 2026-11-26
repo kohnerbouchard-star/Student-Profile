@@ -2,11 +2,21 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {randomUUID,createHash} from 'node:crypto';
 const DB='postgresql://postgres:postgres@127.0.0.1:54322/postgres';
-const ENDPOINT='http://127.0.0.1:9091/';
+const runtimeId=process.env.RUNTIME_CONTAINER_ID||'',databaseId=process.env.DATABASE_CONTAINER_ID||'';
+assert(/^[a-f0-9]{64}$/.test(runtimeId)&&/^[a-f0-9]{64}$/.test(databaseId));
+const inspect=id=>JSON.parse(execFileSync('docker',['inspect',id],{encoding:'utf8'}))[0];
+const runtime=inspect(runtimeId),database=inspect(databaseId);
+assert.equal(runtime.Config.Labels['campaign-ci-owner'],process.env.GITHUB_RUN_ID+'-'+process.env.GITHUB_RUN_ATTEMPT);
+assert.equal(database.Config.Labels['com.supabase.cli.project'],'econovaria');assert.equal(database.Name,'/supabase_db_econovaria');
+const nets=Object.values(runtime.NetworkSettings.Networks);assert.equal(nets.length,1);
+assert.equal(JSON.parse(execFileSync('docker',['network','inspect',nets[0].NetworkID],{encoding:'utf8'}))[0].Internal,true);
+assert(Object.values(database.NetworkSettings.Networks).some(n=>n.NetworkID===nets[0].NetworkID));
+assert(/^172\.(1[6-9]|2[0-9]|3[01])\.[0-9]+\.[0-9]+$/.test(nets[0].IPAddress));
+const ENDPOINT='http://'+nets[0].IPAddress+':9000/';
 assert.equal(process.env.CAMPAIGN_DISPOSABLE,'1');
 assert.equal(process.env.DATABASE_URL,DB);
 const q=s=>"'"+String(s).replaceAll("'","''")+"'";
-const sql=s=>execFileSync('psql',[DB,'-X','-qAt','-v','ON_ERROR_STOP=1','-c',s],{env:{PATH:process.env.PATH,PGOPTIONS:'-c statement_timeout=15000 -c lock_timeout=5000'},encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
+const sql=s=>execFileSync('docker',['exec',databaseId,'env','-u','PGSERVICE','-u','PGHOSTADDR','PGOPTIONS=-c statement_timeout=15000 -c lock_timeout=5000','psql','-U','postgres','-d','postgres','-X','-qAt','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose','-c',s],{env:{PATH:process.env.PATH},encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
 const json=s=>JSON.parse(sql(s));
 const uid=()=>randomUUID(),staff=uid(),game=uid(),campaign=uid(),publicId='cmp_'+campaign.replaceAll('-','');
 const pack='campaign-ci-'+uid(),scheduler='econovaria-campaign-runtime-scheduler-v1';
@@ -49,7 +59,9 @@ try {
  sql(`update public.campaign_effect_commands set claimed_at=clock_timestamp()-interval '6 minutes' where game_session_id=${q(game)} and status='processing';`);
  r=await invoke();assert.equal(r.body.effects.completedCount,1);assert.equal(command().attempt_count,3);
  assert.equal(sql(`select count(*) from public.notifications where game_session_id=${q(game)}`),before);checks.staleRetryIdempotency=true;
-} catch {failed=true;}
+ } catch(error) {failed=true;const text=String(error.stderr||'');
+ checks.failureClass=/ERROR:\s+([0-9A-Z]{5}):/.exec(text)?.[1]||(text.includes('could not connect')?'local-connection':'assertion-or-runtime');
+}
 finally {
  try {if(seeded){sql(`begin; drop trigger if exists campaign_ci_generation_probe on public.notifications; drop function if exists public.campaign_ci_generation_probe();
  delete from public.currency_exchange_rates where game_session_id=${q(game)};

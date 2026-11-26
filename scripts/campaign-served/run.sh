@@ -95,12 +95,27 @@ if(env.API_URL!=='http://127.0.0.1:54321'||!(env.SERVICE_ROLE_KEY||env.SECRET_KE
 fs.writeFileSync(process.env.WORK+'/runtime.env','SUPABASE_URL=http://supabase_kong_econovaria:8000\nSUPABASE_SERVICE_ROLE_KEY='+(env.SERVICE_ROLE_KEY||env.SECRET_KEY)+'\n');
 NODE
 STAGE=served-runtime
-RUNTIME_ID="$(docker create --pull never --platform linux/amd64 --network "$NETWORK_ID" --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m --label "campaign-ci-owner=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -p 127.0.0.1:9091:9000 -e DENO_DIR=/tmp/deno --env-file "$WORK/runtime.env" -v "$PWD:/src:ro" -v "$WORK/deps:/deps:ro" "$IMAGE_ID" start --main-service /src/backend/supabase/functions/campaign-orchestrator --import-map /deps/import-map.json --port 9000)"
+RUNTIME_ID="$(docker create --pull never --platform linux/amd64 --network "$NETWORK_ID" --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m --label "campaign-ci-owner=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -e DENO_DIR=/tmp/deno --env-file "$WORK/runtime.env" -v "$PWD:/src:ro" -v "$WORK/deps:/deps:ro" "$IMAGE_ID" start --main-service /src/backend/supabase/functions/campaign-orchestrator --import-map /deps/import-map.json --port 9000)"
 docker start "$RUNTIME_ID" >/dev/null
-for attempt in $(seq 1 30); do
-  if test "$(curl --silent --max-time 2 --output /dev/null --write-out '%{http_code}' http://127.0.0.1:9091/ || true)" = 405; then break; fi
-  sleep 1
-done
+export RUNTIME_CONTAINER_ID="$RUNTIME_ID"
+export DATABASE_CONTAINER_ID="$(docker inspect --format '{{.Id}}' supabase_db_econovaria)"
+if ! node - <<'NODE'
+const {execFileSync}=require('child_process');
+const c=JSON.parse(execFileSync('docker',['inspect',process.env.RUNTIME_CONTAINER_ID],{encoding:'utf8'}))[0];
+if(c.Config.Labels['campaign-ci-owner']!==process.env.GITHUB_RUN_ID+'-'+process.env.GITHUB_RUN_ATTEMPT)throw Error('OWNER');
+const nets=Object.values(c.NetworkSettings.Networks);if(nets.length!==1||nets[0].NetworkID!==process.env.NETWORK_ID)throw Error('NETWORK');
+const ip=nets[0].IPAddress;if(!/^172\.(1[6-9]|2[0-9]|3[01])\.[0-9]+\.[0-9]+$/.test(ip))throw Error('PRIVATE_IP');
+(async()=>{for(let i=0;i<30;i++){try{const r=await fetch('http://'+ip+':9000/',{redirect:'error',signal:AbortSignal.timeout(2000)});if(r.status===405)return;}catch{}await new Promise(r=>setTimeout(r,1000));}process.exitCode=1;})();
+NODE
+then
+  docker logs "$RUNTIME_ID" >"$WORK/runtime.private" 2>&1 || true
+  node - <<'NODE'
+const fs=require('fs'),s=fs.readFileSync(process.env.WORK+'/runtime.private','utf8').toLowerCase();
+const kind=s.includes('unexpected argument')||s.includes('unrecognized')?'runtime-cli':s.includes('permission denied')?'filesystem-permission':s.includes('module not found')||s.includes('failed to load')?'module-loading':s.includes('read-only')?'readonly-filesystem':'runtime-unready';
+console.log(JSON.stringify({status:'FAILED',stage:'served-runtime',kind}));
+NODE
+  exit 1
+fi
 STAGE=acceptance
 CAMPAIGN_DISPOSABLE=1 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres node scripts/campaign-served/acceptance.mjs
 node -e 'console.log(JSON.stringify({source:process.env.GITHUB_SHA,officialIndex:"'"$INDEX"'",amd64Child:"'"$CHILD"'",imageId:"'"$IMAGE_ID"'",hostedModified:false,providerBundleAttested:false}))'

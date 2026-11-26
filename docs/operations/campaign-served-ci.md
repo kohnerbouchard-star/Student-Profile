@@ -20,7 +20,9 @@ Actual index bytes, unique linux/amd64 child, child bytes and image-config ID ar
 verified before runtime execution. No ECR equivalence or architecture child is
 assumed. The cached image runs by exact image ID with pull-never, readonly source
 and verified module mounts, readonly root, bounded tmpfs, dropped capabilities,
-no-new-privileges and loopback-only port. Its only network is a fresh internal
+no-new-privileges and no published worker port. Acceptance uses the inspected
+owned internal bridge address; fixture SQL uses the inspected database container
+and its local PostgreSQL socket. Readiness must return405 before seeding. Its only network is a fresh internal
 bridge containing the disposable CLI database/API/Auth/PostgREST stack. Modules
 are already localized; runtime has no registry or hosted route.
 
