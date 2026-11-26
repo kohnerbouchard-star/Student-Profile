@@ -69,8 +69,19 @@ export function failureFacts(error){
  const version=lastMigrationVersion(error?.stdout);if(version)facts.lastMigrationVersion=version;
  return facts;
 }
+export const TEST_DUMP_KEY='SourceOnlyComparisonV1';
+// Classification only. Acceptance still uses the unchanged legacy digest below.
+export function normalizeOuterDumpNonce(text){
+ const opening=/^\\restrict ([A-Za-z0-9]+)(?:\r?\n|$)/m.exec(text);
+ const closing=/(^|\n)\\unrestrict ([A-Za-z0-9]+)(?:\r?\n)*$/.exec(text);
+ if(!opening&&!closing)return text;
+ assert(opening&&closing&&opening[1]===closing[2]&&opening.index<closing.index,'DUMP_NONCE_PAIR_INVALID');
+ const noFooter=text.slice(0,closing.index)+closing[1];
+ return noFooter.slice(0,opening.index)+noFooter.slice(opening.index+opening[0].length);
+}
+export const legacySnapshotDigest=text=>sha256(text.replace(/^\\(?:un)?restrict .*\n/gm,''));
 export async function runQualification({env=process.env,root=process.cwd(),execute}={}){
- let work,imageEvidence,bootstrapEvidence,started=false,stage='context',result={status:'FAILED',syntheticOnly:true,releaseQualified:false,applyAuthorized:false};
+ let work,imageEvidence,bootstrapEvidence,noOpEvidence,started=false,stage='context',result={status:'FAILED',syntheticOnly:true,releaseQualified:false,applyAuthorized:false};
  const implementation=execute??((cmd,args,input,timeout=30000,childEnv)=>execFileSync(cmd,args,{env:childEnv,input,encoding:'utf8',timeout,maxBuffer:64*1024*1024,stdio:[input===undefined?'ignore':'pipe','pipe','pipe']}).trim());
  const raw=(cmd,args,...rest)=>{commandAllowed(cmd,args);return implementation(cmd,args,...rest);};
  const local=(cmd,args,input,timeout)=>raw(cmd,args,input,timeout,{PATH:env.PATH});
@@ -115,10 +126,19 @@ export async function runQualification({env=process.env,root=process.cwd(),execu
   sql(BASELINE_PROBE);
   const ledger=()=>JSON.parse(sql("select jsonb_agg(jsonb_build_object('version',version,'name',name,'sha256',encode(sha256(convert_to(statements[1],'UTF8')),'hex'),'statementCount',cardinality(statements)) order by version) from supabase_migrations.schema_migrations where version>='20260921044500';"));
   assert.equal(pendingRows(ledger()).length,15);
-  const snapshot=()=>{
+  const dump=(extra=[])=>{
    container(inspect(id),project,pinned.Id,created);
-   return sha256(run('docker',['exec',id,'env','-i','PATH=/usr/bin:/bin:/usr/local/bin','PGSERVICEFILE=/dev/null','pg_dump','-h','/var/run/postgresql','-U','postgres','-d','postgres','--schema=public','--schema=private','--schema=economy_private','--schema=recovery_private','--schema=supabase_migrations','--schema=qualification_probe']).replace(/^\\(?:un)?restrict .*\n/gm,''));
+   return run('docker',['exec',id,'env','-i','PATH=/usr/bin:/bin:/usr/local/bin','PGSERVICEFILE=/dev/null','pg_dump','-h','/var/run/postgresql','-U','postgres','-d','postgres','--schema=public','--schema=private','--schema=economy_private','--schema=recovery_private','--schema=supabase_migrations','--schema=qualification_probe',...extra]);
   };
+  const snapshot=()=>legacySnapshotDigest(dump());
+  const scheduler=()=>JSON.parse(sql("select json_build_object('launchActiveJobs',current_setting('cron.launch_active_jobs'),'jobCount',(select count(*) from cron.job),'runDetailsCount',(select count(*) from cron.job_run_details));",'supabase_admin'));
+  stage='no-op-controls';const schedulerBefore=scheduler(),first=dump(),second=dump();
+  noOpEvidence={defaultRawEqual:sha256(first)===sha256(second),legacyDigestEqual:legacySnapshotDigest(first)===legacySnapshotDigest(second),onlyOuterNonceDiff:sha256(normalizeOuterDumpNonce(first))===sha256(normalizeOuterDumpNonce(second))};
+  const fixed=['--restrict-key='+TEST_DUMP_KEY];
+  noOpEvidence.fixedWholeEqual=sha256(dump(fixed))===sha256(dump(fixed));
+  noOpEvidence.fixedSchemaEqual=sha256(dump([...fixed,'--schema-only']))===sha256(dump([...fixed,'--schema-only']));
+  noOpEvidence.fixedDataEqual=sha256(dump([...fixed,'--data-only']))===sha256(dump([...fixed,'--data-only']));
+  noOpEvidence.schedulerBefore=schedulerBefore;noOpEvidence.schedulerAfter=scheduler();
   const checks=predicates(rows),before=snapshot();stage='all15-rollback';sql(renderAtomicBatch(rows,checks,'rollback'));assert.equal(snapshot(),before);
   stage='all15-per-migration-faults';
   for(const faultRow of rows){
@@ -137,7 +157,7 @@ export async function runQualification({env=process.env,root=process.cwd(),execu
   sql(projectionFixture+definition+projectionAssertions,'postgres','qualification_manufacturing_fixture');
   assert.equal(local('git',['rev-parse','HEAD']),source);
   result={status:'PASS',sourceCommit:source,syntheticOnly:true,canonicalPrefixCount:count,bootstrapChecked:true,bootstrapEvidence,appliedCount:15,purgeChecked:true,manufacturingCatalogAndClaimGuardChecked:true,manufacturingProjectionPrecisionChecked:true,all15Rollback:true,all15FaultAtomicity:true,injectedFaultPositions:15,committedRetryRejected:true,fullManufacturingLifecycle:false,releaseQualified:false,applyAuthorized:false};
- }catch(error){result={status:'FAILED',stage,...failureFacts(error),...(imageEvidence?{imageEvidence}:{}),...(bootstrapEvidence?{bootstrapEvidence}:{}),syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}
+ }catch(error){result={status:'FAILED',stage,...failureFacts(error),...(imageEvidence?{imageEvidence}:{}),...(bootstrapEvidence?{bootstrapEvidence}:{}),...(noOpEvidence?{noOpEvidence}:{}),syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}
  finally{if(started){try{raw('supabase',['stop','--workdir',work,'--no-backup'],undefined,60000,{PATH:env.PATH,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io',HOME:path.join(work,'home'),DOCKER_CONFIG:path.join(work,'docker'),DOCKER_HOST:'unix:///var/run/docker.sock'});}catch{result={status:'FAILED',stage:'cleanup',syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}}if(work)rmSync(work,{recursive:true,force:true});}
  return result;
 }

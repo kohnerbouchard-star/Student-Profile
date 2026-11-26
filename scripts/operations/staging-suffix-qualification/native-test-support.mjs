@@ -45,7 +45,7 @@ export async function withSyntheticPostgres(fn) {
     assert.equal(sql('postgres', "select current_setting('cluster_name');").trim(), 'econovaria_suffix_synthetic_only');
     assert.equal(sql('postgres', "show server_encoding;").trim(), 'UTF8');
     sql('postgres', 'create role anon; create role authenticated; create role service_role; create role supabase_auth_admin; create role supabase_admin; create role authenticator;');
-    return await fn({ sql, snapshot });
+    return await fn({ sql, snapshot, dump:(db,extra=[])=>run('pg_dump',[...args(db),'--format=plain',...extra]) });
   } finally {
     if (started) run('pg_ctl', ['-D', `${directory}/data`, '-m', 'immediate', '-w', 'stop']);
     rmSync(directory, { recursive: true, force: true });

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {context,container,IMAGE,IMAGE_ID,runQualification,commandAllowed,imageFacts,verifyBootstrap,failureFacts,lastMigrationVersion} from './run.mjs';
+import {context,container,IMAGE,IMAGE_ID,runQualification,commandAllowed,imageFacts,verifyBootstrap,failureFacts,lastMigrationVersion,normalizeOuterDumpNonce,legacySnapshotDigest} from './run.mjs';
 import {loadBatch,renderAtomicBatch} from './compiler.mjs';
 import {predicates} from './postconditions.mjs';
 const wf=readFileSync(new URL('../../../.github/workflows/staging-suffix-source-qualification.yml',import.meta.url),'utf8');
@@ -111,4 +111,15 @@ test('rollback diagnostics whitelist migration, SQLSTATE, predicate ordinal and 
  assert.deepEqual(failureFacts({status:3,stdout:'QUALIFICATION_MIGRATION_'+version,stderr:'ERROR:  P0001: SYNTHETIC_POSTCONDITION_'+version+'_2 PRIVATE_DATA'}),{reason:'INPUT_OR_COMMAND',commandExit:3,sqlState:'P0001',postcondition:{version,ordinal:2},lastMigrationVersion:version});
  assert.equal(failureFacts({code:'ERR_ASSERTION',actual:'a'.repeat(64),expected:'b'.repeat(64)}).reason,'ROLLBACK_SNAPSHOT_MISMATCH');
  assert(!JSON.stringify(failureFacts({stderr:'PRIVATE_DATA'})).includes('PRIVATE_DATA'));
+});
+
+test('nonce diagnostic handles trimmed EOF and preserves every interior SQL/data byte; rollback acceptance unchanged',()=>{
+ const body="-- header\nCREATE TABLE sample(v text);\nCOPY sample FROM stdin;\ntrailing space \n\\.\n-- footer\n";
+ const dump=k=>'\\restrict '+k+'\n'+body+'\\unrestrict '+k;
+ assert.notEqual(legacySnapshotDigest(dump('AAA')),legacySnapshotDigest(dump('BBB')));
+ assert.equal(normalizeOuterDumpNonce(dump('AAA')),body);
+ assert.equal(normalizeOuterDumpNonce(dump('BBB')+'\n'),body);
+ assert.notEqual(normalizeOuterDumpNonce(dump('AAA')),normalizeOuterDumpNonce(dump('AAA').replace('trailing space ','changed')));
+ assert.throws(()=>normalizeOuterDumpNonce('\\restrict AAA\nSQL;\n\\unrestrict BBB'));
+ assert(readFileSync('scripts/operations/staging-suffix-qualification/run.mjs','utf8').includes('const snapshot=()=>legacySnapshotDigest(dump())'));
 });

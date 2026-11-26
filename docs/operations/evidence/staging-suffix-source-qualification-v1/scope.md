@@ -228,3 +228,15 @@ markers, ordinal predicate labels and whitelisted SQLSTATE/guard/comparison fiel
 distinguish which actual body/predicate failed versus snapshot inequality. No raw
 SQL/data/log is emitted. Immutable ledger source and historical SQL are unchanged;
 these psql markers are outside stored migration source and transaction semantics.
+
+Rollback mismatch localization: runner trims stdout, while legacy nonce removal
+requires a trailing newline, leaving final random unrestrict key in the hash.
+Real native no-op dumps reproduce this false mismatch; outer-pair normalization
+(classification only) proves all interior bytes identical. Fixed restrict-key
+no-op dumps are identical, and real data, ACL or sequence-state mutations remain distinguishable.
+Before changing acceptance, canonical CI now records default vs fixed whole/
+schema/data controls plus scheduler counts/launch setting. The legacy rollback
+assertion is UNCHANGED in this diagnostic source. No row sorting, schema filtering
+or ignored ACL/sequence differences are introduced. Fixed restrict-key is used
+only for diagnostic dumps that are never restored, not any real backup/capture.
+Reference https://www.postgresql.org/docs/17/app-pgdump.html#APP-PGDUMP-OPTIONS .
