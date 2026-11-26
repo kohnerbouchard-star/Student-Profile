@@ -55,6 +55,7 @@ remote_present_count=0
 certified_count=0
 local_started=false
 schema_restored=false
+runtime_fixture_compared=false
 prelude_migrations=()
 migrations=()
 pending_migrations=()
@@ -63,7 +64,7 @@ mkdir -p "$supabase_root/supabase/migrations" "$PHASE15_EVIDENCE_DIR"
 : > "$applied_path"
 : > "$certified_path"
 : > "$suffix_applied_path"
-rm -f "$failure_path" "$partition_path"
+rm -f "$failure_path" "$partition_path" "$PHASE15_WORK_DIR/runtime-fixture.json"
 
 
 capture_local_snapshot() {
@@ -79,9 +80,16 @@ capture_local_snapshot() {
     < "$repo_root/scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql" \
     > "$PHASE15_EVIDENCE_DIR/post-schema.json" || return 1
   if test "$qualification_capture" = qualification; then set_stage post-catalog-export; fi
-  docker exec -i "$container" psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 \
-    < "$repo_root/scripts/operations/live-migration-reconciliation/export-runtime-catalog-v2.sql" \
-    > "$PHASE15_EVIDENCE_DIR/post-catalog.json" || return 1
+  if test "$qualification_capture" = qualification && test -n "${REF032_RECONSTRUCT_STATIC_SCHEDULER:-}"; then
+    set_stage runtime-catalog-fixture
+    REF032_FIXTURE_CONTAINER_NOT_BEFORE="$fixture_container_not_before" \
+      node "$repo_root/scripts/operations/live-migration-reconciliation/run-captured-staging-runtime-fixture.mjs" \
+        > "$PHASE15_EVIDENCE_DIR/post-catalog.json" || return 1
+  else
+    docker exec -i "$container" psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 \
+      < "$repo_root/scripts/operations/live-migration-reconciliation/export-runtime-catalog-v2.sql" \
+      > "$PHASE15_EVIDENCE_DIR/post-catalog.json" || return 1
+  fi
 }
 
 write_summary() {
@@ -113,6 +121,8 @@ write_summary() {
   PHASE15_APPLIED_PATH="$applied_path" \
   PHASE15_SCHEMA_COMPARE_EXIT="$schema_compare_exit" \
   PHASE15_CATALOG_COMPARE_EXIT="$catalog_compare_exit" \
+  PHASE15_RUNTIME_FIXTURE_RECEIPT="$PHASE15_WORK_DIR/runtime-fixture.json" \
+  PHASE15_RUNTIME_FIXTURE_COMPARED="$runtime_fixture_compared" \
   node --input-type=module - <<'NODE' > "$PHASE15_EVIDENCE_DIR/summary.json"
 import { existsSync, readFileSync } from "node:fs";
 
@@ -130,6 +140,15 @@ const suffixApplied = readFileSync(process.env.PHASE15_SUFFIX_APPLIED_PATH, "utf
 const optionalExit = (value) => /^\d+$/.test(value ?? "") ? Number(value) : null;
 const schemaComparisonExit = optionalExit(process.env.PHASE15_SCHEMA_COMPARE_EXIT);
 const catalogComparisonExit = optionalExit(process.env.PHASE15_CATALOG_COMPARE_EXIT);
+const receiptPath = process.env.PHASE15_RUNTIME_FIXTURE_RECEIPT;
+let runtimeCatalogFixture = null;
+if (process.env.PHASE15_RUNTIME_FIXTURE_COMPARED === "true" && existsSync(receiptPath)) {
+  const { schedulerRowsAdded, bootstrapHistoryAdded } = JSON.parse(readFileSync(receiptPath, "utf8"));
+  if (Number.isInteger(schedulerRowsAdded) && schedulerRowsAdded >= 0 && schedulerRowsAdded <= 6
+      && typeof bootstrapHistoryAdded === "boolean") {
+    runtimeCatalogFixture = { schedulerRowsAdded, bootstrapHistoryAdded };
+  }
+}
 process.stdout.write(`${JSON.stringify({
   schemaVersion: 1,
   environment: process.env.PHASE15_ENVIRONMENT,
@@ -166,6 +185,7 @@ process.stdout.write(`${JSON.stringify({
   canonicalApplicationSchemaComparisonExit: schemaComparisonExit,
   canonicalApplicationSchemaMatched: schemaComparisonExit === 0,
   runtimeCatalogComparisonExit: catalogComparisonExit,
+  runtimeCatalogFixture,
   runtimeCatalogComparisonIsInformational: true,
 }, null, 2)}\n`);
 NODE
@@ -179,22 +199,24 @@ cleanup() {
     if test -s "$stage_path"; then failure_stage="$(cat "$stage_path")"; fi
     node "$repo_root/scripts/operations/live-migration-reconciliation/rehearsal-stage-diagnostic.mjs" "$failure_stage" "$failure_path"
   fi
-  capture_local_snapshot
-  if test -s "$PHASE15_EVIDENCE_DIR/post-schema.json" \
-      && test -s "$PHASE15_EVIDENCE_DIR/post-catalog.json"; then
-    set +e
-    node "$repo_root/scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs" \
-      --left "$PHASE15_CANONICAL_SCHEMA" \
-      --right "$PHASE15_EVIDENCE_DIR/post-schema.json" \
-      > "$PHASE15_EVIDENCE_DIR/schema-comparison.json"
-    schema_compare_exit=$?
-    node "$repo_root/scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs" \
-      --left "$PHASE15_CANONICAL_CATALOG" \
-      --right "$PHASE15_EVIDENCE_DIR/post-catalog.json" \
-      > "$PHASE15_EVIDENCE_DIR/catalog-comparison.json"
-    catalog_compare_exit=$?
-    printf '%s\n' "$schema_compare_exit" > "$PHASE15_EVIDENCE_DIR/schema-comparison-exit.txt"
-    printf '%s\n' "$catalog_compare_exit" > "$PHASE15_EVIDENCE_DIR/catalog-comparison-exit.txt"
+  if test "$runtime_fixture_compared" != true; then
+    capture_local_snapshot
+    if test -s "$PHASE15_EVIDENCE_DIR/post-schema.json" \
+        && test -s "$PHASE15_EVIDENCE_DIR/post-catalog.json"; then
+      set +e
+      node "$repo_root/scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs" \
+        --left "$PHASE15_CANONICAL_SCHEMA" \
+        --right "$PHASE15_EVIDENCE_DIR/post-schema.json" \
+        > "$PHASE15_EVIDENCE_DIR/schema-comparison.json"
+      schema_compare_exit=$?
+      node "$repo_root/scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs" \
+        --left "$PHASE15_CANONICAL_CATALOG" \
+        --right "$PHASE15_EVIDENCE_DIR/post-catalog.json" \
+        > "$PHASE15_EVIDENCE_DIR/catalog-comparison.json"
+      catalog_compare_exit=$?
+      printf '%s\n' "$schema_compare_exit" > "$PHASE15_EVIDENCE_DIR/schema-comparison-exit.txt"
+      printf '%s\n' "$catalog_compare_exit" > "$PHASE15_EVIDENCE_DIR/catalog-comparison-exit.txt"
+    fi
   fi
   rm -f "$dump_path"
   if test "$local_started" = true; then
@@ -458,6 +480,9 @@ catalog_compare_exit=$?
 set -e
 printf '%s\n' "$schema_compare_exit" > "$PHASE15_EVIDENCE_DIR/schema-comparison-exit.txt"
 printf '%s\n' "$catalog_compare_exit" > "$PHASE15_EVIDENCE_DIR/catalog-comparison-exit.txt"
+if test -n "${REF032_RECONSTRUCT_STATIC_SCHEDULER:-}"; then
+  runtime_fixture_compared=true
+fi
 
 if test "$schema_compare_exit" -ne 0; then
   set_stage canonical-schema-comparison

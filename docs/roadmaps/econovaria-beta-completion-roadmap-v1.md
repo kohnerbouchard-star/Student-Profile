@@ -972,3 +972,17 @@ gate, comparator, capture and 15 ordered historical suffix files are retained.
 See ../operations/evidence/runtime-identity-diagnostic-v1/scope.md. Next: review
 the source, obtain exact reviewed-main clean replay, then separately approve a
 fresh staging read-only run for actual attribution.
+
+### REF-032 / OPS-STAGE-001 — disposable runtime catalog fixture (2026-11-26)
+
+`IMPLEMENTED_NOT_MERGED`, local on `7c1a5a764dc`. Protected run 45771045313
+proved all 15 suffix executions and exact application schema/ACL parity. The
+runtime comparator found six missing repository scheduler tuples and one
+unidentified schema. Exact clean run 45770523085 confirms the six tuples and
+the CLI history namespace. The protected disposable fixture reconstructs both
+from reviewed source within one rollback-only transaction and uses the exact
+catalog query. PostgreSQL 17.12 with a scheduler metadata stand-in proved
+rollback, lost-session cleanup and strict rejection of unrelated drift.
+Next is the same-repository Database Replay PR smoke with native pg_cron,
+followed by a separately authorized, exact-main protected read-only rehearsal.
+The historical schema identity and live apply remain unverified.

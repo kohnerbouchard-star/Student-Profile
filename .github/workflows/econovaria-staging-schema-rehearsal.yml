@@ -78,7 +78,8 @@ jobs:
             scripts/operations/live-migration-reconciliation/readonly-rehearsal.test.mjs \
             scripts/operations/live-migration-reconciliation/staging-schema-rehearsal-contract.test.mjs \
             scripts/operations/live-migration-reconciliation/catalog-diagnostic.test.mjs \
-            scripts/operations/live-migration-reconciliation/runtime-identity-diagnostic.test.mjs
+            scripts/operations/live-migration-reconciliation/runtime-identity-diagnostic.test.mjs \
+            scripts/operations/live-migration-reconciliation/disposable-runtime-catalog-fixture.test.mjs
           node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs --environment "$PHASE15_ENVIRONMENT" --mode rollback --format manifest > "$RUNNER_TEMP/u1/manifest.json"
           node scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs "$RUNNER_TEMP/u1/manifest.json" > "$RUNNER_TEMP/u1/plan.json"
       - name: Capture staging schema and ledger read-only
@@ -122,6 +123,7 @@ jobs:
       - name: Restore and rehearse locally without hosted credentials
         env:
           REF032_RECONSTRUCT_PURGE_FIXTURE: repository-only-v1
+          REF032_RECONSTRUCT_STATIC_SCHEDULER: rollback-only-repository-v1
         run: |
           set -euo pipefail
           umask 077
@@ -138,6 +140,10 @@ jobs:
               errorClass, failedMigration, failedVersion, failureStage, failureSqlstate,
               appliedMigrationCount, certifiedMigrationCount,
               canonicalApplicationSchemaMatched, runtimeCatalogComparisonExit,
+              runtimeCatalogFixture: (.runtimeCatalogFixture
+                | if type == "object" and (.schedulerRowsAdded | type == "number" and floor == . and . >= 0 and . <= 6)
+                  and (.bootstrapHistoryAdded | type == "boolean")
+                  then {schedulerRowsAdded, bootstrapHistoryAdded} else null end),
               sourceRowsCopied, rawSchemaDumpRetained,
               suffix: (.postBundleSuffix | {remoteLedgerPresentCount, appliedMigrationCount, certifiedMigrationCount}),
               sourceSchemaSha256:$schema, sourceLedgerSha256:$ledger, releaseCertificate: false

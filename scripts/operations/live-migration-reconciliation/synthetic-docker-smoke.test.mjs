@@ -1,19 +1,32 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {mkdtempSync,rmSync,readFileSync,readdirSync,writeFileSync} from 'node:fs';import {tmpdir} from 'node:os';import path from 'node:path';
-import {assertSyntheticContext,assertSyntheticContainer,runSyntheticDockerSmoke,SYNTHETIC_GUARD,classifySyntheticFailure,CONNECTION_CONTEXT,validateConnectionContext,SOCKET_PROBE_SCRIPT,validateSocketProbe,CLIENT_ENV} from './synthetic-docker-smoke.mjs';
+import {mkdtempSync,rmSync,readFileSync,readdirSync,writeFileSync} from 'node:fs';import {tmpdir} from 'node:os';
+import { disposableRuntimeCatalogFixture } from './disposable-runtime-catalog-fixture.mjs';import path from 'node:path';
+import {assertSyntheticContext,assertSyntheticContainer,runSyntheticDockerSmoke,SYNTHETIC_GUARD,classifySyntheticFailure,CONNECTION_CONTEXT,validateConnectionContext,SOCKET_PROBE_SCRIPT,validateSocketProbe,CLIENT_ENV,SYNTHETIC_IMAGE,SYNTHETIC_IMAGE_TAG,SYNTHETIC_IMAGE_ID,NATIVE_PG_CRON_VERSION} from './synthetic-docker-smoke.mjs';
 const sha='a'.repeat(40);
 function context(temp){return {env:{GITHUB_ACTIONS:'true',GITHUB_WORKFLOW:'Database Replay',GITHUB_JOB:'replay',GITHUB_EVENT_NAME:'pull_request',GITHUB_REPOSITORY:'kohnerbouchard-star/Student-Profile',REF032_SYNTHETIC_DOCKER_SMOKE:'1',RUNNER_TEMP:temp},event:{pull_request:{base:{ref:'main'},head:{sha,repo:{full_name:'kohnerbouchard-star/Student-Profile'}}}}};}
 function stub(fail){
  const calls=[];let metadata,restored=false;
- const run=(command,args,input)=>{
+ const run=(command,args,input,timeout,childEnv)=>{
   calls.push({command,args,input});
   if(command==='git')return sha;
   if(args[0]==='--version')return '2.109.1';
   if(args[0]==='context')return JSON.stringify([{Endpoints:{docker:{Host:'unix:///var/run/docker.sock'}}}]);
+  if(args[0]==='pull'){
+   assert.deepEqual(args,['pull','--platform','linux/amd64',SYNTHETIC_IMAGE]);
+   if(fail==='image-pull')throw new Error('PRIVATE_REGISTRY_DIAGNOSTIC');
+   return '';
+  }
+  if(args[0]==='image'){
+   assert.deepEqual(args,['image','inspect',SYNTHETIC_IMAGE]);
+   return JSON.stringify([{Id:fail==='wrong-acquired-id'?'sha256:'+'d'.repeat(64):SYNTHETIC_IMAGE_ID,
+     Os:'linux',Architecture:'amd64'}]);
+  }
+  if(args[0]==='tag'){assert.deepEqual(args,['tag',SYNTHETIC_IMAGE,SYNTHETIC_IMAGE_TAG]);return '';}
   if(args[0]==='start'){
+   assert.equal(childEnv.SUPABASE_INTERNAL_IMAGE_REGISTRY,'ghcr.io');
    const config=readFileSync(path.join(args[2],'supabase/config.toml'),'utf8');const project=config.match(/^project_id = "([^"]+)"/m)[1];
    assert.deepEqual(readdirSync(path.join(args[2],'supabase/migrations')),[]);
-   metadata={Name:'/supabase_db_'+project,Id:'b'.repeat(64),Image:'sha256:'+'c'.repeat(64),Config:{Image:'public.ecr.aws/supabase/postgres:17.6.1.147',Labels:{'com.supabase.cli.project':project}},State:{Running:true},Created:new Date().toISOString(),HostConfig:{NetworkMode:'synthetic_network'},NetworkSettings:{Networks:{synthetic_network:{}}}};
+   metadata={Name:'/supabase_db_'+project,Id:'b'.repeat(64),Image:fail==='wrong-image'?'sha256:'+'c'.repeat(64):SYNTHETIC_IMAGE_ID,Config:{Image:SYNTHETIC_IMAGE_TAG,Labels:{'com.supabase.cli.project':project}},State:{Running:true},Created:new Date().toISOString(),HostConfig:{NetworkMode:'synthetic_network'},NetworkSettings:{Networks:{synthetic_network:{}}}};
    if(fail==='startup')throw new Error('PRIVATE_STARTUP');return '';
   }
   if(args[0]==='inspect'){if(fail==='inventory')throw new Error('PRIVATE_INVENTORY');return JSON.stringify([metadata]);}
@@ -30,6 +43,16 @@ function stub(fail){
    if(input.includes('coalesce(json_agg'))return '["synthetic-v1"]';
    if(input.includes('to_regclass')){assert(restored);return 't';}
    if(input.includes(SYNTHETIC_GUARD)){if(fail==='guard-success')return '';const e=new Error('PRIVATE_GUARD');e.status=1;e.stderr='ERROR: P0001\nPRIVATE_ROW_PAYLOAD';throw e;}
+
+   if(input.includes(NATIVE_PG_CRON_VERSION))return fail==='wrong-cron'?'1.6.3':'1.6.4';
+   if(input.includes('$authority$')){
+    if(fail==='runtime-fixture')throw new Error('PRIVATE_RUNTIME_FIXTURE');
+    const {jobs}=disposableRuntimeCatalogFixture();
+    const before={schemaVersion:'econovaria.phase15.catalog-supplement.v2',schemas:[],extensions:[],views:[],routineSecurity:[],triggers:[],cron:[]};
+    const after={...before,schemas:[{name:'supabase_migrations',owner:'postgres'}],cron:jobs};
+    return JSON.stringify(before)+'\n'+JSON.stringify(after);
+   }
+   if(input.includes("to_regnamespace('supabase_migrations')"))return fail==='runtime-rollback'?'f':'t';
    if(input.includes('count(*) from synthetic_probe.item'))return '0';
    if(input.includes('count(*) from synthetic_ledger.migrations'))return restored&&calls.some(c=>c.input?.includes("insert into synthetic_ledger.migrations values('synthetic-v1')")&&!c.input?.includes('create schema'))?'1':'0';
    return '';
@@ -46,14 +69,23 @@ test('synthetic PR context rejects protected main impersonation, forks and exter
 test('synthetic lifecycle orders real-command plan and rejects unsafe boundaries',()=>{
  const temp=mkdtempSync(path.join(tmpdir(),'synthetic-plan-'));
  try{
-  for(const failure of [undefined,'startup','inventory','disconnect','restore','guard-success','cleanup','restore-cleanup','retained-network']){
+  for(const failure of [undefined,'startup','inventory','disconnect','restore','guard-success','cleanup','restore-cleanup','retained-network','image-pull','wrong-acquired-id','wrong-image','wrong-cron','runtime-fixture','runtime-rollback']){
    const f=context(temp),s=stub(failure);const result=runSyntheticDockerSmoke({...f,run:s.run});
    assert.equal(result.status,failure?'FAILED':'PASS',failure);
    assert.equal(result.fullStagingQualification,false);assert(!JSON.stringify(result).includes('PRIVATE'));
-   if(!failure){assert(result.guardRejected);assert(s.calls.some(c=>c.args.includes('pg_dump')));assert(s.calls.some(c=>c.input?.includes('drop schema')));}
-   if(['inventory','disconnect','retained-network'].includes(failure))assert(!s.calls.some(c=>c.args[0]==='exec'));
-   assert(s.calls.some(c=>c.args[0]==='stop'));
+   if(!failure){assert(result.guardRejected);assert(result.runtimeCatalogFixtureRolledBack);assert.equal(result.pgCronVersion,'1.6.4');assert.equal(result.image,SYNTHETIC_IMAGE);assert.equal(result.imageId,SYNTHETIC_IMAGE_ID);assert(s.calls.some(c=>c.args.includes('pg_dump')));assert(s.calls.some(c=>c.input?.includes('drop schema')));}
+   if(['inventory','disconnect','retained-network','wrong-image'].includes(failure))assert(!s.calls.some(c=>c.args[0]==='exec'));
+   if(['image-pull','wrong-acquired-id'].includes(failure)){
+    assert.equal(result.stage,'synthetic-image-acquisition');
+    assert(!s.calls.some(c=>['start','tag','exec'].includes(c.args[0])));
+   }else assert(s.calls.some(c=>c.args[0]==='stop'));
+   if(failure==='wrong-image'){
+    assert.equal(result.stage,'synthetic-image-attestation');
+    assert.deepEqual(result.imageContext,{selectorMatched:true,pinMatched:false});
+   }
    if(failure==='restore-cleanup')assert.equal(result.stage,'synthetic-schema-restore');
+   if(failure==='wrong-cron')assert.equal(result.stage,'synthetic-native-pg-cron');
+   if(failure?.startsWith('runtime-'))assert.equal(result.stage,'synthetic-runtime-catalog-fixture');
   }
  }finally{rmSync(temp,{recursive:true,force:true});}
 });
@@ -100,7 +132,7 @@ test('native synthetic schema dump/restore reaches its own guard (not Docker)',{
 
 test('container identity, ownership, image, freshness and egress must all match',()=>{
  const project='ref032_synthetic_'+'a'.repeat(16),time=Date.now();
- const good={Name:'/supabase_db_'+project,Id:'b'.repeat(64),Image:'sha256:'+'c'.repeat(64),State:{Running:true},Created:new Date(time).toISOString(),Config:{Image:'public.ecr.aws/supabase/postgres:17.6.1.147',Labels:{'com.supabase.cli.project':project}},HostConfig:{NetworkMode:'synthetic_network'},NetworkSettings:{Networks:{}}};
+ const good={Name:'/supabase_db_'+project,Id:'b'.repeat(64),Image:SYNTHETIC_IMAGE_ID,State:{Running:true},Created:new Date(time).toISOString(),Config:{Image:SYNTHETIC_IMAGE_TAG,Labels:{'com.supabase.cli.project':project}},HostConfig:{NetworkMode:'synthetic_network'},NetworkSettings:{Networks:{}}};
  assert.equal(assertSyntheticContainer(good,project,time,true),good.Id);
  for(const change of [c=>c.Name='/other',c=>c.Config.Labels['com.supabase.cli.project']='other',c=>c.Config.Image='untrusted/image',c=>c.HostConfig.NetworkMode='host',c=>c.HostConfig.NetworkMode='container:other',c=>c.NetworkSettings.Networks={bridge:{}},c=>c.Created=new Date(time-1).toISOString(),c=>c.Id='invalid']){const value=structuredClone(good);change(value);assert.throws(()=>assertSyntheticContainer(value,project,time,true));}
 });

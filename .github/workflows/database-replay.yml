@@ -99,7 +99,8 @@ concurrency:
 
 jobs:
   replay:
-    runs-on: ubuntu-latest
+    # Keep the native PR smoke on the verified disposable Docker substrate.
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || 'ubuntu-latest' }}
     timeout-minutes: 35
 
     steps:
@@ -139,7 +140,8 @@ jobs:
           node --test \
             scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs \
             scripts/operations/live-migration-reconciliation/catalog-diagnostic.test.mjs \
-            scripts/operations/live-migration-reconciliation/runtime-identity-diagnostic.test.mjs
+            scripts/operations/live-migration-reconciliation/runtime-identity-diagnostic.test.mjs \
+            scripts/operations/live-migration-reconciliation/disposable-runtime-catalog-fixture.test.mjs
           node --test scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs
           node scripts/operations/live-migration-reconciliation/verify-immutable-manifest.mjs
           node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs --environment staging --mode rollback --format manifest > /tmp/phase15-staging-forward-manifest.json
