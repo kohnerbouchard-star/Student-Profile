@@ -100,7 +100,7 @@ jobs:
           npm run test:player-marketplace --prefix backend
 
       - name: Install pinned Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.109.1
 
@@ -291,7 +291,7 @@ jobs:
 
       - name: Upload sanitized staging evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: economic-asset-core-staging-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
