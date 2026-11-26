@@ -1,22 +1,24 @@
 // Deployment convergence marker: 2026-08-18 staging/production digest parity.
 import {
+  type CampaignProgramSupabaseClient,
   createSupabaseCampaignProgramProvider,
   createVersionedCampaignSchedulePolicy,
-  type CampaignProgramSupabaseClient,
 } from "../../../src/domains/campaign/infrastructure/supabaseCampaignProgramProvider.ts";
 import {
-  createSupabaseCampaignEffectPorts,
   type CampaignEffectSupabaseClient,
+  createSupabaseCampaignEffectPorts,
 } from "../../../src/domains/campaign/infrastructure/supabaseCampaignEffectPorts.ts";
 import {
+  type CampaignRuntimeSupabaseClient,
   createSupabaseCampaignEffectWorkerRepository,
   createSupabaseCampaignSchedulerRepository,
-  type CampaignRuntimeSupabaseClient,
 } from "../../../src/domains/campaign/infrastructure/supabaseCampaignRuntimeRepository.ts";
 import { runCampaignEffectWorker } from "../../../src/domains/campaign/services/campaignEffectWorker.ts";
 import { runCampaignScheduler } from "../../../src/domains/campaign/services/campaignScheduler.ts";
 import {
+  authorizeStagingCampaignRuntime,
   campaignRuntimeClient,
+  useStagingCampaignFence,
   verifySchedulerToken,
 } from "./infrastructure/client.ts";
 
@@ -30,24 +32,33 @@ Deno.serve(async (request) => {
     return json({ code: "method_not_allowed" }, 405);
   }
 
-  const token = request.headers.get("x-econovaria-scheduler-token")?.trim() ?? "";
-  if (!(await verifySchedulerToken(token))) {
+  const token = request.headers.get("x-econovaria-scheduler-token")?.trim() ??
+    "";
+  const admittedClient = useStagingCampaignFence()
+    ? await authorizeStagingCampaignRuntime(token)
+    : await verifySchedulerToken(token)
+    ? campaignRuntimeClient
+    : null;
+  if (!admittedClient) {
     return json({ code: "campaign_scheduler_unauthorized" }, 401);
   }
 
   const now = new Date().toISOString();
-  const runId =
-    `campaign-run:${now.replace(/[^0-9]/g, "")}:${crypto.randomUUID().replaceAll("-", "")}`;
+  const runId = `campaign-run:${now.replace(/[^0-9]/g, "")}:${
+    crypto.randomUUID().replaceAll("-", "")
+  }`;
 
   try {
-    const runtimeClient = campaignRuntimeClient as unknown as CampaignRuntimeSupabaseClient;
-    const scheduler = await runCampaignScheduler({
+    const runtimeClient =
+      admittedClient as unknown as CampaignRuntimeSupabaseClient;
+    const smoke = "smoke" in admittedClient && admittedClient.smoke;
+    const scheduler = smoke ? null : await runCampaignScheduler({
       repository: createSupabaseCampaignSchedulerRepository(
         runtimeClient,
         createVersionedCampaignSchedulePolicy(),
       ),
       programs: createSupabaseCampaignProgramProvider(
-        campaignRuntimeClient as unknown as CampaignProgramSupabaseClient,
+        admittedClient as unknown as CampaignProgramSupabaseClient,
       ),
       dueAt: now,
       runId,
@@ -57,7 +68,7 @@ Deno.serve(async (request) => {
     const effects = await runCampaignEffectWorker({
       repository: createSupabaseCampaignEffectWorkerRepository(runtimeClient),
       ports: createSupabaseCampaignEffectPorts(
-        campaignRuntimeClient as unknown as CampaignEffectSupabaseClient,
+        admittedClient as unknown as CampaignEffectSupabaseClient,
         now,
       ),
       claimedAt: now,

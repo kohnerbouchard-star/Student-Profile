@@ -959,3 +959,12 @@ Next: parent review of checksum-verified local delivery; no full staging claim.
 `IMPLEMENTED_NOT_MERGED`, LOCAL_ONLY on exact main `bc25df5d6d910b09c18574dafb0f00733ef1d5eb`, owner `ops/staging-runtime-catalog-diagnostics`. Adds fixed capped counts to exact schema/catalog comparator evidence and the protected sanitized artifact projection; no object/role names, values, SQL or private paths retained. Tests exercise the actual CLI and workflow projection with ownership, ACL/RLS, scheduler, managed topology and malformed inputs. Existing comparison exits, topology profile, immutable migrations, release/apply holds, credentials and cleanup remain unchanged. Parent-reported artifact 15079418291's actual runtime difference remains unknown; exit 2 still blocks the separate suffix apply candidate. See [scope, profile applicability and limits](../operations/evidence/staging-runtime-catalog-diagnostics-v1/scope.md). No hosted execution, push or dispatch. Next: independent source review and normal exact-head publication controls before a separately authorized fresh protected diagnostic run; no apply permission.
 
 PR1063 source publication: draft [#1063](https://github.com/kohnerbouchard-star/Student-Profile/pull/1063), public source `2e080db32a5f164966c71fbc5242b64977d34ede` (tree identical to local candidate). Actual-number authority retains all PR1062 check identities and adds jobs scheduled by this exact scope; all production/mutation/secret flags remain false. Complete public authority-inclusive carrier and coupled Roster pins precede final-head qualification. No merge, rerun, dispatch, hosted DB or apply authority. Status remains `IMPLEMENTED_NOT_MERGED`; fresh protected diagnostic and actual runtime mismatch remain unverified.
+
+### OPS-STAGE-001 / REF-046 — local Campaign staging fence (2026-11-26)
+
+IMPLEMENTED_NOT_MERGED on the isolated staging Campaign fence branch.
+Committed hold, database drain, exact pre-suffix abort and generation-bound
+effect gateway passed native PostgreSQL 17.12 for the actual four effect
+RPCs. The staged client is independently qualified at its native SQL
+boundary. The scoped staging read-only preflight matched all ten pinned routines and the observed owner had transaction visibility. Draft #1066 carries direct served qualification, held fixture-only smoke and explicit resume. Protected apply composition and managed artifact attestation remain open. See
+docs/operations/evidence/staging-campaign-fence-v1/scope.md.

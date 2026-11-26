@@ -3,6 +3,7 @@ name: Database Replay
 on:
   pull_request:
     paths:
+      - "docs/operations/contracts/player-cross-cutting/pr-1066.json"
       - "docs/operations/contracts/player-cross-cutting/pr-981.json"
       - "docs/operations/contracts/player-cross-cutting/pr-982.json"
       - "docs/operations/contracts/player-cross-cutting/pr-980.json"
