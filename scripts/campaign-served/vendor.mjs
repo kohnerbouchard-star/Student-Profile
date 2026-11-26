@@ -3,7 +3,7 @@ import {readFile,mkdir,writeFile,copyFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 let diagnostic={kind:'unclassified'};
-const mark=(kind,specifier)=>{diagnostic={kind,moduleSha256:createHash('sha256').update(specifier).digest('hex')};};
+const mark=(kind,specifier)=>{diagnostic={kind,moduleSha256:createHash('sha256').update(specifier).digest('hex')};if(specifier.startsWith('https://esm.sh/')){const u=new URL(specifier);if(!u.username&&!u.password)diagnostic.publicModulePath=u.pathname;}};
 const sha=b=>createHash('sha256').update(b).digest('hex');
 // Deno2.9.3 libs/cache_dir/global/cache_file.rs: content followed by the
 // final newline metadata record. Verify original locked content, never envelope.
@@ -18,7 +18,15 @@ export function lockedContent(raw,url,expected) {
 }
 export async function vendor(graph,lock,out,read=readFile) {
   const imports={'https://esm.sh/tslib@2.8.1/denonext/tslib.mjs':'file:///src/backend/supabase/functions/_shared/vendor/tslib-2.8.1/tslib.mjs'},scopes={},records=[];
-  const remote=graph.modules.filter(m=>/^https:/.test(m.specifier));
+  // Deno info also describes type-only dependencies. Traverse only executable
+  // code edges from roots; every reachable remote still requires its locked hash.
+  const modules=new Map(graph.modules.map(m=>[m.specifier,m])),seen=new Set();
+  const redirect=s=>{for(let i=0;graph.redirects?.[s]&&i<10;i++)s=graph.redirects[s];return s;};
+  function visit(input){const spec=redirect(input);if(spec.startsWith('node:')||seen.has(spec))return;
+    const m=modules.get(spec);mark('missing-runtime-module',spec);assert(m);seen.add(spec);
+    for(const d of m.dependencies||[])if(d.code){assert(typeof d.code.specifier==='string');visit(d.code.specifier);}}
+  assert(Array.isArray(graph.roots)&&graph.roots.length>0);graph.roots.forEach(visit);
+  const remote=graph.modules.filter(m=>seen.has(m.specifier)&&/^https:/.test(m.specifier));
   assert(remote.length>0);
   for(const m of remote) {
     mark(!m.local?'unavailable-source':'unpinned-module',m.specifier);
