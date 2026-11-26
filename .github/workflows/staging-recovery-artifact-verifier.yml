@@ -1,0 +1,26 @@
+name: Staging Recovery Evidence Verifier
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/staging-recovery-artifact-verifier.yml'
+      - 'scripts/operations/staging-recovery-evidence/**'
+      - 'scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22.23.1'
+      - name: Verify synthetic receipts and reject invalid evidence
+        run: env -i PATH="$PATH" NODE_DISABLE_COMPILE_CACHE=1 node --test scripts/operations/staging-recovery-evidence/verify.test.mjs
