@@ -79,3 +79,10 @@ candidate explicitly includes verified vendor files using the provider's support
 static pattern, then unbundles offline and requires the locked SDK body to read
 back with its original hash before database startup. This is VFS fixture packaging,
 not altered application source or a weakened dependency pin.
+
+The provider's native unbundle command exited101 on run45759710370, so native
+archive readback is NOT qualified. The fixture instead independently checks exact
+locked SDK source bytes and filename presence in the native artifact, then still
+requires that exact artifact to serve and pass all persisted v2 assertions. This
+byte-presence check is not represented as semantic archive extraction. The failed
+extractor remains a documented limitation; it is not a release/apply gate waiver.

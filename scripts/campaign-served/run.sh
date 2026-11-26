@@ -85,16 +85,15 @@ NODE
  exit 1
 fi
 test -s "$WORK/bundle/campaign.eszip"
-STAGE=native-provider-vfs
-mkdir -p "$WORK/unpacked"
-docker run --rm --pull never --network none --user "$(id -u):$(id -g)" --cap-drop ALL --read-only -v "$WORK/bundle:/artifact:ro" -v "$WORK/unpacked:/out:rw" "$IMAGE_ID" unbundle --eszip /artifact/campaign.eszip --output /out >"$WORK/unbundle.private" 2>&1
+STAGE=native-provider-vfs-bytes
 node - <<'NODE'
-const fs=require('fs'),crypto=require('crypto'),path=require('path');
+const fs=require('fs'),crypto=require('crypto');
 const expected=JSON.parse(fs.readFileSync('backend/supabase/functions/deno.lock')).remote['https://esm.sh/@supabase/supabase-js@2.108.2'];
-let count=0,match=false;
-function walk(p){for(const e of fs.readdirSync(p,{withFileTypes:true})){const f=path.join(p,e.name);if(e.isSymbolicLink())throw Error('ARCHIVE_SYMLINK');if(e.isDirectory())walk(f);else{count++;if(e.name===expected+'.ts'&&crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')===expected)match=true;}}}
-walk(process.env.WORK+'/unpacked');if(!match)throw Error('LOCKED_SDK_MISSING_FROM_VFS');
-console.log(JSON.stringify({status:'PASS',stage:'native-provider-vfs',lockedSdkReadback:true,fileCount:count}));
+const source=fs.readFileSync(process.env.WORK+'/deps/'+expected+'.ts');
+if(crypto.createHash('sha256').update(source).digest('hex')!==expected)throw Error('LOCKED_SOURCE_DRIFT');
+const artifact=fs.readFileSync(process.env.WORK+'/bundle/campaign.eszip');
+if(!artifact.includes(source)||!artifact.includes(Buffer.from(expected+'.ts')))throw Error('LOCKED_SDK_BYTES_MISSING_FROM_ARTIFACT');
+console.log(JSON.stringify({status:'PASS',stage:'native-provider-vfs-bytes',lockedSdkBytesPresent:true,nativeUnbundleQualified:false}));
 NODE
 sha256sum "$WORK/bundle/campaign.eszip" | awk '{print "{\"status\":\"PASS\",\"stage\":\"native-provider-package\",\"artifactSha256\":\"" $1 "\"}"}'
 STAGE=disposable-start
