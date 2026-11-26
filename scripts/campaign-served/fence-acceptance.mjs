@@ -67,6 +67,13 @@ export async function qualifyFence({sql,invoke,tokenHash,fixtureGame,fixtureComm
       if (call('attest_drain',epoch) === 't') return;
       await new Promise(resolve => setTimeout(resolve,500));
     }
+    const activity=JSON.parse(sql("select jsonb_build_object('trackedTransactions',count(*) filter(where xact_start is not null),"+
+      "'disabledActivity',count(*) filter(where state='disabled'),'unknownClients',count(*) filter(where state is null and backend_type='client backend'),"+
+      "'idleExtensionProcesses',count(*) filter(where state is null and backend_type<>'client backend' and not exists("+
+      "select 1 from pg_locks l where l.pid=a.pid and l.locktype='virtualxid' and l.mode='ExclusiveLock' and l.granted and l.virtualxid=l.virtualtransaction)),"+
+      "'preparedTransactions',(select count(*) from pg_prepared_xacts where database=current_database())) from pg_stat_activity a "+
+      "where datname=current_database() and pid<>pg_backend_pid();"));
+    console.log(JSON.stringify({status:'FAILED',stage:'disposable-drain',activity,syntheticOnly:true}));
     throw Error('DISPOSABLE_DRAIN_TIMEOUT');
   };
   const expectSqlFailure = (work, code) => assert.throws(work,e => String(e.stderr ?? '').includes(code));
@@ -81,9 +88,12 @@ export async function qualifyFence({sql,invoke,tokenHash,fixtureGame,fixtureComm
   let epoch = sql('select epoch from staging_campaign.fence;');
   assert.equal(oldVerify(),'f');
   assert.equal((await invoke()).status,401);
+  onStage('held-before-suffix-preserves-token-and-commands');
   assert.equal(tokenRow(),originalToken);
   assert.deepEqual(outbox(outsiderCommand),before);
+  onStage('held-before-suffix-denies-premature-open');
   expectSqlFailure(() => call('open_after_cutover',epoch),'CAMPAIGN_FENCE_SMOKE_OR_DRAIN_REQUIRED');
+  onStage('held-before-suffix-drain');
   await drain(epoch);
   checks.heldPreSuffix=true;
 

@@ -154,6 +154,9 @@ await withSyntheticPostgres(async ({ sql }) => {
     await waitFor(() => run("select exists(select 1 from pg_locks l join pg_stat_activity a using(pid) " +
       "where a.application_name='stage-fence-test-admitted' and l.relation='public.notifications'::regclass " +
       "and l.mode='RowExclusiveLock' and not l.granted);") === 't');
+    assert.equal(run("select count(*) from pg_locks l join pg_stat_activity a using(pid) "+
+      "where a.application_name='stage-fence-test-admitted' and l.locktype='virtualxid' "+
+      "and l.granted and l.mode='ExclusiveLock' and l.virtualxid=l.virtualtransaction;"),'1');
     run(install);
     let epoch = run('select epoch from staging_campaign.fence;');
     assert.equal(run(oldVerify(worker)), 'f');

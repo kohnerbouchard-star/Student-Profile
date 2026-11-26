@@ -29,6 +29,8 @@ create table staging_campaign.smoke_transactions (
 
 -- Operators only. Assess on a new connection after the hold commit. Count
 -- every still-open transaction that could have passed an old privilege check.
+-- Idle extension processes can omit activity state. Their own virtual XID lock
+-- is PostgreSQL evidence of an open transaction. Disabled tracking still blocks.
 create function staging_campaign.attest_drain(p_epoch uuid) returns boolean
 language plpgsql set search_path = pg_catalog, pg_temp as $$
 declare
@@ -45,7 +47,11 @@ begin
   if exists (
     select 1 from pg_stat_activity as activity
     where activity.datname = current_database() and activity.pid <> pg_backend_pid()
-      and (activity.state is null or activity.state = 'disabled' or activity.xact_start <= boundary)
+      and (activity.state = 'disabled' or activity.xact_start <= boundary or
+        (activity.state is null and (activity.backend_type = 'client backend' or exists(
+          select 1 from pg_locks locks where locks.pid = activity.pid and locks.locktype = 'virtualxid'
+            and locks.granted and locks.mode = 'ExclusiveLock' and locks.virtualxid = locks.virtualtransaction
+        ))))
   ) or exists (select 1 from pg_prepared_xacts where database = current_database())
   then
     update staging_campaign.fence set drained_at = null;
@@ -85,7 +91,6 @@ begin
   then raise exception 'CAMPAIGN_FENCE_EPOCH_CHANGED'; end if;
 end;
 $$;
-
 create function staging_campaign.pause_campaign_mutations() returns trigger
 language plpgsql security definer set search_path = pg_catalog, pg_temp as $$
 begin
@@ -96,7 +101,6 @@ begin
   return null;
 end;
 $$;
-
 create function staging_campaign.guard_smoke_row() returns trigger
 language plpgsql security definer set search_path = pg_catalog, pg_temp as $$
 declare scope staging_campaign.smoke_transactions%rowtype;
@@ -135,13 +139,11 @@ create table staging_campaign.route_keys (
 );
 insert into staging_campaign.route_keys
 select game_session_id, idempotency_key from public.campaign_effect_commands where effect_kind = 'set_route_state';
-
 create table staging_campaign.leases (
   command_id text primary key references public.campaign_effect_commands(public_id) on delete cascade,
   epoch uuid not null,
   attempt integer not null check(attempt between 1 and 25)
 );
-
 create function staging_campaign.reserve_route_key() returns trigger
 language plpgsql security definer set search_path = pg_catalog, pg_temp as $$
 begin
@@ -393,7 +395,6 @@ begin
   return scope;
 end;
 $$;
-
 create function staging_campaign.finish_smoke(p_epoch uuid) returns boolean
 language plpgsql set search_path = pg_catalog, pg_temp as $$
 declare scope staging_campaign.smoke_window%rowtype;
@@ -414,7 +415,6 @@ begin
   return passed;
 end;
 $$;
-
 create function public.write_staging_campaign_v1(
   p_epoch uuid, p_operation text, p_args jsonb, p_command_id text default null, p_attempt integer default null
 ) returns jsonb language plpgsql security definer set search_path = pg_catalog, pg_temp as $$

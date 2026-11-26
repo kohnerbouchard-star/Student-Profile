@@ -28,3 +28,14 @@ deployment identity. A run only qualifies the submitted source and native
 test bundle. Independent operational acceptance, exact managed catalog
 overlay review, provider artifact identity and non-Campaign writer fencing
 remain separate. PR #1065 and the operational candidates remain independent.
+
+Run 45767051205 packaged and served the new worker, replayed the exact
+prefix and reached the held HTTP 401. It stopped before a successful
+drain receipt. The first output combined several assertions into one
+stage, so the exact failed predicate was unavailable. The next source
+records separate hold, token, command and drain failure categories.
+For activity rows without state, the drain can account for an idle
+extension process through absence of its PostgreSQL virtual-XID lock.
+An open transaction holds that lock. Unknown client activity, disabled
+tracking, prepared transactions and observable open transactions still
+block. The native in-flight test observes the real lock before drain.
