@@ -51,6 +51,10 @@ export async function vendor(graph,lock,out,read=readFile) {
   return {status:'PASS',moduleCount:records.length,modules:records.map(r=>({url:r.m.specifier,sha256:r.sha256}))};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- try {const [g,l,o]=process.argv.slice(2);console.log(JSON.stringify(await vendor(JSON.parse(await readFile(g)),JSON.parse(await readFile(l)),o)));}
+ try {const [g,l,o]=process.argv.slice(2);const result=await vendor(JSON.parse(await readFile(g)),JSON.parse(await readFile(l)),o);
+ const config=JSON.parse(await readFile('backend/supabase/functions/campaign-orchestrator/deno.json'));
+ const map=JSON.parse(await readFile(o+'/import-map.json'));
+ await writeFile(o+'/runtime-deno.json',JSON.stringify({...config,imports:{...config.imports,...map.imports},scopes:map.scopes}),{mode:0o600});
+ console.log(JSON.stringify(result));}
  catch {console.log(JSON.stringify({status:'FAILED',stage:'frozen-vendor',...diagnostic}));process.exitCode=1;}
 }

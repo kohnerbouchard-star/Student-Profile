@@ -57,3 +57,9 @@ libs/cache_dir/global/cache_file.rs documents its final metadata envelope. The
 correction accepts only valid URL-matched metadata and still requires the original
 content SHA256 to equal the unchanged lock. Malformed wrappers, wrong URLs and
 tampered content fail. No lock or upstream source identity is changed.
+
+Runtime start uses the pinned v1.74.2 supported CLI: import-map flags apply to
+bundle, not start. The verified localization map is merged into an adjacent
+readonly deno.json overlay with original compiler options preserved. The original
+config and worker source remain unchanged in Git. Container UID/GID match the
+private mount owner; capabilities remain dropped. No default registry fallback.

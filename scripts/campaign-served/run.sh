@@ -95,7 +95,7 @@ if(env.API_URL!=='http://127.0.0.1:54321'||!(env.SERVICE_ROLE_KEY||env.SECRET_KE
 fs.writeFileSync(process.env.WORK+'/runtime.env','SUPABASE_URL=http://supabase_kong_econovaria:8000\nSUPABASE_SERVICE_ROLE_KEY='+(env.SERVICE_ROLE_KEY||env.SECRET_KEY)+'\n');
 NODE
 STAGE=served-runtime
-RUNTIME_ID="$(docker create --pull never --platform linux/amd64 --network "$NETWORK_ID" --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m --label "campaign-ci-owner=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -e DENO_DIR=/tmp/deno --env-file "$WORK/runtime.env" -v "$PWD:/src:ro" -v "$WORK/deps:/deps:ro" "$IMAGE_ID" start --main-service /src/backend/supabase/functions/campaign-orchestrator --import-map /deps/import-map.json --port 9000)"
+RUNTIME_ID="$(docker create --pull never --platform linux/amd64 --network "$NETWORK_ID" --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m --label "campaign-ci-owner=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -e DENO_DIR=/tmp/deno --env-file "$WORK/runtime.env" -v "$PWD:/src:ro" -v "$WORK/deps:/deps:ro" -v "$WORK/deps/runtime-deno.json:/src/backend/supabase/functions/campaign-orchestrator/deno.json:ro" "$IMAGE_ID" start --main-service /src/backend/supabase/functions/campaign-orchestrator --port 9000)"
 docker start "$RUNTIME_ID" >/dev/null
 export RUNTIME_CONTAINER_ID="$RUNTIME_ID"
 export DATABASE_CONTAINER_ID="$(docker inspect --format '{{.Id}}' supabase_db_econovaria)"
