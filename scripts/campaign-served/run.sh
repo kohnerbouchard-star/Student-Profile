@@ -9,6 +9,7 @@ test "${GITHUB_EVENT_NAME:-}" = pull_request
 test "$(git rev-parse HEAD)" = "${CAMPAIGN_HEAD_SHA:?missing PR head}"
 test "$(node -p 'require("./package.json").devDependencies.supabase')" = 2.109.1
 test "$(./node_modules/.bin/supabase --version)" = 2.109.1
+test "${DOCKER_HOST:-unix:///var/run/docker.sock}" = unix:///var/run/docker.sock
 test "$(docker context inspect --format '{{.Endpoints.docker.Host}}')" = unix:///var/run/docker.sock
 test -z "$(git diff b62f10ffda169fd6f884cc3a254c136fbd6b862d -- backend/src backend/supabase/functions backend/supabase/config.toml)"
 test -z "$(docker ps -aq --filter label=com.supabase.cli.project=econovaria)"
@@ -25,15 +26,22 @@ remove_owned_container() {
   docker rm --force "$id" >/dev/null
 }
 OWNER="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+NETWORK_NAME="campaign-ci-$OWNER"
 cleanup() {
   result=$?
   trap - EXIT
   if test -n "$CONTROL_ID"; then remove_owned_container "$CONTROL_ID" || result=1; fi
   if test -n "$RUNTIME_ID"; then remove_owned_container "$RUNTIME_ID" || result=1; fi
   if test "$STACK_STARTED" = 1; then
-    ./node_modules/.bin/supabase stop --workdir backend --no-backup >"$WORK/stop.private" 2>&1 || result=1
+    ./node_modules/.bin/supabase stop --workdir backend --network-id "$NETWORK_NAME" --no-backup >"$WORK/stop.private" 2>&1 || result=1
   fi
-  if test -n "$NETWORK_ID"; then docker network rm "$NETWORK_ID" >/dev/null || result=1; fi
+  if test -n "$NETWORK_ID" && docker network inspect "$NETWORK_ID" >/dev/null 2>&1; then
+    if test "$(docker network inspect --format '{{index .Labels "campaign-ci-owner"}}' "$NETWORK_ID")" = "$OWNER"; then
+      docker network rm "$NETWORK_ID" >/dev/null || result=1
+    else
+      result=1
+    fi
+  fi
   rm -rf "$WORK"
   exit "$result"
 }
@@ -193,27 +201,40 @@ NODE
 fi
 test -s "$WORK/bundle/campaign.eszip"
 sha256sum "$WORK/bundle/campaign.eszip" | awk '{print "{\"status\":\"PASS\",\"stage\":\"native-provider-package\",\"artifactSha256\":\"" $1 "\"}"}'
+# Give the CLI its owned internal bridge from the first container start.
+# Reconnecting an initialized gateway/database can leave stale upstream sockets.
+STAGE=network-isolation
+NETWORK_ID="$(docker network create --internal --label "campaign-ci-owner=$OWNER" "$NETWORK_NAME")"
+test "$(docker network inspect --format '{{.Internal}}' "$NETWORK_ID")" = true
+test "$(docker network inspect --format '{{index .Labels "campaign-ci-owner"}}' "$NETWORK_ID")" = "$OWNER"
+export NETWORK_ID
 STAGE=disposable-start
 STACK_STARTED=1
-./node_modules/.bin/supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta,mailpit >"$WORK/start.private" 2>&1
+./node_modules/.bin/supabase start --workdir backend --network-id "$NETWORK_NAME" \
+  --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta,mailpit \
+  >"$WORK/start.private" 2>&1
 STAGE=disposable-replay
-./node_modules/.bin/supabase db reset --workdir backend --local >"$WORK/reset.private" 2>&1
-./node_modules/.bin/supabase status --workdir backend -o env >"$WORK/local.env" 2>"$WORK/status.private"
-# Fresh exclusive GitHub runner; transfer only inspected project-owned IDs/aliases
-# to a private bridge before any worker starts. No hosted route remains.
-STAGE=network-isolation
-NETWORK_ID="$(docker network create --internal --label "campaign-ci-owner=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" "campaign-ci-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT")"
-export NETWORK_ID
+./node_modules/.bin/supabase db reset --workdir backend --network-id "$NETWORK_NAME" --local >"$WORK/reset.private" 2>&1
+./node_modules/.bin/supabase status --workdir backend --network-id "$NETWORK_NAME" -o env >"$WORK/local.env" 2>"$WORK/status.private"
+STAGE=disposable-network-attestation
 node - <<'NODE'
-const {execFileSync}=require('child_process'),fs=require('fs');
-const run=(...a)=>execFileSync('docker',a,{encoding:'utf8'}).trim();
-const ids=run('ps','--filter','label=com.supabase.cli.project=econovaria','--format','{{.ID}}').split('\n').filter(Boolean);
-if(ids.length<3)throw Error('MISSING_LOCAL_STACK');
-for(const id of ids){const c=JSON.parse(run('inspect',id))[0];if(c.Config.Labels['com.supabase.cli.project']!=='econovaria')throw Error('FOREIGN_CONTAINER');
- for(const [name,net] of Object.entries(c.NetworkSettings.Networks)){
- const args=['network','connect'];for(const alias of new Set([c.Name.slice(1),...(net.Aliases||[])]))args.push('--alias',alias);
- run(...args,process.env.NETWORK_ID,c.Id);run('network','disconnect',name,c.Id);
- }}
+const {execFileSync} = require('node:child_process');
+const fs = require('node:fs');
+const run = (...args) => execFileSync('docker', args, {encoding: 'utf8'}).trim();
+const ids = run('ps', '-aq', '--filter', 'label=com.supabase.cli.project=econovaria').split('\n').filter(Boolean);
+const stack = new Set();
+for (const id of ids) {
+  const container = JSON.parse(run('inspect', id))[0];
+  const networks = Object.values(container.NetworkSettings.Networks);
+  if (container.Config.Labels['com.supabase.cli.project'] !== 'econovaria' ||
+      networks.length !== 1 || networks[0].NetworkID !== process.env.NETWORK_ID) {
+    throw Error('CLI_STACK_OUTSIDE_OWNED_NETWORK');
+  }
+  if (container.State.Running) stack.add(container.Name);
+}
+for (const component of ['db', 'kong', 'rest']) {
+  if (!stack.has('/supabase_' + component + '_econovaria')) throw Error('MISSING_LOCAL_STACK');
+}
 const env=Object.fromEntries(fs.readFileSync(process.env.WORK+'/local.env','utf8').split('\n').filter(x=>x.includes('=')).map(x=>{const i=x.indexOf('=');return[x.slice(0,i),x.slice(i+1).replace(/^"|"$/g,'')]}));
 if(env.API_URL!=='http://127.0.0.1:54321'||!(env.SERVICE_ROLE_KEY||env.SECRET_KEY))throw Error('LOCAL_CREDENTIALS');
 fs.writeFileSync(process.env.WORK+'/runtime.env','SUPABASE_URL=http://supabase_kong_econovaria:8000\nSUPABASE_SERVICE_ROLE_KEY='+(env.SERVICE_ROLE_KEY||env.SECRET_KEY)+'\n');
@@ -225,6 +246,7 @@ RUNTIME_ID="$(docker create "${RUNTIME_DOCKER[@]}" --network "$NETWORK_ID" \
 docker start "$RUNTIME_ID" >/dev/null
 export RUNTIME_CONTAINER_ID="$RUNTIME_ID"
 export DATABASE_CONTAINER_ID="$(docker inspect --format '{{.Id}}' supabase_db_econovaria)"
+export GATEWAY_CONTAINER_ID="$(docker inspect --format '{{.Id}}' supabase_kong_econovaria)"
 if ! node - <<'NODE'
 const {execFileSync}=require('child_process');
 const c=JSON.parse(execFileSync('docker',['inspect',process.env.RUNTIME_CONTAINER_ID],{encoding:'utf8'}))[0];

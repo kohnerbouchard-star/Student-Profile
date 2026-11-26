@@ -92,3 +92,16 @@ Campaign artifact uses the same native bundle-and-start path without a static
 asset overlay. Its source and dependency lock remain the held main versions.
 The worker must return the expected HTTP boundary responses and pass every
 persisted v2 assertion before the job can report success.
+
+Run 45761679948 served both native controls, after each extracted successfully,
+and served the Campaign artifact through its HTTP method and missing-token
+boundaries. Its first authorized v2 completion assertion failed after seeding.
+The log did not distinguish scheduler authorization from the worker result.
+
+The next candidate gives the CLI the job-owned internal bridge at first
+startup via its supported --network-id option. This removes the possibility
+of stale upstream socket/DNS state caused by moving running containers. The
+synthetic token must verify directly in SQL and through the local PostgREST
+gateway before invoking the worker. Bounded HTTP status, known error codes
+and effect counts localize any failure. Events follow the RPC's allowed
+arrival, opportunity, rivalry and shortage phases.
