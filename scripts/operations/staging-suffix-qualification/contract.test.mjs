@@ -71,3 +71,9 @@ test('exact publication branch alone is excluded from Vercel, all other base con
  assert.equal(current.git.deploymentEnabled['release/production'],true);
  delete current.git.deploymentEnabled['fix/staging-suffix-source-full15-20261126'];assert.deepEqual(current,original);
 });
+
+test('only pinned setup-cli public ghcr registry metadata is accepted, never arbitrary registry authority',()=>{
+ context({...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io'},{},sha);
+ assert.throws(()=>context({...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'untrusted.invalid'},{},sha));
+ assert.throws(()=>context({...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io',SUPABASE_ACCESS_TOKEN:'synthetic-denied'},{},sha));
+});
