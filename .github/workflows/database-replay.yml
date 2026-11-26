@@ -99,7 +99,8 @@ concurrency:
 
 jobs:
   replay:
-    runs-on: ubuntu-latest
+    # Keep the native PR smoke on the verified disposable Docker substrate.
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || 'ubuntu-latest' }}
     timeout-minutes: 35
 
     steps:
