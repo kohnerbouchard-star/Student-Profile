@@ -959,3 +959,27 @@ Next: parent review of checksum-verified local delivery; no full staging claim.
 `IMPLEMENTED_NOT_MERGED`, LOCAL_ONLY on exact main `bc25df5d6d910b09c18574dafb0f00733ef1d5eb`, owner `ops/staging-runtime-catalog-diagnostics`. Adds fixed capped counts to exact schema/catalog comparator evidence and the protected sanitized artifact projection; no object/role names, values, SQL or private paths retained. Tests exercise the actual CLI and workflow projection with ownership, ACL/RLS, scheduler, managed topology and malformed inputs. Existing comparison exits, topology profile, immutable migrations, release/apply holds, credentials and cleanup remain unchanged. Parent-reported artifact 15079418291's actual runtime difference remains unknown; exit 2 still blocks the separate suffix apply candidate. See [scope, profile applicability and limits](../operations/evidence/staging-runtime-catalog-diagnostics-v1/scope.md). No hosted execution, push or dispatch. Next: independent source review and normal exact-head publication controls before a separately authorized fresh protected diagnostic run; no apply permission.
 
 PR1063 source publication: draft [#1063](https://github.com/kohnerbouchard-star/Student-Profile/pull/1063), public source `2e080db32a5f164966c71fbc5242b64977d34ede` (tree identical to local candidate). Actual-number authority retains all PR1062 check identities and adds jobs scheduled by this exact scope; all production/mutation/secret flags remain false. Complete public authority-inclusive carrier and coupled Roster pins precede final-head qualification. No merge, rerun, dispatch, hosted DB or apply authority. Status remains `IMPLEMENTED_NOT_MERGED`; fresh protected diagnostic and actual runtime mismatch remain unverified.
+
+### REF-032 / OPS-STAGE-001 — source-only full15 CI candidate (2026-11-26)
+
+`IMPLEMENTED_NOT_MERGED`, independent exactb62 main branch, not a public PR.
+Adds Source-only staging suffix qualification workflow and test-only compiler/
+predicates/runner under scripts/operations/staging-suffix-qualification; pinned
+amd64 Supabase image, credential-free fenced canonical449-prefix replay, actual
+purge/manufacturing checks and all15 rollback/fault/commit tests are proposed.
+Local contracts and actual native projection fixture pass; Docker/full15 CI remains
+NOT_RUN. Operational gates/workflows, app source and historical SQL unchanged.
+Publication blocked pending independent proof external Git deployment/branching
+hooks cannot deploy or access hosted authority. No PR number/approval/restore
+receipt fabricated; unissued authority template and complete-carrier coupled pin
+instructions are evidence only. Scope/effects/gaps are in operations/evidence/
+staging-suffix-source-qualification-v1/scope.md. No Mac/hosted access, publication,
+dispatch, deployment, job pause or gate enablement. Next: root resolves exact branch
+publication safety, then actual draft authority/carrier/both pins and natural
+exact-head disposable CI; all release holds remain.
+
+REF-032 publication follow-up: owner authorized exact branch-only Vercel deny key
+before initial push. Contract proves all otherb62 config identical and production
+true retained. Source draft publication and actual-number authority/carrier/both
+Roster pins are authorized; no merge, dispatch, deployment, hosted data or gate
+change. Public PR/head and qualification status are recorded in delivery evidence.

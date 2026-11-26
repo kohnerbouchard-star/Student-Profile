@@ -1,0 +1,349 @@
+{
+  "scope": "Conservative offline event/path inventory, not a GitHub or Vercel certification",
+  "proposedBranch": "fix/staging-suffix-source-full15-20261126",
+  "prospectiveAuthorityPath": "pr-NEW.json is symbolic only; no PR number allocated",
+  "paths": [
+    ".github/workflows/staging-suffix-source-qualification.yml",
+    "docs/roadmaps/econovaria-beta-completion-roadmap-v1.md",
+    "scripts/operations/staging-suffix-qualification/projection.test.mjs",
+    "scripts/operations/staging-suffix-qualification/native-test-support.mjs",
+    "scripts/operations/staging-suffix-qualification/contract.test.mjs",
+    "scripts/operations/staging-suffix-qualification/manufacturing-fixture.mjs",
+    "scripts/operations/staging-suffix-qualification/run.mjs",
+    "scripts/operations/staging-suffix-qualification/postconditions.mjs",
+    "scripts/operations/staging-suffix-qualification/compiler.mjs",
+    "scripts/roster-connected/sources.json",
+    "docs/operations/contracts/player-cross-cutting/pr-NEW.json"
+  ],
+  "workflows": [
+    {
+      "path": ".github/workflows/admin-business-supervision.yml",
+      "events": [
+        "pull_request"
+      ],
+      "permissions": {
+        "contents": "read"
+      },
+      "jobs": [
+        {
+          "id": "source",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": {
+            "contents": "read",
+            "pull-requests": "read"
+          }
+        },
+        {
+          "id": "database",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        },
+        {
+          "id": "browser",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/business-multicurrency-treasury-v1.yml",
+      "events": [
+        "pull_request"
+      ],
+      "permissions": {
+        "contents": "read"
+      },
+      "jobs": [
+        {
+          "id": "source-contract",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": {
+            "contents": "read",
+            "pull-requests": "read"
+          }
+        },
+        {
+          "id": "disposable-database",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        },
+        {
+          "id": "player-browser",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/business-player-store-fx-final-v2.yml",
+      "events": [
+        "pull_request"
+      ],
+      "permissions": {
+        "contents": "read"
+      },
+      "jobs": [
+        {
+          "id": "source-contract",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": {
+            "contents": "read",
+            "pull-requests": "read"
+          }
+        },
+        {
+          "id": "disposable-database",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        },
+        {
+          "id": "player-browser",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        },
+        {
+          "id": "connected-two-browser",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/business-store-sales-convergence-v2.yml",
+      "events": [
+        "pull_request"
+      ],
+      "permissions": {
+        "contents": "read"
+      },
+      "jobs": [
+        {
+          "id": "source-contract",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": {
+            "contents": "read",
+            "pull-requests": "read"
+          }
+        },
+        {
+          "id": "disposable-database",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        },
+        {
+          "id": "worker-contract",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        },
+        {
+          "id": "player-admin-contract",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/player-terminal-verify.yml",
+      "events": [
+        "pull_request"
+      ],
+      "permissions": {
+        "contents": "read"
+      },
+      "jobs": [
+        {
+          "id": "verify",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/production-runtime-promotion-contract.yml",
+      "events": [
+        "pull_request"
+      ],
+      "permissions": {
+        "contents": "read"
+      },
+      "jobs": [
+        {
+          "id": "verify",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/release-integrity.yml",
+      "events": [
+        "pull_request"
+      ],
+      "permissions": {
+        "contents": "read"
+      },
+      "jobs": [
+        {
+          "id": "static-integrity",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        },
+        {
+          "id": "live-parity",
+          "if": "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'",
+          "environment": "production",
+          "mentionsSecrets": true,
+          "permissions": null
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/repository-quality.yml",
+      "events": [
+        "pull_request"
+      ],
+      "permissions": {
+        "contents": "read"
+      },
+      "jobs": [
+        {
+          "id": "quality",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/roster-connected-e2e.yml",
+      "events": [
+        "pull_request"
+      ],
+      "permissions": {
+        "contents": "read"
+      },
+      "jobs": [
+        {
+          "id": "paired-roster",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/staging-readiness-preflight.yml",
+      "events": [
+        "pull_request"
+      ],
+      "permissions": {
+        "contents": "read"
+      },
+      "jobs": [
+        {
+          "id": "validator-tests",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        },
+        {
+          "id": "staging-preflight",
+          "if": "github.event_name == 'workflow_dispatch'",
+          "environment": "staging",
+          "mentionsSecrets": false,
+          "permissions": null
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/staging-suffix-source-qualification.yml",
+      "events": [
+        "push",
+        "pull_request"
+      ],
+      "permissions": {
+        "contents": "read"
+      },
+      "jobs": [
+        {
+          "id": "qualify",
+          "if": "github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository",
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": null
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/supply-chain-security.yml",
+      "events": [
+        "pull_request"
+      ],
+      "permissions": {
+        "contents": "read"
+      },
+      "jobs": [
+        {
+          "id": "dependency-review",
+          "if": "github.event_name == 'pull_request'",
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": {
+            "contents": "read"
+          }
+        },
+        {
+          "id": "verify-and-attest",
+          "if": null,
+          "environment": null,
+          "mentionsSecrets": false,
+          "permissions": {
+            "contents": "read",
+            "id-token": "write",
+            "attestations": "write"
+          }
+        }
+      ]
+    }
+  ],
+  "excludedClosedOnly": [
+    ".github/workflows/branch-hygiene.yml"
+  ]
+}

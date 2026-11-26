@@ -10,6 +10,7 @@
   "git": {
     "deploymentEnabled": {
       "main": false,
+      "fix/staging-suffix-source-full15-20261126": false,
       "release/production": true,
       "ops/econovaria-git-native-domain-activation-20260813": false
     }
