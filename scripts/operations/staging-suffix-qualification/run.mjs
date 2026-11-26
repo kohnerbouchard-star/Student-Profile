@@ -70,7 +70,7 @@ export function failureFacts(error){
  return facts;
 }
 export const TEST_DUMP_KEY='SourceOnlyComparisonV1';
-// Classification only. Acceptance still uses the unchanged legacy digest below.
+// Diagnostic only; acceptance hashes the entire deterministic test dump without filtering.
 export function normalizeOuterDumpNonce(text){
  const opening=/^\\restrict ([A-Za-z0-9]+)(?:\r?\n|$)/m.exec(text);
  const closing=/(^|\n)\\unrestrict ([A-Za-z0-9]+)(?:\r?\n)*$/.exec(text);
@@ -80,6 +80,11 @@ export function normalizeOuterDumpNonce(text){
  return noFooter.slice(0,opening.index)+noFooter.slice(opening.index+opening[0].length);
 }
 export const legacySnapshotDigest=text=>sha256(text.replace(/^\\(?:un)?restrict .*\n/gm,''));
+export function verifyNoOpControls(evidence){
+ for(const key of ['onlyOuterNonceDiff','fixedWholeEqual','fixedSchemaEqual','fixedDataEqual'])assert.equal(evidence[key],true,'NO_OP_CONTROL_'+key);
+ assert.deepEqual(evidence.schedulerBefore,evidence.schedulerAfter,'NO_OP_SCHEDULER_CHANGED');
+ assert.equal(evidence.schedulerBefore.launchActiveJobs,'off','NO_OP_SCHEDULER_NOT_FENCED');
+}
 export async function runQualification({env=process.env,root=process.cwd(),execute}={}){
  let work,imageEvidence,bootstrapEvidence,noOpEvidence,started=false,stage='context',result={status:'FAILED',syntheticOnly:true,releaseQualified:false,applyAuthorized:false};
  const implementation=execute??((cmd,args,input,timeout=30000,childEnv)=>execFileSync(cmd,args,{env:childEnv,input,encoding:'utf8',timeout,maxBuffer:64*1024*1024,stdio:[input===undefined?'ignore':'pipe','pipe','pipe']}).trim());
@@ -130,7 +135,7 @@ export async function runQualification({env=process.env,root=process.cwd(),execu
    container(inspect(id),project,pinned.Id,created);
    return run('docker',['exec',id,'env','-i','PATH=/usr/bin:/bin:/usr/local/bin','PGSERVICEFILE=/dev/null','pg_dump','-h','/var/run/postgresql','-U','postgres','-d','postgres','--schema=public','--schema=private','--schema=economy_private','--schema=recovery_private','--schema=supabase_migrations','--schema=qualification_probe',...extra]);
   };
-  const snapshot=()=>legacySnapshotDigest(dump());
+  const snapshot=()=>sha256(dump(['--restrict-key='+TEST_DUMP_KEY]));
   const scheduler=()=>JSON.parse(sql("select json_build_object('launchActiveJobs',current_setting('cron.launch_active_jobs'),'jobCount',(select count(*) from cron.job),'runDetailsCount',(select count(*) from cron.job_run_details));",'supabase_admin'));
   stage='no-op-controls';const schedulerBefore=scheduler(),first=dump(),second=dump();
   noOpEvidence={defaultRawEqual:sha256(first)===sha256(second),legacyDigestEqual:legacySnapshotDigest(first)===legacySnapshotDigest(second),onlyOuterNonceDiff:sha256(normalizeOuterDumpNonce(first))===sha256(normalizeOuterDumpNonce(second))};
@@ -138,7 +143,7 @@ export async function runQualification({env=process.env,root=process.cwd(),execu
   noOpEvidence.fixedWholeEqual=sha256(dump(fixed))===sha256(dump(fixed));
   noOpEvidence.fixedSchemaEqual=sha256(dump([...fixed,'--schema-only']))===sha256(dump([...fixed,'--schema-only']));
   noOpEvidence.fixedDataEqual=sha256(dump([...fixed,'--data-only']))===sha256(dump([...fixed,'--data-only']));
-  noOpEvidence.schedulerBefore=schedulerBefore;noOpEvidence.schedulerAfter=scheduler();
+  noOpEvidence.schedulerBefore=schedulerBefore;noOpEvidence.schedulerAfter=scheduler();verifyNoOpControls(noOpEvidence);
   const checks=predicates(rows),before=snapshot();stage='all15-rollback';sql(renderAtomicBatch(rows,checks,'rollback'));assert.equal(snapshot(),before);
   stage='all15-per-migration-faults';
   for(const faultRow of rows){
@@ -156,7 +161,7 @@ export async function runQualification({env=process.env,root=process.cwd(),execu
   sql('create database qualification_manufacturing_fixture;');
   sql(projectionFixture+definition+projectionAssertions,'postgres','qualification_manufacturing_fixture');
   assert.equal(local('git',['rev-parse','HEAD']),source);
-  result={status:'PASS',sourceCommit:source,syntheticOnly:true,canonicalPrefixCount:count,bootstrapChecked:true,bootstrapEvidence,appliedCount:15,purgeChecked:true,manufacturingCatalogAndClaimGuardChecked:true,manufacturingProjectionPrecisionChecked:true,all15Rollback:true,all15FaultAtomicity:true,injectedFaultPositions:15,committedRetryRejected:true,fullManufacturingLifecycle:false,releaseQualified:false,applyAuthorized:false};
+  result={status:'PASS',sourceCommit:source,syntheticOnly:true,noOpControlsPassed:true,noOpEvidence,imageEvidence,canonicalPrefixCount:count,bootstrapChecked:true,bootstrapEvidence,appliedCount:15,purgeChecked:true,manufacturingCatalogAndClaimGuardChecked:true,manufacturingProjectionPrecisionChecked:true,all15Rollback:true,all15FaultAtomicity:true,injectedFaultPositions:15,committedRetryRejected:true,fullManufacturingLifecycle:false,releaseQualified:false,applyAuthorized:false};
  }catch(error){result={status:'FAILED',stage,...failureFacts(error),...(imageEvidence?{imageEvidence}:{}),...(bootstrapEvidence?{bootstrapEvidence}:{}),...(noOpEvidence?{noOpEvidence}:{}),syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}
  finally{if(started){try{raw('supabase',['stop','--workdir',work,'--no-backup'],undefined,60000,{PATH:env.PATH,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io',HOME:path.join(work,'home'),DOCKER_CONFIG:path.join(work,'docker'),DOCKER_HOST:'unix:///var/run/docker.sock'});}catch{result={status:'FAILED',stage:'cleanup',syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}}if(work)rmSync(work,{recursive:true,force:true});}
  return result;

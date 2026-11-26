@@ -240,3 +240,7 @@ assertion is UNCHANGED in this diagnostic source. No row sorting, schema filteri
 or ignored ACL/sequence differences are introduced. Fixed restrict-key is used
 only for diagnostic dumps that are never restored, not any real backup/capture.
 Reference https://www.postgresql.org/docs/17/app-pgdump.html#APP-PGDUMP-OPTIONS .
+
+### Proven rollback comparator correction (2026-11-26)
+Natural diagnostic run 45757636764 at 99972b40ad6421654a6cb85cb9b5878fd5092c61 retained the failing rollback assertion. Two canonical no-op dumps differed only in paired outer pg_dump nonce commands: defaultRawEqual=false, legacyDigestEqual=false, onlyOuterNonceDiff=true. Fixed-key full/schema/data dumps were each byte-identical. Scheduler before/after both reported launchActiveJobs=off, jobCount=6, runDetailsCount=0. The trimmed final unrestrict nonce survived the old newline-dependent filter.
+Acceptance now hashes the entire dump with a fixed test-only --restrict-key, without removing any SQL, data, ACL or sequence bytes. These dumps are only compared, never restored or used for capture. All no-op controls and unchanged disabled scheduler state are mandatory; failure remains fail-closed. Real native PostgreSQL regressions reproduce the old defect and detect data, ACL and sequence mutation. This is synthetic harness qualification only; releaseQualified and applyAuthorized remain false.

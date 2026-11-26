@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {context,container,IMAGE,IMAGE_ID,runQualification,commandAllowed,imageFacts,verifyBootstrap,failureFacts,lastMigrationVersion,normalizeOuterDumpNonce,legacySnapshotDigest} from './run.mjs';
+import {context,container,IMAGE,IMAGE_ID,runQualification,commandAllowed,imageFacts,verifyBootstrap,failureFacts,lastMigrationVersion,normalizeOuterDumpNonce,legacySnapshotDigest,verifyNoOpControls} from './run.mjs';
 import {loadBatch,renderAtomicBatch} from './compiler.mjs';
 import {predicates} from './postconditions.mjs';
 const wf=readFileSync(new URL('../../../.github/workflows/staging-suffix-source-qualification.yml',import.meta.url),'utf8');
@@ -113,7 +113,7 @@ test('rollback diagnostics whitelist migration, SQLSTATE, predicate ordinal and 
  assert(!JSON.stringify(failureFacts({stderr:'PRIVATE_DATA'})).includes('PRIVATE_DATA'));
 });
 
-test('nonce diagnostic handles trimmed EOF and preserves every interior SQL/data byte; rollback acceptance unchanged',()=>{
+test('nonce diagnostic handles trimmed EOF and preserves every interior SQL/data byte; acceptance hashes full deterministic dump',()=>{
  const body="-- header\nCREATE TABLE sample(v text);\nCOPY sample FROM stdin;\ntrailing space \n\\.\n-- footer\n";
  const dump=k=>'\\restrict '+k+'\n'+body+'\\unrestrict '+k;
  assert.notEqual(legacySnapshotDigest(dump('AAA')),legacySnapshotDigest(dump('BBB')));
@@ -121,5 +121,14 @@ test('nonce diagnostic handles trimmed EOF and preserves every interior SQL/data
  assert.equal(normalizeOuterDumpNonce(dump('BBB')+'\n'),body);
  assert.notEqual(normalizeOuterDumpNonce(dump('AAA')),normalizeOuterDumpNonce(dump('AAA').replace('trailing space ','changed')));
  assert.throws(()=>normalizeOuterDumpNonce('\\restrict AAA\nSQL;\n\\unrestrict BBB'));
- assert(readFileSync('scripts/operations/staging-suffix-qualification/run.mjs','utf8').includes('const snapshot=()=>legacySnapshotDigest(dump())'));
+ assert(readFileSync('scripts/operations/staging-suffix-qualification/run.mjs','utf8').includes("const snapshot=()=>sha256(dump(['--restrict-key='+TEST_DUMP_KEY]))"));
+});
+
+test('no-op acceptance fails closed for schema, data, whole-dump or scheduler changes',()=>{
+ const scheduler={launchActiveJobs:'off',jobCount:6,runDetailsCount:0};
+ const evidence={onlyOuterNonceDiff:true,fixedWholeEqual:true,fixedSchemaEqual:true,fixedDataEqual:true,schedulerBefore:scheduler,schedulerAfter:{...scheduler}};
+ verifyNoOpControls(evidence);
+ for(const key of ['onlyOuterNonceDiff','fixedWholeEqual','fixedSchemaEqual','fixedDataEqual'])assert.throws(()=>verifyNoOpControls({...evidence,[key]:false}));
+ assert.throws(()=>verifyNoOpControls({...evidence,schedulerAfter:{...scheduler,runDetailsCount:1}}));
+ assert.throws(()=>verifyNoOpControls({...evidence,schedulerBefore:{...scheduler,launchActiveJobs:'on'},schedulerAfter:{...scheduler,launchActiveJobs:'on'}}));
 });
