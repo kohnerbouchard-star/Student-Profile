@@ -48,6 +48,17 @@ test("raw snapshots and database credentials remain in capture and no hosted sec
   assert.match(later, /Remove restricted captures and diagnostics\n        if: always\(\)/);
 });
 
+test("capture wait sampling requires explicit opt-in and is limited to the read-only capture", () => {
+  const match = workflow.match(/capture_wait_diagnostics:\n[^\n]+\n        required: false\n        type: boolean\n        default: false/);
+  assert.ok(match);
+  const start = workflow.indexOf("Capture staging schema and ledger read-only");
+  const end = workflow.indexOf("Restore and rehearse locally without hosted credentials");
+  const [before, capture, after] = [workflow.slice(0, start), workflow.slice(start, end), workflow.slice(end)];
+  assert.ok(capture.includes("REF032_CAPTURE_OBSERVE: ${{ inputs.capture_wait_diagnostics && '1' || '' }}"));
+  assert.ok(capture.includes("-e REF032_CAPTURE_OBSERVE -e PGSSLMODE=verify-full"));
+  assert.doesNotMatch(before + after, /REF032_CAPTURE_OBSERVE/);
+});
+
 test("merging the diagnostic contract naturally schedules canonical Database Replay on main", () => {
   const replay = read(".github/workflows/database-replay.yml");
   const push = replay.match(/^  push:\n([\s\S]*?)(?=^  [A-Za-z_]+:|^permissions:)/m)?.[1] ?? "";

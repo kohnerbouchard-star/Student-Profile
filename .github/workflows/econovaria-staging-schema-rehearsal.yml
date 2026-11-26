@@ -7,6 +7,11 @@ on:
         required: true
         type: boolean
         default: false
+      capture_wait_diagnostics:
+        description: Record bounded read-only schema export wait diagnostics on failure
+        required: false
+        type: boolean
+        default: false
       source_sha:
         description: Approved current-main SHA
         required: true
@@ -78,6 +83,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PHASE15_REMOTE_DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          REF032_CAPTURE_OBSERVE: ${{ inputs.capture_wait_diagnostics && '1' || '' }}
         run: |
           set -euo pipefail
           umask 077
@@ -105,7 +111,7 @@ jobs:
           NODE
           export PHASE15_VERSIONS="$(jq -r '.bundle.migrations[].version, .suffix.migrations[].version' "$RUNNER_TEMP/u1/plan.json" | paste -sd, -)"
           docker run --pull=never --rm --entrypoint bash --env-file "$RUNNER_TEMP/u1/connection.env" \
-            -e PHASE15_VERSIONS -e PGSSLMODE=verify-full \
+            -e PHASE15_VERSIONS -e REF032_CAPTURE_OBSERVE -e PGSSLMODE=verify-full \
             -e PGSSLROOTCERT=/repo/scripts/operations/live-migration-reconciliation/supabase-prod-ca-2021.crt \
             -v "$PWD:/repo:ro" -v "$RUNNER_TEMP/u1:$RUNNER_TEMP/u1" "$IMAGE" \
             /repo/scripts/operations/live-migration-reconciliation/capture-rehearsal-snapshot.sh "$PHASE15_CAPTURE_DIR"
