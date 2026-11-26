@@ -33,7 +33,7 @@ test('all15 exact source bodies have nonempty safe predicates; no unconditional 
 });
 test('failure output remains bounded and non-authorizing',async()=>{
  const result=await runQualification({env:{...env,GITHUB_RUN_ATTEMPT:'2'},execute:()=>sha});
- assert.deepEqual(result,{status:'FAILED',stage:'context',syntheticOnly:true,releaseQualified:false,applyAuthorized:false});
+ assert.deepEqual(result,{status:'FAILED',stage:'context',reason:'INPUT_OR_COMMAND',syntheticOnly:true,releaseQualified:false,applyAuthorized:false});
  assert(!JSON.stringify(result).includes('password'));
 });
 
@@ -48,7 +48,7 @@ test('failed external image acquisition is attempted once and exposes no raw dia
   throw Error('UNEXPECTED_COMMAND');
  };
  const result=await runQualification({env:{...env,RUNNER_TEMP:temp,GITHUB_EVENT_PATH:eventPath},execute});
- assert.equal(pulls,1);assert.deepEqual(result,{status:'FAILED',stage:'image',syntheticOnly:true,releaseQualified:false,applyAuthorized:false});
+ assert.equal(pulls,1);assert.deepEqual(result,{status:'FAILED',stage:'image',reason:'INPUT_OR_COMMAND',syntheticOnly:true,releaseQualified:false,applyAuthorized:false});
  assert(!JSON.stringify(result).includes('PRIVATE'));
  }finally{rmSync(temp,{recursive:true,force:true});}
 });

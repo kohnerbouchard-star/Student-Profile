@@ -16,7 +16,7 @@ export function context(env,event,sha){
  assert.equal(env.GITHUB_REPOSITORY,'kohnerbouchard-star/Student-Profile');assert.equal(env.GITHUB_RUN_ATTEMPT,'1');assert.match(sha,/^[a-f0-9]{40}$/);
  if(env.GITHUB_EVENT_NAME==='pull_request'){assert.equal(event.pull_request.base.ref,'main');assert.equal(event.pull_request.head.repo.full_name,env.GITHUB_REPOSITORY);assert.equal(event.pull_request.head.sha,sha);}
  else{assert.equal(env.GITHUB_EVENT_NAME,'push');assert.match(env.GITHUB_REF,/^refs\/heads\/fix\/staging-suffix-source-[a-z0-9-]+$/);assert.equal(env.GITHUB_SHA,sha);}
- for(const [key,value]of Object.entries(env))if(value&&(/^(?:PG|SUPABASE_|PHASE15_|STAGING_|DATABASE_URL|DOCKER_HOST|DOCKER_CONTEXT|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH|GH_TOKEN|GITHUB_TOKEN)/.test(key)))throw Error('EXTERNAL_AUTHORITY_FORBIDDEN');
+ for(const [key,value]of Object.entries(env))if(value&&(/^(?:PG|SUPABASE_|PHASE15_|STAGING_|DATABASE_URL|DOCKER_HOST|DOCKER_CONTEXT|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH|GH_TOKEN|GITHUB_TOKEN)/.test(key)))throw Object.assign(Error('EXTERNAL_AUTHORITY_FORBIDDEN'),{blockedVariable:key});
 }
 export function container(value,project,image,created){
  assert(typeof value.HostConfig?.NetworkMode==='string'&&value.HostConfig.NetworkMode!=='host'&&!String(value.HostConfig?.NetworkMode).startsWith('container:'));
@@ -44,13 +44,13 @@ export async function runQualification({env=process.env,root=process.cwd(),execu
  const local=(cmd,args,input,timeout)=>raw(cmd,args,input,timeout,{PATH:env.PATH});
  try{
   const source=local('git',['rev-parse','HEAD']);context(env,JSON.parse(readFileSync(env.GITHUB_EVENT_PATH)),source);
-  local('git',['diff','--exit-code','b62f10ffda169fd6f884cc3a254c136fbd6b862d','--','backend/supabase/migrations']);
+  stage='source-integrity';local('git',['diff','--exit-code','b62f10ffda169fd6f884cc3a254c136fbd6b862d','--','backend/supabase/migrations']);
   assert.equal(local('git',['status','--porcelain','--untracked-files=all','--','backend/supabase/migrations']),'');
-  work=mkdtempSync(path.join(env.RUNNER_TEMP,'suffix-source-only-'));mkdirSync(path.join(work,'supabase/migrations'),{recursive:true});mkdirSync(path.join(work,'home'));mkdirSync(path.join(work,'docker'));
+  stage='private-workspace';work=mkdtempSync(path.join(env.RUNNER_TEMP,'suffix-source-only-'));mkdirSync(path.join(work,'supabase/migrations'),{recursive:true});mkdirSync(path.join(work,'home'));mkdirSync(path.join(work,'docker'));
   const childEnv={PATH:env.PATH,HOME:path.join(work,'home'),DOCKER_CONFIG:path.join(work,'docker'),DOCKER_HOST:'unix:///var/run/docker.sock'};
   const run=(cmd,args,input,timeout=30000)=>raw(cmd,args,input,timeout,childEnv);
-  assert.equal(run('supabase',['--version']),'2.109.1');
-  assert.equal(JSON.parse(run('docker',['context','inspect']))[0].Endpoints.docker.Host,'unix:///var/run/docker.sock');
+  stage='cli-version';assert.equal(run('supabase',['--version']),'2.109.1');
+  stage='docker-context';assert.equal(JSON.parse(run('docker',['context','inspect']))[0].Endpoints.docker.Host,'unix:///var/run/docker.sock');
   stage='image';run('docker',['pull','--platform','linux/amd64',IMAGE],undefined,180000);
   const pinned=JSON.parse(run('docker',['image','inspect',IMAGE]))[0];assert.equal(pinned.Architecture,'amd64');assert.equal(pinned.Os,'linux');
   const project='suffix_source_'+randomBytes(8).toString('hex');
@@ -102,7 +102,7 @@ export async function runQualification({env=process.env,root=process.cwd(),execu
   sql(projectionFixture+definition+projectionAssertions,'postgres','qualification_manufacturing_fixture');
   assert.equal(local('git',['rev-parse','HEAD']),source);
   result={status:'PASS',sourceCommit:source,syntheticOnly:true,canonicalPrefixCount:count,appliedCount:15,purgeChecked:true,manufacturingCatalogAndClaimGuardChecked:true,manufacturingProjectionPrecisionChecked:true,all15Rollback:true,all15FaultAtomicity:true,injectedFaultPositions:15,committedRetryRejected:true,fullManufacturingLifecycle:false,releaseQualified:false,applyAuthorized:false};
- }catch{result={status:'FAILED',stage,syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}
+ }catch(error){result={status:'FAILED',stage,reason:error?.blockedVariable?'EXTERNAL_AUTHORITY_FORBIDDEN':'INPUT_OR_COMMAND',...(error?.blockedVariable?{blockedVariable:error.blockedVariable}:{}),syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}
  finally{if(started){try{raw('supabase',['stop','--workdir',work,'--no-backup'],undefined,60000,{PATH:env.PATH,HOME:path.join(work,'home'),DOCKER_CONFIG:path.join(work,'docker'),DOCKER_HOST:'unix:///var/run/docker.sock'});}catch{result={status:'FAILED',stage:'cleanup',syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}}if(work)rmSync(work,{recursive:true,force:true});}
  return result;
 }
