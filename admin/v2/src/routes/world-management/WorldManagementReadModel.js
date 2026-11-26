@@ -1,66 +1,13 @@
 import { isAdminErrorEnvelope, normalizeAdminError } from "../../core/error-envelope.js";
+import { isRecord, safeText, safeToken, safeInteger, safeBoolean, safeTimestamp, safePublicId, safeCurrency, safeStringArray } from "./WorldReadValues.js";
 import { WORLD_ARRIVAL_CLASS_IDS } from "./WorldManagementApi.js";
 
-const UUID_IN_TEXT_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
 const CAMPAIGN_ID_PATTERN = /^cmp_[0-9a-f]{32}$/;
 const EFFECT_ID_PATTERN = /^cec_[0-9a-f]{32}$/;
 const ASSIGNMENT_ID_PATTERN = /^acl_[0-9a-f]{32}$/;
 const ROUTE_ID_PATTERN = /^rte_[a-z0-9_]+$/;
 const LOCATION_ID_PATTERN = /^loc_[a-z0-9_]+$/;
 const CLASS_IDS = new Set(WORLD_ARRIVAL_CLASS_IDS);
-
-function isRecord(value) {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
-}
-
-function safeText(value, maximum = 500) {
-  if (typeof value !== "string" && typeof value !== "number") return "";
-  const normalized = String(value ?? "").trim();
-  if (!normalized || UUID_IN_TEXT_PATTERN.test(normalized)) return "";
-  return normalized.slice(0, maximum);
-}
-
-function safeToken(value, maximum = 160) {
-  return safeText(value, maximum);
-}
-
-function safeInteger(value, fallback = null) {
-  if (value === null || value === undefined || value === "") return fallback;
-  const numeric = Number(value);
-  return Number.isSafeInteger(numeric) && numeric >= 0 ? numeric : fallback;
-}
-
-function safeSignedInteger(value, fallback = null) {
-  if (value === null || value === undefined || value === "") return fallback;
-  const numeric = Number(value);
-  return Number.isSafeInteger(numeric) ? numeric : fallback;
-}
-
-function safeBoolean(value) {
-  return value === true;
-}
-
-function safeTimestamp(value) {
-  const normalized = safeText(value, 80);
-  return normalized && Number.isFinite(Date.parse(normalized)) ? normalized : "";
-}
-
-function safePublicId(value, pattern) {
-  const token = String(value || "").trim().toLowerCase();
-  return pattern.test(token) ? token : "";
-}
-
-function safeCurrency(value) {
-  const code = safeText(value, 12).toUpperCase();
-  return /^[A-Z0-9][A-Z0-9._-]{1,11}$/.test(code) ? code : "";
-}
-
-function safeStringArray(value, maximum = 50) {
-  if (!Array.isArray(value)) return Object.freeze([]);
-  return Object.freeze(
-    value.slice(0, maximum).map((item) => safeText(item, 160)).filter(Boolean),
-  );
-}
 
 function panel(batch, key) {
   const entry = batch?.panels?.[key];
