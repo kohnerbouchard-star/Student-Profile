@@ -3,12 +3,12 @@
   "apiRelation": "exact-equality",
   "mode": "integrated-composite",
   "backend": {
-    "sha": "0af16038627e87d76cc7ca14a4eba7f732885358",
-    "tree": "1bff19c9640e4ffee41debc1fc313bd45a4f2886"
+    "sha": "cc701b726e4ca643f8777835361607279fdf648f",
+    "tree": "48dbae2c46d55cafa7bfaffedad1fdd4db426089"
   },
   "frontend": {
-    "sha": "0af16038627e87d76cc7ca14a4eba7f732885358",
-    "tree": "1bff19c9640e4ffee41debc1fc313bd45a4f2886"
+    "sha": "cc701b726e4ca643f8777835361607279fdf648f",
+    "tree": "48dbae2c46d55cafa7bfaffedad1fdd4db426089"
   },
   "overlay": [
     "admin/v2/src/api/admin-api-client.js",

@@ -102,3 +102,22 @@ as results arrive; this historical source record does not assert those gates
 have passed. Local supplemental artifacts were moved outside the checkout to
 `/tmp/business1056-local-artifacts` before exact-disk Roster verification;
 no runtime input exclusion or check was weakened.
+
+
+## Local reconciliation on exact main1e517d5 — 2026-11-26
+
+Local review/pr1056-reconcile-1e517d5-20261126 normally merges exact published
+head1ba16af732440025304ff576ffe18ba1580a5a89 and main
+1e517d5cac29624964b1fe0c6444929de448757c. Only roadmap and Roster source
+pins conflict. All main roadmap records and Business records survive; generated
+inventory is main-identical. Both Roster roles must reference a complete new
+authority-inclusive carrier, followed by a pin-only commit, with unchanged seven
+overlays and exact equality. Neither old recovery cc283f4d87 nor separate T021
+is substituted. Application/test bytes are unchanged from the published owner;
+all main backend/workflow/rehearsal protections are inherited without edits.
+
+Fresh source identities, conflict proofs, local test outputs and bundle checksum
+are recorded in a separate local handoff directory for the parent. No old CI
+qualifies these new commits. Main may move after this reconciliation; if it does,
+requalification is required. No push, PR state update, merge to main, dispatch,
+provider change, live data access or deployment is performed in this tranche.

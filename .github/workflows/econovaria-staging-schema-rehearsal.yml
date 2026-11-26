@@ -66,6 +66,10 @@ jobs:
           gh run download "$REPLAY_RUN" --name "phase15-clean-replay-$GITHUB_SHA" --dir "$RUNNER_TEMP/u1/canonical"
           docker pull "$IMAGE"
           node --test \
+            scripts/operations/live-migration-reconciliation/rehearsal-stage-diagnostic.test.mjs \
+            scripts/operations/live-migration-reconciliation/sanitize-rehearsal-failure.test.mjs \
+            scripts/operations/live-migration-reconciliation/disposable-purge-control-fixture.test.mjs \
+            scripts/operations/live-migration-reconciliation/captured-staging-purge-fixture.test.mjs \
             scripts/operations/live-migration-reconciliation/readonly-rehearsal.test.mjs \
             scripts/operations/live-migration-reconciliation/staging-schema-rehearsal-contract.test.mjs
           node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs --environment "$PHASE15_ENVIRONMENT" --mode rollback --format manifest > "$RUNNER_TEMP/u1/manifest.json"
@@ -108,6 +112,8 @@ jobs:
           rm -f "$RUNNER_TEMP/u1/connection.env" "$RUNNER_TEMP/u1/connection.pgpass"
           sudo chown -R "$(id -u):$(id -g)" "$PHASE15_CAPTURE_DIR"
       - name: Restore and rehearse locally without hosted credentials
+        env:
+          REF032_RECONSTRUCT_PURGE_FIXTURE: repository-only-v1
         run: |
           set -euo pipefail
           umask 077
@@ -121,6 +127,7 @@ jobs:
             ledger_digest="$(sha256sum "$PHASE15_CAPTURE_DIR/ledger.json" | cut -d' ' -f1)"
             jq --arg schema "$schema_digest" --arg ledger "$ledger_digest" '{
               sourceCommit, environment, status, exitCode, executionMode,
+              errorClass, failedMigration, failedVersion, failureStage, failureSqlstate,
               appliedMigrationCount, certifiedMigrationCount,
               canonicalApplicationSchemaMatched, runtimeCatalogComparisonExit,
               sourceRowsCopied, rawSchemaDumpRetained,

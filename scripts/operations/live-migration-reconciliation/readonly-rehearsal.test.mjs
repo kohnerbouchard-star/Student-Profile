@@ -1,7 +1,8 @@
+import './capture-lock-timeout.test.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, statSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { tmpdir, userInfo } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { validateDatabaseUrlProjectRef } from '../../release-integrity/database-binding.mjs';
@@ -104,8 +105,8 @@ test('shared snapshot survives concurrent DDL/ledger changes and fails on export
 }, () => {
   const bin = process.env.REF032_PG_BIN;
   const temp = mkdtempSync(path.join(tmpdir(), 'ref032-snapshot-'));
-  const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, PGHOST: temp,
-    PGPORT: '5432', PGDATABASE: 'postgres', PGUSER: process.env.USER,
+  const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, PGHOST: '127.0.0.1',
+    PGPORT: process.env.REF032_PG_PORT || '5432', PGDATABASE: 'postgres', PGUSER: userInfo().username,
     PGPASSWORD: 'disposable:pass\\word%42',
     PHASE15_EXPECTED_PROJECT_REF: 'eecvbssdvarfcykcfrny',
     PHASE15_VERSIONS: '20260921044500' };
@@ -114,7 +115,7 @@ test('shared snapshot survives concurrent DDL/ledger changes and fails on export
   try {
     writeFileSync(`${temp}/password`, env.PGPASSWORD, { mode: 0o600 });
     run('initdb', ['-D', `${temp}/db`, '-A', 'scram-sha-256', '--pwfile', `${temp}/password`, '--no-locale']);
-    run('pg_ctl', ['-D', `${temp}/db`, '-l', `${temp}/server.log`, '-o', `-k ${temp} -p 5432 -h 127.0.0.1`, '-w', 'start']);
+    run('pg_ctl', ['-D', `${temp}/db`, '-l', `${temp}/server.log`, '-o', `-k '' -p ${env.PGPORT} -h 127.0.0.1`, '-w', 'start']);
     sql("create schema private; create schema economy_private; create schema supabase_migrations; create table public.before_snapshot(id int); create table supabase_migrations.schema_migrations(version text,name text,statements text[]); insert into supabase_migrations.schema_migrations values ('20260921044500','before',array['select 1;']);");
     const uriFailure = spawnSync(path.join(bin, 'psql'), ['-XqAt', '-c', 'select 1'], {
       env: { ...env, PGDATABASE: `postgresql://${env.PGUSER}:disposable-only@localhost:5432/postgres` }, encoding: 'utf8',
@@ -141,6 +142,7 @@ test('shared snapshot survives concurrent DDL/ledger changes and fails on export
     assert.equal(captureEnv.PGHOST, 'db.eecvbssdvarfcykcfrny.supabase.co');
     // Test-only routing keeps this valid DNS identity on our local SCRAM server.
     captureEnv.PGHOSTADDR = '127.0.0.1';
+    captureEnv.PGPORT = env.PGPORT; // Test-only unique loopback port; converter identity remains unchanged.
     assert.equal(captureEnv.PGDATABASE, 'postgres');
     assert.equal(converted.includes(env.PGPASSWORD), false);
     assert.equal(statSync(captureEnv.PGPASSFILE).mode & 0o777, 0o600);
@@ -163,6 +165,7 @@ test('shared snapshot survives concurrent DDL/ledger changes and fails on export
         input: converter, env: { ...env, RUNNER_TEMP: temp, PHASE15_REMOTE_DATABASE_URL: uri },
       });
     }
+    writeFileSync(captureEnv.PGPASSFILE, readFileSync(captureEnv.PGPASSFILE, 'utf8').replace(':5432:', `:${env.PGPORT}:`), { mode: 0o600 });
     mkdirSync(`${temp}/shim`);
     const wrapper = (query) => writeFileSync(`${temp}/shim/pg_dump`, `#!/bin/bash\nset -eu\nPGOPTIONS= PGAPPNAME=fixture-writer '${bin}/psql' -XqAt -v ON_ERROR_STOP=1 -c "${query}" >/dev/null\nexec '${bin}/pg_dump' "$@"\n`, { mode: 0o700 });
     const capture = (dir) => spawnSync('bash', [helper, `${temp}/${dir}`], {

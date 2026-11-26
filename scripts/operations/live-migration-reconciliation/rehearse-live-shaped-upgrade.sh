@@ -45,6 +45,9 @@ partition_path="$PHASE15_EVIDENCE_DIR/ledger-partition.json"
 suffix_applied_path="$PHASE15_EVIDENCE_DIR/applied-post-bundle-migrations.txt"
 suffix_certified_count=0
 failure_path="$PHASE15_EVIDENCE_DIR/failure.json"
+stage_path="$PHASE15_WORK_DIR/current-stage.txt"
+failure_stage="source-plan"
+set_stage() { failure_stage="$1"; printf '%s\n' "$failure_stage" > "$stage_path"; }
 status="FAILED"
 failed_migration=""
 execution_mode="unresolved"
@@ -62,30 +65,10 @@ mkdir -p "$supabase_root/supabase/migrations" "$PHASE15_EVIDENCE_DIR"
 : > "$suffix_applied_path"
 rm -f "$failure_path" "$partition_path"
 
-# Resolve and pin the complete rehearsal input before starting services or reading a host.
-node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs" \
-  --environment "$PHASE15_ENVIRONMENT" --mode rollback --format manifest > "$manifest_path"
-node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs" \
-  "$manifest_path" > "$plan_path"
-mapfile -t selected_migrations < <(jq -r '.migrations[].filename' "$manifest_path")
-mapfile -t prelude_migrations < <(jq -r '.migrations[:.preludeMigrationCount][].filename' "$manifest_path")
-mapfile -t migrations < <(jq -r '.migrations[.preludeMigrationCount:][].filename' "$manifest_path")
-
-cp "$repo_root/backend/supabase/config.toml" "$supabase_root/supabase/config.toml"
-sed -i "s/^project_id = .*/project_id = \"$project_id\"/" "$supabase_root/supabase/config.toml"
-
-if test -n "${PHASE15_CAPTURE_DIR:-}"; then
-  test -z "${PHASE15_REMOTE_DATABASE_URL:-}"
-  (cd "$PHASE15_CAPTURE_DIR" && sha256sum --check --status SHA256SUMS)
-else
-  test -n "${PHASE15_REMOTE_DATABASE_URL:-}"
-  export PHASE15_REMOTE_DATABASE_URL
-  node "$repo_root/scripts/release-integrity/cli.mjs" validate-db-url \
-    --url-env PHASE15_REMOTE_DATABASE_URL \
-    --expected-project-ref "$PHASE15_EXPECTED_PROJECT_REF"
-fi
 
 capture_local_snapshot() {
+  local qualification_capture="${1:-best-effort}"
+  if test "$qualification_capture" = qualification; then set_stage post-schema-export; fi
   if test "$schema_restored" != true; then
     return 0
   fi
@@ -94,10 +77,11 @@ capture_local_snapshot() {
   fi
   docker exec -i "$container" psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 \
     < "$repo_root/scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql" \
-    > "$PHASE15_EVIDENCE_DIR/post-schema.json" || true
+    > "$PHASE15_EVIDENCE_DIR/post-schema.json" || return 1
+  if test "$qualification_capture" = qualification; then set_stage post-catalog-export; fi
   docker exec -i "$container" psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 \
     < "$repo_root/scripts/operations/live-migration-reconciliation/export-runtime-catalog-v2.sql" \
-    > "$PHASE15_EVIDENCE_DIR/post-catalog.json" || true
+    > "$PHASE15_EVIDENCE_DIR/post-catalog.json" || return 1
 }
 
 write_summary() {
@@ -110,6 +94,7 @@ write_summary() {
   if test -s "$PHASE15_EVIDENCE_DIR/catalog-comparison-exit.txt"; then
     catalog_compare_exit="$(cat "$PHASE15_EVIDENCE_DIR/catalog-comparison-exit.txt")"
   fi
+  PHASE15_FAILURE_PATH="$failure_path" \
   PHASE15_EXIT_CODE="$exit_code" \
   PHASE15_STATUS="$status" \
   PHASE15_FAILED_MIGRATION="$failed_migration" \
@@ -131,12 +116,16 @@ write_summary() {
   node --input-type=module - <<'NODE' > "$PHASE15_EVIDENCE_DIR/summary.json"
 import { existsSync, readFileSync } from "node:fs";
 
+const failure = existsSync(process.env.PHASE15_FAILURE_PATH)
+  ? JSON.parse(readFileSync(process.env.PHASE15_FAILURE_PATH, "utf8")) : {};
 const applied = readFileSync(process.env.PHASE15_APPLIED_PATH, "utf8")
   .split("\n")
   .filter(Boolean);
-const plan = JSON.parse(readFileSync(process.env.PHASE15_PLAN_PATH, "utf8"));
+let plan={suffix:{migrations:[]}};
+try { if(existsSync(process.env.PHASE15_PLAN_PATH)) plan=JSON.parse(readFileSync(process.env.PHASE15_PLAN_PATH,"utf8")); } catch {}
 const partition = existsSync(process.env.PHASE15_PARTITION_PATH) && readFileSync(process.env.PHASE15_PARTITION_PATH, "utf8").trim();
-const suffixLedger = partition ? JSON.parse(partition) : null;
+let suffixLedger=null;
+try { suffixLedger=partition ? JSON.parse(partition) : null; } catch {}
 const suffixApplied = readFileSync(process.env.PHASE15_SUFFIX_APPLIED_PATH, "utf8").split("\n").filter(Boolean);
 const optionalExit = (value) => /^\d+$/.test(value ?? "") ? Number(value) : null;
 const schemaComparisonExit = optionalExit(process.env.PHASE15_SCHEMA_COMPARE_EXIT);
@@ -165,6 +154,10 @@ process.stdout.write(`${JSON.stringify({
     certifiedMigrationCount: Number(process.env.PHASE15_SUFFIX_CERTIFIED_COUNT),
   },
   failedMigration: process.env.PHASE15_FAILED_MIGRATION || null,
+  errorClass: ["LOCAL_REHEARSAL_STAGE_FAILED","UNVERIFIED_REHEARSAL_LEDGER","PARTIAL_REMOTE_MIGRATION_LEDGER","MIGRATION_APPLICATION_FAILED","CANONICAL_APPLICATION_SCHEMA_MISMATCH"].includes(failure.errorClass) ? failure.errorClass : null,
+  failureStage: failure.failureStage ?? null,
+  failedVersion: failure.failedVersion ?? null,
+  failureSqlstate: failure.failureSqlstate ?? null,
   status: process.env.PHASE15_STATUS,
   exitCode: Number(process.env.PHASE15_EXIT_CODE),
   sourceDatabaseAccess: "schema-and-migration-ledger-read-only",
@@ -181,6 +174,11 @@ NODE
 cleanup() {
   local exit_code=$?
   trap - EXIT
+  set +e
+  if test "$exit_code" -ne 0; then
+    if test -s "$stage_path"; then failure_stage="$(cat "$stage_path")"; fi
+    node "$repo_root/scripts/operations/live-migration-reconciliation/rehearsal-stage-diagnostic.mjs" "$failure_stage" "$failure_path"
+  fi
   capture_local_snapshot
   if test -s "$PHASE15_EVIDENCE_DIR/post-schema.json" \
       && test -s "$PHASE15_EVIDENCE_DIR/post-catalog.json"; then
@@ -195,7 +193,6 @@ cleanup() {
       --right "$PHASE15_EVIDENCE_DIR/post-catalog.json" \
       > "$PHASE15_EVIDENCE_DIR/catalog-comparison.json"
     catalog_compare_exit=$?
-    set -e
     printf '%s\n' "$schema_compare_exit" > "$PHASE15_EVIDENCE_DIR/schema-comparison-exit.txt"
     printf '%s\n' "$catalog_compare_exit" > "$PHASE15_EVIDENCE_DIR/catalog-comparison-exit.txt"
   fi
@@ -208,8 +205,36 @@ cleanup() {
 }
 trap cleanup EXIT
 
+set_stage source-plan
+# Resolve and pin the complete rehearsal input before starting services or reading a host.
+node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs" \
+  --environment "$PHASE15_ENVIRONMENT" --mode rollback --format manifest > "$manifest_path"
+node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs" \
+  "$manifest_path" > "$plan_path"
+mapfile -t selected_migrations < <(jq -r '.migrations[].filename' "$manifest_path")
+mapfile -t prelude_migrations < <(jq -r '.migrations[:.preludeMigrationCount][].filename' "$manifest_path")
+mapfile -t migrations < <(jq -r '.migrations[.preludeMigrationCount:][].filename' "$manifest_path")
+
+cp "$repo_root/backend/supabase/config.toml" "$supabase_root/supabase/config.toml"
+sed -i "s/^project_id = .*/project_id = \"$project_id\"/" "$supabase_root/supabase/config.toml"
+
+set_stage capture-integrity
+if test -n "${PHASE15_CAPTURE_DIR:-}"; then
+  test -z "${PHASE15_REMOTE_DATABASE_URL:-}"
+  (cd "$PHASE15_CAPTURE_DIR" && sha256sum --check --status SHA256SUMS)
+else
+  test -n "${PHASE15_REMOTE_DATABASE_URL:-}"
+  export PHASE15_REMOTE_DATABASE_URL
+  node "$repo_root/scripts/release-integrity/cli.mjs" validate-db-url \
+    --url-env PHASE15_REMOTE_DATABASE_URL \
+    --expected-project-ref "$PHASE15_EXPECTED_PROJECT_REF"
+fi
+
+
+set_stage local-startup
 excluded="studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,gotrue,postgrest,realtime,kong,mailpit,postgres-meta"
 startup_status=1
+fixture_container_not_before="$(date -u +%s%3N)"
 for attempt in 1 2 3; do
   set +e
   supabase start --workdir "$supabase_root" --exclude "$excluded"
@@ -223,13 +248,16 @@ for attempt in 1 2 3; do
   sleep $((attempt * 10))
 done
 test "$startup_status" -eq 0
+set_stage local-network-isolation
 if test -n "${PHASE15_CAPTURE_DIR:-}"; then
   # Restored definitions may contain hosted endpoints: prevent disposable egress.
-  for network in $(docker inspect "$container" --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}} {{end}}'); do
+  local_networks="$(docker inspect "$container" --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}} {{end}}')"
+  for network in $local_networks; do
     docker network disconnect "$network" "$container"
   done
 fi
 
+set_stage local-authority-preflight
 test -s "$ca_path"
 test "$(sha256sum "$ca_path" | awk '{print $1}')" = "$ca_sha256"
 openssl x509 -in "$ca_path" -noout -checkend 2592000
@@ -238,6 +266,7 @@ docker exec "$container" chmod 0444 "$ca_container_path"
 test "$(docker exec "$container" psql -U supabase_admin -d postgres -X -qAt -v ON_ERROR_STOP=1 \
   -c "select rolsuper from pg_roles where rolname = 'supabase_admin'")" = "t"
 
+set_stage schema-capture
 if test -n "${PHASE15_CAPTURE_DIR:-}"; then
   cp "$PHASE15_CAPTURE_DIR/schema.sql" "$dump_path"
 else
@@ -252,6 +281,7 @@ else
     > "$dump_path"
 fi
 
+set_stage schema-row-boundary
 test -s "$dump_path"
 if grep -Eq '^(COPY|INSERT INTO) ' "$dump_path"; then
   echo "Schema capture unexpectedly contained application rows." >&2
@@ -259,30 +289,50 @@ if grep -Eq '^(COPY|INSERT INTO) ' "$dump_path"; then
 fi
 sha256sum "$dump_path" | awk '{print $1}' > "$PHASE15_EVIDENCE_DIR/source-schema-dump-sha256.txt"
 
+set_stage local-schema-reset
 docker exec -i "$container" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 <<'SQL'
 drop schema if exists economy_private cascade;
 drop schema if exists private cascade;
 drop schema if exists public cascade;
 SQL
+set_stage local-schema-restore
 docker exec -i "$container" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 < "$dump_path"
 schema_restored=true
+
+# Only the protected captured-staging workflow may reconstruct synthetic controls.
+# Other rehearsal entry points retain their held behavior and cannot opt in implicitly.
+set_stage purge-fixture-authority
+if test "${REF032_RECONSTRUCT_PURGE_FIXTURE:-}" = repository-only-v1; then
+  test "$PHASE15_ENVIRONMENT" = staging
+  test "$PHASE15_EXPECTED_PROJECT_REF" = eecvbssdvarfcykcfrny
+  test -n "${PHASE15_CAPTURE_DIR:-}"
+  test -z "${PHASE15_REMOTE_DATABASE_URL:-}"
+  (cd "$PHASE15_CAPTURE_DIR" && sha256sum --check --status SHA256SUMS)
+  REF032_FIXTURE_CONTAINER_NOT_BEFORE="$fixture_container_not_before" \
+    node "$repo_root/scripts/operations/live-migration-reconciliation/run-captured-staging-purge-fixture.mjs"
+fi
 
 # The hosted application schema dump deliberately excludes extension schemas. Recreate the
 # exact pg_cron prerequisite already installed in both hosted environments, but only inside
 # this disposable local database, so catalog export and the forward FX migration can run.
+set_stage local-prerequisite-install
 docker exec "$container" psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 \
   -c "create extension if not exists pg_cron with schema pg_catalog;"
+set_stage local-prerequisite-verify
 test "$(docker exec "$container" psql -U supabase_admin -d postgres -X -qAt -v ON_ERROR_STOP=1 \
   -c "select e.extversion || ':' || n.nspname || ':' || to_regclass('cron.job')::text from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pg_cron'")" \
   = "$pg_cron_version:pg_catalog:cron.job"
 
+set_stage pre-schema-export
 docker exec -i "$container" psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 \
   < "$repo_root/scripts/operations/live-migration-reconciliation/export-effective-schema-v2.sql" \
   > "$PHASE15_EVIDENCE_DIR/pre-schema.json"
+set_stage pre-catalog-export
 docker exec -i "$container" psql -U postgres -d postgres -X -qAt -v ON_ERROR_STOP=1 \
   < "$repo_root/scripts/operations/live-migration-reconciliation/export-runtime-catalog-v2.sql" \
   > "$PHASE15_EVIDENCE_DIR/pre-catalog.json"
 
+set_stage ledger-capture
 if test -n "${PHASE15_CAPTURE_DIR:-}"; then
   cp "$PHASE15_CAPTURE_DIR/ledger.json" "$PHASE15_EVIDENCE_DIR/complete-remote-ledger.json"
 else
@@ -314,6 +364,7 @@ where version = any (string_to_array(:'phase15_versions', ','))
 SQL
 fi
 
+set_stage ledger-classification
 # Reject unknown, non-prefix or digest-mismatched rows before any local migration.
 if ! node "$repo_root/scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs" \
   "$manifest_path" "$PHASE15_EVIDENCE_DIR/complete-remote-ledger.json" > "$partition_path"; then
@@ -323,6 +374,7 @@ fi
 jq '.bundleRows' "$partition_path" > "$remote_ledger_path"
 mapfile -t pending_suffix < <(jq -r '.pendingSuffix[]' "$partition_path")
 
+set_stage ledger-prefix-verification
 remote_present_count="$(jq 'length' "$remote_ledger_path")"
 if test "$remote_present_count" -eq 0; then
   execution_mode="forward-rehearsal"
@@ -357,24 +409,23 @@ NODE
   test "${#pending_migrations[@]}" -eq "$(("${#selected_migrations[@]}" - remote_present_count))"
 fi
 
+set_stage disposable-migration-apply
 all_pending=("${pending_migrations[@]}" "${pending_suffix[@]}")
 if test "${#all_pending[@]}" -gt 0; then
   for migration in "${all_pending[@]}"; do
     test -s "$repo_root/backend/supabase/migrations/$migration"
     failed_migration="$migration"
     echo "Applying $migration"
-    if ! docker exec -i "$container" psql -U postgres -d postgres -X -q -v ON_ERROR_STOP=1 \
-      < "$repo_root/backend/supabase/migrations/$migration"; then
-      PHASE15_FAILED_MIGRATION="$migration" node --input-type=module - <<'NODE' > "$failure_path"
-process.stdout.write(`${JSON.stringify({
-  schemaVersion: 1,
-  environment: process.env.PHASE15_ENVIRONMENT,
-  failedMigration: process.env.PHASE15_FAILED_MIGRATION,
-  errorClass: "MIGRATION_APPLICATION_FAILED",
-}, null, 2)}\n`);
-NODE
+    private_error_path="$PHASE15_WORK_DIR/migration-error.private"
+    if ! docker exec -i "$container" psql -U postgres -d postgres -X -q \
+      -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate \
+      < "$repo_root/backend/supabase/migrations/$migration" 2> "$private_error_path"; then
+      node "$repo_root/scripts/operations/live-migration-reconciliation/sanitize-rehearsal-failure.mjs" \
+        "$plan_path" "$migration" "$private_error_path" "$failure_path"
+      rm -f "$private_error_path"
       exit 1
     fi
+    rm -f "$private_error_path"
     if [[ "${migration:0:14}" > "20260920082200" ]]; then
       printf '%s\n' "$migration" >> "$suffix_applied_path"
     else
@@ -390,13 +441,15 @@ certified_count="${#selected_migrations[@]}"
 suffix_certified_count="$(jq -r '.suffix.migrationCount' "$plan_path")"
 
 failed_migration=""
-capture_local_snapshot
+capture_local_snapshot qualification
+set_stage canonical-schema-comparison
 set +e
 node "$repo_root/scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs" \
   --left "$PHASE15_CANONICAL_SCHEMA" \
   --right "$PHASE15_EVIDENCE_DIR/post-schema.json" \
   > "$PHASE15_EVIDENCE_DIR/schema-comparison.json"
 schema_compare_exit=$?
+set_stage canonical-catalog-comparison
 node "$repo_root/scripts/operations/live-migration-reconciliation/compare-schema-snapshots.mjs" \
   --left "$PHASE15_CANONICAL_CATALOG" \
   --right "$PHASE15_EVIDENCE_DIR/post-catalog.json" \
@@ -407,6 +460,7 @@ printf '%s\n' "$schema_compare_exit" > "$PHASE15_EVIDENCE_DIR/schema-comparison-
 printf '%s\n' "$catalog_compare_exit" > "$PHASE15_EVIDENCE_DIR/catalog-comparison-exit.txt"
 
 if test "$schema_compare_exit" -ne 0; then
+  set_stage canonical-schema-comparison
   node --input-type=module - <<'NODE' > "$failure_path"
 process.stdout.write(`${JSON.stringify({
   schemaVersion: 1,

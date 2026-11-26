@@ -901,6 +901,59 @@ repository-wide check remains required. No staging or live claim.
 Next: qualify this exact draft and its connected Marketplace checks
 before merging. Market and Player News follow as a separate tranche.
 
+### REF-032 / OPS-STAGE-001 — captured staging rehearsal controls (2026-11-25)
+
+`IMPLEMENTED_NOT_MERGED`, consolidated source-only owner
+`ops/staging-rehearsal-controls-20261125`, base `73ee21a9`. Reconstructs pinned
+repository purge registry/order fixtures only in the explicitly authorized,
+protected captured-staging disposable container; exact source/project, fresh local
+Docker identity, disconnected egress and Unix socket remain mandatory. Publishes
+only approved migration identities and allowlisted SQLSTATE diagnostics. Native
+PostgreSQL reproduces missing-registry P0001, proves exact 207/456/206 baseline
+controls and unchanged loan/graph migration success; exported-snapshot concurrency,
+exporter-loss and timeout tests also pass. Combined targeted/native/release-hold suite 45/45 on pinned Node 22.23.1, no skips. Read-only staging aggregate fingerprints match;
+no hosted rows copied. No historical migration, route, RPC, broad hold, apply
+control, hosted write, merge or dispatch change. Full corrected 15-suffix protected
+rehearsal remains NOT_RUN. See
+`docs/operations/evidence/staging-rehearsal-controls-v1/scope.md`.
+Next: source-only draft review and normal exact-head checks, then separately
+approved fresh exact-main protected rehearsal; apply remains blocked.
+
+PR1058 qualification follow-up: the initial exact head failed normal PR-bound
+Player authority and pre-disposable Roster runtime-equivalence. Add only the
+actual PR1058 exact-path authority/regression and repin unchanged integrated
+Roster roles to one public carrier. Preserve #1055's ordered 127 required / 76
+critical identities, verifier assertions and false production permissions. No
+workflow-filter, historical SQL or fixture/diagnostic behavior change. Source
+checks require fresh exact-head qualification; draft remains unmerged.
+
+### REF-032 / OPS-STAGE-001 — local pre-migration stage diagnostics (2026-11-25)
+
+`IMPLEMENTED_NOT_MERGED`, LOCAL_ONLY at held base `e6bf130c63`. Run 45700466251's
+pre-migration cause remains UNKNOWN; old P0001 evidence is not reused. Adds fixed
+enum stages, preserves primary failure through cleanup errors and projects fixed
+ledger error classes without private stderr/rows/captures. Direct Bash and actual
+shell synthetic reproduction prove a failed Docker inventory can be masked in a
+for-loop substitution; assigning inventory separately now fails closed. This
+local defect is not asserted as the historical cause. Existing authorization,
+source/project/network/socket guards and historical SQL remain intact. No hosted
+connection, publish, dispatch, merge or deployment. See
+`docs/operations/evidence/staging-premigration-stages-local-v1/review.md`.
+Next: parent review and independent source qualification before any new rehearsal.
+
+### REF-032 / OPS-STAGE-001 — local synthetic Docker PR smoke (2026-11-25)
+
+`IMPLEMENTED_NOT_MERGED`, LOCAL_ONLY on exact diagnostics candidate `cf27f96f6a`.
+Adds one same-repository PR-only step to existing Database Replay, with unchanged
+filters/permissions/live-shaped hold and unchanged protected staging authority.
+A unique empty synthetic stack must start, lose network egress, dump/restore only
+two tiny synthetic schemas/ledger and reject its own deterministic guard. No
+hosted inputs or actual migration history is used. Local command-plan contracts
+and native PostgreSQL dump/restore/guard run; actual Docker is unavailable locally
+and remains pending natural PR CI. No push, merge, dispatch or provider change.
+See `docs/operations/evidence/synthetic-docker-smoke-local-v1/review.md`.
+Next: parent review of checksum-verified local delivery; no full staging claim.
+
 ### 2026-11-25 — Player Business installed-route qualification
 
 `PLAYER-BUSINESS-INSTALLED-ROUTE-001`: `IMPLEMENTED_NOT_MERGED`; local owner
@@ -925,3 +978,19 @@ No live-backend or overall backlog completion claim. See [scope and evidence](..
 Next: confirm this candidate's desktop/mobile Treasury scenarios with pinned
 Chromium and finish remaining backend/Edge checks before normal review and CI; preserve separate
 Banking ownership and reserve hosted database work for the live database chat.
+
+### 2026-11-26 — PR1056 local reconciliation against exact main1e517d5
+
+`PLAYER-BUSINESS-INSTALLED-ROUTE-001` remains `IMPLEMENTED_NOT_MERGED`.
+Local review/pr1056-reconcile-1e517d5-20261126 normally merges published
+owner1ba16af732 with exact main1e517d5cac29624964b1fe0c6444929de448757c.
+Complete main and Business roadmap records are retained additively. Only roadmap
+and Roster source pins conflict; main's inventory and staging protections are
+retained unchanged. Both Roster roles are coupled to one new authority-inclusive
+complete integration carrier, with all seven overlays and exact equality intact.
+Business implementation/test bytes remain published-owner-identical; T021 and
+Banking/#1054 changes are excluded. No workflow, backend, migration, route/RPC,
+public ref, draft state, dispatch, hosted database or deployment change.
+Qualification belongs only to this exact main and this new local candidate,
+not any older recovery or future main. See the existing Business scope evidence
+for checks and limitations. Parent owns publication/order; no completion claim.
