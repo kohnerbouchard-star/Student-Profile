@@ -136,7 +136,7 @@ jobs:
       - name: Validate immutable migration and reconciliation contracts
         run: |
           node --test scripts/operations/live-migration-reconciliation/phase15-audit.test.mjs
-          node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs
+          node --test scripts/operations/live-migration-reconciliation/phase15-forward-bundle.test.mjs scripts/operations/live-migration-reconciliation/catalog-diagnostic.test.mjs
           node --test scripts/operations/live-migration-reconciliation/phase15-production-workflow.test.mjs
           node scripts/operations/live-migration-reconciliation/verify-immutable-manifest.mjs
           node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs --environment staging --mode rollback --format manifest > /tmp/phase15-staging-forward-manifest.json

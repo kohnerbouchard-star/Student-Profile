@@ -76,7 +76,8 @@ jobs:
             scripts/operations/live-migration-reconciliation/disposable-purge-control-fixture.test.mjs \
             scripts/operations/live-migration-reconciliation/captured-staging-purge-fixture.test.mjs \
             scripts/operations/live-migration-reconciliation/readonly-rehearsal.test.mjs \
-            scripts/operations/live-migration-reconciliation/staging-schema-rehearsal-contract.test.mjs
+            scripts/operations/live-migration-reconciliation/staging-schema-rehearsal-contract.test.mjs \
+            scripts/operations/live-migration-reconciliation/catalog-diagnostic.test.mjs
           node scripts/operations/live-migration-reconciliation/build-phase15-forward-bundle.mjs --environment "$PHASE15_ENVIRONMENT" --mode rollback --format manifest > "$RUNNER_TEMP/u1/manifest.json"
           node scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs "$RUNNER_TEMP/u1/manifest.json" > "$RUNNER_TEMP/u1/plan.json"
       - name: Capture staging schema and ledger read-only
@@ -139,7 +140,11 @@ jobs:
               sourceRowsCopied, rawSchemaDumpRetained,
               suffix: (.postBundleSuffix | {remoteLedgerPresentCount, appliedMigrationCount, certifiedMigrationCount}),
               sourceSchemaSha256:$schema, sourceLedgerSha256:$ledger, releaseCertificate: false
-            }' "$PHASE15_EVIDENCE_DIR/summary.json" > "$RUNNER_TEMP/u1/sanitized/result.json"
+            }' "$PHASE15_EVIDENCE_DIR/summary.json" \
+              | node scripts/operations/live-migration-reconciliation/catalog-diagnostic.mjs \
+                "$PHASE15_EVIDENCE_DIR/schema-comparison.json" \
+                "$PHASE15_EVIDENCE_DIR/catalog-comparison.json" \
+              > "$RUNNER_TEMP/u1/sanitized/result.json"
           else
             jq -n --arg sha "$GITHUB_SHA" --arg env "$PHASE15_ENVIRONMENT" '{sourceCommit:$sha, environment:$env, status:"NOT_QUALIFIED", releaseCertificate:false}' > "$RUNNER_TEMP/u1/sanitized/result.json"
           fi

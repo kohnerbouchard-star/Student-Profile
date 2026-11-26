@@ -953,3 +953,7 @@ and native PostgreSQL dump/restore/guard run; actual Docker is unavailable local
 and remains pending natural PR CI. No push, merge, dispatch or provider change.
 See `docs/operations/evidence/synthetic-docker-smoke-local-v1/review.md`.
 Next: parent review of checksum-verified local delivery; no full staging claim.
+
+### REF-032 / OPS-STAGE-001 — local bounded catalog diagnostics (2026-11-26)
+
+`IMPLEMENTED_NOT_MERGED`, LOCAL_ONLY on exact main `bc25df5d6d910b09c18574dafb0f00733ef1d5eb`, owner `ops/staging-runtime-catalog-diagnostics`. Adds fixed capped counts to exact schema/catalog comparator evidence and the protected sanitized artifact projection; no object/role names, values, SQL or private paths retained. Tests exercise the actual CLI and workflow projection with ownership, ACL/RLS, scheduler, managed topology and malformed inputs. Existing comparison exits, topology profile, immutable migrations, release/apply holds, credentials and cleanup remain unchanged. Parent-reported artifact 15079418291's actual runtime difference remains unknown; exit 2 still blocks the separate suffix apply candidate. See [scope, profile applicability and limits](../operations/evidence/staging-runtime-catalog-diagnostics-v1/scope.md). No hosted execution, push or dispatch. Next: independent source review and normal exact-head publication controls before a separately authorized fresh protected diagnostic run; no apply permission.
