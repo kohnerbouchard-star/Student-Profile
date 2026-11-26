@@ -1,6 +1,9 @@
-// Counts only. This projection never authorizes a restore, apply or release.
+// Bounded counts and fixed identity labels. This projection cannot authorize a restore, apply or release.
 import { readFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { runtimeIdentityDiagnostic, unavailableRuntimeIdentity } from './runtime-identity-diagnostic.mjs';
 
 const IGNORED = new Set(['captured_at', 'generated_at', 'capturedAt', 'generatedAt']);
 export const COUNT_CAP = 9999;
@@ -82,15 +85,49 @@ function readComparison(path) {
   try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return null; }
 }
 
+// The restore step is finished. Both files are private, and the existing
+// comparison record must describe those exact files and their contents.
+// Reuse the unchanged comparator and keep its complete output in memory only.
+function boundRuntimeIdentity(exitCode, prior, canonicalPath, restoredPath) {
+  if (exitCode !== 2 || !canonicalPath || !restoredPath || prior == null) {
+    return unavailableRuntimeIdentity();
+  }
+  const invalid = unavailableRuntimeIdentity('invalid');
+  const validSide = (record, path) => record?.path === resolve(path) && /^[a-f0-9]{64}$/.test(record.sha256);
+  if (prior.profile !== 'exact' || prior.matched !== false ||
+      !validSide(prior.left, canonicalPath) || !validSide(prior.right, restoredPath)) return invalid;
+  try {
+    const compare = fileURLToPath(new URL('./compare-schema-snapshots.mjs', import.meta.url));
+    const run = spawnSync(process.execPath, [compare, '--left', canonicalPath, '--right', restoredPath], {
+      encoding: 'utf8', maxBuffer: 1024 * 1024, timeout: 15000,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    if (run.status !== 2 || run.error) return invalid;
+    const current = JSON.parse(run.stdout);
+    if (current.profile !== 'exact' || current.matched !== false ||
+        current.left.sha256 !== prior.left.sha256 || current.right.sha256 !== prior.right.sha256) return invalid;
+    const identity = runtimeIdentityDiagnostic(readComparison(canonicalPath), readComparison(restoredPath));
+    return { ...identity, boundToExactComparison: identity.status === 'available' };
+  } catch {
+    return invalid;
+  }
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    if (process.argv.length !== 4) throw new Error();
+    if (![4,6].includes(process.argv.length)) throw new Error();
     const result = JSON.parse(readFileSync(0, 'utf8'));
     if (!object(result)) throw new Error();
+    const runtimeComparison = readComparison(process.argv[3]);
     result.exactComparisonDiagnostics = {
       applicationSchema: safeDiagnostic(readComparison(process.argv[2]), 'econovaria.release-integrity.raw-schema-evidence.v2'),
-      runtimeCatalog: safeDiagnostic(readComparison(process.argv[3]), 'econovaria.phase15.catalog-supplement.v2'),
+      runtimeCatalog: safeDiagnostic(runtimeComparison, 'econovaria.phase15.catalog-supplement.v2'),
     };
+    if (process.argv.length === 6) {
+      result.runtimeIdentityDiagnostic = boundRuntimeIdentity(
+        result.runtimeCatalogComparisonExit, runtimeComparison, process.argv[4], process.argv[5],
+      );
+    }
     result.releaseCertificate = false;
     process.stdout.write(JSON.stringify(result, null, 2) + '\n');
   } catch {

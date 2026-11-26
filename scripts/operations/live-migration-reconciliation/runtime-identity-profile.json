@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "evidenceBaseline": "b62f10ffda169fd6f884cc3a254c136fbd6b862d",
+  "sources": [
+    {
+      "path": "docs/operations/evidence/phase15-live-parity/2026-09-20/staging-schema-supplement.json",
+      "sha256": "37a736a2851572c4c37c36e5bb9da096470ba44499b0a5d949453e4d5a507b81"
+    },
+    {
+      "path": "docs/operations/evidence/phase15-live-parity/2026-09-20/production-schema-supplement.json",
+      "sha256": "ca4c46ceac0dadb8e334c1d820eb04ef8acdc7eedbb138d1bbaa11e5fb05983e"
+    },
+    {
+      "path": "docs/operations/evidence/live-migration-reconciliation-v1/clean-replay-schema.json",
+      "sha256": "341fb79663dd1dcb19b10de30f7e783628452b4f90647bce6c9666d1433f30a0"
+    },
+    {
+      "path": "backend/supabase/migrations/20260731133000_schedule_expired_staff_signup_cleanup_v1.sql",
+      "sha256": "23ab58f7cb25a7978588da1f2d30c2809aa7a6bd3f5d6b3421489c47fc2a6c90"
+    },
+    {
+      "path": "backend/supabase/migrations/20260818142000_scale_story_character_reply_worker_v1.sql",
+      "sha256": "3ebb70489ce3856f2e4050e27e09bb1ffb81cefb76c8327beb230860ed04b238"
+    },
+    {
+      "path": "backend/supabase/migrations/20260810120000_add_daily_country_macro_runtime_v1.sql",
+      "sha256": "5af8d0e3668a570e009d1387ed1393aacefbe1a6d11d6a1bb5ef13f73de498b9"
+    },
+    {
+      "path": "backend/supabase/migrations/20260810123500_add_autonomous_timed_services_runtime_v1.sql",
+      "sha256": "cc394518e92867c83e2b3f909de5584747d4b2ab247b516b8dbfbfceaa66db15"
+    },
+    {
+      "path": "backend/supabase/migrations/20260920081400_phase15_reconcile_game_purge_operator_controls_v1.sql",
+      "sha256": "0e23ff92852149f20b91c3f06b9889db561d985c18266dcbd79da106a0bbd0fd"
+    }
+  ],
+  "providerSchemaRows": [
+    {
+      "name": "auth",
+      "owner": "supabase_admin"
+    },
+    {
+      "name": "cron",
+      "owner": "supabase_admin"
+    },
+    {
+      "name": "extensions",
+      "owner": "postgres"
+    },
+    {
+      "name": "graphql",
+      "owner": "supabase_admin"
+    },
+    {
+      "name": "graphql_public",
+      "owner": "supabase_admin"
+    },
+    {
+      "name": "net",
+      "owner": "supabase_admin"
+    },
+    {
+      "name": "realtime",
+      "owner": "supabase_admin"
+    },
+    {
+      "name": "storage",
+      "owner": "supabase_admin"
+    },
+    {
+      "name": "vault",
+      "owner": "supabase_admin"
+    }
+  ],
+  "providerNamesWithoutVerifiedOwner": [
+    "_realtime",
+    "supabase_functions"
+  ],
+  "staticSchedulerRows": [
+    {
+      "name": "econovaria-expired-staff-signup-cleanup-v1",
+      "schedule": "*/15 * * * *",
+      "active": true,
+      "database": "postgres",
+      "username": "postgres",
+      "commandSha256": "ae3838e4c1f4aa57789f926c9fe38d3b64d8e15381a0ff253938a96d81e6fbde"
+    },
+    {
+      "name": "econovaria-story-character-replies-v1",
+      "schedule": "10 seconds",
+      "active": true,
+      "database": "postgres",
+      "username": "postgres",
+      "commandSha256": "b38e7780a7b0ce6dbd8955390f8ab5af05d3a49bc5fc4be461a8c94ad76a6fad"
+    },
+    {
+      "name": "econovaria-story-character-replies-log-prune-v1",
+      "schedule": "17 3 * * *",
+      "active": true,
+      "database": "postgres",
+      "username": "postgres",
+      "commandSha256": "f5313007e486085762a2e40e8165a7b5cad305771933eaacccc1d179b6542343"
+    },
+    {
+      "name": "econovaria-daily-macro-progression-v1",
+      "schedule": "7 * * * *",
+      "active": true,
+      "database": "postgres",
+      "username": "postgres",
+      "commandSha256": "ffc6f7cbfb17b415e390aa43fb42270e443730dba5d692b720c454015f3d4f0e"
+    },
+    {
+      "name": "econovaria-autonomous-timed-services-v1",
+      "schedule": "* * * * *",
+      "active": true,
+      "database": "postgres",
+      "username": "postgres",
+      "commandSha256": "00fdbe366e71d0fa750a93e61a5f04576bce5b1d93ddd882c6c862c7813b4ec6"
+    },
+    {
+      "name": "econovaria-game-license-expiration-v1",
+      "schedule": "17 * * * *",
+      "active": true,
+      "database": "postgres",
+      "username": "postgres",
+      "commandSha256": "237a11152832985bf284de769e232f7ddadf33e49c25865a141eb9be26ebbb48"
+    }
+  ]
+}
