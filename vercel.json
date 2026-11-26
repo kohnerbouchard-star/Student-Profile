@@ -10,6 +10,7 @@
   "git": {
     "deploymentEnabled": {
       "main": false,
+      "fix/story-dependency-retry-containment": false,
       "release/production": true,
       "ops/econovaria-git-native-domain-activation-20260813": false
     }

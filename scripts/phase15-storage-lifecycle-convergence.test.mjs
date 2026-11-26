@@ -65,13 +65,13 @@ const paths = {
 
 const HISTORICAL_FK_SHA = "fe88cafd56ca4c21ab3c1d34385e21f4c3d8be201eae44ee7f5539a34a98f329";
 const EXPECTED = Object.freeze({
-  registrySha: "7bcda40cfba058b0a712782671ba91cb3c50b29adb1bbe105dfbf84998907ac3",
-  registryCount: 207,
-  fkSha: "0c932d6e620cec801b527e81f3e4d3e91bd8d70fd4fb45d6e1a72166ff0c7a82",
-  fkCount: 460,
-  orderSha: "19c4c6bf8e005c53c6dddfadcf63d5c5e955307a63d93b0343f48d73c4504897",
-  orderCount: 206,
-  finalizeCursor: 207,
+  registrySha: "37c2231abb9aff3c306dc7975c2968d549991fa9c2c9815cf8163c54db458bc6",
+  registryCount: 208,
+  fkSha: "314a9ec50cca588ac091cad4ac42f68c77dbc81e9fb712cb960a7f714566cda3",
+  fkCount: 461,
+  orderSha: "ad48814a47842407203f6b495b10bc7d1f7b1110cbf55506179456b461f678a3",
+  orderCount: 207,
+  finalizeCursor: 208,
 });
 
 async function text(path) {
@@ -142,13 +142,20 @@ test("purge worker and SQL share the current deterministic Story-aware contract"
   assert.match(purger, new RegExp(`EXPECTED_FK_GRAPH_EDGES = ${EXPECTED.fkCount}`));
   assert.match(purger, new RegExp(`EXPECTED_DELETE_ORDER_TABLES = ${EXPECTED.orderCount}`));
   assert.match(purger, new RegExp(`DB_FINALIZE_CURSOR = ${EXPECTED.finalizeCursor}`));
-  assertContains(internal, `v_registry_count <> ${EXPECTED.registryCount}`, "purge SQL");
+  assertContains(internal, "v_registry_count <> 207", "immutable historical purge SQL");
   assertContains(internal, "v_edge_count <> 456", "immutable historical purge SQL");
   assertContains(internal, HISTORICAL_FK_SHA, "immutable historical fingerprint");
   const forward = await text(new URL("backend/supabase/migrations/20261004202506_reconcile_loan_liability_purge_graph_v1.sql", ROOT));
-  for (const marker of [EXPECTED.fkSha, "v_fk_count <> 460", "REF025_UNEXPECTED_PURGE_GRAPH", "REF025_UNEXPECTED_PURGE_DEFINITION"]) assertContains(forward, marker, "guarded forward convergence");
-  assertContains(internal, `v_order_count <> ${EXPECTED.orderCount}`, "purge SQL");
-  assertContains(internal, `db_delete_cursor < ${EXPECTED.finalizeCursor}`, "purge SQL");
+  for (const marker of ["0c932d6e620cec801b527e81f3e4d3e91bd8d70fd4fb45d6e1a72166ff0c7a82", "v_fk_count <> 460", "REF025_UNEXPECTED_PURGE_GRAPH", "REF025_UNEXPECTED_PURGE_DEFINITION"]) assertContains(forward, marker, "guarded forward convergence");
+  assertContains(internal, "v_order_count <> 206", "immutable historical purge SQL");
+  assertContains(internal, "db_delete_cursor < 207", "immutable historical purge SQL");
+  const story = await text(new URL("backend/supabase/migrations/20261117180000_bound_story_execution_retries_v1.sql", ROOT));
+  for (const fingerprint of [EXPECTED.registrySha, EXPECTED.fkSha, EXPECTED.orderSha]) {
+    assertContains(story, fingerprint, "Story audit topology");
+  }
+  for (const marker of ["STORY_RETRY_PURGE_BASELINE_DRIFT", "STORY_RETRY_PURGE_RESULT_DRIFT", "STORY_RETRY_PURGE_DEFINITION_DRIFT"]) {
+    assertContains(story, marker, "Story audit fail-closed transition");
+  }
   assertContains(reasserted, "'environmentName', v_control.environment_name", "purge preflight");
   assertContains(reasserted, "'r2BucketName', v_control.r2_bucket_name", "purge preflight");
   assertContains(reasserted, "GAME_PURGE_EXECUTION_IN_PROGRESS", "purge environment binding");
