@@ -37,7 +37,10 @@ function requireFields(record, fields, optional = []) {
   assert(Object.keys(record).every(key => fields.includes(key) || optional.includes(key)), 'Unexpected recovery field');
 }
 
-function readReceipt(bytes) {
+export function readEvidenceJson(bytes, member = '') {
+  assert(['', 'recovery.json', 'result.json'].includes(member), 'Unknown evidence member');
+  assert(Buffer.isBuffer(bytes) && bytes.length > 0 &&
+    bytes.length <= (member ? maxArchiveBytes : maxPayloadBytes), 'Invalid evidence size');
   const result = spawnSync('python3', ['-c', `
 import io, json, stat, sys, zipfile
 
@@ -52,23 +55,25 @@ def unique_object(pairs):
 def invalid_constant(_):
     raise ValueError("non-JSON number")
 
-with zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())) as archive:
-    members = archive.infolist()
-    if len(members) != 1 or members[0].orig_filename != "recovery.json":
-        raise ValueError("unexpected members")
-    member = members[0]
-    if (member.flag_bits & 1 or stat.S_IFMT(member.external_attr >> 16) not in (0, stat.S_IFREG)
-            or not 0 < member.file_size <= int(sys.argv[1])):
-        raise ValueError("invalid member")
-    with archive.open(member) as stream:
-        raw = stream.read(int(sys.argv[1]) + 1)
-    if len(raw) != member.file_size:
-        raise ValueError("invalid member size")
-    value = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_object, parse_constant=invalid_constant)
-    if not isinstance(value, dict):
-        raise ValueError("expected a JSON object")
-    sys.stdout.buffer.write(raw)
-`, String(maxPayloadBytes)], { input: bytes, timeout: 10000, maxBuffer: maxPayloadBytes });
+raw = sys.stdin.buffer.read()
+if sys.argv[2]:
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        members = archive.infolist()
+        if len(members) != 1 or members[0].orig_filename != sys.argv[2]:
+            raise ValueError("unexpected members")
+        member = members[0]
+        if (member.flag_bits & 1 or stat.S_IFMT(member.external_attr >> 16) not in (0, stat.S_IFREG)
+                or not 0 < member.file_size <= int(sys.argv[1])):
+            raise ValueError("invalid member")
+        with archive.open(member) as stream:
+            raw = stream.read(int(sys.argv[1]) + 1)
+        if len(raw) != member.file_size:
+            raise ValueError("invalid member size")
+value = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_object, parse_constant=invalid_constant)
+if not isinstance(value, dict):
+    raise ValueError("expected a JSON object")
+sys.stdout.buffer.write(raw)
+`, String(maxPayloadBytes), member], { input: bytes, timeout: 10000, maxBuffer: maxPayloadBytes });
   assert.equal(result.status, 0, 'Invalid recovery archive');
   return JSON.parse(result.stdout.toString('utf8'));
 }
@@ -164,39 +169,63 @@ function requireRun(run, runId, workflow, pins) {
   assert.equal(run.actor?.type, 'User');
 }
 
+function requireScope(pins) {
+  assert.match(pins.source, shaPattern);
+  assert.equal(pins.source, pins.currentMain);
+  assert.match(pins.stagingProjectRef, refPattern);
+  assert.match(pins.productionProjectRef, refPattern);
+  assert.notEqual(pins.stagingProjectRef, pins.productionProjectRef);
+}
+
+export function verifyRecoveryPublication({ pins, run, review, bytes }, now = Date.now()) {
+  try {
+    requireScope(pins);
+    for (const id of [pins.repositoryId, pins.producerRunId]) assert(Number.isSafeInteger(id) && id > 0);
+    requireRun(run, pins.producerRunId, recoveryWorkflow, pins);
+    assert.equal(run.status, 'in_progress');
+    const recovery = readEvidenceJson(bytes);
+    requireRecoveryReceipt(recovery, pins, now);
+    requireReview(review, run, pins.repositoryId, recovery);
+    return recovery;
+  } catch {
+    throw new Error('STAGING_RECOVERY_PUBLICATION_REJECTED');
+  }
+}
+
+export function requireRecoveryArtifactBinding({ pins, producer, apply, artifact }) {
+  requireScope(pins);
+  for (const id of [pins.repositoryId, pins.producerRunId, pins.applyRunId, pins.artifactId]) {
+    assert(Number.isSafeInteger(id) && id > 0);
+  }
+  assert.notEqual(pins.producerRunId, pins.applyRunId);
+
+  requireRun(producer, pins.producerRunId, recoveryWorkflow, pins);
+  assert.equal(producer.status, 'completed');
+  assert.equal(producer.conclusion, 'success');
+  requireRun(apply, pins.applyRunId, applyWorkflow, pins);
+  assert.equal(apply.status, 'in_progress');
+
+  assert.equal(artifact.id, pins.artifactId);
+  assert.equal(artifact.name, `econovaria-staging-recovery-${pins.source}`);
+  assert.equal(artifact.expired, false);
+  assert.equal(artifact.workflow_run?.id, producer.id);
+  assert.equal(artifact.workflow_run?.head_sha, pins.source);
+  assert.equal(artifact.workflow_run?.head_branch, 'main');
+  assert.equal(artifact.workflow_run?.repository_id, pins.repositoryId);
+  assert.equal(artifact.workflow_run?.head_repository_id, pins.repositoryId);
+  assert(Number.isSafeInteger(artifact.size_in_bytes) && artifact.size_in_bytes > 0 && artifact.size_in_bytes <= maxArchiveBytes);
+  assert.match(pins.artifactDigest, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(artifact.digest, pins.artifactDigest);
+}
+
 export function verifyRecoveryEvidence(evidence, now = Date.now()) {
   try {
     const { pins, producer, apply, artifact, bytes, producerReview, applyReview } = evidence;
-    assert.match(pins.source, shaPattern);
-    assert.equal(pins.source, pins.currentMain);
-    for (const id of [pins.repositoryId, pins.producerRunId, pins.applyRunId, pins.artifactId]) {
-      assert(Number.isSafeInteger(id) && id > 0);
-    }
-    assert.notEqual(pins.producerRunId, pins.applyRunId);
-    assert.match(pins.stagingProjectRef, refPattern);
-    assert.match(pins.productionProjectRef, refPattern);
-    assert.notEqual(pins.stagingProjectRef, pins.productionProjectRef);
-
-    requireRun(producer, pins.producerRunId, recoveryWorkflow, pins);
-    assert.equal(producer.status, 'completed');
-    assert.equal(producer.conclusion, 'success');
-    requireRun(apply, pins.applyRunId, applyWorkflow, pins);
-    assert.equal(apply.status, 'in_progress');
-
-    assert.equal(artifact.id, pins.artifactId);
-    assert.equal(artifact.name, `econovaria-staging-recovery-${pins.source}`);
-    assert.equal(artifact.expired, false);
-    assert.equal(artifact.workflow_run?.id, producer.id);
-    assert.equal(artifact.workflow_run?.head_sha, pins.source);
-    assert.equal(artifact.workflow_run?.head_branch, 'main');
-    assert.equal(artifact.workflow_run?.repository_id, pins.repositoryId);
-    assert.equal(artifact.workflow_run?.head_repository_id, pins.repositoryId);
-    assert(Number.isSafeInteger(artifact.size_in_bytes) && artifact.size_in_bytes > 0 && artifact.size_in_bytes <= maxArchiveBytes);
+    requireRecoveryArtifactBinding(evidence);
     assert(Buffer.isBuffer(bytes) && bytes.length > 0 && bytes.length <= maxArchiveBytes);
-    assert.equal(artifact.digest, pins.artifactDigest);
     assert.equal(artifact.digest, `sha256:${sha256(bytes)}`);
 
-    const recovery = readReceipt(bytes);
+    const recovery = readEvidenceJson(bytes, 'recovery.json');
     requireRecoveryReceipt(recovery, pins, now);
     requireReview(producerReview, producer, pins.repositoryId, recovery);
     requireReview(applyReview, apply, pins.repositoryId, recovery);

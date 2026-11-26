@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { PROJECT } from '../staging-suffix-apply/control.mjs';
+import { verifyProtectedEvidence } from './protected-transport.mjs';
 import { verifyRecoveryEvidence } from './verify.mjs';
 
 const now = Date.parse('2026-01-02T12:00:00Z');
@@ -188,5 +191,154 @@ test('rejects malformed, expanded, or ambiguous archives without leaking input',
     [['recovery.json', valid.replace('"status":"PASS"', '"status":"NO","status":"PASS"'), regular]],
   ]) {
     assert.throws(() => verifyRecoveryEvidence(evidence(zip(entries)), now), denied);
+  }
+});
+
+function protectedFixture(mode, recovery = { ...receipt(), projectRef: PROJECT }) {
+  const packed = pack(recovery);
+  const publishing = mode === 'publish';
+  const runId = publishing ? 200 : 201;
+  const run = publishing ? { ...packed.producer, status: 'in_progress', conclusion: null } : packed.apply;
+  const repoMeta = { repository: { id: 100 }, head_repository: { id: 100 } };
+  const rehearsalSummary = {
+    sourceCommit: source, environment: 'staging', status: 'PASS', exitCode: 0,
+    canonicalApplicationSchemaMatched: true, runtimeCatalogComparisonExit: 0,
+    sourceRowsCopied: false, rawSchemaDumpRetained: false, releaseCertificate: false,
+    suffix: { remoteLedgerPresentCount: 1, appliedMigrationCount: 15, certifiedMigrationCount: 16 },
+    sourceSchemaSha256: 'b'.repeat(64), sourceLedgerSha256: 'c'.repeat(64),
+  };
+  const rehearsalArtifact = {
+    id: 301, name: `econovaria-staging-rehearsal-diagnostic-${source}`, expired: false,
+    workflow_run: { id: 203, head_sha: source, head_branch: 'main', repository_id: 100, head_repository_id: 100 },
+  };
+  const routes = {
+    'commits/main': { sha: source },
+    'actions/runs/200': publishing ? run : packed.producer,
+    'actions/runs/200/approvals': packed.producerReview.reviews,
+    'actions/runs/201': packed.apply,
+    'actions/runs/201/approvals': packed.applyReview.reviews,
+    'actions/runs/202': {
+      ...packed.producer, ...repoMeta, id: 202, path: '.github/workflows/database-replay.yml',
+      event: 'push', updated_at: '2026-01-02T10:00:00Z',
+    },
+    'actions/runs/203': {
+      ...packed.producer, ...repoMeta, id: 203, path: '.github/workflows/econovaria-staging-schema-rehearsal.yml',
+      updated_at: '2026-01-02T10:00:00Z',
+    },
+    'actions/artifacts/300': packed.artifact,
+    'actions/artifacts/300/zip': packed.bytes,
+    'actions/artifacts/301': rehearsalArtifact,
+  };
+  function repackRehearsal() {
+    const bytes = zip([['result.json', JSON.stringify(rehearsalSummary), 0o100600]]);
+    rehearsalArtifact.digest = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+    rehearsalArtifact.size_in_bytes = bytes.length;
+    routes['actions/artifacts/301/zip'] = bytes;
+  }
+  repackRehearsal();
+  const requests = [];
+  const controlDigest = 'f'.repeat(64);
+  const request = {
+    mode, now, head: source,
+    env: {
+      GITHUB_REPOSITORY: 'kohnerbouchard-star/Student-Profile', GITHUB_REPOSITORY_ID: '100',
+      GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/main', GITHUB_RUN_ATTEMPT: '1',
+      GITHUB_SHA: source, GITHUB_RUN_ID: String(runId),
+    },
+    event: { inputs: publishing ? {
+      source_sha: source, record_authorized: 'true', recovery_receipt: JSON.stringify(recovery),
+    } : {
+      source_sha: source, verify_authorized: 'true', recovery_run: '200', recovery_artifact: '300',
+      recovery_artifact_digest: packed.artifact.digest, replay_run: '202', rehearsal_run: '203',
+      rehearsal_artifact: '301',
+    } },
+    controlDigest,
+    qualification: {
+      status: 'PASS', batchDigest, controlDigest, transactionSafetyReviewed: true, postconditionsReviewed: true,
+      checks: Object.fromEntries(['rollback', 'resume', 'ledgerAtomicity', 'wrongTarget', 'failureInjection',
+        'perMigrationPostconditions'].map(name => [name, 'PASS'])),
+    },
+    api: (path, binary = false) => {
+      requests.push(path);
+      assert(Object.hasOwn(routes, path), 'Unexpected test request');
+      assert.equal(binary, Buffer.isBuffer(routes[path]));
+      return routes[path];
+    },
+  };
+  return { request, routes, requests, rehearsalSummary, repackRehearsal };
+}
+
+test('protected transport rejects automatic events, wrong branches, stale checkout, reruns and missing authorization before API calls', () => {
+  for (const mode of ['publish', 'preflight']) {
+    for (const change of [
+      r => { r.env.GITHUB_EVENT_NAME = 'pull_request'; },
+      r => { r.env.GITHUB_EVENT_NAME = 'push'; },
+      r => { r.env.GITHUB_REF = 'refs/heads/release/production'; },
+      r => { r.env.GITHUB_RUN_ATTEMPT = '2'; },
+      r => { r.env.GITHUB_REPOSITORY = 'fixture/fork'; },
+      r => { r.head = 'b'.repeat(40); },
+      r => { delete r.event.inputs[mode === 'publish' ? 'record_authorized' : 'verify_authorized']; },
+    ]) {
+      const { request, requests } = protectedFixture(mode);
+      change(request);
+      assert.throws(() => verifyProtectedEvidence(request));
+      assert.deepEqual(requests, []);
+    }
+  }
+});
+
+test('publisher validates redacted receipt and real-shaped independent approval before producing output', () => {
+  const { request, routes } = protectedFixture('publish');
+  assert.equal(verifyProtectedEvidence(request).sourceCommit, source);
+  routes['actions/runs/200/approvals'] = [];
+  assert.throws(() => verifyProtectedEvidence(request), /STAGING_RECOVERY_PUBLICATION_REJECTED/);
+  const wrong = protectedFixture('publish', { ...receipt(), projectRef: productionProjectRef });
+  assert.throws(() => verifyProtectedEvidence(wrong.request), /STAGING_RECOVERY_PUBLICATION_REJECTED/);
+});
+
+test('protected preflight downloads only bound artifacts and keeps live apply held', () => {
+  const { request, routes, requests } = protectedFixture('preflight');
+  assert.deepEqual(verifyProtectedEvidence(request), {
+    status: 'EVIDENCE_VERIFIED_APPLY_HELD', fenceVerified: false, applyAuthorized: false,
+  });
+  requests.length = 0;
+  request.event.inputs.recovery_artifact_digest = 'sha256:' + '0'.repeat(64);
+  assert.throws(() => verifyProtectedEvidence(request));
+  assert(!requests.includes('actions/artifacts/300/zip'));
+  request.event.inputs.recovery_artifact_digest = routes['actions/artifacts/300'].digest;
+  routes['actions/artifacts/300'].workflow_run.head_repository_id = 101;
+  assert.throws(() => verifyProtectedEvidence(request));
+  assert(!requests.includes('actions/artifacts/300/zip'));
+});
+
+test('preflight rejects wrong target, runtime drift, unqualified suffix, and missing review independently', () => {
+  const wrong = protectedFixture('preflight', { ...receipt(), projectRef: productionProjectRef });
+  assert.throws(() => verifyProtectedEvidence(wrong.request), /STAGING_RECOVERY_EVIDENCE_REJECTED/);
+  const { request, routes, rehearsalSummary, repackRehearsal } = protectedFixture('preflight');
+  rehearsalSummary.runtimeCatalogComparisonExit = 2;
+  repackRehearsal();
+  assert.throws(() => verifyProtectedEvidence(request));
+  rehearsalSummary.runtimeCatalogComparisonExit = 0;
+  repackRehearsal();
+  const original = request.qualification;
+  request.qualification = { ...original, status: 'NOT_RUN' };
+  assert.throws(() => verifyProtectedEvidence(request), /qualification NOT_RUN/);
+  request.qualification = original;
+  routes['actions/runs/201/approvals'] = [];
+  assert.throws(() => verifyProtectedEvidence(request), /STAGING_RECOVERY_EVIDENCE_REJECTED/);
+});
+
+test('protected workflow definitions are dispatch-only and never expose database credentials or execute SQL', () => {
+  for (const [workflow, flag] of [
+    ['econovaria-staging-recovery-evidence.yml', 'record_authorized'],
+    ['econovaria-staging-suffix-apply.yml', 'verify_authorized'],
+  ]) {
+    const workflowText = readFileSync(new URL(`../../../.github/workflows/${workflow}`, import.meta.url), 'utf8');
+    assert.match(workflowText, /\non:\n  workflow_dispatch:\n/);
+    assert(!/\n  (push|pull_request|pull_request_target|schedule|workflow_run|workflow_call):/.test(workflowText));
+    assert.match(workflowText, /github\.event_name == 'workflow_dispatch'.*'refs\/heads\/main'.*github\.run_attempt == 1/);
+    assert(workflowText.includes(`inputs.${flag} == true`));
+    assert.match(workflowText, /environment: staging/);
+    assert(!/\bsecrets\.|STAGING_DATABASE_URL|SUPABASE_ACCESS_TOKEN|\bpsql\b|staging-suffix-apply\/run\.mjs/.test(workflowText));
   }
 });

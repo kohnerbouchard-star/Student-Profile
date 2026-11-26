@@ -4,7 +4,11 @@ on:
   pull_request:
     paths:
       - '.github/workflows/staging-recovery-artifact-verifier.yml'
+      - '.github/workflows/econovaria-staging-recovery-evidence.yml'
+      - '.github/workflows/econovaria-staging-suffix-apply.yml'
       - 'scripts/operations/staging-recovery-evidence/**'
+      - 'scripts/operations/staging-suffix-apply/control.mjs'
+      - 'docs/operations/evidence/staging-suffix-apply-v1/qualification.json'
       - 'scripts/operations/live-migration-reconciliation/build-phase15-rehearsal-plan.mjs'
 
 permissions:
