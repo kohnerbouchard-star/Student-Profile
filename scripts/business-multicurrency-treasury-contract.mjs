@@ -68,10 +68,21 @@ const source = Object.fromEntries(
 const procurementPage = businessProcurementSource();
 const installedPage = readInstalledBusinessPageSource();
 // Negative controls ensure source closure cannot certify an uninstalled leaf.
-assert.throws(() => installedBusinessPageSource(source.page.replace('import { renderBusinessProcurementPanel }', 'import { unusedProcurementPanel }'), procurementPage));
-assert.throws(() => installedBusinessPageSource(source.page.replace('${renderBusinessProcurementPanel(data,', '${unusedProcurementPanel(data,'), procurementPage));
-assert.throws(() => installedBusinessPageSource(source.page, procurementPage.replace('export function renderBusinessProcurementPanel(', 'function renderBusinessProcurementPanel(')));
-assert.ok(installedBusinessPageSource(source.page, `${procurementPage}\n__leaf_negative_scan_probe__`).includes('__leaf_negative_scan_probe__'));
+const sections = readFileSync("player-terminal/src/pages/business-workspace-sections.js", "utf8");
+assert.throws(() => installedBusinessPageSource(sections.replace('import { renderProcurementFundingLines }', 'import { unusedProcurementPanel }'), procurementPage));
+assert.throws(() => installedBusinessPageSource(sections.replace('${renderProcurementFundingLines(', '${unusedProcurementPanel('), procurementPage));
+assert.throws(() => installedBusinessPageSource(sections, procurementPage.replace('export function renderProcurementFundingLines(', 'function renderProcurementFundingLines(')));
+assert.throws(() => installedBusinessPageSource(sections.replace('${businessTreasuryPanel(data)}', ''), procurementPage));
+const topology = {
+  route: readFileSync("player-terminal/src/core/route-renderer.js", "utf8"),
+  workspace: readFileSync("player-terminal/src/pages/business-workspace.js", "utf8"),
+  page: readFileSync("player-terminal/src/pages/business-workspace-page.js", "utf8"),
+  shared: source.page,
+};
+for (const [key, token] of [["route", "business: renderBusinessWorkspacePage"], ["workspace", "renderBusinessWorkspacePage as renderPhase12BusinessPage"], ["page", "renderBusinessWorkspaceSections(data)"], ["shared", "export function businessTreasuryPanel(data)"]]) {
+  assert.throws(() => installedBusinessPageSource(sections, procurementPage, { ...topology, [key]: topology[key].replace(token, "__broken_route_link__") }));
+}
+assert.ok(installedBusinessPageSource(sections, `${procurementPage}\n__leaf_negative_scan_probe__`).includes('__leaf_negative_scan_probe__'));
 const authority = JSON.parse(source.authority);
 
 function includesAll(text, values, label) {
@@ -426,7 +437,7 @@ includesAll(source.page, [
   "Review exact quote",
   "formatBusinessRatePercent",
 ], "C4 Player page");
-includesAll(procurementPage, ["Review funded procurement quote", "IMMUTABLE PROCUREMENT RECEIPT"], "C4 installed procurement page");
+includesAll(installedPage, ["Review funded procurement quote", "IMMUTABLE PROCUREMENT RECEIPT"], "C4 installed procurement page");
 assert.ok(!installedPage.includes("LOCAL WALLET"), "C4 UI must not represent a Business wallet.");
 includesAll(source.style, ["player-terminal-business-treasury", "player-terminal-business-procurement"], "C4 Player styles");
 includesAll(source.browser, [

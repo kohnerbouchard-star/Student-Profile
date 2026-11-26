@@ -11,7 +11,7 @@ import { renderDashboardPage } from "../src/pages/dashboard-page.js";
 import { renderNewsPage } from "../src/pages/news-page.js";
 import { renderMarketPage } from "../src/pages/market-page.js";
 import { renderPortfolioPage } from "../src/pages/portfolio-page.js";
-import { renderBusinessPage } from "../src/pages/business-page.js";
+import { renderBusinessWorkspacePage as renderBusinessPage } from "../src/core/route-renderer.js";
 import { renderContractsPage } from "../src/pages/contracts-page.js";
 import { renderStorePage } from "../src/pages/store-page.js";
 import { renderMarketplacePage } from "../src/pages/marketplace-page.js";

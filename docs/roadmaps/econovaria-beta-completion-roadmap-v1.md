@@ -953,3 +953,44 @@ and native PostgreSQL dump/restore/guard run; actual Docker is unavailable local
 and remains pending natural PR CI. No push, merge, dispatch or provider change.
 See `docs/operations/evidence/synthetic-docker-smoke-local-v1/review.md`.
 Next: parent review of checksum-verified local delivery; no full staging claim.
+
+### 2026-11-25 — Player Business installed-route qualification
+
+`PLAYER-BUSINESS-INSTALLED-ROUTE-001`: `IMPLEMENTED_NOT_MERGED`; local owner
+`refactor/player-business-installed-route`, implementation `1d7ff7b948`, based on fetched main `73ee21a984`;
+draft [PR #1056](https://github.com/kohnerbouchard-star/Student-Profile/pull/1056),
+published source `0af16038627e87d76cc7ca14a4eba7f732885358`, tree
+`1bff19c9640e4ffee41debc1fc313bd45a4f2886`. No merge/deployment. Treasury browser/unit coverage now targets the configured
+workspace route. The installed workspace consumes the preserved exact Treasury
+panel and committed Procurement recovery disclosure; unreachable configured-page
+and Procurement rendering was removed, retaining formation and shared leaves.
+Static source qualification follows the actual route closure with broken-link
+negative controls. Banking and #1054 are unchanged. No migration, route/RPC,
+backend policy, hosted database or deployment change.
+
+Root tests, Player verification, backend TypeScript, affected Business contracts,
+source-size/inventory, secret and whitespace checks pass locally. Pinned browser
+execution is blocked by locked Chromium HTTP 403 and the absent system Chromium
+binary. Supplemental Chromium158 passed all 12 desktop/mobile cases; the
+fixture uses the real app-root tokens. Full Edge checking and backend smoke
+remain blocked by the unchanged SDK network import.
+No live-backend or overall backlog completion claim. See [scope and evidence](../operations/evidence/player-business-installed-route-v1/scope.md).
+Next: confirm this candidate's desktop/mobile Treasury scenarios with pinned
+Chromium and finish remaining backend/Edge checks before normal review and CI; preserve separate
+Banking ownership and reserve hosted database work for the live database chat.
+
+### 2026-11-26 — PR1056 local reconciliation against exact main1e517d5
+
+`PLAYER-BUSINESS-INSTALLED-ROUTE-001` remains `IMPLEMENTED_NOT_MERGED`.
+Local review/pr1056-reconcile-1e517d5-20261126 normally merges published
+owner1ba16af732 with exact main1e517d5cac29624964b1fe0c6444929de448757c.
+Complete main and Business roadmap records are retained additively. Only roadmap
+and Roster source pins conflict; main's inventory and staging protections are
+retained unchanged. Both Roster roles are coupled to one new authority-inclusive
+complete integration carrier, with all seven overlays and exact equality intact.
+Business implementation/test bytes remain published-owner-identical; T021 and
+Banking/#1054 changes are excluded. No workflow, backend, migration, route/RPC,
+public ref, draft state, dispatch, hosted database or deployment change.
+Qualification belongs only to this exact main and this new local candidate,
+not any older recovery or future main. See the existing Business scope evidence
+for checks and limitations. Parent owns publication/order; no completion claim.

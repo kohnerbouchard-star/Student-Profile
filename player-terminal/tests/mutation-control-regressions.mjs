@@ -20,12 +20,12 @@ assert.equal(isEndpointEnabled(capabilities, "messageThreadCreate"), true);
 assert.equal(isEndpointEnabled(capabilities, "messageRead"), true);
 
 const businessPageSource = await readFile(
-  new URL("../src/pages/business-page.js", import.meta.url),
+  new URL("../src/pages/business-workspace-sections.js", import.meta.url),
   "utf8",
 );
 assert.match(
   businessPageSource,
-  /<input name="employeeKey" type="hidden" value="\$\{escapeHtml\(employee\.id\)\}" \/>/,
+  /<input name="employeeKey" type="hidden" value="\$\{escapeHtml\(row\.id\)\}"\s*\/>/,
   "Employee termination must submit the public employee key rather than relying on browser-owned UUID context.",
 );
 

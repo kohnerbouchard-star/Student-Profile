@@ -76,10 +76,10 @@ for (const token of [
   "BUSINESS_LABOR_SKILL_UNAVAILABLE",
 ]) requireToken(source.errors, token, "Player recovery messages");
 for (const token of [
-  "Workforce utilization & payroll",
+  "FINITE LABOR",
   "data-business-workforce-utilization",
-  "The server reserves exact materials, labor, equipment, and completion time",
-  "recurring Business payroll",
+  "The server atomically reserves materials, labor, and equipment",
+  "payroll",
 ]) requireToken(installedPage, token, "Player Business UI");
 if (/name="unitLaborCost"/u.test(installedPage)) {
   throw new Error("Player Business UI still exposes Player-authored synthetic labor cost.");

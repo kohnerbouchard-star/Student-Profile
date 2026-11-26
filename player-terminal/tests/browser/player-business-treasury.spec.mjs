@@ -103,6 +103,10 @@ function responses() {
     fundingQuote,
   };
   return {
+    businessTreasuryAccountOpen: {
+      ok: true, outcome: "applied", refreshRequired: true,
+      account: { accountKey: "bac_44444444444444444444444444444444", currencyCode: "NVA", accountKind: "checking", status: "active", precision: 2, posted: money("0", "NVA", 2), held: money("0", "NVA", 2), available: money("0", "NVA", 2) },
+    },
     businessTreasuryFxQuote: {
       ok: true,
       outcome: "applied",
@@ -277,12 +281,11 @@ function treasurySnapshot() {
   };
 }
 
-async function mountFixture(page, { installedRoute = false } = {}) {
+async function mountFixture(page) {
   await page.goto("/?preview=1#business");
   await expect(page.locator("#player-main-content .player-terminal-page")).toBeVisible();
-  await page.evaluate(async ({ keys, snapshot, responseMap, installedRoute }) => {
-    const [{ renderBusinessPage }, { previewData }, { installBusinessTreasuryFlow }, { renderPlayerRoute }] = await Promise.all([
-      import("/src/pages/business-page.js"),
+  await page.evaluate(async ({ keys, snapshot, responseMap }) => {
+    const [{ previewData }, { installBusinessTreasuryFlow }, { renderPlayerRoute }] = await Promise.all([
       import("/src/data/preview-data.js"),
       import("/src/features/business-treasury/business-treasury-flow.js"),
       import("/src/core/route-renderer.js"),
@@ -325,23 +328,25 @@ async function mountFixture(page, { installedRoute = false } = {}) {
     document.querySelector("#businessTreasuryBrowserFixture")?.remove();
     const fixture = document.createElement("main");
     fixture.id = "businessTreasuryBrowserFixture";
-    fixture.className = "player-terminal-overview player-terminal-page-host";
+    fixture.className = "player-terminal-overview player-terminal-app-root player-terminal-page-host";
     fixture.dataset.testid = "business-treasury-browser-fixture";
     document.body.append(fixture);
     const state = { route: "business", data };
     const calls = [];
     let refreshFailure = true;
+    const refreshCalls = [];
     const render = () => {
-      fixture.innerHTML = installedRoute
-        ? renderPlayerRoute({ route: "business", data, ui: {}, config: {} })
-        : renderBusinessPage(data);
+      fixture.innerHTML = renderPlayerRoute({ route: "business", data, ui: {}, config: {} });
     };
     const terminal = {
       getState: () => state,
       requestRender: render,
-      refreshResources: async (resources) => refreshFailure
-        ? { errors: Object.fromEntries(resources.map((resource) => [resource, { code: "REQUEST_FAILED" }])) }
-        : { errors: {} },
+      refreshResources: async (resources) => {
+        refreshCalls.push([...resources]);
+        return refreshFailure
+          ? { errors: Object.fromEntries(resources.map((resource) => [resource, { code: "REQUEST_FAILED" }])) }
+          : { errors: {} };
+      },
       showToast: (message) => { globalThis.__businessTreasuryToast = message; },
     };
     render();
@@ -364,6 +369,7 @@ async function mountFixture(page, { installedRoute = false } = {}) {
     });
     globalThis.__businessTreasuryHarness = {
       calls,
+      refreshCalls,
       data,
       destroy: controller.destroy,
       renderState(resourceState, includeSnapshot = true) {
@@ -373,12 +379,14 @@ async function mountFixture(page, { installedRoute = false } = {}) {
       },
       allowRefresh() { refreshFailure = false; },
     };
-  }, { keys, snapshot: treasurySnapshot(), responseMap: responses(), installedRoute });
-  return page.getByTestId("business-treasury-browser-fixture");
+  }, { keys, snapshot: treasurySnapshot(), responseMap: responses() });
+  const fixture = page.getByTestId("business-treasury-browser-fixture");
+  await expect(fixture.locator("[data-business-workspace-v2]")).toBeVisible();
+  return fixture;
 }
 
 test("configured Business review discloses the exact Checking debits before purchase", async ({ page }) => {
-  const fixture = await mountFixture(page, { installedRoute: true });
+  const fixture = await mountFixture(page);
   const workspace = fixture.locator("[data-business-workspace-v2]");
   const procurement = workspace.locator("#business-workspace-procurement");
   const rows = procurement.locator("[data-business-procurement-allocation]");
@@ -537,6 +545,13 @@ test("Business treasury and procurement review exact terms and recover committed
     .toMatchObject({ sourceAmount: "0.1", targetCurrencyCode: "ECO", product: "instant" });
   expect(JSON.stringify(calls)).not.toContain("gameSessionId");
 
+  await page.evaluate(() => globalThis.__businessTreasuryHarness.allowRefresh());
+  await procurement.getByRole("button", { name: "Refresh committed result" }).click();
+  await expect(procurement.getByRole("button", { name: "Refresh committed result" })).toHaveCount(0);
+  await expect(receipt).toBeVisible();
+  await fixture.locator(".player-terminal-business-treasury").getByRole("button", { name: "Refresh committed result" }).click();
+  expect(await page.evaluate(() => globalThis.__businessTreasuryHarness.refreshCalls.at(-1))).toEqual(["businessTreasury"]);
+  expect(await page.evaluate(() => globalThis.__businessTreasuryHarness.calls)).toEqual(calls);
   const overflow = await page.evaluate(() => Math.max(
     document.documentElement.scrollWidth - document.documentElement.clientWidth,
     document.body.scrollWidth - document.body.clientWidth,
@@ -559,6 +574,9 @@ test("Business treasury preserves valid cached evidence across freshness states"
   await page.evaluate(() => globalThis.__businessTreasuryHarness.renderState("unavailable", false));
   await expect(fixture.getByText("Current balances could not be refreshed")).toBeVisible();
   await expect(fixture.getByRole("button", { name: "Retry treasury" })).toBeVisible();
+  await fixture.getByRole("button", { name: "Retry treasury" }).click();
+  await expect(fixture.locator("[data-business-treasury-error]")).toContainText("No action was resubmitted");
+  expect(await page.evaluate(() => globalThis.__businessTreasuryHarness.calls)).toEqual([]);
 });
 
 test("Business treasury passes the automated accessibility contract and keyboard focus order", async ({ page }) => {
@@ -594,4 +612,19 @@ test("Business treasury remains usable without horizontal overflow on mobile", a
   const firstAccount = fixture.locator("[data-business-treasury-account]").first();
   await firstAccount.scrollIntoViewIfNeeded();
   await expect(firstAccount).toBeVisible();
+});
+
+test("Business account-open recovery refreshes without repeating the write", async ({ page }) => {
+  const fixture = await mountFixture(page);
+  const accountDetails = fixture.locator(".player-terminal-business-treasury-actions details").first();
+  await accountDetails.locator("summary").click();
+  await accountDetails.locator('select[name="currencyCode"]').selectOption("NVA");
+  await accountDetails.getByRole("button", { name: "Open Checking account" }).click();
+  await expect(fixture.getByText("Account opened; refresh pending")).toBeVisible();
+  await expect(fixture.getByText(/NVA Business Checking .* is authoritative/)).toBeVisible();
+  await page.evaluate(() => globalThis.__businessTreasuryHarness.allowRefresh());
+  await fixture.getByRole("button", { name: "Refresh opened account" }).click();
+  expect(await page.evaluate(() => globalThis.__businessTreasuryHarness.refreshCalls)).toEqual([["businessTreasury"], ["businessTreasury"]]);
+  expect(await page.evaluate(() => globalThis.__businessTreasuryHarness.calls.map(({ endpointKey }) => endpointKey)))
+    .toEqual(["businessTreasuryAccountOpen"]);
 });
