@@ -1,0 +1,35 @@
+name: Campaign Served Worker
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/campaign-served-worker.yml'
+      - 'scripts/campaign-served/**'
+permissions:
+  contents: read
+concurrency:
+  group: campaign-served-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  disposable-worker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22.23.1'
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
+        with:
+          deno-version: v2.9.3
+      - name: Install repository-locked local CLI only
+        run: npm ci --ignore-scripts
+      - name: Verify source contracts
+        run: node --test scripts/campaign-served/contract.test.mjs
+      - name: Test unchanged Campaign worker with isolated disposable PostgREST
+        shell: bash
+        run: bash scripts/campaign-served/run.sh
