@@ -22,6 +22,8 @@ The mandatory queue is #163, #294, #299, #300, #249, #248, #261, shared converge
 ## Scope Intake
 
 - **`ADMIN-WORLD-READ-VALUES-CLEANUP-001` (2026-11-25):** `IMPLEMENTED_NOT_MERGED`, local-only independent cleanup on exact fetched main `e6bf130c63e9940538dd46938f221f99b9ffba3f`, owner `refactor/admin-dead-browser-cleanup-20261125`. Open PR ownership audit clear for this boundary. Delete the private never-called signed-integer helper and extract nine byte-identical public-value normalization functions from the466-line active World read model (now413, value owner49). Installed roots, dynamic loading, canonical build/copy manifests and retained tests traced; no wrapper/fallback, coverage deletion, DTO, request, permission, CSS or economic change. Focused37 baseline/final, Admin393, root tests and core TS pass; retained browser smoke33 pass/eight existing exceptions/zero failures, plus actual built canonical World desktop/mobile entry checks pass with local Chromium158. No database workflow/migration/provider, proxyClassroom or other active owner scope touched. [Removal proof, root trace, body hashes and limits](../operations/evidence/admin-world-read-values-cleanup-v1/scope.md). Durable patch/bundle with exact public-main prerequisite; no push, merge, dispatch or deployment. Pinned-browser/CI, independent review and frozen Roster reconciliation remain open; not verified complete.
+  - PR #1060 local reconciliation (2026-11-26): preserve published head `ebd8c5f884c41b2f630f036970383e4b3b8c1f40` and exact main `1e517d5cac29624964b1fe0c6444929de448757c` by normal merge. Only Roster source pins conflict; retain main pins in the complete authority-inclusive carrier, followed by a separate four-value local pin child. No guards, allowlists or workflow bytes change relative to main. Exact-head local checks and public-carrier verification remain required; no future-main, hosted qualification, readiness or merge claim. Next: parent publication review, exact public source identity and fresh final-head checks.
+
 
 Serial merge checkpoint (2026-11-18): Market summaries #1014 merged as `e22591309f0b5730f581157c5a239368bc05c121`, tree identical to qualified `d4b45c37`, after25 workflows/48 active jobs and CodeQL passed. Contracts #1013 postmerge finished18 successes/five guarded skips including provider success. Existing Portfolio disclosure owner #1015 normally integrates this actual main, preserving all predecessor capabilities and their verification registrations. Portfolio return/unavailable behavior stays unchanged from qualified `aa717028`; independent review and full fresh exact-head qualification remain mandatory. Earlier draft/pending records are historical. Backend #1009 and live quota-dependent acceptance remain held, autofocus correction remains separate, no manual deployment or broad T048 completion claim.
 
@@ -928,3 +930,30 @@ Roster roles to one public carrier. Preserve #1055's ordered 127 required / 76
 critical identities, verifier assertions and false production permissions. No
 workflow-filter, historical SQL or fixture/diagnostic behavior change. Source
 checks require fresh exact-head qualification; draft remains unmerged.
+
+### REF-032 / OPS-STAGE-001 — local pre-migration stage diagnostics (2026-11-25)
+
+`IMPLEMENTED_NOT_MERGED`, LOCAL_ONLY at held base `e6bf130c63`. Run 45700466251's
+pre-migration cause remains UNKNOWN; old P0001 evidence is not reused. Adds fixed
+enum stages, preserves primary failure through cleanup errors and projects fixed
+ledger error classes without private stderr/rows/captures. Direct Bash and actual
+shell synthetic reproduction prove a failed Docker inventory can be masked in a
+for-loop substitution; assigning inventory separately now fails closed. This
+local defect is not asserted as the historical cause. Existing authorization,
+source/project/network/socket guards and historical SQL remain intact. No hosted
+connection, publish, dispatch, merge or deployment. See
+`docs/operations/evidence/staging-premigration-stages-local-v1/review.md`.
+Next: parent review and independent source qualification before any new rehearsal.
+
+### REF-032 / OPS-STAGE-001 — local synthetic Docker PR smoke (2026-11-25)
+
+`IMPLEMENTED_NOT_MERGED`, LOCAL_ONLY on exact diagnostics candidate `cf27f96f6a`.
+Adds one same-repository PR-only step to existing Database Replay, with unchanged
+filters/permissions/live-shaped hold and unchanged protected staging authority.
+A unique empty synthetic stack must start, lose network egress, dump/restore only
+two tiny synthetic schemas/ledger and reject its own deterministic guard. No
+hosted inputs or actual migration history is used. Local command-plan contracts
+and native PostgreSQL dump/restore/guard run; actual Docker is unavailable locally
+and remains pending natural PR CI. No push, merge, dispatch or provider change.
+See `docs/operations/evidence/synthetic-docker-smoke-local-v1/review.md`.
+Next: parent review of checksum-verified local delivery; no full staging claim.

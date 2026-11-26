@@ -147,6 +147,14 @@ jobs:
       - name: Validate Contract public-key repair contract
         run: node --test scripts/player-contract-public-key-resolution-migration.test.mjs
 
+      - name: Synthetic Docker startup isolation and restore smoke
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          REF032_SYNTHETIC_DOCKER_SMOKE: '1'
+        run: |
+          node --test scripts/operations/live-migration-reconciliation/synthetic-docker-smoke.test.mjs
+          node scripts/operations/live-migration-reconciliation/synthetic-docker-smoke.mjs
+
       - name: Start disposable Postgres service
         shell: bash
         run: |
