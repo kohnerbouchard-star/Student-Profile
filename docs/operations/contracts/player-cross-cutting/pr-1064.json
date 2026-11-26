@@ -26,7 +26,8 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "vercel.json",
-    ".github/workflows/database-replay.yml"
+    ".github/workflows/database-replay.yml",
+    "docs/operations/evidence/staging-suffix-source-qualification-v1/image-identity.json"
   ],
   "requiredFiles": [
     ".github/workflows/staging-suffix-source-qualification.yml",
@@ -46,7 +47,8 @@
     "scripts/verify-player-cross-cutting-authority.mjs",
     "scripts/player-cross-cutting-authority.test.mjs",
     "vercel.json",
-    ".github/workflows/database-replay.yml"
+    ".github/workflows/database-replay.yml",
+    "docs/operations/evidence/staging-suffix-source-qualification-v1/image-identity.json"
   ],
   "requiredChecks": [
     "player-terminal-verify",

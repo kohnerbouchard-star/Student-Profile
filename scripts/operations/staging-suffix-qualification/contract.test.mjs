@@ -4,27 +4,28 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {context,container,IMAGE,runQualification,commandAllowed,imageFacts} from './run.mjs';
+import {context,container,IMAGE,IMAGE_ID,runQualification,commandAllowed,imageFacts,verifyBootstrap} from './run.mjs';
 import {loadBatch,renderAtomicBatch} from './compiler.mjs';
 import {predicates} from './postconditions.mjs';
 const wf=readFileSync(new URL('../../../.github/workflows/staging-suffix-source-qualification.yml',import.meta.url),'utf8');
-const sha='a'.repeat(40),env={GITHUB_ACTIONS:'true',GITHUB_WORKFLOW:'Source-only staging suffix qualification',GITHUB_REPOSITORY:'kohnerbouchard-star/Student-Profile',GITHUB_RUN_ATTEMPT:'1',GITHUB_EVENT_NAME:'push',GITHUB_REF:'refs/heads/fix/staging-suffix-source-test',GITHUB_SHA:sha};
+const sha='a'.repeat(40),trustedEvent={pull_request:{base:{ref:'main'},head:{sha:'a'.repeat(40),repo:{full_name:'kohnerbouchard-star/Student-Profile'}}}},env={GITHUB_ACTIONS:'true',GITHUB_WORKFLOW:'Source-only staging suffix qualification',GITHUB_REPOSITORY:'kohnerbouchard-star/Student-Profile',GITHUB_RUN_ATTEMPT:'1',GITHUB_EVENT_NAME:'pull_request',GITHUB_REF:'refs/heads/fix/staging-suffix-source-test',GITHUB_SHA:sha};
 test('workflow schedules source-only exact-head checks, never dispatch, protected environment or secrets',()=>{
- for(const token of ['pull_request:','push:',"branches: ['fix/staging-suffix-source-*']",'persist-credentials: false','github.event.pull_request.head.sha || github.sha','contents: read','contract.test.mjs','staging-suffix-qualification/run.mjs','backend/supabase/migrations/**'])assert(wf.includes(token));
+ for(const token of ['pull_request:','branches: [main]','persist-credentials: false','github.event.pull_request.head.sha || github.sha','contents: read','contract.test.mjs','staging-suffix-qualification/run.mjs','backend/supabase/migrations/**'])assert(wf.includes(token));
+ assert(!/^  push:/m.test(wf));
  assert(!/workflow_dispatch|workflow_run|workflow_call|pull_request_target|secrets\.|environment:|actions: write|contents: write|gh run|supabase link|deploy/.test(wf));
  assert(!/download-artifact|\.sql\s*$|rehearsal\.log/m.test(wf));
 });
 test('source identity and all external authority overrides reject before Docker',()=>{
- context(env,{},sha);
- for(const key of ['PGHOST','PGPASSWORD','SUPABASE_DB_URL','SUPABASE_ACCESS_TOKEN','STAGING_APPLY_AUTHORIZED','DATABASE_URL','DOCKER_HOST','GH_TOKEN'])assert.throws(()=>context({...env,[key]:'synthetic-denied'}, {},sha));
- for(const mutation of [{GITHUB_EVENT_NAME:'workflow_dispatch'},{GITHUB_REF:'refs/heads/main'},{GITHUB_SHA:'b'.repeat(40)},{GITHUB_RUN_ATTEMPT:'2'}])assert.throws(()=>context({...env,...mutation},{},sha));
+ context(env,trustedEvent,sha);
+ for(const key of ['PGHOST','PGPASSWORD','SUPABASE_DB_URL','SUPABASE_ACCESS_TOKEN','STAGING_APPLY_AUTHORIZED','DATABASE_URL','DOCKER_HOST','GH_TOKEN'])assert.throws(()=>context({...env,[key]:'synthetic-denied'}, trustedEvent,sha));
+ for(const mutation of [{GITHUB_EVENT_NAME:'workflow_dispatch'},{GITHUB_EVENT_NAME:'push'},{GITHUB_REPOSITORY:'untrusted/fork'},{GITHUB_RUN_ATTEMPT:'2'}])assert.throws(()=>context({...env,...mutation},trustedEvent,sha));
  const pr={pull_request:{base:{ref:'main'},head:{sha,repo:{full_name:env.GITHUB_REPOSITORY}}}};context({...env,GITHUB_EVENT_NAME:'pull_request'},pr,sha);pr.pull_request.head.repo.full_name='untrusted/fork';assert.throws(()=>context({...env,GITHUB_EVENT_NAME:'pull_request'},pr,sha));
 });
 test('container must be fresh owned exact-image and fully disconnected',()=>{
  const c={HostConfig:{NetworkMode:'synthetic_bridge'},Name:'/supabase_db_suffix_source_123',Config:{Labels:{'com.supabase.cli.project':'suffix_source_123'}},State:{Running:true},Image:'sha256:expected',Created:new Date().toISOString(),NetworkSettings:{Networks:{}},Id:'1'.repeat(64)};
  container(c,'suffix_source_123','sha256:expected',0);
  for(const mutate of [x=>x.Image='wrong',x=>x.NetworkSettings.Networks={bridge:{}},x=>x.Name='/other',x=>x.State.Running=false]){const n=structuredClone(c);mutate(n);assert.throws(()=>container(n,'suffix_source_123','sha256:expected',0));}
- assert(IMAGE.endsWith('e884cde9f5594ddb30ebec888bd236d128eaf9c9b48cc864d8fa3d27a6c6c6bc'));
+ assert(IMAGE.endsWith('80d7b27c3e8d77cfa7226eee9508671796da214781ff15a35b3670d7ad5ee453'));
 });
 test('all15 exact source bodies have nonempty safe predicates; no unconditional true check',async()=>{
  const rows=await loadBatch(process.cwd()),checks=predicates(rows);assert.equal(rows.length,15);assert.equal(Object.keys(checks).length,15);
@@ -38,7 +39,7 @@ test('failure output remains bounded and non-authorizing',async()=>{
 });
 
 test('failed external image acquisition is attempted once and exposes no raw diagnostic',async()=>{
- const temp=mkdtempSync(path.join(tmpdir(),'suffix-contract-'));const eventPath=path.join(temp,'event.json');writeFileSync(eventPath,'{}');let pulls=0;
+ const temp=mkdtempSync(path.join(tmpdir(),'suffix-contract-'));const eventPath=path.join(temp,'event.json');writeFileSync(eventPath,JSON.stringify(trustedEvent));let pulls=0;
  try{
  const execute=(command,args)=>{
   if(command==='git')return args[0]==='rev-parse'?sha:'';
@@ -73,9 +74,9 @@ test('exact publication branch alone is excluded from Vercel, all other base con
 });
 
 test('only pinned setup-cli public ghcr registry metadata is accepted, never arbitrary registry authority',()=>{
- context({...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io'},{},sha);
- assert.throws(()=>context({...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'untrusted.invalid'},{},sha));
- assert.throws(()=>context({...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io',SUPABASE_ACCESS_TOKEN:'synthetic-denied'},{},sha));
+ context({...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io'},trustedEvent,sha);
+ assert.throws(()=>context({...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'untrusted.invalid'},trustedEvent,sha));
+ assert.throws(()=>context({...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io',SUPABASE_ACCESS_TOKEN:'synthetic-denied'},trustedEvent,sha));
 });
 
 test('image diagnostics emit only immutable IDs, approved registry digests and bounded platform values',()=>{
@@ -85,4 +86,20 @@ test('image diagnostics emit only immutable IDs, approved registry digests and b
  const source=readFileSync('scripts/operations/staging-suffix-qualification/run.mjs','utf8');
  for(const stage of ['expected-image-acquisition','expected-image-platform','observed-image-platform','exact-image-id-binding','network-disconnect','isolated-container-attestation'])assert(source.includes(stage));
  assert(source.includes("assert.equal(info.Image,pinned.Id"));
+});
+
+test('canonical replay pin binds two actual diagnostic acquisitions, frozen CLI selector and exact config ID',()=>{
+ const proof=JSON.parse(readFileSync('docs/operations/evidence/staging-suffix-source-qualification-v1/image-identity.json'));
+ assert.equal(proof.canonicalImage,IMAGE);assert.equal(proof.canonicalConfigId,IMAGE_ID);assert.equal(proof.platform,'linux/amd64');assert.equal(proof.cliVersion,'2.109.1');
+ assert.equal(proof.cliSourceCommit,'6d4c19870ed213ba7f682f117d0345c8a40bfa94');
+ assert.equal(new Set(proof.diagnosticRuns.map(r=>r.jobId)).size,2);
+ assert(proof.diagnosticRuns.every(r=>r.canonicalImage===IMAGE&&r.canonicalConfigId===IMAGE_ID&&r.canonicalCli143Tag===true&&r.stage==='exact-image-id-binding'));
+ assert(readFileSync('scripts/operations/staging-suffix-qualification/run.mjs','utf8').includes('assert.equal(pinned.Id,IMAGE_ID)'));
+});
+
+test('bootstrap proof requires managed Auth/schema/role and available extension prerequisites, not fake schemas',()=>{
+ const required=['server17','extensionsAvailable','authUsers','authSessions','authFactors','authUid','authJwt','authRole','storageSchema','roles'];
+ const facts=Object.fromEntries(required.map(k=>[k,true]));facts.storageObjects=false;facts.installedExtensions={};verifyBootstrap(facts);
+ for(const key of required)assert.throws(()=>verifyBootstrap({...facts,[key]:false}));
+ assert(wf.includes("if: github.event_name == 'pull_request' &&"));
 });

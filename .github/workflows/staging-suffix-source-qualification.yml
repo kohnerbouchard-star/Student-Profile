@@ -12,23 +12,11 @@ on:
       - 'scripts/roster-connected/sources.json'
       - 'docs/operations/contracts/player-cross-cutting/pr-1064.json'
       - 'docs/operations/evidence/staging-suffix-source-qualification-v1/**'
-  push:
-    branches: ['fix/staging-suffix-source-*']
-    paths:
-      - '.github/workflows/staging-suffix-source-qualification.yml'
-      - 'scripts/operations/staging-suffix-qualification/**'
-      - 'scripts/operations/live-migration-reconciliation/**'
-      - 'backend/supabase/migrations/**'
-      - 'backend/supabase/config.toml'
-      - 'vercel.json'
-      - 'scripts/roster-connected/sources.json'
-      - 'docs/operations/contracts/player-cross-cutting/pr-1064.json'
-      - 'docs/operations/evidence/staging-suffix-source-qualification-v1/**'
 permissions:
   contents: read
 jobs:
   qualify:
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:

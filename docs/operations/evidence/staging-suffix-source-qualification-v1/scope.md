@@ -197,3 +197,25 @@ image, not permission to accept a mutable tag or different digest. The next
 bounded result must prove actual platform/digest identities. Reusing canonical
 CI image identity requires an independently verifiable immutable pin; do not
 relax the check to a version/name or silently adopt observed bytes.
+
+Image diagnosis concluded at87596672: independent push/PR runs both reported
+exact-image-id-binding failure with identical public facts. Both old capture pin
+and canonical CLI image were available linux/amd64, but config IDs differed.
+image-identity.json records both runs and frozen CLI source selection. This source
+check now explicitly pins canonical server17.6.1.143 digest80d7b27c... AND config
+ID2d3ac69a..., then requires CLI selector and exact runtime identity. The old
+capture workflow/pin is untouched. This is not a fallback or platform/name-only
+acceptance rule. The next run independently pulls the declared immutable digest;
+any registry, platform, config, selector or runtime mismatch still rejects before
+canonical SQL. Full runtime qualification remains pending actual CI.
+
+The published draft now qualifies on pull_request ONLY, with same-repo/main exact
+head binding. Push qualification was removed to avoid duplicate acquisitions and
+DB tests once this actual PR exists; no manual trigger is added. After immutable
+image/platform/config/selector identity and network fencing, bootstrap evidence
+requires PostgreSQL17, available pg_cron/pg_net/pgcrypto/supabase_vault, actual
+managed Auth users/sessions/MFA and uid/jwt/role functions, Storage namespace and
+all five required roles. Missing prerequisites fail before canonical SQL; no
+synthetic Auth/Storage replacements are created. Storage object-table presence
+and installed extension versions are separately observed, not Storage-byte or
+managed runtime qualification. Only public metadata booleans/versions are output.
