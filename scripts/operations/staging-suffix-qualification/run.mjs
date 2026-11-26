@@ -37,8 +37,12 @@ export function commandAllowed(command,args){
   assert(args.includes('psql')||args.includes('pg_dump'));
  }
 }
+export function imageFacts(meta){
+ assert.match(meta.Id,/^sha256:[a-f0-9]{64}$/);
+ return {imageId:meta.Id,architecture:['amd64','arm64'].includes(meta.Architecture)?meta.Architecture:'other',os:meta.Os==='linux'?'linux':'other',repoDigests:[...new Set((meta.RepoDigests??[]).filter(x=>/^(?:ghcr\.io|public\.ecr\.aws)\/supabase\/postgres@sha256:[a-f0-9]{64}$/.test(x)))].sort().slice(0,4)};
+}
 export async function runQualification({env=process.env,root=process.cwd(),execute}={}){
- let work,started=false,stage='context',result={status:'FAILED',syntheticOnly:true,releaseQualified:false,applyAuthorized:false};
+ let work,imageEvidence,started=false,stage='context',result={status:'FAILED',syntheticOnly:true,releaseQualified:false,applyAuthorized:false};
  const implementation=execute??((cmd,args,input,timeout=30000,childEnv)=>execFileSync(cmd,args,{env:childEnv,input,encoding:'utf8',timeout,maxBuffer:64*1024*1024,stdio:[input===undefined?'ignore':'pipe','pipe','pipe']}).trim());
  const raw=(cmd,args,...rest)=>{commandAllowed(cmd,args);return implementation(cmd,args,...rest);};
  const local=(cmd,args,input,timeout)=>raw(cmd,args,input,timeout,{PATH:env.PATH});
@@ -51,16 +55,18 @@ export async function runQualification({env=process.env,root=process.cwd(),execu
   const run=(cmd,args,input,timeout=30000)=>raw(cmd,args,input,timeout,childEnv);
   stage='cli-version';assert.equal(run('supabase',['--version']),'2.109.1');
   stage='docker-context';assert.equal(JSON.parse(run('docker',['context','inspect']))[0].Endpoints.docker.Host,'unix:///var/run/docker.sock');
-  stage='image';run('docker',['pull','--platform','linux/amd64',IMAGE],undefined,180000);
-  const pinned=JSON.parse(run('docker',['image','inspect',IMAGE]))[0];assert.equal(pinned.Architecture,'amd64');assert.equal(pinned.Os,'linux');
+  stage='expected-image-acquisition';run('docker',['pull','--platform','linux/amd64',IMAGE],undefined,180000);
+  stage='expected-image-platform';const pinned=JSON.parse(run('docker',['image','inspect',IMAGE]))[0];imageEvidence={expected:imageFacts(pinned)};assert.equal(pinned.Architecture,'amd64');assert.equal(pinned.Os,'linux');
   const project='suffix_source_'+randomBytes(8).toString('hex');
   const config=readFileSync(path.join(root,'backend/supabase/config.toml'),'utf8').replace(/^project_id = .*$/m,`project_id = "${project}"`).replace(/^port = 54321$/m,'port = 57662').replace(/^port = 54322$/m,'port = 57660').replace(/^shadow_port = 54320$/m,'shadow_port = 57661');
   assert(config.includes('[db.seed]\nenabled = false\nsql_paths = []'));writeFileSync(path.join(work,'supabase/config.toml'),config);
   const created=Date.now();stage='empty-managed-bootstrap';started=true;run('supabase',['start','--workdir',work,'--exclude',EXCLUDED],undefined,240000);
   const inspect=id=>JSON.parse(run('docker',['inspect',id]))[0];let info=inspect(`supabase_db_${project}`);
-  stage='pinned-managed-image-binding';assert.equal(info.Image,pinned.Id,'CLI managed bootstrap must resolve exactly the pinned image');
+  stage='observed-image-platform';const observed=JSON.parse(run('docker',['image','inspect',info.Image]))[0];imageEvidence.observed=imageFacts(observed);imageEvidence.canonicalCli143Tag=/^(?:ghcr\.io|public\.ecr\.aws)\/supabase\/postgres:17\.6\.1\.143$/.test(info.Config.Image);
+  stage='exact-image-id-binding';assert.equal(info.Image,pinned.Id,'CLI managed bootstrap must resolve exactly the pinned image');
+  stage='network-disconnect';
   for(const network of Object.keys(info.NetworkSettings.Networks))run('docker',['network','disconnect',network,info.Id]);
-  const id=container(inspect(info.Id),project,pinned.Id,created);
+  stage='isolated-container-attestation';const id=container(inspect(info.Id),project,pinned.Id,created);
   const sql=(text,role='postgres',database='postgres')=>{
    assert(['postgres','qualification_manufacturing_fixture'].includes(database));
    assert.equal(container(inspect(id),project,pinned.Id,created),id);
@@ -102,7 +108,7 @@ export async function runQualification({env=process.env,root=process.cwd(),execu
   sql(projectionFixture+definition+projectionAssertions,'postgres','qualification_manufacturing_fixture');
   assert.equal(local('git',['rev-parse','HEAD']),source);
   result={status:'PASS',sourceCommit:source,syntheticOnly:true,canonicalPrefixCount:count,appliedCount:15,purgeChecked:true,manufacturingCatalogAndClaimGuardChecked:true,manufacturingProjectionPrecisionChecked:true,all15Rollback:true,all15FaultAtomicity:true,injectedFaultPositions:15,committedRetryRejected:true,fullManufacturingLifecycle:false,releaseQualified:false,applyAuthorized:false};
- }catch(error){result={status:'FAILED',stage,reason:error?.blockedVariable?'EXTERNAL_AUTHORITY_FORBIDDEN':'INPUT_OR_COMMAND',...(error?.blockedVariable?{blockedVariable:error.blockedVariable}:{}),syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}
+ }catch(error){result={status:'FAILED',stage,reason:error?.blockedVariable?'EXTERNAL_AUTHORITY_FORBIDDEN':'INPUT_OR_COMMAND',...(error?.blockedVariable?{blockedVariable:error.blockedVariable}:{}),...(imageEvidence?{imageEvidence}:{}),syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}
  finally{if(started){try{raw('supabase',['stop','--workdir',work,'--no-backup'],undefined,60000,{PATH:env.PATH,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io',HOME:path.join(work,'home'),DOCKER_CONFIG:path.join(work,'docker'),DOCKER_HOST:'unix:///var/run/docker.sock'});}catch{result={status:'FAILED',stage:'cleanup',syntheticOnly:true,releaseQualified:false,applyAuthorized:false};}}if(work)rmSync(work,{recursive:true,force:true});}
  return result;
 }

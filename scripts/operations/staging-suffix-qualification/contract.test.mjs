@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {context,container,IMAGE,runQualification,commandAllowed} from './run.mjs';
+import {context,container,IMAGE,runQualification,commandAllowed,imageFacts} from './run.mjs';
 import {loadBatch,renderAtomicBatch} from './compiler.mjs';
 import {predicates} from './postconditions.mjs';
 const wf=readFileSync(new URL('../../../.github/workflows/staging-suffix-source-qualification.yml',import.meta.url),'utf8');
@@ -48,7 +48,7 @@ test('failed external image acquisition is attempted once and exposes no raw dia
   throw Error('UNEXPECTED_COMMAND');
  };
  const result=await runQualification({env:{...env,RUNNER_TEMP:temp,GITHUB_EVENT_PATH:eventPath},execute});
- assert.equal(pulls,1);assert.deepEqual(result,{status:'FAILED',stage:'image',reason:'INPUT_OR_COMMAND',syntheticOnly:true,releaseQualified:false,applyAuthorized:false});
+ assert.equal(pulls,1);assert.deepEqual(result,{status:'FAILED',stage:'expected-image-acquisition',reason:'INPUT_OR_COMMAND',syntheticOnly:true,releaseQualified:false,applyAuthorized:false});
  assert(!JSON.stringify(result).includes('PRIVATE'));
  }finally{rmSync(temp,{recursive:true,force:true});}
 });
@@ -76,4 +76,13 @@ test('only pinned setup-cli public ghcr registry metadata is accepted, never arb
  context({...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io'},{},sha);
  assert.throws(()=>context({...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'untrusted.invalid'},{},sha));
  assert.throws(()=>context({...env,SUPABASE_INTERNAL_IMAGE_REGISTRY:'ghcr.io',SUPABASE_ACCESS_TOKEN:'synthetic-denied'},{},sha));
+});
+
+test('image diagnostics emit only immutable IDs, approved registry digests and bounded platform values',()=>{
+ const id='sha256:'+'1'.repeat(64),digest='ghcr.io/supabase/postgres@sha256:'+'2'.repeat(64);
+ assert.deepEqual(imageFacts({Id:id,Architecture:'arm64',Os:'linux',RepoDigests:[digest,'untrusted.invalid/private'],Config:{Env:['SYNTHETIC_SECRET']}}),{imageId:id,architecture:'arm64',os:'linux',repoDigests:[digest]});
+ assert.throws(()=>imageFacts({Id:'untrusted-text'}));
+ const source=readFileSync('scripts/operations/staging-suffix-qualification/run.mjs','utf8');
+ for(const stage of ['expected-image-acquisition','expected-image-platform','observed-image-platform','exact-image-id-binding','network-disconnect','isolated-container-attestation'])assert(source.includes(stage));
+ assert(source.includes("assert.equal(info.Image,pinned.Id"));
 });

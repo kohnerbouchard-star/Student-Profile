@@ -175,3 +175,25 @@ New authority supersedes the earlier unallocated/unissued publication status;
 kept template is not itself trusted authority. Final complete authority-inclusive
 carrier and BOTH pins are coupled together, with exact IDs in delivery evidence.
 No main update, dispatch, deployment, real data, job pause or gate change occurred.
+
+## Canonical CLI image diagnosis (no identity waiver)
+
+Final-head run45753949409 reached pinned-managed-image-binding only after the
+requested immutable image pull/platform checks and empty bootstrap succeeded.
+That old stage also included disconnect/attestation, so it was insufficient to
+prove which check failed. New stages distinguish acquisition, expected/observed
+platform, exact image-ID binding, disconnect and isolated attestation. Only public
+immutable image IDs, approved registry RepoDigests and bounded platform fields
+may be emitted; no container env/mount/config dump or raw logs. Exact binding
+assertion remains unchanged. A changed-source natural run is diagnostic, not a
+blind rerun or a different-image fallback.
+
+Pinned SupabaseCLI2.109.1 upstream source selects postgres17.6.1.143 in BOTH
+packages/stack/src/versions.ts and apps/cli-go/pkg/config/templates/Dockerfile:
+https://github.com/supabase/cli/blob/v2.109.1/packages/stack/src/versions.ts
+https://github.com/supabase/cli/blob/v2.109.1/apps/cli-go/pkg/config/templates/Dockerfile
+That supports a concrete selector mismatch hypothesis versus the older capture
+image, not permission to accept a mutable tag or different digest. The next
+bounded result must prove actual platform/digest identities. Reusing canonical
+CI image identity requires an independently verifiable immutable pin; do not
+relax the check to a version/name or silently adopt observed bytes.
