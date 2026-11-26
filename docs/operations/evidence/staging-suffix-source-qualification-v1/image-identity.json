@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "scope": "SOURCE_ONLY_PUBLIC_IMAGE_METADATA_NOT_RELEASE_OR_RESTORE_AUTHORITY",
+  "canonicalImage": "ghcr.io/supabase/postgres@sha256:80d7b27c3e8d77cfa7226eee9508671796da214781ff15a35b3670d7ad5ee453",
+  "canonicalConfigId": "sha256:2d3ac69ad5c95d81458cc93a6cc6c31a98dfa00cd28f88a0a9358d315e1c357a",
+  "platform": "linux/amd64",
+  "cliVersion": "2.109.1",
+  "cliSourceCommit": "6d4c19870ed213ba7f682f117d0345c8a40bfa94",
+  "cliSelector": "ghcr.io/supabase/postgres:17.6.1.143",
+  "sourcePaths": [
+    "apps/cli-go/pkg/config/templates/Dockerfile",
+    "packages/stack/src/versions.ts"
+  ],
+  "oldCaptureToolImage": "ghcr.io/supabase/postgres@sha256:e884cde9f5594ddb30ebec888bd236d128eaf9c9b48cc864d8fa3d27a6c6c6bc",
+  "oldCaptureToolConfigId": "sha256:74bcceb8123bdc6d9b129eac9446cc0c0fa6fd2e5ee1b5da185c02529b420080",
+  "diagnosticRuns": [
+    {
+      "event": "pull_request",
+      "runId": 45754722769,
+      "jobId": 139690551118,
+      "attempt": 1,
+      "sourceCommit": "87596672196671178b20330aac9754b65eee8494",
+      "stage": "exact-image-id-binding",
+      "canonicalImage": "ghcr.io/supabase/postgres@sha256:80d7b27c3e8d77cfa7226eee9508671796da214781ff15a35b3670d7ad5ee453",
+      "canonicalConfigId": "sha256:2d3ac69ad5c95d81458cc93a6cc6c31a98dfa00cd28f88a0a9358d315e1c357a",
+      "canonicalCli143Tag": true
+    },
+    {
+      "event": "push",
+      "runId": 45754715624,
+      "jobId": 139690527802,
+      "attempt": 1,
+      "sourceCommit": "87596672196671178b20330aac9754b65eee8494",
+      "stage": "exact-image-id-binding",
+      "canonicalImage": "ghcr.io/supabase/postgres@sha256:80d7b27c3e8d77cfa7226eee9508671796da214781ff15a35b3670d7ad5ee453",
+      "canonicalConfigId": "sha256:2d3ac69ad5c95d81458cc93a6cc6c31a98dfa00cd28f88a0a9358d315e1c357a",
+      "canonicalCli143Tag": true
+    }
+  ],
+  "tagSignatureVerified": false,
+  "historicalCaptureWorkflowChanged": false,
+  "identityGuardRelaxed": false
+}
