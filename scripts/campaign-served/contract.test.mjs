@@ -11,7 +11,7 @@ test('vendor validates frozen bytes and localizes remote runtime imports',async(
  const graph={roots:['https://example.test/a.mjs'],modules:[{specifier:'https://example.test/a.mjs',local:'synthetic',dependencies:[]}]};
  const result=await vendor(graph,{remote:{'https://example.test/a.mjs':hash}},out,async()=>bytes);
  assert.equal(result.moduleCount,1);assert.equal((await readFile(out+'/'+hash+'.ts')).toString(),bytes.toString());
- const map=JSON.parse(await readFile(out+'/import-map.json'));assert.equal(map.imports['https://example.test/a.mjs'],'file:///deps/'+hash+'.ts');
+ const map=JSON.parse(await readFile(out+'/import-map.json'));assert.equal(map.imports['https://example.test/a.mjs'],'file:///src/backend/supabase/functions/campaign-orchestrator/.ci-vendor/'+hash+'.ts');
  }finally{await rm(out,{recursive:true,force:true});}
 });
 test('vendor rejects absent hashes, modified bytes and unresolved code dependency',async()=>{
