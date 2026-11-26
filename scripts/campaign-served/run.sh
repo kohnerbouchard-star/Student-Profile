@@ -70,6 +70,22 @@ if ! node scripts/campaign-served/vendor.mjs "$WORK/graph.json" backend/supabase
   cat "$WORK/vendor.json"
   exit 1
 fi
+STAGE=vendor-readability
+mkdir -p backend/supabase/functions/campaign-orchestrator/ci_vendor "$WORK/bundle"
+SDK_HASH="$(node -p 'JSON.parse(require("fs").readFileSync("./backend/supabase/functions/deno.lock","utf8")).remote["https://esm.sh/@supabase/supabase-js@2.108.2"]')"
+READ_HASH="$(docker run --rm --pull never --network none --user "$(id -u):$(id -g)" --cap-drop ALL --read-only -v "$WORK/deps:/deps:ro" --entrypoint /bin/sh "$IMAGE_ID" -c "test -r /deps/$SDK_HASH.ts && sha256sum /deps/$SDK_HASH.ts")"
+test "${READ_HASH%% *}" = "$SDK_HASH"
+echo '{"status":"PASS","stage":"vendor-readability","actualContainerUid":true}'
+STAGE=native-provider-package
+if ! docker run --rm --pull never --network none --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m -e DENO_DIR=/tmp/deno -v "$PWD:/src:ro" -v "$WORK/deps:/src/backend/supabase/functions/campaign-orchestrator/ci_vendor:ro" -v "$WORK/deps/runtime-deno.json:/src/backend/supabase/functions/campaign-orchestrator/deno.json:ro" -v "$WORK/bundle:/out:rw" "$IMAGE_ID" bundle --entrypoint /src/backend/supabase/functions/campaign-orchestrator/index.ts --output /out/campaign.eszip >"$WORK/bundle.private" 2>&1; then
+ node - <<'NODE'
+const fs=require('fs'),s=fs.readFileSync(process.env.WORK+'/bundle.private','utf8');
+console.log(JSON.stringify({status:'FAILED',stage:'native-provider-package',syntheticStartupDiagnostic:s.split('\n').filter(l=>/error|caused by|not found|failed|specifier/i.test(l)).slice(-8).join('\n').slice(0,1800)}));
+NODE
+ exit 1
+fi
+test -s "$WORK/bundle/campaign.eszip"
+sha256sum "$WORK/bundle/campaign.eszip" | awk '{print "{\"status\":\"PASS\",\"stage\":\"native-provider-package\",\"artifactSha256\":\"" $1 "\"}"}'
 STAGE=disposable-start
 ./node_modules/.bin/supabase start --workdir backend --exclude studio,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta,mailpit >"$WORK/start.private" 2>&1
 STAGE=disposable-replay
@@ -95,8 +111,8 @@ if(env.API_URL!=='http://127.0.0.1:54321'||!(env.SERVICE_ROLE_KEY||env.SECRET_KE
 fs.writeFileSync(process.env.WORK+'/runtime.env','SUPABASE_URL=http://supabase_kong_econovaria:8000\nSUPABASE_SERVICE_ROLE_KEY='+(env.SERVICE_ROLE_KEY||env.SECRET_KEY)+'\n');
 NODE
 STAGE=served-runtime
-mkdir -p backend/supabase/functions/campaign-orchestrator/.ci-vendor
-RUNTIME_ID="$(docker create --pull never --platform linux/amd64 --network "$NETWORK_ID" --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m --label "campaign-ci-owner=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -e DENO_DIR=/tmp/deno --env-file "$WORK/runtime.env" -v "$PWD:/src:ro" -v "$WORK/deps:/src/backend/supabase/functions/campaign-orchestrator/.ci-vendor:ro" -v "$WORK/deps/runtime-deno.json:/src/backend/supabase/functions/campaign-orchestrator/deno.json:ro" "$IMAGE_ID" start --main-service /src/backend/supabase/functions/campaign-orchestrator --port 9000)"
+mkdir -p backend/supabase/functions/campaign-orchestrator/ci_vendor
+RUNTIME_ID="$(docker create --pull never --platform linux/amd64 --network "$NETWORK_ID" --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m --label "campaign-ci-owner=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -e DENO_DIR=/tmp/deno --env-file "$WORK/runtime.env" -v "$WORK/bundle:/artifact:ro" "$IMAGE_ID" start --main-service /artifact/campaign.eszip --port 9000)"
 docker start "$RUNTIME_ID" >/dev/null
 export RUNTIME_CONTAINER_ID="$RUNTIME_ID"
 export DATABASE_CONTAINER_ID="$(docker inspect --format '{{.Id}}' supabase_db_econovaria)"

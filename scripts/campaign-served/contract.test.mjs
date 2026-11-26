@@ -11,7 +11,7 @@ test('vendor validates frozen bytes and localizes remote runtime imports',async(
  const graph={roots:['https://example.test/a.mjs'],modules:[{specifier:'https://example.test/a.mjs',local:'synthetic',dependencies:[]}]};
  const result=await vendor(graph,{remote:{'https://example.test/a.mjs':hash}},out,async()=>bytes);
  assert.equal(result.moduleCount,1);assert.equal((await readFile(out+'/'+hash+'.ts')).toString(),bytes.toString());
- const map=JSON.parse(await readFile(out+'/import-map.json'));assert.equal(map.imports['https://example.test/a.mjs'],'file:///src/backend/supabase/functions/campaign-orchestrator/.ci-vendor/'+hash+'.ts');
+ const map=JSON.parse(await readFile(out+'/import-map.json'));assert.equal(map.imports['https://example.test/a.mjs'],'file:///src/backend/supabase/functions/campaign-orchestrator/ci_vendor/'+hash+'.ts');
  }finally{await rm(out,{recursive:true,force:true});}
 });
 test('vendor rejects absent hashes, modified bytes and unresolved code dependency',async()=>{
@@ -27,7 +27,7 @@ test('source-only PR job and exact branch disable cannot deploy',async()=>{
  assert.equal(JSON.parse(await readFile('vercel.json')).git.deploymentEnabled['fix/campaign-served-worker-20261126'],false);
  const run=await readFile('scripts/campaign-served/run.sh','utf8');
  assert.match(run,/--internal/);assert.match(run,/--pull never/);assert.match(run,/--frozen/);assert.doesNotMatch(run,/deno bundle|esbuild|--use-api/);
- assert.match(run,/--platform linux\/amd64/);assert.match(run,/runtime-deno[.]json:/);assert.match(run,/--user/);assert.doesNotMatch(run,/ --import-map /);assert.doesNotMatch(run,/-p [0-9]/);assert.match(run,/RUNTIME_CONTAINER_ID/);
+ assert.match(run,/--platform linux\/amd64/);assert.match(run,/runtime-deno[.]json:/);assert.match(run,/--network none/);assert.match(run,/bundle --entrypoint/);assert.match(run,/--main-service \/artifact\/campaign[.]eszip/);assert.match(run,/--user/);assert.doesNotMatch(run,/ --import-map /);assert.doesNotMatch(run,/-p [0-9]/);assert.match(run,/RUNTIME_CONTAINER_ID/);
 });
 
 test('Deno cache envelope decoding preserves exact locked content',()=>{

@@ -63,3 +63,12 @@ bundle, not start. The verified localization map is merged into an adjacent
 readonly deno.json overlay with original compiler options preserved. The original
 config and worker source remain unchanged in Git. Container UID/GID match the
 private mount owner; capabilities remain dropped. No default registry fallback.
+
+The corrected job first checks the locked SDK wrapper with sha256sum as the
+actual image UID, using only image-provided tools and network-none. It then uses
+that exact verified Edge Runtime's native bundle command offline, with the same
+readonly localized modules and compiler configuration, before starting PostgREST.
+The worker test runs that exact eszip through the supported main-service artifact
+path. Native provider packaging is distinct from the rejected standalone Deno/
+esbuild toolchain. A public artifact SHA256 is recorded only after packaging
+succeeds; it is not a deployed-platform digest or release certificate.

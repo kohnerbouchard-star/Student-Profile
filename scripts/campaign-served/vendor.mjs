@@ -33,7 +33,7 @@ export async function vendor(graph,lock,out,read=readFile) {
     assert(m.local && /^[a-f0-9]{64}$/.test(lock.remote[m.specifier]));
     const raw=await read(m.local);mark('source-integrity',m.specifier);const bytes=lockedContent(raw,m.specifier,lock.remote[m.specifier]);
     const file=sha(bytes)+(m.specifier.includes('.json')?'.json':m.specifier.includes('.d.ts')?'.d.ts':'.ts');
-    imports[m.specifier]='file:///src/backend/supabase/functions/campaign-orchestrator/.ci-vendor/'+file;records.push({m,bytes,file,sha256:sha(bytes)});
+    imports[m.specifier]='file:///src/backend/supabase/functions/campaign-orchestrator/ci_vendor/'+file;records.push({m,bytes,file,sha256:sha(bytes)});
   }
   const resolve=s=>{if(s.startsWith('file://'+process.cwd()+'/'))return 'file:///src/'+s.slice(('file://'+process.cwd()+'/').length);let n=s;for(let i=0;graph.redirects?.[n]&&i<10;i++)n=graph.redirects[n];return imports[n];};
   for(const [a,b] of Object.entries(graph.redirects||{})){assert(resolve(b));imports[a]=resolve(b);}
@@ -43,7 +43,7 @@ export async function vendor(graph,lock,out,read=readFile) {
       if(d.code?.specifier?.startsWith('node:'))continue;
       if(d.code) {mark('unmapped-dependency',d.code.specifier);assert(resolve(d.code.specifier),'Unmapped runtime dependency');map[d.specifier]=resolve(d.code.specifier);}
     }
-    scopes['file:///src/backend/supabase/functions/campaign-orchestrator/.ci-vendor/'+file]=map;
+    scopes['file:///src/backend/supabase/functions/campaign-orchestrator/ci_vendor/'+file]=map;
   }
   await mkdir(out,{recursive:true});
   for(const r of records)await writeFile(out+'/'+r.file,r.bytes,{mode:0o600});
