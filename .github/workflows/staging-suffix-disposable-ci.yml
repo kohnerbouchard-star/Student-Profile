@@ -1,0 +1,27 @@
+name: Disposable Held Staging Suffix
+on:
+  push:
+    branches: [chore/staging-suffix-disposable-ci-20261126]
+
+permissions:
+  contents: read
+
+jobs:
+  disposable:
+    if: github.event.created && !github.event.deleted && !github.event.forced && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out the event commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 3
+          persist-credentials: false
+      - name: Use repository Node version
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Exercise the exact held transaction in disposable PostgreSQL
+        run: node scripts/operations/staging-suffix-disposable-qualification/run-github.mjs
