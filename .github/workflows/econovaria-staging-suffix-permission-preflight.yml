@@ -1,0 +1,42 @@
+name: Staging Suffix Permission Preflight
+
+on:
+  push:
+    branches: [chore/staging-suffix-permission-preflight-20261126]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  inspect-staging:
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/chore/staging-suffix-permission-preflight-20261126' &&
+      github.repository == 'kohnerbouchard-star/Student-Profile' && github.repository_id == '1264495890' &&
+      github.event.repository.private == false && github.event.repository.owner.id == 287640607 &&
+      github.actor_id == '287640607' && github.event.sender.id == 287640607 && github.event.sender.type == 'User' &&
+      github.event.created && !github.event.deleted && !github.event.forced && github.run_attempt == 1
+    environment: staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22.23.1'
+          package-manager-cache: false
+      - name: Verify protected staging admission and exact owner approval
+        id: review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/operations/staging-suffix-permission-preflight/run.mjs verify-review
+      - name: Check staging permission metadata in a read-only transaction
+        if: success() && steps.review.outputs.approved_head == github.sha
+        env:
+          PREFLIGHT_REVIEWED_HEAD: ${{ steps.review.outputs.approved_head }}
+          STAGING_DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: node scripts/operations/staging-suffix-permission-preflight/run.mjs catalog
