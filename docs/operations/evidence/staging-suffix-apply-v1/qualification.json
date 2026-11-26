@@ -1,0 +1,16 @@
+{
+  "status": "NOT_RUN",
+  "sourceCommit": null,
+  "batchDigest": null,
+  "transactionSafetyReviewed": false,
+  "postconditionsReviewed": false,
+  "checks": {
+    "rollback": "NOT_RUN",
+    "resume": "NOT_RUN",
+    "ledgerAtomicity": "NOT_RUN",
+    "wrongTarget": "NOT_RUN",
+    "failureInjection": "NOT_RUN",
+    "perMigrationPostconditions": "NOT_RUN"
+  },
+  "postconditions": {}
+}

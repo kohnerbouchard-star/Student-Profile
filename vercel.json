@@ -12,7 +12,8 @@
       "main": false,
       "release/production": true,
       "ops/econovaria-git-native-domain-activation-20260813": false,
-      "test/staging-recovery-artifact-verifier-20261126": false
+      "test/staging-recovery-artifact-verifier-20261126": false,
+      "ops/staging-recovery-preflight-20261126": false
     }
   },
   "functions": {

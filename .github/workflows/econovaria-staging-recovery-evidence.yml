@@ -1,0 +1,49 @@
+name: Econovaria Staging Recovery Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      record_authorized:
+        type: boolean
+        default: false
+        required: true
+        description: Approve recording the reviewed staging recovery summary
+      source_sha:
+        required: true
+        description: Exact current main release SHA
+      recovery_receipt:
+        type: string
+        required: true
+        description: Redacted recovery summary JSON only. Keep backup bytes and secrets in private custody.
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  record-recovery:
+    if: github.repository == 'kohnerbouchard-star/Student-Profile' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && inputs.record_authorized == true
+    environment: staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22.23.1'
+      - name: Verify exact recovery receipt and independent staging review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/operations/staging-recovery-evidence/protected-transport.mjs publish
+      - name: Publish validated redacted receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: econovaria-staging-recovery-${{ github.sha }}
+          path: ${{ runner.temp }}/staging-reviewed-recovery/recovery.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Clear private runner copy
+        if: always()
+        run: rm -f "$RUNNER_TEMP/staging-reviewed-recovery/recovery.json"
