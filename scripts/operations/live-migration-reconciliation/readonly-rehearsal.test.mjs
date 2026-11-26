@@ -1,3 +1,4 @@
+import './capture-session-observer.test.mjs';
 import './capture-lock-timeout.test.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
