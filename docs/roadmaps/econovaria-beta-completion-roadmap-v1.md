@@ -959,3 +959,16 @@ Next: parent review of checksum-verified local delivery; no full staging claim.
 `IMPLEMENTED_NOT_MERGED`, LOCAL_ONLY on exact main `bc25df5d6d910b09c18574dafb0f00733ef1d5eb`, owner `ops/staging-runtime-catalog-diagnostics`. Adds fixed capped counts to exact schema/catalog comparator evidence and the protected sanitized artifact projection; no object/role names, values, SQL or private paths retained. Tests exercise the actual CLI and workflow projection with ownership, ACL/RLS, scheduler, managed topology and malformed inputs. Existing comparison exits, topology profile, immutable migrations, release/apply holds, credentials and cleanup remain unchanged. Parent-reported artifact 15079418291's actual runtime difference remains unknown; exit 2 still blocks the separate suffix apply candidate. See [scope, profile applicability and limits](../operations/evidence/staging-runtime-catalog-diagnostics-v1/scope.md). No hosted execution, push or dispatch. Next: independent source review and normal exact-head publication controls before a separately authorized fresh protected diagnostic run; no apply permission.
 
 PR1063 source publication: draft [#1063](https://github.com/kohnerbouchard-star/Student-Profile/pull/1063), public source `2e080db32a5f164966c71fbc5242b64977d34ede` (tree identical to local candidate). Actual-number authority retains all PR1062 check identities and adds jobs scheduled by this exact scope; all production/mutation/secret flags remain false. Complete public authority-inclusive carrier and coupled Roster pins precede final-head qualification. No merge, rerun, dispatch, hosted DB or apply authority. Status remains `IMPLEMENTED_NOT_MERGED`; fresh protected diagnostic and actual runtime mismatch remain unverified.
+
+### REF-032 / OPS-STAGE-001 — exact bounded runtime identity attribution (2026-11-26)
+
+LOCAL_ONLY on main b62f10ffda169fd6f884cc3a254c136fbd6b862d, continuing candidate
+fa01ad942eed08be07b9882e1f0bb145d17380e2. Protected run 45744262169's positional
+schema/cron counts do not establish differing identities. The protected artifact
+projection now verifies the same exact comparison inputs and records fixed
+profile-backed labels and unresolved counts. Real synthetic PostgreSQL exports
+reproduce 3/1 with distinct known and unresolved cases. The exact catalog apply
+gate, comparator, capture and 15 ordered historical suffix files are retained.
+See ../operations/evidence/runtime-identity-diagnostic-v1/scope.md. Next: review
+the source, obtain exact reviewed-main clean replay, then separately approve a
+fresh staging read-only run for actual attribution.
