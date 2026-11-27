@@ -1,0 +1,15 @@
+{
+  "action": "attach-open",
+  "bootstrapHead": "9cf72d54287c3039cf4496d16543a35300fac045",
+  "expectedParent": "9cf72d54287c3039cf4496d16543a35300fac045",
+  "ledgerSha256": "abe640a61ab112cafeeae89dd93c27e93796b7122680b94c1661ef092c7bc312",
+  "maintenance": {
+    "endsAt": "2026-11-27T04:08:51.912Z",
+    "ownerEvidenceSha256": "ace34904650712c330bd780e9a84863996ed52e396b48da1416d2ac3757f4f57",
+    "startsAt": "2026-11-27T03:40:51.912Z"
+  },
+  "packetSha256": "58f2ecfb90c4f2ff95c76410c9188d41e7b5e02bfff4d599dbc933d8c6e70deb",
+  "projectRef": "eecvbssdvarfcykcfrny",
+  "schemaVersion": 1,
+  "target": "staging-business-open-only"
+}
