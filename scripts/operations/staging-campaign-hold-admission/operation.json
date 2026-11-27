@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "type": "install",
+  "projectRef": "eecvbssdvarfcykcfrny",
+  "scope": "campaign-only-pre-suffix",
+  "ledgerSha256": "abe640a61ab112cafeeae89dd93c27e93796b7122680b94c1661ef092c7bc312",
+  "recovery": {
+    "projectRef": "eecvbssdvarfcykcfrny",
+    "archiveSha256": "88ce1d3d9fbd2b1d0bb7e39de0ea6e624e80f82dc93e188ca3963d3c7cce829e",
+    "receiptSha256": "20beca25f483a5f6cc3537169b067df1a4913b9da2475d1fe4897fc1236c06d0",
+    "restoreTargetKind": "isolated-native-supabase-postgres",
+    "completedAt": "2026-11-27T00:18:10.000Z",
+    "restoredLedgerSha256": "abe640a61ab112cafeeae89dd93c27e93796b7122680b94c1661ef092c7bc312",
+    "fullArchiveLoad": true,
+    "isolated": true,
+    "outOfHostedProduction": true
+  },
+  "runtime": {
+    "slug": "campaign-orchestrator",
+    "version": 10,
+    "deploymentId": "eecvbssdvarfcykcfrny_c43e768c-3f46-415d-a99d-816fe876d1dc_10",
+    "sourceSha256": "b8f4f71163fbf5d313ef1d103c3cc529ab780c6576597e27644d9b5c77646fea",
+    "verifyJwt": false,
+    "importMap": false,
+    "verification": "supabase-management-get-v1",
+    "configSha256": "fcd6598422a7cb6e649ce25df68589b3df74cbd960a4ba30d8a6935a5c6f73a5",
+    "preservedPackageSha256": "891f341eac79cec5aab2ff4300911cbf8d1f600f53898955bb044f2201304c41"
+  },
+  "maintenance": {
+    "startsAt": "2026-11-27T00:35:00.000Z",
+    "endsAt": "2026-11-27T01:20:00.000Z",
+    "approvalEvidenceSha256": "be520b7eb95c5ed37e2d16bad234243d9b1e80dce5da8e2f2ce78f6a4f70915c"
+  },
+  "inverse": {
+    "blob": "7f46cdd2b27b101c01b383df208ed6ac2086070c",
+    "testedRunId": "45768104640"
+  }
+}
