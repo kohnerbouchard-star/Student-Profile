@@ -113,8 +113,8 @@
     "validate:progression-content": "node --test scripts/progression-content-quality.test.mjs"
   },
   "devDependencies": {
-    "@supabase/supabase-js": "2.119.0",
-    "playwright": "1.65.0",
+    "@supabase/supabase-js": "2.119.2",
+    "playwright": "1.65.1",
     "supabase": "2.109.1"
   }
 }
