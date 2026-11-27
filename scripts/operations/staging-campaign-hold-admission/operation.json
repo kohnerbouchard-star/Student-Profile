@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "type": "install",
+  "type": "abort",
   "projectRef": "eecvbssdvarfcykcfrny",
   "scope": "campaign-only-pre-suffix",
   "ledgerSha256": "abe640a61ab112cafeeae89dd93c27e93796b7122680b94c1661ef092c7bc312",
@@ -29,10 +29,13 @@
   "maintenance": {
     "startsAt": "2026-11-27T00:35:00.000Z",
     "endsAt": "2026-11-27T01:20:00.000Z",
-    "approvalEvidenceSha256": "be520b7eb95c5ed37e2d16bad234243d9b1e80dce5da8e2f2ce78f6a4f70915c"
+    "approvalEvidenceSha256": "9e90facc720565d661175e4c17e5e552de42ca8928fb3ec4d6d154e0ddd9bc00"
   },
   "inverse": {
     "blob": "7f46cdd2b27b101c01b383df208ed6ac2086070c",
     "testedRunId": "45768104640"
-  }
+  },
+  "installHead": "598825620a6e9ef98cb4693e2a9163f05a634e90",
+  "installRunId": "45917590512",
+  "heldEpochSha256": "6ed0c4bdcb5e29e28338fd68773002784929e7f89e3160f50f9476e2f4a895f1"
 }
