@@ -1,0 +1,76 @@
+name: Staging Sidecar Maintenance (Inert Only)
+on:
+  push:
+    branches: [chore/staging-suffix-permission-preflight-20261126]
+    paths: [scripts/operations/staging-inert-sidecar/request.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: staging-campaign-exclusive-hold
+  cancel-in-progress: false
+jobs:
+  admit:
+    if: >-
+      github.event_name == 'push' && github.repository == 'kohnerbouchard-star/Student-Profile' &&
+      github.repository_id == '1264495890' && github.event.repository.private == false &&
+      github.actor_id == '287640607' && github.event.sender.id == 287640607 &&
+      github.event.repository.owner.id == 287640607 && github.event.sender.type == 'User' &&
+      !github.event.created && !github.event.deleted && !github.event.forced && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    outputs:
+      admitted: ${{ steps.admit.outputs.admitted }}
+      lane: ${{ steps.admit.outputs.lane }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 8
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22.23.1'
+          package-manager-cache: false
+      - id: admit
+        run: node scripts/operations/staging-inert-sidecar/run.mjs admit
+  operate:
+    needs: admit
+    if: success() && needs.admit.outputs.admitted != ''
+    environment: staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 8
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22.23.1'
+          package-manager-cache: false
+      - name: Verify native staging owner approval and exact evidence
+        id: review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIDECAR_ADMITTED: ${{ needs.admit.outputs.admitted }}
+        run: node scripts/operations/staging-inert-sidecar/run.mjs review
+      - name: Read only the exact active Auth v20 metadata
+        id: auth
+        if: success() && needs.admit.outputs.lane == 'auth'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SIDECAR_ADMITTED: ${{ needs.admit.outputs.admitted }}
+          SIDECAR_REVIEWED: ${{ steps.review.outputs.reviewed }}
+        run: node scripts/operations/staging-inert-sidecar/run.mjs auth-proof
+      - name: Apply one inert packet
+        if: >-
+          success() && steps.review.outputs.reviewed != '' &&
+          (needs.admit.outputs.lane == 'business' || steps.auth.outputs.gate != '')
+        env:
+          SIDECAR_ADMITTED: ${{ needs.admit.outputs.admitted }}
+          SIDECAR_REVIEWED: ${{ steps.review.outputs.reviewed }}
+          SIDECAR_AUTH_PROOF: ${{ steps.auth.outputs.gate }}
+          STAGING_DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: node scripts/operations/staging-inert-sidecar/run.mjs apply
