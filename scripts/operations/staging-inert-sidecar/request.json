@@ -1,16 +1,16 @@
 {
   "action": "install",
   "bootstrapHead": "946421bb39ad46df2f283e72e47378800a60820a",
-  "expectedParent": "946421bb39ad46df2f283e72e47378800a60820a",
-  "lane": "business",
+  "expectedParent": "1769d51bf4370f4d1ea630350553865d2a5d3271",
+  "lane": "auth",
   "ledgerSha256": "abe640a61ab112cafeeae89dd93c27e93796b7122680b94c1661ef092c7bc312",
   "maintenance": {
-    "endsAt": "2026-11-27T03:59:01.256Z",
-    "ownerEvidenceSha256": "617922e934db78e63d8d5088bc26057e7ad6aa49b15b1659f64d416638821914",
+    "endsAt": "2026-11-27T04:03:29.938Z",
+    "ownerEvidenceSha256": "4a6f746ec6b4d207b1beb6dea9d1b4902d8eb44779af7732271b1c2f8385bcc4",
     "recoveryEvidenceSha256": "20beca25f483a5f6cc3537169b067df1a4913b9da2475d1fe4897fc1236c06d0",
-    "startsAt": "2026-11-27T03:17:01.256Z"
+    "startsAt": "2026-11-27T03:21:29.938Z"
   },
-  "packetSha256": "dab76174204aabf9cb1c2ad17ca065df568fd7d1678b36991b34988b65770151",
+  "packetSha256": "893f3173a4be59812bf07874075434c6f0363b01e6503c9a59a808eac28e47ba",
   "projectRef": "eecvbssdvarfcykcfrny",
   "schemaVersion": 1,
   "target": "staging-inert-only"
